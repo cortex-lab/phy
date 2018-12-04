@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-"""Test VisPy."""
+"""Test plot."""
 
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
 
-from vispy.app import use_app
 from pytest import yield_fixture
 
 from ..base import BaseCanvas
@@ -19,10 +18,10 @@ from ..panzoom import PanZoom
 
 @yield_fixture
 def canvas(qapp):
-    use_app('pyqt5')
-    c = BaseCanvas(keys='interactive')
+    c = BaseCanvas()
     yield c
     c.close()
+    del c
 
 
 @yield_fixture

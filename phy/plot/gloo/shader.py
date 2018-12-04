@@ -202,7 +202,7 @@ class Shader(GLObject):
     def _create(self):
         """ Create the shader """
 
-        log.debug("GPU: Creating shader")
+        log.log(5, "GPU: Creating shader")
 
         # Check if we have something to compile
         if not self.code:
@@ -217,7 +217,7 @@ class Shader(GLObject):
     def _update(self):
         """ Compile the source and checks everything's ok """
 
-        log.debug("GPU: Compiling shader")
+        log.log(5, "GPU: Compiling shader")
 
         if len(self.hooks):
             hooks = [name for name, snippet in self.hooks]

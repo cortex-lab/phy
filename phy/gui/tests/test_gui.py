@@ -11,10 +11,8 @@ from pytest import raises
 from ..qt import Qt, QApplication, QWidget, QMessageBox
 from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
-                   _try_get_vispy_canvas,
                    )
 from phy.utils import Bunch, connect, unconnect
-from phy.utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -22,26 +20,15 @@ from phy.utils._color import _random_color
 #------------------------------------------------------------------------------
 
 def _create_canvas():
-    """Create a VisPy canvas with a color background."""
-    from vispy import app
-    c = app.Canvas()
-    c.color = _random_color()
-
-    @c.connect
-    def on_draw(e):  # pragma: no cover
-        c.context.clear(c.color)
-
+    """Create a GL view."""
+    from phy.plot import View
+    c = View()
     return c
 
 
 #------------------------------------------------------------------------------
 # Test views
 #------------------------------------------------------------------------------
-
-def test_vispy_view():
-    from vispy.app import Canvas
-    assert isinstance(_try_get_vispy_canvas(Canvas()), QWidget)
-
 
 def test_matplotlib_view():
     from matplotlib.pyplot import Figure

@@ -69,8 +69,6 @@ class View(BaseCanvas):
                  box_bounds=None, box_pos=None, box_size=None,
                  enable_lasso=False,
                  **kwargs):
-        if not kwargs.get('keys', None):
-            kwargs['keys'] = None
         super(View, self).__init__(**kwargs)
         self.layout = layout
 
@@ -196,7 +194,7 @@ class View(BaseCanvas):
             # NOTE: visual.program.__contains__ is implemented in vispy master
             # so we can replace this with `if 'a_box_index' in visual.program`
             # after the next VisPy release.
-            if 'a_box_index' in visual.program._code_variables:
+            if 'a_box_index' in visual.program:
                 visual.program['a_box_index'] = box_index.astype(np.float32)
         # TODO: refactor this when there is the possibility to update existing
         # visuals without recreating the whole scene.
@@ -258,7 +256,7 @@ class Lasso(object):
         return _in_polygon(pos, self.polygon)
 
     def attach(self, view):
-        view.connect(self.on_mouse_press)
+        view.attach_events(self)
         self.view = view
 
     def create_visual(self):

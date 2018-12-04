@@ -25,17 +25,6 @@ logger = logging.getLogger(__name__)
 # GUI main window
 # -----------------------------------------------------------------------------
 
-def _try_get_vispy_canvas(view):
-    # Get the Qt widget from a VisPy canvas.
-    try:
-        from vispy.app import Canvas
-        if isinstance(view, Canvas):
-            view = view.native
-    except ImportError:  # pragma: no cover
-        pass
-    return view
-
-
 def _try_get_matplotlib_canvas(view):
     # Get the Qt widget from a matplotlib figure.
     try:
@@ -91,7 +80,7 @@ def _get_dock_position(position):
 
 
 class GUI(QMainWindow):
-    """A Qt main window holding docking Qt or VisPy widgets.
+    """A Qt main window holding docking Qt.
 
     `GUI` derives from `QMainWindow`.
 
@@ -250,9 +239,8 @@ class GUI(QMainWindow):
         # The view name is `<class_name><view_index>`, e.g. `MyView0`.
         view.name = name or view.__class__.__name__ + str(view.view_index)
 
-        # Get the Qt canvas for VisPy and matplotlib views.
-        widget = _try_get_vispy_canvas(view)
-        widget = _try_get_matplotlib_canvas(widget)
+        # Get the Qt canvas for matplotlib views.
+        widget = _try_get_matplotlib_canvas(view)
 
         dock_widget = _create_dock_widget(widget, view.name,
                                           closable=closable,

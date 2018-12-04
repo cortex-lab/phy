@@ -57,7 +57,7 @@ class Buffer(GPUData, GLObject):
 
         self._handle = gl.glGenBuffers(1)
         self._activate()
-        log.debug("GPU: Creating buffer (id=%d)" % self._id)
+        log.log(5, "GPU: Creating buffer (id=%d)" % self._id)
         gl.glBufferData(self._target, self.nbytes, None, self._usage)
         self._deactivate()
 
@@ -70,13 +70,13 @@ class Buffer(GPUData, GLObject):
     def _activate(self):
         """ Bind the buffer to some target """
 
-        log.debug("GPU: Activating buffer (id=%d)" % self._id)
+        log.log(5, "GPU: Activating buffer (id=%d)" % self._id)
         gl.glBindBuffer(self._target, self._handle)
 
     def _deactivate(self):
         """ Unbind the current bound buffer """
 
-        log.debug("GPU: Deactivating buffer (id=%d)" % self._id)
+        log.log(5, "GPU: Deactivating buffer (id=%d)" % self._id)
         gl.glBindBuffer(self._target, 0)
 
     def _update(self):

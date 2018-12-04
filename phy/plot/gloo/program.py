@@ -160,7 +160,7 @@ class Program(GLObject):
         A GL context must be available to be able to build (link)
         """
 
-        log.debug("GPU: Creating program")
+        log.log(5, "GPU: Creating program")
 
         # Check if program has been created
         if self._handle <= 0:
@@ -170,7 +170,7 @@ class Program(GLObject):
 
         self._build_shaders(self._handle)
 
-        log.debug("GPU: Linking program")
+        log.log(5, "GPU: Linking program")
 
         # Link the program
         gl.glLinkProgram(self._handle)
@@ -203,7 +203,7 @@ class Program(GLObject):
         if not self._fragment:
             raise ValueError("No fragment shader has been given")
 
-        log.debug("GPU: Attaching shaders to program")
+        log.log(5, "GPU: Attaching shaders to program")
 
         # Attach shaders
         attached = gl.glGetAttachedShaders(program)
@@ -362,7 +362,7 @@ class Program(GLObject):
     def _activate(self):
         """Activate the program as part of current rendering state."""
 
-        log.debug("GPU: Activating program (id=%d)" % self._id)
+        log.log(5, "GPU: Activating program (id=%d)" % self._id)
         gl.glUseProgram(self.handle)
 
         for uniform in self._uniforms.values():
@@ -385,7 +385,7 @@ class Program(GLObject):
         # Need fix when dealing with vertex arrays (only need to active the array)
         for attribute in self._attributes.values():
             attribute.deactivate()
-        log.debug("GPU: Deactivating program (id=%d)" % self._id)
+        log.log(5, "GPU: Deactivating program (id=%d)" % self._id)
 
     @property
     def all_uniforms(self):

@@ -259,9 +259,10 @@ class Uniform(Variable):
     def _activate(self):
         if self._gtype in (gl.GL_SAMPLER_1D, gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE):
             if self.data is not None:
-                log.debug("GPU: Active texture is %d" % self._texture_unit)
+                log.log(5, "GPU: Active texture is %d" % self._texture_unit)
                 gl.glActiveTexture(gl.GL_TEXTURE0 + self._texture_unit)
-                self.data.activate()
+                if hasattr(self.data, 'activate'):
+                    self.data.activate()
 
     def _update(self):
 
@@ -284,7 +285,7 @@ class Uniform(Variable):
         # Textures (need to get texture count)
         elif self._gtype in (gl.GL_SAMPLER_1D, gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE):
             # texture = self.data
-            log.debug("GPU: Activactin texture %d" % self._texture_unit)
+            log.log(5, "GPU: Activactin texture %d" % self._texture_unit)
             # gl.glActiveTexture(gl.GL_TEXTURE0 + self._unit)
             # gl.glBindTexture(texture.target, texture.handle)
             gl.glUniform1i(self._handle, self._texture_unit)
@@ -381,7 +382,7 @@ class Attribute(Variable):
     def _update(self):
         """ Actual upload of data to GPU memory  """
 
-        log.debug("GPU: Updating %s" % self.name)
+        log.log(5, "GPU: Updating %s" % self.name)
 
         # Check active status (mandatory)
 #        if not self._active:

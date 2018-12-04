@@ -37,11 +37,11 @@ def test_axes_1(qtbot, canvas_pz):
     g.attach(c)
 
     c.show()
-    qtbot.waitForWindowShown(c.native)
+    qtbot.waitForWindowShown(c)
 
-    c.panzoom.zoom = 2
-    c.panzoom.zoom = 8
-    c.panzoom.pan = (3, 3)
+    c.panzoom.zoom = 4
+    #c.panzoom.zoom = 8
+    #c.panzoom.pan = (3, 3)
 
     # qtbot.stop()
     c.close()

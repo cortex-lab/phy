@@ -185,7 +185,7 @@ class Texture(GPUData, GLObject):
     def _activate(self):
         """ Activate texture on GPU """
 
-        log.debug("GPU: Activate texture")
+        log.log(5, "GPU: Activate texture")
         gl.glBindTexture(self.target, self._handle)
         if self._need_setup:
             self._setup()
@@ -193,19 +193,19 @@ class Texture(GPUData, GLObject):
     def _deactivate(self):
         """ Deactivate texture on GPU """
 
-        log.debug("GPU: Deactivate texture")
+        log.log(5, "GPU: Deactivate texture")
         gl.glBindTexture(self._target, 0)
 
     def _create(self):
         """ Create texture on GPU """
 
-        log.debug("GPU: Creating texture")
+        log.log(5, "GPU: Creating texture")
         self._handle = gl.glGenTextures(1)
 
     def _delete(self):
         """ Delete texture from GPU """
 
-        log.debug("GPU: Deleting texture")
+        log.log(5, "GPU: Deleting texture")
         if self.handle > -1:
             gl.glDeleteTextures(np.array([self.handle], dtype=np.uint32))
 
@@ -247,7 +247,7 @@ class Texture1D(Texture):
 
     def _update(self):
 
-        log.debug("GPU: Updating texture")
+        log.log(5, "GPU: Updating texture")
         if self.pending_data:
             start, stop = self.pending_data
             offset, nbytes = start, stop - start
@@ -305,7 +305,7 @@ class Texture2D(Texture):
         """ Update texture on GPU """
 
         if self.pending_data:
-            log.debug("GPU: Updating texture")
+            log.log(5, "GPU: Updating texture")
 
             start, stop = self.pending_data
             offset, nbytes = start, stop - start
@@ -394,7 +394,7 @@ class TextureCube(Texture):
         self._need_setup = False
 
     def _update(self):
-        log.debug("GPU: Updating texture cube")
+        log.log(5, "GPU: Updating texture cube")
 
         if self.need_update:
             gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
@@ -440,7 +440,7 @@ class TextureCube(Texture):
     def _activate(self):
         """ Activate texture on GPU """
 
-        log.debug("GPU: Activate texture cube")
+        log.log(5, "GPU: Activate texture cube")
         gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
         gl.glBindTexture(self.target, self._handle)
         if self._need_setup:
@@ -449,6 +449,6 @@ class TextureCube(Texture):
     def _deactivate(self):
         """ Deactivate texture on GPU """
 
-        log.debug("GPU: Deactivate texture cube")
+        log.log(5, "GPU: Deactivate texture cube")
         gl.glBindTexture(self._target, 0)
         gl.glDisable(gl.GL_TEXTURE_CUBE_MAP)

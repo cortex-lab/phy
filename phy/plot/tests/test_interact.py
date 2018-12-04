@@ -66,7 +66,7 @@ def _create_visual(qtbot, canvas, interact, box_index):
     visual.program['a_box_index'] = box_index.astype(np.float32)
 
     c.show()
-    qtbot.waitForWindowShown(c.native)
+    qtbot.waitForWindowShown(c)
 
 
 #------------------------------------------------------------------------------
