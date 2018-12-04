@@ -93,7 +93,7 @@ def test_visual_1(qtbot, canvas):
     v.set_data()
 
     canvas.show()
-    qtbot.waitForWindowShown(canvas.native)
+    qtbot.waitForWindowShown(canvas)
     # qtbot.stop()
 
 
@@ -138,7 +138,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     v.set_data()
 
     canvas.show()
-    qtbot.waitForWindowShown(canvas.native)
+    qtbot.waitForWindowShown(canvas)
     # qtbot.stop()
 
 
@@ -162,5 +162,5 @@ def test_interact_1(qtbot, canvas):
     v.set_data()
 
     canvas.show()
-    qtbot.waitForWindowShown(canvas.native)
+    qtbot.waitForWindowShown(canvas)
     interact.update()

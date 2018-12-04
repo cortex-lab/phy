@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Base VisPy classes."""
+"""Base GL classes."""
 
 
 #------------------------------------------------------------------------------
@@ -75,13 +75,11 @@ class BaseVisual(object):
             logger.debug("Skipping drawing visual `%s` because the program "
                          "has not been built yet.", self)
 
-    def on_resize(self, size):
-        # HACK: we check whether u_window_size is used in order to avoid
-        # the VisPy warning. We only update it if that uniform is active.
+    def on_resize(self, width, height):
         s = self.program._vertex.code + '\n' + self.program.fragment.code
         s = s.replace('uniform vec2 u_window_size;', '')
         if 'u_window_size' in s:
-            self.program['u_window_size'] = size
+            self.program['u_window_size'] = (width, height)
 
     # To override
     # -------------------------------------------------------------------------
@@ -306,7 +304,6 @@ def key_info(e):
 
 
 class BaseCanvas(QOpenGLWindow):
-    """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self.transforms = TransformChain()
@@ -317,6 +314,7 @@ class BaseCanvas(QOpenGLWindow):
         self._attached = []
         self._mouse_press_position = None
         self._mouse_press_button = None
+        self._mouse_press_modifiers = None
         self._last_mouse_pos = None
 
     def add_visual(self, visual):
@@ -344,7 +342,7 @@ class BaseCanvas(QOpenGLWindow):
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
         # Initialize the size.
-        visual.on_resize((self.size().width(), self.size().height()))
+        visual.on_resize(self.size().width(), self.size().height())
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
         emit('visual_added', visual)
@@ -363,7 +361,7 @@ class BaseCanvas(QOpenGLWindow):
     def resizeGL(self, w, h):
         """Resize the OpenGL context."""
         for visual in self.visuals:
-            visual.on_resize((w, h))
+            visual.on_resize(w, h)
         self.update()
 
     def paintGL(self):
@@ -388,6 +386,9 @@ class BaseCanvas(QOpenGLWindow):
                 continue
             f(Bunch(kwargs))
 
+    def resizeEvent(self, e):
+        self.emit('resize')
+
     def _mouse_event(self, name, e):
         pos, button = mouse_info(e)
         modifiers = get_modifiers(e)
@@ -399,11 +400,13 @@ class BaseCanvas(QOpenGLWindow):
         # Used for dragging.
         self._mouse_press_position = pos
         self._mouse_press_button = button
+        self._mouse_press_modifiers = modifiers
 
     def mouseReleaseEvent(self, e):
         self._mouse_event('mouse_release', e)
         self._mouse_press_position = None
         self._mouse_press_button = None
+        self._mouse_press_modifiers = None
 
     def mouseDoubleClickEvent(self, e):
         self._mouse_event('mouse_double_click', e)
@@ -415,6 +418,7 @@ class BaseCanvas(QOpenGLWindow):
                   pos=pos,
                   last_pos=self._last_mouse_pos,
                   modifiers=modifiers,
+                  mouse_press_modifiers=self._mouse_press_modifiers,
                   button=self._mouse_press_button,
                   mouse_press_position=self._mouse_press_position)
         self._last_mouse_pos = pos
@@ -479,7 +483,7 @@ class BaseInteract(object):
         """Attach this interact to a canvas."""
         self.canvas = canvas
 
-        @connect
+        @connect(sender=canvas)
         def on_visual_added(visual):
             self.update_program(visual.program)
 

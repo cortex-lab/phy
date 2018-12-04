@@ -10,10 +10,8 @@ from contextlib import contextmanager
 from cProfile import Profile
 import functools
 import logging
-import os
 import os.path as op
 import sys
-import time
 from timeit import default_timer
 
 from numpy.testing import assert_array_equal as ae
@@ -184,33 +182,3 @@ def _enable_pdb():  # pragma: no cover
                                          color_scheme='Linux',
                                          call_pdb=True,
                                          )
-
-
-#------------------------------------------------------------------------------
-# Testing VisPy canvas
-#------------------------------------------------------------------------------
-
-def show_test(canvas):
-    """Show a VisPy canvas for a fraction of second."""
-    with canvas:
-        # Interactive mode for tests.
-        if 'PYTEST_INTERACT' in os.environ:  # pragma: no cover
-            while not canvas._closed:
-                canvas.update()
-                canvas.app.process_events()
-                time.sleep(1. / 60)
-        else:
-            canvas.update()
-            canvas.app.process_events()
-
-
-def show_colored_canvas(color):
-    """Show a transient VisPy canvas with a uniform background color."""
-    from vispy import app, gloo
-    c = app.Canvas()
-
-    @c.connect
-    def on_draw(e):
-        gloo.clear(color)
-
-    show_test(c)

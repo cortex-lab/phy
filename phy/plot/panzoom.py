@@ -396,7 +396,7 @@ class PanZoom(BaseInteract):
 
     def on_mouse_move(self, e):
         """Pan and zoom with the mouse."""
-        if e.modifiers:
+        if e.mouse_press_modifiers:
             return
         if e.mouse_press_position:
             x0, y0 = self._normalize(e.mouse_press_position)
@@ -468,7 +468,7 @@ class PanZoom(BaseInteract):
     @property
     def size(self):
         if self.canvas:
-            return self.canvas.size().width(), self.canvas.size().height()
+            return self.canvas.size().width() or 1, self.canvas.size().height() or 1
         else:
             return (1, 1)
 
@@ -476,6 +476,7 @@ class PanZoom(BaseInteract):
         """Attach this interact to a canvas."""
         super(PanZoom, self).attach(canvas)
         canvas.panzoom = self
+        self._set_canvas_aspect()
 
         # Because the visual shaders must be modified to account for u_pan and u_zoom.
         if not all(v.program is None for v in canvas.visuals):
@@ -488,8 +489,6 @@ class PanZoom(BaseInteract):
         canvas.inserter.insert_vert(vs, 'header')
 
         canvas.attach_events(self)
-
-        self._set_canvas_aspect()
 
     def map(self, arr):
         arr = Translate(self.pan).apply(arr)

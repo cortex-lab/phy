@@ -10,7 +10,6 @@
 import numpy as np
 
 from .base import BaseInteract
-from .gloo import Texture2D
 from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
 from .visuals import LineVisual
@@ -215,8 +214,7 @@ class Boxed(BaseInteract):
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
         box_bounds = box_bounds.astype(np.float32)
         # TODO OPTIM: set the texture at initialization and update the data
-        program['u_box_bounds'] = Texture2D(box_bounds,
-                                            internalformat='rgba32f')
+        program['u_box_bounds'] = box_bounds
         program['n_boxes'] = self.n_boxes
 
     # Change the box bounds, positions, or size

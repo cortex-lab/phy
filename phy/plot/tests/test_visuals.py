@@ -27,7 +27,7 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
     assert v.vertex_count(**data) >= 0
     v.set_data(**kwargs)
     c.show()
-    qtbot.waitForWindowShown(c.native)
+    qtbot.waitForWindowShown(c)
     if stop:  # pragma: no cover
         qtbot.stop()
     c.close()
@@ -314,7 +314,7 @@ def test_text_2(qtbot, canvas_pz):
     v.set_data(pos=pos, data_bounds=None)
 
     c.show()
-    qtbot.waitForWindowShown(c.native)
+    qtbot.waitForWindowShown(c)
 
     # qtbot.stop()
     c.close()

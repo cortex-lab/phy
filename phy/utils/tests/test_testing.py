@@ -13,9 +13,8 @@ import time
 
 import numpy as np
 from pytest import mark
-from vispy.app import Canvas
 
-from ..testing import (benchmark, captured_output, captured_logging, show_test,
+from ..testing import (benchmark, captured_output, captured_logging,
                        _assert_equal, _enable_profiler, _profile,
                        show_colored_canvas,
                        )
@@ -50,11 +49,6 @@ def test_assert_equal():
 def test_benchmark():
     with benchmark():
         time.sleep(.002)
-
-
-def test_canvas():
-    c = Canvas(keys='interactive')
-    show_test(c)
 
 
 def test_show_colored_canvas():

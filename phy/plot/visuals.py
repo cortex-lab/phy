@@ -14,7 +14,6 @@ import numpy as np
 from six import string_types
 
 from .base import BaseVisual
-from .gloo import Texture2D
 from .transform import Range, NDC
 from .utils import (_tesselate_histogram,
                     _get_texture,
@@ -675,7 +674,7 @@ class TextVisual(BaseVisual):
         self.program['u_glyph_size'] = glyph_size
         # TODO: color
 
-        self.program['u_tex'] = Texture2D(tex[::-1, :])
+        self.program['u_tex'] = tex[::-1, :]
 
 
 class LineVisual(BaseVisual):
