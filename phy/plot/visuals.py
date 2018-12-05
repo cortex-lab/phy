@@ -112,7 +112,7 @@ class ScatterVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
         if data.data_bounds is not None:
             self.data_range.from_bounds = data.data_bounds
             pos_tr = self.transforms.apply(data.pos)
@@ -202,7 +202,7 @@ class UniformScatterVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
         if data.data_bounds is not None:
             self.data_range.from_bounds = data.data_bounds
             pos_tr = self.transforms.apply(data.pos)
@@ -308,7 +308,7 @@ class PlotVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
 
         assert isinstance(data.y, list)
         n_signals = len(data.y)
@@ -408,7 +408,7 @@ class UniformPlotVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
 
         assert isinstance(data.y, list)
         n_signals = len(data.y)
@@ -506,7 +506,7 @@ class HistogramVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
         hist = data.hist
 
         n_hists, n_bins = hist.shape
@@ -610,7 +610,7 @@ class TextVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
 
         pos = data.pos.astype(np.float64)
         assert pos.ndim == 2
@@ -724,7 +724,7 @@ class LineVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
 
         pos = data.pos
         assert pos.ndim == 2
@@ -784,7 +784,7 @@ class PolygonVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.n_vertices = self.vertex_count(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
 
         pos = data.pos
         assert pos.ndim == 2
