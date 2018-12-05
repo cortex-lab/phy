@@ -15,7 +15,7 @@ import numpy as np
 from .base import BaseInteract
 from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
-from phy.utils import emit
+from phy.utils import emit, connect
 
 
 #------------------------------------------------------------------------------
@@ -477,6 +477,10 @@ class PanZoom(BaseInteract):
         super(PanZoom, self).attach(canvas)
         canvas.panzoom = self
         self._set_canvas_aspect()
+
+        @connect(sender=canvas)
+        def on_visual_added(sender, visual):
+            self.update_program(visual.program)
 
         # Because the visual shaders must be modified to account for u_pan and u_zoom.
         if not all(v.program is None for v in canvas.visuals):

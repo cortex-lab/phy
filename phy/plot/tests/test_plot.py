@@ -9,99 +9,68 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from pytest import fixture
 
-from ..panzoom import PanZoom
-from ..plot import View
+from ..plot import PlotCanvas
 from ..transform import NDC
 from ..utils import _get_linear_x
+from .. import visuals
 
 
 #------------------------------------------------------------------------------
-# Utils
+# Fixtures
 #------------------------------------------------------------------------------
 
-def _show(qtbot, view, stop=False):
-    view.build()
-    view.show()
-    qtbot.waitForWindowShown(view)
-    if stop:  # pragma: no cover
-        qtbot.stop()
-    view.close()
+@fixture
+def x():
+    return .25 * np.random.randn(1000)
+
+
+@fixture
+def y():
+    return .25 * np.random.randn(1000)
 
 
 #------------------------------------------------------------------------------
 # Test plotting interface
 #------------------------------------------------------------------------------
 
-def test_building(qtbot):
-    view = View()
-    n = 1000
+def test_plot_1(qtbot, x, y):
+    c = PlotCanvas(with_panzoom=True)
 
-    x = np.random.randn(n)
-    y = np.random.randn(n)
+    v = visuals.ScatterVisual()
+    c.add_visual(v)
+    v.set_data(x=x, y=y)
 
-    with view.building():
-        view.scatter(x, y)
-        view.enable_axes()
-
-    view.show()
-    qtbot.waitForWindowShown(view)
-    view.close()
-
-
-def test_simple_view(qtbot):
-    view = View()
-    n = 1000
-
-    x = np.random.randn(n)
-    y = np.random.randn(n)
-
-    view.scatter(x, y)
-    _show(qtbot, view)
-
-
-def test_uniform_scatter(qtbot):
-    view = View()
-    n = 1000
-
-    x = np.random.randn(n)
-    y = np.random.randn(n)
-
-    view.uscatter(x, y,
-                  color=(1., 1., 0., .5),
-                  size=40,
-                  )
-    _show(qtbot, view)
+    c.show()
+    qtbot.waitForWindowShown(c)
+    # qtbot.stop()
+    c.close()
 
 
 #------------------------------------------------------------------------------
 # Test visuals in grid
 #------------------------------------------------------------------------------
 
-def test_grid_scatter(qtbot):
-    view = View(layout='grid', shape=(2, 3))
-    n = 100
+def test_grid_scatter(qtbot, x, y):
+    c = PlotCanvas(layout='grid', shape=(2, 3))
 
-    assert isinstance(view.panzoom, PanZoom)
-
-    x = np.random.randn(n)
-    y = np.random.randn(n)
-
-    view[0, 1].scatter(x, y)
-    view[0, 2].scatter(x, y, color=np.random.uniform(.5, .8, size=(n, 4)))
-
-    view[1, 0].scatter(x, y, size=np.random.uniform(5, 20, size=n))
-    view[1, 1]
+    c[0, 1].add(visuals.ScatterVisual(), x=x, y=y)
+    c[1, 0].add(visuals.ScatterVisual(), x, y, size=np.random.uniform(5, 20, size=1000))
+    c[0, 2].add(visuals.ScatterVisual(), x, y, color=np.random.uniform(.5, .8, size=(1000, 4)))
 
     # Multiple scatters in the same subplot.
-    view[1, 2].scatter(x[2::6], y[2::6], marker='asterisk',
-                       color=(0, 1, 0, .25), size=20)
-    view[1, 2].scatter(x[::5], y[::5], marker='heart',
-                       color=(1, 0, 0, .35), size=50)
-    view[1, 2].scatter(x[1::3], y[1::3], marker='heart',
-                       color=(1, 0, 1, .35), size=30)
+    c[1, 2].add(visuals.ScatterVisual(marker='asterisk'),
+                x[2::6], y[2::6], color=(0, 1, 0, .25), size=20)
+    c[1, 2].add(visuals.ScatterVisual(marker='heart'),
+                x[::5], y[::5], color=(1, 0, 0, .35), size=50)
+    c[1, 2].add(visuals.ScatterVisual(marker='heart'),
+                x[1::3], y[1::3], color=(1, 0, 1, .35), size=30)
 
-    _show(qtbot, view)
+    c.show()
+    qtbot.waitForWindowShown(c)
+    # qtbot.stop()
+    c.close()
 
 
 def test_grid_plot(qtbot):

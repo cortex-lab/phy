@@ -13,10 +13,11 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from ..base import BaseVisual
-from ..interact import Grid, Boxed, Stacked
+from ..base import BaseVisual, BaseCanvas
+from ..interact import Grid, Boxed, Stacked, Lasso
 from ..panzoom import PanZoom
 from ..transform import NDC
+from ..visuals import ScatterVisual
 
 
 #------------------------------------------------------------------------------
@@ -101,7 +102,7 @@ def test_grid_1(qtbot, canvas):
     grid = Grid((2, 3))
     _create_visual(qtbot, canvas, grid, box_index)
 
-    grid.add_boxes(canvas)
+    # grid.add_boxes(canvas)
 
     # qtbot.stop()
 
@@ -214,3 +215,76 @@ def test_stacked_closest_box():
     stacked = Stacked(n_boxes=4, origin='lower')
     ac(stacked.get_closest_box((-.5, .9)), 3)
     ac(stacked.get_closest_box((+.5, -.9)), 0)
+
+
+#------------------------------------------------------------------------------
+# Test lasso
+#------------------------------------------------------------------------------
+
+def test_lasso_simple(qtbot):
+    view = BaseCanvas()
+    n = 1000
+
+    x = .25 * np.random.randn(n)
+    y = .25 * np.random.randn(n)
+
+    scatter = ScatterVisual()
+    view.add_visual(scatter)
+    scatter.set_data(x=x, y=y)
+
+    l = Lasso()
+    l.attach(view)
+    l.create_visual()
+
+    view.show()
+    qtbot.waitForWindowShown(view)
+
+    l.add((-.5, -.5))
+    l.add((+.5, -.5))
+    l.add((+.5, +.5))
+    l.add((-.5, +.5))
+    assert l.count == 4
+    assert l.polygon.shape == (4, 2)
+    b = [[-.5, -.5], [+.5, -.5], [+.5, +.5], [-.5, +.5]]
+    ae(l.in_polygon(b), [False, False, True, True])
+    assert str(l)
+
+    # qtbot.stop()
+    view.close()
+
+
+def _test_lasso_grid(qtbot):
+    view = BaseCanvas()
+    # TODO: grid shape (1, 2)
+    x, y = np.meshgrid(np.linspace(-1., 1., 20), np.linspace(-1., 1., 20))
+    x, y = x.ravel(), y.ravel()
+    view[0, 1].scatter(x, y, data_bounds=NDC)
+
+    l = view.lasso
+    ev = None
+    # TODO
+    return
+
+    # Square selection in the left panel.
+    ev.mouse_press(pos=(100, 100), button=1, modifiers=('Control',))
+    assert l.box == (0, 0)
+    ev.mouse_press(pos=(200, 100), button=1, modifiers=('Control',))
+    ev.mouse_press(pos=(200, 200), button=1, modifiers=('Control',))
+    ev.mouse_press(pos=(100, 200), button=1, modifiers=('Control',))
+    assert l.box == (0, 0)
+
+    # Clear.
+    ev.mouse_press(pos=(100, 200), button=2, modifiers=('Control',))
+    assert l.box is None
+
+    # Square selection in the right panel.
+    ev.mouse_press(pos=(500, 100), button=1, modifiers=('Control',))
+    assert l.box == (0, 1)
+    ev.mouse_press(pos=(700, 100), button=1, modifiers=('Control',))
+    ev.mouse_press(pos=(700, 300), button=1, modifiers=('Control',))
+    ev.mouse_press(pos=(500, 300), button=1, modifiers=('Control',))
+    assert l.box == (0, 1)
+
+    ind = l.in_polygon(np.c_[x, y])
+    view[0, 1].scatter(x[ind], y[ind], color=(1., 0., 0., 1.),
+                       data_bounds=NDC)

@@ -11,10 +11,12 @@ from collections import defaultdict
 import logging
 import re
 
+import numpy as np
+
 from phy.gui.qt import QOpenGLWindow, Qt, QEvent
 from . import gloo
 from .gloo import gl
-from .transform import TransformChain, Clip
+from .transform import TransformChain, Clip, pixels_to_ndc
 from .utils import _load_shader
 from phy.utils import connect, emit, Bunch
 
@@ -51,6 +53,7 @@ class BaseVisual(object):
         self.inserter.insert_vert('uniform vec2 u_window_size;', 'header')
         # The program will be set by the canvas when the visual is
         # added to the canvas.
+        self.n_vertices = 0
         self.program = None
         self.set_canvas_transforms_filter(lambda t: t)
 
@@ -303,12 +306,29 @@ def key_info(e):
                 return name
 
 
+def window_to_ndc(pos, size=None, box=None, panzoom=None, interact=None):
+    """Convert coordinates in pixels to NDC, taking into account window size,
+    possible panzoom and interact."""
+    # From window coordinates to NDC (pan & zoom taken into account).
+    if panzoom:
+        pos = panzoom.get_mouse_pos(pos)
+    else:
+        pos = np.asarray(pixels_to_ndc(pos, size=size))
+
+    # From NDC to data coordinates.
+    if interact:
+        pos = interact.imap(pos, box)
+
+    return pos
+
+
 class BaseCanvas(QOpenGLWindow):
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self.transforms = TransformChain()
         self.inserter = GLSLInserter()
         self.visuals = []
+        self._next_paint_callbacks = []
 
         # Events.
         self._attached = []
@@ -316,6 +336,9 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_button = None
         self._mouse_press_modifiers = None
         self._last_mouse_pos = None
+
+    def get_size(self):
+        return self.size().width() or 1, self.size().height() or 1
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
@@ -345,17 +368,16 @@ class BaseCanvas(QOpenGLWindow):
         visual.on_resize(self.size().width(), self.size().height())
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
-        emit('visual_added', visual)
+        emit('visual_added', self, visual)
 
-    def define_visuals(self):
-        """Define visuals here. To be overriden."""
-        pass
+    def on_next_paint(self, f):
+        """Register a function to be called at the next frame refresh (in paintGL())."""
+        self._next_paint_callbacks.append(f)
 
     def initializeGL(self):
         """Create the scene."""
         # Enable transparency.
         gl.enable_depth_mask()
-        self.define_visuals()
         self.update()
 
     def resizeGL(self, w, h):
@@ -367,6 +389,11 @@ class BaseCanvas(QOpenGLWindow):
     def paintGL(self):
         """Draw all visuals."""
         gloo.clear()
+        # Flush the queue of next paint callbacks.
+        for f in self._next_paint_callbacks:
+            f()
+        self._next_paint_callbacks.clear()
+        # Draw all visuals.
         for visual in self.visuals:
             logger.log(5, "Draw visual `%s`.", visual)
             visual.on_draw()
@@ -484,7 +511,7 @@ class BaseInteract(object):
         self.canvas = canvas
 
         @connect(sender=canvas)
-        def on_visual_added(visual):
+        def on_visual_added(sender, visual):
             self.update_program(visual.program)
 
     def update_program(self, program):

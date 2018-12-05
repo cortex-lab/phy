@@ -9,10 +9,11 @@
 
 import numpy as np
 
-from .base import BaseInteract
+from phy.io.array import _in_polygon
+from .base import BaseInteract, window_to_ndc
 from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
-from .visuals import LineVisual
+from .visuals import LineVisual, PolygonVisual
 
 
 #------------------------------------------------------------------------------
@@ -98,9 +99,8 @@ class Grid(BaseInteract):
         def _remove_clip(tc):
             return tc.remove('Clip')
 
-        canvas.add_visual(boxes)
+        canvas.add_visual(boxes, box_index=box_index)
         boxes.set_data(pos=pos)
-        boxes.program['a_box_index'] = box_index.astype(np.float32)
 
     def get_closest_box(self, pos):
         x, y = pos
@@ -308,3 +308,92 @@ class Stacked(Boxed):
         super(Stacked, self).__init__(b, box_var=box_var,
                                       keep_aspect_ratio=False,
                                       )
+
+
+#------------------------------------------------------------------------------
+# Interactive tools
+#------------------------------------------------------------------------------
+
+class Lasso(object):
+    def __init__(self):
+        self._points = []
+        self.view = None
+        self.visual = None
+        self.box = None
+
+    def add(self, pos):
+        self._points.append(pos)
+        self.update_visual()
+
+    @property
+    def polygon(self):
+        l = self._points
+        # Close the polygon.
+        # l = l + l[0] if len(l) else l
+        out = np.array(l, dtype=np.float64)
+        out = np.reshape(out, (out.size // 2, 2))
+        assert out.ndim == 2
+        assert out.shape[1] == 2
+        return out
+
+    def clear(self):
+        self._points = []
+        self.box = None
+        self.update_visual()
+
+    @property
+    def count(self):
+        return len(self._points)
+
+    def in_polygon(self, pos):
+        return _in_polygon(pos, self.polygon)
+
+    def attach(self, view):
+        view.attach_events(self)
+        self.view = view
+
+    def create_visual(self):
+        self.visual = PolygonVisual()
+        self.view.add_visual(self.visual)
+        self.update_visual()
+
+    def update_visual(self):
+        if not self.visual:
+            return
+        # Update the polygon.
+        self.visual.set_data(pos=self.polygon)
+        """
+        # Set the box index for the polygon, depending on the box
+        # where the first point was clicked in.
+        box = (self.box if self.box is not None
+               else self.view._default_box_index)
+        k = len(self.view._default_box_index)
+        n = self.visual.vertex_count(pos=self.polygon)
+        box_index = _get_array(box, (n, k)).astype(np.float32)
+        self.visual.program['a_box_index'] = box_index
+        """
+        self.view.update()
+
+    def on_mouse_press(self, e):
+        if 'Control' in e.modifiers:
+            if e.button == 'Left':
+                # Find the box.
+                panzoom = getattr(self.view, 'panzoom', None)
+                ndc = panzoom.get_mouse_pos(e.pos) if panzoom else e.pos
+
+                # NOTE: we don't update the box after the second point.
+                # In other words, the first point determines the box for the
+                # lasso.
+                interact = getattr(self.view, 'interact', None)
+                if self.box is None and interact:
+                    self.box = interact.get_closest_box(ndc)
+                # Transform from window coordinates to NDC.
+                pos = window_to_ndc(e.pos, box=self.box, interact=interact,
+                                    size=self.view.get_size(), panzoom=panzoom)
+                self.add(pos)
+            else:
+                self.clear()
+                self.box = None
+
+    def __repr__(self):
+        return str(self.polygon)

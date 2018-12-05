@@ -10,7 +10,8 @@
 from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
-from phy.gui.qt import Qt, QPoint
+#from phy.gui.qt import Qt, QPoint
+from . import mouse_drag, key_press
 from ..base import BaseVisual
 from ..panzoom import PanZoom
 
@@ -199,29 +200,6 @@ def test_panzoom_mouse_pos():
 #------------------------------------------------------------------------------
 # Test panzoom on canvas
 #------------------------------------------------------------------------------
-
-def mouse_drag(qtbot, c, p0, p1, button='left', modifiers=()):
-    b = getattr(Qt, button.capitalize() + 'Button')
-    modifiers = _modifiers_flag(modifiers)
-    qtbot.mousePress(c, b, modifiers, QPoint(*p0))
-    qtbot.mouseMove(c, QPoint(*p1))
-    qtbot.mouseRelease(c, b, modifiers, QPoint(*p1))
-
-
-def _modifiers_flag(modifiers):
-    out = Qt.NoModifier
-    for m in modifiers:
-        out |= getattr(Qt, m + 'Modifier')
-    return out
-
-
-def key_press(qtbot, c, key, modifiers=()):
-    qtbot.keyPress(c, getattr(Qt, 'Key_' + key), _modifiers_flag(modifiers))
-
-
-def key_release(qtbot, c, key, modifiers=()):
-    qtbot.keyRelease(c, getattr(Qt, 'Key_' + key), _modifiers_flag(modifiers))
-
 
 def test_panzoom_pan_mouse(qtbot, canvas_pz, panzoom):
     c = canvas_pz
