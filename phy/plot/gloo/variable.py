@@ -333,8 +333,9 @@ class Attribute(Variable):
             self._data = data
 
         # We already have a vertex buffer
-        elif isinstance(self._data, (VertexBuffer, VertexArray)):
-            self._data[...] = data
+        # HACK: disable reusing the same buffer for now: fails if the data has not the same shape
+        #elif isinstance(self._data, (VertexBuffer, VertexArray)) and len(self._data) == len(data):
+        #    self._data[...] = data
 
         # Data is a tuple with size <= 4, we assume this designates a generate
         # vertex attribute.

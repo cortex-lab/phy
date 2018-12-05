@@ -10,7 +10,7 @@
 
 import os.path as op
 
-from .plot import View
+from .plot import PlotCanvas
 from .transform import Translate, Scale, Range, Subplot, NDC
 from .panzoom import PanZoom
 from .utils import _get_linear_x

@@ -112,6 +112,7 @@ class ScatterVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
         if data.data_bounds is not None:
             self.data_range.from_bounds = data.data_bounds
             pos_tr = self.transforms.apply(data.pos)
@@ -201,6 +202,7 @@ class UniformScatterVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
         if data.data_bounds is not None:
             self.data_range.from_bounds = data.data_bounds
             pos_tr = self.transforms.apply(data.pos)
@@ -306,6 +308,7 @@ class PlotVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
 
         assert isinstance(data.y, list)
         n_signals = len(data.y)
@@ -405,6 +408,7 @@ class UniformPlotVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
 
         assert isinstance(data.y, list)
         n_signals = len(data.y)
@@ -502,6 +506,7 @@ class HistogramVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
         hist = data.hist
 
         n_hists, n_bins = hist.shape
@@ -601,10 +606,12 @@ class TextVisual(BaseVisual):
     def vertex_count(pos=None, **kwargs):
         """Take the output of validate() as input."""
         # Total number of glyphs * 6 (6 vertices per glyph).
-        return sum(map(len, kwargs['text'])) * 6
+        return sum(map(len, kwargs.get('text', ''))) * 6
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
+
         pos = data.pos.astype(np.float64)
         assert pos.ndim == 2
         assert pos.shape[1] == 2
@@ -717,6 +724,8 @@ class LineVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
+
         pos = data.pos
         assert pos.ndim == 2
         assert pos.shape[1] == 4
@@ -775,6 +784,8 @@ class PolygonVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(*args, **kwargs)
+
         pos = data.pos
         assert pos.ndim == 2
         assert pos.shape[1] == 2
