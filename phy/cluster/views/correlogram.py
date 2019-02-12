@@ -123,8 +123,8 @@ class CorrelogramView(ManualClusteringView):
         super(CorrelogramView, self).attach(gui)
         self.actions.add(self.toggle_normalization, shortcut='n', checkable=True)
         self.actions.separator()
-        self.actions.add(self.set_bin, alias='cb')
-        self.actions.add(self.set_window, alias='cw')
+        self.actions.add(self.set_bin, alias='cb', prompt=True)
+        self.actions.add(self.set_window, alias='cw', prompt=True)
 
     @property
     def state(self):
