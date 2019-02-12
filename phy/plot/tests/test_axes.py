@@ -20,18 +20,6 @@ from ..axes import AxisLocator, Axes
 # Tests axes
 #------------------------------------------------------------------------------
 
-def test_locator_1():
-    l = AxisLocator('auto')
-
-    l.set_view_bounds((0., 0., 1., 1.))
-    ae(l.xticks, l.yticks)
-    ae(l.xticks, np.linspace(-1., 2., 7))
-
-    l.set_view_bounds((.101, -201, .201, -101))
-    ac(l.xticks, np.linspace(0, .35, 8))
-    ae(l.yticks, np.linspace(-350., 0., 8))
-
-
 def test_axes_1(qtbot, canvas_pz):
     c = canvas_pz
 
