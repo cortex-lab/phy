@@ -83,7 +83,11 @@ class Axes(object):
     def __init__(self, color=None, data_bounds=None):
         self.locator = AxisLocator(data_bounds=data_bounds)
         self.color = color or self.default_color
+        self._create_visuals()
+        self._last_log_zoom = (1, 1)
+        self._last_pan = (0, 0)
 
+    def _create_visuals(self):
         self.xvisual = LineVisual()
         self.yvisual = LineVisual()
         self.txvisual = TextVisual()
@@ -93,9 +97,6 @@ class Axes(object):
         _fix_coordinate_in_visual(self.yvisual, 'x')
         _fix_coordinate_in_visual(self.txvisual, 'y')
         _fix_coordinate_in_visual(self.tyvisual, 'x')
-
-        self._last_log_zoom = (1, 1)
-        self._last_pan = (0, 0)
 
     def set_bounds(self, bounds):
         self.locator.set_view_bounds(bounds)

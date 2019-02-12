@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+
 import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
@@ -43,5 +45,6 @@ def test_axes_1(qtbot, canvas_pz):
     #c.panzoom.zoom = 8
     #c.panzoom.pan = (3, 3)
 
-    # qtbot.stop()
+    if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+        qtbot.stop()
     c.close()
