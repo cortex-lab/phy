@@ -22,6 +22,7 @@ from .utils import (_tesselate_histogram,
                     _get_pos,
                     _get_index,
                     )
+from phy.gui.qt import _is_high_dpi
 from phy.utils import Bunch
 
 
@@ -451,7 +452,7 @@ class UniformPlotVisual(BaseVisual):
 
 
 #------------------------------------------------------------------------------
-# Other visuals
+# Histogram visual
 #------------------------------------------------------------------------------
 
 class HistogramVisual(BaseVisual):
@@ -536,6 +537,10 @@ class HistogramVisual(BaseVisual):
         self.program['n_hists'] = n_hists
 
 
+#------------------------------------------------------------------------------
+# Test visual
+#------------------------------------------------------------------------------
+
 class TextVisual(BaseVisual):
     """Display strings at multiple locations.
 
@@ -554,7 +559,7 @@ class TextVisual(BaseVisual):
         # Load the font.
         curdir = op.realpath(op.dirname(__file__))
         font_name = 'SourceCodePro-Regular'
-        font_size = 32
+        font_size = 32 if not _is_high_dpi() else 64
         # The font texture is gzipped.
         fn = '%s-%d.npy.gz' % (font_name, font_size)
         with gzip.open(op.join(curdir, 'static', fn), 'rb') as f:
@@ -684,6 +689,10 @@ class TextVisual(BaseVisual):
         self.program['u_tex'] = tex[::-1, :]
 
 
+#------------------------------------------------------------------------------
+# Line visual
+#------------------------------------------------------------------------------
+
 class LineVisual(BaseVisual):
     """Lines."""
     _default_color = (.3, .3, .3, 1.)
@@ -747,6 +756,10 @@ class LineVisual(BaseVisual):
         color = np.repeat(data.color, 2, axis=0)
         self.program['a_color'] = color.astype(np.float32)
 
+
+#------------------------------------------------------------------------------
+# Polygon visual
+#------------------------------------------------------------------------------
 
 class PolygonVisual(BaseVisual):
     """Polygon."""
