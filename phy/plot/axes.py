@@ -16,6 +16,7 @@ from matplotlib.ticker import MaxNLocator
 from .transform import NDC, Range
 from .visuals import LineVisual, TextVisual
 from phy import connect
+from phy.gui.qt import _is_high_dpi
 
 
 #------------------------------------------------------------------------------
@@ -23,11 +24,24 @@ from phy import connect
 #------------------------------------------------------------------------------
 
 class AxisLocator(object):
-    def __init__(self, nbins=24, data_bounds=None):
-        self.locator = MaxNLocator(nbins=nbins, steps=[1, 2, 2.5, 5, 10])
+    _default_nbinsx = 12
+    _default_nbinsy = 8
+    # ticks are extended beyond the viewport for smooth transition
+    # when panzooming: -2, -1, 0, +1, +2
+    _bins_margin = 5
+    _default_steps = (1, 2, 2.5, 5, 10)
+
+    def __init__(self, nbinsx=None, nbinsy=None, data_bounds=None):
         self.data_bounds = data_bounds
         self._tr = Range(from_bounds=NDC, to_bounds=self.data_bounds)
         self._tri = self._tr.inverse()
+        self.set_nbins(nbinsx, nbinsy)
+
+    def set_nbins(self, nbinsx=None, nbinsy=None):
+        nbinsx = nbinsx or self._default_nbinsx
+        nbinsy = nbinsy or self._default_nbinsy
+        self.locx = MaxNLocator(nbins=self._bins_margin * nbinsx, steps=self._default_steps)
+        self.locy = MaxNLocator(nbins=self._bins_margin * nbinsy, steps=self._default_steps)
 
     def _transform_ticks(self, xticks, yticks):
         """From data coordinates to view coordinates."""
@@ -38,10 +52,11 @@ class AxisLocator(object):
         out = self._tri.apply(arr)
         return out[:nx, 0], out[nx:, 1]
 
-    def set_view_bounds(self, view_bounds):
+    def set_view_bounds(self, view_bounds=None):
+        view_bounds = view_bounds or NDC
         x0, y0, x1, y1 = view_bounds
-        dx = x1 - x0
-        dy = y1 - y0
+        dx = 2 * (x1 - x0)
+        dy = 2 * (y1 - y0)
 
         # Get the bounds in data coordinates.
         ((dx0, dy0), (dx1, dy1)) = self._tr.apply([
@@ -49,8 +64,8 @@ class AxisLocator(object):
             [x1 + dx, y1 + dy]])
 
         # Compute the ticks in data coordinates.
-        self.xticks = self.locator.tick_values(dx0, dx1)
-        self.yticks = self.locator.tick_values(dy0, dy1)
+        self.xticks = self.locx.tick_values(dx0, dx1)
+        self.yticks = self.locy.tick_values(dy0, dy1)
 
         # Get the ticks in view coordinates.
         self.xticks_view, self.yticks_view = self._transform_ticks(self.xticks, self.yticks)
@@ -77,6 +92,20 @@ def _set_line_data(xticks, yticks):
     return xdata, ydata
 
 
+def get_nbins(w, h):
+    """Return a sensible number of bins on the x and y axes as a function
+    of the window size."""
+    if _is_high_dpi():
+        w, h = w // 2, h // 2
+    return max(1, w // 150), max(1, h // 80)
+
+
+def _quant_zoom(z):
+    if z == 0:
+        return 0
+    return int(z) if z >= 1 else -int(1. / z)
+
+
 class Axes(object):
     default_color = (1, 1, 1, .25)
 
@@ -100,6 +129,9 @@ class Axes(object):
 
     def set_bounds(self, bounds):
         self.locator.set_view_bounds(bounds)
+        self.update_visuals()
+
+    def update_visuals(self):
         # Get the text data.
         xtext, ytext = self.locator.xtext, self.locator.ytext
         # GPU data for the grid.
@@ -111,7 +143,7 @@ class Axes(object):
         self.xvisual.set_data(xdata, color=self.color)
         self.yvisual.set_data(ydata, color=self.color)
 
-        self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, 1.02))
+        self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, +1.02))
         self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
 
     def attach(self, canvas):
@@ -121,10 +153,16 @@ class Axes(object):
         canvas.add_visual(self.tyvisual)
         self.set_bounds(NDC)
 
+        @connect(sender=canvas)
+        def on_resize(sender, w, h):
+            nbinsx, nbinsy = get_nbins(w, h)
+            self.locator.set_nbins(nbinsx, nbinsy)
+            self.set_bounds(canvas.panzoom.get_range())
+
         @connect(sender=canvas.panzoom)
         def on_zoom(sender, zoom):
             zx, zy = zoom
-            ix, iy = int(log2(zx)), int(log2(zy))
+            ix, iy = _quant_zoom(zx), _quant_zoom(zy)
             if (ix, iy) != self._last_log_zoom:
                 self._last_log_zoom = ix, iy
                 self.set_bounds(canvas.panzoom.get_range())

@@ -408,12 +408,13 @@ class BaseCanvas(QOpenGLWindow):
         """Raise an event and calls on_***() on attached objects."""
         for obj in self._attached:
             f = getattr(obj, 'on_' + name, None)
-            if not f:
-                continue
-            f(Bunch(kwargs))
+            if f:
+                f(Bunch(kwargs))
 
     def resizeEvent(self, e):
         self.emit('resize')
+        # Also emit a global resize event.
+        emit('resize', self, *self.get_size())
 
     def _mouse_event(self, name, e):
         pos, button = mouse_info(e)
@@ -466,7 +467,7 @@ class BaseCanvas(QOpenGLWindow):
         key, modifiers = self._key_event('key_press', e)
 
     def keyReleaseEvent(self, e):
-        self._key_event('key_press', e)
+        self._key_event('key_release', e)
 
     def _event(self, e):
         out = super(BaseCanvas, self).event(e)
