@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+
 import numpy as np
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
@@ -28,7 +30,7 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
     v.set_data(**kwargs)
     c.show()
     qtbot.waitForWindowShown(c)
-    if stop:  # pragma: no cover
+    if os.environ.get('PHY_TEST_STOP', None) or stop:  # pragma: no cover
         qtbot.stop()
     c.close()
 

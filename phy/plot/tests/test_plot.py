@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
 from pytest import fixture
 
 from ..plot import PlotCanvas
