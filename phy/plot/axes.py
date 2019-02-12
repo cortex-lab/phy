@@ -14,6 +14,7 @@ from matplotlib.ticker import MaxNLocator
 from .transform import NDC, Range
 from .visuals import LineVisual, TextVisual
 from phy import connect
+from phy.utils._types import _is_integer
 from phy.gui.qt import _is_high_dpi
 
 
@@ -36,10 +37,10 @@ class AxisLocator(object):
         self.set_nbins(nbinsx, nbinsy)
 
     def set_nbins(self, nbinsx=None, nbinsy=None):
-        nbinsx = nbinsx or self._default_nbinsx
-        nbinsy = nbinsy or self._default_nbinsy
-        self.locx = MaxNLocator(nbins=self._bins_margin * nbinsx, steps=self._default_steps)
-        self.locy = MaxNLocator(nbins=self._bins_margin * nbinsy, steps=self._default_steps)
+        nbinsx = self._bins_margin * nbinsx if _is_integer(nbinsx) else self._default_nbinsx
+        nbinsy = self._bins_margin * nbinsy if _is_integer(nbinsy) else self._default_nbinsy
+        self.locx = MaxNLocator(nbins=nbinsx, steps=self._default_steps)
+        self.locy = MaxNLocator(nbins=nbinsy, steps=self._default_steps)
 
     def _transform_ticks(self, xticks, yticks):
         """From data coordinates to view coordinates."""
