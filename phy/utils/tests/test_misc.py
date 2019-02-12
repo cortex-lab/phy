@@ -110,7 +110,7 @@ def test_git_version():
         with open(os.devnull, 'w') as fnull:
             subprocess.check_output(['git', '-C', filedir, 'status'],
                                     stderr=fnull)
-            assert v is not "", "git_version failed to return"
+            assert v != "", "git_version failed to return"
             assert v[:5] == "-git-", "Git version does not begin in -git-"
     except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         assert v == ""
