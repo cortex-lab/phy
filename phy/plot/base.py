@@ -329,6 +329,7 @@ class BaseCanvas(QOpenGLWindow):
         self.inserter = GLSLInserter()
         self.visuals = []
         self._next_paint_callbacks = []
+        self._size = (0, 0)
 
         # Events.
         self._attached = []
@@ -380,15 +381,10 @@ class BaseCanvas(QOpenGLWindow):
         gl.enable_depth_mask()
         self.update()
 
-    def resizeGL(self, w, h):
-        """Resize the OpenGL context."""
-        for visual in self.visuals:
-            visual.on_resize(w, h)
-        self.update()
-
     def paintGL(self):
         """Draw all visuals."""
         gloo.clear()
+        size = self.get_size()
         # Flush the queue of next paint callbacks.
         for f in self._next_paint_callbacks:
             f()
@@ -396,7 +392,10 @@ class BaseCanvas(QOpenGLWindow):
         # Draw all visuals.
         for visual in self.visuals:
             logger.log(5, "Draw visual `%s`.", visual)
+            if size != self._size:
+                visual.on_resize(*size)
             visual.on_draw()
+        self._size = size
 
     # Events
     # ---------------------------------------------------------------------------------------------
