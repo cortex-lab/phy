@@ -7,8 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from math import log2
-
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
