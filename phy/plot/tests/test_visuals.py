@@ -318,5 +318,6 @@ def test_text_2(qtbot, canvas_pz):
     c.show()
     qtbot.waitForWindowShown(c)
 
-    # qtbot.stop()
+    if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+        qtbot.stop()
     c.close()
