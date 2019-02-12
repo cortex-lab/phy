@@ -319,13 +319,17 @@ class Texture2D(Texture):
             nbytes += (self.width - ((offset + nbytes) %
                                      self.width)) % self.width
 
-            x = 0
-            y = offset // self.width
-            width = self.width
-            height = nbytes // self.width
+            # x = 0
+            # y = offset // self.width
+            # width = self.width
+            # height = nbytes // self.width
             gl.glBindTexture(self._target, self.handle)
-            gl.glTexSubImage2D(self.target, 0, x, y, width, height,
-                               self._cpu_format, self.gtype, self)
+            # gl.glTexSubImage2D(self.target, 0, x, y, width, height,
+            #                    self._cpu_format, self.gtype, self)
+            # HACK: disable partial texture update which fails if the new texture
+            # doesn't have the same size.
+            gl.glTexImage2D(self.target, 0, self._gpu_format, self.width, self.height,
+                            0, self._cpu_format, self.gtype, self)
             gl.glBindTexture(self._target, self.handle)
 
         self._pending_data = None
