@@ -549,7 +549,7 @@ class TextVisual(BaseVisual):
     """
     _default_color = (1., 1., 1., 1.)
 
-    def __init__(self, color=None):
+    def __init__(self):
         super(TextVisual, self).__init__()
         self.set_shader('text')
         self.set_primitive_type('triangles')
@@ -566,15 +566,13 @@ class TextVisual(BaseVisual):
             self._tex = np.load(f)
         with open(op.join(curdir, 'static', 'chars.txt'), 'r') as f:
             self._chars = f.read()
-        self.color = color if color is not None else self._default_color
-        assert len(self.color) == 4
 
     def _get_glyph_indices(self, s):
         return [self._chars.index(char) for char in s]
 
     @staticmethod
     def validate(pos=None, text=None, anchor=None,
-                 data_bounds=None,
+                 data_bounds=None, color=None,
                  ):
 
         if text is None:
@@ -591,6 +589,9 @@ class TextVisual(BaseVisual):
         n_text = pos.shape[0]
         assert len(text) == n_text
 
+        color = color if color is not None else TextVisual._default_color
+        assert len(color) == 4
+
         anchor = anchor if anchor is not None else (0., 0.)
         anchor = np.atleast_2d(anchor)
         if anchor.shape[0] == 1:
@@ -605,7 +606,7 @@ class TextVisual(BaseVisual):
             assert data_bounds.shape == (n_text, 4)
 
         return Bunch(pos=pos, text=text, anchor=anchor,
-                     data_bounds=data_bounds)
+                     color=color, data_bounds=data_bounds)
 
     @staticmethod
     def vertex_count(pos=None, **kwargs):
@@ -684,7 +685,7 @@ class TextVisual(BaseVisual):
         self.program['a_lengths'] = a_lengths.astype(np.float32)
 
         self.program['u_glyph_size'] = glyph_size
-        # TODO: color
+        self.program['u_color'] = data.color
 
         self.program['u_tex'] = tex[::-1, :]
 

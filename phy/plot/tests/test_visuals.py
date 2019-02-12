@@ -297,7 +297,7 @@ def test_text_1(qtbot, canvas_pz):
     pos = np.c_[np.linspace(-.5, .5, 10), np.linspace(-.5, .5, 10)]
 
     _test_visual(qtbot, canvas_pz, TextVisual(),
-                 pos=pos, text=text)
+                 color=(1, 1, 0, 1), pos=pos, text=text)
 
 
 def test_text_2(qtbot, canvas_pz):
