@@ -53,7 +53,7 @@ class PanZoom(BaseInteract):
     _pm = ('+', '-')
 
     def __init__(self,
-                 aspect=1.0,
+                 aspect=None,
                  pan=(0.0, 0.0), zoom=(1.0, 1.0),
                  zmin=1e-5, zmax=1e5,
                  xmin=None, xmax=None,
