@@ -9,11 +9,7 @@
 
 import os
 
-import numpy as np
-from numpy.testing import assert_equal as ae
-from numpy.testing import assert_allclose as ac
-
-from ..axes import AxisLocator, Axes
+from ..axes import Axes
 
 
 #------------------------------------------------------------------------------
