@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+
 from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
@@ -43,6 +45,10 @@ def panzoom(qtbot, canvas_pz):
 
     yield c.panzoom
 
+    if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+        qtbot.stop()
+    c.close()
+
 
 #------------------------------------------------------------------------------
 # Test panzoom
@@ -52,7 +58,7 @@ def test_panzoom_basic_attrs():
     pz = PanZoom()
 
     # Aspect.
-    assert pz.aspect == 1.
+    assert pz.aspect is None
     pz.aspect = 2.
     assert pz.aspect == 2.
 
@@ -72,7 +78,7 @@ def test_panzoom_basic_constrain():
     pz = PanZoom(constrain_bounds=(-1, -1, 1, 1))
 
     # Aspect.
-    assert pz.aspect == 1.
+    assert pz.aspect is None
     pz.aspect = 2.
     assert pz.aspect == 2.
 

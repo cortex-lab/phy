@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import fixture, yield_fixture
 
 from ..base import BaseCanvas
 from ..panzoom import PanZoom
@@ -21,10 +21,11 @@ def canvas(qapp):
     c = BaseCanvas()
     yield c
     c.close()
-    del c
+    #del c
 
 
-@yield_fixture
+@fixture
 def canvas_pz(canvas):
-    PanZoom(enable_mouse_wheel=True).attach(canvas)
-    yield canvas
+    pz = PanZoom(enable_mouse_wheel=True)
+    pz.attach(canvas)
+    return canvas
