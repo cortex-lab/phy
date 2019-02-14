@@ -157,11 +157,8 @@ def test_scale_glsl():
 def test_range_glsl():
 
     assert Range([-1, -1, 1, 1]).glsl('x')
-
-    expected = ('u_to.xy + (u_to.zw - u_to.xy) * (x - u_from.xy) / '
-                '(u_from.zw - u_from.xy)')
     r = Range('u_from', 'u_to')
-    assert expected in r.glsl('x')
+    assert 'x = (x - fxy);' in r.glsl('x')
 
 
 def test_clip_glsl():
