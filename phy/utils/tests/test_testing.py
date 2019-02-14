@@ -16,7 +16,6 @@ from pytest import mark
 
 from ..testing import (benchmark, captured_output, captured_logging,
                        _assert_equal, _enable_profiler, _profile,
-                       show_colored_canvas,
                        )
 
 
@@ -49,10 +48,6 @@ def test_assert_equal():
 def test_benchmark():
     with benchmark():
         time.sleep(.002)
-
-
-def test_show_colored_canvas():
-    show_colored_canvas((.6, 0, .8))
 
 
 @mark.parametrize('line_by_line', [False, True])
