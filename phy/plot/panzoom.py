@@ -12,7 +12,6 @@ import sys
 
 import numpy as np
 
-from .base import BaseInteract
 from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
 from phy.utils import emit, connect
@@ -22,7 +21,7 @@ from phy.utils import emit, connect
 # PanZoom class
 #------------------------------------------------------------------------------
 
-class PanZoom(BaseInteract):
+class PanZoom(object):
     """Pan and zoom interact.
 
     To use it:
@@ -227,13 +226,13 @@ class PanZoom(BaseInteract):
             self._zoom[1] = max(self._zoom[1],
                                 1. / (self.ymax - self._pan[1]))
 
-    def get_mouse_pos(self, pos):
+    def window_to_ndc(self, pos):
         """Return the mouse coordinates in NDC, taking panzoom into account."""
         position = np.asarray(self._normalize(pos))
         zoom = np.asarray(self._zoom_aspect())
         pan = np.asarray(self.pan)
-        mouse_pos = ((position / zoom) - pan)
-        return mouse_pos
+        ndc = ((position / zoom) - pan)
+        return ndc
 
     # Pan and zoom
     # -------------------------------------------------------------------------
@@ -474,13 +473,18 @@ class PanZoom(BaseInteract):
 
     def attach(self, canvas):
         """Attach this interact to a canvas."""
-        super(PanZoom, self).attach(canvas)
         canvas.panzoom = self
+        self.canvas = canvas
         self._set_canvas_aspect()
 
         @connect(sender=canvas)
         def on_visual_added(sender, visual):
-            self.update_program(visual.program)
+            self.update_visual(visual)
+
+        @connect
+        def on_visual_set_data(visual):
+            if visual in canvas.visuals:
+                self.update_visual(visual)
 
         # Because the visual shaders must be modified to account for u_pan and u_zoom.
         if not all(v.program is None for v in canvas.visuals):
@@ -504,6 +508,14 @@ class PanZoom(BaseInteract):
         arr = Translate(self.pan).inverse().apply(arr)
         return arr
 
-    def update_program(self, program):
-        program[self.pan_var_name] = self._pan
-        program[self.zoom_var_name] = self._zoom_aspect()
+    def update_visual(self, visual):
+        visual.program[self.pan_var_name] = self._pan
+        visual.program[self.zoom_var_name] = self._zoom_aspect()
+
+    def update(self):
+        """Update all visuals in the attached canvas."""
+        if not self.canvas:
+            return
+        for visual in self.canvas.visuals:
+            self.update_visual(visual)
+        self.canvas.update()

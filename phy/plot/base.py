@@ -17,8 +17,9 @@ from phy.gui.qt import QOpenGLWindow, Qt, QEvent
 from . import gloo
 from .gloo import gl
 from .transform import TransformChain, Clip, pixels_to_ndc
-from .utils import _load_shader
+from .utils import _load_shader, _get_array
 from phy.utils import connect, emit, Bunch
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,10 @@ class BaseVisual(object):
 
     It is rendered with a single pass of a single gloo program with a single
     type of GL primitive.
+
+    NOTE:
+    * set_data MUST set self.n_vertices (necessary for a_box_index in layouts)
+    * set_data MUST emit('visual_set_data', self) at the end (registration point for layouts)
 
     """
 
@@ -70,7 +75,7 @@ class BaseVisual(object):
     def on_draw(self):
         """Draw the visual."""
         # Skip the drawing if the program hasn't been built yet.
-        # The program is built by the interact.
+        # The program is built by the layout.
         if self.program is not None:
             # Draw the program.
             self.program.draw(self.gl_primitive_type)
@@ -112,7 +117,7 @@ class BaseVisual(object):
 
 
 #------------------------------------------------------------------------------
-# Build program with interacts
+# Build program with layouts
 #------------------------------------------------------------------------------
 
 def _insert_glsl(vertex, fragment, to_insert):
@@ -306,22 +311,6 @@ def key_info(e):
                 return name
 
 
-def window_to_ndc(pos, size=None, box=None, panzoom=None, interact=None):
-    """Convert coordinates in pixels to NDC, taking into account window size,
-    possible panzoom and interact."""
-    # From window coordinates to NDC (pan & zoom taken into account).
-    if panzoom:
-        pos = panzoom.get_mouse_pos(pos)
-    else:
-        pos = np.asarray(pixels_to_ndc(pos, size=size))
-
-    # From NDC to data coordinates.
-    if interact:
-        pos = interact.imap(pos, box)
-
-    return pos
-
-
 class BaseCanvas(QOpenGLWindow):
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
@@ -340,6 +329,15 @@ class BaseCanvas(QOpenGLWindow):
 
     def get_size(self):
         return self.size().width() or 1, self.size().height() or 1
+
+    def window_to_ndc(self, mouse_pos):
+        """Get NDC coordinates from a position in window coordinates, taking into
+        account panzoom."""
+        panzoom = getattr(self, 'panzoom', None)
+        ndc = (
+            panzoom.window_to_ndc(mouse_pos) if panzoom else
+            np.asarray(pixels_to_ndc(mouse_pos, size=self.get_size())))
+        return ndc
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
@@ -391,10 +389,12 @@ class BaseCanvas(QOpenGLWindow):
         self._next_paint_callbacks.clear()
         # Draw all visuals.
         for visual in self.visuals:
-            logger.log(5, "Draw visual `%s`.", visual)
             if size != self._size:
                 visual.on_resize(*size)
-            visual.on_draw()
+            # Do not draw if there are no vertices.
+            if visual.n_vertices > 0:
+                logger.log(5, "Draw visual `%s`.", visual)
+                visual.on_draw()
         self._size = size
 
     # Events
@@ -499,30 +499,64 @@ class BaseCanvas(QOpenGLWindow):
 
 
 #------------------------------------------------------------------------------
-# Base interact
+# Base layout
 #------------------------------------------------------------------------------
 
-class BaseInteract(object):
+class BaseLayout(object):
     """Implement dynamic transforms on a canvas."""
     canvas = None
+    box_var = None
+    n_dims = 1
+    active_box = 0
+
+    def __init__(self, box_var=None):
+        self.box_var = box_var or 'a_box_index'
 
     def attach(self, canvas):
-        """Attach this interact to a canvas."""
+        """Attach this layout to a canvas."""
         self.canvas = canvas
+        canvas.layout = self
 
-        @connect(sender=canvas)
-        def on_visual_added(sender, visual):
-            self.update_program(visual.program)
+        @connect
+        def on_visual_set_data(visual):
+            if visual in canvas.visuals:
+                self.update_visual(visual)
 
-    def update_program(self, program):
-        """Override this method to update programs when `self.update()`
-        is called."""
-        pass
+    def map(self, arr, box=None):
+        """Direct transformation from data to NDC coordinates."""
+        raise NotImplementedError()
+
+    def imap(self, arr, box=None):
+        """Inverse transformation from NDC to data coordinates."""
+        raise NotImplementedError()
+
+    def get_closest_box(self, ndc):
+        """Override to return the box closest to a given position in NDC."""
+        raise NotImplementedError()
+
+    def click_in_box(self, mouse_pos):
+        """Get the mouse position from window coordinates to local NDC coordinates."""
+        if not self.canvas:
+            return
+        ndc = self.canvas.window_to_ndc(mouse_pos)
+        box = self.get_closest_box(ndc)
+        self.active_box = box
+        # From NDC to data coordinates, in the given box.
+        return self.imap(ndc, box)
+
+    def update_visual(self, visual):
+        """Called whenever visual.set_data() is called. Set a_box_index in here."""
+        if (visual.n_vertices > 0 and self.box_var in visual.program and
+                ((visual.program[self.box_var] is None) or
+                 (visual.program[self.box_var].shape[0] != visual.n_vertices))):
+            logger.log(5, "Set %s(%d) for %s" % (self.box_var, visual.n_vertices, visual))
+            visual.program[self.box_var] = _get_array(
+                self.active_box, (visual.n_vertices, self.n_dims)).astype(np.float32)
 
     def update(self):
         """Update all visuals in the attached canvas."""
         if not self.canvas:
             return
         for visual in self.canvas.visuals:
-            self.update_program(visual.program)
+            self.update_visual(visual)
         self.canvas.update()

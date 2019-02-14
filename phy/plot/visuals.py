@@ -23,7 +23,7 @@ from .utils import (_tesselate_histogram,
                     _get_index,
                     )
 from phy.gui.qt import _is_high_dpi
-from phy.utils import Bunch
+from phy.utils import Bunch, emit
 
 
 #------------------------------------------------------------------------------
@@ -123,6 +123,7 @@ class ScatterVisual(BaseVisual):
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_size'] = data.size.astype(np.float32)
         self.program['a_color'] = data.color.astype(np.float32)
+        emit('visual_set_data', self)
 
 
 class UniformScatterVisual(BaseVisual):
@@ -218,6 +219,7 @@ class UniformScatterVisual(BaseVisual):
         self.program['u_size'] = self.marker_size
         self.program['u_color'] = self.color
         self.program['u_mask_max'] = _max(masks)
+        emit('visual_set_data', self)
 
 
 #------------------------------------------------------------------------------
@@ -347,6 +349,8 @@ class PlotVisual(BaseVisual):
         self.program['a_color'] = color.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
 
+        emit('visual_set_data', self)
+
 
 class UniformPlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
@@ -450,6 +454,8 @@ class UniformPlotVisual(BaseVisual):
         self.program['u_color'] = self.color
         self.program['u_mask_max'] = _max(masks)
 
+        emit('visual_set_data', self)
+
 
 #------------------------------------------------------------------------------
 # Histogram visual
@@ -535,6 +541,8 @@ class HistogramVisual(BaseVisual):
         tex = _get_texture(data.color, self._default_color, n_hists, [0, 1])
         self.program['u_color'] = tex.astype(np.float32)
         self.program['n_hists'] = n_hists
+
+        emit('visual_set_data', self)
 
 
 #------------------------------------------------------------------------------
@@ -689,6 +697,8 @@ class TextVisual(BaseVisual):
 
         self.program['u_tex'] = tex[::-1, :]
 
+        emit('visual_set_data', self)
+
 
 #------------------------------------------------------------------------------
 # Line visual
@@ -757,6 +767,8 @@ class LineVisual(BaseVisual):
         color = np.repeat(data.color, 2, axis=0)
         self.program['a_color'] = color.astype(np.float32)
 
+        emit('visual_set_data', self)
+
 
 #------------------------------------------------------------------------------
 # Polygon visual
@@ -764,7 +776,7 @@ class LineVisual(BaseVisual):
 
 class PolygonVisual(BaseVisual):
     """Polygon."""
-    _default_color = (.5, .5, .5, 1.)
+    _default_color = (1, 1, 1, 1)
 
     def __init__(self):
         super(PolygonVisual, self).__init__()
@@ -815,3 +827,5 @@ class PolygonVisual(BaseVisual):
         self.program['a_position'] = pos_tr.astype(np.float32)
 
         self.program['u_color'] = self._default_color
+
+        emit('visual_set_data', self)
