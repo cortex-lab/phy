@@ -105,7 +105,7 @@ def subplot_bounds_glsl(shape=None, index=None):
     x1 = '-1.0 + 2.0 * ({i}.y + 1) / {s}.y'.format(s=shape, i=index)
     y1 = '+1.0 - 2.0 * ({i}.x) / {s}.x'.format(s=shape, i=index)
 
-    return 'vec4({x0}, {y0}, {x1}, {y1})'.format(x0=x0, y0=y0, x1=x1, y1=y1)
+    return 'vec4(\n{x0}, \n{y0}, \n{x1}, \n{y1})'.format(x0=x0, y0=y0, x1=x1, y1=y1)
 
 
 def pixels_to_ndc(pos, size=None):
@@ -151,8 +151,10 @@ class Translate(BaseTransform):
 
     def glsl(self, var):
         assert var
-        return """{var} = {var} + {translate};""".format(var=var,
-                                                         translate=self.value)
+        return '''
+        // Translate transform.
+        {var} = {var} + {translate};
+        '''.format(var=var, translate=self.value)
 
     def inverse(self):
         if isinstance(self.value, string_types):
@@ -168,7 +170,10 @@ class Scale(BaseTransform):
 
     def glsl(self, var):
         assert var
-        return """{var} = {var} * {scale};""".format(var=var, scale=self.value)
+        return '''
+        // Scale transform.
+        {var} = {var} * {scale};
+        '''.format(var=var, scale=self.value)
 
     def inverse(self):
         if isinstance(self.value, string_types):
@@ -208,9 +213,17 @@ class Range(BaseTransform):
         from_bounds = _glslify(self.from_bounds)
         to_bounds = _glslify(self.to_bounds)
 
-        return ("{var} = {t}.xy + ({t}.zw - {t}.xy) * "
-                "({var} - {f}.xy) / ({f}.zw - {f}.xy);"
-                "").format(var=var, f=from_bounds, t=to_bounds)
+        return '''
+        // Range transform.
+        vec2 fxy = {f}.xy;
+        vec2 fzw = {f}.zw;
+        vec2 txy = {t}.xy;
+        vec2 tzw = {t}.zw;
+        {var} = ({var} - fxy);
+        {var} = {var} * (tzw - txy);
+        {var} = {var} / (fzw - fxy);
+        {var} = {var} + txy;
+        '''.format(var=var, f=from_bounds, t=to_bounds)
 
     def inverse(self):
         return Range(from_bounds=self.to_bounds,
@@ -235,12 +248,13 @@ class Clip(BaseTransform):
         bounds = _glslify(self.bounds)
 
         return """
-            if (({var}.x < {bounds}.x) ||
-                ({var}.y < {bounds}.y) ||
-                ({var}.x > {bounds}.z) ||
-                ({var}.y > {bounds}.w)) {{
-                discard;
-            }}
+        // Clip transform.
+        if (({var}.x < {bounds}.x) ||
+            ({var}.y < {bounds}.y) ||
+            ({var}.x > {bounds}.z) ||
+            ({var}.y > {bounds}.w)) {{
+            discard;
+        }}
         """.format(bounds=bounds, var=var)
 
     def inverse(self):
