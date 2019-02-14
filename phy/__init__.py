@@ -8,6 +8,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import atexit
 import logging
 import os.path as op
 import sys
@@ -63,6 +64,14 @@ def add_default_handler(level='INFO', logger=logger):
     handler.setFormatter(formatter)
 
     logger.addHandler(handler)
+
+
+@atexit.register
+def on_exit():
+    # Close the logging handlers.
+    for handler in logger.handlers:
+        handler.close()
+        logger.removeHandler(handler)
 
 
 DEBUG = False
