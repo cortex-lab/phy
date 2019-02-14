@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Common interacts."""
+"""Common layouts."""
 
 
 #------------------------------------------------------------------------------
@@ -10,18 +10,18 @@
 import numpy as np
 
 from phy.io.array import _in_polygon
-from .base import BaseInteract, window_to_ndc
+from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
 from .visuals import LineVisual, PolygonVisual
 
 
 #------------------------------------------------------------------------------
-# Grid interact
+# Grid
 #------------------------------------------------------------------------------
 
-class Grid(BaseInteract):
-    """Grid interact.
+class Grid(BaseLayout):
+    """Grid layout.
 
     NOTE: to be used in a grid, a visual must define `a_box_index`
     (by default) or another GLSL variable specified in `box_var`.
@@ -37,10 +37,11 @@ class Grid(BaseInteract):
     """
 
     margin = .075
+    n_dims = 2
+    active_box = (0, 0)
 
     def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
-        # Name of the variable with the box index.
-        self.box_var = box_var or 'a_box_index'
+        super(Grid, self).__init__(box_var=box_var)
         self.shape_var = shape_var
         self._shape = shape
         ms = 1 - self.margin
@@ -61,7 +62,7 @@ class Grid(BaseInteract):
 
     def map(self, arr, box=None):
         assert box is not None
-        assert len(box) == 2
+        assert len(box) == self.n_dims
         arr = self._transforms[0].apply(arr)
         arr = Subplot(self.shape, box).apply(arr)
         return arr
@@ -99,8 +100,10 @@ class Grid(BaseInteract):
         def _remove_clip(tc):
             return tc.remove('Clip')
 
-        canvas.add_visual(boxes, box_index=box_index)
+        canvas.add_visual(boxes)
+        boxes.program['a_box_index'] = box_index.astype(np.float32)
         boxes.set_data(pos=pos)
+        canvas.update()
 
     def get_closest_box(self, pos):
         x, y = pos
@@ -109,13 +112,9 @@ class Grid(BaseInteract):
         i = np.clip(int(rows * (1. - y) / 2.), 0, rows - 1)
         return i, j
 
-    def update_program(self, program):
-        program[self.shape_var] = self._shape
-        # Only set the default box index if necessary.
-        try:
-            program[self.box_var]
-        except KeyError:
-            program[self.box_var] = (0, 0)
+    def update_visual(self, visual):
+        super(Grid, self).update_visual(visual)
+        visual.program[self.shape_var] = self._shape
 
     @property
     def shape(self):
@@ -128,11 +127,11 @@ class Grid(BaseInteract):
 
 
 #------------------------------------------------------------------------------
-# Boxed interact
+# Boxed
 #------------------------------------------------------------------------------
 
-class Boxed(BaseInteract):
-    """Boxed interact.
+class Boxed(BaseLayout):
+    """Boxed layout.
 
     NOTE: to be used in a boxed, a visual must define `a_box_index`
     (by default) or another GLSL variable specified in `box_var`.
@@ -154,6 +153,8 @@ class Boxed(BaseInteract):
     """
 
     margin = 0
+    n_dims = 1
+    active_box = 0
 
     def __init__(self,
                  box_bounds=None,
@@ -162,11 +163,9 @@ class Boxed(BaseInteract):
                  box_var=None,
                  keep_aspect_ratio=True,
                  ):
+        super(Boxed, self).__init__(box_var=box_var)
         self._key_pressed = None
         self.keep_aspect_ratio = keep_aspect_ratio
-
-        # Name of the variable with the box index.
-        self.box_var = box_var or 'a_box_index'
 
         # Find the box bounds if only the box positions are passed.
         if box_bounds is None:
@@ -209,13 +208,14 @@ class Boxed(BaseInteract):
         assert 0 <= box < len(self.box_bounds)
         return Range(NDC, self.box_bounds[box]).inverse().apply(arr)
 
-    def update_program(self, program):
+    def update_visual(self, visual):
+        super(Boxed, self).update_visual(visual)
         # Signal bounds (positions).
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
         box_bounds = box_bounds.astype(np.float32)
         # TODO OPTIM: set the texture at initialization and update the data
-        program['u_box_bounds'] = box_bounds
-        program['n_boxes'] = self.n_boxes
+        visual.program['u_box_bounds'] = box_bounds
+        visual.program['n_boxes'] = self.n_boxes
 
     # Change the box bounds, positions, or size
     #--------------------------------------------------------------------------
@@ -272,7 +272,7 @@ class Boxed(BaseInteract):
 
 
 class Stacked(Boxed):
-    """Stacked interact.
+    """Stacked layout.
 
     NOTE: to be used in a stacked, a visual must define `a_box_index`
     (by default) or another GLSL variable specified in `box_var`.
@@ -317,13 +317,13 @@ class Stacked(Boxed):
 class Lasso(object):
     def __init__(self):
         self._points = []
-        self.view = None
+        self.canvas = None
         self.visual = None
-        self.box = None
+        #self.box = None
 
     def add(self, pos):
         self._points.append(pos)
-        self.update_visual()
+        self.update_lasso_visual()
 
     @property
     def polygon(self):
@@ -338,8 +338,8 @@ class Lasso(object):
 
     def clear(self):
         self._points = []
-        self.box = None
-        self.update_visual()
+        #self.box = None
+        self.update_lasso_visual()
 
     @property
     def count(self):
@@ -348,52 +348,32 @@ class Lasso(object):
     def in_polygon(self, pos):
         return _in_polygon(pos, self.polygon)
 
-    def attach(self, view):
-        view.attach_events(self)
-        self.view = view
+    def attach(self, canvas):
+        canvas.attach_events(self)
+        self.canvas = canvas
 
-    def create_visual(self):
+    def create_lasso_visual(self):
         self.visual = PolygonVisual()
-        self.view.add_visual(self.visual)
-        self.update_visual()
+        self.canvas.add_visual(self.visual)
+        #self.update_lasso_visual()
 
-    def update_visual(self):
+    def update_lasso_visual(self):
         if not self.visual:
             return
-        # Update the polygon.
+        # The following call updates a_box_index with the active box in BaseLayout.
         self.visual.set_data(pos=self.polygon)
-        """
-        # Set the box index for the polygon, depending on the box
-        # where the first point was clicked in.
-        box = (self.box if self.box is not None
-               else self.view._default_box_index)
-        k = len(self.view._default_box_index)
-        n = self.visual.vertex_count(pos=self.polygon)
-        box_index = _get_array(box, (n, k)).astype(np.float32)
-        self.visual.program['a_box_index'] = box_index
-        """
-        self.view.update()
+        self.canvas.update()
 
     def on_mouse_press(self, e):
         if 'Control' in e.modifiers:
             if e.button == 'Left':
-                # Find the box.
-                panzoom = getattr(self.view, 'panzoom', None)
-                ndc = panzoom.get_mouse_pos(e.pos) if panzoom else e.pos
-
-                # NOTE: we don't update the box after the second point.
-                # In other words, the first point determines the box for the
-                # lasso.
-                interact = getattr(self.view, 'interact', None)
-                if self.box is None and interact:
-                    self.box = interact.get_closest_box(ndc)
-                # Transform from window coordinates to NDC.
-                pos = window_to_ndc(e.pos, box=self.box, interact=interact,
-                                    size=self.view.get_size(), panzoom=panzoom)
-                self.add(pos)
+                layout = getattr(self.canvas, 'layout', None)
+                f = getattr(layout, 'click_in_box', self.canvas.window_to_ndc)
+                pos = f(e.pos)
+                self.add(pos)  # call update_lasso_visual
             else:
                 self.clear()
-                self.box = None
+                #self.box = None
 
     def __repr__(self):
         return str(self.polygon)

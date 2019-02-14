@@ -13,6 +13,7 @@ from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
 #from phy.gui.qt import Qt, QPoint
+from phy.utils import emit
 from . import mouse_drag, key_press
 from ..base import BaseVisual
 from ..panzoom import PanZoom
@@ -29,8 +30,10 @@ class MyTestVisual(BaseVisual):
         self.set_primitive_type('lines')
 
     def set_data(self):
+        self.n_vertices = 2
         self.program['a_position'] = [[-1, 0], [1, 0]]
         self.program['u_color'] = [1, 1, 1, 1]
+        emit('visual_set_data', self)
 
 
 @yield_fixture
@@ -199,7 +202,7 @@ def test_panzoom_set_range():
 def test_panzoom_mouse_pos():
     pz = PanZoom()
     pz.zoom_delta((10, 10), (.5, .25))
-    pos = pz.get_mouse_pos((.01, -.01))
+    pos = pz.window_to_ndc((.01, -.01))
     ac(pos, (.5, .25), atol=1e-3)
 
 
@@ -220,8 +223,6 @@ def test_panzoom_pan_mouse(qtbot, canvas_pz, panzoom):
     # Panning with a modifier should not pan.
     mouse_drag(qtbot, c, (100, 0), (200, 0), modifiers=('Control',))
     assert pz.pan == [0, 0]
-
-    # qtbot.stop()
 
 
 def _test_panzoom_touch(qtbot, canvas_pz, panzoom):

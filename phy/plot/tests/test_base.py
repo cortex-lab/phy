@@ -10,7 +10,8 @@
 import numpy as np
 from pytest import yield_fixture
 
-from ..base import BaseVisual, BaseInteract, GLSLInserter
+from phy.utils import emit
+from ..base import BaseVisual, BaseLayout, GLSLInserter
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)
 
@@ -84,6 +85,7 @@ def test_visual_1(qtbot, canvas):
             self.set_primitive_type('lines')
 
         def set_data(self):
+            self.n_vertices = 2
             self.program['a_position'] = [[-1, 0], [1, 0]]
             self.program['u_color'] = [1, 1, 1, 1]
 
@@ -119,6 +121,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
             self.inserter.insert_vert(s, 'after_transforms')
 
         def set_data(self):
+            self.n_vertices = 1000
             data = np.random.uniform(0, 20, (1000, 2))
             pos = self.transforms.apply(data).astype(np.float32)
             self.program['a_position'] = pos
@@ -128,7 +131,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
                                   Clip(bounds),
                                   ])
 
-    # We attach the visual to the canvas. By default, a BaseInteract is used.
+    # We attach the visual to the canvas. By default, a BaseLayout is used.
     v = TestVisual()
     canvas.add_visual(v)
     v.set_data()
@@ -142,9 +145,10 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     # qtbot.stop()
 
 
-def test_interact_1(qtbot, canvas):
-    interact = BaseInteract()
-    interact.update()
+def test_layout_1(qtbot, canvas):
+    layout = BaseLayout()
+    layout.attach(canvas)
+    #layout.update()
 
     class TestVisual(BaseVisual):
         def __init__(self):
@@ -153,14 +157,15 @@ def test_interact_1(qtbot, canvas):
             self.set_primitive_type('lines')
 
         def set_data(self):
+            self.n_vertices = 2
             self.program['a_position'] = [[-1, 0], [1, 0]]
             self.program['u_color'] = [1, 1, 1, 1]
+            emit('visual_set_data', self)
 
-    interact.attach(canvas)
     v = TestVisual()
     canvas.add_visual(v)
     v.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas)
-    interact.update()
+    layout.update()
