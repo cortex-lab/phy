@@ -385,6 +385,12 @@ class Attribute(Variable):
 
         log.log(5, "GPU: Updating %s" % self.name)
 
+        if self.data is None or self.data.size == 0:
+            log.error("Data is empty for %s" % self.name)
+            return
+        else:
+            log.log(5, "data shape is %s" % self.data.shape)
+
         # Check active status (mandatory)
 #        if not self._active:
 #            raise RuntimeError("Attribute variable is not active")
@@ -399,9 +405,14 @@ class Attribute(Variable):
 
         # Regular vertex buffer
         elif self.handle >= 0:
-            # if self._need_update:
-            #    self.data._update()
-            #    self._need_update = False
+            if self.data is None:
+                log.error("data %s is None" % self.name)
+                return
+            elif self.data.size == 0:
+                log.error("data %s is empty, %s" % (self.name, self.data.shape))
+                return
+            else:
+                log.log(5, "data %s is okay %s" % (self.name, self.data.shape))
 
             # Get relevant information from gl_typeinfo
             size, gtype, dtype = gl_typeinfo[self._gtype]
