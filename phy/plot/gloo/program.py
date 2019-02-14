@@ -4,7 +4,9 @@
 # -----------------------------------------------------------------------------
 
 import logging
+from operator import attrgetter
 import re
+
 import numpy as np
 
 from . import gl
@@ -99,7 +101,7 @@ class Program(GLObject):
         # Build associated structured vertex buffer if count is given
         if self._count > 0:
             dtype = []
-            for attribute in self._attributes.values():
+            for attribute in sorted(self._attributes.values(), filter=attrgetter('name')):
                 dtype.append(attribute.dtype)
             self._buffer = np.zeros(
                 self._count, dtype=dtype).view(VertexBuffer)
@@ -299,7 +301,6 @@ class Program(GLObject):
                     self._attributes[name].set_data(data.ravel()[name])
 
     def __setitem__(self, name, data):
-
         vhooks = self._vert_hooks.keys()
         fhooks = self._frag_hooks.keys()
 
@@ -354,6 +355,13 @@ class Program(GLObject):
             raise IndexError(
                 "Unknown item (no corresponding hook, uniform or attribute)")
 
+    def __contains__(self, name):
+        try:
+            self[name]
+            return True
+        except IndexError:
+            return False
+
     # def keys(self):
     #     """ Uniforme and attribute names """
 
@@ -365,12 +373,12 @@ class Program(GLObject):
         log.log(5, "GPU: Activating program (id=%d)" % self._id)
         gl.glUseProgram(self.handle)
 
-        for uniform in self._uniforms.values():
+        for uniform in sorted(self._uniforms.values(), key=attrgetter('name')):
             if uniform.active:
                 uniform.activate()
 
         # Need fix when dealing with vertex arrays (only need to active the array)
-        for attribute in self._attributes.values():
+        for attribute in sorted(self._attributes.values(), key=attrgetter('name')):
             if attribute.active:
                 attribute.activate()
 
@@ -379,11 +387,11 @@ class Program(GLObject):
 
         gl.glUseProgram(0)
 
-        for uniform in self._uniforms.values():
+        for uniform in sorted(self._uniforms.values(), key=attrgetter('name')):
             uniform.deactivate()
 
         # Need fix when dealing with vertex arrays (only need to active the array)
-        for attribute in self._attributes.values():
+        for attribute in sorted(self._attributes.values(), key=attrgetter('name')):
             attribute.deactivate()
         log.log(5, "GPU: Deactivating program (id=%d)" % self._id)
 
@@ -557,6 +565,13 @@ class Program(GLObject):
             if attribute in inactive_attributes:
                 inactive_attributes.remove(attribute)
         return inactive_attributes
+
+    @property
+    def n_vertices(self):
+        attr = next(iter(self._attributes.values()))
+        if attr:
+            return attr.shape[0]
+        return 0
 
     # first=0, count=None):
     def draw(self, mode=None, indices=None):

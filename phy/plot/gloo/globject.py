@@ -3,6 +3,10 @@
 # Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class GLObject(object):
     """ Generic GL object that may live both on CPU and GPU """
@@ -87,6 +91,7 @@ class GLObject(object):
             self._need_setup = False
 
         if self.need_update:
+            log.log(5, "%s need update" % self.handle)
             self._update()
             self._need_update = False
 
