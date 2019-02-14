@@ -40,6 +40,13 @@ def _try_get_matplotlib_canvas(view):
     return view
 
 
+def _try_get_opengl_canvas(view):
+    """Convert from QOpenGLWindow to QOpenGLWidget."""
+    from phy.plot.base import BaseCanvas
+    if isinstance(view, BaseCanvas):
+        return QWidget.createWindowContainer(view)
+
+
 class DockWidget(QDockWidget):
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
@@ -239,8 +246,9 @@ class GUI(QMainWindow):
         # The view name is `<class_name><view_index>`, e.g. `MyView0`.
         view.name = name or view.__class__.__name__ + str(view.view_index)
 
-        # Get the Qt canvas for matplotlib views.
+        # Get the Qt canvas for matplotlib/OpenGL views.
         widget = _try_get_matplotlib_canvas(view)
+        widget = _try_get_opengl_canvas(view)
 
         dock_widget = _create_dock_widget(widget, view.name,
                                           closable=closable,

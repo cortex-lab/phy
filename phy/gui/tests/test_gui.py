@@ -21,8 +21,8 @@ from phy.utils import Bunch, connect, unconnect
 
 def _create_canvas():
     """Create a GL view."""
-    from phy.plot import View
-    c = View()
+    from phy.plot import BaseCanvas
+    c = BaseCanvas()
     return c
 
 
@@ -67,8 +67,8 @@ def test_gui_1(tempdir, qtbot):
     view.setFloating(False)
     gui.show()
 
-    assert gui.get_view('Canvas')
-    assert len(gui.list_views('Canvas')) == 2
+    assert gui.get_view('BaseCanvas')
+    assert len(gui.list_views('BaseCanvas')) == 2
 
     # Check that the close_widget event is fired when the gui widget is
     # closed.

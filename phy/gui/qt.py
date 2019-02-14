@@ -39,7 +39,7 @@ from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
                              QMainWindow, QDockWidget, QWidget,
                              QMessageBox, QApplication, QMenuBar,
-                             QInputDialog,
+                             QInputDialog, QOpenGLWidget
                              )
 
 # Enable high DPI support.
