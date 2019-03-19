@@ -15,7 +15,7 @@ from vispy.util.event import Event
 
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, busy_cursor
-from phy.plot import View
+from phy.plot import BaseCanvas
 from phy.utils import Bunch, connect, unconnect
 
 logger = logging.getLogger(__name__)
@@ -153,7 +153,7 @@ class BaseManualClusteringView(object):
         self.status = message
 
 
-class ManualClusteringView(BaseManualClusteringView, View):
+class ManualClusteringView(BaseManualClusteringView, BaseCanvas):
     def __init__(self, *args, **kwargs):
         super(ManualClusteringView, self).__init__(*args, **kwargs)
         self.panzoom._default_zoom = .9

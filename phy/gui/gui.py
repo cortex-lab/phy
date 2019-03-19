@@ -35,8 +35,8 @@ def _try_get_matplotlib_canvas(view):
         # Case where the view has a .figure property which is a matplotlib figure.
         elif isinstance(getattr(view, 'figure', None), Figure):
             view = FigureCanvasQTAgg(view.figure)
-    except ImportError:  # pragma: no cover
-        pass
+    except ImportError as e:  # pragma: no cover
+        logger.warn("Import error: %s", e)
     return view
 
 
@@ -45,6 +45,7 @@ def _try_get_opengl_canvas(view):
     from phy.plot.base import BaseCanvas
     if isinstance(view, BaseCanvas):
         return QWidget.createWindowContainer(view)
+    return view
 
 
 class DockWidget(QDockWidget):
@@ -248,7 +249,7 @@ class GUI(QMainWindow):
 
         # Get the Qt canvas for matplotlib/OpenGL views.
         widget = _try_get_matplotlib_canvas(view)
-        widget = _try_get_opengl_canvas(view)
+        widget = _try_get_opengl_canvas(widget)
 
         dock_widget = _create_dock_widget(widget, view.name,
                                           closable=closable,
