@@ -10,6 +10,7 @@
 
 import os.path as op
 
+from .base import BaseCanvas
 from .plot import PlotCanvas
 from .transform import Translate, Scale, Range, Subplot, NDC
 from .panzoom import PanZoom
