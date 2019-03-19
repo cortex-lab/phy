@@ -185,6 +185,8 @@ def zoom_fun(ax, event):
     cur_ylim = ax.get_ylim()
     xdata = event.xdata
     ydata = event.ydata
+    if xdata is None or ydata is None:
+        return
     x_left = xdata - cur_xlim[0]
     x_right = cur_xlim[1] - xdata
     y_top = ydata - cur_ylim[0]
