@@ -1,6 +1,12 @@
 from phy.gui.qt import Qt, QPoint
 
 
+def mouse_click(qtbot, c, pos, button='left', modifiers=()):
+    b = getattr(Qt, button.capitalize() + 'Button')
+    modifiers = _modifiers_flag(modifiers)
+    qtbot.mouseClick(c, b, modifiers, QPoint(*pos))
+
+
 def mouse_press(qtbot, c, pos, button='left', modifiers=()):
     b = getattr(Qt, button.capitalize() + 'Button')
     modifiers = _modifiers_flag(modifiers)

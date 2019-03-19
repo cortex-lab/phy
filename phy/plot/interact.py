@@ -319,7 +319,7 @@ class Lasso(object):
         self._points = []
         self.canvas = None
         self.visual = None
-        #self.box = None
+        self.box = None
 
     def add(self, pos):
         self._points.append(pos)
@@ -338,7 +338,7 @@ class Lasso(object):
 
     def clear(self):
         self._points = []
-        #self.box = None
+        self.box = None
         self.update_lasso_visual()
 
     @property
@@ -364,16 +364,16 @@ class Lasso(object):
         self.visual.set_data(pos=self.polygon)
         self.canvas.update()
 
-    def on_mouse_press(self, e):
+    def on_mouse_click(self, e):
         if 'Control' in e.modifiers:
             if e.button == 'Left':
                 layout = getattr(self.canvas, 'layout', None)
-                f = getattr(layout, 'click_in_box', self.canvas.window_to_ndc)
-                pos = f(e.pos)
+                f = getattr(layout, 'box_map', self.canvas.window_to_ndc)
+                self.box, pos = f(e.pos)
                 self.add(pos)  # call update_lasso_visual
             else:
                 self.clear()
-                #self.box = None
+                self.box = None
 
     def __repr__(self):
         return str(self.polygon)

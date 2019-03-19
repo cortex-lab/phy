@@ -19,7 +19,7 @@ from ..interact import Grid, Boxed, Stacked, Lasso
 from ..panzoom import PanZoom
 from ..transform import NDC
 from ..visuals import ScatterVisual
-from . import mouse_press
+from . import mouse_click
 
 
 #------------------------------------------------------------------------------
@@ -49,6 +49,7 @@ class MyTestVisual(BaseVisual):
         self.n_vertices = 1000
 
         position = np.random.uniform(low=-1, high=+1, size=(n, 2))
+        self.data = position
         self.program['a_position'] = position.astype(np.float32)
 
         emit('visual_set_data', self)
@@ -256,8 +257,6 @@ def test_lasso_simple(qtbot):
 
 def test_lasso_grid(qtbot, canvas):
     grid = Grid((1, 2))
-    box_index = np.zeros((1000, 2), dtype=np.float32)
-    box_index[:, 1] = 1
     grid.attach(canvas)
 
     PanZoom(aspect=None).attach(canvas)
@@ -265,6 +264,9 @@ def test_lasso_grid(qtbot, canvas):
 
     visual = MyTestVisual()
     canvas.add_visual(visual)
+    # Right panel.
+    box_index = np.zeros((1000, 2), dtype=np.float32)
+    box_index[:, 1] = 1
     visual.program['a_box_index'] = box_index
     visual.set_data()
 
@@ -278,35 +280,27 @@ def test_lasso_grid(qtbot, canvas):
     qtbot.waitForWindowShown(canvas)
 
     def _ctrl_click(x, y, button='left'):
-        mouse_press(qtbot, canvas, (x, y), button=button, modifiers=('Control',))
+        mouse_click(qtbot, canvas, (x, y), button=button, modifiers=('Control',))
 
-    # Square selection in the left panel.
-    # TODO
-    #_ctrl_click(100, 100)
-    #print(l.box)
-    #print(l.box)
-    #assert l.box == (0, 0)
+    # Square selection in the right panel.
+    w, h = canvas.get_size()
+    x0 = w / 2 + 100
+    x1 = x0 + 200
+    y0 = 100
+    y1 = 300
+    _ctrl_click(x0, y0)
+    _ctrl_click(x1, y0)
+    _ctrl_click(x1, y1)
+    _ctrl_click(x0, y1)
+    assert l.polygon.shape == (4, 2)
+    assert l.box == (0, 1)
 
-    #qtbot.stop()
-    return
+    inlasso = l.in_polygon(visual.data)
+    assert .001 < inlasso.mean() < .999
 
-    # ev.mouse_press(pos=(200, 100), button=1, modifiers=('Control',))
-    # ev.mouse_press(pos=(200, 200), button=1, modifiers=('Control',))
-    # ev.mouse_press(pos=(100, 200), button=1, modifiers=('Control',))
-    # assert l.box == (0, 0)
+    # Clear box.
+    _ctrl_click(x0, y0, 'right')
+    assert l.polygon.shape == (0, 2)
+    assert l.box is None
 
-    # # Clear.
-    # ev.mouse_press(pos=(100, 200), button=2, modifiers=('Control',))
-    # assert l.box is None
-
-    # # Square selection in the right panel.
-    # ev.mouse_press(pos=(500, 100), button=1, modifiers=('Control',))
-    # assert l.box == (0, 1)
-    # ev.mouse_press(pos=(700, 100), button=1, modifiers=('Control',))
-    # ev.mouse_press(pos=(700, 300), button=1, modifiers=('Control',))
-    # ev.mouse_press(pos=(500, 300), button=1, modifiers=('Control',))
-    # assert l.box == (0, 1)
-
-    # ind = l.in_polygon(np.c_[x, y])
-    # view[0, 1].scatter(x[ind], y[ind], color=(1., 0., 0., 1.),
-    #                    data_bounds=NDC)
+    canvas.close()

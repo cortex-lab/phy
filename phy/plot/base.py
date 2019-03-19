@@ -10,10 +10,11 @@
 from collections import defaultdict
 import logging
 import re
+from timeit import default_timer
 
 import numpy as np
 
-from phy.gui.qt import QOpenGLWindow, Qt, QEvent
+from phy.gui.qt import Qt, QEvent, QOpenGLWindow
 from . import gloo
 from .gloo import gl
 from .transform import TransformChain, Clip, pixels_to_ndc
@@ -326,6 +327,7 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_button = None
         self._mouse_press_modifiers = None
         self._last_mouse_pos = None
+        self._mouse_press_time = 0.
 
     def get_size(self):
         return self.size().width() or 1, self.size().height() or 1
@@ -428,9 +430,13 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_position = pos
         self._mouse_press_button = button
         self._mouse_press_modifiers = modifiers
+        self._mouse_press_time = default_timer()
 
     def mouseReleaseEvent(self, e):
         self._mouse_event('mouse_release', e)
+        # HACK: since there is no mouseClickEvent in Qt, emulate it here.
+        if default_timer() - self._mouse_press_time < .25:
+            self._mouse_event('mouse_click', e)
         self._mouse_press_position = None
         self._mouse_press_button = None
         self._mouse_press_modifiers = None
@@ -534,15 +540,15 @@ class BaseLayout(object):
         """Override to return the box closest to a given position in NDC."""
         raise NotImplementedError()
 
-    def click_in_box(self, mouse_pos):
-        """Get the mouse position from window coordinates to local NDC coordinates."""
+    def box_map(self, mouse_pos):
+        """Get the box and local NDC coordinates from mouse position."""
         if not self.canvas:
             return
         ndc = self.canvas.window_to_ndc(mouse_pos)
         box = self.get_closest_box(ndc)
         self.active_box = box
         # From NDC to data coordinates, in the given box.
-        return self.imap(ndc, box)
+        return box, self.imap(ndc, box)
 
     def update_visual(self, visual):
         """Called whenever visual.set_data() is called. Set a_box_index in here."""
