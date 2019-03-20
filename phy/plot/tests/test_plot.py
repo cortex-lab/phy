@@ -58,7 +58,7 @@ def test_plot_grid(qtbot, x, y):
     c[0, 1].add(visuals.HistogramVisual(), 5 + x)
     c[0, 2].add(visuals.ScatterVisual(), x, y, color=np.random.uniform(.5, .8, size=(1000, 4)))
 
-    c[1, 0].add(visuals.LineVisual(), pos=[-1, -5, +1, -.5])
+    c[1, 0].add(visuals.LineVisual(), pos=[-1, -.5, +1, -.5])
     c[1, 1].add(visuals.TextVisual(), pos=(0, 0), text='Hello world!', anchor=(0., 0.))
 
     # Multiple scatters in the same subplot.
@@ -109,43 +109,3 @@ def test_plot_boxed(qtbot):
     qtbot.waitForWindowShown(c)
     # qtbot.stop()
     c.close()
-
-
-#------------------------------------------------------------------------------
-# Test lasso
-#------------------------------------------------------------------------------
-
-def _test_lasso_grid(qtbot):
-    view = PlotCanvas(layout='grid', shape=(1, 2), enable_lasso=True)
-    x, y = np.meshgrid(np.linspace(-1., 1., 20), np.linspace(-1., 1., 20))
-    x, y = x.ravel(), y.ravel()
-    view[0, 1].scatter(x, y, data_bounds=NDC)
-
-    l = view.lasso
-    ev = None
-    # TODO
-    return
-
-    # Square selection in the left panel.
-    ev.mouse_press(pos=(100, 100), button=1, modifiers=('Control',))
-    assert l.box == (0, 0)
-    ev.mouse_press(pos=(200, 100), button=1, modifiers=('Control',))
-    ev.mouse_press(pos=(200, 200), button=1, modifiers=('Control',))
-    ev.mouse_press(pos=(100, 200), button=1, modifiers=('Control',))
-    assert l.box == (0, 0)
-
-    # Clear.
-    ev.mouse_press(pos=(100, 200), button=2, modifiers=('Control',))
-    assert l.box is None
-
-    # Square selection in the right panel.
-    ev.mouse_press(pos=(500, 100), button=1, modifiers=('Control',))
-    assert l.box == (0, 1)
-    ev.mouse_press(pos=(700, 100), button=1, modifiers=('Control',))
-    ev.mouse_press(pos=(700, 300), button=1, modifiers=('Control',))
-    ev.mouse_press(pos=(500, 300), button=1, modifiers=('Control',))
-    assert l.box == (0, 1)
-
-    ind = l.in_polygon(np.c_[x, y])
-    view[0, 1].scatter(x[ind], y[ind], color=(1., 0., 0., 1.),
-                       data_bounds=NDC)

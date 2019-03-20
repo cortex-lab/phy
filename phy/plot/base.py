@@ -341,7 +341,10 @@ class BaseCanvas(QOpenGLWindow):
             np.asarray(pixels_to_ndc(mouse_pos, size=self.get_size())))
         return ndc
 
-    def add_visual(self, visual):
+    def clear(self):
+        self.visuals.clear()
+
+    def add_visual(self, visual, **kwargs):
         """Add a visual to the canvas, and build its program by the same
         occasion.
 
