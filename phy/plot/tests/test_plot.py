@@ -7,13 +7,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
-from pytest import fixture
+import os
 
-from ..plot import PlotCanvas
-from ..transform import NDC
+import numpy as np
+from pytest import fixture, yield_fixture, mark
+
+from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import _get_linear_x
-from .. import visuals
 
 
 #------------------------------------------------------------------------------
@@ -34,78 +34,69 @@ def y():
 # Test plotting interface
 #------------------------------------------------------------------------------
 
-def test_plot_1(qtbot, x, y):
-    c = PlotCanvas(with_panzoom=True)
-
-    v = visuals.ScatterVisual()
-    c.add_visual(v)
-    v.set_data(x=x, y=y)
-
+@fixture(params=[False, True])
+def canvas(request, qtbot):
+    c = PlotCanvas() if request.param else PlotCanvasMpl()
+    yield c
     c.show()
-    qtbot.waitForWindowShown(c)
-    # qtbot.stop()
+    qtbot.waitForWindowShown(c.canvas)
+    if os.environ.get('PHY_TEST_STOP', None):
+        qtbot.stop()
     c.close()
 
 
-#------------------------------------------------------------------------------
-# Test visuals in PlotCanvas
-#------------------------------------------------------------------------------
+def test_plot_1(canvas, x, y):
+    c = canvas
+    c.scatter(x=x, y=y)
+    c.enable_axes()
 
-def test_plot_grid(qtbot, x, y):
-    c = PlotCanvas(layout='grid', shape=(2, 3))
 
-    c[0, 0].add(visuals.PlotVisual(), x=x, y=y)
-    c[0, 1].add(visuals.HistogramVisual(), 5 + x)
-    c[0, 2].add(visuals.ScatterVisual(), x, y, color=np.random.uniform(.5, .8, size=(1000, 4)))
+def test_plot_grid(canvas, x, y):
+    c = canvas
+    c.set_layout('grid', shape=(2, 3))
 
-    c[1, 0].add(visuals.LineVisual(), pos=[-1, -.5, +1, -.5])
-    c[1, 1].add(visuals.TextVisual(), pos=(0, 0), text='Hello world!', anchor=(0., 0.))
+    c[0, 0].plot(x=x, y=y)
+    c[0, 1].hist(5 + x[::10])
+    c[0, 2].scatter(x, y, color=np.random.uniform(.5, .8, size=(1000, 4)))
+
+    c[1, 0].lines(pos=[-1, -.5, +1, -.5])
+    c[1, 1].text(pos=(0, 0), text='Hello world!', anchor=(0., 0.))
 
     # Multiple scatters in the same subplot.
-    c[1, 2].add(visuals.ScatterVisual(marker='asterisk'),
-                x[2::6], y[2::6], color=(0, 1, 0, .25), size=20)
-    c[1, 2].add(visuals.ScatterVisual(marker='heart'),
-                x[::5], y[::5], color=(1, 0, 0, .35), size=50)
-    c[1, 2].add(visuals.ScatterVisual(marker='heart'),
-                x[1::3], y[1::3], color=(1, 0, 1, .35), size=30)
-
-    c.show()
-    qtbot.waitForWindowShown(c)
-    # qtbot.stop()
-    c.close()
+    c[1, 2].scatter(x[2::6], y[2::6], color=(0, 1, 0, .25), size=20, marker='asterisk')
+    c[1, 2].scatter(x[::5], y[::5], color=(1, 0, 0, .35), size=50, marker='heart')
+    c[1, 2].scatter(x[1::3], y[1::3], color=(1, 0, 1, .35), size=30, marker='heart')
 
 
-def test_plot_stacked(qtbot):
-    c = PlotCanvas(layout='stacked', n_plots=3)
+def test_plot_stacked(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    c = canvas
+    c.set_layout('stacked', n_plots=3)
+
     t = _get_linear_x(1, 1000).ravel()
+    c[0].scatter(pos=np.random.rand(100, 2))
 
-    c[0].add(visuals.ScatterVisual(), pos=np.random.rand(100, 2))
+    c[1].hist(np.random.rand(5, 10), color=np.random.uniform(.4, .9, size=(5, 4)))
 
-    c[1].add(visuals.HistogramVisual(), np.random.rand(5, 10),
-             color=np.random.uniform(.4, .9, size=(5, 4)))
-
-    c[2].add(visuals.PlotVisual(), t, np.sin(20 * t), color=(1, 0, 0, 1))
-
-    c.show()
-    qtbot.waitForWindowShown(c)
-    # qtbot.stop()
-    c.close()
+    c[2].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
 
 
-def test_plot_boxed(qtbot):
+def test_plot_boxed(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    c = canvas
+
     n = 3
     b = np.zeros((n, 4))
     b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 2. / 3., n)
     b[:, 2] = b[:, 3] = np.linspace(-1. + 2. / 3., 1., n)
-    c = PlotCanvas(layout='boxed', box_bounds=b)
+    c.set_layout('boxed', box_bounds=b)
 
     t = _get_linear_x(1, 1000).ravel()
-    c[0].add(visuals.ScatterVisual(), pos=np.random.rand(100, 2))
-    c[1].add(visuals.PlotVisual(), t, np.sin(20 * t), color=(1, 0, 0, 1))
-    c[2].add(visuals.HistogramVisual(), np.random.rand(5, 10),
-             color=np.random.uniform(.4, .9, size=(5, 4)))
-
-    c.show()
-    qtbot.waitForWindowShown(c)
-    # qtbot.stop()
-    c.close()
+    c[0].scatter(pos=np.random.rand(100, 2))
+    c[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+    c[2].hist(np.random.rand(5, 10),
+              color=np.random.uniform(.4, .9, size=(5, 4)))
