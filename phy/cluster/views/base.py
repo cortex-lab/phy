@@ -11,11 +11,10 @@ import logging
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from vispy.util.event import Event
 
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, busy_cursor
-from phy.plot import BaseCanvas
+from phy.plot import BaseCanvas, PanZoom
 from phy.utils import Bunch, connect, unconnect
 
 logger = logging.getLogger(__name__)
@@ -24,12 +23,6 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Manual clustering view
 # -----------------------------------------------------------------------------
-
-class StatusEvent(Event):
-    def __init__(self, type, message=None):
-        super(StatusEvent, self).__init__(type)
-        self.message = message
-
 
 class BaseManualClusteringView(object):
     """Base class for clustering views.
@@ -103,8 +96,7 @@ class BaseManualClusteringView(object):
         self.actions.separator()
 
         # Update the GUI status message when the `self.set_status()` method
-        # is called, i.e. when the `status` event is raised by the VisPy
-        # view.
+        # is called, i.e. when the `status` event is raised by the view.
         @connect(sender=self)  # pragma: no cover
         def on_status(sender=None, e=None):
             gui.status_message = e.message
@@ -153,27 +145,25 @@ class BaseManualClusteringView(object):
         self.status = message
 
 
-class ManualClusteringView(BaseManualClusteringView, BaseCanvas):
+class ManualClusteringView(BaseManualClusteringView):
     def __init__(self, *args, **kwargs):
         super(ManualClusteringView, self).__init__(*args, **kwargs)
+
+        self.figure = BaseCanvas()
+
+        self.panzoom = PanZoom()
         self.panzoom._default_zoom = .9
         self.panzoom.reset()
-        self.events.add(status=StatusEvent)
-
-    def attach(self, *args, **kwargs):
-
         # Disable keyboard pan so that we can use arrows as global shortcuts
         # in the GUI.
         self.panzoom.enable_keyboard_pan = False
+        self.panzoom.attach(self.figure)
 
-        super(ManualClusteringView, self).attach(*args, **kwargs)
+    def show(self):
+        self.figure.show()
 
-    def set_status(self, message=None):
-        super(ManualClusteringView, self).set_status(message=message)
-        self.events.status(message=message)
-
-    def on_mouse_move(self, e):  # pragma: no cover
-        self.set_status()
+    def close(self):
+        self.figure.close()
 
 
 # -----------------------------------------------------------------------------
