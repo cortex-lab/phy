@@ -36,11 +36,14 @@ class PlotCanvas(BaseCanvas):
         super(PlotCanvas, self).__init__(**kwargs)
         self.layout = layout
 
+        # Constrain pan zoom.
+        self.constrain_bounds = [-2, -2, +2, +2]
         if layout == 'grid':
             self._default_box_index = (0, 0)
             self.grid = Grid(shape)
             self.grid.attach(self)
             self.interact = self.grid
+            self.constrain_bounds = [-1, -1, +1, +1]
 
         elif layout == 'boxed':
             self.n_plots = (len(box_bounds)
@@ -95,7 +98,7 @@ class PlotCanvas(BaseCanvas):
         return box_index
 
     def enable_panzoom(self):
-        self.panzoom = PanZoom(aspect=None, constrain_bounds=[-2, -2, +2, +2])
+        self.panzoom = PanZoom(aspect=None, constrain_bounds=self.constrain_bounds)
         self.panzoom.attach(self)
 
     def enable_lasso(self):

@@ -100,8 +100,7 @@ class Grid(BaseLayout):
         def _remove_clip(tc):
             return tc.remove('Clip')
 
-        canvas.add_visual(boxes)
-        boxes.program['a_box_index'] = box_index.astype(np.float32)
+        canvas.add_visual(boxes, box_index=box_index)
         boxes.set_data(pos=pos)
         canvas.update()
 
