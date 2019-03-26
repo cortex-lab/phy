@@ -10,7 +10,7 @@
 import os
 
 import numpy as np
-from pytest import fixture, yield_fixture, mark
+from pytest import fixture
 
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import _get_linear_x
