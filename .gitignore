@@ -46,3 +46,5 @@ lib64
 
 # Sphinx
 docs/_build
+
+.vscode
