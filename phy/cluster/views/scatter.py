@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phy.utils._color import _colormap
-from .base import ManualClusteringViewMatplotlib, ManualClusteringView
+from .base import ManualClusteringView
 from phy.plot import NDC
 
 logger = logging.getLogger(__name__)
@@ -22,18 +22,17 @@ logger = logging.getLogger(__name__)
 # Scatter view
 # -----------------------------------------------------------------------------
 
-class BaseScatterView(object):
+class ScatterView(ManualClusteringView):
     _default_marker_size = 5.
 
     def __init__(self,
                  coords=None,  # function clusters: Bunch(x, y)
                  **kwargs):
-
         assert coords
         self.coords = coords
 
         # Initialize the view.
-        super(BaseScatterView, self).__init__(**kwargs)
+        super(ScatterView, self).__init__(**kwargs)
 
     def _get_data(self, cluster_ids):
         return [self.coords(cluster_id) for cluster_id in cluster_ids]
@@ -50,13 +49,6 @@ class BaseScatterView(object):
             data_bounds = (xmin, ymin, xmax, ymax)
         return data_bounds
 
-
-class ScatterViewMatplotlib(BaseScatterView, ManualClusteringViewMatplotlib):
-    def __init__(self, *args, **kwargs):
-        super(ScatterViewMatplotlib, self).__init__(*args, **kwargs)
-        self.subplots(1, 1)
-        self.ax = self.axes[0, 0]
-
     def _plot_points(self, bunchs, data_bounds):
         ms = self._default_marker_size
         xmin, ymin, xmax, ymax = data_bounds
@@ -64,9 +56,9 @@ class ScatterViewMatplotlib(BaseScatterView, ManualClusteringViewMatplotlib):
             x, y = d.x, d.y
             assert x.ndim == y.ndim == 1
             assert x.shape == y.shape
-            self.ax.scatter(x, y, marker=',', c=tuple(_colormap(i)) + (.5,), s=ms)
-        self.ax.set_xlim(xmin, xmax)
-        self.ax.set_ylim(ymin, ymax)
+            color = _colormap(i, .75)
+            # Create one visual per cluster.
+            self.canvas.scatter(x=x, y=y, color=color, size=ms, data_bounds=data_bounds)
 
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
@@ -76,33 +68,6 @@ class ScatterViewMatplotlib(BaseScatterView, ManualClusteringViewMatplotlib):
         bunchs = self._get_data(cluster_ids)
         data_bounds = self._get_data_bounds(bunchs)
 
-        # Plot the points.
-        self.ax.clear()
-        self.config_ax(self.ax)
-        self.ax.grid(color='w', alpha=.2)
+        self.canvas.clear()
         self._plot_points(bunchs, data_bounds)
-        self.show()
-
-
-class ScatterView(BaseScatterView, ManualClusteringView):
-    def _plot_points(self, bunchs, data_bounds):
-        ms = self._default_marker_size
-        xmin, ymin, xmax, ymax = data_bounds
-        for i, d in enumerate(bunchs):
-            x, y = d.x, d.y
-            assert x.ndim == y.ndim == 1
-            assert x.shape == y.shape
-            self.scatter(
-                x=x, y=y, color=tuple(_colormap(i)) + (.75,), size=ms, data_bounds=data_bounds)
-
-    def on_select(self, cluster_ids=(), **kwargs):
-        if not cluster_ids:
-            return
-
-        # Retrieve the data.
-        bunchs = self._get_data(cluster_ids)
-        data_bounds = self._get_data_bounds(bunchs)
-
-        with self.building():
-            self._plot_points(bunchs, data_bounds)
-            self.enable_axes(data_bounds=data_bounds)
+        self.canvas.enable_axes(data_bounds=data_bounds)
