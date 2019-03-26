@@ -7,31 +7,26 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-import pytest
 
-from phy.gui import GUI
 from phy.utils import Bunch
-from ..scatter import ScatterView, ScatterViewMatplotlib
+from ..scatter import ScatterView
 
 
 #------------------------------------------------------------------------------
 # Test scatter view
 #------------------------------------------------------------------------------
 
-@pytest.mark.parametrize('view_class', (ScatterView, ScatterViewMatplotlib))
-def test_scatter_view(qtbot, tempdir, view_class):
+def test_scatter_view(qtbot):
     n = 1000
-    v = view_class(
+    v = ScatterView(
         coords=lambda c: Bunch(
             x=np.random.randn(n),
             y=np.random.randn(n),
             data_bounds=None,
         )
     )
-    gui = GUI(config_dir=tempdir)
-    gui.show()
-    v.attach(gui)
-    qtbot.addWidget(gui)
+    v.canvas.show()
+    qtbot.addWidget(v.canvas)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -39,4 +34,4 @@ def test_scatter_view(qtbot, tempdir, view_class):
     v.on_select(cluster_ids=[0, 2])
 
     # qtbot.stop()
-    gui.close()
+    v.canvas.close()
