@@ -75,9 +75,14 @@ def _apply_color_masks(color, masks=None, alpha=None):
     return color
 
 
-def _colormap(i):
+def _colormap(i, alpha=None):
     n = len(_COLORMAP)
-    return _COLORMAP[i % n] / 255.
+    color = tuple(_COLORMAP[i % n] / 255.)
+    if alpha is None:
+        return color
+    else:
+        assert 0 <= alpha <= 1
+        return color + (alpha,)
 
 
 def _spike_colors(spike_clusters=None, masks=None, alpha=None):
@@ -107,8 +112,7 @@ class ColorSelector(object):
             color = (.5,) * 4
         elif cluster_ids and clu in cluster_ids:
             i = cluster_ids.index(clu)
-            color = _colormap(i)
-            color = tuple(color) + (alpha,)
+            color = _colormap(i, alpha)
         else:
             if clu in self._colors:
                 return self._colors[clu]

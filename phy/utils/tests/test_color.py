@@ -25,6 +25,7 @@ def test_random_color():
 def test_colormap():
     assert len(_colormap(0)) == 3
     assert len(_colormap(1000)) == 3
+    assert len(_colormap(0, 0.5)) == 4
 
     assert _spike_colors([0, 1, 10, 1000]).shape == (4, 4)
     assert _spike_colors([0, 1, 10, 1000],
