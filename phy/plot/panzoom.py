@@ -483,11 +483,11 @@ class PanZoom(object):
 
         @connect
         def on_visual_set_data(visual):
-            if visual in canvas.visuals:
+            if canvas.has_visual(visual):
                 self.update_visual(visual)
 
         # Because the visual shaders must be modified to account for u_pan and u_zoom.
-        if not all(v.program is None for v in canvas.visuals):
+        if not all(v.program is None for v in canvas.visuals + canvas.unclearable_visuals):
             raise RuntimeError("The PanZoom instance must be attached before the visuals.")
 
         canvas.transforms.add_on_gpu([self._translate, self._scale])
@@ -516,6 +516,6 @@ class PanZoom(object):
         """Update all visuals in the attached canvas."""
         if not self.canvas:
             return
-        for visual in self.canvas.visuals:
+        for visual in self.canvas.visuals + self.canvas.unclearable_visuals:
             self.update_visual(visual)
         self.canvas.update()

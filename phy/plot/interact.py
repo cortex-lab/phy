@@ -100,7 +100,7 @@ class Grid(BaseLayout):
         def _remove_clip(tc):
             return tc.remove('Clip')
 
-        canvas.add_visual(boxes, box_index=box_index)
+        canvas.add_visual(boxes, unclearable=True, box_index=box_index)
         boxes.set_data(pos=pos)
         canvas.update()
 
@@ -350,10 +350,11 @@ class Lasso(object):
     def attach(self, canvas):
         canvas.attach_events(self)
         self.canvas = canvas
+        self.create_lasso_visual()
 
     def create_lasso_visual(self):
         self.visual = PolygonVisual()
-        self.canvas.add_visual(self.visual)
+        self.canvas.add_visual(self.visual, unclearable=True)
         #self.update_lasso_visual()
 
     def update_lasso_visual(self):

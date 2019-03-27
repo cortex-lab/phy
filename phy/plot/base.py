@@ -317,6 +317,7 @@ class BaseCanvas(QOpenGLWindow):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self.transforms = TransformChain()
         self.inserter = GLSLInserter()
+        self.unclearable_visuals = []
         self.visuals = []
         self._next_paint_callbacks = []
         self._size = (0, 0)
@@ -344,7 +345,7 @@ class BaseCanvas(QOpenGLWindow):
     def clear(self):
         self.visuals.clear()
 
-    def add_visual(self, visual, **kwargs):
+    def add_visual(self, visual, unclearable=False, **kwargs):
         """Add a visual to the canvas, and build its program by the same
         occasion.
 
@@ -371,8 +372,12 @@ class BaseCanvas(QOpenGLWindow):
         # Initialize the size.
         visual.on_resize(self.size().width(), self.size().height())
         # Register the visual in the list of visuals in the canvas.
-        self.visuals.append(visual)
+        l = self.visuals if not unclearable else self.unclearable_visuals
+        l.append(visual)
         emit('visual_added', self, visual)
+
+    def has_visual(self, visual):
+        return visual in self.visuals or visual in self.unclearable_visuals
 
     def on_next_paint(self, f):
         """Register a function to be called at the next frame refresh (in paintGL())."""
@@ -393,7 +398,7 @@ class BaseCanvas(QOpenGLWindow):
             f()
         self._next_paint_callbacks.clear()
         # Draw all visuals.
-        for visual in self.visuals:
+        for visual in self.unclearable_visuals + self.visuals:
             if size != self._size:
                 visual.on_resize(*size)
             # Do not draw if there are no vertices.
@@ -528,7 +533,7 @@ class BaseLayout(object):
 
         @connect
         def on_visual_set_data(visual):
-            if visual in canvas.visuals:
+            if visual in canvas.visuals + canvas.unclearable_visuals:
                 self.update_visual(visual)
 
     def map(self, arr, box=None):
@@ -566,6 +571,6 @@ class BaseLayout(object):
         """Update all visuals in the attached canvas."""
         if not self.canvas:
             return
-        for visual in self.canvas.visuals:
+        for visual in self.canvas.visuals + self.canvas.unclearable_visuals:
             self.update_visual(visual)
         self.canvas.update()

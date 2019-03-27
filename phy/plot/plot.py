@@ -19,8 +19,8 @@ from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked, Lasso
 from .panzoom import PanZoom
 from .visuals import (
-    ScatterVisual, PlotVisual, HistogramVisual,
-    TextVisual, LineVisual, PolygonVisual,
+    ScatterVisual, UniformScatterVisual, PlotVisual,
+    HistogramVisual, TextVisual, LineVisual, PolygonVisual,
     DEFAULT_COLOR)
 from .transform import NDC
 from .utils import _get_array
@@ -88,14 +88,14 @@ class PlotCanvas(BaseCanvas):
         if layout == 'grid' and shape is not None:
             self.interact.add_boxes(self)
 
-    def add_visual(self, visual, box_index=None):
+    def add_visual(self, visual, unclearable=False, box_index=None):
         if not self._enabled:
             self._enable()
         if self.interact:
             @self.on_next_paint
             def set_box_index():
                 visual.program['a_box_index'] = self.make_box_index(visual, box_index=box_index)
-        super(PlotCanvas, self).add_visual(visual)
+        super(PlotCanvas, self).add_visual(visual, unclearable=unclearable)
 
     def __getitem__(self, box_index):
         self._default_box_index = _as_tuple(box_index)
@@ -111,6 +111,12 @@ class PlotCanvas(BaseCanvas):
 
     def scatter(self, *args, **kwargs):
         self.add(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
+
+    def uscatter(self, *args, **kwargs):
+        self.add(UniformScatterVisual(
+            marker=kwargs.pop('marker', None),
+            color=kwargs.pop('color', None),
+            size=kwargs.pop('size', None)), *args, **kwargs)
 
     def plot(self, *args, **kwargs):
         self.add(PlotVisual(), *args, **kwargs)
