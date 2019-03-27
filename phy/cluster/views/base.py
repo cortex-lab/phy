@@ -137,3 +137,9 @@ class ManualClusteringView(object):
         if not message:
             return
         self.status = message
+
+    def show(self):
+        return self.canvas.show()
+
+    def close(self):
+        self.canvas.close()

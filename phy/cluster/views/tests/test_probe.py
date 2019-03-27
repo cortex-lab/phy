@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from phy.electrode.mea import staggered_positions
-from phy.gui import GUI
 from phy.utils import emit
 
 from ..probe import ProbeView
@@ -17,7 +16,7 @@ from ..probe import ProbeView
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_probe_view(qtbot, tempdir):
+def test_probe_view(qtbot):
 
     n = 50
     positions = staggered_positions(n)
@@ -26,10 +25,8 @@ def test_probe_view(qtbot, tempdir):
     v = ProbeView(positions=positions,
                   best_channels=best_channels,
                   )
-    gui = GUI(config_dir=tempdir)
-    gui.show()
-    v.attach(gui)
-    qtbot.addWidget(gui)
+    v.show()
+    qtbot.addWidget(v)
 
     class Supervisor(object):
         pass
@@ -40,4 +37,4 @@ def test_probe_view(qtbot, tempdir):
     emit('select', Supervisor(), cluster_ids=[0, 2])
 
     # qtbot.stop()
-    gui.close()
+    v.close()
