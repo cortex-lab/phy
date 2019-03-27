@@ -25,14 +25,10 @@ logger = logging.getLogger(__name__)
 class ScatterView(ManualClusteringView):
     _default_marker_size = 5.
 
-    def __init__(self,
-                 coords=None,  # function clusters: Bunch(x, y)
-                 **kwargs):
+    def __init__(self, coords=None):  # coords is a function clusters: Bunch(x, y)
+        super(ScatterView, self).__init__()
         assert coords
         self.coords = coords
-
-        # Initialize the view.
-        super(ScatterView, self).__init__(**kwargs)
 
     def _get_data(self, cluster_ids):
         return [self.coords(cluster_id) for cluster_id in cluster_ids]

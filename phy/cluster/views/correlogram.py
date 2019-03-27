@@ -34,17 +34,12 @@ class CorrelogramView(ManualClusteringView):
         'go_right': 'alt+right',
     }
 
-    def __init__(self, correlograms=None,
-                 sample_rate=None,
-                 **kwargs):
+    def __init__(self, correlograms=None, sample_rate=None):
+        super(CorrelogramView, self).__init__()
+        self.canvas.set_layout(layout='grid')
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
-
-        # Initialize the view.
-        super(CorrelogramView, self).__init__(layout='grid',
-                                              shape=(1, 1),
-                                              **kwargs)
 
         # Function clusters => CCGs.
         self.correlograms = correlograms
@@ -78,24 +73,16 @@ class CorrelogramView(ManualClusteringView):
         for i, j in self._iter_subplots(n_clusters):
             hist = ccg[i, j, :]
             color = colors[i] if i == j else np.ones(4)
-            self[i, j].hist(hist,
-                            color=color,
-                            ylim=ylim,
-                            )
+            self.canvas[i, j].hist(hist, color=color, ylim=ylim)
 
     def _plot_labels(self, cluster_ids):
-        n = len(cluster_ids)
-        for k in range(n):
-            self[k, 0].text(pos=[-1., 0.],
-                            text=str(cluster_ids[k]),
-                            anchor=[-1.04, 0.],
-                            data_bounds=None,
-                            )
-            self[n - 1, k].text(pos=[0., -1.],
-                                text=str(cluster_ids[k]),
-                                anchor=[0., -1.04],
-                                data_bounds=None,
-                                )
+        for i, j in self._iter_subplots(len(cluster_ids)):
+            self.canvas[i, j].text(
+                pos=[-0.90, -0.90],
+                color=(0., 0., 0., 1.),
+                text='%d-%d' % (cluster_ids[i], cluster_ids[j]),
+                data_bounds=None,
+            )
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids
@@ -103,15 +90,13 @@ class CorrelogramView(ManualClusteringView):
         if not cluster_ids:
             return
 
-        ccg = self.correlograms(cluster_ids,
-                                self.bin_size,
-                                self.window_size,
-                                )
+        ccg = self.correlograms(
+            cluster_ids, self.bin_size, self.window_size)
 
-        self.grid.shape = (n_clusters, n_clusters)
-        with self.building():
-            self._plot_correlograms(ccg)
-            self._plot_labels(cluster_ids)
+        self.canvas.grid.shape = (n_clusters, n_clusters)
+        self.canvas.clear()
+        self._plot_correlograms(ccg)
+        self._plot_labels(cluster_ids)
 
     def toggle_normalization(self, checked):
         """Change the normalization of the correlograms."""

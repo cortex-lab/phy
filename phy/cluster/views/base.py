@@ -46,11 +46,6 @@ class ManualClusteringView(object):
 
         self.canvas = PlotCanvas()
 
-        # Keep track of the selected clusters and spikes.
-        #self.cluster_ids = None
-
-        super(ManualClusteringView, self).__init__(**kwargs)
-
     def on_select(self, cluster_ids=None, **kwargs):
         # To override.
         pass

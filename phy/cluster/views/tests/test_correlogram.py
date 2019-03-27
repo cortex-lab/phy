@@ -6,7 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from phy.gui import GUI
 from phy.io.mock import (artificial_correlograms,
                          )
 
@@ -17,20 +16,16 @@ from ..correlogram import CorrelogramView
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot, tempdir):
-
-    ns = 50
+def test_correlogram_view(qtbot):
 
     def get_correlograms(cluster_ids, bin_size, window_size):
-        return artificial_correlograms(len(cluster_ids), ns)
+        return artificial_correlograms(len(cluster_ids), int(window_size / bin_size))
 
     v = CorrelogramView(correlograms=get_correlograms,
                         sample_rate=100.,
                         )
-    gui = GUI(config_dir=tempdir)
-    v.attach(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    v.canvas.show()
+    qtbot.waitForWindowShown(v.canvas)
 
     v.on_select([])
     v.on_select(cluster_ids=[0])
@@ -43,4 +38,4 @@ def test_correlogram_view(qtbot, tempdir):
     v.set_window(100)
 
     # qtbot.stop()
-    gui.close()
+    v.canvas.close()

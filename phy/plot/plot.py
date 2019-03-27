@@ -85,7 +85,7 @@ class PlotCanvas(BaseCanvas):
             self.stacked.attach(self)
             self.interact = self.stacked
 
-        if layout == 'grid':
+        if layout == 'grid' and shape is not None:
             self.interact.add_boxes(self)
 
     def add_visual(self, visual, box_index=None):
