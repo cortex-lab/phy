@@ -24,8 +24,7 @@ def test_correlogram_view(qtbot):
     v = CorrelogramView(correlograms=get_correlograms,
                         sample_rate=100.,
                         )
-    v.canvas.show()
-    qtbot.waitForWindowShown(v.canvas)
+    v.show()
 
     v.on_select([])
     v.on_select(cluster_ids=[0])
@@ -38,4 +37,4 @@ def test_correlogram_view(qtbot):
     v.set_window(100)
 
     # qtbot.stop()
-    v.canvas.close()
+    v.close()

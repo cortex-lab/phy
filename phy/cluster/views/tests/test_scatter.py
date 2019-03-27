@@ -25,8 +25,8 @@ def test_scatter_view(qtbot):
             data_bounds=None,
         )
     )
-    v.canvas.show()
-    qtbot.addWidget(v.canvas)
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -34,4 +34,4 @@ def test_scatter_view(qtbot):
     v.on_select(cluster_ids=[0, 2])
 
     # qtbot.stop()
-    v.canvas.close()
+    v.close()

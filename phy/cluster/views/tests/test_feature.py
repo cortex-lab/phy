@@ -9,13 +9,12 @@
 import numpy as np
 import pytest
 
-from phy.gui import GUI, GUIState
-from phy.gui.qt import Qt, QPoint
 from phy.io.array import _spikes_per_cluster
 from phy.io.mock import (artificial_features,
                          artificial_spike_clusters,
                          )
-from phy.utils import Bunch, emit
+from phy.plot.tests import mouse_click
+from phy.utils import Bunch
 
 from ..feature import FeatureView
 
@@ -25,9 +24,9 @@ from ..feature import FeatureView
 #------------------------------------------------------------------------------
 
 @pytest.mark.parametrize('n_channels', [5, 1])
-def test_feature_view(qtbot, tempdir, n_channels):
+def test_feature_view(qtbot, n_channels):
     nc = n_channels
-    ns = 500
+    ns = 10000
     features = artificial_features(ns, nc, 4)
     spike_clusters = artificial_spike_clusters(ns, 4)
     spike_times = np.linspace(0., 1., ns)
@@ -58,24 +57,13 @@ def test_feature_view(qtbot, tempdir, n_channels):
     v = FeatureView(features=get_features,
                     attributes={'time': get_time},
                     )
-
-    v.set_state(GUIState(scaling=None))
-
-    gui = GUI(config_dir=tempdir)
-    v.attach(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    v.show()
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
-
-    class Supervisor(object):
-        pass
-
-    emit('select', Supervisor(), [0, 2])
-    qtbot.wait(10)
+    qtbot.waitForWindowShown(v.canvas)
 
     v.increase()
     v.decrease()
@@ -88,18 +76,15 @@ def test_feature_view(qtbot, tempdir, n_channels):
     spike_ids = v.on_request_split()
     assert len(spike_ids) == 0
 
-    # Draw a lasso.
-    def _click(x, y):
-        qtbot.mouseClick(v.native, Qt.LeftButton, pos=QPoint(x, y),
-                         modifier=Qt.ControlModifier)
-
-    _click(10, 10)
-    _click(10, 300)
-    _click(300, 300)
-    _click(300, 10)
+    a, b = 50, 200
+    mouse_click(qtbot, v.canvas, (a, a), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (a, b), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (b, b), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (b, a), modifiers=('Control',))
 
     # Split lassoed points.
     spike_ids = v.on_request_split()
     assert len(spike_ids) > 0
 
-    gui.close()
+    # qtbot.stop()
+    v.close()

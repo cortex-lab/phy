@@ -85,18 +85,16 @@ class FeatureView(ManualClusteringView):
         'toggle_automatic_channel_selection': 'c',
     }
 
-    def __init__(self,
-                 features=None,
-                 attributes=None,
-                 **kwargs):
+    def __init__(self, features=None, attributes=None):
+        super(FeatureView, self).__init__()
         self._scaling = None
 
         assert features
         self.features = features
 
         self.n_cols = 4
-        self.shape = (self.n_cols, self.n_cols)
-
+        self.canvas.set_layout('grid', shape=(self.n_cols, self.n_cols))
+        self.canvas.enable_lasso()
         self.grid_dim = _get_default_grid()  # [i][j] = '..,..'
 
         # Channels being shown.
@@ -106,12 +104,6 @@ class FeatureView(ManualClusteringView):
         # {name: array}
         # where each array is a `(n_spikes,)` array.
         self.attributes = attributes or {}
-
-        # Initialize the view.
-        super(FeatureView, self).__init__(layout='grid',
-                                          shape=self.shape,
-                                          enable_lasso=True,
-                                          **kwargs)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -186,13 +178,13 @@ class FeatureView(ManualClusteringView):
         xmin, xmax = self._get_axis_bounds(dim_x, px)
         ymin, ymax = self._get_axis_bounds(dim_y, py)
         masks = _get_masks_max(px, py)
-        self[i, j].uscatter(x=px.data, y=py.data,
-                            color=_get_point_color(clu_idx),
-                            size=_get_point_size(clu_idx),
-                            masks=_get_point_masks(clu_idx=clu_idx,
-                                                   masks=masks),
-                            data_bounds=(xmin, ymin, xmax, ymax),
-                            )
+        self.canvas[i, j].uscatter(
+            x=px.data, y=py.data,
+            color=_get_point_color(clu_idx),
+            size=_get_point_size(clu_idx),
+            masks=_get_point_masks(clu_idx=clu_idx, masks=masks),
+            data_bounds=(xmin, ymin, xmax, ymax),
+        )
 
     def _plot_labels(self):
         """Plot feature labels along left and bottom edge of subplots"""
@@ -207,26 +199,27 @@ class FeatureView(ManualClusteringView):
             # best channel for the selected cluster, and so on.
             dim_x = self._get_axis_label(dim_x)
             dim_y = self._get_axis_label(dim_y)
-            # Left edge of left column of subplots.
-            self[k, 0].text(pos=[-1., 0.],
-                            text=dim_y,
-                            anchor=[-1.03, 0.],
-                            data_bounds=None,
-                            )
+            # Right edge of right column of subplots.
+            self.canvas[k, br].text(
+                pos=[.9, .9],
+                text=dim_y,
+                data_bounds=None,
+            )
             # Bottom edge of bottom row of subplots.
-            self[br, k].text(pos=[0., -1.],
-                             text=dim_x,
-                             anchor=[0., -1.04],
-                             data_bounds=None,
-                             )
+            self.canvas[br, k].text(
+                pos=[0, -.9],
+                text=dim_x,
+                data_bounds=None,
+            )
 
     def _plot_axes(self):
         for i, j, dim_x, dim_y in self._iter_subplots():
-            self[i, j].lines(pos=[[-1., 0., +1., 0.],
-                                  [0., -1., 0., +1.]],
-                             color=(.25, .25, .25, .5),
-                             data_bounds=None,
-                             )
+            self.canvas[i, j].lines(
+                pos=[[-1., 0., +1., 0.],
+                     [0., -1., 0., +1.]],
+                color=(.5, .5, .5, .5),
+                data_bounds=None,
+            )
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -270,30 +263,30 @@ class FeatureView(ManualClusteringView):
         background = self.features(channel_ids=self.channel_ids)
 
         # Plot all features.
-        with self.building():
-            self._plot_axes()
+        self.canvas.clear()
+        # self.canvas.grid.add_boxes(self.canvas)
+        self._plot_axes()
 
-            # NOTE: the columns in bunch.data are ordered by decreasing quality
-            # of the associated channels. The channels corresponding to each
-            # column are given in bunch.channel_ids in the same order.
+        # NOTE: the columns in bunch.data are ordered by decreasing quality
+        # of the associated channels. The channels corresponding to each
+        # column are given in bunch.channel_ids in the same order.
 
-            # Find the initial scaling.
-            if self._scaling in (None, np.inf):
-                m = np.median(np.abs(background.data))
-                m = m if m > 1e-9 else 1.
-                self._scaling = .1 / m
+        # Find the initial scaling.
+        if self._scaling in (None, np.inf):
+            m = np.median(np.abs(background.data))
+            m = m if m > 1e-9 else 1.
+            self._scaling = .1 / m
 
-            for i, j, dim_x, dim_y in self._iter_subplots():
-                # Plot the background points.
-                self._plot_points(i, j, dim_x, dim_y, background)
+        for i, j, dim_x, dim_y in self._iter_subplots():
+            # Plot the background points.
+            self._plot_points(i, j, dim_x, dim_y, background)
 
-                # Plot each cluster's data.
-                for clu_idx, bunch in enumerate(bunchs):
-                    self._plot_points(i, j, dim_x, dim_y, bunch,
-                                      clu_idx=clu_idx)
+            # Plot each cluster's data.
+            for clu_idx, bunch in enumerate(bunchs):
+                self._plot_points(
+                    i, j, dim_x, dim_y, bunch, clu_idx=clu_idx)
 
-            self._plot_labels()
-            self.grid.add_boxes(self, self.shape)
+        self._plot_labels()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -345,13 +338,13 @@ class FeatureView(ManualClusteringView):
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
-        if (self.lasso.count < 3 or
+        if (self.canvas.lasso.count < 3 or
                 not len(self.cluster_ids)):  # pragma: no cover
             return np.array([], dtype=np.int64)
         assert len(self.channel_ids)
 
         # Get the dimensions of the lassoed subplot.
-        i, j = self.lasso.box
+        i, j = self.canvas.lasso.box
         dim = self.grid_dim[i][j]
         dim_x, dim_y = dim.split(',')
 
@@ -382,8 +375,8 @@ class FeatureView(ManualClusteringView):
         spike_ids = np.concatenate(spike_ids)
 
         # Find lassoed spikes.
-        ind = self.lasso.in_polygon(pos)
-        self.lasso.clear()
+        ind = self.canvas.lasso.in_polygon(pos)
+        self.canvas.lasso.clear()
         return np.unique(spike_ids[ind])
 
     def toggle_automatic_channel_selection(self, checked):
