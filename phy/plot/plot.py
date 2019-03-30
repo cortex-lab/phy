@@ -106,7 +106,7 @@ class PlotCanvas(BaseCanvas):
         return self
 
     def add(self, visual, *args, **kwargs):
-        self.add_visual(visual, box_index=self._default_box_index)
+        self.add_visual(visual, box_index=kwargs.pop('box_index', self._default_box_index))
         visual.set_data(*args, **kwargs)
 
     def scatter(self, *args, **kwargs):
