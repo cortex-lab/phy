@@ -14,6 +14,7 @@ import numpy as np
 from six import string_types
 
 from .transform import Range, NDC
+from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,32 @@ def _get_index(n_items, item_size, n):
 
 def _get_linear_x(n_signals, n_samples):
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+
+
+class BatchAccumulator(object):
+    def __init__(self):
+        self.items = {}
+
+    def add(self, b):
+        # It is assumed that the first item is an array, and
+        # that the size of the first dimension is the number of
+        # vertices for that visual.
+        n = next(iter(b.values())).shape[0]
+        for key, val in b.items():
+            if key not in self.items:
+                self.items[key] = []
+            k = len(val) if isinstance(val, (tuple, list)) else 1
+            self.items[key].append(_get_array(val, (n, k)))
+
+    def __getattr__(self, key):
+        if key not in self.items:
+            raise AttributeError()
+        arrs = self.items.get(key)
+        return np.concatenate(arrs, axis=0)
+
+    @property
+    def data(self):
+        return Bunch({key: getattr(self, key) for key in self.items.keys()})
 
 
 #------------------------------------------------------------------------------

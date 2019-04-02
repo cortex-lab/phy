@@ -19,6 +19,7 @@ from ..utils import (_load_shader,
                      _binary_search,
                      _get_boxes,
                      _get_box_pos_size,
+                     BatchAccumulator,
                      )
 
 
@@ -121,3 +122,16 @@ def test_get_box_pos_size():
     pos, size = _get_box_pos_size(bounds)
     ae(pos, [[-.5, 0], [.5, 0]])
     assert size == (.5, .25)
+
+
+def test_accumulator():
+    b = BatchAccumulator()
+    b.add({'x': np.ones(4), 'y': 2})
+    b.add({'x': np.zeros(2), 'y': 1})
+    x = np.array([[1, 1, 1, 1, 0, 0]]).T
+    y = np.array([[2, 2, 2, 2, 1, 1]]).T
+    ae(b.x, x)
+    ae(b.y, y)
+    assert tuple(b.data.keys()) == ('x', 'y')
+    ae(b.data.x, x)
+    ae(b.data.y, y)
