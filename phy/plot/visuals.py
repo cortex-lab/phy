@@ -124,6 +124,7 @@ class ScatterVisual(BaseVisual):
         self.program['a_size'] = data.size.astype(np.float32)
         self.program['a_color'] = data.color.astype(np.float32)
         emit('visual_set_data', self)
+        return data
 
 
 class UniformScatterVisual(BaseVisual):
@@ -192,6 +193,9 @@ class UniformScatterVisual(BaseVisual):
         masks = _get_array(masks, (n, 1), 1., np.float32)
         assert masks.shape == (n, 1)
 
+        # The mask is clu_idx + fractional mask
+        masks *= .99999
+
         # Validate the data.
         if data_bounds is not None:
             data_bounds = _get_data_bounds(data_bounds, pos)
@@ -220,6 +224,7 @@ class UniformScatterVisual(BaseVisual):
         self.program['u_color'] = self.color
         self.program['u_mask_max'] = _max(masks)
         emit('visual_set_data', self)
+        return data
 
 
 #------------------------------------------------------------------------------
@@ -241,7 +246,7 @@ def _min(arr):
 
 
 def _max(arr):
-    return arr.max() if len(arr) else 1
+    return arr.max() if len(arr) else 1.
 
 
 class PlotVisual(BaseVisual):
@@ -350,6 +355,7 @@ class PlotVisual(BaseVisual):
         self.program['a_signal_index'] = signal_index.astype(np.float32)
 
         emit('visual_set_data', self)
+        return data
 
 
 class UniformPlotVisual(BaseVisual):
@@ -455,6 +461,7 @@ class UniformPlotVisual(BaseVisual):
         self.program['u_mask_max'] = _max(masks)
 
         emit('visual_set_data', self)
+        return data
 
 
 #------------------------------------------------------------------------------
@@ -543,6 +550,7 @@ class HistogramVisual(BaseVisual):
         self.program['n_hists'] = n_hists
 
         emit('visual_set_data', self)
+        return data
 
 
 #------------------------------------------------------------------------------
@@ -557,12 +565,18 @@ class TextVisual(BaseVisual):
     """
     _default_color = (1., 1., 1., 1.)
 
-    def __init__(self):
+    def __init__(self, color=None):
         super(TextVisual, self).__init__()
         self.set_shader('text')
         self.set_primitive_type('triangles')
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
+
+        # Color.
+        color = color if color is not None else TextVisual._default_color
+        assert not isinstance(color, np.ndarray)  # uniform color for now
+        assert len(color) == 4
+        self.color = color
 
         # Load the font.
         curdir = op.realpath(op.dirname(__file__))
@@ -580,7 +594,7 @@ class TextVisual(BaseVisual):
 
     @staticmethod
     def validate(pos=None, text=None, anchor=None,
-                 data_bounds=None, color=None,
+                 data_bounds=None,
                  ):
 
         if text is None:
@@ -597,9 +611,6 @@ class TextVisual(BaseVisual):
         n_text = pos.shape[0]
         assert len(text) == n_text
 
-        color = color if color is not None else TextVisual._default_color
-        assert len(color) == 4
-
         anchor = anchor if anchor is not None else (0., 0.)
         anchor = np.atleast_2d(anchor)
         if anchor.shape[0] == 1:
@@ -614,7 +625,7 @@ class TextVisual(BaseVisual):
             assert data_bounds.shape == (n_text, 4)
 
         return Bunch(pos=pos, text=text, anchor=anchor,
-                     color=color, data_bounds=data_bounds)
+                     data_bounds=data_bounds)
 
     @staticmethod
     def vertex_count(pos=None, **kwargs):
@@ -634,6 +645,7 @@ class TextVisual(BaseVisual):
         # Concatenate all strings.
         text = data.text
         lengths = list(map(len, text))
+        assert isinstance(text, list)
         text = ''.join(text)
         a_char_index = self._get_glyph_indices(text)
         n_glyphs = len(a_char_index)
@@ -693,11 +705,23 @@ class TextVisual(BaseVisual):
         self.program['a_lengths'] = a_lengths.astype(np.float32)
 
         self.program['u_glyph_size'] = glyph_size
-        self.program['u_color'] = data.color
+        self.program['u_color'] = self.color
 
         self.program['u_tex'] = tex[::-1, :]
 
         emit('visual_set_data', self)
+        return data
+
+    def set_box_index(self, box_index, data=None):
+        # box_index has one item per text item.
+        if isinstance(box_index, tuple):
+            box_index = [box_index]
+        assert len(box_index) == len(data.text)
+        lengths = list(map(len, data.text))
+        a_box_index = np.repeat(box_index, lengths, axis=0)
+        a_box_index = np.repeat(a_box_index, 6, axis=0)
+        assert len(a_box_index) == self.n_vertices
+        self.program['a_box_index'] = a_box_index.astype(np.float32)
 
 
 #------------------------------------------------------------------------------
@@ -768,6 +792,7 @@ class LineVisual(BaseVisual):
         self.program['a_color'] = color.astype(np.float32)
 
         emit('visual_set_data', self)
+        return data
 
 
 #------------------------------------------------------------------------------
@@ -829,3 +854,4 @@ class PolygonVisual(BaseVisual):
         self.program['u_color'] = self._default_color
 
         emit('visual_set_data', self)
+        return data

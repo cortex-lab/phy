@@ -23,7 +23,7 @@ from .visuals import (
     HistogramVisual, TextVisual, LineVisual, PolygonVisual,
     DEFAULT_COLOR)
 from .transform import NDC
-from .utils import _get_array
+from .utils import _get_array, BatchAccumulator
 from phy.utils._types import _as_tuple
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,14 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Plotting interface
 #------------------------------------------------------------------------------
+
+def _make_box_index(box_index, n):
+    if not isinstance(box_index, np.ndarray):
+        k = len(box_index)
+        box_index = _get_array(box_index, (n, k))
+    assert box_index.shape[0] == n
+    return box_index
+
 
 class PlotCanvas(BaseCanvas):
     """Plotting canvas."""
@@ -46,6 +54,7 @@ class PlotCanvas(BaseCanvas):
 
     def __init__(self, *args, **kwargs):
         super(PlotCanvas, self).__init__(*args, **kwargs)
+        self._acc = BatchAccumulator()
 
     def _enable(self):
         self._enabled = True
@@ -88,15 +97,6 @@ class PlotCanvas(BaseCanvas):
         if layout == 'grid' and shape is not None:
             self.interact.add_boxes(self)
 
-    def add_visual(self, visual, unclearable=False, box_index=None):
-        if not self._enabled:
-            self._enable()
-        if self.interact:
-            @self.on_next_paint
-            def set_box_index():
-                visual.program['a_box_index'] = self.make_box_index(visual, box_index=box_index)
-        super(PlotCanvas, self).add_visual(visual, unclearable=unclearable)
-
     def __getitem__(self, box_index):
         self._default_box_index = _as_tuple(box_index)
         return self
@@ -105,42 +105,82 @@ class PlotCanvas(BaseCanvas):
     def canvas(self):
         return self
 
-    def add(self, visual, *args, **kwargs):
-        self.add_visual(visual, box_index=kwargs.pop('box_index', self._default_box_index))
-        visual.set_data(*args, **kwargs)
+    def add_visual(self, *args, **kwargs):
+        if not self._enabled:
+            self._enable()
+        super(PlotCanvas, self).add_visual(*args, **kwargs)
+
+    def add_one(self, visual, *args, box_index=None, **kwargs):
+        # Finalize batch.
+        if self._acc.items:
+            kwargs.update(self._acc.data)
+            box_index = box_index if box_index is not None else self._acc.box_index
+            self._acc.reset()
+        else:
+            box_index = box_index if box_index is not None else self._default_box_index
+        self.add_visual(
+            visual,
+            clearable=kwargs.pop('clearable', True),
+            key=kwargs.pop('key', None),
+        )
+        # Remove box_index from the kwargs updated with the BatchAccumulator.
+        kwargs.pop('box_index', None)
+        data = visual.set_data(*args, **kwargs)
+        if self.interact:
+            #@self.on_next_paint
+            #def set_box_index():
+            visual.set_box_index(box_index, data=data)
+
+    def add_batch(self, visual_cls, box_index=None, **kwargs):
+        # box_index scalar or vector
+        b = visual_cls.validate(**kwargs)
+        b.box_index = box_index if box_index is not None else self._default_box_index
+        # b.box_index = _make_box_index(box_index, n)
+        self._acc.add(b)
+
+    # Plot methods
+    #--------------------------------------------------------------------------
 
     def scatter(self, *args, **kwargs):
-        self.add(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
+        return self.add_one(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
 
     def uscatter(self, *args, **kwargs):
-        self.add(UniformScatterVisual(
+        return self.add_one(UniformScatterVisual(
             marker=kwargs.pop('marker', None),
             color=kwargs.pop('color', None),
             size=kwargs.pop('size', None)), *args, **kwargs)
 
     def plot(self, *args, **kwargs):
-        self.add(PlotVisual(), *args, **kwargs)
+        return self.add_one(PlotVisual(), *args, **kwargs)
 
     def lines(self, *args, **kwargs):
-        self.add(LineVisual(), *args, **kwargs)
+        return self.add_one(LineVisual(), *args, **kwargs)
 
     def text(self, *args, **kwargs):
-        self.add(TextVisual(), *args, **kwargs)
+        return self.add_one(TextVisual(), *args, **kwargs)
 
     def polygon(self, *args, **kwargs):
-        self.add(PolygonVisual(), *args, **kwargs)
+        return self.add_one(PolygonVisual(), *args, **kwargs)
 
     def hist(self, *args, **kwargs):
-        self.add(HistogramVisual(), *args, **kwargs)
+        return self.add_one(HistogramVisual(), *args, **kwargs)
 
-    def make_box_index(self, visual, box_index=None):
-        if box_index is None:
-            box_index = self._default_box_index
-        if not isinstance(box_index, np.ndarray):
-            n = visual.n_vertices
-            k = len(self._default_box_index)
-            box_index = _get_array(box_index, (n, k))
-        return box_index
+    # Batch methods
+    #--------------------------------------------------------------------------
+
+    def text_batch(self, **kwargs):
+        # box_index scalar or vector
+        b = TextVisual.validate(**kwargs)
+        b.box_index = kwargs.pop('box_index', self._default_box_index)
+        if isinstance(b.box_index, tuple):
+            b.box_index = [b.box_index]
+        self._acc.add(b, noconcat=('text', 'box_index'))
+
+    def uscatter_batch(self, **kwargs):
+        self.add_batch(UniformScatterVisual, **kwargs)
+
+    # Enable methods
+    #--------------------------------------------------------------------------
 
     def enable_panzoom(self):
         self.panzoom = PanZoom(aspect=None, constrain_bounds=self.constrain_bounds)
