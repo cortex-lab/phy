@@ -10,7 +10,7 @@
 import os
 
 import numpy as np
-from pytest import fixture
+from pytest import fixture, raises
 
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import _get_linear_x
@@ -34,7 +34,7 @@ def y():
 # Test plotting interface
 #------------------------------------------------------------------------------
 
-@fixture(params=[False, True])
+@fixture(params=[True])
 def canvas(request, qtbot):
     c = PlotCanvas() if request.param else PlotCanvasMpl()
     yield c
@@ -100,3 +100,47 @@ def test_plot_boxed(qtbot, canvas):
     c[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
     c[2].hist(np.random.rand(5, 10),
               color=np.random.uniform(.4, .9, size=(5, 4)))
+
+
+def test_plot_uscatter(qtbot, canvas):
+    x, y = .25 * np.random.randn(2, 1000)
+    canvas.uscatter(x=x, y=y)
+
+
+def test_plot_uscatter_batch_fail(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    x, y = .25 * np.random.randn(2, 100)
+    with raises(TypeError):  # color cannot be passed to batch
+        canvas.uscatter_batch(x=x, y=y, color=(1, 0, 0, 1))
+
+
+def test_plot_uscatter_batch_1(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    canvas.set_layout('grid', shape=(1, 2))
+    x, y = .25 * np.random.randn(2, 10)
+    canvas[0, 0].uscatter_batch(x=x, y=y)
+    canvas[0, 1].uscatter_batch(x=y, y=x)
+    canvas.uscatter(color=(1, 1, 0, 1))
+
+
+def test_plot_text_batch_1(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    canvas.set_layout('grid', shape=(1, 2))
+    canvas[0, 0].text(pos=(0, 0), text='12', anchor=(0., 0.))
+    canvas[0, 1].text(pos=(0, 0), text='345', anchor=(0., 0.))
+
+
+def test_plot_text_batch_2(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    canvas.set_layout('grid', shape=(1, 2))
+    canvas[0, 0].text_batch(pos=(0, 0), text='12', anchor=(0., 0.))
+    canvas[0, 1].text_batch(pos=(0, 0), text='345', anchor=(0., 0.))
+    canvas.text()

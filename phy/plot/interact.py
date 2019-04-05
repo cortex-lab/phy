@@ -100,8 +100,9 @@ class Grid(BaseLayout):
         def _remove_clip(tc):
             return tc.remove('Clip')
 
-        canvas.add_visual(boxes, unclearable=True, box_index=box_index)
+        canvas.add_visual(boxes, clearable=False)
         boxes.set_data(pos=pos)
+        boxes.set_box_index(box_index)
         canvas.update()
 
     def get_closest_box(self, pos):
