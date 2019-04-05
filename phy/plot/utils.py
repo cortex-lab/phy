@@ -237,23 +237,42 @@ def _get_linear_x(n_signals, n_samples):
 
 class BatchAccumulator(object):
     def __init__(self):
-        self.items = {}
+        self.reset()
 
-    def add(self, b):
-        # It is assumed that the first item is an array, and
-        # that the size of the first dimension is the number of
-        # vertices for that visual.
-        n = next(iter(b.values())).shape[0]
+    def reset(self):
+        self.items = {}
+        self.noconcat = ()
+
+    def add(self, b, noconcat=()):
+        n = len(next(iter(b.values())))
+        self.noconcat = noconcat
         for key, val in b.items():
             if key not in self.items:
                 self.items[key] = []
-            k = len(val) if isinstance(val, (tuple, list)) else 1
-            self.items[key].append(_get_array(val, (n, k)))
+            if val is None:
+                continue
+            # Size of the second dimension.
+            if isinstance(val, np.ndarray) and val.ndim == 2:
+                k = val.shape[1]
+            elif isinstance(val, (tuple, list)):
+                k = len(val)
+            else:
+                k = 1
+            # Special consideration for list of strings (text visual).
+            if key in noconcat:
+                self.items[key].extend(val)
+            else:
+                self.items[key].append(_get_array(val, (n, k)))
 
     def __getattr__(self, key):
         if key not in self.items:
             raise AttributeError()
         arrs = self.items.get(key)
+        if not arrs:
+            return None
+        # Special consideration for list of strings (text visual).
+        if key in self.noconcat:
+            return arrs
         return np.concatenate(arrs, axis=0)
 
     @property
