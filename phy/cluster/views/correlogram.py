@@ -77,12 +77,12 @@ class CorrelogramView(ManualClusteringView):
 
     def _plot_labels(self, cluster_ids):
         for i, j in self._iter_subplots(len(cluster_ids)):
-            self.canvas[i, j].text(
+            self.canvas[i, j].text_batch(
                 pos=[-0.90, -0.90],
-                color=(0., 0., 0., 1.),
                 text='%d-%d' % (cluster_ids[i], cluster_ids[j]),
                 data_bounds=None,
             )
+        self.canvas.text(color=(0., 0., 0., 1.))
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids

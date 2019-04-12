@@ -167,23 +167,31 @@ class FeatureView(ManualClusteringView):
         # PC dimensions: use the common scaling.
         return (-1. / self.scaling, +1. / self.scaling)
 
-    def _plot_points(self, i, j, dim_x, dim_y, bunch, clu_idx=None):
+    def _plot_points(self, bunch, clu_idx=None):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
-        px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
-        py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
-        # Skip empty data.
-        if px is None or py is None:
-            return
-        assert px.data.shape == py.data.shape
-        xmin, xmax = self._get_axis_bounds(dim_x, px)
-        ymin, ymax = self._get_axis_bounds(dim_y, py)
-        masks = _get_masks_max(px, py)
-        self.canvas[i, j].uscatter(
-            x=px.data, y=py.data,
+        for i, j, dim_x, dim_y in self._iter_subplots():
+            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
+            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+            # Skip empty data.
+            if px is None or py is None:
+                return
+            assert px.data.shape == py.data.shape
+            xmin, xmax = self._get_axis_bounds(dim_x, px)
+            ymin, ymax = self._get_axis_bounds(dim_y, py)
+            data_bounds = (xmin, ymin, xmax, ymax)
+            masks = _get_masks_max(px, py)
+            # Prepare the batch visual with all subplots
+            # for the selected cluster.
+            self.canvas[i, j].uscatter_batch(
+                x=px.data, y=py.data,
+                masks=_get_point_masks(clu_idx=clu_idx, masks=masks),
+                data_bounds=data_bounds,
+            )
+        # Add the batch visual, omitted keyword arguments are taken
+        # from the batch (uscatter_batch method).
+        self.canvas.uscatter(
             color=_get_point_color(clu_idx),
             size=_get_point_size(clu_idx),
-            masks=_get_point_masks(clu_idx=clu_idx, masks=masks),
-            data_bounds=(xmin, ymin, xmax, ymax),
         )
 
     def _plot_labels(self):
@@ -200,17 +208,18 @@ class FeatureView(ManualClusteringView):
             dim_x = self._get_axis_label(dim_x)
             dim_y = self._get_axis_label(dim_y)
             # Right edge of right column of subplots.
-            self.canvas[k, br].text(
+            self.canvas[k, br].text_batch(
                 pos=[.9, .9],
                 text=dim_y,
                 data_bounds=None,
             )
             # Bottom edge of bottom row of subplots.
-            self.canvas[br, k].text(
+            self.canvas[br, k].text_batch(
                 pos=[0, -.9],
                 text=dim_x,
                 data_bounds=None,
             )
+        self.canvas.text()
 
     def _plot_axes(self):
         for i, j, dim_x, dim_y in self._iter_subplots():
@@ -277,15 +286,12 @@ class FeatureView(ManualClusteringView):
             m = m if m > 1e-9 else 1.
             self._scaling = .1 / m
 
-        for i, j, dim_x, dim_y in self._iter_subplots():
-            # Plot the background points.
-            self._plot_points(i, j, dim_x, dim_y, background)
+        # Plot the background points.
+        self._plot_points(background)
 
-            # Plot each cluster's data.
-            for clu_idx, bunch in enumerate(bunchs):
-                self._plot_points(
-                    i, j, dim_x, dim_y, bunch, clu_idx=clu_idx)
-
+        # Plot each cluster's data.
+        for clu_idx, bunch in enumerate(bunchs):
+            self._plot_points(bunch, clu_idx=clu_idx)
         self._plot_labels()
 
     def attach(self, gui):

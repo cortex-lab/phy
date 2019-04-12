@@ -58,12 +58,12 @@ def test_feature_view(qtbot, n_channels):
                     attributes={'time': get_time},
                     )
     v.show()
+    qtbot.waitForWindowShown(v.canvas)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
-    qtbot.waitForWindowShown(v.canvas)
 
     v.increase()
     v.decrease()
