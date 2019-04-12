@@ -355,8 +355,7 @@ class Lasso(object):
 
     def create_lasso_visual(self):
         self.visual = PolygonVisual()
-        self.canvas.add_visual(self.visual, unclearable=True)
-        #self.update_lasso_visual()
+        self.canvas.add_visual(self.visual, clearable=False)
 
     def update_lasso_visual(self):
         if not self.visual:
