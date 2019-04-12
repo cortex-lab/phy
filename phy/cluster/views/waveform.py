@@ -187,7 +187,7 @@ class WaveformView(ManualClusteringView):
                 y=wave,
                 color=color,
                 masks=m,
-                box_index=np.c_[box_index],
+                box_index=box_index,
                 data_bounds=None,
             )
 

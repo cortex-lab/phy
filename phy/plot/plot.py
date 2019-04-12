@@ -127,15 +127,12 @@ class PlotCanvas(BaseCanvas):
         kwargs.pop('box_index', None)
         data = visual.set_data(*args, **kwargs)
         if self.interact:
-            #@self.on_next_paint
-            #def set_box_index():
             visual.set_box_index(box_index, data=data)
 
     def add_batch(self, visual_cls, box_index=None, **kwargs):
         # box_index scalar or vector
         b = visual_cls.validate(**kwargs)
         b.box_index = box_index if box_index is not None else self._default_box_index
-        # b.box_index = _make_box_index(box_index, n)
         self._acc.add(b)
 
     # Plot methods
