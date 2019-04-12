@@ -341,6 +341,7 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_modifiers = None
         self._last_mouse_pos = None
         self._mouse_press_time = 0.
+        self._current_key_event = None
 
     def get_size(self):
         return self.size().width() or 1, self.size().height() or 1
@@ -454,7 +455,8 @@ class BaseCanvas(QOpenGLWindow):
     def _mouse_event(self, name, e):
         pos, button = mouse_info(e)
         modifiers = get_modifiers(e)
-        self.emit(name, pos=pos, button=button, modifiers=modifiers)
+        key = self._current_key_event[0] if self._current_key_event else None
+        self.emit(name, pos=pos, button=button, modifiers=modifiers, key=key)
         return pos, button, modifiers
 
     def mousePressEvent(self, e):
@@ -504,9 +506,11 @@ class BaseCanvas(QOpenGLWindow):
 
     def keyPressEvent(self, e):
         key, modifiers = self._key_event('key_press', e)
+        self._current_key_event = (key, modifiers)
 
     def keyReleaseEvent(self, e):
         self._key_event('key_release', e)
+        self._current_key_event = None
 
     def _event(self, e):
         out = super(BaseCanvas, self).event(e)
