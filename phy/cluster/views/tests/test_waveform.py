@@ -8,12 +8,11 @@
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
-from vispy.util import keys
 
 from phy.electrode.mea import staggered_positions
-from phy.gui import GUI
 from phy.io.mock import artificial_waveforms
 from phy.utils import Bunch, connect
+from phy.plot.tests import mouse_click, key_press, key_release
 
 from ..waveform import WaveformView
 
@@ -33,10 +32,8 @@ def test_waveform_view(qtbot, tempdir):
 
     v = WaveformView(waveforms=get_waveforms,
                      )
-    gui = GUI(config_dir=tempdir)
-    v.attach(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -86,11 +83,11 @@ def test_waveform_view(qtbot, tempdir):
     def on_channel_click(sender, channel_id=None, button=None, key=None):
         _clicked.append((channel_id, button, key))
 
-    v.events.key_press(key=keys.Key('2'))
-    v.events.mouse_press(pos=(0., 0.), button=1)
-    v.events.key_release(key=keys.Key('2'))
+    key_press(qtbot, v.canvas, '2')
+    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left')
+    key_release(qtbot, v.canvas, '2')
 
-    assert _clicked == [(0, 1, 2)]
+    assert _clicked == [(1, 'Left', 2)]
 
     # qtbot.stop()
-    gui.close()
+    v.close()

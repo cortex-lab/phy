@@ -11,7 +11,6 @@ from collections import defaultdict
 import logging
 
 import numpy as np
-from vispy.util.event import Event
 
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
@@ -55,14 +54,6 @@ def _get_clu_offsets(bunchs):
     return offsets
 
 
-class ChannelClick(Event):
-    def __init__(self, type, channel_id=None, key=None, button=None):
-        super(ChannelClick, self).__init__(type)
-        self.channel_id = channel_id
-        self.key = key
-        self.button = button
-
-
 class WaveformView(ManualClusteringView):
     scaling_coeff = 1.1
     cluster_ids = ()
@@ -84,11 +75,7 @@ class WaveformView(ManualClusteringView):
         'shrink_vertically': 'shift+down',
     }
 
-    def __init__(self,
-                 waveforms=None,
-                 channel_labels=None,
-                 **kwargs):
-        self._key_pressed = None
+    def __init__(self, waveforms=None, channel_labels=None):
         self._overlap = False
         self.do_show_labels = True
         self.channel_ids = None
@@ -96,20 +83,20 @@ class WaveformView(ManualClusteringView):
         self.filtered_tags = ()
 
         # Initialize the view.
-        super(WaveformView, self).__init__(layout='boxed',
-                                           box_pos=[[0., 0.]],
-                                           **kwargs)
-
-        self.events.add(channel_click=ChannelClick)
+        super(WaveformView, self).__init__()
 
         # Box and probe scaling.
-        self.boxed.margin = .1
+        self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
+        self.canvas.boxed.margin = .1
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
 
-        self.box_pos = np.array(self.boxed.box_pos)
-        self.box_size = np.array(self.boxed.box_size)
+        self.box_pos = np.array(self.canvas.boxed.box_pos)
+        self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()
+
+        # Bind self.on_mouse_click() to the canvas.
+        self.canvas.attach_events(self)
 
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
@@ -126,11 +113,13 @@ class WaveformView(ManualClusteringView):
             for i, ch in enumerate(channel_ids):
                 label = (self.channel_labels[i]
                          if self.channel_labels is not None else ch)
-                self[i].text(pos=[x, 0.],
-                             text=str(label),
-                             anchor=[-1.01, -.25],
-                             data_bounds=None,
-                             )
+                self.canvas[i].text_batch(
+                    pos=[x, 0.],
+                    text=str(label),
+                    anchor=[-1.01, -.25],
+                    data_bounds=None,
+                )
+            self.canvas.text()
 
     def _plot_waveforms(self, bunchs, channel_ids):
         # Initialize the box scaling the first time.
@@ -142,7 +131,7 @@ class WaveformView(ManualClusteringView):
         max_clu_offsets = max(clu_offsets) + 1
         for i, d in enumerate(bunchs):
             wave = d.data
-            alpha = d.get('alpha', .5)
+            alpha = d.get('alpha', .75)
             channel_ids_loc = d.channel_ids
 
             n_channels = len(channel_ids_loc)
@@ -193,13 +182,14 @@ class WaveformView(ManualClusteringView):
             wave = np.transpose(wave, (0, 2, 1))
             wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
 
-            self.uplot(x=t,
-                       y=wave,
-                       color=color,
-                       masks=m,
-                       box_index=box_index,
-                       data_bounds=None,
-                       )
+            self.canvas.uplot(
+                x=t,
+                y=wave,
+                color=color,
+                masks=m,
+                box_index=np.c_[box_index],
+                data_bounds=None,
+            )
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids
@@ -217,14 +207,14 @@ class WaveformView(ManualClusteringView):
         self.channel_ids = channel_ids
 
         # Update the box bounds as a function of the selected channels.
-        self.boxed.box_bounds = box_bounds
-        self.box_pos = np.array(self.boxed.box_pos)
-        self.box_size = np.array(self.boxed.box_size)
+        self.canvas.boxed.box_bounds = box_bounds
+        self.box_pos = np.array(self.canvas.boxed.box_pos)
+        self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()
 
-        with self.building():
-            self._plot_waveforms(bunchs, channel_ids)
-            self._plot_labels(channel_ids, n_clusters)
+        self.canvas.clear()
+        self._plot_waveforms(bunchs, channel_ids)
+        self._plot_labels(channel_ids, n_clusters)
 
     @property
     def state(self):
@@ -258,14 +248,7 @@ class WaveformView(ManualClusteringView):
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
 
-        # We forward the event from VisPy to the phy GUI.
-        @self.connect
-        def on_channel_click(e):
-            emit('channel_click', self,
-                 channel_id=e.channel_id,
-                 key=e.key,
-                 button=e.button,
-                 )
+        # TODO: channel_click event
 
     # Overlap
     # -------------------------------------------------------------------------
@@ -287,8 +270,12 @@ class WaveformView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def _update_boxes(self):
-        self.boxed.update_boxes(self.box_pos * self.probe_scaling,
-                                self.box_size * self.box_scaling)
+        self.canvas.boxed.update_boxes(
+            self.box_pos * self.probe_scaling, self.box_size * self.box_scaling)
+
+    @property
+    def boxed(self):
+        return self.canvas.boxed
 
     @property
     def box_scaling(self):
@@ -360,22 +347,11 @@ class WaveformView(ManualClusteringView):
         self.do_show_labels = checked
         self.on_select(cluster_ids=self.cluster_ids)
 
-    def on_key_press(self, event):
-        """Handle key press events."""
-        key = event.key
-        self._key_pressed = key
-
-    def on_mouse_press(self, e):
-        key = self._key_pressed
-        if 'Control' in e.modifiers or key in map(str, range(10)):
-            key = int(key.name) if key in map(str, range(10)) else None
+    def on_mouse_click(self, e):
+        nums = tuple('%d' % i for i in range(10))
+        if 'Control' in e.modifiers or e.key in nums:
+            key = int(e.key) if e.key in nums else None
             # Get mouse position in NDC.
-            mouse_pos = self.panzoom.get_mouse_pos(e.pos)
-            channel_idx = self.boxed.get_closest_box(mouse_pos)
+            channel_idx = self.canvas.boxed.get_closest_box(e.pos)
             channel_id = self.channel_ids[channel_idx]
-            self.events.channel_click(channel_id=channel_id,
-                                      key=key,
-                                      button=e.button)
-
-    def on_key_release(self, event):
-        self._key_pressed = None
+            emit('channel_click', self, channel_id=channel_id, key=key, button=e.button)
