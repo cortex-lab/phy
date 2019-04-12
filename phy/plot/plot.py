@@ -157,7 +157,7 @@ class PlotCanvas(BaseCanvas):
         return self.add_one(LineVisual(), *args, **kwargs)
 
     def text(self, *args, **kwargs):
-        return self.add_one(TextVisual(), *args, **kwargs)
+        return self.add_one(TextVisual(color=kwargs.pop('color', None)), *args, **kwargs)
 
     def polygon(self, *args, **kwargs):
         return self.add_one(PolygonVisual(), *args, **kwargs)
