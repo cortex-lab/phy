@@ -19,7 +19,7 @@ from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked, Lasso
 from .panzoom import PanZoom
 from .visuals import (
-    ScatterVisual, UniformScatterVisual, PlotVisual,
+    ScatterVisual, UniformScatterVisual, PlotVisual, UniformPlotVisual,
     HistogramVisual, TextVisual, LineVisual, PolygonVisual,
     DEFAULT_COLOR)
 from .transform import NDC
@@ -152,6 +152,9 @@ class PlotCanvas(BaseCanvas):
 
     def plot(self, *args, **kwargs):
         return self.add_one(PlotVisual(), *args, **kwargs)
+
+    def uplot(self, *args, **kwargs):
+        return self.add_one(UniformPlotVisual(color=kwargs.pop('color', None)), *args, **kwargs)
 
     def lines(self, *args, **kwargs):
         return self.add_one(LineVisual(), *args, **kwargs)
