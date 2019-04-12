@@ -117,11 +117,15 @@ class BaseVisual(object):
         self.canvas_transforms_filter = f
 
     def set_box_index(self, box_index, data=None):
-        # b is the output of validate_data
+        # data is the output of validate_data
         assert box_index is not None
         n = self.n_vertices
-        k = len(box_index)
-        a_box_index = _get_array(box_index, (n, k))
+        if not isinstance(box_index, np.ndarray):
+            k = len(box_index)
+            a_box_index = _get_array(box_index, (n, k))
+        else:
+            a_box_index = box_index
+        assert a_box_index.ndim == 2
         assert a_box_index.shape[0] == n
         self.program['a_box_index'] = a_box_index.astype(np.float32)
 
@@ -415,8 +419,10 @@ class BaseCanvas(QOpenGLWindow):
         for f in self._next_paint_callbacks:
             f()
         self._next_paint_callbacks.clear()
-        # Draw all visuals.
-        for v in self.visuals:
+        # Draw all visuals, clearable first, non clearable last.
+        visuals = [v for v in self.visuals if v.clearable is True]
+        visuals += [v for v in self.visuals if v.clearable is False]
+        for v in visuals:
             visual = v.visual
             if size != self._size:
                 visual.on_resize(*size)
