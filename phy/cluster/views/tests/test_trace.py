@@ -8,14 +8,13 @@
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
-from vispy.util import keys
 
-from phy.gui import GUI
 from phy.io.mock import (artificial_traces,
                          artificial_spike_clusters,
                          )
 from phy.utils import Bunch, connect
 from phy.utils._color import ColorSelector
+from phy.plot.tests import mouse_click
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
 
@@ -26,8 +25,8 @@ from ..trace import TraceView, select_traces, _iter_spike_waveforms
 
 def test_trace_view(tempdir, qtbot):
     nc = 5
-    ns = 9
-    sr = 1000.
+    ns = 20
+    sr = 2000.
     ch = list(range(nc))
     duration = 1.
     st = np.linspace(0.1, .9, ns)
@@ -50,7 +49,7 @@ def test_trace_view(tempdir, qtbot):
 
     def get_traces(interval):
         out = Bunch(data=select_traces(traces, interval, sample_rate=sr),
-                    color=(.75,) * 4,
+                    color=(.75, .75, .75, 1),
                     )
         a, b = st.searchsorted(interval)
         out.waveforms = []
@@ -75,10 +74,8 @@ def test_trace_view(tempdir, qtbot):
                   duration=duration,
                   channel_vertical_order=np.arange(nc)[::-1],
                   )
-    gui = GUI(config_dir=tempdir)
-    v.attach(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -88,57 +85,69 @@ def test_trace_view(tempdir, qtbot):
     # ac(v.stacked.box_size, (1., .08181), atol=1e-3)
     v.set_interval((.375, .625))
     assert v.time == .5
+    qtbot.wait(1)
 
     v.go_to(.25)
     assert v.time == .25
+    qtbot.wait(1)
 
     v.go_to(-.5)
     assert v.time == .125
+    qtbot.wait(1)
 
     v.go_left()
     assert v.time == .125
+    qtbot.wait(1)
 
     v.go_right()
     assert v.time == .175
+    qtbot.wait(1)
 
     # Change interval size.
     v.interval = (.25, .75)
     ac(v.interval, (.25, .75))
+    qtbot.wait(1)
+
     v.widen()
     ac(v.interval, (.125, .875))
+    qtbot.wait(1)
+
     v.narrow()
     ac(v.interval, (.25, .75))
+    qtbot.wait(1)
 
     # Widen the max interval.
     v.set_interval((0, duration))
     v.widen()
+    qtbot.wait(1)
 
     v.toggle_show_labels(True)
     v.go_right()
     v.toggle_auto_update(True)
     assert v.do_show_labels
+    qtbot.wait(1)
 
     # Change channel scaling.
     bs = v.stacked.box_size
-    v.increase()
     v.decrease()
-    ac(v.stacked.box_size, bs, atol=1e-3)
+    qtbot.wait(1)
+
+    v.increase()
+    ac(v.stacked.box_size, bs, atol=.05)
+    qtbot.wait(1)
 
     v.origin = 'upper'
     assert v.origin == 'upper'
+    qtbot.wait(1)
 
     # Simulate spike selection.
     _clicked = []
 
     @connect(sender=v)
-    def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+    def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None, key=None):
         _clicked.append((channel_id, spike_id, cluster_id))
 
-    v.events.key_press(key=keys.Key('Control'))
-    v.events.mouse_press(pos=(400., 200.), button=1, modifiers=(keys.CONTROL,))
-    v.events.key_release(key=keys.Key('Control'))
+    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
 
     assert len(_clicked[0]) == 3
-
-    # qtbot.stop()
-    gui.close()
+    v.close()

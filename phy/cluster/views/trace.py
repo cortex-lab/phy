@@ -77,14 +77,6 @@ def _iter_spike_waveforms(interval=None,
         yield wave
 
 
-class SpikeClick(Event):
-    def __init__(self, type, channel_id=None, spike_id=None, cluster_id=None):
-        super(SpikeClick, self).__init__(type)
-        self.channel_id = channel_id
-        self.spike_id = spike_id
-        self.cluster_id = cluster_id
-
-
 class TraceView(ManualClusteringView):
     auto_update = False
     interval_duration = .25  # default duration of the interval
@@ -107,11 +99,9 @@ class TraceView(ManualClusteringView):
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
-                 channel_vertical_order=None,
-                 **kwargs):
+                 channel_vertical_order=None):
 
         self.do_show_labels = True
-        self._key_pressed = None
 
         # traces is a function interval => [traces]
         # spikes is a function interval => [Bunch(...)]
@@ -142,22 +132,26 @@ class TraceView(ManualClusteringView):
         self._origin = None
 
         # Initialize the view.
-        super(TraceView, self).__init__(layout='stacked',
-                                        origin=self.origin,
-                                        n_plots=self.n_channels,
-                                        **kwargs)
+        super(TraceView, self).__init__()
+        self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
-        self.box_size = np.array(self.stacked.box_size)
+        self.box_size = np.array(self.canvas.stacked.box_size)
         self._update_boxes()
+
+        # Bind self.on_mouse_click() to the canvas.
+        self.canvas.attach_events(self)
 
         # Initial interval.
         self._interval = None
         self.go_to(duration / 2.)
 
         self._waveform_times = []
-        self.events.add(spike_click=SpikeClick)
+
+    @property
+    def stacked(self):
+        return self.canvas.stacked
 
     def _permute_channels(self, x, inv=False):
         cp = self._channel_perm
@@ -186,11 +180,12 @@ class TraceView(ManualClusteringView):
         assert traces.shape == (n_ch, n_samples)
         assert box_index.shape == (n_ch, n_samples)
 
-        self.uplot(t, traces,
-                   color=color,
-                   data_bounds=data_bounds,
-                   box_index=box_index,
-                   )
+        self.canvas.uplot(
+            t, traces,
+            color=color,
+            data_bounds=data_bounds,
+            box_index=box_index.ravel(),
+        )
 
     def _plot_waveforms(self, waveforms=None,
                         channel_ids=None,
@@ -208,20 +203,23 @@ class TraceView(ManualClusteringView):
         # The box index depends on the channel.
         box_index = self._permute_channels(channel_ids)
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
-        self.plot(t, waveforms.T, color=color,
-                  box_index=box_index,
-                  data_bounds=data_bounds,
-                  )
+        self.canvas.plot(
+            t, waveforms.T, color=color,
+            box_index=box_index,
+            data_bounds=data_bounds,
+        )
 
     def _plot_labels(self, traces, data_bounds=None):
         for ch in range(self.n_channels):
             bi = self._permute_channels(ch)
             ch_label = '%d' % ch
-            self[bi].text(pos=[data_bounds[0], traces[0, ch]],
-                          text=ch_label,
-                          anchor=[+1., -.1],
-                          data_bounds=data_bounds,
-                          )
+            self.canvas[bi].text_batch(
+                pos=[data_bounds[0], traces[0, ch]],
+                text=ch_label,
+                anchor=[+1., -.1],
+                data_bounds=data_bounds,
+            )
+        self.canvas.text()
 
     def _restrict_interval(self, interval):
         start, end = interval
@@ -253,7 +251,7 @@ class TraceView(ManualClusteringView):
         #    return
         self._interval = interval
         start, end = interval
-        self.clear()
+        self.canvas.clear()
 
         # Set the status message.
         if change_status:
@@ -296,8 +294,7 @@ class TraceView(ManualClusteringView):
         if self.do_show_labels:
             self._plot_labels(traces.data, data_bounds=data_bounds)
 
-        self.build()
-        self.update()
+        self.canvas.update()
 
     def on_select(self, cluster_ids=None, **kwargs):
         super(TraceView, self).on_select(cluster_ids=cluster_ids, **kwargs)
@@ -322,18 +319,6 @@ class TraceView(ManualClusteringView):
 
         # Default: freeze the view for performance reasons.
         # self.actions.get('toggle_auto_update').trigger()
-
-        # We forward the event from VisPy to the phy GUI.
-        @self.connect
-        def on_spike_click(e):
-            logger.log(5, "Spike click on channel %s, spike %s, cluster %s.",
-                       e.channel_id, e.spike_id, e.cluster_id)
-            emit('spike_click',
-                 self,
-                 channel_id=e.channel_id,
-                 spike_id=e.spike_id,
-                 cluster_id=e.cluster_id,
-                 )
 
     @property
     def state(self):
@@ -435,33 +420,25 @@ class TraceView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def _update_boxes(self):
-        self.stacked.box_size = self.box_size * self.scaling
+        self.canvas.stacked.box_size = self.box_size * self.scaling
 
     def increase(self):
         """Increase the scaling of the traces."""
         self.scaling *= self.scaling_coeff_y
-        self._update_boxes()
 
     def decrease(self):
         """Decrease the scaling of the traces."""
         self.scaling /= self.scaling_coeff_y
-        self._update_boxes()
 
     # Spike selection
     # -------------------------------------------------------------------------
 
-    def on_key_press(self, event):
-        """Handle key press events."""
-        key = event.key
-        self._key_pressed = key
-
-    def on_mouse_press(self, e):
-        key = self._key_pressed
-        if 'Control' in e.modifiers or key in map(str, range(10)):
-            key = int(key.name) if key in map(str, range(10)) else None
+    def on_mouse_click(self, e):
+        nums = tuple('%d' % i for i in range(10))
+        if 'Control' in e.modifiers or e.key in nums:
+            key = int(e.key) if e.key in nums else None
             # Get mouse position in NDC.
-            mouse_pos = self.panzoom.get_mouse_pos(e.pos)
-            box_id = self.stacked.get_closest_box(mouse_pos)
+            box_id = self.canvas.stacked.get_closest_box(e.pos)
             channel_id = self._permute_channels(box_id, inv=True)
             # Find the spike and cluster closest to the mouse.
             db = self._data_bounds
@@ -469,6 +446,7 @@ class TraceView(ManualClusteringView):
             if not self._waveform_times:
                 return
             # Get the time coordinate of the mouse position.
+            mouse_pos = self.canvas.panzoom.window_to_ndc(e.pos)
             mouse_time = Range(NDC, db).apply(mouse_pos)[0][0]
             # Get the closest spike id.
             times, spike_ids, spike_clusters, channel_ids = \
@@ -477,10 +455,5 @@ class TraceView(ManualClusteringView):
             # Raise the spike_click event.
             spike_id = spike_ids[i]
             cluster_id = spike_clusters[i]
-            self.events.spike_click(channel_id=channel_id,
-                                    spike_id=spike_id,
-                                    cluster_id=cluster_id
-                                    )
-
-    def on_key_release(self, event):
-        self._key_pressed = None
+            emit('spike_click', self, channel_id=channel_id, key=key,
+                 spike_id=spike_id, cluster_id=cluster_id)

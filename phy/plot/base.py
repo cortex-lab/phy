@@ -125,6 +125,8 @@ class BaseVisual(object):
             a_box_index = _get_array(box_index, (n, k))
         else:
             a_box_index = box_index
+        if a_box_index.ndim == 1:
+            a_box_index = np.c_[a_box_index.ravel()]
         assert a_box_index.ndim == 2
         assert a_box_index.shape[0] == n
         self.program['a_box_index'] = a_box_index.astype(np.float32)
@@ -589,7 +591,8 @@ class BaseLayout(object):
 
     def update_visual(self, visual):
         """Called whenever visual.set_data() is called. Set a_box_index in here."""
-        if (visual.n_vertices > 0 and self.box_var in visual.program and
+        if (visual.n_vertices > 0 and
+                self.box_var in visual.program and
                 ((visual.program[self.box_var] is None) or
                  (visual.program[self.box_var].shape[0] != visual.n_vertices))):
             logger.log(5, "Set %s(%d) for %s" % (self.box_var, visual.n_vertices, visual))
