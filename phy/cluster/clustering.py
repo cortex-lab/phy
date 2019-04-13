@@ -44,8 +44,8 @@ def _extend_spikes(spike_ids, spike_clusters):
 def _concatenate_spike_clusters(*pairs):
     """Concatenate a list of pairs (spike_ids, spike_clusters)."""
     pairs = [(_as_array(x), _as_array(y)) for (x, y) in pairs]
-    concat = np.vstack(np.hstack((x[:, None], y[:, None]))
-                       for x, y in pairs)
+    concat = np.vstack([np.hstack((x[:, None], y[:, None]))
+                        for x, y in pairs])
     reorder = np.argsort(concat[:, 0])
     concat = concat[reorder, :]
     return concat[:, 0].astype(np.int64), concat[:, 1].astype(np.int64)

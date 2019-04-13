@@ -239,7 +239,7 @@ def test_lasso_simple(qtbot):
     l.create_lasso_visual()
 
     view.show()
-    qtbot.waitForWindowShown(view)
+    #qtbot.waitForWindowShown(view)
 
     l.add((-.5, -.5))
     l.add((+.5, -.5))
@@ -278,6 +278,7 @@ def test_lasso_grid(qtbot, canvas):
 
     canvas.show()
     qtbot.waitForWindowShown(canvas)
+    qtbot.wait(10)
 
     def _ctrl_click(x, y, button='left'):
         mouse_click(qtbot, canvas, (x, y), button=button, modifiers=('Control',))

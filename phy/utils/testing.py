@@ -55,6 +55,7 @@ def captured_logging(name=None):
     logger.removeHandler(handler)
     for handler in handlers:
         logger.addHandler(handler)
+    handler.close()
 
 
 def _assert_equal(d_0, d_1):

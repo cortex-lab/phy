@@ -11,7 +11,6 @@ import logging
 
 import numpy as np
 from phy.plot.transform import NDC, Range
-from vispy.util.event import Event
 
 from phy.utils import Bunch, emit
 from .base import ManualClusteringView

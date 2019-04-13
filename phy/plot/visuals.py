@@ -535,7 +535,7 @@ class HistogramVisual(BaseVisual):
         self.data_range.from_bounds = data_bounds
 
         # Set the transformed position.
-        pos = np.vstack(_tesselate_histogram(row) for row in hist)
+        pos = np.vstack([_tesselate_histogram(row) for row in hist])
         pos_tr = self.transforms.apply(pos)
         assert pos_tr.shape == (n, 2)
         self.program['a_position'] = pos_tr.astype(np.float32)

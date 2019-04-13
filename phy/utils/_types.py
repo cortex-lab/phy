@@ -47,7 +47,7 @@ def _is_list(obj):
 
 def _as_scalar(obj):
     if isinstance(obj, np.generic):
-        return np.asscalar(obj)
+        return obj.item()
     assert isinstance(obj, (int, float))
     return obj
 

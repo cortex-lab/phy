@@ -52,7 +52,7 @@ def _add_log_file(filename):
     formatter = _Formatter(fmt=_logger_fmt,
                            datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
+    logging.getLogger('phy').addHandler(handler)
 
 
 def _run_cmd(cmd, ctx, glob, loc):  # pragma: no cover

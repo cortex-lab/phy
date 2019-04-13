@@ -423,8 +423,8 @@ class BaseCanvas(QOpenGLWindow):
             f()
         self._next_paint_callbacks.clear()
         # Draw all visuals, clearable first, non clearable last.
-        visuals = [v for v in self.visuals if v.clearable is True]
-        visuals += [v for v in self.visuals if v.clearable is False]
+        visuals = [v for v in self.visuals if v.get('clearable', True)]
+        visuals += [v for v in self.visuals if not v.get('clearable', True)]
         for v in visuals:
             visual = v.visual
             if size != self._size:
