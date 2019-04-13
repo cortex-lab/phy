@@ -48,7 +48,7 @@ class _CustomEncoder(json.JSONEncoder):
         elif obj.__class__.__name__ == 'QByteArray':
             return {'__qbytearray__': _encode_qbytearray(obj)}
         elif isinstance(obj, np.generic):
-            return np.asscalar(obj)
+            return obj.item()
         return super(_CustomEncoder, self).default(obj)  # pragma: no cover
 
 

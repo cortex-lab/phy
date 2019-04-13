@@ -29,6 +29,8 @@ add_default_handler(5)
 np.random.seed(2015)
 
 warnings.filterwarnings('ignore', category=matplotlib.cbook.mplDeprecation)
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 
 @yield_fixture

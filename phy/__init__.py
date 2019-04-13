@@ -29,7 +29,7 @@ from .utils.testing import _enable_profiler
 
 __author__ = 'Kwik team'
 __email__ = 'cyrille.rossant at gmail.com'
-__version__ = '1.0.9'
+__version__ = '2.0alpha'
 __version_git__ = __version__ + _git_version()
 
 
