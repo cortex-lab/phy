@@ -13,6 +13,7 @@ from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
                    _try_get_opengl_canvas,
                    )
+from phy.plot import BaseCanvas
 from phy.utils import Bunch, connect, unconnect
 
 
@@ -22,7 +23,6 @@ from phy.utils import Bunch, connect, unconnect
 
 def _create_canvas():
     """Create a GL view."""
-    from phy.plot import BaseCanvas
     c = BaseCanvas()
     return c
 
@@ -83,8 +83,9 @@ def test_gui_1(tempdir, qtbot):
     view.setFloating(False)
     gui.show()
 
-    assert gui.get_view('BaseCanvas')
-    assert len(gui.list_views('BaseCanvas')) == 2
+    assert gui.view_name(_create_canvas()) == 'BaseCanvas'
+    assert gui.get_view(BaseCanvas)
+    assert len(gui.list_views(BaseCanvas)) == 2
 
     # Check that the close_widget event is fired when the gui widget is
     # closed.
@@ -135,24 +136,20 @@ def test_gui_geometry_state(tempdir, qtbot):
     gui.show()
     qtbot.waitForWindowShown(gui)
 
-    gui.add_view(_create_canvas(), 'view1')
-    gui.add_view(_create_canvas(), 'view2')
-    gui.add_view(_create_canvas(), 'view2')
+    gui.add_view(_create_canvas())
+    gui.add_view(_create_canvas())
+    gui.add_view(_create_canvas())
 
-    assert len(gui.list_views('view')) == 3
-    assert gui.view_count() == {
-        'view1': 1,
-        'view2': 2,
-    }
+    assert len(gui.list_views(BaseCanvas)) == 3
 
     gui.close()
 
     # Recreate the GUI with the saved state.
     gui = GUI(config_dir=tempdir)
 
-    gui.add_view(_create_canvas(), 'view1')
-    gui.add_view(_create_canvas(), 'view2')
-    gui.add_view(_create_canvas(), 'view2')
+    gui.add_view(_create_canvas())
+    gui.add_view(_create_canvas())
+    gui.add_view(_create_canvas())
 
     @connect(sender=gui)
     def on_show(sender):
@@ -163,11 +160,7 @@ def test_gui_geometry_state(tempdir, qtbot):
     gui.show()
     qtbot.waitForWindowShown(gui)
 
-    assert len(gui.list_views('view')) == 3
-    assert gui.view_count() == {
-        'view1': 1,
-        'view2': 2,
-    }
+    assert len(gui.list_views(BaseCanvas)) == 3
 
     gui.close()
 
@@ -178,8 +171,10 @@ def test_gui_geometry_state(tempdir, qtbot):
 
 def test_gui_state_view(tempdir):
     view = Bunch(name='MyView0')
+    gui = Bunch()
+    gui.view_name = lambda view: view.name
     state = GUIState(config_dir=tempdir)
-    state.update_view_state(view, dict(hello='world'))
-    assert not state.get_view_state(Bunch(name='MyView'))
-    assert not state.get_view_state(Bunch(name='MyView1'))
-    assert state.get_view_state(view) == Bunch(hello='world')
+    state.update_view_state(view, dict(hello='world'), gui)
+    assert not state.get_view_state(Bunch(name='MyView'), gui)
+    assert not state.get_view_state(Bunch(name='MyView (1)'), gui)
+    assert state.get_view_state(view, gui) == Bunch(hello='world')

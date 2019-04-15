@@ -7,7 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import defaultdict
+import json
 import logging
 import os.path as op
 
@@ -133,6 +133,9 @@ class GUI(QMainWindow):
         # Mapping {name: menuBar}.
         self._menus = {}
 
+        # Views,
+        self._views = []
+
         # Status bar.
         self._lock_status = False
         self._status_bar = QStatusBar(self)
@@ -229,31 +232,49 @@ class GUI(QMainWindow):
     # Views
     # -------------------------------------------------------------------------
 
-    def _get_view_index(self, view):
-        """Index of a view in the GUI: 0 for the first view of a given
-        class, 1 for the next, and so on."""
-        name = view.__class__.__name__
-        return len(self.list_views(name))
+    def list_views(self, cls):
+        """Return the list of views from a given class."""
+        return [view for view in self._views if isinstance(view, cls)]
+
+    def get_view(self, cls, index=0):
+        """Return a view from a given class."""
+        views = self.list_views(cls)
+        if index <= len(views) - 1:
+            return views[index]
+
+    def view_index(self, view):
+        """Return the index of a given view."""
+        views = self.list_views(view.__class__)
+        if view in views:
+            return views.index(view)
+
+    def view_name(self, view):
+        """Return the name of a view: view class name, followed by the view index."""
+        if view not in self._views:
+            return view.__class__.__name__
+        index = self.view_index(view)
+        assert index >= 0
+        if index == 0:
+            return view.__class__.__name__
+        else:
+            return '%s (%d)' % (view.__class__.__name__, index)
 
     def add_view(self,
                  view,
-                 name=None,
                  position=None,
                  closable=False,
                  floatable=True,
                  floating=None):
         """Add a widget to the main window."""
 
-        # Set the name in the view.
-        view.view_index = self._get_view_index(view)
-        # The view name is `<class_name><view_index>`, e.g. `MyView0`.
-        view.name = name or view.__class__.__name__ + str(view.view_index)
+        self._views.append(view)
+        name = self.view_name(view)
 
         # Get the Qt canvas for matplotlib/OpenGL views.
         widget = _try_get_matplotlib_canvas(view)
         widget = _try_get_opengl_canvas(widget)
 
-        dock_widget = _create_dock_widget(widget, view.name,
+        dock_widget = _create_dock_widget(widget, name,
                                           closable=closable,
                                           floatable=floatable,
                                           )
@@ -265,36 +286,13 @@ class GUI(QMainWindow):
         # Emit the close_view event when the dock widget is closed.
         @connect(sender=dock_widget)
         def on_close_dock_widget(sender):
+            self._views.remove(view)
             emit('close_view', self, view)
 
         dock_widget.show()
         emit('add_view', self, view)
-        logger.log(5, "Add %s to GUI.", view.name)
+        logger.log(5, "Add %s to GUI.", name)
         return dock_widget
-
-    def list_views(self, name='', is_visible=True):
-        """List all views which name start with a given string."""
-        children = self.findChildren(QWidget)
-        return [child.view for child in children
-                if isinstance(child, QDockWidget) and
-                child.view.name.startswith(name) and
-                (child.isVisible() if is_visible else True) and
-                child.width() >= 10 and
-                child.height() >= 10
-                ]
-
-    def get_view(self, name, is_visible=True):
-        """Return a view from its name."""
-        views = self.list_views(name, is_visible=is_visible)
-        return views[0] if views else None
-
-    def view_count(self):
-        """Return the number of opened views."""
-        views = self.list_views()
-        counts = defaultdict(lambda: 0)
-        for view in views:
-            counts[view.name] += 1
-        return dict(counts)
 
     # Menu bar
     # -------------------------------------------------------------------------
@@ -379,16 +377,18 @@ class GUIState(Bunch):
         _ensure_dir_exists(op.join(self.config_dir, self.name))
         self.load()
 
-    def get_view_state(self, view):
+    def get_view_state(self, view, gui):
         """Return the state of a view."""
-        return self.get(getattr(view, 'name', ''), Bunch())
+        name = gui.view_name(view)
+        return self.get(name, Bunch())
 
-    def update_view_state(self, view, state):
+    def update_view_state(self, view, state, gui):
         """Update the state of a view."""
-        if view.name not in self:
-            self[view.name] = Bunch()
-        self[view.name].update(state)
-        logger.debug("Update GUI state for %s", view.name)
+        name = gui.view_name(view)
+        if name not in self:
+            self[name] = Bunch()
+        self[name].update(state)
+        logger.debug("Update GUI state for %s", name)
 
     @property
     def path(self):
@@ -402,10 +402,15 @@ class GUIState(Bunch):
             return
         assert op.exists(self.path)
         logger.debug("Load the GUI state from `%s`.", self.path)
-        self.update(_bunchify(_load_json(self.path)))
+        try:
+            data = _load_json(self.path)
+        except json.decoder.JSONDecodeError as e:  # pragma: no cover
+            logger.warning("Error decoding JSON: %s", e)
+            data = {}
+        self.update(_bunchify(data))
 
     def save(self):
         """Save the state to the JSON file in the config dir."""
         logger.debug("Save the GUI state to `%s`.", self.path)
-        _save_json(self.path, {k: v for k, v in self.items()
-                               if k not in ('config_dir', 'name')})
+        data = {k: v for k, v in self.items() if k not in ('config_dir', 'name')}
+        _save_json(self.path, data)
