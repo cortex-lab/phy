@@ -101,7 +101,7 @@ def get_nbins(w, h):
 
 def _quant_zoom(z):
     if z == 0:
-        return 0
+        return 0  # pragma: no cover
     return int(z) if z >= 1 else -int(1. / z)
 
 

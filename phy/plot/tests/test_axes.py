@@ -26,8 +26,8 @@ def test_axes_1(qtbot, canvas_pz):
     qtbot.waitForWindowShown(c)
 
     c.panzoom.zoom = 4
-    #c.panzoom.zoom = 8
-    #c.panzoom.pan = (3, 3)
+    c.panzoom.zoom = 8
+    c.panzoom.pan = (3, 3)
 
     if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
         qtbot.stop()

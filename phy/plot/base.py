@@ -125,7 +125,7 @@ class BaseVisual(object):
             a_box_index = _get_array(box_index, (n, k))
         else:
             a_box_index = box_index
-        if a_box_index.ndim == 1:
+        if a_box_index.ndim == 1:  # pragma: no cover
             a_box_index = np.c_[a_box_index.ravel()]
         assert a_box_index.ndim == 2
         assert a_box_index.shape[0] == n
@@ -478,7 +478,7 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_button = None
         self._mouse_press_modifiers = None
 
-    def mouseDoubleClickEvent(self, e):
+    def mouseDoubleClickEvent(self, e):  # pragma: no cover
         self._mouse_event('mouse_double_click', e)
 
     def mouseMoveEvent(self, e):
@@ -493,7 +493,8 @@ class BaseCanvas(QOpenGLWindow):
                   mouse_press_position=self._mouse_press_position)
         self._last_mouse_pos = pos
 
-    def wheelEvent(self, e):
+    def wheelEvent(self, e):  # pragma: no cover
+        # NOTE: Qt has no way to simulate wheel events for testing
         delta = e.angleDelta()
         deltay = delta.y() / 120.0
         pos = e.pos().x(), e.pos().y()
@@ -514,7 +515,8 @@ class BaseCanvas(QOpenGLWindow):
         self._key_event('key_release', e)
         self._current_key_event = None
 
-    def _event(self, e):
+    def event(self, e):  # pragma: no cover
+        """Touch event."""
         out = super(BaseCanvas, self).event(e)
         t = e.type()
         # Two-finger pinch.

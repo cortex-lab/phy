@@ -12,6 +12,7 @@ import os
 import numpy as np
 from pytest import fixture, raises
 
+from phy.gui import GUI
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import _get_linear_x
 
@@ -34,7 +35,7 @@ def y():
 # Test plotting interface
 #------------------------------------------------------------------------------
 
-@fixture(params=[True])
+@fixture(params=[True, False])
 def canvas(request, qtbot):
     c = PlotCanvas() if request.param else PlotCanvasMpl()
     yield c
@@ -45,10 +46,22 @@ def canvas(request, qtbot):
     c.close()
 
 
+def test_plot_0(qtbot, x, y):
+    c = PlotCanvas()
+    c.has_axes = True
+    c.has_lasso = True
+    c.scatter(x=x, y=y)
+    c.show()
+    qtbot.waitForWindowShown(c.canvas)
+    #c._enable()
+    c.close()
+
+
 def test_plot_1(canvas, x, y):
     c = canvas
     c.scatter(x=x, y=y)
     c.enable_axes()
+    c.enable_lasso()
 
 
 def test_plot_grid(canvas, x, y):
@@ -61,6 +74,7 @@ def test_plot_grid(canvas, x, y):
 
     c[1, 0].lines(pos=[-1, -.5, +1, -.5])
     c[1, 1].text(pos=(0, 0), text='Hello world!', anchor=(0., 0.))
+    c[1, 1].polygon(pos=np.random.rand(5, 2))
 
     # Multiple scatters in the same subplot.
     c[1, 2].scatter(x[2::6], y[2::6], color=(0, 1, 0, .25), size=20, marker='asterisk')
@@ -102,7 +116,18 @@ def test_plot_boxed(qtbot, canvas):
               color=np.random.uniform(.4, .9, size=(5, 4)))
 
 
+def test_plot_uplot(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    x, y = .25 * np.random.randn(2, 1000)
+    canvas.uplot(x=x, y=y)
+
+
 def test_plot_uscatter(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
     x, y = .25 * np.random.randn(2, 1000)
     canvas.uscatter(x=x, y=y)
 
@@ -144,3 +169,21 @@ def test_plot_text_batch_2(qtbot, canvas):
     canvas[0, 0].text_batch(pos=(0, 0), text='12', anchor=(0., 0.))
     canvas[0, 1].text_batch(pos=(0, 0), text='345', anchor=(0., 0.))
     canvas.text()
+
+
+#------------------------------------------------------------------------------
+# Test matplotlib plotting
+#------------------------------------------------------------------------------
+
+def test_plot_mpl_1(qtbot):
+    gui = GUI()
+    c = PlotCanvasMpl()
+
+    c.clear()
+    c.attach(gui)
+
+    c.show()
+    qtbot.waitForWindowShown(c.canvas)
+    if os.environ.get('PHY_TEST_STOP', None):
+        qtbot.stop()
+    c.close()

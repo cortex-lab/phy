@@ -11,9 +11,10 @@ import numpy as np
 from pytest import yield_fixture
 
 from phy.utils import emit
-from ..base import BaseVisual, BaseLayout, GLSLInserter
+from ..base import BaseVisual, BaseLayout, BaseCanvas, GLSLInserter
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)
+from . import mouse_click, mouse_drag, mouse_press, key_press, key_release
 
 
 #------------------------------------------------------------------------------
@@ -77,6 +78,26 @@ def test_glsl_inserter_hook(vertex_shader, fragment_shader):
     assert '// In fragment shader.' in fs
 
 
+def test_mock_events(qtbot, canvas):
+    c = canvas
+    pos = p0 = (50, 50)
+    p1 = (100, 100)
+    key = 'A'
+    mouse_click(qtbot, c, pos, button='left', modifiers=())
+    mouse_press(qtbot, c, pos, button='left', modifiers=())
+    mouse_drag(qtbot, c, p0, p1, button='left', modifiers=())
+    key_press(qtbot, c, key, modifiers=())
+    key_release(qtbot, c, key, modifiers=())
+
+
+def test_next_paint(qtbot, canvas):
+    @canvas.on_next_paint
+    def next():
+        pass
+    canvas.show()
+    qtbot.waitForWindowShown(canvas)
+
+
 def test_visual_1(qtbot, canvas):
     class TestVisual(BaseVisual):
         def __init__(self):
@@ -90,12 +111,18 @@ def test_visual_1(qtbot, canvas):
             self.program['u_color'] = [1, 1, 1, 1]
 
     v = TestVisual()
-    canvas.add_visual(v)
+    canvas.add_visual(v, key='key')
     # Must be called *after* add_visual().
     v.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas)
+
+    assert canvas.get_visual('key') == v
+    canvas.remove(v)
+    assert canvas.get_visual('key') is None
+    canvas.clear()
+
     # qtbot.stop()
 
 

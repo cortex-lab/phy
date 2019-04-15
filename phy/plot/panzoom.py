@@ -408,7 +408,7 @@ class PanZoom(object):
                 c = np.sqrt(self.size[0]) * .03
                 self.zoom_delta((dx, dy), (x0, y0), c=c)
 
-    def on_touch(self, e):
+    def on_touch(self, e):  # pragma: no cover
         if e.type == 'end':
             self._pinch = None
         elif e.type == 'pinch':
@@ -432,7 +432,7 @@ class PanZoom(object):
             c = 5
             self.pan_delta((c * dx, c * dy))
 
-    def on_mouse_wheel(self, e):
+    def on_mouse_wheel(self, e):  # pragma: no cover
         """Zoom with the mouse wheel."""
         # NOTE: not called on OS X because of touchpad
         if e.modifiers:
@@ -487,7 +487,7 @@ class PanZoom(object):
                 self.update_visual(visual)
 
         # Because the visual shaders must be modified to account for u_pan and u_zoom.
-        if not all(v.visual.program is None for v in canvas.visuals):
+        if not all(v.visual.program is None for v in canvas.visuals):  # pragma: no cover
             raise RuntimeError("The PanZoom instance must be attached before the visuals.")
 
         canvas.transforms.add_on_gpu([self._translate, self._scale])
