@@ -11,6 +11,7 @@ from pytest import raises
 from ..qt import Qt, QApplication, QWidget, QMessageBox
 from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
+                   _try_get_opengl_canvas,
                    )
 from phy.utils import Bunch, connect, unconnect
 
@@ -33,6 +34,21 @@ def _create_canvas():
 def test_matplotlib_view():
     from matplotlib.pyplot import Figure
     assert isinstance(_try_get_matplotlib_canvas(Figure()), QWidget)
+    assert isinstance(_try_get_opengl_canvas(Figure()), Figure)
+
+    class MyFigure(object):
+        figure = Figure()
+    assert isinstance(_try_get_matplotlib_canvas(MyFigure()), QWidget)
+
+
+def test_opengl_view():
+    from phy.plot.base import BaseCanvas
+    assert isinstance(_try_get_opengl_canvas(BaseCanvas()), QWidget)
+    assert isinstance(_try_get_matplotlib_canvas(BaseCanvas()), BaseCanvas)
+
+    class MyFigure(object):
+        canvas = BaseCanvas()
+    assert isinstance(_try_get_opengl_canvas(MyFigure()), QWidget)
 
 
 #------------------------------------------------------------------------------
@@ -90,6 +106,7 @@ def test_gui_1(tempdir, qtbot):
     assert gui.state.geometry_state['geometry']
     assert gui.state.geometry_state['state']
 
+    gui.default_actions.show_all_shortcuts()
     gui.default_actions.exit()
 
 

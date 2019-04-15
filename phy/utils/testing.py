@@ -44,7 +44,7 @@ def captured_output():
 def captured_logging(name=None):
     buffer = StringIO()
     logger = logging.getLogger(name)
-    handlers = logger.handlers
+    handlers = list(logger.handlers)
     for handler in logger.handlers:
         logger.removeHandler(handler)
     handler = logging.StreamHandler(buffer)
