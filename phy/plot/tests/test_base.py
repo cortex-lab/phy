@@ -11,7 +11,7 @@ import numpy as np
 from pytest import yield_fixture
 
 from phy.utils import emit
-from ..base import BaseVisual, BaseLayout, BaseCanvas, GLSLInserter
+from ..base import BaseVisual, BaseLayout, GLSLInserter
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)
 from . import mouse_click, mouse_drag, mouse_press, key_press, key_release

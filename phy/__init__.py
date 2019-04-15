@@ -67,7 +67,7 @@ def add_default_handler(level='INFO', logger=logger):
 
 
 @atexit.register
-def on_exit():
+def on_exit():  # pragma: no cover
     # Close the logging handlers.
     for handler in logger.handlers:
         handler.close()

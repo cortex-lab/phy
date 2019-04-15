@@ -16,7 +16,7 @@ from ..correlogram import CorrelogramView
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot):
+def test_correlogram_view(qtbot, gui):
 
     def get_correlograms(cluster_ids, bin_size, window_size):
         return artificial_correlograms(len(cluster_ids), int(window_size / bin_size))
@@ -26,6 +26,7 @@ def test_correlogram_view(qtbot):
                         )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
 
     v.on_select([])
     v.on_select(cluster_ids=[0])
@@ -36,6 +37,8 @@ def test_correlogram_view(qtbot):
 
     v.set_bin(1)
     v.set_window(100)
+
+    v.set_state(v.state)
 
     # qtbot.stop()
     v.close()

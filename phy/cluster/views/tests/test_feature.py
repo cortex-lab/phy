@@ -24,7 +24,7 @@ from ..feature import FeatureView
 #------------------------------------------------------------------------------
 
 @pytest.mark.parametrize('n_channels', [5, 1])
-def test_feature_view(qtbot, n_channels):
+def test_feature_view(qtbot, gui, n_channels):
     nc = n_channels
     ns = 10000
     features = artificial_features(ns, nc, 4)
@@ -59,6 +59,7 @@ def test_feature_view(qtbot, n_channels):
                     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -85,6 +86,8 @@ def test_feature_view(qtbot, n_channels):
     # Split lassoed points.
     spike_ids = v.on_request_split()
     assert len(spike_ids) > 0
+
+    v.set_state(v.state)
 
     # qtbot.stop()
     v.close()

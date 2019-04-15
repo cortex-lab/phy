@@ -23,7 +23,7 @@ from ..trace import TraceView, select_traces, _iter_spike_waveforms
 # Test trace view
 #------------------------------------------------------------------------------
 
-def test_trace_view(tempdir, qtbot):
+def test_trace_view(qtbot, tempdir, gui):
     nc = 5
     ns = 20
     sr = 2000.
@@ -76,6 +76,7 @@ def test_trace_view(tempdir, qtbot):
                   )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -148,6 +149,8 @@ def test_trace_view(tempdir, qtbot):
         _clicked.append((channel_id, spike_id, cluster_id))
 
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
+
+    v.set_state(v.state)
 
     assert len(_clicked[0]) == 3
     v.close()
