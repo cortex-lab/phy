@@ -16,7 +16,7 @@ from ..probe import ProbeView
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_probe_view(qtbot):
+def test_probe_view(qtbot, gui):
 
     n = 50
     positions = staggered_positions(n)
@@ -27,6 +27,7 @@ def test_probe_view(qtbot):
                   )
     v.show()
     qtbot.addWidget(v)
+    v.attach(gui)
 
     class Supervisor(object):
         pass

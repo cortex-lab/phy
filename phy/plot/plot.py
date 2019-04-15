@@ -23,7 +23,7 @@ from .visuals import (
     HistogramVisual, TextVisual, LineVisual, PolygonVisual,
     DEFAULT_COLOR)
 from .transform import NDC
-from .utils import _get_array, BatchAccumulator
+from .utils import BatchAccumulator
 from phy.utils._types import _as_tuple
 
 logger = logging.getLogger(__name__)

@@ -21,7 +21,7 @@ from ..waveform import WaveformView
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot, tempdir):
+def test_waveform_view(qtbot, tempdir, gui):
     nc = 5
 
     def get_waveforms(cluster_id):
@@ -34,6 +34,7 @@ def test_waveform_view(qtbot, tempdir):
                      )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -88,6 +89,8 @@ def test_waveform_view(qtbot, tempdir):
     key_release(qtbot, v.canvas, '2')
 
     assert _clicked == [(1, 'Left', 2)]
+
+    v.set_state(v.state)
 
     # qtbot.stop()
     v.close()

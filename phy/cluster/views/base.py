@@ -38,6 +38,8 @@ class ManualClusteringView(object):
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
 
+        self.name = self.__class__.__name__
+
         # Message to show in the status bar.
         self.status = None
 
