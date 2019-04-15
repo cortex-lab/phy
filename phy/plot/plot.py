@@ -33,14 +33,6 @@ logger = logging.getLogger(__name__)
 # Plotting interface
 #------------------------------------------------------------------------------
 
-def _make_box_index(box_index, n):
-    if not isinstance(box_index, np.ndarray):
-        k = len(box_index)
-        box_index = _get_array(box_index, (n, k))
-    assert box_index.shape[0] == n
-    return box_index
-
-
 class PlotCanvas(BaseCanvas):
     """Plotting canvas."""
     _default_box_index = (0,)
@@ -199,7 +191,7 @@ class PlotCanvas(BaseCanvas):
 # Matplotlib plotting interface
 #------------------------------------------------------------------------------
 
-def zoom_fun(ax, event):
+def zoom_fun(ax, event):  # pragma: no cover
     cur_xlim = ax.get_xlim()
     cur_ylim = ax.get_ylim()
     xdata = event.xdata
@@ -258,7 +250,7 @@ class PlotCanvasMpl(object):
             self.subplots(shape[0], shape[1])
             self._default_box_index = (0, 0)
 
-        elif layout == 'boxed':
+        elif layout == 'boxed':  # pragma: no cover
             self.n_plots = (len(box_bounds)
                             if box_bounds is not None else len(box_pos))
             # self.boxed = Boxed(box_bounds=box_bounds,
@@ -267,7 +259,7 @@ class PlotCanvasMpl(object):
             # TODO
             raise NotImplementedError()
 
-        elif layout == 'stacked':
+        elif layout == 'stacked':  # pragma: no cover
             self.n_plots = n_plots
             # self.stacked = Stacked(n_plots, margin=.1, origin=origin)
             # TODO
@@ -320,7 +312,7 @@ class PlotCanvasMpl(object):
         pass
 
     def enable_lasso(self):
-        raise NotImplementedError()
+        pass
 
     def enable_panzoom(self):
         pass
