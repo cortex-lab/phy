@@ -14,7 +14,7 @@ from timeit import default_timer
 
 import numpy as np
 
-from phy.gui.qt import Qt, QEvent, QOpenGLWindow
+from phy.gui.qt import Qt, QEvent, QOpenGLWindow, QWindow
 from . import gloo
 from .gloo import gl
 from .transform import TransformChain, Clip, pixels_to_ndc

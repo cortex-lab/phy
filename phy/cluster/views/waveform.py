@@ -97,9 +97,6 @@ class WaveformView(ManualClusteringView):
         self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()
 
-        # Bind self.on_mouse_click() to the canvas.
-        self.canvas.attach_events(self)
-
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
 

@@ -140,9 +140,6 @@ class TraceView(ManualClusteringView):
         self.box_size = np.array(self.canvas.stacked.box_size)
         self._update_boxes()
 
-        # Bind self.on_mouse_click() to the canvas.
-        self.canvas.attach_events(self)
-
         # Initial interval.
         self._interval = None
         self.go_to(duration / 2.)

@@ -47,6 +47,10 @@ class ManualClusteringView(object):
 
         self.canvas = PlotCanvas()
 
+        # Attach the Qt events to this class, so that derived class
+        # can override on_mouse_click() and so on.
+        self.canvas.attach_events(self)
+
     def on_select(self, cluster_ids=None, **kwargs):
         # To override.
         pass
