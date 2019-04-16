@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class CorrelogramView(ManualClusteringView):
     _callback_delay = 30
+    _default_position = 'left'
     cluster_ids = ()
 
     bin_size = 1e-3

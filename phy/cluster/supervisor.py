@@ -679,8 +679,8 @@ class Supervisor(object):
         )
 
         connect(self._save_gui_state, event='close', sender=gui)
-        gui.add_view(self.cluster_view)
-        gui.add_view(self.similarity_view)
+        gui.add_view(self.cluster_view, position='left')
+        gui.add_view(self.similarity_view, position='left')
         #self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view, gui))
 
         self.action_creator.attach(gui)

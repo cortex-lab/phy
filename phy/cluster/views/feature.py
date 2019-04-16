@@ -75,6 +75,7 @@ def _uniq(seq):
 
 class FeatureView(ManualClusteringView):
     _callback_delay = 20
+    _default_position = 'right'
     cluster_ids = ()
     fixed_channels = False  # true to disable automatic selection of channels
 

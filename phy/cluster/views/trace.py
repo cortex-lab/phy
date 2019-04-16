@@ -77,6 +77,7 @@ def _iter_spike_waveforms(interval=None,
 
 
 class TraceView(ManualClusteringView):
+    _default_position = 'left'
     auto_update = False
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
