@@ -225,7 +225,7 @@ class Uniform(Variable):
         elif self._gtype == gl.GL_SAMPLER_2D:
             if isinstance(data, Texture2D):
                 self._data = data
-            elif isinstance(self._data, Texture2D):
+            elif isinstance(self._data, Texture2D) and data.size == self._data.size:
                 # self._data.set_data(data)
                 self._data[...] = data.reshape(self._data.shape)
 
