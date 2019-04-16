@@ -88,6 +88,7 @@ class WaveformView(ManualClusteringView):
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
         self.canvas.boxed.margin = .1
+        self._waveform_min_max = (-1., 1.)
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
 
@@ -100,6 +101,10 @@ class WaveformView(ManualClusteringView):
 
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
+
+    def _get_data_bounds(self):
+        wmin, wmax = self._waveform_min_max
+        return [-1., wmin, +1., wmax]
 
     def _plot_labels(self, channel_ids, n_clusters, channel_labels=None):
         # Add channel labels.
@@ -117,7 +122,7 @@ class WaveformView(ManualClusteringView):
                     pos=[x, 0.],
                     text=str(label),
                     anchor=[-1.01, -.25],
-                    data_bounds=None,
+                    data_bounds=self._get_data_bounds(),
                 )
             self.canvas.text()
 
@@ -181,6 +186,7 @@ class WaveformView(ManualClusteringView):
             # Generate the waveform array.
             wave = np.transpose(wave, (0, 2, 1))
             wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
+            self._waveform_min_max = (wave.min(), wave.max())
 
             self.canvas.uplot(
                 x=t,
@@ -188,7 +194,7 @@ class WaveformView(ManualClusteringView):
                 color=color,
                 masks=m,
                 box_index=box_index,
-                data_bounds=None,
+                data_bounds=self._get_data_bounds(),
             )
 
     def on_select(self, cluster_ids=(), **kwargs):
