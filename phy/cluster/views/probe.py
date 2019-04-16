@@ -45,4 +45,4 @@ class ProbeView(HTMLWidget):
 
         self.on_select()
         self.show()
-        gui.add_view(self)
+        gui.add_view(self, position='right')

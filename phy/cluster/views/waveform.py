@@ -55,6 +55,7 @@ def _get_clu_offsets(bunchs):
 
 
 class WaveformView(ManualClusteringView):
+    _default_position = 'right'
     scaling_coeff = 1.1
     cluster_ids = ()
 

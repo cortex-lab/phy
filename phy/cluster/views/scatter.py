@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class ScatterView(ManualClusteringView):
+    _default_position = 'right'
     _default_marker_size = 5.
 
     def __init__(self, coords=None):  # coords is a function clusters: Bunch(x, y)

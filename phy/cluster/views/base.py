@@ -31,6 +31,7 @@ class ManualClusteringView(object):
     }
     _callback_delay = 1
     auto_update = True  # automatically update the view when the cluster selection changes
+    _default_position = None
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -53,7 +54,7 @@ class ManualClusteringView(object):
     def attach(self, gui):
         """Attach the view to the GUI."""
 
-        gui.add_view(self)
+        gui.add_view(self, position=self._default_position)
         self.gui = gui
 
         # Set the view state.
