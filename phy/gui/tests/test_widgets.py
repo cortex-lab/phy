@@ -133,7 +133,7 @@ def test_widget_javascript_1(qtbot):
 
     # Test logging from JS.
     with captured_logging() as buf:
-        widget.eval_js('console.log("hello world!");')
+        widget.eval_js('console.warn("hello world!");')
         _block(lambda: 'hello world!' in buf.getvalue().lower())
 
     # qtbot.stop()

@@ -38,8 +38,6 @@ class ManualClusteringView(object):
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
 
-        self.name = self.__class__.__name__
-
         # Message to show in the status bar.
         self.status = None
 
@@ -52,14 +50,14 @@ class ManualClusteringView(object):
         # To override.
         pass
 
-    def attach(self, gui, name=None):
+    def attach(self, gui):
         """Attach the view to the GUI."""
 
-        gui.add_view(self.canvas)
+        gui.add_view(self)
         self.gui = gui
 
         # Set the view state.
-        self.set_state(gui.state.get_view_state(self))
+        self.set_state(gui.state.get_view_state(self, gui))
 
         # Call on_select() asynchronously after a delay, and set a busy
         # cursor.
@@ -80,11 +78,11 @@ class ManualClusteringView(object):
             @self.async_caller.set
             def update_view():
                 with busy_cursor():
-                    logger.debug("Selecting %s in %s.", cluster_ids, self)
+                    logger.log(5, "Selecting %s in %s.", cluster_ids, self)
                     self.on_select(cluster_ids=cluster_ids, **kwargs)
 
         self.actions = Actions(
-            gui, name=name or self.__class__.__name__,
+            gui, name=gui.view_name(self),
             menu=self.__class__.__name__, default_shortcuts=self.shortcuts)
 
         # Freeze and unfreeze the view when selecting clusters.
@@ -101,7 +99,7 @@ class ManualClusteringView(object):
         @connect(sender=gui)
         def on_close(sender=None):
             unconnect(on_select)
-            gui.state.update_view_state(self, self.state)
+            gui.state.update_view_state(self, self.state, gui)
             self.canvas.close()
 
         self.canvas.show()
