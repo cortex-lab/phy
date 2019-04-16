@@ -294,6 +294,7 @@ class FeatureView(ManualClusteringView):
         for clu_idx, bunch in enumerate(bunchs):
             self._plot_points(bunch, clu_idx=clu_idx)
         self._plot_labels()
+        self.canvas.update()
 
     def attach(self, gui):
         """Attach the view to the GUI."""

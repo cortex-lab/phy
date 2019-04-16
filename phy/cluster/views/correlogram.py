@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 
+from phy.plot.transform import Scale
 from phy.utils._color import _spike_colors
 from .base import ManualClusteringView
 
@@ -38,6 +39,8 @@ class CorrelogramView(ManualClusteringView):
     def __init__(self, correlograms=None, sample_rate=None):
         super(CorrelogramView, self).__init__()
         self.canvas.set_layout(layout='grid')
+        # Outside margin to show labels.
+        self.canvas.transforms.add_on_gpu(Scale(.9))
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
@@ -77,13 +80,21 @@ class CorrelogramView(ManualClusteringView):
             self.canvas[i, j].hist(hist, color=color, ylim=ylim)
 
     def _plot_labels(self, cluster_ids):
-        for i, j in self._iter_subplots(len(cluster_ids)):
-            self.canvas[i, j].text_batch(
-                pos=[-0.90, -0.90],
-                text='%d-%d' % (cluster_ids[i], cluster_ids[j]),
+        n = len(cluster_ids)
+        for k in range(n):
+            self.canvas[k, 0].text_batch(
+                pos=[-1., 0.],
+                text=str(cluster_ids[k]),
+                anchor=[-0.90, -0.90],
                 data_bounds=None,
             )
-        self.canvas.text(color=(0., 0., 0., 1.))
+            self.canvas[n - 1, k].text_batch(
+                pos=[0., -1.],
+                text=str(cluster_ids[k]),
+                anchor=[-0.90, -0.90],
+                data_bounds=None,
+            )
+        self.canvas.text(color=(1., 1., 1., 1.))
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids

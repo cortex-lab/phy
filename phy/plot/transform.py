@@ -142,6 +142,9 @@ class BaseTransform(object):
     def inverse(self):
         raise NotImplementedError()
 
+    def __repr__(self):
+        return '<%s (%s)>' % (self.__class__.__name__, self.value)
+
 
 class Translate(BaseTransform):
     def apply(self, arr, value=None):
@@ -337,3 +340,6 @@ class TransformChain(object):
         self.cpu_transforms.extend(tc.cpu_transforms)
         self.gpu_transforms.extend(tc.gpu_transforms)
         return self
+
+    def __repr__(self):
+        return 'CPU: %s ; GPU: %s' % (self.cpu_transforms, self.gpu_transforms)
