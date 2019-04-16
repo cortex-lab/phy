@@ -30,9 +30,9 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QEvent, QCoreApplication,
                           qInstallMessageHandler,
                           )
-from PyQt5.QtGui import (
+from PyQt5.QtGui import (  # noqa
     QKeySequence, QColor, QMouseEvent, QGuiApplication,
-    QWindow, QOpenGLWindow)  # noqa
+    QWindow, QOpenGLWindow)
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       QWebEnginePage,
                                       # QWebSettings,
