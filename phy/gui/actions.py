@@ -167,8 +167,9 @@ def _create_qaction(
         if prompt:
             args += _prompt_args(title, docstring) or ()
         if len(args) != n_args:
-            logger.warning("Invalid function arguments: expecting %d but got %d",
-                           n_args, len(args))
+            logger.warning(
+                "Invalid function arguments: expecting %d but got %d",
+                n_args, len(args))
             return
         return callback(*args)
 

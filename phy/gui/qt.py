@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 
 from contextlib import contextmanager
-from functools import wraps
+from functools import wraps, partial
 import logging
 import os.path as op
 import sys
@@ -245,7 +245,7 @@ class WebPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, msg, line, source):
         super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
         msg = "[JS:L%02d] %s" % (line, msg)
-        f = (logger.debug, logger.warn, logger.error)[level]
+        f = (partial(logger.log, 5), logger.warning, logger.error)[level]
         if self._raise_on_javascript_error and level >= 2:
             raise RuntimeError(msg)
         f(msg)

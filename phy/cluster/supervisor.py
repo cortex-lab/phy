@@ -67,7 +67,7 @@ class TaskLogger(object):
         self._queue = []
 
     def enqueue(self, sender, name, *args, output=None):
-        logger.debug("Enqueue %s %s %s (%s)", sender.__class__.__name__, name, args, output)
+        logger.log(5, "Enqueue %s %s %s (%s)", sender.__class__.__name__, name, args, output)
         self._queue.append((sender, name, args))
 
     def dequeue(self):
@@ -84,7 +84,7 @@ class TaskLogger(object):
     def _eval(self, task):
         # Evaluation a task and call a callback function.
         sender, name, args = task
-        logger.debug("Calling %s.%s(%s)", sender.__class__.__name__, name, args)
+        logger.log(5, "Calling %s.%s(%s)", sender.__class__.__name__, name, args)
         f = getattr(sender, name)
         callback = partial(self._callback, task)
         argspec = inspect.getfullargspec(f)
@@ -111,7 +111,7 @@ class TaskLogger(object):
     def enqueue_after(self, task, output):
         sender, name, args = task
         getattr(self, '_after_%s' % name,
-                lambda *args: logger.debug("No method _after_%s", name))(task, output)
+                lambda *args: logger.log(5, "No method _after_%s", name))(task, output)
 
     def _after_merge(self, task, output):
         sender, name, args = task
@@ -176,7 +176,7 @@ class TaskLogger(object):
         sender, name, args = task
         assert sender
         assert name
-        logger.debug("Log %s %s %s (%s)", sender.__class__.__name__, name, args, output)
+        logger.log(5, "Log %s %s %s (%s)", sender.__class__.__name__, name, args, output)
         task = (sender, name, args, output)
         # Avoid successive duplicates (even if sender is different).
         if not self._history or self._history[-1][1:] != task[1:]:
@@ -549,7 +549,7 @@ class Supervisor(object):
         self.cluster_view.get_state(b(1))
         b.wait()
         state = b.result(1)[0][0]
-        gui.state.update_view_state(self.cluster_view, state)
+        gui.state.update_view_state(self.cluster_view, state, gui)
 
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
@@ -679,9 +679,9 @@ class Supervisor(object):
         )
 
         connect(self._save_gui_state, event='close', sender=gui)
-        self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
         gui.add_view(self.similarity_view)
+        #self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view, gui))
 
         self.action_creator.attach(gui)
 

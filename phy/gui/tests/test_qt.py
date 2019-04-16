@@ -115,7 +115,7 @@ def test_javascript_1(qtbot):
         qtbot.waitForWindowShown(view)
         _block(lambda: view.html is not None)
         view.close()
-    assert buf.getvalue() == "[JS:L01] Test.\n"
+    assert buf.getvalue() == ""
 
 
 def test_javascript_2(qtbot):

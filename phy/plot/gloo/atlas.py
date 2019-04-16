@@ -89,7 +89,7 @@ class Atlas(Texture2D):
                     region = node[0], y, width, height
 
         if best_index == -1:
-            log.warn("No enough free space in atlas")
+            log.warning("No enough free space in atlas")
             return None
 
         node = region[0], region[1] + height, width
