@@ -210,7 +210,7 @@ class FeatureView(ManualClusteringView):
             dim_y = self._get_axis_label(dim_y)
             # Right edge of right column of subplots.
             self.canvas[k, br].text_batch(
-                pos=[.9, .9],
+                pos=[.8, .9],
                 text=dim_y,
                 data_bounds=None,
             )

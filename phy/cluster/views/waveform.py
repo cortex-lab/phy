@@ -89,7 +89,6 @@ class WaveformView(ManualClusteringView):
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
         self.canvas.boxed.margin = .1
-        self._waveform_min_max = (-1., 1.)
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
 
@@ -100,11 +99,12 @@ class WaveformView(ManualClusteringView):
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
 
-    def _get_data_bounds(self):
-        wmin, wmax = self._waveform_min_max
-        return [-1., wmin, +1., wmax]
+    def _get_data_bounds(self, bunchs):
+        m = min(b.data.min() for b in bunchs)
+        M = max(b.data.max() for b in bunchs)
+        return [-1, m, +1, M]
 
-    def _plot_labels(self, channel_ids, n_clusters, channel_labels=None):
+    def _plot_labels(self, channel_ids, n_clusters, channel_labels=None, data_bounds=None):
         # Add channel labels.
         if self.do_show_labels:
             # Label positions.
@@ -120,11 +120,11 @@ class WaveformView(ManualClusteringView):
                     pos=[x, 0.],
                     text=str(label),
                     anchor=[-1.01, -.25],
-                    data_bounds=self._get_data_bounds(),
+                    data_bounds=data_bounds,
                 )
             self.canvas.text()
 
-    def _plot_waveforms(self, bunchs, channel_ids):
+    def _plot_waveforms(self, bunchs, channel_ids, data_bounds=None):
         # Initialize the box scaling the first time.
         if self.box_scaling[1] == 1.:
             M = np.max([np.max(np.abs(b.data)) for b in bunchs])
@@ -192,7 +192,7 @@ class WaveformView(ManualClusteringView):
                 color=color,
                 masks=m,
                 box_index=box_index,
-                data_bounds=self._get_data_bounds(),
+                data_bounds=data_bounds,
             )
 
     def on_select(self, cluster_ids=(), **kwargs):
@@ -217,8 +217,9 @@ class WaveformView(ManualClusteringView):
         self._update_boxes()
 
         self.canvas.clear()
-        self._plot_waveforms(bunchs, channel_ids)
-        self._plot_labels(channel_ids, n_clusters)
+        data_bounds = self._get_data_bounds(bunchs)
+        self._plot_waveforms(bunchs, channel_ids, data_bounds=data_bounds)
+        self._plot_labels(channel_ids, n_clusters, data_bounds=data_bounds)
 
     @property
     def state(self):
