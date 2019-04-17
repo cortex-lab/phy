@@ -246,6 +246,8 @@ def test_transform_chain_add():
 
     ae((tc + tc_2).apply([3.]), [[3.]])
 
+    assert str(tc)
+
 
 def test_transform_chain_inverse():
     tc = TransformChain()

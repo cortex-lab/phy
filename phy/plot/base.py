@@ -563,6 +563,7 @@ class BaseLayout(object):
         """Attach this layout to a canvas."""
         self.canvas = canvas
         canvas.layout = self
+        canvas.attach_events(self)
 
         @connect
         def on_visual_set_data(visual):
