@@ -14,7 +14,7 @@ import numpy as np
 
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
-from phy.plot.transform import Scale
+from phy.plot.interact import Boxed
 from phy.plot.utils import _get_boxes
 from phy.utils import emit
 from phy.utils._color import _colormap
@@ -34,7 +34,7 @@ def _get_box_bounds(bunchs, channel_ids):
                    for cid, pos in zip(d.channel_ids,
                                        d.channel_positions)})
     box_pos = np.stack([cp[cid] for cid in channel_ids])
-    return _get_boxes(box_pos, margin=.1)
+    return _get_boxes(box_pos, margin=Boxed.margin)
 
 
 def _get_clu_offsets(bunchs):
@@ -90,12 +90,8 @@ class WaveformView(ManualClusteringView):
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
 
-        self.canvas.boxed.margin = .1
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
-
-        # Outside margin to show labels.
-        self.canvas.transforms.add_on_gpu(Scale(.75))
 
         self.box_pos = np.array(self.canvas.boxed.box_pos)
         self.box_size = np.array(self.canvas.boxed.box_size)
@@ -358,10 +354,12 @@ class WaveformView(ManualClusteringView):
         self.on_select(cluster_ids=self.cluster_ids)
 
     def on_mouse_click(self, e):
+        b = e.button
         nums = tuple('%d' % i for i in range(10))
         if 'Control' in e.modifiers or e.key in nums:
             key = int(e.key) if e.key in nums else None
             # Get mouse position in NDC.
-            channel_idx = self.canvas.boxed.get_closest_box(e.pos)
+            channel_idx, _ = self.canvas.boxed.box_map(e.pos)
             channel_id = self.channel_ids[channel_idx]
-            emit('channel_click', self, channel_id=channel_id, key=key, button=e.button)
+            logger.debug("Click on channel %d with key %s and button %s.", channel_id, key, b)
+            emit('channel_click', self, channel_id=channel_id, key=key, button=b)

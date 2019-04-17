@@ -32,6 +32,7 @@ def test_manual_clustering_view_1(qtbot):
     v.set_state({'auto_update': False})
     assert v.auto_update is False
 
+    qtbot.wait(1)
     # qtbot.stop()
     v.canvas.close()
 
@@ -47,5 +48,6 @@ def test_manual_clustering_view_2(qtbot, gui):
 
     emit('select', Supervisor(), cluster_ids=[0, 1])
 
+    qtbot.wait(1)
     # qtbot.stop()
     v.canvas.close()

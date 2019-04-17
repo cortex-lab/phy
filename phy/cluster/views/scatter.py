@@ -37,14 +37,16 @@ class ScatterView(ManualClusteringView):
     def _get_data_bounds(self, bunchs):
         if not bunchs:  # pragma: no cover
             return NDC
-        data_bounds = bunchs[0].get('data_bounds', None)
-        if data_bounds is None:
-            xmin = np.min([d.x.min() for d in bunchs])
-            ymin = np.min([d.y.min() for d in bunchs])
-            xmax = np.max([d.x.max() for d in bunchs])
-            ymax = np.max([d.y.max() for d in bunchs])
-            data_bounds = (xmin, ymin, xmax, ymax)
-        return data_bounds
+        xmin, ymin, xmax, ymax = np.inf, np.inf, -np.inf, -np.inf
+        for d in bunchs:
+            xmin_, ymin_, xmax_, ymax_ = (
+                d.get('data_bounds', None) or
+                (d.x.min(), d.y.min(), d.x.max(), d.y.max()))
+            xmin = min(xmin, xmin_)
+            ymin = min(ymin, ymin_)
+            xmax = max(xmax, xmax_)
+            ymax = max(ymax, ymax_)
+        return (xmin, ymin, xmax, ymax)
 
     def _plot_points(self, bunchs, data_bounds):
         ms = self._default_marker_size

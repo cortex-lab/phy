@@ -24,8 +24,10 @@ from ..waveform import WaveformView
 def test_waveform_view(qtbot, tempdir, gui):
     nc = 5
 
+    w = artificial_waveforms(10, 20, nc)
+
     def get_waveforms(cluster_id):
-        return Bunch(data=artificial_waveforms(10, 20, nc),
+        return Bunch(data=w,
                      channel_ids=np.arange(nc),
                      channel_positions=staggered_positions(nc),
                      )
@@ -44,8 +46,8 @@ def test_waveform_view(qtbot, tempdir, gui):
     v.toggle_waveform_overlap(True)
     v.toggle_waveform_overlap(False)
 
-    v.toggle_show_labels(True)
     v.toggle_show_labels(False)
+    v.toggle_show_labels(True)
 
     # Box scaling.
     bs = v.boxed.box_size
@@ -88,7 +90,7 @@ def test_waveform_view(qtbot, tempdir, gui):
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left')
     key_release(qtbot, v.canvas, '2')
 
-    assert _clicked == [(1, 'Left', 2)]
+    assert _clicked == [(2, 'Left', 2)]
 
     v.set_state(v.state)
 
