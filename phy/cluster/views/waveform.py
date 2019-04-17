@@ -14,6 +14,7 @@ import numpy as np
 
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
+from phy.plot.transform import Scale
 from phy.plot.utils import _get_boxes
 from phy.utils import emit
 from phy.utils._color import _colormap
@@ -88,9 +89,13 @@ class WaveformView(ManualClusteringView):
 
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
+
         self.canvas.boxed.margin = .1
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
+
+        # Outside margin to show labels.
+        self.canvas.transforms.add_on_gpu(Scale(.75))
 
         self.box_pos = np.array(self.canvas.boxed.box_pos)
         self.box_size = np.array(self.canvas.boxed.box_size)
