@@ -152,7 +152,7 @@ class Boxed(BaseLayout):
 
     """
 
-    margin = 0
+    margin = .1
     n_dims = 1
     active_box = 0
 
@@ -217,6 +217,27 @@ class Boxed(BaseLayout):
         visual.program['u_box_bounds'] = box_bounds
         visual.program['n_boxes'] = self.n_boxes
 
+    def add_boxes(self, canvas):
+        n_boxes = len(self.box_bounds)
+        a = 1 + .05
+
+        pos = np.array([[-a, -a, +a, -a],
+                        [+a, -a, +a, +a],
+                        [+a, +a, -a, +a],
+                        [-a, +a, -a, -a],
+                        ])
+        pos = np.tile(pos, (n_boxes, 1))
+
+        box_index = np.c_[np.arange(n_boxes)]
+        box_index = np.repeat(box_index, 8, axis=0)
+
+        boxes = LineVisual()
+
+        canvas.add_visual(boxes, clearable=False)
+        boxes.set_data(pos=pos)
+        boxes.set_box_index(box_index)
+        canvas.update()
+
     # Change the box bounds, positions, or size
     #--------------------------------------------------------------------------
 
@@ -257,9 +278,12 @@ class Boxed(BaseLayout):
     def get_closest_box(self, pos):
         """Get the box closest to some position."""
         pos = np.atleast_2d(pos)
-        d = np.sum((np.array(self.box_pos) - pos) ** 2, axis=1)
-        idx = np.argmin(d)
-        return idx
+        x0, y0, x1, y1 = self.box_bounds.T
+        rmin = np.c_[x0, y0]
+        rmax = np.c_[x1, y1]
+        z = np.zeros_like(rmin)
+        d = np.maximum(np.maximum(rmin - pos, z), pos - rmax)
+        return np.argmin(np.linalg.norm(d, axis=1))
 
     def update_boxes(self, box_pos, box_size):
         """Set the box bounds from specified box positions and sizes."""
@@ -282,16 +306,16 @@ class Stacked(Boxed):
 
     n_boxes : int
         Number of boxes to stack vertically.
-    margin : int (0 by default)
-        The margin between the stacked subplots. Can be negative. Must be
-        between -1 and 1. The unit is relative to each box's size.
     box_var : str
         Name of the GLSL variable with the box index.
 
     """
-    def __init__(self, n_boxes, margin=0, box_var=None, origin=None):
+    margin = 0
+
+    def __init__(self, n_boxes, box_var=None, origin=None):
 
         # The margin must be in [-1, 1]
+        margin = .05
         margin = np.clip(margin, -1, 1)
         # Normalize the margin.
         margin = 2. * margin / float(n_boxes)

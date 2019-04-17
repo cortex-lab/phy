@@ -82,9 +82,10 @@ class PlotCanvas(BaseCanvas):
 
         elif layout == 'stacked':
             self.n_plots = n_plots
-            self.stacked = Stacked(n_plots, margin=.1, origin=origin)
+            self.stacked = Stacked(n_plots, origin=origin)
             self.stacked.attach(self)
             self.interact = self.stacked
+            self.constrain_bounds = (-1, -1, +1, +1)
 
         if layout == 'grid' and shape is not None:
             self.interact.add_boxes(self)
@@ -182,8 +183,8 @@ class PlotCanvas(BaseCanvas):
         self.lasso = Lasso()
         self.lasso.attach(self)
 
-    def enable_axes(self, data_bounds=None):
-        self.axes = Axes(data_bounds=data_bounds)
+    def enable_axes(self, data_bounds=None, show_x=True, show_y=True):
+        self.axes = Axes(data_bounds=data_bounds, show_x=show_x, show_y=show_y)
         self.axes.attach(self)
 
 

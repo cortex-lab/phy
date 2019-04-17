@@ -159,6 +159,7 @@ def test_boxed_2(qtbot, canvas):
 
     boxed = Boxed(box_pos=pos)
     _create_visual(qtbot, canvas, boxed, box_index)
+    boxed.add_boxes(canvas)
 
     boxed.box_pos *= .25
     boxed.box_size = [1, .1]
@@ -202,7 +203,7 @@ def test_stacked_1(qtbot, canvas):
     n = 1000
     box_index = np.repeat(np.arange(6), n, axis=0)
 
-    stacked = Stacked(n_boxes=6, margin=-10, origin='upper')
+    stacked = Stacked(n_boxes=6, origin='upper')
     _create_visual(qtbot, canvas, stacked, box_index)
     stacked.update_boxes(stacked.box_pos, stacked.box_size)
 
