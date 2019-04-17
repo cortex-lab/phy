@@ -39,6 +39,7 @@ class CorrelogramView(ManualClusteringView):
     def __init__(self, correlograms=None, sample_rate=None):
         super(CorrelogramView, self).__init__()
         self.canvas.set_layout(layout='grid')
+
         # Outside margin to show labels.
         self.canvas.transforms.add_on_gpu(Scale(.9))
 

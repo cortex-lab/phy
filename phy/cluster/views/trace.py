@@ -81,7 +81,7 @@ class TraceView(ManualClusteringView):
     auto_update = False
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
-    scaling_coeff_x = 1.5
+    scaling_coeff_x = 1.25
     scaling_coeff_y = 1.1
     default_trace_color = (.75, .75, .75, 1.)
     default_shortcuts = {
@@ -291,6 +291,7 @@ class TraceView(ManualClusteringView):
         if self.do_show_labels:
             self._plot_labels(traces.data, data_bounds=data_bounds)
 
+        self.canvas.enable_axes(data_bounds=data_bounds, show_y=False)
         self.canvas.update()
 
     def on_select(self, cluster_ids=None, **kwargs):
@@ -388,13 +389,13 @@ class TraceView(ManualClusteringView):
     def go_right(self):
         """Go to right."""
         start, end = self._interval
-        delay = (end - start) * .2
+        delay = (end - start) * .1
         self.shift(delay)
 
     def go_left(self):
         """Go to left."""
         start, end = self._interval
-        delay = (end - start) * .2
+        delay = (end - start) * .1
         self.shift(-delay)
 
     def widen(self):
