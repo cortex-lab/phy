@@ -23,8 +23,8 @@ from phy.gui.qt import _is_high_dpi
 #------------------------------------------------------------------------------
 
 class AxisLocator(object):
-    _default_nbinsx = 12
-    _default_nbinsy = 8
+    _default_nbinsx = 24
+    _default_nbinsy = 16
     # ticks are extended beyond the viewport for smooth transition
     # when panzooming: -2, -1, 0, +1, +2
     _bins_margin = 5
@@ -108,23 +108,27 @@ def _quant_zoom(z):
 class Axes(object):
     default_color = (1, 1, 1, .25)
 
-    def __init__(self, color=None, data_bounds=None):
+    def __init__(self, color=None, data_bounds=None, show_x=True, show_y=True):
         self.locator = AxisLocator(data_bounds=data_bounds)
+        self.show_x = show_x
+        self.show_y = show_y
         self.color = color or self.default_color
         self._create_visuals()
         self._last_log_zoom = (1, 1)
         self._last_pan = (0, 0)
 
     def _create_visuals(self):
-        self.xvisual = LineVisual()
-        self.yvisual = LineVisual()
-        self.txvisual = TextVisual()
-        self.tyvisual = TextVisual()
+        if self.show_x:
+            self.xvisual = LineVisual()
+            self.txvisual = TextVisual()
+            _fix_coordinate_in_visual(self.xvisual, 'y')
+            _fix_coordinate_in_visual(self.txvisual, 'y')
 
-        _fix_coordinate_in_visual(self.xvisual, 'y')
-        _fix_coordinate_in_visual(self.yvisual, 'x')
-        _fix_coordinate_in_visual(self.txvisual, 'y')
-        _fix_coordinate_in_visual(self.tyvisual, 'x')
+        if self.show_y:
+            self.yvisual = LineVisual()
+            self.tyvisual = TextVisual()
+            _fix_coordinate_in_visual(self.yvisual, 'x')
+            _fix_coordinate_in_visual(self.tyvisual, 'x')
 
     def set_bounds(self, bounds):
         self.locator.set_view_bounds(bounds)
@@ -139,17 +143,23 @@ class Axes(object):
         xpos, ypos = xdata[:, :2], ydata[:, 2:]
 
         # Set the visuals data.
-        self.xvisual.set_data(xdata, color=self.color)
-        self.yvisual.set_data(ydata, color=self.color)
+        if self.show_x:
+            self.xvisual.set_data(xdata, color=self.color)
+            self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, +1.02))
 
-        self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, +1.02))
-        self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
+        if self.show_y:
+            self.yvisual.set_data(ydata, color=self.color)
+            self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
 
     def attach(self, canvas):
-        canvas.add_visual(self.xvisual)
-        canvas.add_visual(self.yvisual)
-        canvas.add_visual(self.txvisual)
-        canvas.add_visual(self.tyvisual)
+        if self.show_x:
+            canvas.add_visual(self.xvisual)
+            canvas.add_visual(self.txvisual)
+
+        if self.show_y:
+            canvas.add_visual(self.yvisual)
+            canvas.add_visual(self.tyvisual)
+
         self.set_bounds(NDC)
 
         @connect(sender=canvas)
