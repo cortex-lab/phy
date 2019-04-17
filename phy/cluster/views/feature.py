@@ -36,7 +36,7 @@ def _get_default_grid():
     """.strip()
     dims = [[_ for _ in re.split(' +', line.strip())]
             for line in s.splitlines()]
-    return dims
+    return dims, ('0A', '1A', '0B', '1B'), ('0A', '1A', '0B', '1B')
 
 
 def _get_point_color(clu_idx=None):
@@ -96,7 +96,10 @@ class FeatureView(ManualClusteringView):
         self.n_cols = 4
         self.canvas.set_layout('grid', shape=(self.n_cols, self.n_cols))
         self.canvas.enable_lasso()
-        self.grid_dim = _get_default_grid()  # [i][j] = '..,..'
+        # grid_dim[i][j] = '..,..'
+        # x_labels[j] is the label of x axis of subplots in col j
+        # y_labels[i] is the label of y axis of subplots in row i
+        self.grid_dim, self.x_labels, self.y_labels = _get_default_grid()
 
         # Channels being shown.
         self.channel_ids = None
@@ -211,13 +214,13 @@ class FeatureView(ManualClusteringView):
             # Right edge of right column of subplots.
             self.canvas[k, br].text_batch(
                 pos=[.8, .9],
-                text=dim_y,
+                text=self.y_labels[k],
                 data_bounds=None,
             )
             # Bottom edge of bottom row of subplots.
             self.canvas[br, k].text_batch(
                 pos=[0, -.9],
-                text=dim_x,
+                text=self.x_labels[k],
                 data_bounds=None,
             )
         self.canvas.text()
