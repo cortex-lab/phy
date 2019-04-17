@@ -214,13 +214,13 @@ class FeatureView(ManualClusteringView):
             # Right edge of right column of subplots.
             self.canvas[k, br].text_batch(
                 pos=[.8, .9],
-                text=self.y_labels[k],
+                text=self._get_axis_label(self.y_labels[k]),
                 data_bounds=None,
             )
             # Bottom edge of bottom row of subplots.
             self.canvas[br, k].text_batch(
                 pos=[0, -.9],
-                text=self.x_labels[k],
+                text=self._get_axis_label(self.x_labels[k]),
                 data_bounds=None,
             )
         self.canvas.text()
