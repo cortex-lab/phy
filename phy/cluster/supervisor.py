@@ -279,6 +279,9 @@ class SimilarityView(ClusterView):
     _defaut_sort = ('similarity', 'desc')
     _view_name = 'similarity_view'
 
+    def set_selected_index_offset(self, n):
+        self.eval_js('table._setSelectedIndexOffset(%d);' % n)
+
     def reset(self, cluster_ids):
         if not len(cluster_ids):
             return
@@ -627,6 +630,7 @@ class Supervisor(object):
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=cluster_ids_and_next)
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
+        self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
         emit('select', self, self.selected)
 
     def _similar_selected(self, sender, similar_and_next):

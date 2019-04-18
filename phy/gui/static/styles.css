@@ -7,7 +7,7 @@ body, input {
 
 body, p, div, th, td, input {
     font-family: Helvetica;
-    font-size: 12pt;
+    font-size: 10pt;
 }
 
 #table input {
@@ -118,4 +118,66 @@ th.sort { cursor:pointer; }
         -ms-user-select: none; /* IE 10+ */
        -moz-user-select: none; /* Gecko (Firefox) */
     -webkit-user-select: none; /* Webkit (Safari, Chrome) */
+}
+
+
+/* Selection colors */
+
+#table .selected > td[class='id'] {
+    /*background-color: #000;*/
+    color: #fff;
+    font-weight: bold;
+}
+
+#table .color-0 > td[class='id'] {
+    background-color: rgb(8, 146, 252);
+}
+
+#table .color-1 > td[class='id'] {
+    background-color: rgb(255, 2, 2);
+}
+
+#table .color-2 > td[class='id'] {
+    color: #000;
+    background-color: rgb(240, 253, 2);
+}
+
+#table .color-3 > td[class='id'] {
+    background-color: rgb(228, 31, 228);
+}
+
+#table .color-4 > td[class='id'] {
+    background-color: rgb(2, 217, 2);
+}
+
+#table .color-5 > td[class='id'] {
+    background-color: rgb(255, 147, 2);
+}
+
+#table .color-6 > td[class='id'] {
+    background-color: rgb(212, 150, 70);
+}
+
+#table .color-7 > td[class='id'] {
+    background-color: rgb(205, 131, 201);
+}
+
+#table .color-8 > td[class='id'] {
+    background-color: rgb(201, 172, 36);
+}
+
+#table .color-9 > td[class='id'] {
+    background-color: rgb(150, 179, 62);
+}
+
+#table .color-10 > td[class='id'] {
+    background-color: rgb(95, 188, 122);
+}
+
+#table .color-11 > td[class='id'] {
+    background-color: rgb(129, 173, 190);
+}
+
+#table .color-12 > td[class='id'] {
+    background-color: rgb(231, 107, 119);
 }
