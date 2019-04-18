@@ -145,7 +145,7 @@ def test_boxed_1(qtbot, canvas):
     boxed.box_bounds = b
 
     boxed.update_boxes(boxed.box_pos, boxed.box_size)
-    ac(boxed.box_bounds, b)
+    ac(boxed.box_bounds, b * .9)
 
     # qtbot.stop()
 
