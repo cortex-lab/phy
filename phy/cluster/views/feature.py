@@ -302,7 +302,9 @@ class FeatureView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(FeatureView, self).attach(gui)
-        self.actions.add(self.toggle_automatic_channel_selection, checkable=True)
+        self.actions.add(
+            self.toggle_automatic_channel_selection,
+            checked=not self.fixed_channels, checkable=True)
         self.actions.separator()
         self.actions.add(self.clear_channels)
         self.actions.separator()
@@ -393,7 +395,7 @@ class FeatureView(ManualClusteringView):
     def toggle_automatic_channel_selection(self, checked):
         """Toggle the automatic selection of channels when the cluster
         selection changes."""
-        self.fixed_channels = checked
+        self.fixed_channels = not checked
 
     # Feature scaling
     # -------------------------------------------------------------------------

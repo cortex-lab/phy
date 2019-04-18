@@ -34,7 +34,8 @@ def _get_box_bounds(bunchs, channel_ids):
                    for cid, pos in zip(d.channel_ids,
                                        d.channel_positions)})
     box_pos = np.stack([cp[cid] for cid in channel_ids])
-    return _get_boxes(box_pos, margin=Boxed.margin)
+    bounds = _get_boxes(box_pos, margin=Boxed.margin)
+    return bounds
 
 
 def _get_clu_offsets(bunchs):

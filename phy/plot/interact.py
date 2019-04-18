@@ -259,9 +259,9 @@ class Boxed(BaseLayout):
 
     @box_pos.setter
     def box_pos(self, val):
-        self.box_bounds = _get_boxes(val, size=self.box_size,
-                                     margin=self.margin,
-                                     keep_aspect_ratio=self.keep_aspect_ratio)
+        self.box_bounds = _get_boxes(
+            val, size=self.box_size, margin=self.margin,
+            keep_aspect_ratio=self.keep_aspect_ratio)
 
     @property
     def box_size(self):
@@ -271,9 +271,9 @@ class Boxed(BaseLayout):
     @box_size.setter
     def box_size(self, val):
         assert len(val) == 2
-        self.box_bounds = _get_boxes(self.box_pos, size=val,
-                                     margin=self.margin,
-                                     keep_aspect_ratio=self.keep_aspect_ratio)
+        self.box_bounds = _get_boxes(
+            self.box_pos, size=val, margin=self.margin,
+            keep_aspect_ratio=self.keep_aspect_ratio)
 
     def get_closest_box(self, pos):
         """Get the box closest to some position."""
@@ -289,10 +289,9 @@ class Boxed(BaseLayout):
         """Set the box bounds from specified box positions and sizes."""
         assert box_pos.shape == (self.n_boxes, 2)
         assert len(box_size) == 2
-        self.box_bounds = _get_boxes(box_pos,
-                                     size=box_size,
-                                     keep_aspect_ratio=self.keep_aspect_ratio,
-                                     )
+        self.box_bounds = _get_boxes(
+            box_pos, size=box_size, margin=self.margin,
+            keep_aspect_ratio=self.keep_aspect_ratio)
 
 
 class Stacked(Boxed):

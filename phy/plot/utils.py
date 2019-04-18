@@ -77,7 +77,6 @@ def _get_boxes(pos, size=None, margin=0, keep_aspect_ratio=True):
     """Generate non-overlapping boxes in NDC from a set of positions."""
 
     # Margin.
-    #a = .1
     a = margin
 
     # Get x, y.
@@ -104,8 +103,7 @@ def _get_boxes(pos, size=None, margin=0, keep_aspect_ratio=True):
         else:
             b = ((x1max + x0min) / 2. - dy / 2., y0min,
                  (x1max + x0min) / 2. + dy / 2., y1max)
-    r = Range(from_bounds=b,
-              to_bounds=(-1 + a, -1 + a, 1 - a, 1 - a))
+    r = Range(from_bounds=b, to_bounds=(-1 + a, -1 + a, 1 - a, 1 - a))
     return np.c_[r.apply(np.c_[x0, y0]), r.apply(np.c_[x1, y1])]
 
 
