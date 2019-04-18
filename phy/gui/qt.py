@@ -158,7 +158,7 @@ def _block(until_true):
     if until_true():
         return
     t0 = default_timer()
-    timeout = .5 if not _in_travis() else 5
+    timeout = 1 if not _in_travis() else 5
 
     while not until_true() and (default_timer() - t0 < timeout):
         app = QApplication.instance()
