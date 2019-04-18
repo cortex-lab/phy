@@ -261,8 +261,6 @@ def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
     c = canvas_pz
     pz = panzoom
 
-    if _in_travis():
-        return
     # Zoom with mouse.
     mouse_drag(qtbot, c, (150, 150), (50, 50), button='right')
     assert pz.pan[0] < 0
@@ -309,5 +307,4 @@ def test_panzoom_resize(qtbot, canvas_pz, panzoom):
     pz = panzoom
 
     c.resize(400, 600)
-    if not _in_travis():
-        assert tuple(pz._canvas_aspect) not in ((0, 0), (1, 1), (1, 0), (0, 1))
+    assert tuple(pz._canvas_aspect) not in ((0, 0), (1, 1), (1, 0), (0, 1))

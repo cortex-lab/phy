@@ -86,8 +86,7 @@ def test_feature_view(qtbot, gui, n_channels):
 
     # Split lassoed points.
     spike_ids = v.on_request_split()
-    if not _in_travis():  # HACK: disable on travis for now
-        assert len(spike_ids) > 0
+    assert len(spike_ids) > 0
 
     v.set_state(v.state)
 

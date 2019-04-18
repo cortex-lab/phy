@@ -345,6 +345,9 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_time = 0.
         self._current_key_event = None
 
+        # Default window size.
+        self.setGeometry(20, 20, 800, 600)
+
     def get_size(self):
         return self.size().width() or 1, self.size().height() or 1
 

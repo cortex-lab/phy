@@ -299,9 +299,6 @@ def test_lasso_grid(qtbot, canvas):
     assert l.box == (0, 1)
 
     inlasso = l.in_polygon(visual.data)
-    if _in_travis():
-        canvas.close()
-        return
     assert .001 < inlasso.mean() < .999
 
     # Clear box.

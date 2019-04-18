@@ -126,16 +126,13 @@ def test_gui_status_message(gui):
 
 def test_gui_geometry_state(tempdir, qtbot):
     _gs = []
-    gui = GUI(size=(100, 100), config_dir=tempdir)
-    #qtbot.addWidget(gui)
+    gui = GUI(size=(800, 600), config_dir=tempdir)
+    qtbot.addWidget(gui)
 
     @connect(sender=gui)
     def on_close(sender):
         _gs.append(gui.save_geometry_state())
-
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-
+    
     gui.add_view(_create_canvas())
     gui.add_view(_create_canvas())
     gui.add_view(_create_canvas())
@@ -156,9 +153,6 @@ def test_gui_geometry_state(tempdir, qtbot):
         gui.restore_geometry_state(_gs[0])
 
     assert gui.restore_geometry_state(None) is None
-
-    gui.show()
-    qtbot.waitForWindowShown(gui)
 
     assert len(gui.list_views(BaseCanvas)) == 3
 
