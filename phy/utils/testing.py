@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from cProfile import Profile
 import functools
 import logging
+import os
 import os.path as op
 import sys
 from timeit import default_timer
@@ -183,3 +184,7 @@ def _enable_pdb():  # pragma: no cover
                                          color_scheme='Linux',
                                          call_pdb=True,
                                          )
+
+
+def _in_travis():
+    return 'TRAVIS' in os.environ
