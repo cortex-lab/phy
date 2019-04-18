@@ -1,35 +1,28 @@
 language: python
-dist: xenial
-sudo: required
-compiler:
-  - gcc
+sudo: false
 python:
   - "3.7"
 before_install:
   - pip install codecov
-  # Allow traceback dumps
-  - ulimit -c
-  - ulimit -a -S
-  - ulimit -a -H
-  - cat /proc/sys/kernel/core_pattern
-  - cat /etc/default/apport
-  - service --status-all || true
-  - initctl list || true
 install:
-  - mkdir ./mason/
-  - curl -sSfL https://github.com/mapbox/mason/archive/v0.2.0.tar.gz | tar --gunzip --extract --strip-components=1 --directory=./mason/
-  - ./mason/mason install gdb 7.12
-  - export PATH=$(./mason/mason prefix gdb 7.12)/bin:${PATH}
-  - curl -sSfL https://github.com/mapbox/logbt/archive/v1.6.0.tar.gz | tar --gunzip --extract --strip-components=2 --exclude="*md" --exclude="test*" --directory=.
-  - sudo bash -c "echo '/tmp/logbt-coredumps/core.%p.%E' > /proc/sys/kernel/core_pattern"
-  # Install Python requirements and phy
-  - pip install -r requirements.txt
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  # Create the environment.
+  - conda install pyyaml
+  - conda env create python=$TRAVIS_PYTHON_VERSION
+  - source activate phy
+  # Dev requirements
   - pip install -r requirements-dev.txt
   - pip install -e .
 before_script:
     - export DISPLAY=:99.0
     - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
 script:
-  - ./logbt make test
+  - make test
 after_success:
   - codecov
