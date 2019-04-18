@@ -14,7 +14,6 @@ from pytest import yield_fixture
 
 #from phy.gui.qt import Qt, QPoint
 from phy.utils import emit
-from phy.utils.testing import _in_travis
 from . import mouse_drag, key_press
 from ..base import BaseVisual
 from ..panzoom import PanZoom

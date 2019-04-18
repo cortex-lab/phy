@@ -132,7 +132,7 @@ def test_gui_geometry_state(tempdir, qtbot):
     @connect(sender=gui)
     def on_close(sender):
         _gs.append(gui.save_geometry_state())
-    
+
     gui.add_view(_create_canvas())
     gui.add_view(_create_canvas())
     gui.add_view(_create_canvas())
