@@ -15,7 +15,6 @@ from phy.io.mock import (artificial_features,
                          )
 from phy.plot.tests import mouse_click
 from phy.utils import Bunch
-from phy.utils.testing import _in_travis
 
 from ..feature import FeatureView
 
