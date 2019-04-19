@@ -71,7 +71,8 @@ def firing_rate(spike_clusters,
 
     assert duration > 0
     assert bin_size > 0
-    return np.bincount(spike_clusters_i) * (bin_size / duration)
+    bc = np.bincount(spike_clusters_i)
+    return bc * np.c_[bc] * (bin_size / duration)
 
 
 def correlograms(spike_times,

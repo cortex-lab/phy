@@ -36,7 +36,7 @@ class CorrelogramView(ManualClusteringView):
         'go_right': 'alt+right',
     }
 
-    def __init__(self, correlograms=None, sample_rate=None):
+    def __init__(self, correlograms=None, firing_rate=None, sample_rate=None):
         super(CorrelogramView, self).__init__()
         self.canvas.set_layout(layout='grid')
 
@@ -48,6 +48,9 @@ class CorrelogramView(ManualClusteringView):
 
         # Function clusters => CCGs.
         self.correlograms = correlograms
+
+        # Function clusters => firing rates (same unit as CCG).
+        self.firing_rate = firing_rate
 
         # Set the default bin and window size.
         self.set_bin_window(bin_size=self.bin_size,
@@ -71,28 +74,41 @@ class CorrelogramView(ManualClusteringView):
             for j in range(n_clusters):
                 yield i, j
 
-    def _plot_correlograms(self, ccg):
+    def _plot_correlograms(self, ccg, ylims=None):
+        ylims = ylims or {}
         n_clusters = ccg.shape[0]
-        ylim = [ccg.max()] if not self.uniform_normalization else None
         colors = _spike_colors(np.arange(n_clusters), alpha=1.)
         for i, j in self._iter_subplots(n_clusters):
             hist = ccg[i, j, :]
             color = colors[i] if i == j else np.ones(4)
-            self.canvas[i, j].hist(hist, color=color, ylim=ylim)
+            self.canvas[i, j].hist_batch(hist=hist, color=color, ylim=ylims.get((i, j), None))
+        self.canvas.hist()
+
+    def _plot_firing_rate(self, fr, ylims=None, n_bins=None):
+        assert n_bins > 0
+        ylims = ylims or {}
+        for i, j in self._iter_subplots(len(fr)):
+            db = (0, 0, n_bins, ylims.get((i, j), None))
+            f = fr[i, j]
+            self.canvas[i, j].lines_batch(
+                pos=[0, f, n_bins, f], color=(.25, .25, .25, 1.), data_bounds=db)
+        self.canvas.lines()
 
     def _plot_labels(self, cluster_ids):
         n = len(cluster_ids)
+        p = -1.0
+        a = -.9
         for k in range(n):
             self.canvas[k, 0].text_batch(
-                pos=[-1., 0.],
+                pos=[p, 0.],
                 text=str(cluster_ids[k]),
-                anchor=[-0.90, -0.90],
+                anchor=[a, a],
                 data_bounds=None,
             )
             self.canvas[n - 1, k].text_batch(
-                pos=[0., -1.],
+                pos=[0., p],
                 text=str(cluster_ids[k]),
-                anchor=[-0.90, -0.90],
+                anchor=[a, a],
                 data_bounds=None,
             )
         self.canvas.text(color=(1., 1., 1., 1.))
@@ -106,9 +122,22 @@ class CorrelogramView(ManualClusteringView):
         ccg = self.correlograms(
             cluster_ids, self.bin_size, self.window_size)
 
+        # CCG normalization.
+        if self.uniform_normalization:
+            M = ccg.max()
+            ylims = {(i, j): M for i, j in self._iter_subplots(n_clusters)}
+        else:
+            ylims = {(i, j): ccg[i, j, :].max() for i, j in self._iter_subplots(n_clusters)}
+
         self.canvas.grid.shape = (n_clusters, n_clusters)
         self.canvas.clear()
-        self._plot_correlograms(ccg)
+        self._plot_correlograms(ccg, ylims=ylims)
+
+        # Show firing rate as horizontal lines.
+        if self.firing_rate:
+            fr = self.firing_rate(cluster_ids, self.bin_size)
+            self._plot_firing_rate(fr, ylims=ylims, n_bins=ccg.shape[2])
+
         self._plot_labels(cluster_ids)
 
     def toggle_normalization(self, checked):

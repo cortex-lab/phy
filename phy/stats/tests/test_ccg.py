@@ -60,13 +60,13 @@ def test_firing_rate_0():
     bin_size = 1
 
     fr = firing_rate(spike_clusters, bin_size=bin_size, duration=20)
-    ae(fr, [.1, .1])
+    ae(fr, .2 * np.ones((2, 2)))
 
 
 def test_firing_rate_1():
     spike_clusters = np.tile(np.arange(10), 100)
     fr = firing_rate(spike_clusters, cluster_ids=np.arange(10), bin_size=.1, duration=1.)
-    ae(fr, np.ones(10) * 10)
+    ae(fr, np.ones((10, 10)) * 1000)
 
 
 def test_ccg_0():
