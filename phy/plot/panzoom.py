@@ -360,7 +360,7 @@ class PanZoom(object):
         aspect = w / max(float(h), 1.)
         if aspect > 1.0:
             self._canvas_aspect = np.array([1.0 / aspect, 1.0])
-        else:
+        else:  # pragma: no cover
             self._canvas_aspect = np.array([1.0, aspect / 1.0])
 
     def _zoom_keyboard(self, key):

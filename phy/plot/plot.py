@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from collections import defaultdict
 import logging
 
 import numpy as np
@@ -46,7 +47,7 @@ class PlotCanvas(BaseCanvas):
 
     def __init__(self, *args, **kwargs):
         super(PlotCanvas, self).__init__(*args, **kwargs)
-        self._acc = BatchAccumulator()
+        self._acc = defaultdict(BatchAccumulator)  # dict visual_cls => BatchAccumulator()
 
     def _enable(self):
         self._enabled = True
@@ -105,10 +106,15 @@ class PlotCanvas(BaseCanvas):
 
     def add_one(self, visual, *args, box_index=None, **kwargs):
         # Finalize batch.
-        if self._acc.items:
-            kwargs.update(self._acc.data)
-            box_index = box_index if box_index is not None else self._acc.box_index
-            self._acc.reset()
+        cls = visual.__class__
+        # WARNING: self._acc[cls] should not be silently created here
+        # when accessing self._acc[cls] of a defaultdict.
+        # If the first part of the if test fails, then the second part
+        # is not even run.
+        if cls in self._acc and self._acc[cls].items:
+            kwargs.update(self._acc[cls].data)
+            box_index = box_index if box_index is not None else self._acc[cls].box_index
+            self._acc[cls].reset()
         else:
             box_index = box_index if box_index is not None else self._default_box_index
         self.add_visual(
@@ -131,7 +137,7 @@ class PlotCanvas(BaseCanvas):
         else:
             n = visual_cls.vertex_count(**kwargs)
             b.box_index = np.tile(np.atleast_2d(self._default_box_index), (n, 1))
-        self._acc.add(b)
+        return self._acc[visual_cls].add(b)
 
     # Plot methods
     #--------------------------------------------------------------------------
@@ -172,13 +178,16 @@ class PlotCanvas(BaseCanvas):
         b.box_index = kwargs.pop('box_index', self._default_box_index)
         if isinstance(b.box_index, tuple):
             b.box_index = [b.box_index]
-        self._acc.add(b, noconcat=('text', 'box_index'))
+        return self._acc[TextVisual].add(b, noconcat=('text', 'box_index'))
 
     def uscatter_batch(self, **kwargs):
-        self.add_batch(UniformScatterVisual, **kwargs)
+        return self.add_batch(UniformScatterVisual, **kwargs)
 
     def lines_batch(self, **kwargs):
-        self.add_batch(LineVisual, **kwargs)
+        return self.add_batch(LineVisual, **kwargs)
+
+    def hist_batch(self, **kwargs):
+        return self.add_batch(HistogramVisual, **kwargs)
 
     # Enable methods
     #--------------------------------------------------------------------------
