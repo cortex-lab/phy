@@ -87,9 +87,13 @@ def test_feature_view(qtbot, gui, n_channels):
     mouse_click(qtbot, v.canvas, (b, a), modifiers=('Control',))
 
     # Split lassoed points.
-    if not _in_travis():
-        spike_ids = v.on_request_split()
-        assert len(spike_ids) > 0
+    if _in_travis():  # pragma: no cover
+        # HACK: mouse click seems to fail on travis, emulating the lasso
+        c = .8
+        v.canvas.lasso._points = [[-c, -c], [-c, c], [c, c], [c, -c]]
+        v.canvas.lasso.box = (0, 0)
+    spike_ids = v.on_request_split()
+    assert len(spike_ids) > 0
 
     v.set_state(v.state)
 

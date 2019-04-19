@@ -345,7 +345,7 @@ class Lasso(object):
         self.box = None
 
     def add(self, pos):
-        self._points.append(pos)
+        self._points.append(pos.ravel().tolist())
         self.update_lasso_visual()
 
     @property
