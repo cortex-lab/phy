@@ -255,7 +255,7 @@ class Table(HTMLWidget):
         b = self.builder
         b.set_body_src('index.html')
 
-        if _is_high_dpi():
+        if _is_high_dpi():  # pragma: no cover
             b.add_style('''
 
                 /* This is for high-dpi displays. */
