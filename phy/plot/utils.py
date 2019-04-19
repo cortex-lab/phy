@@ -304,7 +304,7 @@ def _load_shader(filename):
 
 
 def _tesselate_histogram(hist):
-    """
+    r"""
 
     2/4  3
      ____

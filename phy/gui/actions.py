@@ -361,8 +361,7 @@ class Snippets(object):
 
     # Allowed characters in snippet mode.
     # A Qt shortcut will be created for every character.
-    _snippet_chars = ("abcdefghijklmnopqrstuvwxyz0123456789"
-                      " ,.;?!_-+~=*/\(){}[]")
+    _snippet_chars = r"abcdefghijklmnopqrstuvwxyz0123456789 ,.;?!_-+~=*/\(){}[]"
 
     def __init__(self, gui):
         self.gui = gui

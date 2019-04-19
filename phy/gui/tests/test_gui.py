@@ -156,6 +156,7 @@ def test_gui_geometry_state(tempdir, qtbot):
 
     assert len(gui.list_views(BaseCanvas)) == 3
 
+    gui.show()
     gui.close()
 
 

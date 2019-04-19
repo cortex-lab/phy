@@ -38,7 +38,7 @@ def remove_comments(code):
 def remove_version(code):
     """ Remove any version directive """
 
-    pattern = '\#\s*version[^\r\n]*\n'
+    pattern = r'\#\s*version[^\r\n]*\n'
     regex = re.compile(pattern, re.MULTILINE | re.DOTALL)
     return regex.sub('\n', code)
 
@@ -47,7 +47,7 @@ def merge_includes(code):
     """ Merge all includes recursively """
 
     # pattern = '\#\s*include\s*"(?P<filename>[a-zA-Z0-9\-\.\/]+)"[^\r\n]*\n'
-    pattern = '\#\s*include\s*"(?P<filename>[a-zA-Z0-9\-\.\/]+)"'
+    pattern = r'\#\s*include\s*"(?P<filename>[a-zA-Z0-9\-\.\/]+)"'
     regex = re.compile(pattern)
     includes = []
 
@@ -102,18 +102,18 @@ def get_declarations(code, qualifier=""):
         qualifier = "(" + "|".join([str(q) for q in qualifier]) + ")"
 
     if qualifier != "":
-        re_type = re.compile("""
+        re_type = re.compile(r"""
                              %s                               # Variable qualifier
                              \s+(?P<type>\w+)                 # Variable type
                              \s+(?P<names>[\w,\[\]\n =\.$]+); # Variable name(s)
                              """ % qualifier, re.VERBOSE)
     else:
-        re_type = re.compile("""
+        re_type = re.compile(r"""
                              \s*(?P<type>\w+)         # Variable type
                              \s+(?P<names>[\w\[\] ]+) # Variable name(s)
                              """, re.VERBOSE)
 
-    re_names = re.compile("""
+    re_names = re.compile(r"""
                           (?P<name>\w+)           # Variable name
                           \s*(\[(?P<size>\d+)\])? # Variable size
                           (\s*[^,]+)?
@@ -143,7 +143,7 @@ def get_hooks(code):
         return []
 
     hooks = []
-    re_hooks = re.compile("""\<(?P<hook>\w+)
+    re_hooks = re.compile(r"""\<(?P<hook>\w+)
                               (\.(?P<subhook>.+))?
                               (\([^<>]+\))?\>""", re.VERBOSE)
     for match in re.finditer(re_hooks, code):
@@ -185,7 +185,7 @@ def get_functions(code):
         return r"[^{}]*?(?:{" * n + r"[^{}]*?" + r"}[^{}]*?)*?" * n
 
     functions = []
-    regex = re.compile("""
+    regex = re.compile(r"""
                        \s*(?P<type>\w+)    # Function return type
                        \s+(?P<name>[\w]+)   # Function name
                        \s*\((?P<args>.*?)\) # Function arguments
