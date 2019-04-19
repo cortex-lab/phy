@@ -534,7 +534,6 @@ class HistogramVisual(BaseVisual):
                             data.ylim]
         data_bounds = np.repeat(data_bounds, 6 * n_bins, axis=0)
         self.data_range.from_bounds = data_bounds
-        data.data_bounds = data_bounds
 
         # Set the transformed position.
         pos = np.vstack([_tesselate_histogram(row) for row in hist])

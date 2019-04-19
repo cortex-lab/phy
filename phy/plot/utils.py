@@ -272,6 +272,7 @@ class BatchAccumulator(object):
             else:
                 assert n is not None  # n should had been set above, or in a previous iteration.
                 self.items[key].append(_get_array(val, (n, k)))
+        return b
 
     def __getattr__(self, key):
         if key not in self.items:

@@ -162,6 +162,16 @@ def test_plot_lines_batch_1(qtbot, canvas):
     canvas.lines()
 
 
+def test_plot_hist_batch_1(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    canvas.set_layout('grid', shape=(1, 2))
+    canvas[0, 0].hist_batch(hist=[[3., 4., 1., 2.]], color=(1, 0, 0, 1))
+    canvas[0, 1].hist_batch(hist=[[0., 1., 0., 2.], [1., 0., 3., 0.]], color=(0, 1, 0, 1))
+    canvas.hist()
+
+
 def test_plot_text_batch_1(qtbot, canvas):
     if isinstance(canvas, PlotCanvasMpl):
         # TODO: not implemented yet
