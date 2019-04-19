@@ -345,7 +345,8 @@ class Lasso(object):
         self.box = None
 
     def add(self, pos):
-        self._points.append(pos.ravel().tolist())
+        x, y = pos.flat if isinstance(pos, np.ndarray) else pos
+        self._points.append((x, y))
         self.update_lasso_visual()
 
     @property
