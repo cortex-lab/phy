@@ -22,6 +22,7 @@ from .utils import (_tesselate_histogram,
                     _get_pos,
                     _get_index,
                     )
+from phy.io.array import _as_array
 from phy.gui.qt import _is_high_dpi
 from phy.utils import Bunch, emit
 
@@ -533,6 +534,7 @@ class HistogramVisual(BaseVisual):
                             data.ylim]
         data_bounds = np.repeat(data_bounds, 6 * n_bins, axis=0)
         self.data_range.from_bounds = data_bounds
+        data.data_bounds = data_bounds
 
         # Set the transformed position.
         pos = np.vstack([_tesselate_histogram(row) for row in hist])
@@ -744,6 +746,7 @@ class LineVisual(BaseVisual):
                  data_bounds=None,
                  ):
         assert pos is not None
+        pos = _as_array(pos)
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
         n_lines = pos.shape[0]
@@ -764,7 +767,7 @@ class LineVisual(BaseVisual):
     @staticmethod
     def vertex_count(pos=None, **kwargs):
         """Take the output of validate() as input."""
-        return pos.shape[0] * 2
+        return np.atleast_2d(pos).shape[0] * 2
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)

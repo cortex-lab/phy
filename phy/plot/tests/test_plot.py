@@ -152,6 +152,16 @@ def test_plot_uscatter_batch_1(qtbot, canvas):
     canvas.uscatter(color=(1, 1, 0, 1))
 
 
+def test_plot_lines_batch_1(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    canvas.set_layout('grid', shape=(1, 2))
+    canvas[0, 0].lines_batch(pos=[0., 0., 1., 1.])
+    canvas[0, 1].lines_batch(pos=[-1., 1., 1., -1.])
+    canvas.lines()
+
+
 def test_plot_text_batch_1(qtbot, canvas):
     if isinstance(canvas, PlotCanvasMpl):
         # TODO: not implemented yet
