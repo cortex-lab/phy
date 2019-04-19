@@ -6,8 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from phy.io.mock import (artificial_correlograms,
-                         )
+import numpy as np
+
+from phy.io.mock import artificial_correlograms
 
 from ..correlogram import CorrelogramView
 
@@ -21,7 +22,11 @@ def test_correlogram_view(qtbot, gui):
     def get_correlograms(cluster_ids, bin_size, window_size):
         return artificial_correlograms(len(cluster_ids), int(window_size / bin_size))
 
+    def get_firing_rate(cluster_ids, bin_size):
+        return .5 * np.ones((len(cluster_ids), len(cluster_ids)))
+
     v = CorrelogramView(correlograms=get_correlograms,
+                        firing_rate=get_firing_rate,
                         sample_rate=100.,
                         )
     v.show()
