@@ -298,7 +298,7 @@ def test_lasso_grid(qtbot, canvas):
     assert l.polygon.shape == (4, 2)
     assert l.box == (0, 1)
 
-    if not _in_travis():
+    if not _in_travis():  # pragma: no cover
         inlasso = l.in_polygon(visual.data)
         assert .001 < inlasso.mean() < .999
 

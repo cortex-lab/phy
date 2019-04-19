@@ -94,7 +94,7 @@ def _set_line_data(xticks, yticks):
 def get_nbins(w, h):
     """Return a sensible number of bins on the x and y axes as a function
     of the window size."""
-    if _is_high_dpi():
+    if _is_high_dpi():  # pragma: no cover
         w, h = w // 2, h // 2
     return max(1, w // 150), max(1, h // 80)
 
