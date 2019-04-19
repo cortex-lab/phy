@@ -246,16 +246,22 @@ class BatchAccumulator(object):
         self.noconcat = ()
 
     def add(self, b, noconcat=()):
-        n = len(next(iter(b.values())))
         self.noconcat = noconcat
+        n = None
+        # We assume that the first element of the b dictionary is an
+        # ndarray, that sets the number of vertices for all elements
+        # in the dictionary.
         for key, val in b.items():
             if key not in self.items:
                 self.items[key] = []
             if val is None:
                 continue
             # Size of the second dimension.
-            if isinstance(val, np.ndarray) and val.ndim == 2:
-                k = val.shape[1]
+            if isinstance(val, np.ndarray):
+                if val.ndim == 1:
+                    val = np.c_[val]
+                assert val.ndim == 2
+                n, k = val.shape
             elif isinstance(val, (tuple, list)):
                 k = len(val)
             else:
@@ -264,6 +270,7 @@ class BatchAccumulator(object):
             if key in noconcat:
                 self.items[key].extend(val)
             else:
+                assert n is not None  # n should had been set above, or in a previous iteration.
                 self.items[key].append(_get_array(val, (n, k)))
 
     def __getattr__(self, key):

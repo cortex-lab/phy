@@ -121,11 +121,16 @@ class PlotCanvas(BaseCanvas):
         data = visual.set_data(*args, **kwargs)
         if self.interact:
             visual.set_box_index(box_index, data=data)
+        return data
 
     def add_batch(self, visual_cls, box_index=None, **kwargs):
         # box_index scalar or vector
         b = visual_cls.validate(**kwargs)
-        b.box_index = box_index if box_index is not None else self._default_box_index
+        if box_index is not None:  # pragma: no cover
+            b.box_index = box_index
+        else:
+            n = visual_cls.vertex_count(**kwargs)
+            b.box_index = np.tile(np.atleast_2d(self._default_box_index), (n, 1))
         self._acc.add(b)
 
     # Plot methods
@@ -171,6 +176,9 @@ class PlotCanvas(BaseCanvas):
 
     def uscatter_batch(self, **kwargs):
         self.add_batch(UniformScatterVisual, **kwargs)
+
+    def lines_batch(self, **kwargs):
+        self.add_batch(LineVisual, **kwargs)
 
     # Enable methods
     #--------------------------------------------------------------------------
