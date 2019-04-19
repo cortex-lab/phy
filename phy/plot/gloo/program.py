@@ -434,7 +434,7 @@ class Program(GLObject):
         count = gl.glGetProgramiv(self.handle, gl.GL_ACTIVE_UNIFORMS)
 
         # This match a name of the form "name[size]" (= array)
-        regex = re.compile("""(?P<name>\w+)\s*(\[(?P<size>\d+)\])\s*""")
+        regex = re.compile(r"""(?P<name>\w+)\s*(\[(?P<size>\d+)\])\s*""")
         uniforms = []
         for i in range(count):
             name, size, gtype = gl.glGetActiveUniform(self.handle, i)
@@ -517,7 +517,7 @@ class Program(GLObject):
         attributes = []
 
         # This match a name of the form "name[size]" (= array)
-        regex = re.compile("""(?P<name>\w+)\s*(\[(?P<size>\d+)\])""")
+        regex = re.compile(r"""(?P<name>\w+)\s*(\[(?P<size>\d+)\])""")
 
         for i in range(count):
             name, size, gtype = gl.glGetActiveAttrib(self.handle, i)

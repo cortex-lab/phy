@@ -13,7 +13,7 @@ class Snippet(object):
     """
     A snippet is a piece of GLSL code that can be injected into an another GLSL
     code. It provides the necessary machinery to take care of name collisions,
-    external variables and snippet composition (call, +, -, /, \*).
+    external variables and snippet composition (call, +, -, /, \\*).
 
     :param string code: Shader code
     :param string default: Default function to be called if none is specified.

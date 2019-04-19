@@ -120,7 +120,7 @@ class Shader(GLObject):
         re_hook = r"(?P<hook>%s)(\.(?P<subhook>[\.\w\!]+))?" % name
         re_args = r"(\((?P<args>[^<>]+)\))?"
         # re_hooks = re.compile("\<" + re_hook + re_args + "\>", re.VERBOSE)
-        pattern = "\<" + re_hook + re_args + "\>"
+        pattern = r"\<" + re_hook + re_args + r"\>"
 
         # snippet is not a Snippet (it should be a string)
         if not isinstance(snippet, Snippet):
