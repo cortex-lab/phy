@@ -3,4 +3,4 @@
 
 """Statistics functions."""
 
-from .ccg import correlograms
+from .ccg import correlograms, firing_rate
