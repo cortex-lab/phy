@@ -54,10 +54,10 @@ def _symmetrize_correlograms(correlograms):
     return np.dstack((sym, correlograms))
 
 
-def firing_rate(spike_times,
-                spike_clusters,
+def firing_rate(spike_clusters,
                 cluster_ids=None,
-                bin_size=None):
+                bin_size=None,
+                duration=None):
     """Compute the average number of spikes per cluster per bin."""
 
     # Take the cluster order into account.
@@ -69,7 +69,7 @@ def firing_rate(spike_times,
     # Like spike_clusters, but with 0..n_clusters-1 indices.
     spike_clusters_i = _index_of(spike_clusters, clusters)
 
-    duration = spike_times[-1]
+    assert duration > 0
     assert bin_size > 0
     return np.bincount(spike_clusters_i) * (bin_size / duration)
 
@@ -93,7 +93,7 @@ def correlograms(spike_times,
     spike_clusters : array-like
         Spike-cluster mapping.
     cluster_ids : array-like
-        The list of unique clusters, in any order. That order will be used
+        The list of *all* unique clusters, in any order. That order will be used
         in the output array.
     bin_size : float
         Size of the bin, in seconds.

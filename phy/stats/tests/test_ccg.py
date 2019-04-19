@@ -56,17 +56,16 @@ def test_utils():
 
 
 def test_firing_rate_0():
-    spike_samples = [0, 10, 10, 20]
     spike_clusters = [0, 1, 0, 1]
     bin_size = 1
 
-    fr = firing_rate(spike_samples, spike_clusters, bin_size=bin_size)
+    fr = firing_rate(spike_clusters, bin_size=bin_size, duration=20)
     ae(fr, [.1, .1])
 
 
 def test_firing_rate_1():
     spike_clusters = np.tile(np.arange(10), 100)
-    fr = firing_rate([1], spike_clusters, bin_size=.1)
+    fr = firing_rate(spike_clusters, cluster_ids=np.arange(10), bin_size=.1, duration=1.)
     ae(fr, np.ones(10) * 10)
 
 
