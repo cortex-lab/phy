@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal as ae
 from ..ccg import (_increment,
                    _diff_shifted,
                    correlograms,
+                   firing_rate,
                    )
 
 
@@ -54,10 +55,25 @@ def test_utils():
     ae(_diff_shifted(arr, 2), ds2)
 
 
+def test_firing_rate_0():
+    spike_samples = [0, 10, 10, 20]
+    spike_clusters = [0, 1, 0, 1]
+    bin_size = 1
+
+    fr = firing_rate(spike_samples, spike_clusters, bin_size=bin_size)
+    ae(fr, [.1, .1])
+
+
+def test_firing_rate_1():
+    spike_clusters = np.tile(np.arange(10), 100)
+    fr = firing_rate([1], spike_clusters, bin_size=.1)
+    ae(fr, np.ones(10) * 10)
+
+
 def test_ccg_0():
     spike_samples = [0, 10, 10, 20]
     spike_clusters = [0, 1, 0, 1]
-    binsize = 1
+    bin_size = 1
     winsize_bins = 2 * 3 + 1
 
     c_expected = np.zeros((2, 2, 4))
@@ -69,7 +85,7 @@ def test_ccg_0():
     c_expected[0, 1, 0] = 0  # This is a peculiarity of the algorithm.
 
     c = correlograms(spike_samples, spike_clusters,
-                     bin_size=binsize, window_size=winsize_bins,
+                     bin_size=bin_size, window_size=winsize_bins,
                      cluster_ids=[0, 1], symmetrize=False)
 
     ae(c, c_expected)
@@ -78,7 +94,7 @@ def test_ccg_0():
 def test_ccg_1():
     spike_samples = np.array([2, 3, 10, 12, 20, 24, 30, 40], dtype=np.uint64)
     spike_clusters = [0, 1, 0, 0, 2, 1, 0, 2]
-    binsize = 1
+    bin_size = 1
     winsize_bins = 2 * 3 + 1
 
     c_expected = np.zeros((3, 3, 4))
@@ -86,7 +102,7 @@ def test_ccg_1():
     c_expected[0, 0, 2] = 1
 
     c = correlograms(spike_samples, spike_clusters,
-                     bin_size=binsize, window_size=winsize_bins,
+                     bin_size=bin_size, window_size=winsize_bins,
                      symmetrize=False)
 
     ae(c, c_expected)
@@ -95,10 +111,10 @@ def test_ccg_1():
 def test_ccg_2():
     max_cluster = 10
     spike_samples, spike_clusters = _random_data(max_cluster)
-    binsize, winsize_bins = _ccg_params()
+    bin_size, winsize_bins = _ccg_params()
 
     c = correlograms(spike_samples, spike_clusters,
-                     bin_size=binsize, window_size=winsize_bins,
+                     bin_size=bin_size, window_size=winsize_bins,
                      sample_rate=20000, symmetrize=False)
 
     assert c.shape == (max_cluster, max_cluster, 26)
@@ -108,10 +124,10 @@ def test_ccg_symmetry_time():
     """Reverse time and check that the CCGs are just transposed."""
 
     spike_samples, spike_clusters = _random_data(2)
-    binsize, winsize_bins = _ccg_params()
+    bin_size, winsize_bins = _ccg_params()
 
     c0 = correlograms(spike_samples, spike_clusters,
-                      bin_size=binsize, window_size=winsize_bins,
+                      bin_size=bin_size, window_size=winsize_bins,
                       sample_rate=20000, symmetrize=False)
 
     spike_samples_1 = np.cumsum(np.r_[np.arange(1),
@@ -119,7 +135,7 @@ def test_ccg_symmetry_time():
     spike_samples_1 = spike_samples_1.astype(np.uint64)
     spike_clusters_1 = spike_clusters[::-1]
     c1 = correlograms(spike_samples_1, spike_clusters_1,
-                      bin_size=binsize, window_size=winsize_bins,
+                      bin_size=bin_size, window_size=winsize_bins,
                       sample_rate=20000, symmetrize=False)
 
     # The ACGs are identical.
@@ -135,15 +151,15 @@ def test_ccg_symmetry_clusters():
     """Exchange clusters and check that the CCGs are just transposed."""
 
     spike_samples, spike_clusters = _random_data(2)
-    binsize, winsize_bins = _ccg_params()
+    bin_size, winsize_bins = _ccg_params()
 
     c0 = correlograms(spike_samples, spike_clusters,
-                      bin_size=binsize, window_size=winsize_bins,
+                      bin_size=bin_size, window_size=winsize_bins,
                       sample_rate=20000, symmetrize=False)
 
     spike_clusters_1 = 1 - spike_clusters
     c1 = correlograms(spike_samples, spike_clusters_1,
-                      bin_size=binsize, window_size=winsize_bins,
+                      bin_size=bin_size, window_size=winsize_bins,
                       sample_rate=20000, symmetrize=False)
 
     # The ACGs are identical.
@@ -157,10 +173,10 @@ def test_ccg_symmetry_clusters():
 
 def test_symmetrize_correlograms():
     spike_samples, spike_clusters = _random_data(3)
-    binsize, winsize_bins = _ccg_params()
+    bin_size, winsize_bins = _ccg_params()
 
     sym = correlograms(spike_samples, spike_clusters,
-                       bin_size=binsize, window_size=winsize_bins,
+                       bin_size=bin_size, window_size=winsize_bins,
                        sample_rate=20000)
     assert sym.shape == (3, 3, 51)
 
