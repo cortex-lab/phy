@@ -330,8 +330,10 @@ class FeatureView(ManualClusteringView):
             return
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
-        # axis = 'x' if button == 1 else 'y'
-        d = 0 if button == 1 else 1
+        if key is not None:
+            d = np.clip(len(channels) - 1, 0, key - 1)
+        else:
+            d = 0 if button == 'Left' else 1
         # Change the first or second best channel.
         old = channels[d]
         # Avoid updating the view if the channel doesn't change.
@@ -339,13 +341,13 @@ class FeatureView(ManualClusteringView):
             return
         channels[d] = channel_id
         # Ensure that the first two channels are different.
-        if channels[1 - d] == channel_id:
-            channels[1 - d] = old
+        if channels[1 - min(d, 1)] == channel_id:
+            channels[1 - min(d, 1)] = old
         assert channels[0] != channels[1]
         # Remove duplicate channels.
         self.channel_ids = _uniq(channels)
-        logger.debug("Choose channels %d and %d in feature view.",
-                     *channels[:2])
+        logger.debug(
+            "Choose channels %d and %d in feature view.", *channels[:2])
         # Fix the channels temporarily.
         self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
 
