@@ -432,26 +432,24 @@ class TraceView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def on_mouse_click(self, e):
-        nums = tuple('%d' % i for i in range(10))
-        if 'Control' in e.modifiers or e.key in nums:
-            key = int(e.key) if e.key in nums else None
+        if 'Control' in e.modifiers:
             # Get mouse position in NDC.
-            box_id = self.canvas.stacked.get_closest_box(e.pos)
+            box_id, _ = self.canvas.stacked.box_map(e.pos)
             channel_id = self._permute_channels(box_id, inv=True)
             # Find the spike and cluster closest to the mouse.
             db = self._data_bounds
             # Get the information about the displayed spikes.
-            if not self._waveform_times:
+            wt = [(t, s, c, ch) for t, s, c, ch in self._waveform_times if channel_id in ch]
+            if not wt:
                 return
             # Get the time coordinate of the mouse position.
             mouse_pos = self.canvas.panzoom.window_to_ndc(e.pos)
             mouse_time = Range(NDC, db).apply(mouse_pos)[0][0]
             # Get the closest spike id.
-            times, spike_ids, spike_clusters, channel_ids = \
-                zip(*(_ for _ in self._waveform_times if channel_id in _[3]))
+            times, spike_ids, spike_clusters, channel_ids = zip(*wt)
             i = np.argmin(np.abs(np.array(times) - mouse_time))
             # Raise the spike_click event.
             spike_id = spike_ids[i]
             cluster_id = spike_clusters[i]
-            emit('spike_click', self, channel_id=channel_id, key=key,
+            emit('spike_click', self, channel_id=channel_id,
                  spike_id=spike_id, cluster_id=cluster_id)
