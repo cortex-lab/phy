@@ -19,6 +19,7 @@ import os.path as op
 from six import with_metaclass
 
 from ._misc import _fullname
+from .config import load_master_config
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ def get_plugin(name):
 def _iter_plugin_files(dirs):
     for plugin_dir in dirs:
         plugin_dir = op.realpath(op.expanduser(plugin_dir))
-        if not op.exists(plugin_dir):
+        if not op.exists(plugin_dir):  # pragma: no cover
             continue
         for subdir, dirs, files in os.walk(plugin_dir, followlinks=True):
             # Skip test folders.
@@ -110,3 +111,28 @@ def discover_plugins(dirs):
             finally:
                 file.close()
     return IPluginRegistry.plugins
+
+
+def attach_plugins(controller, plugins=None, config_dir=None):
+    # Attach the plugins.
+    plugins = plugins or []
+    config = load_master_config(config_dir=config_dir)
+    name = getattr(controller, 'gui_name', None) or controller.__class__.__name__
+    c = config.get(name)
+    default_plugins = c.plugins if c else []
+    if len(default_plugins):
+        plugins = default_plugins + plugins
+    logger.debug("Loading %d plugins.", len(plugins))
+    for plugin in plugins:
+        try:
+            p = get_plugin(plugin)()
+        except ValueError:  # pragma: no cover
+            logger.warning("The plugin %s couldn't be found.", plugin)
+            continue
+        try:
+            p.attach_to_controller(controller)
+            logger.debug("Attached plugin %s.", plugin)
+        except Exception as e:  # pragma: no cover
+            logger.warning(
+                "An error occurred when attaching plugin %s: %s.",
+                plugin, e)

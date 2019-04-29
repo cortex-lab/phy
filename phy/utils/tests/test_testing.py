@@ -16,6 +16,7 @@ from pytest import mark
 
 from ..testing import (benchmark, captured_output, captured_logging,
                        _assert_equal, _enable_profiler, _profile,
+                       download_test_file
                        )
 
 
@@ -56,3 +57,11 @@ def test_profile(chdir_tempdir, line_by_line):
     prof = _enable_profiler(line_by_line=line_by_line)
     _profile(prof, 'import time; time.sleep(.001)', {}, {})
     assert op.exists(op.join(chdir_tempdir, '.profile', 'stats.txt'))
+
+
+def test_download_test_file(tempdir):
+    name = 'test/test-4ch-1s.dat'
+    path = download_test_file(name, config_dir=tempdir)
+    assert op.exists(path)
+    assert op.getsize(path) == 160000
+    path = download_test_file(name, config_dir=tempdir)
