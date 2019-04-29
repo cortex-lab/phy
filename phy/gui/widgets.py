@@ -247,6 +247,11 @@ class Table(HTMLWidget):
         super(Table, self).__init__(*args, title=title)
         self._init_table(columns=columns, value_names=value_names, data=data)
 
+    def eval_js(self, expr, callback=None):
+        # Avoid JS errors when the table is not yet fully loaded.
+        expr = 'if (typeof table !== "undefined") ' + expr
+        return super(Table, self).eval_js(expr, callback=callback)
+
     def _init_table(self, columns=None, value_names=None, data=None):
         columns = columns or ['id']
         value_names = value_names or columns
