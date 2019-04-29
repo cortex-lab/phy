@@ -15,6 +15,7 @@ from ..plugin import (IPluginRegistry,
                       IPlugin,
                       get_plugin,
                       discover_plugins,
+                      attach_plugins
                       )
 from .._misc import _write_text
 
@@ -55,3 +56,26 @@ def test_discover_plugins(tempdir, no_native_plugins):
     plugins = discover_plugins([tempdir])
     assert plugins
     assert plugins[0].__name__ == 'MyPlugin'
+
+
+def test_attach_plugins(tempdir):
+    class MyController(object):
+        pass
+
+    class MyPlugin1(IPlugin):
+        def attach_to_controller(self, controller):
+            controller.plugin1 = True
+
+    class MyPlugin2(IPlugin):
+        def attach_to_controller(self, controller):
+            controller.plugin2 = True
+
+    contents = '''
+    c.MyController.plugins = ['MyPlugin1']
+    '''
+    _write_text(op.join(tempdir, 'phy_config.py'), contents)
+
+    controller = MyController()
+    attach_plugins(controller, plugins=['MyPlugin2'], config_dir=tempdir)
+
+    assert controller.plugin1 == controller.plugin2 is True

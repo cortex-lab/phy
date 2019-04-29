@@ -114,7 +114,12 @@ def test_load_config(config):
     assert configurable.my_var == 1.0
 
 
-def test_load_master_config(temp_config_dir):
+def test_load_master_config_0(temp_config_dir):
+    c = load_master_config(temp_config_dir)
+    assert c.MyConfigurable.my_var != 1.0
+
+
+def test_load_master_config_1(temp_config_dir):
     # Create a config file in the temporary user directory.
     config_contents = dedent("""
        c = get_config()

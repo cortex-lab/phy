@@ -60,11 +60,6 @@ def _default_config(config_dir=None):
 
     from phy import IPlugin
 
-    try:
-        import phycontrib
-    except:
-        pass
-
     # Plugin example:
     #
     # class MyPlugin(IPlugin):

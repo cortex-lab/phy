@@ -19,6 +19,7 @@ from .._misc import (_git_version,
                      _load_json, _save_json,
                      _load_pickle, _save_pickle,
                      _read_python,
+                     _read_text,
                      _write_text,
                      _encode_qbytearray, _decode_qbytearray,
                      )
@@ -97,8 +98,7 @@ def test_write_text(tempdir):
                  op.join(tempdir, 'test_dir/test_2.txt'),
                  ):
         _write_text(path, 'hello world')
-        with open(path, 'r') as f:
-            assert f.read() == 'hello world'
+        assert _read_text(path) == 'hello world'
 
 
 def test_git_version():
