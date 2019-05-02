@@ -10,9 +10,9 @@
 import logging
 
 from phy.gui import Actions
-from phy.gui.qt import AsyncCaller, busy_cursor
+from phy.gui.qt import AsyncCaller
 from phy.plot import PlotCanvas
-from phy.utils import Bunch, connect, unconnect
+from phy.utils import Bunch, connect, unconnect, emit
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ManualClusteringView(object):
     """
     default_shortcuts = {
     }
-    _callback_delay = 1
+    _callback_delay = 100
     auto_update = True  # automatically update the view when the cluster selection changes
     _default_position = None
 
@@ -38,6 +38,8 @@ class ManualClusteringView(object):
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
+
+        self._is_busy = False
 
         # Message to show in the status bar.
         self.status = None
@@ -67,6 +69,7 @@ class ManualClusteringView(object):
         # Call on_select() asynchronously after a delay, and set a busy
         # cursor.
         self.async_caller = AsyncCaller(delay=self._callback_delay)
+        self.async_caller2 = AsyncCaller(delay=self._callback_delay)
 
         @connect
         def on_select(sender, cluster_ids, **kwargs):
@@ -78,13 +81,16 @@ class ManualClusteringView(object):
             if not cluster_ids:
                 return
 
-            # Call this function after a delay unless there is another
-            # cluster selection in the meantime.
+            # Immediately set is_busy to True.
+            emit('is_busy', self, True)
+            # Set the view as busy.
             @self.async_caller.set
             def update_view():
-                with busy_cursor():
-                    logger.log(5, "Selecting %s in %s.", cluster_ids, self)
-                    self.on_select(cluster_ids=cluster_ids, **kwargs)
+                logger.log(5, "Selecting %s in %s.", cluster_ids, self)
+                self.on_select(cluster_ids=cluster_ids, **kwargs)
+                @self.async_caller2.set
+                def finished():
+                    emit('is_busy', self, False)
 
         self.actions = Actions(
             gui, name=gui.view_name(self),
