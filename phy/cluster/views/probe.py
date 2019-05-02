@@ -11,7 +11,7 @@ import logging
 
 from phy.electrode.layout import probe_layout
 from phy.gui import HTMLWidget
-from phy.utils import connect
+from phy.utils import connect, unconnect
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,6 @@ class ProbeView(HTMLWidget):
         self.positions = positions
         self.best_channels = best_channels
 
-        @connect
-        def on_select(sender, cluster_ids):
-            if sender.__class__.__name__ != 'Supervisor':
-                return
-            self.on_select(cluster_ids=cluster_ids)
-
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
             cluster_channels = {0: list(range(len(self.positions)))}
@@ -42,7 +36,17 @@ class ProbeView(HTMLWidget):
         self.build()
 
     def attach(self, gui):
-
         self.on_select()
         self.show()
         gui.add_view(self, position='right')
+
+        @connect
+        def on_select(sender, cluster_ids):
+            if sender.__class__.__name__ != 'Supervisor':
+                return
+            self.on_select(cluster_ids=cluster_ids)
+
+        # Save the view state in the GUI state.
+        @connect(sender=gui)
+        def on_close(sender=None):
+            unconnect(on_select)

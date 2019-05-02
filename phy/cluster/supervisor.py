@@ -18,7 +18,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
-from phy.gui.qt import _block, set_busy
+from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
@@ -501,6 +501,8 @@ class Supervisor(object):
 
         connect(self._save_new_cluster_id, event='cluster', sender=self)
 
+        self._is_busy = False
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -683,16 +685,6 @@ class Supervisor(object):
         self.cluster_view.set_busy(busy)
         self.similarity_view.set_busy(busy)
 
-    def _set_debouncer(self):
-        self._busy = {}
-        self._is_busy = False
-        # Collect all busy events from the views, and sets the GUI as busy
-        # if at least one view is busy.
-        @connect
-        def on_is_busy(sender, is_busy):
-            self._busy[sender] = is_busy
-            self._set_busy(any(self._busy.values()))
-
     def attach(self, gui):
         # Create the cluster view and similarity view.
         self._create_views(gui=gui)
@@ -713,7 +705,19 @@ class Supervisor(object):
 
         emit('attach_gui', self)
 
-        self._set_debouncer()
+        # Set the debouncer.
+        self._busy = {}
+        self._is_busy = False
+        # Collect all busy events from the views, and sets the GUI as busy
+        # if at least one view is busy.
+        @connect
+        def on_is_busy(sender, is_busy):
+            self._busy[sender] = is_busy
+            self._set_busy(any(self._busy.values()))
+
+        @connect(sender=gui)
+        def on_close(e):
+            unconnect(on_is_busy)
 
     @property
     def actions(self):
@@ -878,5 +882,6 @@ class Supervisor(object):
 
     def block(self):
         """Block until there are no pending actions."""
-        _block(lambda: self.task_logger.has_finished())
+        _block(lambda: self.task_logger.has_finished() and not self._is_busy)
         self.task_logger.show_history()
+        _wait(250)

@@ -148,12 +148,11 @@ def _wait_signal(signal, timeout=None):
 
 def set_busy(busy):
     app = create_app()
-    cursor = app.overrideCursor()
     if busy:
-        if cursor is None or cursor.shape() != Qt.WaitCursor:
-            app.setOverrideCursor(Qt.WaitCursor)
+        app.setOverrideCursor(Qt.WaitCursor)
     else:
-        create_app().restoreOverrideCursor()
+        app.restoreOverrideCursor()
+        app.restoreOverrideCursor()
 
 
 @contextmanager
@@ -176,6 +175,11 @@ def _block(until_true):
                           int(timeout * 1000))
     if not until_true():
         raise RuntimeError("Timeout in _block().")
+
+
+def _wait(ms):
+    from PyQt5 import QtTest
+    QtTest.QTest.qWait(ms)
 
 
 # -----------------------------------------------------------------------------

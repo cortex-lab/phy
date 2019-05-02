@@ -12,7 +12,7 @@ import logging
 import os.path as op
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
-                 QMessageBox, Qt, QSize, QMetaObject)
+                 QMessageBox, Qt, QSize, QMetaObject, _wait)
 from .actions import Actions, Snippets
 from phy.utils import (Bunch, _bunchify, emit, connect,
                        _load_json, _save_json,
@@ -209,6 +209,7 @@ class GUI(QMainWindow):
         """Qt slot when the window is closed."""
         if self._closed:
             return
+        _wait(250)
         res = emit('close', self)
         # Discard the close event if False is returned by one of the callback
         # functions.
