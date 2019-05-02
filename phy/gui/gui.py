@@ -232,6 +232,10 @@ class GUI(QMainWindow):
     # Views
     # -------------------------------------------------------------------------
 
+    @property
+    def views(self):
+        return self._views
+
     def list_views(self, cls):
         """Return the list of views from a given class."""
         return [view for view in self._views if isinstance(view, cls)]

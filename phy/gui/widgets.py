@@ -13,7 +13,7 @@ from functools import partial
 
 from six import text_type
 
-from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, QTimer, _is_high_dpi
+from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
 from phy.utils import emit, connect
 from phy.utils._misc import _CustomEncoder, _read_text
 from phy.utils._types import _is_integer
@@ -71,13 +71,6 @@ _DEFAULT_SCRIPT = """
                 eventEmitter.emitJS(e.detail.name,
                                     JSON.stringify(e.detail.data));
             });
-
-            /*
-            // Callbacks on the widget.
-            for (let callback of window._onWidgetReady_callbacks) {
-                callback(widget);
-            }
-            */
 
         });
     });
@@ -304,11 +297,12 @@ class Table(HTMLWidget):
 
         # HACK: work-around a Qt bug where this widget is not properly refreshed
         # when an OpenGL widget is docked to the main window.
-        self._timer = QTimer()
-        self._timer.setSingleShot(True)
-        self._timer.timeout.connect(lambda: self.update())
+        # self._timer = QTimer()
+        # self._timer.setSingleShot(True)
+        # self._timer.timeout.connect(lambda: self.update())
         # Note: this event should be raised LAST, after all OpenGL widgets have been updated.
-        connect(event='select', sender=self, func=lambda *args: self._timer.start(100), last=True)
+        #connect(event='select', sender=self, func=lambda *args: self._timer.start(100), last=True)
+        connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
@@ -349,6 +343,10 @@ class Table(HTMLWidget):
         assert all(_is_integer(_) for _ in ids)
         self.eval_js('table.select({});'.format(dumps(ids)), callback=callback)
 
+    def set_busy(self, busy):
+        #logger.debug("Set %s busy to %s.", self.__class__.__name__, busy)
+        self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
+
     def get(self, id, callback=None):
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
 
@@ -384,5 +382,5 @@ class Table(HTMLWidget):
         self.eval_js('table._currentSort()', callback=callback)
 
     def closeEvent(self, e):
-        self._timer.stop()
+        # self._timer.stop()
         return super(Table, self).closeEvent(e)

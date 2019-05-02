@@ -146,12 +146,22 @@ def _wait_signal(signal, timeout=None):
     loop.exec_()
 
 
+def set_busy(busy):
+    app = create_app()
+    cursor = app.overrideCursor()
+    if busy:
+        if cursor is None or cursor.shape() != Qt.WaitCursor:
+            app.setOverrideCursor(Qt.WaitCursor)
+    else:
+        create_app().restoreOverrideCursor()
+
+
 @contextmanager
 def busy_cursor():
     """Context manager displaying a busy cursor during a long command."""
-    create_app().setOverrideCursor(Qt.WaitCursor)
+    set_busy(True)
     yield
-    create_app().restoreOverrideCursor()
+    set_busy(False)
 
 
 def _block(until_true):
