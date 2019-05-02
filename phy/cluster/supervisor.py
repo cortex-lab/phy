@@ -18,7 +18,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
-from phy.gui.qt import _block
+from phy.gui.qt import _block, set_busy
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
@@ -671,6 +671,28 @@ class Supervisor(object):
         ss = b.result(2)[0][0]
         return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
 
+    def _set_busy(self, busy):
+        # If busy is the same, do nothing.
+        if busy is self._is_busy:
+            return
+        self._is_busy = busy
+        # Set the busy cursor.
+        logger.log(5, "Set busy to %s", busy)
+        set_busy(busy)
+        # Let the cluster view that the GUI is busy.
+        self.cluster_view.set_busy(busy)
+        self.similarity_view.set_busy(busy)
+
+    def _set_debouncer(self):
+        self._busy = {}
+        self._is_busy = False
+        # Collect all busy events from the views, and sets the GUI as busy
+        # if at least one view is busy.
+        @connect
+        def on_is_busy(sender, is_busy):
+            self._busy[sender] = is_busy
+            self._set_busy(any(self._busy.values()))
+
     def attach(self, gui):
         # Create the cluster view and similarity view.
         self._create_views(gui=gui)
@@ -690,6 +712,8 @@ class Supervisor(object):
         self.action_creator.attach(gui)
 
         emit('attach_gui', self)
+
+        self._set_debouncer()
 
     @property
     def actions(self):

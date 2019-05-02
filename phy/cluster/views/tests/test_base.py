@@ -18,6 +18,8 @@ from ..base import ManualClusteringView
 #------------------------------------------------------------------------------
 
 class MyView(ManualClusteringView):
+    _callback_delay = 1
+
     def on_select(self, cluster_ids, **kwargs):
         for i in range(len(cluster_ids)):
             self.canvas.scatter(pos=.25 * np.random.randn(100, 2), color=_colormap(i, 1))
@@ -48,6 +50,6 @@ def test_manual_clustering_view_2(qtbot, gui):
 
     emit('select', Supervisor(), cluster_ids=[0, 1])
 
-    qtbot.wait(1)
+    qtbot.wait(200)
     # qtbot.stop()
     v.canvas.close()
