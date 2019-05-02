@@ -214,6 +214,19 @@ def test_table_1(qtbot, table):
     _assert(table.get_selected, [1, 2])
 
 
+def test_table_busy(qtbot, table):
+    table.select([1, 2])
+    table.set_busy(True)
+    _l = []
+
+    def callback(out):
+        _l.append(out)
+
+    table.eval_js('table.debouncer.isBusy', callback=callback)
+    _block(lambda: _l == [True])
+    table.set_busy(False)
+
+
 def test_table_duplicates(qtbot, table):
     table.select([1, 1])
     _assert(table.get_selected, [1])
