@@ -20,14 +20,13 @@ from .utils.config import load_master_config
 from .utils._misc import _git_version
 from .utils.event import connect, unconnect, emit
 from .utils.plugin import IPlugin, get_plugin, discover_plugins
-from .utils.testing import _enable_profiler
 
 
 #------------------------------------------------------------------------------
 # Global variables and functions
 #------------------------------------------------------------------------------
 
-__author__ = 'Kwik team'
+__author__ = 'Cyrille Rossant'
 __email__ = 'cyrille.rossant at gmail.com'
 __version__ = '2.0alpha'
 __version_git__ = __version__ + _git_version()
@@ -72,33 +71,6 @@ def on_exit():  # pragma: no cover
     for handler in logger.handlers:
         handler.close()
         logger.removeHandler(handler)
-
-
-DEBUG = False
-if '--debug' in sys.argv:  # pragma: no cover
-    DEBUG = True
-    sys.argv.remove('--debug')
-
-
-PDB = False
-if '--pdb' in sys.argv:  # pragma: no cover
-    PDB = True
-    sys.argv.remove('--pdb')
-
-
-IPYTHON = False
-if '--ipython' in sys.argv:  # pragma: no cover
-    IPYTHON = True
-    sys.argv.remove('--ipython')
-
-
-# Add `profile` in the builtins.
-if '--lprof' in sys.argv or '--prof' in sys.argv:  # pragma: no cover
-    _enable_profiler('--lprof' in sys.argv)
-    if '--prof' in sys.argv:
-        sys.argv.remove('--prof')
-    if '--lprof' in sys.argv:
-        sys.argv.remove('--lprof')
 
 
 def test():  # pragma: no cover
