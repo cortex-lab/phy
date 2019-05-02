@@ -1,4 +1,4 @@
-from phy.gui.qt import Qt, QPoint
+from phy.gui.qt import Qt, QPoint, _wait
 
 
 def mouse_click(qtbot, c, pos, button='left', modifiers=()):
@@ -30,6 +30,7 @@ def _modifiers_flag(modifiers):
 
 def key_press(qtbot, c, key, modifiers=()):
     qtbot.keyPress(c, getattr(Qt, 'Key_' + key), _modifiers_flag(modifiers))
+    _wait(250)
 
 
 def key_release(qtbot, c, key, modifiers=()):
