@@ -28,7 +28,7 @@ class MyView(ManualClusteringView):
 def test_manual_clustering_view_1(qtbot):
     v = MyView()
     v.canvas.show()
-    qtbot.addWidget(v.canvas)
+    # qtbot.addWidget(v.canvas)
     v.on_select(cluster_ids=[0, 1])
 
     v.set_state({'auto_update': False})
@@ -42,7 +42,7 @@ def test_manual_clustering_view_1(qtbot):
 def test_manual_clustering_view_2(qtbot, gui):
     v = MyView()
     v.canvas.show()
-    qtbot.addWidget(v.canvas)
+    # qtbot.addWidget(v.canvas)
     v.attach(gui)
 
     class Supervisor(object):

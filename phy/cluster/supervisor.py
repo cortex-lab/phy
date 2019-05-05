@@ -881,7 +881,7 @@ class Supervisor(object):
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
-    _block_duration = 250  # in milliseconds. For testing only.
+    _block_duration = 100  # in milliseconds. For testing only.
 
     def block(self):
         """Block until there are no pending actions."""

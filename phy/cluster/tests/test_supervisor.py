@@ -333,24 +333,32 @@ def test_supervisor_edge_cases(supervisor):
     _select(supervisor, [0])
 
     supervisor.undo()
+    supervisor.block()
+
     supervisor.redo()
+    supervisor.block()
 
     # Merge.
     supervisor.merge()
+    supervisor.block()
     _assert_selected(supervisor, [0])
 
     supervisor.merge([])
+    supervisor.block()
     _assert_selected(supervisor, [0])
 
     supervisor.merge([10])
+    supervisor.block()
     _assert_selected(supervisor, [0])
 
     # Split.
     supervisor.split([])
+    supervisor.block()
     _assert_selected(supervisor, [0])
 
     # Move.
     supervisor.move('ignored', [])
+    supervisor.block()
 
     supervisor.save()
 
@@ -474,7 +482,10 @@ def test_supervisor_label(supervisor):
 
     _select(supervisor, [20])
     supervisor.label("my_field", 3.14)
+    supervisor.block()
+
     supervisor.label("my_field", 1.23, cluster_ids=30)
+    supervisor.block()
 
     supervisor.save()
 
