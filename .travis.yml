@@ -19,6 +19,7 @@ install:
   - source activate phy
   # Dev requirements
   - pip install -r requirements-dev.txt
+  - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
   - pip install -e .
 before_script:
     - export DISPLAY=:99.0
