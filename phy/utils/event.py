@@ -43,10 +43,10 @@ class EventEmitter(object):
     """
 
     def __init__(self):
-        self._reset()
+        self.reset()
         self._is_silent = False
 
-    def _reset(self):
+    def reset(self):
         """Remove all registered callbacks."""
         self._callbacks = []
 
@@ -100,10 +100,12 @@ class EventEmitter(object):
 
         return func
 
-    def unconnect(self, *funcs):
-        """Unconnect specified callback functions."""
-        self._callbacks = [(event, sender, f, kwargs)
-                           for (event, sender, f, kwargs) in self._callbacks if f not in funcs]
+    def unconnect(self, *items):
+        """Unconnect specified callback functions or senders."""
+        self._callbacks = [
+            (event, sender, f, kwargs)
+            for (event, sender, f, kwargs) in self._callbacks
+            if f not in items and sender not in items]
 
     def emit(self, event, sender, *args, **kwargs):
         """Call all callback functions registered with an event.
@@ -298,3 +300,4 @@ emit = _EVENT.emit
 connect = _EVENT.connect
 unconnect = _EVENT.unconnect
 silent = _EVENT.silent
+reset = _EVENT.reset
