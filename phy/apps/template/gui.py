@@ -486,7 +486,7 @@ class TemplateController(object):
         @v.actions.add(shortcut='alt+s', checkable=True, checked=v.show_all_spikes)
         def toggle_highlighted_spikes(checked):
             """Toggle between showing all spikes or selected spikes."""
-            v.show_all_spikes = not v.show_all_spikes
+            v.show_all_spikes = checked
             v.set_interval()
 
         @connect
