@@ -16,6 +16,7 @@ import numpy as np
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
+
 from phy.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
@@ -880,8 +881,10 @@ class Supervisor(object):
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
+    _block_duration = 250  # in milliseconds. For testing only.
+
     def block(self):
         """Block until there are no pending actions."""
         _block(lambda: self.task_logger.has_finished() and not self._is_busy)
         self.task_logger.show_history()
-        _wait(250)
+        _wait(self._block_duration)

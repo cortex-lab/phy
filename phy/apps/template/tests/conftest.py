@@ -16,7 +16,7 @@ from pytest import fixture
 
 from ..model import TemplateModel
 from ..gui import TemplateController
-from phy.utils.testing import download_test_file
+from phy.utils.testing import download_test_file, _in_travis
 from phy.utils._misc import _read_python
 from phy.apps import _copy_gui_state
 
@@ -89,6 +89,8 @@ def template_controller(tempdir, template_model):
     c = TemplateController(model=template_model,
                            config_dir=tempdir,
                            plugins=plugins)
+    if _in_travis():
+        c.supervisor._block_duration = 500
 
     return c
 
