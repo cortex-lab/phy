@@ -28,7 +28,7 @@ from phy.io.context import Context, _cache_methods
 from phy.stats import correlograms
 from phy.stats.clusters import (get_waveform_amplitude,
                                 )
-from phy.utils import Bunch, emit, connect
+from phy.utils import Bunch, emit, connect, unconnect
 from phy.utils._color import ColorSelector
 from phy.utils.plugin import attach_plugins
 from phy.utils.tempdir import TemporaryDirectory
@@ -85,7 +85,6 @@ class KwikController(object):
             self.cache_dir = op.join(self.cache_dir, str(cg))
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
-
         self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
@@ -160,7 +159,7 @@ class KwikController(object):
 
     def _set_selector(self):
         def spikes_per_cluster(cluster_id):
-            return self.supervisor.clustering.spikes_per_cluster[cluster_id]
+            return self.supervisor.clustering.spikes_per_cluster.get(cluster_id, [])
         return Selector(spikes_per_cluster)
 
     def _add_view(self, gui, view):
@@ -431,6 +430,8 @@ class KwikController(object):
         @connect(sender=gui)
         def on_close(e=None):
             self.context.save_memcache()
+            # Unconnect all events GUI and supervisor.
+            unconnect(gui, self.supervisor, *gui.views)
 
         emit('gui_ready', self, gui)
 
