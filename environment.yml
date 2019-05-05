@@ -9,7 +9,6 @@ dependencies:
   - cython
   - pip:
     - pyopengl
-    - vispy
     - requests
     - traitlets
     - tqdm
