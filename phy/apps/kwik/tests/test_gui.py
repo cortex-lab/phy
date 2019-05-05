@@ -16,7 +16,7 @@ from phy.apps import _copy_gui_state
 from phy.cluster.views import WaveformView, TraceView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press
-from phy.utils import connect
+from phy.utils import connect, reset
 from phy.utils.testing import captured_output, download_test_file, _in_travis
 from ..gui import KwikController, kwik_describe
 
@@ -40,8 +40,11 @@ def controller(tempdir):
     kwik_path = op.join(tempdir, op.basename(paths[0]))
     c = KwikController(kwik_path)
     if _in_travis():
-        c.supervisor._block_duration = 500
-    return c
+        c.supervisor._block_duration = 1000
+    yield c
+    # NOTE: make sure all callback functions are unconnected at the end of the tests
+    # to avoid side-effects and spurious dependencies between tests.
+    reset()
 
 
 def _wait_controller(controller):
@@ -80,6 +83,7 @@ def test_gui_1(qtbot, tempdir, controller):
 
     clu_moved = s.selected[0]
     s.actions.move_best_to_good()
+    s.block()
     assert len(s.selected) == 1
 
     s.actions.next()
