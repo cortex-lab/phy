@@ -173,21 +173,3 @@ class MEA(object):
         assert self._probe is not None
         self._channels = _probe_channels(self._probe, group)
         self._positions = _probe_positions(self._probe, group)
-
-
-#------------------------------------------------------------------------------
-# Common probes
-#------------------------------------------------------------------------------
-
-def linear_positions(n_channels):
-    """Linear channel positions along the vertical axis."""
-    return np.c_[np.zeros(n_channels),
-                 np.linspace(0., 1., n_channels)]
-
-
-def staggered_positions(n_channels):
-    """Generate channel positions for a staggered probe."""
-    i = np.arange(n_channels - 1)
-    x, y = (-1) ** i * (5 + i), 10 * (i + 1)
-    pos = np.flipud(np.r_[np.zeros((1, 2)), np.c_[x, y]])
-    return pos

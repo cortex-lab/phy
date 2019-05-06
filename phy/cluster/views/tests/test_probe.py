@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from phy.electrode.mea import staggered_positions
+from phy.utils.geometry import staggered_positions
 from phy.utils import emit
 
 from ..probe import ProbeView

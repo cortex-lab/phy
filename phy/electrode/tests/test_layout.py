@@ -8,8 +8,7 @@
 
 import numpy as np
 
-from phy.gui.widgets import HTMLWidget
-from ..mea import staggered_positions
+from phy.utils.geometry import staggered_positions
 from ..layout import probe_layout
 
 
@@ -23,9 +22,4 @@ def test_probe_layout(qtbot):
                    1: np.arange(7, 15, 2)}
 
     layout = probe_layout(positions, channel_ids)
-    w = HTMLWidget()
-    w.builder.set_body(layout)
-    w.show()
-    qtbot.waitForWindowShown(w)
-    qtbot.addWidget(w)
-    # qtbot.stop()
+    assert '<circle' in layout

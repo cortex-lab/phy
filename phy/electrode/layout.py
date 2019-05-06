@@ -11,8 +11,7 @@ from collections import defaultdict
 
 import numpy as np
 from phy.io.array import _flatten
-from phy.plot.transform import Range, NDC
-from phy.plot.utils import _get_boxes
+from phy.utils.geometry import _get_boxes, range_transform
 from phy.utils._color import _COLORMAP
 
 
@@ -30,8 +29,8 @@ def _iter_channel(positions):
     y = - boxes[:, [1, 3]].mean(axis=1)
     positions = np.c_[x, y]
     tr = [margin, margin, size - margin, size - margin]
-    positions = Range(NDC, tr).apply(positions)
-    for x, y in positions:
+    positions_tr = range_transform([-1, -1, 1, 1], tr, positions)
+    for x, y in positions_tr:
         yield x, y
 
 

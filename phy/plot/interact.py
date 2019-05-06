@@ -12,7 +12,8 @@ import numpy as np
 from phy.io.array import _in_polygon
 from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC
-from .utils import _get_texture, _get_boxes, _get_box_pos_size
+from .utils import _get_texture
+from phy.utils.geometry import _get_boxes, _get_box_pos_size
 from .visuals import LineVisual, PolygonVisual
 
 

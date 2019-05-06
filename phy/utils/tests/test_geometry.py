@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test plotting utilities."""
+"""Test geometry utilities."""
 
 
 #------------------------------------------------------------------------------
@@ -10,34 +10,21 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
-from pytest import raises
 
-from phy.utils.geometry import (
-    linear_positions, staggered_positions, _get_data_bounds, _boxes_overlap,
-    _binary_search, _get_boxes, _get_box_pos_size
-)
-from ..utils import (
-    _load_shader, _tesselate_histogram, BatchAccumulator
+from ..geometry import (
+    linear_positions,
+    staggered_positions,
+    _get_data_bounds,
+    _boxes_overlap,
+    _binary_search,
+    _get_boxes,
+    _get_box_pos_size,
 )
 
 
 #------------------------------------------------------------------------------
 # Test utilities
 #------------------------------------------------------------------------------
-
-def test_load_shader():
-    assert 'main()' in _load_shader('simple.vert')
-
-
-def test_tesselate_histogram():
-    n = 7
-    hist = np.arange(n)
-    thist = _tesselate_histogram(hist)
-    assert thist.shape == (6 * n, 2)
-    ac(thist[0], [0, 0])
-    ac(thist[-3], [n, n - 1])
-    ac(thist[-1], [n, 0])
-
 
 def test_get_data_bounds():
     ae(_get_data_bounds(None), [[-1., -1., 1., 1.]])
@@ -122,16 +109,10 @@ def test_get_box_pos_size():
     assert size == (.5, .25)
 
 
-def test_accumulator():
-    b = BatchAccumulator()
-    with raises(AttributeError):
-        b.doesnotexist
-    b.add({'x': np.ones(4), 'y': 2})
-    b.add({'x': np.zeros(2), 'y': 1})
-    x = np.array([[1, 1, 1, 1, 0, 0]]).T
-    y = np.array([[2, 2, 2, 2, 1, 1]]).T
-    ae(b.x, x)
-    ae(b.y, y)
-    assert tuple(b.data.keys()) == ('x', 'y')
-    ae(b.data.x, x)
-    ae(b.data.y, y)
+def test_positions():
+    probe = staggered_positions(31)
+    assert probe.shape == (31, 2)
+    ae(probe[-1], (0, 0))
+
+    probe = linear_positions(29)
+    assert probe.shape == (29, 2)
