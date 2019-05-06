@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from phy.io.mock import artificial_correlograms
+from phylib.io.mock import artificial_correlograms
 
 from ..correlogram import CorrelogramView
 

@@ -9,7 +9,7 @@
 import numpy as np
 from numpy.testing import assert_allclose as ac
 
-from phy.io.mock import artificial_waveforms
+from phylib.io.mock import artificial_waveforms
 from phylib.utils import Bunch, connect
 from phylib.utils.geometry import staggered_positions
 from phy.plot.tests import mouse_click, key_press, key_release

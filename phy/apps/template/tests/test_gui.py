@@ -9,13 +9,13 @@
 import logging
 import os.path as op
 
-from phy.gui.widgets import Barrier
 from phylib.utils._misc import _read_python
 from phylib.utils.testing import captured_output
 from phylib.utils import connect
 from phy.cluster.views import WaveformView, TraceView
-from ..gui import TemplateController, template_describe
+from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press
+from ..gui import TemplateController, template_describe
 
 logger = logging.getLogger(__name__)
 

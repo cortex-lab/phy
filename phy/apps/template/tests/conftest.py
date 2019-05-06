@@ -16,10 +16,10 @@ from pytest import fixture
 
 from ..model import TemplateModel
 from ..gui import TemplateController
-from phy.utils.datasets import download_test_file
 from phylib.utils.event import reset
 from phylib.utils._misc import _read_python
 from phy.apps import _copy_gui_state
+from phy.utils.datasets import download_test_file
 
 logger = logging.getLogger(__name__)
 

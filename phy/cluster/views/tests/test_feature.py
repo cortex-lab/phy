@@ -9,13 +9,11 @@
 import numpy as np
 import pytest
 
-from phy.io.array import _spikes_per_cluster
-from phy.io.mock import (artificial_features,
-                         artificial_spike_clusters,
-                         )
-from phy.plot.tests import mouse_click
+from phylib.io.array import _spikes_per_cluster
+from phylib.io.mock import artificial_features, artificial_spike_clusters
 from phylib.utils import Bunch
 from phylib.utils.testing import _in_travis
+from phy.plot.tests import mouse_click
 
 from ..feature import FeatureView
 

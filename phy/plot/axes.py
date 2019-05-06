@@ -13,7 +13,7 @@ from matplotlib.ticker import MaxNLocator
 
 from .transform import NDC, Range
 from .visuals import LineVisual, TextVisual
-from phy import connect
+from phylib import connect
 from phylib.utils._types import _is_integer
 from phy.gui.qt import _is_high_dpi
 

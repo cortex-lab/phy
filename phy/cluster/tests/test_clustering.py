@@ -10,8 +10,8 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from phy.io.mock import artificial_spike_clusters
-from phy.io.array import (_spikes_in_clusters,)
+from phylib.io.mock import artificial_spike_clusters
+from phylib.io.array import (_spikes_in_clusters,)
 from phylib.utils import connect
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,

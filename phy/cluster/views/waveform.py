@@ -12,9 +12,9 @@ import logging
 
 import numpy as np
 
-from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
 from phy.plot.interact import Boxed
+from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phylib.utils._color import _colormap
 from phylib.utils.geometry import _get_boxes

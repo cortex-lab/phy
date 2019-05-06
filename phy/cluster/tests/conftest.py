@@ -8,8 +8,7 @@
 
 from pytest import fixture
 
-from phy.io.array import (get_closest_clusters,
-                          )
+from phylib.io.array import get_closest_clusters
 
 
 #------------------------------------------------------------------------------
