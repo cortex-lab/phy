@@ -14,8 +14,7 @@ import os.path as op
 
 import numpy as np
 
-from phylib.io.array import (Selector,
-                          )
+from phylib.io.array import Selector
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect
 from phylib.utils._color import ColorSelector
