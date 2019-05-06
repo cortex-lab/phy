@@ -14,7 +14,7 @@ import os.path as op
 
 from six.moves.cPickle import dump, load
 
-from phy.utilslib._misc import (
+from phylib.utils._misc import (
     _save_json, _load_json,
     _load_pickle, _save_pickle,
     _fullname,)

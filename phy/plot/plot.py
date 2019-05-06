@@ -25,7 +25,7 @@ from .visuals import (
     DEFAULT_COLOR)
 from .transform import NDC
 from .utils import BatchAccumulator
-from phy.utilslib._types import _as_tuple
+from phylib.utils._types import _as_tuple
 
 logger = logging.getLogger(__name__)
 

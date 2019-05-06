@@ -11,7 +11,7 @@ import logging
 
 from phy.electrode.layout import probe_layout
 from phy.gui import HTMLWidget
-from phy.utilslib import connect, unconnect
+from phylib.utils import connect, unconnect
 
 logger = logging.getLogger(__name__)
 

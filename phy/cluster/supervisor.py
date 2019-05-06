@@ -17,7 +17,7 @@ from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 
-from phy.utilslib import Bunch, emit, connect, unconnect
+from phylib.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier

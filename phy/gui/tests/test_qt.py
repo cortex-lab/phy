@@ -8,7 +8,7 @@
 
 from pytest import raises
 
-from phy.utilslib.testing import captured_logging
+from phylib.utils.testing import captured_logging
 from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   _button_name_from_enum,
                   _button_enum_from_name,

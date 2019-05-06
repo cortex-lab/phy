@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 from pytest import raises
 
-from phy.utilslib.geometry import (
+from phylib.utils.geometry import (
     linear_positions, staggered_positions, _get_data_bounds, _boxes_overlap,
     _binary_search, _get_boxes, _get_box_pos_size
 )

@@ -8,8 +8,8 @@
 
 import numpy as np
 
-from phy.utilslib import emit
-from phy.utilslib._color import _colormap
+from phylib.utils import emit
+from phylib.utils._color import _colormap
 from ..base import ManualClusteringView
 
 

@@ -15,8 +15,8 @@ import sys
 
 from six import StringIO
 
-from .utilslib._misc import _git_version
-from .utilslib.event import connect, unconnect, emit
+from phylib.utils._misc import _git_version
+from phylib.utils.event import connect, unconnect, emit
 from .utils.config import load_master_config
 from .utils.datasets import download_file
 from .utils.plugin import IPlugin, get_plugin, discover_plugins

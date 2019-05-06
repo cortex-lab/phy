@@ -14,7 +14,7 @@ from ..gui import (GUI, GUIState,
                    _try_get_opengl_canvas,
                    )
 from phy.plot import BaseCanvas
-from phy.utilslib import Bunch, connect, unconnect
+from phylib.utils import Bunch, connect, unconnect
 
 
 #------------------------------------------------------------------------------

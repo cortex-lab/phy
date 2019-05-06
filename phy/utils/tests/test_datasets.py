@@ -20,7 +20,7 @@ from ..datasets import (download_file,
                         _check_md5_of_url,
                         _validate_output_dir,
                         )
-from phy.utilslib.testing import captured_logging
+from phylib.utils.testing import captured_logging
 
 logger = logging.getLogger(__name__)
 

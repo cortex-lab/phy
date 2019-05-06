@@ -39,8 +39,8 @@ from ..array import (_unique,
                      Accumulator,
                      _accumulate,
                      )
-from phy.utilslib._types import _as_array
-from phy.utilslib.testing import _assert_equal as ae
+from phylib.utils._types import _as_array
+from phylib.utils.testing import _assert_equal as ae
 from ..mock import artificial_spike_clusters
 
 

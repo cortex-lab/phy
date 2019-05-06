@@ -10,14 +10,14 @@ import logging
 
 import numpy as np
 
-from phy.utilslib._types import _as_array, _is_array_like
+from phylib.utils._types import _as_array, _is_array_like
 from phy.io.array import (_unique,
                           _spikes_in_clusters,
                           _spikes_per_cluster,
                           )
 from ._utils import UpdateInfo
 from ._history import History
-from phy.utilslib.event import emit
+from phylib.utils.event import emit
 
 logger = logging.getLogger(__name__)
 

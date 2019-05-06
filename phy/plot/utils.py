@@ -12,7 +12,7 @@ import os.path as op
 
 import numpy as np
 
-from phy.utilslib import Bunch
+from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)
 

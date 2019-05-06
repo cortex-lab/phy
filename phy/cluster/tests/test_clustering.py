@@ -12,7 +12,7 @@ from pytest import raises
 
 from phy.io.mock import artificial_spike_clusters
 from phy.io.array import (_spikes_in_clusters,)
-from phy.utilslib import connect
+from phylib.utils import connect
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
                           _extend_assignment,

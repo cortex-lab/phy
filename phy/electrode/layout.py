@@ -11,8 +11,8 @@ from collections import defaultdict
 
 import numpy as np
 from ..io.array import _flatten
-from phy.utilslib.geometry import _get_boxes, range_transform
-from phy.utilslib._color import _COLORMAP
+from phylib.utils.geometry import _get_boxes, range_transform
+from phylib.utils._color import _COLORMAP
 
 
 #------------------------------------------------------------------------------

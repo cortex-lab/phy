@@ -17,7 +17,7 @@ from ..actions import (_show_shortcuts,
                        _expected_args,
                        Actions,
                        )
-from phy.utilslib.testing import captured_output, captured_logging
+from phylib.utils.testing import captured_output, captured_logging
 from ..qt import mock_dialogs
 
 
