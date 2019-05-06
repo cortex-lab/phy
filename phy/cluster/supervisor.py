@@ -19,7 +19,7 @@ from .clustering import Clustering
 
 from phy.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
-from phy.gui.qt import _block, set_busy, _wait
+from phy.gui.qt import _block, set_busy
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
@@ -648,6 +648,10 @@ class Supervisor(object):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
         if sender != self.action_creator:
             return
+        # The GUI should not be busy when calling a new action.
+        if self._is_busy:
+            logger.log(5, "The GUI is busy, waiting before calling the action.")
+            _block(lambda: not self._is_busy)
         # Enqueue the requested action.
         self.task_logger.enqueue(self, name, *args)
         # Perform the action (which calls self.<name>(...)).
@@ -680,9 +684,9 @@ class Supervisor(object):
             return
         self._is_busy = busy
         # Set the busy cursor.
-        logger.log(5, "Set busy to %s", busy)
+        logger.log(10, "GUI is %sbusy" % ('' if busy else 'not '))
         set_busy(busy)
-        # Let the cluster view that the GUI is busy.
+        # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)
         self.similarity_view.set_busy(busy)
 
@@ -881,10 +885,8 @@ class Supervisor(object):
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
-    _block_duration = 100  # in milliseconds. For testing only.
-
     def block(self):
         """Block until there are no pending actions."""
         _block(lambda: self.task_logger.has_finished() and not self._is_busy)
-        self.task_logger.show_history()
-        _wait(self._block_duration)
+        assert not self._is_busy
+        # self.task_logger.show_history()

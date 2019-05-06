@@ -8,7 +8,7 @@
 
 #from contextlib import contextmanager
 
-from pytest import yield_fixture, fixture
+from pytest import yield_fixture, fixture, raises
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
@@ -23,9 +23,8 @@ from phy.io import Context
 from phy.gui import GUI
 from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
-#from phy.gui.tests.test_qt import _block
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
-from phy.utils import connect, Bunch
+from phy.utils import connect, Bunch, emit
 
 
 def handler(msg_type, msg_log_context, msg_string):
@@ -275,6 +274,27 @@ def _assert_selected(supervisor, sel):
 def test_select(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+
+
+def test_supervisor_busy(qtbot, supervisor):
+    _select(supervisor, [30], [20])
+
+    o = object()
+
+    emit('is_busy', o, True)
+    assert supervisor._is_busy
+
+    # The action fails while the supervisor is busy.
+    with raises(RuntimeError):
+        emit('action', supervisor.action_creator, 'merge')
+
+    emit('is_busy', o, False)
+    assert not supervisor._is_busy
+
+    # The action succeeds because the supervisor is no longer busy.
+    emit('action', supervisor.action_creator, 'merge')
+    supervisor.block()
+    assert not supervisor._is_busy
 
 
 def test_supervisor_cluster_metrics(

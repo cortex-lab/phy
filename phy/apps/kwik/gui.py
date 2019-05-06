@@ -159,7 +159,7 @@ class KwikController(object):
 
     def _set_selector(self):
         def spikes_per_cluster(cluster_id):
-            return self.supervisor.clustering.spikes_per_cluster.get(cluster_id, [])
+            return self.supervisor.clustering.spikes_per_cluster[cluster_id]
         return Selector(spikes_per_cluster)
 
     def _add_view(self, gui, view):

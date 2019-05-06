@@ -90,6 +90,7 @@ class ManualClusteringView(object):
                 self.on_select(cluster_ids=cluster_ids, **kwargs)
                 @self.async_caller2.set
                 def finished():
+                    logger.log(5, "Done selecting %s in %s.", cluster_ids, self)
                     emit('is_busy', self, False)
 
         self.actions = Actions(
