@@ -12,8 +12,7 @@ import os
 from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
-#from phy.gui.qt import Qt, QPoint
-from phy.utils import emit
+from phy.utilslib import emit
 from . import mouse_drag, key_press
 from ..base import BaseVisual
 from ..panzoom import PanZoom

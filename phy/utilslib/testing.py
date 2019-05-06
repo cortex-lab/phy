@@ -9,16 +9,13 @@
 from contextlib import contextmanager
 import logging
 import os
-import os.path as op
 import sys
 
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 from six import StringIO
 
-from phy.io.datasets import download_file
 from ._types import _is_array_like
-from .config import _ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -76,18 +73,3 @@ def _assert_equal(d_0, d_1):
 
 def _in_travis():  # pragma: no cover
     return 'TRAVIS' in os.environ
-
-
-_BASE_URL = 'https://raw.githubusercontent.com/kwikteam/phy-data/master/'
-
-
-def download_test_file(name, config_dir=None, force=False):
-    """Download a test file."""
-    config_dir = config_dir or phy_config_dir()
-    path = op.join(config_dir, 'test_data', name)
-    _ensure_dir_exists(op.dirname(path))
-    if not force and op.exists(path):
-        return path
-    url = _BASE_URL + name
-    download_file(url, output_path=path)
-    return path

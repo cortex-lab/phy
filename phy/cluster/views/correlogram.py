@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phy.plot.transform import Scale
-from phy.utils._color import _spike_colors
+from phy.utilslib._color import _spike_colors
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)

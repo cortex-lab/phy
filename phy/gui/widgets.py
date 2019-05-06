@@ -14,9 +14,9 @@ from functools import partial
 from six import text_type
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
-from phy.utils import emit, connect
-from phy.utils._misc import _CustomEncoder, _read_text
-from phy.utils._types import _is_integer
+from phy.utilslib import emit, connect
+from phy.utilslib._misc import _CustomEncoder, _read_text
+from phy.utilslib._types import _is_integer
 
 logger = logging.getLogger(__name__)
 

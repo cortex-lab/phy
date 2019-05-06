@@ -13,8 +13,8 @@ import itertools
 
 import numpy as np
 
-from ..utils._types import _as_array
-from ..utils._misc import _read_python
+from phy.utilslib._types import _as_array
+from phy.utilslib._misc import _read_python
 
 
 #------------------------------------------------------------------------------

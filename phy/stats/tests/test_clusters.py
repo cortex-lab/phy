@@ -18,7 +18,7 @@ from ..clusters import (mean,
                         get_mean_masked_features_distance,
                         get_waveform_amplitude,
                         )
-from phy.electrode.mea import staggered_positions
+from phy.utilslib.geometry import staggered_positions
 from phy.io.mock import (artificial_features,
                          artificial_masks,
                          artificial_waveforms,

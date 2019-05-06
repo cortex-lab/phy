@@ -18,7 +18,7 @@ import os.path as op
 
 from six import with_metaclass
 
-from ._misc import _fullname
+from phy.utilslib._misc import _fullname
 from .config import load_master_config
 
 logger = logging.getLogger(__name__)

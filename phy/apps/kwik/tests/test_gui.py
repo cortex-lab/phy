@@ -16,8 +16,9 @@ from phy.apps import _copy_gui_state
 from phy.cluster.views import WaveformView, TraceView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press
-from phy.utils import connect, reset
-from phy.utils.testing import captured_output, download_test_file
+from phy.utilslib import connect, reset
+from phy.utilslib.testing import captured_output
+from phy.utils.datasets import download_test_file
 from ..gui import KwikController, kwik_describe
 
 logger = logging.getLogger(__name__)

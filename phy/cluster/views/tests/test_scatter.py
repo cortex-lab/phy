@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from phy.utils import Bunch
+from phy.utilslib import Bunch
 from ..scatter import ScatterView
 
 

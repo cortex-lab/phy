@@ -15,7 +15,7 @@ from traitlets import Float
 from traitlets.config import Configurable
 
 from .. import config as _config
-from .._misc import _write_text
+from phy.utilslib._misc import _write_text
 from ..config import (_ensure_dir_exists,
                       load_config,
                       load_master_config,

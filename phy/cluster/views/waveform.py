@@ -15,9 +15,9 @@ import numpy as np
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
 from phy.plot.interact import Boxed
-from phy.utils import emit
-from phy.utils._color import _colormap
-from phy.utils.geometry import _get_boxes
+from phy.utilslib import emit
+from phy.utilslib._color import _colormap
+from phy.utilslib.geometry import _get_boxes
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)

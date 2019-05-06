@@ -12,8 +12,8 @@ from numpy.testing import assert_allclose as ac
 from phy.io.mock import (artificial_traces,
                          artificial_spike_clusters,
                          )
-from phy.utils import Bunch, connect
-from phy.utils._color import ColorSelector
+from phy.utilslib import Bunch, connect
+from phy.utilslib._color import ColorSelector
 from phy.plot.tests import mouse_click
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms

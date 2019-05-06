@@ -11,7 +11,7 @@ import logging
 import numpy as np
 from scipy.interpolate import interp1d
 
-from ..utils._types import _as_array, Bunch
+from phy.utilslib._types import _as_array, Bunch
 from phy.io.array import _pad, _get_padded, _range_from_slice
 from phy.traces.filter import apply_filter, bandpass_filter
 
