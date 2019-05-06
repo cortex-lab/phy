@@ -17,7 +17,7 @@ from ..plugin import (IPluginRegistry,
                       discover_plugins,
                       attach_plugins
                       )
-from phy.utilslib._misc import _write_text
+from phylib.utils._misc import _write_text
 
 
 #------------------------------------------------------------------------------

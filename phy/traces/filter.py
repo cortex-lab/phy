@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 from scipy import signal
 
-from phy.utilslib._types import _as_array
+from phylib.utils._types import _as_array
 
 
 #------------------------------------------------------------------------------

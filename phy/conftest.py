@@ -15,14 +15,14 @@ import matplotlib
 from pytest import yield_fixture
 
 from phy import add_default_handler
-from phy.utilslib.tempdir import TemporaryDirectory
+from phylib.utils.tempdir import TemporaryDirectory
 
 
 #------------------------------------------------------------------------------
 # Common fixtures
 #------------------------------------------------------------------------------
 
-logging.getLogger().setLevel(10)
+logging.getLogger('phy').setLevel(10)
 add_default_handler(5)
 
 # Fix the random seed in the tests.

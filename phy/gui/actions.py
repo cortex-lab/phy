@@ -17,7 +17,7 @@ import traceback
 from six import string_types, PY3
 
 from .qt import QKeySequence, QAction, require_qt, _input_dialog
-from phy.utilslib import Bunch
+from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)
 

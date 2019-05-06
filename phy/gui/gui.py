@@ -14,7 +14,7 @@ import os.path as op
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  QMessageBox, Qt, QSize, QMetaObject, _wait)
 from .actions import Actions, Snippets
-from phy.utilslib import Bunch, _bunchify, emit, connect, _load_json, _save_json
+from phylib.utils import Bunch, _bunchify, emit, connect, _load_json, _save_json
 from phy.utils import _ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)

@@ -14,7 +14,7 @@ from phy.io.array import (_concatenate_virtual_arrays,
                           _spikes_in_clusters,
                           )
 from phy.traces import WaveformLoader
-from phy.utilslib import Bunch
+from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)
 

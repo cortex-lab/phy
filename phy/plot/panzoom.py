@@ -13,8 +13,8 @@ import sys
 import numpy as np
 
 from .transform import Translate, Scale, pixels_to_ndc
-from phy.utilslib._types import _as_array
-from phy.utilslib import emit, connect
+from phylib.utils._types import _as_array
+from phylib.utils import emit, connect
 
 
 #------------------------------------------------------------------------------

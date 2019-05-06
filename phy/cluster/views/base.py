@@ -12,7 +12,7 @@ import logging
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller
 from phy.plot import PlotCanvas
-from phy.utilslib import Bunch, connect, unconnect, emit
+from phylib.utils import Bunch, connect, unconnect, emit
 
 logger = logging.getLogger(__name__)
 

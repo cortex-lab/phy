@@ -10,7 +10,7 @@
 import numpy as np
 from pytest import yield_fixture
 
-from phy.utilslib import emit
+from phylib.utils import emit
 from ..base import BaseVisual, BaseLayout, GLSLInserter
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)

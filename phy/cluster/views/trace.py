@@ -12,7 +12,7 @@ import logging
 import numpy as np
 from phy.plot.transform import NDC, Range
 
-from phy.utilslib import Bunch, emit
+from phylib.utils import Bunch, emit
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)

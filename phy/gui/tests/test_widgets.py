@@ -10,8 +10,8 @@ from functools import partial
 import os.path as op
 from pytest import yield_fixture
 
-from phy.utilslib import connect, unconnect
-from phy.utilslib.testing import captured_logging
+from phylib.utils import connect, unconnect
+from phylib.utils.testing import captured_logging
 from .test_qt import _block
 from ..widgets import HTMLWidget, Table, Barrier, AsyncTasks
 

@@ -13,7 +13,7 @@ import os.path as op
 import sys
 from timeit import default_timer
 
-from phy.utilslib.testing import _in_travis
+from phylib.utils.testing import _in_travis
 
 logger = logging.getLogger(__name__)
 

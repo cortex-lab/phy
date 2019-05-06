@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phy.utilslib._color import _colormap
+from phylib.utils._color import _colormap
 from .base import ManualClusteringView
 from phy.plot import NDC
 

@@ -10,9 +10,9 @@ import logging
 import os.path as op
 
 from phy.gui.widgets import Barrier
-from phy.utilslib._misc import _read_python
-from phy.utilslib.testing import captured_output
-from phy.utilslib import connect
+from phylib.utils._misc import _read_python
+from phylib.utils.testing import captured_output
+from phylib.utils import connect
 from phy.cluster.views import WaveformView, TraceView
 from ..gui import TemplateController, template_describe
 from phy.plot.tests import key_press

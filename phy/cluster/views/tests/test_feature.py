@@ -14,8 +14,8 @@ from phy.io.mock import (artificial_features,
                          artificial_spike_clusters,
                          )
 from phy.plot.tests import mouse_click
-from phy.utilslib import Bunch
-from phy.utilslib.testing import _in_travis
+from phylib.utils import Bunch
+from phylib.utils.testing import _in_travis
 
 from ..feature import FeatureView
 

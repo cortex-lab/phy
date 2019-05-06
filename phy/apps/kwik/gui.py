@@ -27,9 +27,9 @@ from phy.io.array import Selector
 from phy.stats import correlograms
 from phy.stats.clusters import (get_waveform_amplitude,
                                 )
-from phy.utilslib import Bunch, emit, connect, unconnect
-from phy.utilslib._color import ColorSelector
-from phy.utilslib.tempdir import TemporaryDirectory
+from phylib.utils import Bunch, emit, connect, unconnect
+from phylib.utils._color import ColorSelector
+from phylib.utils.tempdir import TemporaryDirectory
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 from .. import _add_log_file

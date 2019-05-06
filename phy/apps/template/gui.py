@@ -28,9 +28,9 @@ from phy.gui import create_app, run_app, GUI
 from phy.io.array import (Selector,
                           )
 from phy.stats import correlograms, firing_rate
-from phy.utilslib import Bunch, emit, connect
-from phy.utilslib._color import ColorSelector
-from phy.utilslib._misc import _read_python
+from phylib.utils import Bunch, emit, connect
+from phylib.utils._color import ColorSelector
+from phylib.utils._misc import _read_python
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 from .. import _add_log_file
