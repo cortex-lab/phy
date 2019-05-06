@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from phy.io.array import _in_polygon
+from phylib.io.array import _in_polygon
 from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture

@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import fixture, yield_fixture
 from six.moves import cPickle
 
-from phy.io.array import write_array, read_array
+from phylib.io.array import write_array, read_array
 from ..context import Context, _fullname
 
 

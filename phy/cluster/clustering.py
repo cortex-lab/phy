@@ -11,10 +11,7 @@ import logging
 import numpy as np
 
 from phylib.utils._types import _as_array, _is_array_like
-from phy.io.array import (_unique,
-                          _spikes_in_clusters,
-                          _spikes_per_cluster,
-                          )
+from phylib.io.array import _unique, _spikes_in_clusters, _spikes_per_cluster
 from ._utils import UpdateInfo
 from ._history import History
 from phylib.utils.event import emit

@@ -14,6 +14,12 @@ import shutil
 
 import numpy as np
 
+from phylib.stats import correlograms
+from phylib.stats.clusters import get_waveform_amplitude
+from phylib.io.array import Selector
+from phylib.utils import Bunch, emit, connect, unconnect
+from phylib.utils._color import ColorSelector
+from phylib.utils.tempdir import TemporaryDirectory
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
@@ -23,13 +29,6 @@ from phy.cluster.views import (WaveformView,
                                )
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
-from phy.io.array import Selector
-from phy.stats import correlograms
-from phy.stats.clusters import (get_waveform_amplitude,
-                                )
-from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._color import ColorSelector
-from phylib.utils.tempdir import TemporaryDirectory
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 from .. import _add_log_file
