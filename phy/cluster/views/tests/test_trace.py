@@ -9,9 +9,7 @@
 import numpy as np
 from numpy.testing import assert_allclose as ac
 
-from phylib.io.mock import (artificial_traces,
-                         artificial_spike_clusters,
-                         )
+from phylib.io.mock import artificial_traces, artificial_spike_clusters
 from phylib.utils import Bunch, connect
 from phylib.utils._color import ColorSelector
 from phy.plot.tests import mouse_click
