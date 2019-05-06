@@ -14,8 +14,7 @@ from numpy.testing import assert_array_equal as ae
 
 from ..mea import (_probe_channels, _remap_adjacency, _adjacency_subset,
                    _probe_positions, _probe_adjacency_list,
-                   MEA, linear_positions, staggered_positions,
-                   load_probe, list_probes
+                   MEA, load_probe, list_probes
                    )
 
 
@@ -89,15 +88,6 @@ def test_mea():
 
     with raises(ValueError):
         MEA(channels=channels, positions=positions[:-1, :])
-
-
-def test_positions():
-    probe = staggered_positions(31)
-    assert probe.shape == (31, 2)
-    ae(probe[-1], (0, 0))
-
-    probe = linear_positions(29)
-    assert probe.shape == (29, 2)
 
 
 def test_library(tempdir):

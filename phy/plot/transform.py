@@ -7,12 +7,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
 from textwrap import dedent
 
 import numpy as np
 from six import string_types
 
-import logging
+from phy.utils.geometry import range_transform
 
 logger = logging.getLogger(__name__)
 
@@ -196,19 +197,7 @@ class Range(BaseTransform):
                                  else self.from_bounds, dtype=np.float64)
         to_bounds = np.asarray(to_bounds if to_bounds is not None
                                else self.to_bounds, dtype=np.float64)
-        f0 = from_bounds[..., :2]
-        f1 = from_bounds[..., 2:]
-        t0 = to_bounds[..., :2]
-        t1 = to_bounds[..., 2:]
-
-        d = (f1 - f0)
-        d[d == 0] = 1
-
-        out = arr.copy()
-        out -= f0
-        out *= (t1 - t0) / d
-        out += t0
-        return out
+        return range_transform(from_bounds, to_bounds, arr)
 
     def glsl(self, var):
         assert var

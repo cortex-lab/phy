@@ -9,9 +9,9 @@
 import numpy as np
 from numpy.testing import assert_allclose as ac
 
-from phy.electrode.mea import staggered_positions
 from phy.io.mock import artificial_waveforms
 from phy.utils import Bunch, connect
+from phy.utils.geometry import staggered_positions
 from phy.plot.tests import mouse_click, key_press, key_release
 
 from ..waveform import WaveformView
