@@ -10,9 +10,9 @@
 from collections import defaultdict
 
 import numpy as np
-from phy.io.array import _flatten
-from phy.utils.geometry import _get_boxes, range_transform
-from phy.utils._color import _COLORMAP
+from ..io.array import _flatten
+from ..utils.geometry import _get_boxes, range_transform
+from ..utils._color import _COLORMAP
 
 
 #------------------------------------------------------------------------------

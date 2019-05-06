@@ -14,9 +14,8 @@ import time
 import numpy as np
 from pytest import mark
 
-from ..testing import (benchmark, captured_output, captured_logging,
-                       _assert_equal, _enable_profiler, _profile,
-                       download_test_file
+from ..testing import (captured_output, captured_logging,
+                       _assert_equal, download_test_file
                        )
 
 
@@ -44,19 +43,6 @@ def test_assert_equal():
     d_bis = deepcopy(d)
     d_bis['a']['b'] = d_bis['a']['b'] + 1e-10
     _assert_equal(d, d_bis)
-
-
-def test_benchmark():
-    with benchmark():
-        time.sleep(.002)
-
-
-@mark.parametrize('line_by_line', [False, True])
-def test_profile(chdir_tempdir, line_by_line):
-    # Remove the profile from the builtins.
-    prof = _enable_profiler(line_by_line=line_by_line)
-    _profile(prof, 'import time; time.sleep(.001)', {}, {})
-    assert op.exists(op.join(chdir_tempdir, '.profile', 'stats.txt'))
 
 
 def test_download_test_file(tempdir):
