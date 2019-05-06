@@ -16,10 +16,11 @@ import responses
 from pytest import raises, yield_fixture
 
 from ..datasets import (download_file,
+                        download_test_file,
                         _check_md5_of_url,
                         _validate_output_dir,
                         )
-from phy.utils.testing import captured_logging
+from phy.utilslib.testing import captured_logging
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +161,11 @@ def test_download_file(tempdir, mock_urls):
 
     if assert_succeeds:
         _check(data)
+
+
+def test_download_test_file(tempdir):
+    name = 'test/test-4ch-1s.dat'
+    path = download_test_file(name, config_dir=tempdir)
+    assert op.exists(path)
+    assert op.getsize(path) == 160000
+    path = download_test_file(name, config_dir=tempdir)

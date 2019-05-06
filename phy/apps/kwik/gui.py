@@ -24,14 +24,14 @@ from phy.cluster.views import (WaveformView,
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
 from phy.io.array import Selector
-from phy.io.context import Context, _cache_methods
 from phy.stats import correlograms
 from phy.stats.clusters import (get_waveform_amplitude,
                                 )
-from phy.utils import Bunch, emit, connect, unconnect
-from phy.utils._color import ColorSelector
+from phy.utilslib import Bunch, emit, connect, unconnect
+from phy.utilslib._color import ColorSelector
+from phy.utilslib.tempdir import TemporaryDirectory
+from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
-from phy.utils.tempdir import TemporaryDirectory
 from .. import _add_log_file
 
 

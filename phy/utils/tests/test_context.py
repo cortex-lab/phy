@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import fixture, yield_fixture
 from six.moves import cPickle
 
-from ..array import write_array, read_array
+from phy.io.array import write_array, read_array
 from ..context import Context, _fullname
 
 
@@ -30,23 +30,16 @@ def context(tempdir):
 @yield_fixture
 def temp_phy_config_dir(tempdir):
     """Use a temporary phy user directory."""
-    import phy.io.context
-    f = phy.io.context.phy_config_dir
-    phy.io.context.phy_config_dir = lambda: tempdir
+    import phy.utils.context
+    f = phy.utils.context.phy_config_dir
+    phy.utils.context.phy_config_dir = lambda: tempdir
     yield
-    phy.io.context.phy_config_dir = f
+    phy.utils.context.phy_config_dir = f
 
 
 #------------------------------------------------------------------------------
 # Test utils and cache
 #------------------------------------------------------------------------------
-
-def test_fullname():
-    def myfunction(x):
-        return
-
-    assert _fullname(myfunction) == 'phy.io.tests.test_context.myfunction'
-
 
 def test_read_write(tempdir):
     x = np.arange(10)

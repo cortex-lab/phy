@@ -13,8 +13,8 @@ import re
 import numpy as np
 from six import u
 
-from phy.utils import Bunch, connect
-from phy.utils._color import _colormap
+from phy.utilslib import Bunch, connect
+from phy.utilslib._color import _colormap
 from phy.plot.transform import Range
 from .base import ManualClusteringView
 

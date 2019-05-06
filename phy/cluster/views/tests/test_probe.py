@@ -6,8 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from phy.utils.geometry import staggered_positions
-from phy.utils import emit
+from phy.utilslib.geometry import staggered_positions
+from phy.utilslib import emit
 
 from ..probe import ProbeView
 

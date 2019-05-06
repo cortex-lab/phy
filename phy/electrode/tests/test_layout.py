@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from phy.utils.geometry import staggered_positions
+from phy.utilslib.geometry import staggered_positions
 from ..layout import probe_layout
 
 

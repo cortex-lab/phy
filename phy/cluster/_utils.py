@@ -11,7 +11,7 @@ from collections import defaultdict
 import logging
 
 from ._history import History
-from phy.utils import Bunch, _as_list, _is_list, emit, silent
+from phy.utilslib import Bunch, _as_list, _is_list, emit, silent
 
 logger = logging.getLogger(__name__)
 

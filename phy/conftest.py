@@ -15,7 +15,7 @@ import matplotlib
 from pytest import yield_fixture
 
 from phy import add_default_handler
-from phy.utils.tempdir import TemporaryDirectory
+from phy.utilslib.tempdir import TemporaryDirectory
 
 
 #------------------------------------------------------------------------------

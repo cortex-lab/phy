@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from phy.utils._types import _as_array
+from phy.utilslib._types import _as_array
 from phy.io.array import _index_of, _unique
 
 

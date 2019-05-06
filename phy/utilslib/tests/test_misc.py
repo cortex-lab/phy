@@ -22,6 +22,7 @@ from .._misc import (_git_version,
                      _read_text,
                      _write_text,
                      _encode_qbytearray, _decode_qbytearray,
+                     _fullname,
                      )
 
 
@@ -114,3 +115,10 @@ def test_git_version():
             assert v[:5] == "-git-", "Git version does not begin in -git-"
     except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         assert v == ""
+
+
+def test_fullname():
+    def myfunction(x):
+        return
+
+    assert _fullname(myfunction) == 'phy.utilslib.tests.test_misc.myfunction'

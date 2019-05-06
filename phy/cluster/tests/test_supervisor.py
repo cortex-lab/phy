@@ -19,12 +19,12 @@ from ..supervisor import (Supervisor,
                           SimilarityView,
                           ActionCreator,
                           )
-from phy.io import Context
 from phy.gui import GUI
 from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
-from phy.utils import connect, Bunch, emit
+from phy.utils.context import Context
+from phy.utilslib import connect, Bunch, emit
 
 
 def handler(msg_type, msg_log_context, msg_string):

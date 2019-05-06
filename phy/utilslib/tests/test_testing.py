@@ -8,15 +8,10 @@
 
 from copy import deepcopy
 import logging
-import os.path as op
-import time
 
 import numpy as np
-from pytest import mark
 
-from ..testing import (captured_output, captured_logging,
-                       _assert_equal, download_test_file
-                       )
+from ..testing import captured_output, captured_logging, _assert_equal
 
 
 #------------------------------------------------------------------------------
@@ -43,11 +38,3 @@ def test_assert_equal():
     d_bis = deepcopy(d)
     d_bis['a']['b'] = d_bis['a']['b'] + 1e-10
     _assert_equal(d, d_bis)
-
-
-def test_download_test_file(tempdir):
-    name = 'test/test-4ch-1s.dat'
-    path = download_test_file(name, config_dir=tempdir)
-    assert op.exists(path)
-    assert op.getsize(path) == 160000
-    path = download_test_file(name, config_dir=tempdir)

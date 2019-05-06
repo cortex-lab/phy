@@ -15,8 +15,8 @@ import os.path as op
 
 import numpy as np
 
-from phy.utils import _as_scalar, _as_scalars
-from phy.utils._types import _as_array, _is_array_like
+from phy.utilslib import _as_scalar, _as_scalars
+from phy.utilslib._types import _as_array, _is_array_like
 
 logger = logging.getLogger(__name__)
 

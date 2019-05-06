@@ -19,7 +19,7 @@ from . import gloo
 from .gloo import gl
 from .transform import TransformChain, Clip, pixels_to_ndc
 from .utils import _load_shader, _get_array
-from phy.utils import connect, emit, Bunch
+from phy.utilslib import connect, emit, Bunch
 
 
 logger = logging.getLogger(__name__)

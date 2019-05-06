@@ -11,7 +11,9 @@ import logging
 import os
 import os.path as op
 
-from phy.utils.event import ProgressReporter
+from .config import _ensure_dir_exists, phy_config_dir
+from phy.utilslib.event import ProgressReporter
+
 
 logger = logging.getLogger(__name__)
 
@@ -136,3 +138,18 @@ def download_file(url, output_path):
             raise RuntimeError("The checksum of the downloaded file "
                                "doesn't match the provided checksum.")
     return
+
+
+_BASE_URL = 'https://raw.githubusercontent.com/kwikteam/phy-data/master/'
+
+
+def download_test_file(name, config_dir=None, force=False):
+    """Download a test file."""
+    config_dir = config_dir or phy_config_dir()
+    path = op.join(config_dir, 'test_data', name)
+    _ensure_dir_exists(op.dirname(path))
+    if not force and op.exists(path):
+        return path
+    url = _BASE_URL + name
+    download_file(url, output_path=path)
+    return path

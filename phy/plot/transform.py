@@ -13,7 +13,7 @@ from textwrap import dedent
 import numpy as np
 from six import string_types
 
-from phy.utils.geometry import range_transform
+from phy.utilslib.geometry import range_transform
 
 logger = logging.getLogger(__name__)
 

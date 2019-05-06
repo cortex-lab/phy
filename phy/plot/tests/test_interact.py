@@ -13,8 +13,8 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from phy.utils import emit
-from phy.utils.testing import _in_travis
+from phy.utilslib import emit
+from phy.utilslib.testing import _in_travis
 from ..base import BaseVisual, BaseCanvas
 from ..interact import Grid, Boxed, Stacked, Lasso
 from ..panzoom import PanZoom

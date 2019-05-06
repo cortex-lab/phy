@@ -23,8 +23,8 @@ from .utils import (_tesselate_histogram,
                     )
 from phy.io.array import _as_array
 from phy.gui.qt import _is_high_dpi
-from phy.utils import Bunch, emit
-from phy.utils.geometry import _get_data_bounds
+from phy.utilslib import Bunch, emit
+from phy.utilslib.geometry import _get_data_bounds
 
 
 #------------------------------------------------------------------------------

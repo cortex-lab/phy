@@ -14,10 +14,11 @@ import os.path as op
 
 from six.moves.cPickle import dump, load
 
-from phy.utils import (_save_json, _load_json,
-                       _load_pickle, _save_pickle,
-                       _ensure_dir_exists, _fullname,)
-from phy.utils.config import phy_config_dir
+from phy.utilslib._misc import (
+    _save_json, _load_json,
+    _load_pickle, _save_pickle,
+    _fullname,)
+from .config import phy_config_dir, _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
