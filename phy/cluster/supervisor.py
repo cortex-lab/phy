@@ -649,9 +649,9 @@ class Supervisor(object):
         if sender != self.action_creator:
             return
         # The GUI should not be busy when calling a new action.
-        if self._is_busy:
-            logger.log(5, "The GUI is busy, waiting before calling the action.")
-            _block(lambda: not self._is_busy)
+        # if self._is_busy:
+        #     logger.log(5, "The GUI is busy, waiting before calling the action.")
+        #     _block(lambda: not self._is_busy)
         # Enqueue the requested action.
         self.task_logger.enqueue(self, name, *args)
         # Perform the action (which calls self.<name>(...)).
