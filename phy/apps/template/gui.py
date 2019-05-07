@@ -15,10 +15,12 @@ import os.path as op
 import numpy as np
 
 from phylib.io.array import Selector
+from phylib.io.model import TemplateModel, from_sparse
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect
 from phylib.utils._color import ColorSelector
 from phylib.utils._misc import _read_python
+
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
@@ -33,8 +35,6 @@ from phy.gui import create_app, run_app, GUI
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 from .. import _add_log_file
-
-from .model import TemplateModel, from_sparse
 
 logger = logging.getLogger(__name__)
 

@@ -12,13 +12,13 @@ import shutil
 
 from pytest import fixture
 
+from phylib.io.datasets import download_test_file
 from phylib.utils import connect, reset
 from phylib.utils.testing import captured_output
 from phy.apps import _copy_gui_state
 from phy.cluster.views import WaveformView, TraceView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press
-from phy.utils.datasets import download_test_file
 from ..gui import KwikController, kwik_describe
 
 logger = logging.getLogger(__name__)

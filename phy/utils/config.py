@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os
 import os.path as op
 from textwrap import dedent
 
@@ -15,6 +14,7 @@ from traitlets.config import (Config,
                               PyFileConfigLoader,
                               JSONFileConfigLoader,
                               )
+from phylib.utils._misc import _ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -22,19 +22,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Config
 #------------------------------------------------------------------------------
-
-def phy_config_dir():
-    """Return the absolute path to the phy user directory."""
-    home = op.realpath(op.expanduser('~'))
-    return op.join(home, '.phy')
-
-
-def _ensure_dir_exists(path):
-    """Ensure a directory exists."""
-    if not op.exists(path):
-        os.makedirs(path)
-    assert op.exists(path) and op.isdir(path)
-
 
 def load_config(path=None):
     """Load a Python or JSON config file."""
