@@ -1,9 +1,9 @@
+# numpy
+# matplotlib
+# scipy
+# h5py
+# pyqt5
 git+https://github.com/cortex-lab/phylib
-numpy
-matplotlib
-scipy
-h5py
-pyqt5
 pyopengl
 requests
 traitlets
