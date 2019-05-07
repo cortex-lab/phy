@@ -1,5 +1,12 @@
+# -*- coding: utf-8 -*-
 
-import csv
+"""Template model."""
+
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
 import glob
 import logging
 import os
@@ -16,9 +23,15 @@ from phylib.io.array import (
 )
 from phylib.traces import WaveformLoader
 from phylib.utils import Bunch
+from phylib.utils._misc import _write_tsv, _read_tsv
+
 
 logger = logging.getLogger(__name__)
 
+
+#------------------------------------------------------------------------------
+# Utility functions
+#------------------------------------------------------------------------------
 
 def read_array(path):
     arr_name, ext = op.splitext(path)
@@ -38,36 +51,12 @@ def load_metadata(filename):
     Return (field_name, dictionary).
 
     """
-    dic = {}
-    if not op.exists(filename):
-        return dic
-    # Find whether the delimiter is tab or comma.
-    with open(filename, 'r') as f:
-        delimiter = '\t' if '\t' in f.readline() else ','
-    with open(filename, 'r') as f:
-        reader = csv.reader(f, delimiter=delimiter)
-        # Skip the header.
-        _, field_name = next(reader)
-        for row in reader:
-            cluster, value = row
-            cluster = int(cluster)
-            dic[cluster] = value
-    return field_name, dic
+    return _read_tsv(filename)
 
 
 def save_metadata(filename, field_name, metadata):
     """Save metadata in a CSV file."""
-    import sys
-    if sys.version_info[0] < 3:
-        file = open(filename, 'wb')
-    else:
-        file = open(filename, 'w', newline='')
-    delimiter = '\t' if filename.endswith('.tsv') else ','
-    with file as f:
-        writer = csv.writer(f, delimiter=delimiter)
-        writer.writerow(['cluster_id', field_name])
-        writer.writerows([(cluster, metadata[cluster])
-                          for cluster in sorted(metadata)])
+    return _write_tsv(filename, field_name, metadata)
 
 
 def _dat_n_samples(filename, dtype=None, n_channels=None, offset=None):
@@ -167,6 +156,10 @@ def from_sparse(data, cols, channel_ids):
     out = out[:, :-1, ...]
     return out
 
+
+#------------------------------------------------------------------------------
+# Template model
+#------------------------------------------------------------------------------
 
 class TemplateModel(object):
     n_closest_channels = 16
