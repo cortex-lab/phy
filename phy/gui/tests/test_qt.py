@@ -22,6 +22,9 @@ from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   WebView,
                   busy_cursor,
                   AsyncCaller,
+                  QThreadPool,
+                  _wait,
+                  Worker,
                   _block,
                   )
 
@@ -63,10 +66,22 @@ def test_screen_size(qtbot):
     assert _is_high_dpi() in (False, True)
 
 
+def test_worker(qtbot):
+    pool = QThreadPool.globalInstance()
+    _l = []
+
+    def f():  # pragma: no cover
+        _l.append(0)
+    w = Worker(f)
+    pool.start(w)
+    _wait(10)
+    assert _l == [0]
+
+
 def test_block(qtbot):
     create_app()
     with raises(RuntimeError):
-        _block(lambda: False)
+        _block(lambda: False, timeout=.1)
 
 
 def test_wait_signal(qtbot):

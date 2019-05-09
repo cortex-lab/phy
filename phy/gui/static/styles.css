@@ -28,9 +28,9 @@ body, p, div, th, td, input {
     background-position: top left;
 }
 
-th.sort::-moz-selection { background:transparent; }
-th.sort::selection  { background:transparent; }
-th.sort { cursor:pointer; }
+th.sort::-moz-selection { background: transparent; }
+th.sort::selection  { background: transparent; }
+th.sort { cursor: pointer; }
 
 #table {
     border-collapse: collapse;
