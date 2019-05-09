@@ -108,12 +108,16 @@ def _quant_zoom(z):
 class Axes(object):
     default_color = (1, 1, 1, .25)
 
-    def __init__(self, color=None, data_bounds=None, show_x=True, show_y=True):
-        self.locator = AxisLocator(data_bounds=data_bounds)
+    def __init__(self, data_bounds=None, color=None, show_x=True, show_y=True):
         self.show_x = show_x
         self.show_y = show_y
-        self.color = color or self.default_color
         self._create_visuals()
+        self.color = color or self.default_color
+        self.reset(data_bounds=data_bounds)
+        self._attached = None
+
+    def reset(self, data_bounds=None):
+        self.locator = AxisLocator(data_bounds=data_bounds)
         self._last_log_zoom = (1, 1)
         self._last_pan = (0, 0)
 
@@ -152,13 +156,18 @@ class Axes(object):
             self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
 
     def attach(self, canvas):
+        # Only attach once to avoid binding lots of events.
+        if self._attached:
+            return
+        self._attached = canvas
+
         if self.show_x:
-            canvas.add_visual(self.xvisual)
-            canvas.add_visual(self.txvisual)
+            canvas.add_visual(self.xvisual, clearable=False)
+            canvas.add_visual(self.txvisual, clearable=False)
 
         if self.show_y:
-            canvas.add_visual(self.yvisual)
-            canvas.add_visual(self.tyvisual)
+            canvas.add_visual(self.yvisual, clearable=False)
+            canvas.add_visual(self.tyvisual, clearable=False)
 
         self.set_bounds(NDC)
 
