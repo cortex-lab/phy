@@ -261,7 +261,7 @@ class Table(HTMLWidget):
                     transform: scale(2);
                     transform-origin: 0 0;
                     overflow-y: scroll;
-                    overflow-x: hidden;
+                    /*overflow-x: hidden;*/
                 }
 
                 input.filter {

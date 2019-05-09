@@ -12,6 +12,7 @@ import logging
 import os.path as op
 import sys
 from timeit import default_timer
+import traceback
 
 from phylib.utils.testing import _in_travis
 
@@ -28,6 +29,7 @@ from OpenGL import GL  # noqa
 
 from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QVariant, QEventLoop, QTimer, QPoint, QTimer,
+                          QThreadPool, QRunnable,
                           pyqtSignal, pyqtSlot, QSize, QUrl,
                           QEvent, QCoreApplication,
                           qInstallMessageHandler,
@@ -163,23 +165,58 @@ def busy_cursor():
     set_busy(False)
 
 
-def _block(until_true):
+def _block(until_true, timeout=None):
     if until_true():
         return
     t0 = default_timer()
-    timeout = 1 if not _in_travis() else 2
+    timeout = timeout or (2 if not _in_travis() else 5)
 
     while not until_true() and (default_timer() - t0 < timeout):
         app = QApplication.instance()
         app.processEvents(QEventLoop.AllEvents,
                           int(timeout * 1000))
     if not until_true():
+        logger.error("Timeout in _block().")
         raise RuntimeError("Timeout in _block().")
 
 
 def _wait(ms):
     from PyQt5 import QtTest
     QtTest.QTest.qWait(ms)
+
+
+# -----------------------------------------------------------------------------
+# Threading
+# -----------------------------------------------------------------------------
+
+class WorkerSignals(QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+
+
+class Worker(QRunnable):
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+    @pyqtSlot()
+    def run(self):  # pragma: no cover
+        # Bug with coverage, which doesn't recognize these lines as
+        # called when they are called from a different thread.
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except Exception:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)
+        finally:
+            self.signals.finished.emit()
 
 
 # -----------------------------------------------------------------------------
