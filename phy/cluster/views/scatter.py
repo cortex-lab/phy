@@ -28,6 +28,7 @@ class ScatterView(ManualClusteringView):
 
     def __init__(self, coords=None):  # coords is a function clusters: Bunch(x, y)
         super(ScatterView, self).__init__()
+        self.canvas.enable_axes()
         assert coords
         self.coords = coords
 
@@ -69,5 +70,5 @@ class ScatterView(ManualClusteringView):
 
         self.canvas.clear()
         self._plot_points(bunchs, data_bounds)
-        self.canvas.enable_axes(data_bounds=data_bounds)
+        self.canvas.axes.reset(data_bounds=data_bounds)
         self.canvas.update()
