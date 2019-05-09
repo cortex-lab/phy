@@ -134,6 +134,7 @@ class TraceView(ManualClusteringView):
         # Initialize the view.
         super(TraceView, self).__init__()
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
+        self.canvas.enable_axes(show_y=False)
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
@@ -291,7 +292,7 @@ class TraceView(ManualClusteringView):
         if self.do_show_labels:
             self._plot_labels(traces.data, data_bounds=data_bounds)
 
-        self.canvas.enable_axes(data_bounds=data_bounds, show_y=False)
+        self.canvas.axes.reset(data_bounds=data_bounds)
         self.canvas.update()
 
     def on_select(self, cluster_ids=None, **kwargs):
