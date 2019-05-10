@@ -9,6 +9,7 @@ dependencies:
   - pyqt
   - cython
   - pip:
+    - colorcet
     - pyopengl
     - requests
     - traitlets
