@@ -15,6 +15,7 @@ from six import text_type
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
 from phylib.utils import emit, connect
+from phylib.utils._color import _COLORMAP, _is_bright
 from phylib.utils._misc import _CustomEncoder, _read_text
 from phylib.utils._types import _is_integer
 
@@ -233,6 +234,19 @@ def dumps(o):
     return json.dumps(o, cls=_CustomEncoder)
 
 
+def _color_styles():
+    """Use colormap colors in table widget."""
+    return '\n'.join(
+        '''
+        #table .color-%d > td[class='id'] {
+            background-color: rgb(%d, %d, %d);
+            %s
+        }
+        ''' % (i, r, g, b, 'color: #000 !important;'
+                           if _is_bright((r / 255, g / 255, b / 255)) else '')
+        for i, (r, g, b) in enumerate(_COLORMAP))
+
+
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
@@ -269,6 +283,8 @@ class Table(HTMLWidget):
                 }
 
             ''')
+
+        b.add_style(_color_styles())
 
         self.data = data
         self.columns = columns
