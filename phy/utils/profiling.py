@@ -132,7 +132,7 @@ def _enable_pdb():  # pragma: no cover
                                          )
 
 
-def memory_usage():
+def memory_usage():  # pragma: no cover
     import psutil
     process = psutil.Process(os.getpid())
     return process.memory_info().rss

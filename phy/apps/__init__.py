@@ -108,8 +108,7 @@ def _copy_gui_state(gui_name, module_name, config_dir=None):
 @click.help_option('-h', '--help')
 @click.pass_context
 def phycli(ctx, pdb=None, ipython=None, prof=None, lprof=None):
-    """By default, the `phy` command does nothing. Add subcommands with plugins
-    using `attach_to_cli()` and the `click` library."""
+    """Ephys data tool."""
     add_default_handler(level='DEBUG' if DEBUG else 'INFO')
 
 
@@ -119,7 +118,8 @@ def phycli(ctx, pdb=None, ipython=None, prof=None, lprof=None):
 
 @phycli.command('template-gui')  # pragma: no cover
 @click.argument('params-path', type=click.Path(exists=True))
-def cli_template_gui(params_path):
+@click.pass_context
+def cli_template_gui(ctx, params_path):
     """Launch the template GUI on a params.py file."""
     from .template.gui import template_gui
     template_gui(params_path)
@@ -127,7 +127,8 @@ def cli_template_gui(params_path):
 
 @phycli.command('template-describe')
 @click.argument('params-path', type=click.Path(exists=True))
-def cli_template_describe(params_path):
+@click.pass_context
+def cli_template_describe(ctx, params_path):
     """Describe a template file."""
     from .template.gui import template_describe
     template_describe(params_path)
@@ -153,7 +154,27 @@ def cli_kwik_gui(ctx, path, channel_group=None, clustering=None):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--channel-group', type=int, help='channel group')
 @click.option('--clustering', type=str, help='clustering')
-def cli_kwik_describe(path, channel_group=0, clustering='main'):
+@click.pass_context
+def cli_kwik_describe(ctx, path, channel_group=0, clustering='main'):
     """Describe a Kwik file."""
     from .kwik.gui import kwik_describe
     kwik_describe(path, channel_group=channel_group, clustering=clustering)
+
+
+#------------------------------------------------------------------------------
+# Conversion
+#------------------------------------------------------------------------------
+
+@phycli.command('alfconvert')
+@click.argument('params-path', type=click.Path(exists=True))
+@click.argument('out_dir', type=click.Path())
+@click.pass_context
+def cli_alf_convert(ctx, params_path, out_dir):
+    """Describe a template file."""
+    from phylib.io.alf import EphysAlfCreator
+    from phylib.io.model import TemplateModel
+    from phylib.utils._misc import _read_python
+
+    model = TemplateModel(**_read_python(params_path))
+    c = EphysAlfCreator(model)
+    c.convert(out_dir)
