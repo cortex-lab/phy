@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from cProfile import Profile
 import functools
 import logging
+import os
 import os.path as op
 import sys
 from timeit import default_timer
@@ -129,3 +130,9 @@ def _enable_pdb():  # pragma: no cover
                                          color_scheme='Linux',
                                          call_pdb=True,
                                          )
+
+
+def memory_usage():
+    import psutil
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss

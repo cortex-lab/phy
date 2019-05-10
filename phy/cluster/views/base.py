@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import gc
 import logging
 
 from phy.gui import Actions
@@ -92,6 +93,7 @@ class ManualClusteringView(object):
                 def finished():
                     logger.log(5, "Done selecting %s in %s.", cluster_ids, self)
                     emit('is_busy', self, False)
+                    gc.collect()
 
         self.actions = Actions(
             gui, name=gui.view_name(self),
@@ -113,6 +115,7 @@ class ManualClusteringView(object):
             unconnect(on_select)
             gui.state.update_view_state(self, self.state, gui)
             self.canvas.close()
+            gc.collect()
 
         self.canvas.show()
 
@@ -155,3 +158,4 @@ class ManualClusteringView(object):
 
     def close(self):
         self.canvas.close()
+        gc.collect()
