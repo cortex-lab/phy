@@ -369,7 +369,7 @@ class BaseCanvas(QOpenGLWindow):
     def clear(self):
         self.visuals[:] = (v for v in self.visuals if not v.get('clearable', True))
         for v in self.visuals:
-            if v.get('clearable', True):
+            if v.get('clearable', True):  # pragma: no cover
                 v.close()
                 del v
         gc.collect()
