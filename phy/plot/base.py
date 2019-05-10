@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict
+import gc
 import logging
 import re
 from timeit import default_timer
@@ -130,6 +131,11 @@ class BaseVisual(object):
         assert a_box_index.ndim == 2
         assert a_box_index.shape[0] == n
         self.program['a_box_index'] = a_box_index.astype(np.float32)
+
+    def close(self):
+        self.program._deactivate()
+        del self.program
+        gc.collect()
 
 
 #------------------------------------------------------------------------------
@@ -362,9 +368,18 @@ class BaseCanvas(QOpenGLWindow):
 
     def clear(self):
         self.visuals[:] = (v for v in self.visuals if not v.get('clearable', True))
+        for v in self.visuals:
+            if v.get('clearable', True):
+                v.close()
+                del v
+        gc.collect()
 
     def remove(self, *visuals):
         self.visuals[:] = (v for v in self.visuals if v.visual not in visuals)
+        for v in visuals:
+            v.close()
+            del v
+        gc.collect()
 
     def get_visual(self, key):
         for v in self.visuals:
