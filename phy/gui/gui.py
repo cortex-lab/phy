@@ -152,6 +152,7 @@ class GUI(QMainWindow):
 
         # Default actions.
         self._set_default_actions()
+        self._set_view_actions()
 
         # Create and attach snippets.
         self.snippets = Snippets(self)
@@ -195,8 +196,8 @@ class GUI(QMainWindow):
             from phy import __version_git__
             msg = "phy {} v{}".format(self.name, __version_git__)
             try:
-                from phycontrib import __version__
-                msg += "\nphycontrib v{}".format(__version__)
+                from phylib import __version__
+                msg += "\nphylib v{}".format(__version__)
             except ImportError:
                 pass
             QMessageBox.about(self, "About", msg)
@@ -207,6 +208,21 @@ class GUI(QMainWindow):
             self.close()
 
         self.default_actions.separator()
+
+    def _set_view_actions(self):
+        self.view_actions = Actions(self, name='Views', menu='&Views')
+
+        @self.view_actions.add
+        def reset_views():
+            """Reset all views."""
+            # TODO
+
+        self.view_actions.separator()
+
+        # Add "Add view" action.
+        for view_cls in self.view_creator.keys():
+            self.view_actions.add(
+                partial(self._create_and_add_view, view_cls), name='add_%s' % view_cls.__name__)
 
     # Events
     # -------------------------------------------------------------------------
@@ -299,16 +315,8 @@ class GUI(QMainWindow):
             if n_views <= 0:
                 continue
             assert n_views >= 1
-            # Add "Add view" action.
-            first_view = self._create_and_add_view(view_cls)
-            actions = getattr(first_view, 'actions', None)
-            if not actions:
-                continue
-            actions.separator()
-            actions.add(
-                partial(self._create_and_add_view, view_cls), name='add_%s' % view_cls.__name__)
             # Extra views.
-            for i in range(n_views - 1):
+            for i in range(n_views):
                 self._create_and_add_view(view_cls)
 
     def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
