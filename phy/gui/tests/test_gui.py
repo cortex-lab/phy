@@ -114,7 +114,7 @@ def test_gui_creator(tempdir, qtbot):
     class MyCanvas(BaseCanvas):
         def __init__(self, *args, **kwargs):
             super(MyCanvas, self).__init__(*args, **kwargs)
-            self.actions = Actions(gui, menu='&File')
+            self.actions = Actions(gui, menu='MyCanvas')
 
         def attach(self, gui):
             gui.add_view(self)
@@ -147,6 +147,7 @@ def test_gui_creator(tempdir, qtbot):
 
     # Close the first dock widget.
     views[0].dock_widget.toggleViewAction().activate(0)
+    gui.remove_menu('&File')
 
     # One remaining MyCanvas view.
     views = gui.list_views(MyCanvas)
