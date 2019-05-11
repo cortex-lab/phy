@@ -63,11 +63,14 @@ class ManualClusteringView(object):
     def attach(self, gui):
         """Attach the view to the GUI."""
 
+        # Add shortcuts only for the first view of any given type.
+        shortcuts = self.shortcuts if not gui.list_views(self.__class__) else None
+
         gui.add_view(self, position=self._default_position)
         self.gui = gui
 
         self.actions = Actions(
-            gui, name=self.name, menu=self.name, default_shortcuts=self.shortcuts)
+            gui, name=self.name, menu=self.name, default_shortcuts=shortcuts)
 
         # Freeze and unfreeze the view when selecting clusters.
         self.actions.add(self.toggle_auto_update, checkable=True, checked=self.auto_update)
