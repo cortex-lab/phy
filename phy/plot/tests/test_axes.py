@@ -19,7 +19,8 @@ from ..axes import Axes
 def test_axes_1(qtbot, canvas_pz):
     c = canvas_pz
 
-    g = Axes(data_bounds=(0, -10, 1000, 10))
+    db = (0, -10, 1000, 10)
+    g = Axes(data_bounds=db)
     g.attach(c)
 
     c.show()
@@ -28,6 +29,7 @@ def test_axes_1(qtbot, canvas_pz):
     c.panzoom.zoom = 4
     c.panzoom.zoom = 8
     c.panzoom.pan = (3, 3)
+    g.reset_data_bounds(db)
 
     if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
         qtbot.stop()
