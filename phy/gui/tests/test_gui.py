@@ -132,7 +132,8 @@ def test_gui_creator(tempdir, qtbot):
     qtbot.addWidget(gui)
 
     # Automatically create the views with the view counts.
-    gui.create_views({BaseCanvas: 1, MyCanvas: 2, UnusedClass: 0})
+    gui._requested_view_count = {BaseCanvas: 1, MyCanvas: 2, UnusedClass: 0}
+    gui.create_views()
     gui.show()
     qtbot.waitForWindowShown(gui)
 
@@ -222,9 +223,8 @@ def test_gui_geometry_state(tempdir, qtbot):
 
 def test_gui_state_view(tempdir):
     view = Bunch(name='MyView0')
-    gui = Bunch()
     state = GUIState(config_dir=tempdir)
-    state.update_view_state(view, dict(hello='world'), gui)
-    assert not state.get_view_state(Bunch(name='MyView'), gui)
-    assert not state.get_view_state(Bunch(name='MyView (1)'), gui)
-    assert state.get_view_state(view, gui) == Bunch(hello='world')
+    state.update_view_state(view, dict(hello='world'))
+    assert not state.get_view_state(Bunch(name='MyView'))
+    assert not state.get_view_state(Bunch(name='MyView (1)'))
+    assert state.get_view_state(view) == Bunch(hello='world')
