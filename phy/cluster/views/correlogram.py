@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(ManualClusteringView):
-    _callback_delay = 30
     _default_position = 'left'
     cluster_ids = ()
 
@@ -38,6 +37,7 @@ class CorrelogramView(ManualClusteringView):
 
     def __init__(self, correlograms=None, firing_rate=None, sample_rate=None):
         super(CorrelogramView, self).__init__()
+        self.state_attrs += ('bin_size', 'window_size', 'uniform_normalization')
         self.canvas.set_layout(layout='grid')
 
         # Outside margin to show labels.
@@ -152,15 +152,6 @@ class CorrelogramView(ManualClusteringView):
         self.actions.separator()
         self.actions.add(self.set_bin, alias='cb', prompt=True)
         self.actions.add(self.set_window, alias='cw', prompt=True)
-
-    @property
-    def state(self):
-        state = super(CorrelogramView, self).state
-        state.update(bin_size=self.bin_size,
-                     window_size=self.window_size,
-                     uniform_normalization=self.uniform_normalization,
-                     )
-        return state
 
     def set_bin(self, bin_size):
         """Set the correlogram bin size (in milliseconds).

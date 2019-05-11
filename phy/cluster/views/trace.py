@@ -133,6 +133,8 @@ class TraceView(ManualClusteringView):
 
         # Initialize the view.
         super(TraceView, self).__init__()
+        self.state_attrs += ('scaling', 'origin', 'interval', 'do_show_labels')
+
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
 
@@ -292,7 +294,7 @@ class TraceView(ManualClusteringView):
         if self.do_show_labels:
             self._plot_labels(traces.data, data_bounds=data_bounds)
 
-        self.canvas.axes.reset(data_bounds=data_bounds)
+        self.canvas.axes.reset_data_bounds(data_bounds)
         self.canvas.update()
 
     def on_select(self, cluster_ids=None, **kwargs):
@@ -318,16 +320,6 @@ class TraceView(ManualClusteringView):
 
         # Default: freeze the view for performance reasons.
         # self.actions.get('toggle_auto_update').trigger()
-
-    @property
-    def state(self):
-        state = super(TraceView, self).state
-        state.update(scaling=self.scaling,
-                     origin=self.origin,
-                     interval=self._interval,
-                     do_show_labels=self.do_show_labels,
-                     )
-        return state
 
     # Scaling
     # -------------------------------------------------------------------------
