@@ -70,5 +70,5 @@ class ScatterView(ManualClusteringView):
 
         self.canvas.clear()
         self._plot_points(bunchs, data_bounds)
-        self.canvas.axes.reset(data_bounds=data_bounds)
+        self.canvas.axes.reset_data_bounds(data_bounds)
         self.canvas.update()

@@ -74,7 +74,6 @@ def _uniq(seq):
 
 
 class FeatureView(ManualClusteringView):
-    _callback_delay = 20
     _default_position = 'right'
     cluster_ids = ()
     fixed_channels = False  # true to disable automatic selection of channels
@@ -88,6 +87,7 @@ class FeatureView(ManualClusteringView):
 
     def __init__(self, features=None, attributes=None):
         super(FeatureView, self).__init__()
+        self.state_attrs += ('scaling', 'fixed_channels')
         self._scaling = None
 
         assert features
@@ -313,12 +313,6 @@ class FeatureView(ManualClusteringView):
 
         connect(self.on_channel_click)
         connect(self.on_request_split)
-
-    @property
-    def state(self):
-        state = super(FeatureView, self).state
-        state.update(scaling=self.scaling, fixed_channels=self.fixed_channels)
-        return state
 
     def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
         """Respond to the click on a channel."""

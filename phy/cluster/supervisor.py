@@ -555,7 +555,7 @@ class Supervisor(object):
         self.cluster_view.get_state(b(1))
         b.wait()
         state = b.result(1)[0][0]
-        gui.state.update_view_state(self.cluster_view, state, gui)
+        gui.state.update_view_state(self.cluster_view, state)
 
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))

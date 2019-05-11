@@ -87,6 +87,7 @@ class WaveformView(ManualClusteringView):
 
         # Initialize the view.
         super(WaveformView, self).__init__()
+        self.state_attrs += ('box_scaling', 'probe_scaling', 'overlap', 'do_show_labels')
 
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
@@ -222,16 +223,6 @@ class WaveformView(ManualClusteringView):
         data_bounds = self._get_data_bounds(bunchs)
         self._plot_waveforms(bunchs, channel_ids, data_bounds=data_bounds)
         self._plot_labels(channel_ids, n_clusters, data_bounds=data_bounds)
-
-    @property
-    def state(self):
-        state = super(WaveformView, self).state
-        state.update(box_scaling=tuple(self.box_scaling),
-                     probe_scaling=tuple(self.probe_scaling),
-                     overlap=self.overlap,
-                     do_show_labels=self.do_show_labels,
-                     )
-        return state
 
     def attach(self, gui):
         """Attach the view to the GUI."""

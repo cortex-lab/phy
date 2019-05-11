@@ -30,7 +30,6 @@ class ManualClusteringView(object):
     """
     default_shortcuts = {
     }
-    _callback_delay = 100
     auto_update = True  # automatically update the view when the cluster selection changes
     _default_position = None
 
@@ -44,6 +43,9 @@ class ManualClusteringView(object):
 
         # Message to show in the status bar.
         self.status = None
+
+        # List of attributes to save in the GUI view state.
+        self.state_attrs = ('auto_update',)
 
         # Attached GUI.
         self.gui = None
@@ -64,13 +66,22 @@ class ManualClusteringView(object):
         gui.add_view(self, position=self._default_position)
         self.gui = gui
 
+        self.actions = Actions(
+            gui, name=self.name, menu=self.name, default_shortcuts=self.shortcuts)
+
+        # Freeze and unfreeze the view when selecting clusters.
+        self.actions.add(self.toggle_auto_update, checkable=True, checked=self.auto_update)
+        self.actions.separator()
+
         # Set the view state.
-        self.set_state(gui.state.get_view_state(self, gui))
+        self.set_state(gui.state.get_view_state(self))
+
+        emit('view_actions_created', self)
 
         # Call on_select() asynchronously after a delay, and set a busy
         # cursor.
-        self.async_caller = AsyncCaller(delay=self._callback_delay)
-        self.async_caller2 = AsyncCaller(delay=self._callback_delay)
+        self.async_caller = AsyncCaller(delay=1)
+        self.async_caller2 = AsyncCaller(delay=10)
 
         @connect
         def on_select(sender, cluster_ids, **kwargs):
@@ -95,14 +106,6 @@ class ManualClusteringView(object):
                     emit('is_busy', self, False)
                     gc.collect()
 
-        self.actions = Actions(
-            gui, name=gui.view_name(self),
-            menu=self.__class__.__name__, default_shortcuts=self.shortcuts)
-
-        # Freeze and unfreeze the view when selecting clusters.
-        self.actions.add(self.toggle_auto_update, checkable=True, checked=self.auto_update)
-        self.actions.separator()
-
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the view.
         @connect(sender=self)  # pragma: no cover
@@ -111,11 +114,19 @@ class ManualClusteringView(object):
 
         # Save the view state in the GUI state.
         @connect(sender=gui)
-        def on_close(sender=None):
+        def on_close_view(sender, view):
+            if view != self:
+                return
+            logger.debug("Close view %s.", view)
+            gui.remove_menu(self.name)
             unconnect(on_select)
-            gui.state.update_view_state(self, self.state, gui)
+            gui.state.update_view_state(self, self.state)
             self.canvas.close()
             gc.collect()
+
+        @connect(sender=gui)
+        def on_close(sender):
+            gui.state.update_view_state(self, self.state)
 
         self.canvas.show()
 
@@ -134,7 +145,7 @@ class ManualClusteringView(object):
         To be overriden.
 
         """
-        return Bunch(auto_update=self.auto_update)
+        return Bunch({key: getattr(self, key, None) for key in self.state_attrs})
 
     def set_state(self, state):
         """Set the view state.
@@ -144,6 +155,7 @@ class ManualClusteringView(object):
         May be overriden.
 
         """
+        logger.debug("Set state for %s.", getattr(self, 'name', self.__class__.__name__))
         for k, v in state.items():
             setattr(self, k, v)
 
