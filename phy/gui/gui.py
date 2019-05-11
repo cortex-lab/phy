@@ -120,6 +120,7 @@ class GUI(QMainWindow):
                  name=None,
                  subtitle=None,
                  view_creator=None,
+                 view_count=None,
                  **kwargs
                  ):
         # HACK to ensure that closeEvent is called only twice (seems like a
@@ -154,7 +155,8 @@ class GUI(QMainWindow):
 
         # View creator: dictionary {view_class: function_that_adds_view}
         self.view_creator = view_creator or {}
-        self._requested_view_count = _decode_view_count(self.state.get('view_count', {}))
+        self._requested_view_count = _decode_view_count(
+            self.state.get('view_count', view_count) or {}) or {}
 
         # Status bar.
         self._lock_status = False
