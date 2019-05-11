@@ -24,7 +24,7 @@ from phylib.utils._misc import _read_python
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
-                               TraceView as _TraceView,
+                               TraceView,
                                CorrelogramView,
                                ScatterView,
                                ProbeView,
@@ -43,19 +43,7 @@ logger = logging.getLogger(__name__)
 # Utils and views
 #------------------------------------------------------------------------------
 
-class TraceView(_TraceView):
-    show_all_spikes = False
-
-    @property
-    def state(self):
-        state = super(TraceView, self).state
-        state.update(show_all_spikes=self.show_all_spikes)
-        return state
-
-
 class TemplateFeatureView(ScatterView):
-    _callback_delay = 100
-
     def _get_data(self, cluster_ids):
         if len(cluster_ids) != 2:
             return []
@@ -77,8 +65,8 @@ class TemplateController(object):
     n_spikes_waveforms = 100
     batch_size_waveforms = 10
 
-    n_spikes_features = 10000
-    n_spikes_amplitudes = 10000
+    n_spikes_features = 2500
+    n_spikes_amplitudes = 5000
     n_spikes_correlograms = 100000
 
     def __init__(self, dat_path=None, config_dir=None, model=None, **kwargs):
@@ -91,6 +79,14 @@ class TemplateController(object):
         self.cache_dir = op.join(self.model.dir_path, '.phy')
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
+        self.view_creator = {
+            WaveformView: self.create_waveform_view,
+            TraceView: self.create_trace_view,
+            FeatureView: self.create_feature_view,
+            TemplateFeatureView: self.create_template_feature_view,
+            CorrelogramView: self.create_correlogram_view,
+            AmplitudeView: self.create_amplitude_view,
+        }
 
         # Attach plugins before setting up the supervisor, so that plugins
         # can register callbacks to events raised during setup.
@@ -179,11 +175,6 @@ class TemplateController(object):
         def spikes_per_cluster(cluster_id):
             return self.supervisor.clustering.spikes_per_cluster.get(cluster_id, [0])
         return Selector(spikes_per_cluster)
-
-    def _add_view(self, gui, view):
-        view.attach(gui)
-        emit('add_view', self, gui, view)
-        return view
 
     # Model methods
     # -------------------------------------------------------------------------
@@ -294,28 +285,52 @@ class TemplateController(object):
                      alpha=1.,
                      )
 
-    def add_waveform_view(self, gui):
+    def create_waveform_view(self):
         f = (self._get_waveforms if self.model.traces is not None
              else self._get_template_waveforms)
-        v = WaveformView(waveforms=f,
-                         )
-        v = self._add_view(gui, v)
+        v = WaveformView(waveforms=f)
+        v.shortcuts['toggle_templates'] = 'w'
+        v.shortcuts['toggle_mean_waveforms'] = 'm'
 
-        v.actions.separator()
+        v.state_attrs += ('show_what',)
+        funs = {
+            'waveforms': self._get_waveforms,
+            'templates': self._get_template_waveforms,
+            'mean_waveforms': self._get_mean_waveforms,
+        }
 
-        @v.actions.add(shortcut='w', checkable=True)
-        def toggle_templates(checked):
-            f, g = self._get_waveforms, self._get_template_waveforms
-            if self.model.traces is None:
-                return
-            v.waveforms = f if v.waveforms == g else g
-            v.on_select(cluster_ids=v.cluster_ids)
+        # Add extra actions.
+        @connect(sender=v)
+        def on_view_actions_created(sender):
+            # NOTE: this callback function is called in WaveformView.attach().
 
-        @v.actions.add(shortcut='m', checkable=True)
-        def toggle_mean_waveforms(checked):
-            f, g = self._get_waveforms, self._get_mean_waveforms
-            v.waveforms = f if v.waveforms == g else g
-            v.on_select(cluster_ids=v.cluster_ids)
+            # Initialize show_what if it was not set in the GUI state.
+            if not hasattr(v, 'show_what'):
+                v.show_what = 'waveforms'
+            # Set the waveforms function.
+            v.waveforms = funs[v.show_what]
+
+            @v.actions.add(checkable=True, checked=v.show_what == 'templates')
+            def toggle_templates(checked):
+                # Both checkboxes are mutually exclusive.
+                if checked:
+                    v.actions.get('toggle_mean_waveforms').setChecked(False)
+                v.show_what = 'templates' if checked else 'waveforms'
+                if v.show_what == 'waveforms' and self.model.traces is None:
+                    return
+                v.waveforms = funs[v.show_what]
+                v.on_select(cluster_ids=v.cluster_ids)
+
+            @v.actions.add(checkable=True, checked=v.show_what == 'mean_waveforms')
+            def toggle_mean_waveforms(checked):
+                # Both checkboxes are mutually exclusive.
+                if checked:
+                    v.actions.get('toggle_templates').setChecked(False)
+                v.show_what = 'mean_waveforms' if checked else 'waveforms'
+                v.waveforms = funs[v.show_what]
+                v.on_select(cluster_ids=v.cluster_ids)
+
+            v.actions.separator()
 
         return v
 
@@ -363,11 +378,13 @@ class TemplateController(object):
                      channel_ids=channel_ids,
                      )
 
-    def add_feature_view(self, gui):
-        v = FeatureView(features=self._get_features,
-                        attributes={'time': self._get_spike_times}
-                        )
-        return self._add_view(gui, v)
+    def create_feature_view(self):
+        if self.model.features is None:
+            return
+        return FeatureView(
+            features=self._get_features,
+            attributes={'time': self._get_spike_times}
+        )
 
     # Template features
     # -------------------------------------------------------------------------
@@ -399,10 +416,10 @@ class TemplateController(object):
                                   ),
                      )
 
-    def add_template_feature_view(self, gui):
-        v = TemplateFeatureView(coords=self._get_template_features,
-                                )
-        return self._add_view(gui, v)
+    def create_template_feature_view(self):
+        if self.model.template_features is None:
+            return
+        return TemplateFeatureView(coords=self._get_template_features)
 
     # Traces
     # -------------------------------------------------------------------------
@@ -453,7 +470,10 @@ class TemplateController(object):
         n = len(spike_times)
         view.go_to(spike_times[(ind + delta) % n])
 
-    def add_trace_view(self, gui):
+    def create_trace_view(self):
+        if self.model.traces is None:
+            return
+
         m = self.model
         v = TraceView(traces=self._get_traces,
                       n_channels=m.n_channels,
@@ -461,39 +481,48 @@ class TemplateController(object):
                       duration=m.duration,
                       channel_vertical_order=m.channel_vertical_order,
                       )
-        self._add_view(gui, v)
+        v.shortcuts['go_to_next_spike'] = 'alt+pgdown'
+        v.shortcuts['go_to_previous_spike'] = 'alt+pgup'
+        v.shortcuts['toggle_highlighted_spikes'] = 'alt+s'
+
+        v.show_all_spikes = False
+        v.state_attrs += ('show_all_spikes',)
 
         # Update the get_traces() function with show_all_spikes.
         def get_traces(interval):
             return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
         v.traces = get_traces
 
-        v.actions.separator()
+        # Add extra actions.
+        @connect(sender=v)
+        def on_view_actions_created(sender):
 
-        @v.actions.add(shortcut='alt+pgdown')
-        def go_to_next_spike():
-            """Jump to the next spike from the first selected cluster."""
-            self._jump_to_spike(v, +1)
+            @v.actions.add()
+            def go_to_next_spike():
+                """Jump to the next spike from the first selected cluster."""
+                self._jump_to_spike(v, +1)
 
-        @v.actions.add(shortcut='alt+pgup')
-        def go_to_previous_spike():
-            """Jump to the previous spike from the first selected cluster."""
-            self._jump_to_spike(v, -1)
+            @v.actions.add()
+            def go_to_previous_spike():
+                """Jump to the previous spike from the first selected cluster."""
+                self._jump_to_spike(v, -1)
 
-        v.actions.separator()
+            v.actions.separator()
 
-        @v.actions.add(shortcut='alt+s', checkable=True, checked=v.show_all_spikes)
-        def toggle_highlighted_spikes(checked):
-            """Toggle between showing all spikes or selected spikes."""
-            v.show_all_spikes = checked
-            v.set_interval()
+            @v.actions.add(checkable=True, checked=v.show_all_spikes)
+            def toggle_highlighted_spikes(checked):
+                """Toggle between showing all spikes or selected spikes."""
+                v.show_all_spikes = checked
+                v.set_interval()
 
-        @connect
-        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
-            # Select the corresponding cluster.
-            self.supervisor.select([cluster_id])
-            # Update the trace view.
-            v.on_select([cluster_id])
+            @connect
+            def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+                # Select the corresponding cluster.
+                self.supervisor.select([cluster_id])
+                # Update the trace view.
+                v.on_select([cluster_id])
+
+            v.actions.separator()
 
         return v
 
@@ -524,13 +553,13 @@ class TemplateController(object):
         return firing_rate(
             sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration)
 
-    def add_correlogram_view(self, gui):
+    def create_correlogram_view(self):
         m = self.model
-        v = CorrelogramView(correlograms=self._get_correlograms,
-                            firing_rate=self._get_firing_rate,
-                            sample_rate=m.sample_rate,
-                            )
-        return self._add_view(gui, v)
+        return CorrelogramView(
+            correlograms=self._get_correlograms,
+            firing_rate=self._get_firing_rate,
+            sample_rate=m.sample_rate,
+        )
 
     # Amplitudes
     # -------------------------------------------------------------------------
@@ -543,20 +572,19 @@ class TemplateController(object):
         y = m.amplitudes[spike_ids]
         return Bunch(x=x, y=y, data_bounds=(0., 0., m.duration, y.max()))
 
-    def add_amplitude_view(self, gui):
-        v = AmplitudeView(coords=self._get_amplitudes,
-                          )
-        return self._add_view(gui, v)
+    def create_amplitude_view(self):
+        if self.model.amplitudes is None:
+            return
+        return AmplitudeView(coords=self._get_amplitudes)
 
     # Probe view
     # -------------------------------------------------------------------------
 
-    def add_probe_view(self, gui):
-        v = ProbeView(positions=self.model.channel_positions,
-                      best_channels=self.get_best_channels,
-                      )
-        v.attach(gui)
-        return v
+    def create_probe_view(self):
+        return ProbeView(
+            positions=self.model.channel_positions,
+            best_channels=self.get_best_channels,
+        )
 
     # GUI
     # -------------------------------------------------------------------------
@@ -565,40 +593,12 @@ class TemplateController(object):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
+                  view_creator=self.view_creator,
+                  view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)
-
         self.supervisor.attach(gui)
 
-        self.add_waveform_view(gui)
-
-        if self.model.traces is not None:
-            self.add_trace_view(gui)
-        else:
-            logger.warning(
-                "The raw data file is not available, the trace view won't be displayed.")
-
-        if self.model.features is not None:
-            self.add_feature_view(gui)
-        else:
-            logger.warning(
-                "Features file is not available, the feature view won't be displayed.")
-
-        if self.model.template_features is not None:
-            self.add_template_feature_view(gui)
-        else:
-            logger.warning(
-                "Template feature file is not available, "
-                "the template feature view won't be displayed.")
-
-        self.add_correlogram_view(gui)
-
-        if self.model.amplitudes is not None:
-            self.add_amplitude_view(gui)
-        else:
-            logger.warning(
-                "The amplitude file is not available, the amplitude view won't be displayed.")
-
-        self.add_probe_view(gui)
+        gui.create_views()
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)

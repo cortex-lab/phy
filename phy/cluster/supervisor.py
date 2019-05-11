@@ -19,7 +19,7 @@ from .clustering import Clustering
 
 from phylib.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
-from phy.gui.qt import _block, set_busy
+from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
@@ -890,3 +890,4 @@ class Supervisor(object):
         _block(lambda: self.task_logger.has_finished() and not self._is_busy)
         assert not self._is_busy
         # self.task_logger.show_history()
+        _wait(50)

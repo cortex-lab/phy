@@ -20,8 +20,9 @@ from phylib.conftest import *  # noqa
 # Common fixtures
 #------------------------------------------------------------------------------
 
-logging.getLogger('phy').setLevel(10)
-add_default_handler(5)
+logger = logging.getLogger('phy')
+logger.setLevel(10)
+add_default_handler(5, logger=logger)
 
 # Fix the random seed in the tests.
 np.random.seed(2015)

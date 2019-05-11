@@ -109,7 +109,8 @@ def _copy_gui_state(gui_name, module_name, config_dir=None):
 @click.pass_context
 def phycli(ctx, pdb=None, ipython=None, prof=None, lprof=None):
     """Ephys data tool."""
-    add_default_handler(level='DEBUG' if DEBUG else 'INFO')
+    add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phy'))
+    add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phylib'))
 
 
 #------------------------------------------------------------------------------
@@ -122,6 +123,10 @@ def phycli(ctx, pdb=None, ipython=None, prof=None, lprof=None):
 def cli_template_gui(ctx, params_path):
     """Launch the template GUI on a params.py file."""
     from .template.gui import template_gui
+    prof = __builtins__.get('profile', None)
+    if prof:
+        from phy.utils.profiling import _profile
+        return _profile(prof, 'template_gui(params_path)', globals(), locals())
     template_gui(params_path)
 
 

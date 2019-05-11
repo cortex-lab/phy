@@ -84,6 +84,13 @@ class KwikController(object):
             self.cache_dir = op.join(self.cache_dir, str(cg))
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
+        self.view_creator = {
+            WaveformView: self.create_waveform_view,
+            TraceView: self.create_trace_view,
+            FeatureView: self.create_feature_view,
+            CorrelogramView: self.create_correlogram_view,
+        }
+
         self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
@@ -160,11 +167,6 @@ class KwikController(object):
         def spikes_per_cluster(cluster_id):
             return self.supervisor.clustering.spikes_per_cluster[cluster_id]
         return Selector(spikes_per_cluster)
-
-    def _add_view(self, gui, view):
-        view.attach(gui)
-        emit('add_view', gui, view)
-        return view
 
     # Model methods
     # -------------------------------------------------------------------------
@@ -247,18 +249,35 @@ class KwikController(object):
         b['alpha'] = 1.
         return b
 
-    def add_waveform_view(self, gui):
-        v = WaveformView(waveforms=self._get_waveforms,
-                         )
-        v = self._add_view(gui, v)
+    def create_waveform_view(self):
+        f = self._get_waveforms
+        v = WaveformView(waveforms=f)
+        v.shortcuts['toggle_mean_waveforms'] = 'm'
 
-        v.actions.separator()
+        v.state_attrs += ('show_what',)
+        funs = {
+            'waveforms': self._get_waveforms,
+            'mean_waveforms': self._get_mean_waveforms,
+        }
 
-        @v.actions.add(shortcut='m')
-        def toggle_mean_waveforms(checked):
-            f, g = self._get_waveforms, self._get_mean_waveforms
-            v.waveforms = f if v.waveforms == g else g
-            v.on_select()
+        # Add extra actions.
+        @connect(sender=v)
+        def on_view_actions_created(sender):
+            # NOTE: this callback function is called in WaveformView.attach().
+
+            # Initialize show_what if it was not set in the GUI state.
+            if not hasattr(v, 'show_what'):
+                v.show_what = 'waveforms'
+            # Set the waveforms function.
+            v.waveforms = funs[v.show_what]
+
+            @v.actions.add(checkable=True, checked=v.show_what == 'mean_waveforms')
+            def toggle_mean_waveforms(checked):
+                v.show_what = 'mean_waveforms' if checked else 'waveforms'
+                v.waveforms = funs[v.show_what]
+                v.on_select(cluster_ids=v.cluster_ids)
+
+            v.actions.separator()
 
         return v
 
@@ -295,11 +314,11 @@ class KwikController(object):
                      channel_ids=channel_ids,
                      )
 
-    def add_feature_view(self, gui):
-        v = FeatureView(features=self._get_features,
-                        attributes={'time': self._get_spike_times}
-                        )
-        return self._add_view(gui, v)
+    def create_feature_view(self):
+        return FeatureView(
+            features=self._get_features,
+            attributes={'time': self._get_spike_times}
+        )
 
     # Traces
     # -------------------------------------------------------------------------
@@ -347,7 +366,7 @@ class KwikController(object):
         n = len(spike_times)
         view.go_to(spike_times[(ind + delta) % n])
 
-    def add_trace_view(self, gui):
+    def create_trace_view(self):
         m = self.model
         v = TraceView(traces=self._get_traces,
                       n_channels=m.n_channels,
@@ -355,34 +374,37 @@ class KwikController(object):
                       duration=m.duration,
                       channel_vertical_order=self.channel_vertical_order,
                       )
-        self._add_view(gui, v)
 
-        v.actions.separator()
+        # Add extra actions.
+        @connect(sender=v)
+        def on_view_actions_created(sender):
 
-        @v.actions.add(shortcut='alt+pgdown')
-        def go_to_next_spike():
-            """Jump to the next spike from the first selected cluster."""
-            self._jump_to_spike(v, +1)
+            v.actions.separator()
 
-        @v.actions.add(shortcut='alt+pgup')
-        def go_to_previous_spike():
-            """Jump to the previous spike from the first selected cluster."""
-            self._jump_to_spike(v, -1)
+            @v.actions.add(shortcut='alt+pgdown')
+            def go_to_next_spike():
+                """Jump to the next spike from the first selected cluster."""
+                self._jump_to_spike(v, +1)
 
-        v.actions.separator()
+            @v.actions.add(shortcut='alt+pgup')
+            def go_to_previous_spike():
+                """Jump to the previous spike from the first selected cluster."""
+                self._jump_to_spike(v, -1)
 
-        @v.actions.add(shortcut='alt+s')
-        def toggle_highlighted_spikes(checked):
-            """Toggle between showing all spikes or selected spikes."""
-            self._show_all_spikes = checked
-            v.set_interval()
+            v.actions.separator()
 
-        @connect(sender=gui)
-        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
-            # Select the corresponding cluster.
-            self.supervisor.select([cluster_id])
-            # Update the trace view.
-            v.on_select([cluster_id])
+            @v.actions.add(shortcut='alt+s')
+            def toggle_highlighted_spikes(checked):
+                """Toggle between showing all spikes or selected spikes."""
+                self._show_all_spikes = checked
+                v.set_interval()
+
+            @connect
+            def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+                # Select the corresponding cluster.
+                self.supervisor.select([cluster_id])
+                # Update the trace view.
+                v.on_select([cluster_id])
 
         return v
 
@@ -401,12 +423,12 @@ class KwikController(object):
                             window_size=window_size,
                             )
 
-    def add_correlogram_view(self, gui):
+    def create_correlogram_view(self):
         m = self.model
-        v = CorrelogramView(correlograms=self._get_correlograms,
-                            sample_rate=m.sample_rate,
-                            )
-        return self._add_view(gui, v)
+        return CorrelogramView(
+            correlograms=self._get_correlograms,
+            sample_rate=m.sample_rate,
+        )
 
     # GUI
     # -------------------------------------------------------------------------
@@ -415,15 +437,12 @@ class KwikController(object):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.kwik_path,
                   config_dir=self.config_dir,
+                  view_creator=self.view_creator,
+                  view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)
-
         self.supervisor.attach(gui)
 
-        self.add_waveform_view(gui)
-        if self.model.traces is not None:
-            self.add_trace_view(gui)
-        self.add_feature_view(gui)
-        self.add_correlogram_view(gui)
+        gui.create_views()
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)
