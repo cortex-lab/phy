@@ -31,6 +31,7 @@ class AxisLocator(object):
     _default_steps = (1, 2, 2.5, 5, 10)
 
     def __init__(self, nbinsx=None, nbinsy=None, data_bounds=None):
+        """data_bounds is the initial bounds of the view in data coordinates."""
         self.data_bounds = data_bounds
         self._tr = Range(from_bounds=NDC, to_bounds=self.data_bounds)
         self._tri = self._tr.inverse()
@@ -52,6 +53,7 @@ class AxisLocator(object):
         return out[:nx, 0], out[nx:, 1]
 
     def set_view_bounds(self, view_bounds=None):
+        """Set the view bounds in NDC."""
         view_bounds = view_bounds or NDC
         x0, y0, x1, y1 = view_bounds
         dx = 2 * (x1 - x0)
@@ -111,13 +113,16 @@ class Axes(object):
     def __init__(self, data_bounds=None, color=None, show_x=True, show_y=True):
         self.show_x = show_x
         self.show_y = show_y
+        self.reset_data_bounds(data_bounds, do_update=False)
         self._create_visuals()
         self.color = color or self.default_color
-        self.reset(data_bounds=data_bounds)
         self._attached = None
 
-    def reset(self, data_bounds=None):
+    def reset_data_bounds(self, data_bounds, do_update=True):
         self.locator = AxisLocator(data_bounds=data_bounds)
+        self.locator.set_view_bounds(NDC)
+        if do_update:
+            self.update_visuals()
         self._last_log_zoom = (1, 1)
         self._last_pan = (0, 0)
 
@@ -133,10 +138,6 @@ class Axes(object):
             self.tyvisual = TextVisual()
             _fix_coordinate_in_visual(self.yvisual, 'x')
             _fix_coordinate_in_visual(self.tyvisual, 'x')
-
-    def set_bounds(self, bounds):
-        self.locator.set_view_bounds(bounds)
-        self.update_visuals()
 
     def update_visuals(self):
         # Get the text data.
@@ -169,13 +170,15 @@ class Axes(object):
             canvas.add_visual(self.yvisual, clearable=False)
             canvas.add_visual(self.tyvisual, clearable=False)
 
-        self.set_bounds(NDC)
+        self.locator.set_view_bounds(NDC)
+        self.update_visuals()
 
         @connect(sender=canvas)
         def on_resize(sender, w, h):
             nbinsx, nbinsy = get_nbins(w, h)
             self.locator.set_nbins(nbinsx, nbinsy)
-            self.set_bounds(canvas.panzoom.get_range())
+            self.locator.set_view_bounds(canvas.panzoom.get_range())
+            self.update_visuals()
 
         @connect(sender=canvas.panzoom)
         def on_zoom(sender, zoom):
@@ -183,7 +186,8 @@ class Axes(object):
             ix, iy = _quant_zoom(zx), _quant_zoom(zy)
             if (ix, iy) != self._last_log_zoom:
                 self._last_log_zoom = ix, iy
-                self.set_bounds(canvas.panzoom.get_range())
+                self.locator.set_view_bounds(canvas.panzoom.get_range())
+                self.update_visuals()
 
         @connect(sender=canvas.panzoom)
         def on_pan(sender, pan):
@@ -192,4 +196,5 @@ class Axes(object):
             tx, ty = int(px * zx), int(py * zy)
             if (tx, ty) != self._last_pan:
                 self._last_pan = tx, ty
-                self.set_bounds(canvas.panzoom.get_range())
+                self.locator.set_view_bounds(canvas.panzoom.get_range())
+                self.update_visuals()
