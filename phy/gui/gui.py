@@ -7,6 +7,8 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from collections import defaultdict
+from functools import partial
 import json
 import logging
 import os.path as op
@@ -107,6 +109,7 @@ class GUI(QMainWindow):
                  size=None,
                  name=None,
                  subtitle=None,
+                 view_creator=None,
                  **kwargs
                  ):
         # HACK to ensure that closeEvent is called only twice (seems like a
@@ -134,6 +137,10 @@ class GUI(QMainWindow):
 
         # Views,
         self._views = []
+        self._view_class_indices = defaultdict(int)  # Dictionary {view_cls: next_usable_index}
+
+        # View creator: dictionary {view_class: function_that_adds_view}
+        self.view_creator = view_creator or {}
 
         # Status bar.
         self._lock_status = False
@@ -236,9 +243,17 @@ class GUI(QMainWindow):
     def views(self):
         return self._views
 
+    @property
+    def view_count(self):
+        """Dictionary {view_class: n_views}."""
+        vc = defaultdict(int)
+        for v in self.views:
+            vc[v.__class__] += 1
+        return dict(vc)
+
     def list_views(self, cls):
         """Return the list of views from a given class."""
-        return [view for view in self._views if isinstance(view, cls)]
+        return [view for view in self._views if view.__class__ == cls]
 
     def get_view(self, cls, index=0):
         """Return a view from a given class."""
@@ -246,33 +261,62 @@ class GUI(QMainWindow):
         if index <= len(views) - 1:
             return views[index]
 
-    def view_index(self, view):
-        """Return the index of a given view."""
+    def _set_view_name(self, view):
+        """Set a unique name for a view: view class name, followed by the view index."""
+        assert view not in self._views
+        # Get all views of the same class.
+        cls = view.__class__
+        basename = cls.__name__
         views = self.list_views(view.__class__)
-        if view in views:
-            return views.index(view)
-
-    def view_name(self, view):
-        """Return the name of a view: view class name, followed by the view index."""
-        if view not in self._views:
-            return view.__class__.__name__
-        index = self.view_index(view)
-        assert index >= 0
-        if index == 0:
-            return view.__class__.__name__
+        if not views:
+            # If the view is the first of its class, just use the base name.
+            name = basename
         else:
-            return '%s (%d)' % (view.__class__.__name__, index)
+            # index is the next usable index for the view's class.
+            index = self._view_class_indices.get(cls, 0)
+            assert index >= 1
+            name = '%s (%d)' % (basename, index)
+        view.name = name
+        return name
 
-    def add_view(self,
-                 view,
-                 position=None,
-                 closable=False,
-                 floatable=True,
-                 floating=None):
+    def _create_and_add_view(self, view_cls):
+        fn = self.view_creator.get(view_cls, None)
+        if fn is None:
+            return
+        # Create the view with the view creation function.
+        view = fn()
+        # Attach the view to the GUI if it has an attach(gui) method,
+        # otherwise add the view.
+        if hasattr(view, 'attach'):
+            view.attach(self)
+        else:
+            self.add_view(view)
+        return view
+
+    def create_views(self, view_count):
+        """view_count is a dictionary {view_cls: n_views}."""
+        for view_cls, n_views in view_count.items():
+            if n_views <= 0:
+                continue
+            assert n_views >= 1
+            # Add "Add view" action.
+            first_view = self._create_and_add_view(view_cls)
+            actions = getattr(first_view, 'actions', None)
+            if not actions:
+                continue
+            actions.separator()
+            actions.add(
+                partial(self._create_and_add_view, view_cls), name='add_%s' % view_cls.__name__)
+            # Extra views.
+            for i in range(n_views - 1):
+                self._create_and_add_view(view_cls)
+
+    def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
         """Add a widget to the main window."""
 
+        name = self._set_view_name(view)
         self._views.append(view)
-        name = self.view_name(view)
+        self._view_class_indices[view.__class__] += 1
 
         # Get the Qt canvas for matplotlib/OpenGL views.
         widget = _try_get_matplotlib_canvas(view)
@@ -286,6 +330,7 @@ class GUI(QMainWindow):
         if floating is not None:
             dock_widget.setFloating(floating)
         dock_widget.view = view
+        view.dock_widget = dock_widget
 
         # Emit the close_view event when the dock widget is closed.
         @connect(sender=dock_widget)
@@ -383,12 +428,11 @@ class GUIState(Bunch):
 
     def get_view_state(self, view, gui):
         """Return the state of a view."""
-        name = gui.view_name(view)
-        return self.get(name, Bunch())
+        return self.get(view.name, Bunch())
 
     def update_view_state(self, view, state, gui):
         """Update the state of a view."""
-        name = gui.view_name(view)
+        name = view.name
         if name not in self:
             self[name] = Bunch()
         self[name].update(state)

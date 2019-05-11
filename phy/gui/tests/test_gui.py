@@ -9,7 +9,7 @@
 from pytest import raises
 
 from ..qt import Qt, QApplication, QWidget, QMessageBox
-from ..gui import (GUI, GUIState,
+from ..gui import (GUI, GUIState, Actions,
                    _try_get_matplotlib_canvas,
                    _try_get_opengl_canvas,
                    )
@@ -83,7 +83,6 @@ def test_gui_1(tempdir, qtbot):
     view.setFloating(False)
     gui.show()
 
-    assert gui.view_name(_create_canvas()) == 'BaseCanvas'
     assert gui.get_view(BaseCanvas)
     assert len(gui.list_views(BaseCanvas)) == 2
 
@@ -109,6 +108,62 @@ def test_gui_1(tempdir, qtbot):
 
     gui.default_actions.show_all_shortcuts()
     gui.default_actions.exit()
+
+
+def test_gui_creator(tempdir, qtbot):
+    class MyCanvas(BaseCanvas):
+        def __init__(self, *args, **kwargs):
+            super(MyCanvas, self).__init__(*args, **kwargs)
+            self.actions = Actions(gui, menu='&File')
+
+        def attach(self, gui):
+            gui.add_view(self)
+
+    class UnusedClass(BaseCanvas):
+        pass
+
+    def _create_my_canvas():
+        return MyCanvas()
+
+    # View creator.
+    vc = {BaseCanvas: _create_canvas, MyCanvas: _create_my_canvas}
+
+    gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir, view_creator=vc)
+    qtbot.addWidget(gui)
+
+    # Automatically create the views with the view counts.
+    gui.create_views({BaseCanvas: 1, MyCanvas: 2, UnusedClass: 0})
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    assert gui.view_count == {BaseCanvas: 1, MyCanvas: 2}
+    assert len(gui.list_views(BaseCanvas)) == 1
+
+    # Two MyCanvas views.
+    views = gui.list_views(MyCanvas)
+    assert len(views) == 2
+
+    add_action = views[0].actions.get('add_MyCanvas')
+
+    # Close the first dock widget.
+    views[0].dock_widget.toggleViewAction().activate(0)
+
+    # One remaining MyCanvas view.
+    views = gui.list_views(MyCanvas)
+    assert len(views) == 1
+    assert views[0].name == 'MyCanvas (1)'
+    assert gui.view_count == {BaseCanvas: 1, MyCanvas: 1}
+
+    # Add a new MyCanvas.
+    add_action.activate(0)
+    views = gui.list_views(MyCanvas)
+    assert len(views) == 2
+    assert views[0].name == 'MyCanvas (1)'
+    assert views[1].name == 'MyCanvas (2)'
+    assert gui.view_count == {BaseCanvas: 1, MyCanvas: 2}
+
+    # qtbot.stop()
+    gui.close()
 
 
 def test_gui_status_message(gui):
@@ -167,7 +222,6 @@ def test_gui_geometry_state(tempdir, qtbot):
 def test_gui_state_view(tempdir):
     view = Bunch(name='MyView0')
     gui = Bunch()
-    gui.view_name = lambda view: view.name
     state = GUIState(config_dir=tempdir)
     state.update_view_state(view, dict(hello='world'), gui)
     assert not state.get_view_state(Bunch(name='MyView'), gui)
