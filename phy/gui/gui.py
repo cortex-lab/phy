@@ -17,6 +17,7 @@ from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  QMessageBox, Qt, QSize, QMetaObject, _wait)
 from .actions import Actions, Snippets
 from phylib.utils import Bunch, _bunchify, emit, connect, _load_json, _save_json
+from phylib.utils._misc import _fullname, _load_from_fullname
 from phy.utils import _ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,15 @@ def _get_dock_position(position):
             }[position or 'right']
 
 
+def _encode_view_count(vc):
+    """Make view class type objects serializables via the fully qualified names."""
+    return {_fullname(view_cls): n_views for view_cls, n_views in vc.items()}
+
+
+def _decode_view_count(vc):
+    return {_load_from_fullname(view_cls_name): n_views for view_cls_name, n_views in vc.items()}
+
+
 class GUI(QMainWindow):
     """A Qt main window holding docking Qt.
 
@@ -139,8 +149,12 @@ class GUI(QMainWindow):
         self._views = []
         self._view_class_indices = defaultdict(int)  # Dictionary {view_cls: next_usable_index}
 
+        # Create the state.
+        self.state = GUIState(self.name, **kwargs)
+
         # View creator: dictionary {view_class: function_that_adds_view}
         self.view_creator = view_creator or {}
+        self._requested_view_count = _decode_view_count(self.state.get('view_count', {}))
 
         # Status bar.
         self._lock_status = False
@@ -156,9 +170,6 @@ class GUI(QMainWindow):
 
         # Create and attach snippets.
         self.snippets = Snippets(self)
-
-        # Create the state.
-        self.state = GUIState(self.name, **kwargs)
 
         @connect(sender=self)
         def on_show(sender):
@@ -245,6 +256,7 @@ class GUI(QMainWindow):
         logger.debug("Save the geometry state.")
         gs = self.save_geometry_state()
         self.state['geometry_state'] = gs
+        self.state['view_count'] = _encode_view_count(self.view_count)
         self.state.save()
 
     def show(self):
@@ -312,9 +324,9 @@ class GUI(QMainWindow):
             self.add_view(view)
         return view
 
-    def create_views(self, view_count):
+    def create_views(self):
         """view_count is a dictionary {view_cls: n_views}."""
-        for view_cls, n_views in view_count.items():
+        for view_cls, n_views in self._requested_view_count.items():
             if n_views <= 0:
                 continue
             assert n_views >= 1
@@ -445,11 +457,11 @@ class GUIState(Bunch):
         _ensure_dir_exists(op.join(self.config_dir, self.name))
         self.load()
 
-    def get_view_state(self, view, gui):
+    def get_view_state(self, view):
         """Return the state of a view."""
         return self.get(view.name, Bunch())
 
-    def update_view_state(self, view, state, gui):
+    def update_view_state(self, view, state):
         """Update the state of a view."""
         name = view.name
         if name not in self:
