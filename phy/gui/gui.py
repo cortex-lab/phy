@@ -301,6 +301,9 @@ class GUI(QMainWindow):
             return
         # Create the view with the view creation function.
         view = fn()
+        if view is None:  # pragma: no cover
+            logger.warning("Could not create view %s.", view_cls.__name__)
+            return
         # Attach the view to the GUI if it has an attach(gui) method,
         # otherwise add the view.
         if hasattr(view, 'attach'):
@@ -359,6 +362,14 @@ class GUI(QMainWindow):
         if name not in self._menus:
             self._menus[name] = self.menuBar().addMenu(name)
         return self._menus[name]
+
+    def remove_menu(self, name):
+        """Remove a menu."""
+        if name in self._menus:
+            menu = self._menus[name]
+            menu.clear()
+            menu.setVisible(False)
+            self.menuBar().removeAction(menu.menuAction())
 
     def dialog(self, message):
         """Show a message in a dialog box."""
