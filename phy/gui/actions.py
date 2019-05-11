@@ -154,7 +154,7 @@ def _create_qaction(
         gui, name, callback, shortcut, docstring=None,
         checkable=False, checked=False, prompt=False, n_args=None, alias=''):
     # Create the QAction instance.
-    action = QAction(name.capitalize().replace('_', ' '), gui)
+    action = QAction(name.replace('_', ' ').capitalize(), gui)
 
     # Show an input dialog if there are args.
     title = getattr(callback, '__name__', 'action')
