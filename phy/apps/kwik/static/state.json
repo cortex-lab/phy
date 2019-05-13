@@ -1,31 +1,70 @@
 {
   "ClusterView": {
-    "quality": "n_spikes",
-    "similarity": "closest_clusters"
+    "current_sort": [
+      "quality",
+      "desc"
+    ]
   },
-  "CorrelogramView0": {
+  "CorrelogramView": {
+    "auto_update": true,
     "bin_size": 0.001,
-    "excerpt_size": 10000,
-    "n_excerpts": 100,
-    "uniform_normalization": true,
+    "uniform_normalization": false,
     "window_size": 0.05
   },
-  "FeatureView0": {
-    "scaling": 2.0736
+  "FeatureView": {
+    "auto_update": true,
+    "fixed_channels": false,
+    "scaling": 0.0003937371740721254
   },
-  "TraceView0": {
-    "origin": null
+  "TraceView": {
+    "auto_update": false,
+    "do_show_labels": true,
+    "interval": [
+      5.77845,
+      5.86035
+    ],
+    "origin": null,
+    "scaling": 6.115909044841463,
+    "show_all_spikes": true
   },
-  "WaveformView0": {
-    "do_zoom_on_channels": true,
-    "overlap": false
+  "TraceView (1)": {
+    "auto_update": false,
+    "do_show_labels": true,
+    "interval": [
+      4.875,
+      5.125
+    ],
+    "origin": null,
+    "scaling": 1.0,
+    "show_all_spikes": false
+  },
+  "WaveformView": {
+    "auto_update": true,
+    "box_scaling": [
+      207.96505671840671,
+      52.04890192270895
+    ],
+    "do_show_labels": true,
+    "overlap": false,
+    "probe_scaling": [
+      142.04293198443187,
+      49.785181124993684
+    ],
+    "show_what": "waveforms"
   },
   "geometry_state": {
     "geometry": {
-      "__qbytearray__": "QWRuUXl3QUJBQUFBQUFBM0FBQUFEZ0FBQnNvQUFBUDRBQUFBUVFBQUFEUUFBQWJBQUFBRDdnQUFBQUFBQUE9PQ=="
+      "__qbytearray__": "QWRuUXl3QUNBQUFBQUFBQUFBQUFBQUFBRHY4QUFBaHZBQUFIaFFBQUJFUUFBQTcvQUFBSVJnQUFBQUFBQkFBQUR3QT0="
     },
     "state": {
-      "__qbytearray__": "QUFBQS93QUFBQUQ5QUFBQUFRQUFBQUVBQUFhQUFBQURqUHdDQUFBQUFmd0FBQUFaQUFBRGpBQUFBRmNBLy8vLy9BRUFBQUFEL0FBQUFBQUFBQWFBQUFBQXRBRC8vLy84QWdBQUFBTDhBQUFBR1FBQUE0d0FBQUJYQVAvLy8vd0JBQUFBQS93QUFBQUFBQUFCU1FBQUFEZ0EvLy8vL0FJQUFBQUQrd0FBQUJZQVF3QnNBSFVBY3dCMEFHVUFjZ0JXQUdrQVpRQjNBUUFBQUJrQUFBRU1BQUFBR1FELy8vLzdBQUFBSEFCVEFHa0FiUUJwQUd3QVlRQnlBR2tBZEFCNUFGWUFhUUJsQUhjQkFBQUJLd0FBQVlRQUFBQVpBUC8vLy9zQUFBQWdBRU1BYndCeUFISUFaUUJzQUc4QVp3QnlBR0VBYlFCV0FHa0FaUUIzQURBQkFBQUN0UUFBQVBBQUFBQVpBUC8vLy93QUFBRlBBQUFETUFBQUFEZ0EvLy8vL0FJQUFBQUMrd0FBQUJnQVJnQmxBR0VBZEFCMUFISUFaUUJXQUdrQVpRQjNBREFCQUFBQUdRQUFBaGdBQUFBWkFQLy8vL3NBQUFBVUFGUUFjZ0JoQUdNQVpRQldBR2tBWlFCM0FEQUJBQUFDTndBQUFXNEFBQUFaQVAvLy8vc0FBQUFhQUZjQVlRQjJBR1VBWmdCdkFISUFiUUJXQUdrQVpRQjNBREFCQUFBRWhRQUFBZnNBQUFBNEFQLy8vL3NBQUFBZ0FFTUFid0J5QUhJQVpRQnNBRzhBWndCeUFHRUFiUUJXQUdrQVpRQjNBREVCQUFBQ3B3QUFBUDRBQUFBQUFBQUFBUHdBQUFGTUFBQUROZ0FBQUFBQS8vLy8vQUlBQUFBQyt3QUFBQmdBUmdCbEFHRUFkQUIxQUhJQVpRQldBR2tBWlFCM0FERUJBQUFBR1FBQUFvUUFBQUFBQUFBQUFQc0FBQUFVQUZRQWNnQmhBR01BWlFCV0FHa0FaUUIzQURFQkFBQUNvd0FBQVFJQUFBQUFBQUFBQVBzQUFBQWFBRmNBWVFCMkFHVUFaZ0J2QUhJQWJRQldBR2tBWlFCM0FERUJBQUFFaUFBQUFmZ0FBQUFBQUFBQUFBQUFBQUFBQUFPTUFBQUFCQUFBQUFRQUFBQUlBQUFBQ1B3QUFBQUE="
+      "__qbytearray__": "QUFBQS93QUFBQUQ5QUFBQUFnQUFBQUFBQUFkNkFBQUlLdndCQUFBQUF2d0FBQUFBQUFBRFBnQUFBRlFBLy8vLy9BSUFBQUFEK3dBQUFCWUFRd0JzQUhVQWN3QjBBR1VBY2dCV0FHa0FaUUIzQVFBQUFDTUFBQU80QUFBQUlnRC8vLy83QUFBQUhBQlRBR2tBYlFCcEFHd0FZUUJ5QUdrQWRBQjVBRllBYVFCbEFIY0JBQUFENXdBQUFpNEFBQUFpQVAvLy8vc0FBQUFlQUVNQWJ3QnlBSElBWlFCc0FHOEFad0J5QUdFQWJRQldBR2tBWlFCM0FRQUFCaUVBQUFJc0FBQUFJZ0QvLy8vN0FBQUFFZ0JVQUhJQVlRQmpBR1VBVmdCcEFHVUFkd0VBQUFOS0FBQUVNQUFBQUZRQS8vLy9BQUFBQVFBQUIzb0FBQWdxL0FFQUFBQUMrd0FBQUJnQVZ3QmhBSFlBWlFCbUFHOEFjZ0J0QUZZQWFRQmxBSGNCQUFBSGhnQUFBN2NBQUFCVUFQLy8vL3NBQUFBV0FFWUFaUUJoQUhRQWRRQnlBR1VBVmdCcEFHVUFkd0VBQUF0SkFBQUR0d0FBQUZRQS8vLy9BQUFBQUFBQUNDb0FBQUFFQUFBQUJBQUFBQWdBQUFBSS9BQUFBQUE9"
     }
+  },
+  "view_count": {
+    "phy.cluster.supervisor.ClusterView": 1,
+    "phy.cluster.supervisor.SimilarityView": 1,
+    "phy.cluster.views.correlogram.CorrelogramView": 1,
+    "phy.cluster.views.feature.FeatureView": 1,
+    "phy.cluster.views.trace.TraceView": 1,
+    "phy.cluster.views.waveform.WaveformView": 1
   }
-}

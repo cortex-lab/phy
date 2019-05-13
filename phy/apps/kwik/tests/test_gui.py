@@ -15,7 +15,6 @@ from pytest import fixture
 from phylib.io.datasets import download_test_file
 from phylib.utils import connect, reset
 from phylib.utils.testing import captured_output
-from phy.apps import _copy_gui_state
 from phy.cluster.views import WaveformView, TraceView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press
@@ -30,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 @fixture
 def controller(tempdir):
-    _copy_gui_state('KwikGUI', 'kwik', config_dir=tempdir)
     # Download the dataset.
     paths = list(map(download_test_file, ('kwik/hybrid_10sec.kwik',
                                           'kwik/hybrid_10sec.kwx',

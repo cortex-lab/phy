@@ -8,9 +8,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os
-import os.path as op
-import shutil
 import sys
 from traceback import format_exception
 
@@ -81,22 +78,6 @@ def _add_log_file(filename):
                            datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logging.getLogger('phy').addHandler(handler)
-
-
-def _copy_gui_state(gui_name, module_name, config_dir=None):
-    """Copy the state.json file."""
-    config_dir = config_dir or op.join(op.realpath(op.expanduser('~')), '.phy')
-    gui_dir = op.join(config_dir, gui_name)
-    if not op.exists(gui_dir):
-        os.makedirs(gui_dir)
-    # Create the script if it doesn't already exist.
-    path = op.join(gui_dir, 'state.json')
-    if op.exists(path):
-        return
-    curdir = op.dirname(op.realpath(__file__))
-    from_path = op.join(curdir, '../apps', module_name, 'static', 'state.json')
-    logger.debug("Copy %s to %s" % (from_path, path))
-    shutil.copy(from_path, path)
 
 
 #------------------------------------------------------------------------------
