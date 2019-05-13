@@ -9,9 +9,12 @@
 
 from collections import defaultdict
 from functools import partial
+import inspect
 import json
 import logging
 import os.path as op
+from pathlib import Path
+import shutil
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  QMessageBox, Qt, QSize, QMetaObject, _wait)
@@ -151,7 +154,8 @@ class GUI(QMainWindow):
         self._view_class_indices = defaultdict(int)  # Dictionary {view_cls: next_usable_index}
 
         # Create the state.
-        self.state = GUIState(self.name, **kwargs)
+        default_state_path = kwargs.pop('default_state_path', _get_default_state_path(self))
+        self.state = GUIState(self.name, default_state_path=default_state_path, **kwargs)
 
         # View creator: dictionary {view_class: function_that_adds_view}
         self.view_creator = view_creator or {}
@@ -445,6 +449,14 @@ class GUI(QMainWindow):
 # GUI state, creator
 # -----------------------------------------------------------------------------
 
+def _get_default_state_path(gui):
+    """Return the path to the default state.json for a given GUI."""
+    gui_path = Path(inspect.getfile(gui.__class__))
+    path = gui_path.parent / 'static' / 'state.json'
+    print(path)
+    return path
+
+
 class GUIState(Bunch):
     """Represent the state of the GUI: positions of the views and
     all parameters associated to the GUI and views.
@@ -452,11 +464,14 @@ class GUIState(Bunch):
     This is automatically loaded from the configuration directory.
 
     """
-    def __init__(self, name='GUI', config_dir=None, **kwargs):
+    def __init__(self, name='GUI', default_state_path=None, config_dir=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
         self.name = name
-        self.config_dir = config_dir or phy_config_dir()
-        _ensure_dir_exists(op.join(self.config_dir, self.name))
+        self.config_dir = Path(config_dir or phy_config_dir())
+        if not default_state_path:
+            logger.warning("The default state path %s does not exist.", default_state_path)
+        self.default_state_path = default_state_path
+        _ensure_dir_exists(self.path.parent)
         self.load()
 
     def get_view_state(self, view):
@@ -473,17 +488,24 @@ class GUIState(Bunch):
 
     @property
     def path(self):
-        return op.join(self.config_dir, self.name, 'state.json')
+        return self.config_dir / self.name / 'state.json'
 
     def load(self):
         """Load the state from the JSON file in the config dir."""
-        if not op.exists(self.path):
-            logger.debug("The GUI state file `%s` doesn't exist.", self.path)
-            # TODO: create the default state.
-            return
+        if not self.path.exists():
+            if self.default_state_path and op.exists(self.default_state_path):
+                logger.debug(
+                    "The GUI state file `%s` doesn't exist, creating a default one...", self.path)
+                shutil.copy(self.default_state_path, self.path)
+                logger.info("Copied %s to %s.", self.default_state_path, self.path)
+            else:
+                logger.debug(
+                    "Could not copy non-existing default state file %s.", self.default_state_path)
+                return
         assert op.exists(self.path)
         logger.debug("Load the GUI state from `%s`.", self.path)
         try:
+            logger.debug("Load %s for GUIState.", self.path)
             data = _load_json(self.path)
         except json.decoder.JSONDecodeError as e:  # pragma: no cover
             logger.warning("Error decoding JSON: %s", e)
@@ -493,5 +515,7 @@ class GUIState(Bunch):
     def save(self):
         """Save the state to the JSON file in the config dir."""
         logger.debug("Save the GUI state to `%s`.", self.path)
-        data = {k: v for k, v in self.items() if k not in ('config_dir', 'name')}
+        # Fields to skip when saving.
+        unsaved = ('config_dir', 'name', 'default_state_path')
+        data = {k: v for k, v in self.items() if k not in unsaved}
         _save_json(self.path, data)
