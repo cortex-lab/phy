@@ -7,7 +7,10 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import Mapping
+try:  # pragma: no cover
+    from collections.abc import Mapping  # noqa
+except ImportError:  # pragma: no cover
+    from collections import Mapping  # noqa
 import inspect
 import json
 import logging

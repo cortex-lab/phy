@@ -66,7 +66,11 @@ def test_trace_view(qtbot, tempdir, gui):
             out.waveforms.append(d)
         return out
 
+    def get_spike_times():
+        return st
+
     v = TraceView(traces=get_traces,
+                  spike_times=get_spike_times,
                   n_channels=nc,
                   sample_rate=sr,
                   duration=duration,
@@ -99,7 +103,13 @@ def test_trace_view(qtbot, tempdir, gui):
     qtbot.wait(1)
 
     v.go_right()
-    #assert v.time == .175
+    ac(v.time, .150)
+    qtbot.wait(1)
+
+    v.go_to_next_spike()
+    qtbot.wait(1)
+
+    v.go_to_previous_spike()
     qtbot.wait(1)
 
     # Change interval size.
@@ -124,6 +134,9 @@ def test_trace_view(qtbot, tempdir, gui):
     v.go_right()
     v.toggle_auto_update(True)
     assert v.do_show_labels
+    qtbot.wait(1)
+
+    v.toggle_highlighted_spikes(True)
     qtbot.wait(1)
 
     # Change channel scaling.

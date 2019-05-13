@@ -92,19 +92,23 @@ class TraceView(ManualClusteringView):
         'toggle_show_labels': 'alt+l',
         'widen': 'alt+-',
         'narrow': 'alt++',
+        'go_to_next_spike': 'alt+pgdown',
+        'go_to_previous_spike': 'alt+pgup',
+        'toggle_highlighted_spikes': 'alt+s',
     }
 
     def __init__(self,
                  traces=None,
                  sample_rate=None,
+                 spike_times=None,  # function that returns spike times for the selected clusters
                  duration=None,
                  n_channels=None,
                  channel_vertical_order=None):
 
         self.do_show_labels = True
+        self.show_all_spikes = False
 
-        # traces is a function interval => [traces]
-        # spikes is a function interval => [Bunch(...)]
+        self.get_spike_times = spike_times
 
         # Sample rate.
         assert sample_rate > 0
@@ -133,7 +137,7 @@ class TraceView(ManualClusteringView):
 
         # Initialize the view.
         super(TraceView, self).__init__()
-        self.state_attrs += ('scaling', 'origin', 'interval', 'do_show_labels')
+        self.state_attrs += ('scaling', 'origin', 'interval', 'do_show_labels', 'show_all_spikes')
         self.local_state_attrs += ('interval', 'scaling')
 
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
@@ -306,6 +310,8 @@ class TraceView(ManualClusteringView):
         """Attach the view to the GUI."""
         super(TraceView, self).attach(gui)
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
+        self.actions.add(
+            self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes)
         self.actions.separator()
         self.actions.add(self.go_to, alias='tg')
         self.actions.separator()
@@ -318,6 +324,10 @@ class TraceView(ManualClusteringView):
         self.actions.separator()
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
+        self.actions.separator()
+        self.actions.add(self.go_to_next_spike)
+        self.actions.add(self.go_to_previous_spike)
+        self.actions.separator()
 
         # Default: freeze the view for performance reasons.
         # self.actions.get('toggle_auto_update').trigger()
@@ -391,6 +401,26 @@ class TraceView(ManualClusteringView):
         start, end = self._interval
         delay = (end - start) * .1
         self.shift(-delay)
+
+    def _jump_to_spike(self, delta=+1):
+        """Jump to next or previous spike from the selected clusters."""
+        spike_times = self.get_spike_times()
+        ind = np.searchsorted(spike_times, self.time)
+        n = len(spike_times)
+        self.go_to(spike_times[(ind + delta) % n])
+
+    def go_to_next_spike(self, ):
+        """Jump to the next spike from the first selected cluster."""
+        self._jump_to_spike(+1)
+
+    def go_to_previous_spike(self, ):
+        """Jump to the previous spike from the first selected cluster."""
+        self._jump_to_spike(-1)
+
+    def toggle_highlighted_spikes(self, checked):
+        """Toggle between showing all spikes or selected spikes."""
+        self.show_all_spikes = checked
+        self.set_interval()
 
     def widen(self):
         """Increase the interval size."""
