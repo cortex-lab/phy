@@ -119,6 +119,7 @@ class GUI(QMainWindow):
                  subtitle=None,
                  view_creator=None,
                  view_count=None,
+                 config_dir=None,
                  **kwargs
                  ):
         # HACK to ensure that closeEvent is called only twice (seems like a
@@ -149,7 +150,7 @@ class GUI(QMainWindow):
         self._view_class_indices = defaultdict(int)  # Dictionary {view_cls: next_usable_index}
 
         # Create the GUI state.
-        state_path = _gui_state_path(self.name, config_dir=kwargs.pop('config_dir', None))
+        state_path = _gui_state_path(self.name, config_dir=config_dir)
         default_state_path = kwargs.pop('default_state_path', _get_default_state_path(self))
         self.state = GUIState(state_path, default_state_path=default_state_path, **kwargs)
 
