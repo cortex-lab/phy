@@ -7,19 +7,16 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os
-import os.path as op
-import shutil
 
 from pytest import raises
 
 from ..qt import Qt, QApplication, QWidget, QMessageBox
-from ..gui import (GUI, GUIState, Actions,
+from ..gui import (GUI, Actions,
                    _try_get_matplotlib_canvas,
                    _try_get_opengl_canvas,
                    )
 from phy.plot import BaseCanvas
-from phylib.utils import Bunch, connect, unconnect
+from phylib.utils import connect, unconnect
 
 logger = logging.getLogger(__name__)
 
@@ -222,28 +219,3 @@ def test_gui_geometry_state(tempdir, qtbot):
 
     gui.show()
     gui.close()
-
-
-#------------------------------------------------------------------------------
-# Test GUI state
-#------------------------------------------------------------------------------
-
-def test_gui_state_view_1(tempdir):
-    view = Bunch(name='MyView0')
-    path = op.join(tempdir, 'GUI/state.json')
-    state = GUIState(path)
-    state.update_view_state(view, dict(hello='world'))
-    assert not state.get_view_state(Bunch(name='MyView'))
-    assert not state.get_view_state(Bunch(name='MyView (1)'))
-    assert state.get_view_state(view) == Bunch(hello='world')
-    state.save()
-
-    # Copy the state.json to a "default" location.
-    default_path = op.join(tempdir, 'state.json')
-    shutil.copy(state._path, default_path)
-    os.remove(state._path)
-
-    logger.info("Create new GUI state.")
-    # The default state.json should be automatically copied and loaded.
-    state = GUIState(path, default_state_path=default_path)
-    assert state.MyView0.hello == 'world'
