@@ -143,11 +143,11 @@ class FeatureView(ManualClusteringView):
         masks = bunch.get('masks', None)
         assert dim not in self.attributes  # This is called only on PC data.
         s = 'ABCDEFGHIJ'
-        # Channel relative index.
+        # Channel relative index, typically just 0 or 1.
         c_rel = int(dim[:-1])
         # Get the channel_id from the currently-selected channels.
         channel_id = self.channel_ids[c_rel % len(self.channel_ids)]
-        # Skup the plot if the channel id is not displayed.
+        # Skip the plot if the channel id is not displayed.
         if channel_id not in bunch.channel_ids:  # pragma: no cover
             return None
         # Get the column index of the current channel in data.
@@ -177,7 +177,8 @@ class FeatureView(ManualClusteringView):
             px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
             py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
             # Skip empty data.
-            if px is None or py is None:
+            if px is None or py is None:  # pragma: no cover
+                logger.warning("Skipping empty data for cluster %d.", cluster_id)
                 return
             assert px.data.shape == py.data.shape
             xmin, xmax = self._get_axis_bounds(dim_x, px)
@@ -265,7 +266,17 @@ class FeatureView(ManualClusteringView):
 
         # Choose the channels based on the first selected cluster.
         channel_ids = list(bunchs[0].channel_ids)
-        assert len(channel_ids)
+        common_channels = list(channel_ids)
+        # Intersection (with order kept) of channels belonging to all clusters.
+        for bunch in bunchs:
+            common_channels = [c for c in bunch.channel_ids if c in common_channels]
+        # The selected channels will be (1) the channels common to all clusters, followed
+        # by (2) remaining channels from the first cluster (excluding those already selected
+        # in (1)).
+        n = len(channel_ids)
+        not_common_channels = [c for c in channel_ids if c not in common_channels]
+        channel_ids = common_channels + not_common_channels[:n - len(common_channels)]
+        assert len(channel_ids) > 0
 
         # Choose the channels automatically unless fixed_channels is set.
         if (not fixed_channels or self.channel_ids is None):

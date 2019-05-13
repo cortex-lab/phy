@@ -684,7 +684,7 @@ class Supervisor(object):
             return
         self._is_busy = busy
         # Set the busy cursor.
-        logger.log(10, "GUI is %sbusy" % ('' if busy else 'not '))
+        logger.log(5, "GUI is %sbusy" % ('' if busy else 'not '))
         set_busy(busy)
         # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)
