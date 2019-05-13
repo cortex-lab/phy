@@ -149,7 +149,7 @@ class FeatureView(ManualClusteringView):
         channel_id = self.channel_ids[c_rel % len(self.channel_ids)]
         # Skip the plot if the channel id is not displayed.
         if channel_id not in bunch.channel_ids:  # pragma: no cover
-            return None
+            return Bunch(data=np.zeros((bunch.data.shape[0],)))
         # Get the column index of the current channel in data.
         c = list(bunch.channel_ids).index(channel_id)
         # Principal component: A=0, B=1, etc.
@@ -164,7 +164,7 @@ class FeatureView(ManualClusteringView):
         """Return the min/max of an axis."""
         if dim in self.attributes:
             # Attribute: specified lim, or compute the min/max.
-            vmin, vmax = bunch['lim']
+            vmin, vmax = bunch.get('lim', (0, 0))
             assert vmin is not None
             assert vmax is not None
             return vmin, vmax
