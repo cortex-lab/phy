@@ -96,8 +96,6 @@ class KwikController(object):
         self.selector = self._set_selector()
         self.color_selector = ColorSelector()
 
-        self._show_all_spikes = False
-
         attach_plugins(self, plugins=kwargs.get('plugins', None),
                        config_dir=config_dir)
 
@@ -347,14 +345,12 @@ class KwikController(object):
                                        color_selector=self.color_selector,
                                        n_samples_waveforms=ns,
                                        get_best_channels=gbc,
-                                       show_all_spikes=self._show_all_spikes,
                                        ):
             b.channel_labels = m.channel_order[b.channel_ids]
             out.waveforms.append(b)
         return out
 
-    def _jump_to_spike(self, view, delta=+1):
-        """Jump to next or previous spike from the selected clusters."""
+    def _trace_spike_times(self):
         m = self.model
         cluster_ids = self.supervisor.selected
         if len(cluster_ids) == 0:
@@ -362,49 +358,29 @@ class KwikController(object):
         spc = self.supervisor.clustering.spikes_per_cluster
         spike_ids = spc[cluster_ids[0]]
         spike_times = m.spike_times[spike_ids]
-        ind = np.searchsorted(spike_times, view.time)
-        n = len(spike_times)
-        view.go_to(spike_times[(ind + delta) % n])
+        return spike_times
 
     def create_trace_view(self):
         m = self.model
         v = TraceView(traces=self._get_traces,
+                      spike_times=self._trace_spike_times,
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
                       channel_vertical_order=self.channel_vertical_order,
                       )
 
-        # Add extra actions.
-        @connect(sender=v)
-        def on_view_actions_created(sender):
+        # # Update the get_traces() function with show_all_spikes.
+        # def get_traces(interval):
+        #     return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
+        # v.traces = get_traces
 
-            v.actions.separator()
-
-            @v.actions.add(shortcut='alt+pgdown')
-            def go_to_next_spike():
-                """Jump to the next spike from the first selected cluster."""
-                self._jump_to_spike(v, +1)
-
-            @v.actions.add(shortcut='alt+pgup')
-            def go_to_previous_spike():
-                """Jump to the previous spike from the first selected cluster."""
-                self._jump_to_spike(v, -1)
-
-            v.actions.separator()
-
-            @v.actions.add(shortcut='alt+s')
-            def toggle_highlighted_spikes(checked):
-                """Toggle between showing all spikes or selected spikes."""
-                self._show_all_spikes = checked
-                v.set_interval()
-
-            @connect
-            def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
-                # Select the corresponding cluster.
-                self.supervisor.select([cluster_id])
-                # Update the trace view.
-                v.on_select([cluster_id])
+        @connect
+        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+            # Select the corresponding cluster.
+            self.supervisor.select([cluster_id])
+            # Update the trace view.
+            v.on_select([cluster_id])
 
         return v
 

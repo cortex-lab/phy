@@ -17,7 +17,7 @@ import numpy as np
 from phylib.io.array import Selector
 from phylib.io.model import TemplateModel, from_sparse
 from phylib.stats import correlograms, firing_rate
-from phylib.utils import Bunch, emit, connect
+from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._color import ColorSelector
 from phylib.utils._misc import _read_python
 
@@ -457,8 +457,7 @@ class TemplateController(object):
             out.waveforms.extend([b, residual])
         return out
 
-    def _jump_to_spike(self, view, delta=+1):
-        """Jump to next or previous spike from the selected clusters."""
+    def _trace_spike_times(self):
         m = self.model
         cluster_ids = self.supervisor.selected
         if len(cluster_ids) == 0:
@@ -466,9 +465,7 @@ class TemplateController(object):
         spc = self.supervisor.clustering.spikes_per_cluster
         spike_ids = spc[cluster_ids[0]]
         spike_times = m.spike_times[spike_ids]
-        ind = np.searchsorted(spike_times, view.time)
-        n = len(spike_times)
-        view.go_to(spike_times[(ind + delta) % n])
+        return spike_times
 
     def create_trace_view(self):
         if self.model.traces is None:
@@ -476,53 +473,24 @@ class TemplateController(object):
 
         m = self.model
         v = TraceView(traces=self._get_traces,
+                      spike_times=self._trace_spike_times,
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
                       channel_vertical_order=m.channel_vertical_order,
                       )
-        v.shortcuts['go_to_next_spike'] = 'alt+pgdown'
-        v.shortcuts['go_to_previous_spike'] = 'alt+pgup'
-        v.shortcuts['toggle_highlighted_spikes'] = 'alt+s'
-
-        v.show_all_spikes = False
-        v.state_attrs += ('show_all_spikes',)
 
         # Update the get_traces() function with show_all_spikes.
         def get_traces(interval):
             return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
         v.traces = get_traces
 
-        # Add extra actions.
         @connect(sender=v)
-        def on_view_actions_created(sender):
-
-            @v.actions.add()
-            def go_to_next_spike():
-                """Jump to the next spike from the first selected cluster."""
-                self._jump_to_spike(v, +1)
-
-            @v.actions.add()
-            def go_to_previous_spike():
-                """Jump to the previous spike from the first selected cluster."""
-                self._jump_to_spike(v, -1)
-
-            v.actions.separator()
-
-            @v.actions.add(checkable=True, checked=v.show_all_spikes)
-            def toggle_highlighted_spikes(checked):
-                """Toggle between showing all spikes or selected spikes."""
-                v.show_all_spikes = checked
-                v.set_interval()
-
-            @connect
-            def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
-                # Select the corresponding cluster.
-                self.supervisor.select([cluster_id])
-                # Update the trace view.
-                v.on_select([cluster_id])
-
-            v.actions.separator()
+        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+            # Select the corresponding cluster.
+            self.supervisor.select([cluster_id])
+            # Update the trace view.
+            v.on_select([cluster_id])
 
         return v
 
@@ -593,6 +561,7 @@ class TemplateController(object):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
+                  local_path=op.join(self.cache_dir, 'state.json'),
                   view_creator=self.view_creator,
                   view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)
@@ -600,9 +569,18 @@ class TemplateController(object):
 
         gui.create_views()
 
+        @connect(sender=gui)
+        def on_add_view(sender, view):
+            view.on_select(cluster_ids=self.supervisor.selected_clusters)
+
         # Save the memcache when closing the GUI.
         @connect(sender=gui)
         def on_close(sender):
+            unconnect(on_add_view)
+            # Gather all GUI state attributes from views that are local and thus need
+            # to be saved in the data directory.
+            gui.state._local_keys = set().union(
+                *(getattr(view, 'local_state_attrs', ()) for view in gui.views))
             self.context.save_memcache()
 
         emit('gui_ready', self, gui)
