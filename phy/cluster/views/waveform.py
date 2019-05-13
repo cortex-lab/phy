@@ -88,6 +88,7 @@ class WaveformView(ManualClusteringView):
         # Initialize the view.
         super(WaveformView, self).__init__()
         self.state_attrs += ('box_scaling', 'probe_scaling', 'overlap', 'do_show_labels')
+        self.local_state_attrs += ('box_scaling', 'probe_scaling')
 
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])

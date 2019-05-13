@@ -134,6 +134,7 @@ class TraceView(ManualClusteringView):
         # Initialize the view.
         super(TraceView, self).__init__()
         self.state_attrs += ('scaling', 'origin', 'interval', 'do_show_labels')
+        self.local_state_attrs += ('interval', 'scaling')
 
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
