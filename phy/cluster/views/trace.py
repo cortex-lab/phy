@@ -405,9 +405,10 @@ class TraceView(ManualClusteringView):
     def _jump_to_spike(self, delta=+1):
         """Jump to next or previous spike from the selected clusters."""
         spike_times = self.get_spike_times()
-        ind = np.searchsorted(spike_times, self.time)
-        n = len(spike_times)
-        self.go_to(spike_times[(ind + delta) % n])
+        if spike_times is not None and len(spike_times):
+            ind = np.searchsorted(spike_times, self.time)
+            n = len(spike_times)
+            self.go_to(spike_times[(ind + delta) % n])
 
     def go_to_next_spike(self, ):
         """Jump to the next spike from the first selected cluster."""
