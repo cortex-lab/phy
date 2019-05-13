@@ -47,6 +47,9 @@ class ManualClusteringView(object):
         # List of attributes to save in the GUI view state.
         self.state_attrs = ('auto_update',)
 
+        # List of attributes to save in the local GUI state as well.
+        self.local_state_attrs = ()
+
         # Attached GUI.
         self.gui = None
 

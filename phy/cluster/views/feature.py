@@ -88,6 +88,7 @@ class FeatureView(ManualClusteringView):
     def __init__(self, features=None, attributes=None):
         super(FeatureView, self).__init__()
         self.state_attrs += ('scaling', 'fixed_channels')
+        self.local_state_attrs += ('scaling',)
         self._scaling = None
 
         assert features
