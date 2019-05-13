@@ -63,9 +63,9 @@ def _filter_nested_dict(value, key=None, search_terms=None):
         dupe_node = {}
         for key, val in value.items():
             cur_node = _filter_nested_dict(val, key=key, search_terms=search_terms)
-            if cur_node:
+            if cur_node is not None and (not isinstance(cur_node, dict) or cur_node):
                 dupe_node[key] = cur_node
-        return dupe_node or {}
+        return dupe_node
 
 
 def _recursive_update(d, u):
