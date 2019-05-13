@@ -9,19 +9,14 @@
 
 from collections import defaultdict
 from functools import partial
-import inspect
-import json
 import logging
-import os.path as op
-from pathlib import Path
-import shutil
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  QMessageBox, Qt, QSize, QMetaObject, _wait)
+from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
-from phylib.utils import Bunch, _bunchify, emit, connect, _load_json, _save_json
+from phylib.utils import emit, connect
 from phylib.utils._misc import _fullname, _load_from_fullname
-from phy.utils import _ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -444,78 +439,3 @@ class GUI(QMainWindow):
             self.restoreGeometry((gs['geometry']))
         if gs.get('state', None):
             self.restoreState((gs['state']))
-
-
-# -----------------------------------------------------------------------------
-# GUI state, creator
-# -----------------------------------------------------------------------------
-
-def _get_default_state_path(gui):
-    """Return the path to the default state.json for a given GUI."""
-    gui_path = Path(inspect.getfile(gui.__class__))
-    path = gui_path.parent / 'static' / 'state.json'
-    return path
-
-
-def _gui_state_path(gui_name, config_dir=None):
-    """Return the path to the GUI state, given the GUI name and the config dir."""
-    return Path(config_dir or phy_config_dir()) / gui_name / 'state.json'
-
-
-class GUIState(Bunch):
-    """Represent the state of the GUI: positions of the views and
-    all parameters associated to the GUI and views.
-
-    This is automatically loaded from the configuration directory.
-
-    """
-    def __init__(self, path, default_state_path=None, **kwargs):
-        super(GUIState, self).__init__(**kwargs)
-        self._path = Path(path)
-        if not default_state_path:
-            logger.warning("The default state path %s does not exist.", default_state_path)
-        self._default_state_path = default_state_path
-        _ensure_dir_exists(self._path.parent)
-        self.load()
-
-    def get_view_state(self, view):
-        """Return the state of a view."""
-        return self.get(view.name, Bunch())
-
-    def update_view_state(self, view, state):
-        """Update the state of a view."""
-        name = view.name
-        if name not in self:
-            self[name] = Bunch()
-        self[name].update(state)
-        logger.debug("Update GUI state for %s", name)
-
-    def load(self):
-        """Load the state from the JSON file in the config dir."""
-        if not self._path.exists():
-            if self._default_state_path and op.exists(self._default_state_path):
-                logger.debug(
-                    "The GUI state file `%s` doesn't exist, creating a default one...", self._path)
-                shutil.copy(self._default_state_path, self._path)
-                logger.info("Copied %s to %s.", self._default_state_path, self._path)
-            else:
-                logger.debug(
-                    "Could not copy non-existing default state file %s.", self._default_state_path)
-                return
-        assert op.exists(self._path)
-        logger.debug("Load the GUI state from `%s`.", self._path)
-        try:
-            logger.debug("Load %s for GUIState.", self._path)
-            data = _load_json(self._path)
-        except json.decoder.JSONDecodeError as e:  # pragma: no cover
-            logger.warning("Error decoding JSON: %s", e)
-            data = {}
-        self.update(_bunchify(data))
-
-    def save(self):
-        """Save the state to the JSON file in the config dir."""
-        logger.debug("Save the GUI state to `%s`.", self._path)
-        # Fields to skip when saving.
-        unsaved = ('_path', '_default_state_path', 'config_dir')
-        data = {k: v for k, v in self.items() if k not in unsaved}
-        _save_json(self._path, data)
