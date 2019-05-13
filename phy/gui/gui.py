@@ -153,9 +153,10 @@ class GUI(QMainWindow):
         self._views = []
         self._view_class_indices = defaultdict(int)  # Dictionary {view_cls: next_usable_index}
 
-        # Create the state.
+        # Create the GUI state.
+        state_path = _gui_state_path(self.name, config_dir=kwargs.pop('config_dir', None))
         default_state_path = kwargs.pop('default_state_path', _get_default_state_path(self))
-        self.state = GUIState(self.name, default_state_path=default_state_path, **kwargs)
+        self.state = GUIState(state_path, default_state_path=default_state_path, **kwargs)
 
         # View creator: dictionary {view_class: function_that_adds_view}
         self.view_creator = view_creator or {}
@@ -453,8 +454,12 @@ def _get_default_state_path(gui):
     """Return the path to the default state.json for a given GUI."""
     gui_path = Path(inspect.getfile(gui.__class__))
     path = gui_path.parent / 'static' / 'state.json'
-    print(path)
     return path
+
+
+def _gui_state_path(gui_name, config_dir=None):
+    """Return the path to the GUI state, given the GUI name and the config dir."""
+    return Path(config_dir or phy_config_dir()) / gui_name / 'state.json'
 
 
 class GUIState(Bunch):
@@ -464,14 +469,13 @@ class GUIState(Bunch):
     This is automatically loaded from the configuration directory.
 
     """
-    def __init__(self, name='GUI', default_state_path=None, config_dir=None, **kwargs):
+    def __init__(self, path, default_state_path=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
-        self.name = name
-        self.config_dir = Path(config_dir or phy_config_dir())
+        self._path = Path(path)
         if not default_state_path:
             logger.warning("The default state path %s does not exist.", default_state_path)
-        self.default_state_path = default_state_path
-        _ensure_dir_exists(self.path.parent)
+        self._default_state_path = default_state_path
+        _ensure_dir_exists(self._path.parent)
         self.load()
 
     def get_view_state(self, view):
@@ -486,27 +490,23 @@ class GUIState(Bunch):
         self[name].update(state)
         logger.debug("Update GUI state for %s", name)
 
-    @property
-    def path(self):
-        return self.config_dir / self.name / 'state.json'
-
     def load(self):
         """Load the state from the JSON file in the config dir."""
-        if not self.path.exists():
-            if self.default_state_path and op.exists(self.default_state_path):
+        if not self._path.exists():
+            if self._default_state_path and op.exists(self._default_state_path):
                 logger.debug(
-                    "The GUI state file `%s` doesn't exist, creating a default one...", self.path)
-                shutil.copy(self.default_state_path, self.path)
-                logger.info("Copied %s to %s.", self.default_state_path, self.path)
+                    "The GUI state file `%s` doesn't exist, creating a default one...", self._path)
+                shutil.copy(self._default_state_path, self._path)
+                logger.info("Copied %s to %s.", self._default_state_path, self._path)
             else:
                 logger.debug(
-                    "Could not copy non-existing default state file %s.", self.default_state_path)
+                    "Could not copy non-existing default state file %s.", self._default_state_path)
                 return
-        assert op.exists(self.path)
-        logger.debug("Load the GUI state from `%s`.", self.path)
+        assert op.exists(self._path)
+        logger.debug("Load the GUI state from `%s`.", self._path)
         try:
-            logger.debug("Load %s for GUIState.", self.path)
-            data = _load_json(self.path)
+            logger.debug("Load %s for GUIState.", self._path)
+            data = _load_json(self._path)
         except json.decoder.JSONDecodeError as e:  # pragma: no cover
             logger.warning("Error decoding JSON: %s", e)
             data = {}
@@ -514,8 +514,8 @@ class GUIState(Bunch):
 
     def save(self):
         """Save the state to the JSON file in the config dir."""
-        logger.debug("Save the GUI state to `%s`.", self.path)
+        logger.debug("Save the GUI state to `%s`.", self._path)
         # Fields to skip when saving.
-        unsaved = ('config_dir', 'name', 'default_state_path')
+        unsaved = ('_path', '_default_state_path', 'config_dir')
         data = {k: v for k, v in self.items() if k not in unsaved}
-        _save_json(self.path, data)
+        _save_json(self._path, data)

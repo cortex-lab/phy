@@ -230,7 +230,8 @@ def test_gui_geometry_state(tempdir, qtbot):
 
 def test_gui_state_view_1(tempdir):
     view = Bunch(name='MyView0')
-    state = GUIState(config_dir=tempdir)
+    path = op.join(tempdir, 'GUI/state.json')
+    state = GUIState(path)
     state.update_view_state(view, dict(hello='world'))
     assert not state.get_view_state(Bunch(name='MyView'))
     assert not state.get_view_state(Bunch(name='MyView (1)'))
@@ -239,10 +240,10 @@ def test_gui_state_view_1(tempdir):
 
     # Copy the state.json to a "default" location.
     default_path = op.join(tempdir, 'state.json')
-    shutil.copy(state.path, default_path)
-    os.remove(state.path)
+    shutil.copy(state._path, default_path)
+    os.remove(state._path)
 
     logger.info("Create new GUI state.")
     # The default state.json should be automatically copied and loaded.
-    state = GUIState(default_state_path=default_path, config_dir=tempdir)
+    state = GUIState(path, default_state_path=default_path)
     assert state.MyView0.hello == 'world'
