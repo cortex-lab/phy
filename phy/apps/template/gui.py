@@ -124,9 +124,11 @@ class TemplateController(object):
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
         cluster_groups = self.model.get_metadata('group')
+        # Special cluster metrics.
         cluster_metrics = {
             'channel': self.get_best_channel,
             'depth': self.get_probe_depth,
+            'amplitude': self.get_cluster_amplitude,
         }
         supervisor = Supervisor(spike_clusters=self.model.spike_clusters,
                                 cluster_groups=cluster_groups,
@@ -193,6 +195,17 @@ class TemplateController(object):
         template_ids, counts = np.unique(st, return_counts=True)
         ind = np.argmax(counts)
         return template_ids[ind]
+
+    def get_cluster_amplitude(self, cluster_id):
+        bunch = self._get_template_waveforms(cluster_id)
+        data = bunch.data
+        masks = bunch.masks
+        assert data.ndim == 3
+        n_templates, n_samples, n_channels = data.shape
+        assert masks.shape == (n_templates, n_channels)
+        template_amplitudes = (data.max(axis=1) - data.min(axis=1)).max(axis=1)
+        assert template_amplitudes.shape == (n_templates,)
+        return (template_amplitudes * masks[0, :]).sum()
 
     def similarity(self, cluster_id):
         """Return the list of similar clusters to a given cluster."""
@@ -562,6 +575,7 @@ class TemplateController(object):
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
                   local_path=op.join(self.cache_dir, 'state.json'),
+                  default_state_path=op.join(op.dirname(__file__), 'static/state.json'),
                   view_creator=self.view_creator,
                   view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)

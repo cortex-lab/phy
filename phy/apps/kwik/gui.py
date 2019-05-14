@@ -413,6 +413,7 @@ class KwikController(object):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.kwik_path,
                   config_dir=self.config_dir,
+                  default_state_path=op.join(op.dirname(__file__), 'static/state.json'),
                   view_creator=self.view_creator,
                   view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)
