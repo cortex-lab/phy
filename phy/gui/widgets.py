@@ -11,6 +11,7 @@ import json
 import logging
 from functools import partial
 
+import numpy as np
 from six import text_type
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
@@ -230,8 +231,18 @@ class HTMLWidget(WebView):
 # HTML table
 # -----------------------------------------------------------------------------
 
+def _pretty_floats(obj):
+    if isinstance(obj, (float, np.float64, np.float32)):
+        return '%.4g' % obj
+    elif isinstance(obj, dict):
+        return dict((k, _pretty_floats(v)) for k, v in obj.items())
+    elif isinstance(obj, (list, tuple)):
+        return list(map(_pretty_floats, obj))
+    return obj
+
+
 def dumps(o):
-    return json.dumps(o, cls=_CustomEncoder)
+    return json.dumps(_pretty_floats(o), cls=_CustomEncoder)
 
 
 def _color_styles():

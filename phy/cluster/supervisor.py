@@ -576,7 +576,7 @@ class Supervisor(object):
     def _get_cluster_info(self, cluster_id, exclude=()):
         out = {'id': cluster_id,
                'n_spikes': self.n_spikes(cluster_id),
-               'quality': '%.3f' % self.quality(cluster_id),
+               'quality': self.quality(cluster_id),
                }
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
