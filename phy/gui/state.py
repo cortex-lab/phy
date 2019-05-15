@@ -43,7 +43,7 @@ def _gui_state_path(gui_name, config_dir=None):
 def _load_state(path):
     try:
         logger.debug("Load %s for GUIState.", path)
-        data = _load_json(path)
+        data = _load_json(str(path))
     except json.decoder.JSONDecodeError as e:  # pragma: no cover
         logger.warning("Error decoding JSON: %s", e)
         data = {}
@@ -92,12 +92,12 @@ class GUIState(Bunch):
     def __init__(self, path, local_path=None, default_state_path=None, local_keys=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
         self._path = Path(path)
-        _ensure_dir_exists(self._path.parent)
+        _ensure_dir_exists(str(self._path.parent))
 
         self._local_path = Path(local_path) if local_path else None
         self._local_keys = local_keys or ()
         if self._local_path:
-            _ensure_dir_exists(self._local_path.parent)
+            _ensure_dir_exists(str(self._local_path.parent))
 
         if not default_state_path:
             logger.warning("The default state path %s does not exist.", default_state_path)
@@ -118,7 +118,7 @@ class GUIState(Bunch):
         logger.debug("Update GUI state for %s", name)
 
     def _copy_default_state(self):
-        if self._default_state_path and op.exists(self._default_state_path):
+        if self._default_state_path and op.exists(str(self._default_state_path)):
             logger.debug(
                 "The GUI state file `%s` doesn't exist, creating a default one...", self._path)
             shutil.copy(self._default_state_path, self._path)
@@ -132,7 +132,7 @@ class GUIState(Bunch):
         # Make the self._path exists, by copying the default state if necessary.
         if not self._path.exists():
             self._copy_default_state()
-        if not op.exists(self._path):
+        if not op.exists(str(self._path)):
             return
         self.update(_load_state(self._path))
         # After having loaded the global state, load the local state if it exists.
@@ -153,7 +153,7 @@ class GUIState(Bunch):
         """Save the entire GUIState to the global file."""
         path = self._path
         logger.debug("Save global GUI state to `%s`.", path)
-        _save_json(path, self._global_data)
+        _save_json(str(path), self._global_data)
 
     def _save_local(self):
         """Only save fields which keys are in self._local_keys.
@@ -167,7 +167,7 @@ class GUIState(Bunch):
         assert self._local_path
 
         logger.debug("Save local GUI state to `%s`.", path)
-        _save_json(path, self._local_data)
+        _save_json(str(path), self._local_data)
 
     def save(self):
         """Save the state to the JSON files in the config dir (global) and local dir (if any)."""
