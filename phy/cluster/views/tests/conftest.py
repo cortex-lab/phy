@@ -17,7 +17,7 @@ from phy.gui import GUI
 
 @yield_fixture
 def gui(tempdir, qtbot):
-    gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
+    gui = GUI(position=(200, 200), size=(800, 600), config_dir=tempdir)
     gui.show()
     qtbot.wait(1)
     #qtbot.addWidget(gui)

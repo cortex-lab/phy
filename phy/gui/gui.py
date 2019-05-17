@@ -134,7 +134,7 @@ class GUI(QMainWindow):
                             QMainWindow.AnimatedDocks
                             )
 
-        self._set_name(name, subtitle)
+        self._set_name(name, str(subtitle))
         position = position or (200, 200)
         size = size or (800, 600)
         self._set_pos_size(position, size)

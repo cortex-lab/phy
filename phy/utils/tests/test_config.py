@@ -41,7 +41,7 @@ def test_logging():
 #------------------------------------------------------------------------------
 
 def test_phy_config_dir():
-    assert _config.phy_config_dir().endswith('.phy')
+    assert str(_config.phy_config_dir()).endswith('.phy')
 
 
 def test_ensure_dir_exists(tempdir):
