@@ -14,7 +14,6 @@ except ImportError:  # pragma: no cover
 import inspect
 import json
 import logging
-import os.path as op
 from pathlib import Path
 import shutil
 
@@ -118,7 +117,7 @@ class GUIState(Bunch):
         logger.debug("Update GUI state for %s", name)
 
     def _copy_default_state(self):
-        if self._default_state_path and op.exists(str(self._default_state_path)):
+        if self._default_state_path and self._default_state_path.exists():
             logger.debug(
                 "The GUI state file `%s` doesn't exist, creating a default one...", self._path)
             shutil.copy(self._default_state_path, self._path)
@@ -132,7 +131,7 @@ class GUIState(Bunch):
         # Make the self._path exists, by copying the default state if necessary.
         if not self._path.exists():
             self._copy_default_state()
-        if not op.exists(str(self._path)):
+        if not self._path.exists():
             return
         self.update(_load_state(self._path))
         # After having loaded the global state, load the local state if it exists.

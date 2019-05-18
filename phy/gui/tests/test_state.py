@@ -8,7 +8,6 @@
 
 import logging
 import os
-import os.path as op
 import shutil
 
 from ..state import GUIState, _gui_state_path, _get_default_state_path, _filter_nested_dict
@@ -40,7 +39,7 @@ def test_gui_state_view_1(tempdir):
     state.save()
 
     # Copy the state.json to a "default" location.
-    default_path = op.join(tempdir, 'state.json')
+    default_path = tempdir / 'state.json'
     shutil.copy(state._path, default_path)
     os.remove(state._path)
 
@@ -73,8 +72,8 @@ def test_filter_nested_dict():
 
 
 def test_gui_state_view_2(tempdir):
-    global_path = op.join(tempdir, 'global/state.json')
-    local_path = op.join(tempdir, 'local/state.json')
+    global_path = tempdir / 'global/state.json'
+    local_path = tempdir / 'local/state.json'
     data = {'a': {'b': 2, 'c': {'d': 4, 'e': 5}}}
 
     # Keep the entire dictionary with 'a' key.
@@ -90,8 +89,8 @@ def test_gui_state_view_2(tempdir):
 
 
 def test_gui_state_view_3(tempdir):
-    global_path = op.join(tempdir, 'global/state.json')
-    local_path = op.join(tempdir, 'local/state.json')
+    global_path = tempdir / 'global/state.json'
+    local_path = tempdir / 'local/state.json'
     data = {'a': {'b': 2, 'c': {'d': 4, 'e': 5}}}
 
     state = GUIState(global_path, local_path=local_path, local_keys=('b',))

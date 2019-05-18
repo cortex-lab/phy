@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 
 from functools import partial
-import os.path as op
+from pathlib import Path
 from pytest import yield_fixture
 
 from phylib.utils import connect, unconnect
@@ -95,7 +95,7 @@ def test_widget_empty(qtbot):
 def test_widget_html(qtbot):
     widget = HTMLWidget()
     widget.builder.add_style('html, body, p {background-color: purple;}')
-    path = op.join(op.dirname(__file__), '../static/styles.css')
+    path = Path(__file__).parent.parent / 'static/styles.css'
     widget.builder.add_style_src(path)
     widget.builder.add_header('<!-- comment -->')
     widget.builder.set_body('Hello world!')

@@ -9,7 +9,7 @@
 from contextlib import contextmanager
 from functools import wraps, partial
 import logging
-import os.path as op
+from pathlib import Path
 import sys
 from timeit import default_timer
 import traceback
@@ -290,8 +290,7 @@ class AsyncCaller(object):
 
 
 def _abs_path(rel_path):
-    static_dir = op.join(op.abspath(op.dirname(__file__)), 'static/')
-    return op.join(static_dir, rel_path)
+    return Path(__file__).parent / 'static' / rel_path
 
 
 class WebPage(QWebEnginePage):
@@ -319,7 +318,7 @@ class WebView(QWebEngineView):
     def set_html(self, html, callback=None):
         self._callback = callback
         self.loadFinished.connect(self._loadFinished)
-        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
+        static_dir = str(Path(__file__).parent / 'static') + '/'
         base_url = QUrl().fromLocalFile(static_dir)
         self.page().setHtml(html, base_url)
 
