@@ -100,6 +100,8 @@ class GUIState(Bunch):
 
         if not default_state_path:
             logger.warning("The default state path %s does not exist.", default_state_path)
+        else:
+            default_state_path = Path(default_state_path)
         self._default_state_path = default_state_path
 
         self.load()

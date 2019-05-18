@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os.path as op
 
 from phylib.utils._misc import _read_python
 from phylib.utils.testing import captured_output
@@ -108,7 +107,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     gui.close()
 
     # Create a new controller and a new GUI with the same data.
-    params = _read_python(op.join(tempdir, 'params.py'))
+    params = _read_python(tempdir / 'params.py')
     params['dat_path'] = controller.model.dat_path
     controller = TemplateController(config_dir=tempdir,
                                     **params)

@@ -9,7 +9,7 @@
 
 import logging
 from operator import itemgetter
-import os.path as op
+from pathlib import Path
 import shutil
 
 import numpy as np
@@ -49,9 +49,9 @@ except ImportError:  # pragma: no cover
 
 def _backup(path):
     """Backup a file."""
-    path_backup = path + '.bak'
-    if not op.exists(path_backup):
-        logger.info("Backup `{0}`.".format(path_backup))
+    path_backup = str(path) + '.bak'
+    if not Path(path_backup).exists():
+        logger.info("Backup `%s`.", path_backup)
         shutil.copy(path, path_backup)
 
 
@@ -72,16 +72,16 @@ class KwikController(object):
     n_closest_channels = 16
 
     def __init__(self, kwik_path, config_dir=None, **kwargs):
-        kwik_path = op.realpath(kwik_path)
+        kwik_path = Path(kwik_path)
         _backup(kwik_path)
-        self.model = KwikModel(kwik_path, **kwargs)
+        self.model = KwikModel(str(kwik_path), **kwargs)
         m = self.model
         self.channel_vertical_order = np.argsort(m.channel_positions[:, 1])
         self.distance_max = _get_distance_max(self.model.channel_positions)
-        self.cache_dir = op.join(op.dirname(kwik_path), '.phy')
+        self.cache_dir = kwik_path.parent / '.phy'
         cg = kwargs.get('channel_group', None)
         if cg is not None:
-            self.cache_dir = op.join(self.cache_dir, str(cg))
+            self.cache_dir = self.cache_dir / str(cg)
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
         self.view_creator = {
@@ -413,7 +413,7 @@ class KwikController(object):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.kwik_path,
                   config_dir=self.config_dir,
-                  default_state_path=op.join(op.dirname(__file__), 'static/state.json'),
+                  default_state_path=Path(__file__).parent / 'static/state.json',
                   view_creator=self.view_creator,
                   view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)
@@ -439,7 +439,7 @@ class KwikController(object):
 
 def kwik_gui(path, channel_group=None, clustering=None):
     # Create a `phy.log` log file with 0 level.
-    _add_log_file(op.join(op.dirname(path), 'phy.log'))
+    _add_log_file(Path(path).parent / 'phy.log')
 
     create_app()
     controller = KwikController(

@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os.path as op
 import shutil
 
 from pytest import fixture
@@ -35,8 +34,8 @@ def controller(tempdir):
                                           'kwik/hybrid_10sec.dat')))
     # Copy the dataset to a temporary directory.
     for path in paths:
-        shutil.copy(path, op.join(tempdir, op.basename(path)))
-    kwik_path = op.join(tempdir, op.basename(paths[0]))
+        shutil.copy(path, tempdir / path.name)
+    kwik_path = tempdir / paths[0].name
     c = KwikController(kwik_path)
     yield c
     # NOTE: make sure all callback functions are unconnected at the end of the tests
