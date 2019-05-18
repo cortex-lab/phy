@@ -14,7 +14,7 @@ Code from http://eli.thegreenplace.net/2012/08/07/fundamental-concepts-of-plugin
 import imp
 import logging
 import os
-import os.path as op
+from pathlib import Path
 
 from six import with_metaclass
 
@@ -62,12 +62,13 @@ def get_plugin(name):
 
 def _iter_plugin_files(dirs):
     for plugin_dir in dirs:
-        plugin_dir = op.realpath(op.expanduser(plugin_dir))
-        if not op.exists(plugin_dir):  # pragma: no cover
+        plugin_dir = Path(plugin_dir).expanduser()
+        if not plugin_dir.exists():  # pragma: no cover
             continue
         for subdir, dirs, files in os.walk(plugin_dir, followlinks=True):
+            subdir = Path(subdir)
             # Skip test folders.
-            base = op.basename(subdir)
+            base = subdir.name
             if 'test' in base or '__' in base:  # pragma: no cover
                 continue
             logger.debug("Scanning `%s`.", subdir)
@@ -76,7 +77,7 @@ def _iter_plugin_files(dirs):
                         not filename.endswith('.py')):
                     continue  # pragma: no cover
                 logger.debug("Found plugin module `%s`.", filename)
-                yield op.join(subdir, filename)
+                yield subdir / filename
 
 
 def discover_plugins(dirs):
@@ -97,9 +98,8 @@ def discover_plugins(dirs):
     """
     # Scan all subdirectories recursively.
     for path in _iter_plugin_files(dirs):
-        filename = op.basename(path)
-        subdir = op.dirname(path)
-        modname, ext = op.splitext(filename)
+        subdir = path.parent
+        modname = path.stem
         file, path, descr = imp.find_module(modname, [subdir])
         if file:
             # Loading the module registers the plugin in

@@ -11,7 +11,7 @@ from cProfile import Profile
 import functools
 import logging
 import os
-import os.path as op
+from pathlib import Path
 import sys
 from timeit import default_timer
 
@@ -94,8 +94,7 @@ def _enable_profiler(line_by_line=False):  # pragma: no cover
 
 
 def _profile(prof, statement, glob, loc):
-    dir = '.profile'
-    dir = op.realpath(dir)
+    dir = Path('.profile')
     _ensure_dir_exists(dir)
     prof.runctx(statement, glob, loc)
     # Capture stdout.
@@ -116,9 +115,8 @@ def _profile(prof, statement, glob, loc):
         fn = 'lstats.txt'
     else:
         fn = 'stats.txt'
-    stats_file = op.join(dir, fn)
-    with open(stats_file, 'w') as f:
-        f.write(stats)
+    stats_file = dir / fn
+    stats_file.write_text(stats)
 
 
 def _enable_pdb():  # pragma: no cover

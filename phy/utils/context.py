@@ -10,7 +10,7 @@ from functools import wraps
 import inspect
 import logging
 import os
-import os.path as op
+from pathlib import Path
 
 from six.moves.cPickle import dump, load
 
@@ -42,15 +42,15 @@ class Context(object):
     def __init__(self, cache_dir, ipy_view=None, verbose=0):
         self.verbose = verbose
         # Make sure the cache directory exists.
-        self.cache_dir = op.realpath(op.expanduser(cache_dir))
-        if not op.exists(self.cache_dir):
+        self.cache_dir = Path(cache_dir).expanduser()
+        if not self.cache_dir.exists():
             logger.debug("Create cache directory `%s`.", self.cache_dir)
             os.makedirs(self.cache_dir)
 
         # Ensure the memcache directory exists.
-        path = op.join(self.cache_dir, 'memcache')
-        if not op.exists(path):
-            os.mkdir(path)
+        path = self.cache_dir / 'memcache'
+        if not path.exists():
+            path.mkdir()
 
         self._set_memory(self.cache_dir)
         self.ipy_view = ipy_view if ipy_view else None
@@ -85,8 +85,8 @@ class Context(object):
 
     def load_memcache(self, name):
         # Load the memcache from disk, if it exists.
-        path = op.join(self.cache_dir, 'memcache', name + '.pkl')
-        if op.exists(path):
+        path = self.cache_dir / 'memcache' / (name + '.pkl')
+        if path.exists():
             logger.debug("Load memcache for `%s`.", name)
             with open(path, 'rb') as fd:
                 cache = load(fd)
@@ -97,7 +97,7 @@ class Context(object):
 
     def save_memcache(self):
         for name, cache in self._memcache.items():
-            path = op.join(self.cache_dir, 'memcache', name + '.pkl')
+            path = self.cache_dir / 'memcache' / (name + '.pkl')
             logger.debug("Save memcache for `%s`.", name)
             with open(path, 'wb') as fd:
                 dump(cache, fd)
@@ -121,15 +121,15 @@ class Context(object):
 
     def _get_path(self, name, location, file_ext='.json'):
         if location == 'local':
-            return op.join(self.cache_dir, name + file_ext)
+            return self.cache_dir / (name + file_ext)
         elif location == 'global':
-            return op.join(phy_config_dir(), name + file_ext)
+            return phy_config_dir() / (name + file_ext)
 
     def save(self, name, data, location='local', kind='json'):
         """Save a dictionary in a JSON file within the cache directory."""
         file_ext = '.json' if kind == 'json' else '.pkl'
         path = self._get_path(name, location, file_ext=file_ext)
-        _ensure_dir_exists(op.dirname(path))
+        _ensure_dir_exists(path.parent)
         logger.debug("Save data to `%s`.", path)
         if kind == 'json':
             _save_json(path, data)
@@ -139,10 +139,10 @@ class Context(object):
     def load(self, name, location='local'):
         """Load saved data from the cache directory."""
         path = self._get_path(name, location, file_ext='.json')
-        if op.exists(path):
+        if path.exists():
             return _load_json(path)
         path = self._get_path(name, location, file_ext='.pkl')
-        if op.exists(path):
+        if path.exists():
             return _load_pickle(path)
         logger.debug("The file `%s` doesn't exist.", path)
         return {}

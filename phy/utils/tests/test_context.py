@@ -6,8 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import fixture, yield_fixture
@@ -43,8 +41,8 @@ def temp_phy_config_dir(tempdir):
 
 def test_read_write(tempdir):
     x = np.arange(10)
-    write_array(op.join(tempdir, 'test.npy'), x)
-    ae(read_array(op.join(tempdir, 'test.npy')), x)
+    write_array(tempdir / 'test.npy', x)
+    ae(read_array(tempdir / 'test.npy'), x)
 
 
 def test_context_load_save(tempdir, context, temp_phy_config_dir):
@@ -148,9 +146,9 @@ def test_context_memcache(tempdir, context):
 
 def test_pickle_cache(tempdir, context):
     """Make sure the Context is picklable."""
-    with open(op.join(tempdir, 'test.pkl'), 'wb') as f:
+    with open(tempdir / 'test.pkl', 'wb') as f:
         cPickle.dump(context, f)
-    with open(op.join(tempdir, 'test.pkl'), 'rb') as f:
+    with open(tempdir / 'test.pkl', 'rb') as f:
         ctx = cPickle.load(f)
     assert isinstance(ctx, Context)
     assert ctx.cache_dir == context.cache_dir

@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os.path as op
 from textwrap import dedent
 
 from pytest import fixture
@@ -45,9 +44,9 @@ def test_phy_config_dir():
 
 
 def test_ensure_dir_exists(tempdir):
-    path = op.join(tempdir, 'a/b/c')
+    path = tempdir / 'a/b/c'
     _ensure_dir_exists(path)
-    assert op.isdir(path)
+    assert path.is_dir()
 
 
 def test_temp_config_dir(temp_config_dir):
@@ -65,7 +64,7 @@ def py_config(tempdir):
        c = get_config()
        c.MyConfigurable.my_var = 1.0
        """
-    path = op.join(tempdir, 'config.py')
+    path = tempdir / 'config.py'
     _write_text(path, config_contents)
     return path
 
@@ -80,7 +79,7 @@ def json_config(tempdir):
             }
         }
     """
-    path = op.join(tempdir, 'config.json')
+    path = tempdir / 'config.json'
     _write_text(path, config_contents)
     return path
 
@@ -125,8 +124,7 @@ def test_load_master_config_1(temp_config_dir):
        c = get_config()
        c.MyConfigurable.my_var = 1.0
        """)
-    with open(op.join(temp_config_dir, 'phy_config.py'), 'w') as f:
-        f.write(config_contents)
+    (temp_config_dir / 'phy_config.py').write_text(config_contents)
 
     # Load the master config file.
     c = load_master_config()
@@ -135,7 +133,7 @@ def test_load_master_config_1(temp_config_dir):
 
 def test_save_config(tempdir):
     c = {'A': {'b': 3.}}
-    path = op.join(tempdir, 'config.json')
+    path = tempdir / 'config.json'
     save_config(path, c)
 
     c1 = load_config(path)

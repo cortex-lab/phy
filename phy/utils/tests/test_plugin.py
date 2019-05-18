@@ -7,8 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 from pytest import yield_fixture, raises
 
 from ..plugin import (IPluginRegistry,
@@ -49,7 +47,7 @@ def test_plugin_1(no_native_plugins):
 
 
 def test_discover_plugins(tempdir, no_native_plugins):
-    path = op.join(tempdir, 'my_plugin.py')
+    path = tempdir / 'my_plugin.py'
     contents = '''from phy import IPlugin\nclass MyPlugin(IPlugin): pass'''
     _write_text(path, contents)
 
@@ -73,7 +71,7 @@ def test_attach_plugins(tempdir):
     contents = '''
     c.MyController.plugins = ['MyPlugin1']
     '''
-    _write_text(op.join(tempdir, 'phy_config.py'), contents)
+    _write_text(tempdir / 'phy_config.py', contents)
 
     controller = MyController()
     attach_plugins(controller, plugins=['MyPlugin2'], config_dir=tempdir)

@@ -6,7 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
 import time
 
 from pytest import mark
@@ -28,4 +27,4 @@ def test_profile(chdir_tempdir, line_by_line):
     # Remove the profile from the builtins.
     prof = _enable_profiler(line_by_line=line_by_line)
     _profile(prof, 'import time; time.sleep(.001)', {}, {})
-    assert op.exists(op.join(chdir_tempdir, '.profile', 'stats.txt'))
+    assert (chdir_tempdir / '.profile/stats.txt').exists()
