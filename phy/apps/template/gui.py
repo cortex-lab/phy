@@ -134,6 +134,7 @@ class TemplateController(object):
                                 cluster_groups=cluster_groups,
                                 cluster_metrics=cluster_metrics,
                                 cluster_labels=self.model.metadata,
+                                quality=self.get_cluster_amplitude,
                                 similarity=self.similarity,
                                 new_cluster_id=new_cluster_id,
                                 context=self.context,
