@@ -767,8 +767,9 @@ class Supervisor(object):
             cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
             return
-        self.clustering.merge(cluster_ids, to=to)
+        out = self.clustering.merge(cluster_ids, to=to)
         self._global_history.action(self.clustering)
+        return out
 
     def split(self, spike_ids=None, spike_clusters_rel=0):
         """Split the selected spikes."""
@@ -783,9 +784,10 @@ class Supervisor(object):
                    "that you want to split.")
             emit('error', self, msg)
             return
-        self.clustering.split(spike_ids,
-                              spike_clusters_rel=spike_clusters_rel)
+        out = self.clustering.split(
+            spike_ids, spike_clusters_rel=spike_clusters_rel)
         self._global_history.action(self.clustering)
+        return out
 
     # Move actions
     # -------------------------------------------------------------------------

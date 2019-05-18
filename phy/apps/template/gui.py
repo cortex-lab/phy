@@ -15,7 +15,7 @@ import os.path as op
 import numpy as np
 
 from phylib.io.array import Selector
-from phylib.io.model import TemplateModel, from_sparse
+from phylib.io.model import TemplateModel
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._color import ColorSelector
@@ -205,7 +205,7 @@ class TemplateController(object):
         assert masks.shape == (n_templates, n_channels)
         template_amplitudes = (data.max(axis=1) - data.min(axis=1)).max(axis=1)
         assert template_amplitudes.shape == (n_templates,)
-        return (template_amplitudes * masks[0, :]).sum()
+        return (template_amplitudes * masks[:, 0]).sum()
 
     def similarity(self, cluster_id):
         """Return the list of similar clusters to a given cluster."""
@@ -281,16 +281,13 @@ class TemplateController(object):
         # Get all templates from which this cluster stems from.
         templates = [self.model.get_template(template_id)
                      for template_id in template_ids]
-        data = np.stack([b.template * mean_amp for b in templates], axis=0)
-        cols = np.stack([b.channel_ids for b in templates], axis=0)
-        # NOTE: transposition because the channels should be in the second
-        # dimension for from_sparse.
-        data = data.transpose((0, 2, 1))
-        assert data.ndim == 3
-        assert data.shape[1] == cols.shape[1]
-        waveforms = from_sparse(data, cols, channel_ids)
-        # Transpose back.
-        waveforms = waveforms.transpose((0, 2, 1))
+        # Construct the waveforms array.
+        ns = self.model.n_samples_templates
+        data = np.zeros((len(template_ids), ns, self.model.n_channels))
+        for i, b in enumerate(templates):
+            data[i][:, b.channel_ids] = b.template * mean_amp
+        waveforms = data[..., channel_ids]
+        assert waveforms.shape == (len(template_ids), ns, len(channel_ids))
         return Bunch(data=waveforms,
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],

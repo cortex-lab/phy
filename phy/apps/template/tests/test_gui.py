@@ -187,3 +187,11 @@ def test_template_gui_sim(qtbot, template_controller):
     assert s.selected == [cl - 1, cl + 1]
 
     gui.close()
+
+
+def test_template_amplitude(template_controller):
+    controller = template_controller
+    s = controller.supervisor
+    b = s.merge([31, 51])
+    amp = controller.get_cluster_amplitude(b.added[0])
+    assert amp > 0
