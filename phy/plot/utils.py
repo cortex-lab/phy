@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os.path as op
+from pathlib import Path
 
 import numpy as np
 
@@ -156,11 +156,7 @@ class BatchAccumulator(object):
 
 def _load_shader(filename):
     """Load a shader file."""
-    curdir = op.dirname(op.realpath(__file__))
-    glsl_path = op.join(curdir, 'glsl')
-    path = op.join(glsl_path, filename)
-    with open(path, 'r') as f:
-        return f.read()
+    return (Path(__file__).parent / 'glsl' / filename).read_text()
 
 
 def _tesselate_histogram(hist):

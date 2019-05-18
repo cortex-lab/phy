@@ -5,15 +5,14 @@
 
 import re
 import logging
-import os.path as op
+from pathlib import Path
 
 
 log = logging.getLogger(__name__)
 
 
 def _find(filename):
-    root = op.join(op.dirname(__file__), '../glsl/')
-    return op.realpath(op.join(root, filename))
+    return Path(__file__).parent.parent / 'glsl' / filename
 
 
 def remove_comments(code):

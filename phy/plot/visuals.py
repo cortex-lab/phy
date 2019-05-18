@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------
 
 import gzip
-import os.path as op
+from pathlib import Path
 
 import numpy as np
 from six import string_types
@@ -580,14 +580,14 @@ class TextVisual(BaseVisual):
         self.color = color
 
         # Load the font.
-        curdir = op.realpath(op.dirname(__file__))
+        curdir = Path(__file__).parent
         font_name = 'SourceCodePro-Regular'
         font_size = 16 if not _is_high_dpi() else 32
         # The font texture is gzipped.
         fn = '%s-%d.npy.gz' % (font_name, font_size)
-        with gzip.open(op.join(curdir, 'static', fn), 'rb') as f:
+        with gzip.open(curdir / 'static' / fn, 'rb') as f:
             self._tex = np.load(f)
-        with open(op.join(curdir, 'static', 'chars.txt'), 'r') as f:
+        with open(curdir / 'static' / 'chars.txt', 'r') as f:
             self._chars = f.read()
 
     def _get_glyph_indices(self, s):
