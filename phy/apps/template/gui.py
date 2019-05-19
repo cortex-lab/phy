@@ -263,7 +263,8 @@ class TemplateController(object):
 
     def _get_mean_waveforms(self, cluster_id):
         b = self._get_waveforms(cluster_id)
-        b.data = b.data.mean(axis=0)[np.newaxis, ...]
+        if b.data is not None:
+            b.data = b.data.mean(axis=0)[np.newaxis, ...]
         b['alpha'] = 1.
         return b
 
@@ -570,13 +571,15 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def create_gui(self, **kwargs):
+        view_count = {
+            view_cls: 1 for view_cls in self.view_creator.keys() if view_cls != ProbeView}
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
                   local_path=op.join(self.cache_dir, 'state.json'),
                   default_state_path=op.join(op.dirname(__file__), 'static/state.json'),
                   view_creator=self.view_creator,
-                  view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
+                  view_count=view_count,
                   **kwargs)
         self.supervisor.attach(gui)
 

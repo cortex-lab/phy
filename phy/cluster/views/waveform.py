@@ -208,6 +208,8 @@ class WaveformView(ManualClusteringView):
         # Retrieve the waveform data.
         bunchs = [self.waveforms(cluster_id)
                   for cluster_id in cluster_ids]
+        if bunchs[0].data is None:
+            return
 
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))

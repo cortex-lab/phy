@@ -30,7 +30,7 @@ def test_template_controller(template_controller):
 def test_template_describe(qtbot, template_path):
     with captured_output() as (stdout, stderr):
         template_describe(template_path)
-    assert '(314, 12, 3)' in stdout.getvalue()
+    assert '314' in stdout.getvalue()
 
 
 def _wait_controller(controller):
@@ -59,9 +59,13 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     _wait_controller(controller)
 
     wv = gui.list_views(WaveformView)[0]
-    tv = gui.list_views(TraceView)[0]
+    tv = gui.list_views(TraceView)
+    if tv:
+        tv = tv[0]
+        tv.actions.go_to_next_spike()
+    else:
+        tv = None
 
-    tv.actions.go_to_next_spike()
     s.actions.next()
     s.block()
 
@@ -98,11 +102,12 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     wv.actions.toggle_templates(True)
     wv.actions.toggle_mean_waveforms(True)
 
-    tv.actions.toggle_highlighted_spikes(True)
-    tv.actions.go_to_next_spike()
-    tv.actions.go_to_previous_spike()
+    if tv:
+        tv.actions.toggle_highlighted_spikes(True)
+        tv.actions.go_to_next_spike()
+        tv.actions.go_to_previous_spike()
 
-    mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
+        mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
 
     assert s.cluster_meta.get('group', clu) == 'good'
 
