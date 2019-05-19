@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os
 import shutil
 
 from ..state import GUIState, _gui_state_path, _get_default_state_path, _filter_nested_dict
@@ -41,7 +40,7 @@ def test_gui_state_view_1(tempdir):
     # Copy the state.json to a "default" location.
     default_path = tempdir / 'state.json'
     shutil.copy(state._path, default_path)
-    os.remove(state._path)
+    state._path.unlink()
 
     logger.info("Create new GUI state.")
     # The default state.json should be automatically copied and loaded.
