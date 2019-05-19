@@ -179,7 +179,7 @@ class KwikController(object):
         ind = mm[channel_ids] > .1
         if np.sum(ind) > 0:
             channel_ids = channel_ids[ind]
-        else:
+        else:  # pragma: no cover
             channel_ids = channel_ids[:4]
         return channel_ids
 
@@ -370,11 +370,6 @@ class KwikController(object):
                       channel_vertical_order=self.channel_vertical_order,
                       )
 
-        # # Update the get_traces() function with show_all_spikes.
-        # def get_traces(interval):
-        #     return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
-        # v.traces = get_traces
-
         @connect
         def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
@@ -437,7 +432,7 @@ class KwikController(object):
 # Kwik commands
 #------------------------------------------------------------------------------
 
-def kwik_gui(path, channel_group=None, clustering=None):
+def kwik_gui(path, channel_group=None, clustering=None):  # pragma: no cover
     # Create a `phy.log` log file with 0 level.
     _add_log_file(Path(path).parent / 'phy.log')
 

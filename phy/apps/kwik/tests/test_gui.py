@@ -16,7 +16,7 @@ from phylib.utils import connect, reset
 from phylib.utils.testing import captured_output
 from phy.cluster.views import WaveformView, TraceView
 from phy.gui.widgets import Barrier
-from phy.plot.tests import key_press
+from phy.plot.tests import key_press, mouse_click
 from ..gui import KwikController, kwik_describe
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def controller(tempdir):
     for path in paths:
         shutil.copy(path, tempdir / path.name)
     kwik_path = tempdir / paths[0].name
-    c = KwikController(kwik_path)
+    c = KwikController(kwik_path, channel_group=0)
     yield c
     # NOTE: make sure all callback functions are unconnected at the end of the tests
     # to avoid side-effects and spurious dependencies between tests.
@@ -106,6 +106,8 @@ def test_gui_1(qtbot, tempdir, controller):
     tv.actions.go_to_next_spike()
     tv.actions.go_to_previous_spike()
 
+    mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
+
     s.save()
     gui.close()
 
@@ -144,6 +146,8 @@ def test_kwik_gui_2(qtbot, controller):
     for char in 'RECLUSTER':
         key_press(qtbot, gui, char)
     key_press(qtbot, gui, 'Enter')
+    controller.supervisor.block()
+
     key_press(qtbot, gui, 'S', modifiers=('Control',))
 
     gui.close()
