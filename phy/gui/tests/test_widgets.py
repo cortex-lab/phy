@@ -46,9 +46,6 @@ def table(qtbot):
     table = Table(columns=columns,
                   value_names=['id', 'count', {'data': ['is_masked']}],
                   data=data)
-    table.show()
-    qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
     _wait_until_table_ready(qtbot, table)
 
     yield table

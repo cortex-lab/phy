@@ -33,20 +33,20 @@ def test_template_describe(qtbot, template_path):
     assert '314' in stdout.getvalue()
 
 
-def _wait_controller(controller):
-    mc = controller.supervisor
+def _wait_controller(qtbot, supervisor, gui):
     b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
+    connect(b('cluster_view'), event='ready', sender=supervisor.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=supervisor.similarity_view)
+    gui.show()
+    qtbot.addWidget(gui)
+    qtbot.waitForWindowShown(gui)
     b.wait()
 
 
 def test_template_gui_0(qtbot, tempdir, template_controller):
     controller = template_controller
     gui = controller.create_gui()
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-    _wait_controller(controller)
+    _wait_controller(qtbot, controller.supervisor, gui)
     gui.close()
 
 
@@ -54,9 +54,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     controller = template_controller
     gui = controller.create_gui()
     s = controller.supervisor
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-    _wait_controller(controller)
+    _wait_controller(qtbot, controller.supervisor, gui)
 
     wv = gui.list_views(WaveformView)[0]
     tv = gui.list_views(TraceView)
@@ -122,9 +120,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
 
     gui = controller.create_gui()
     s = controller.supervisor
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-    _wait_controller(controller)
+    _wait_controller(qtbot, s, gui)
 
     # Check that the data has been updated.
     assert s.get_labels('some_field')[clu - 1] is None
@@ -139,10 +135,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
 
 def test_template_gui_2(qtbot, template_controller):
     gui = template_controller.create_gui()
-    qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-    _wait_controller(template_controller)
+    _wait_controller(qtbot, template_controller.supervisor, gui)
 
     gui._create_and_add_view(WaveformView)
     gui._create_and_add_view(ProbeView)
@@ -166,10 +159,7 @@ def test_template_gui_sim(qtbot, template_controller):
     """Ensure that the similarity is refreshed when clusters change."""
     gui = template_controller.create_gui()
     s = template_controller.supervisor
-    qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-    _wait_controller(template_controller)
+    _wait_controller(qtbot, s, gui)
 
     s.cluster_view.sort_by('id', 'desc')
     s.actions.next()
