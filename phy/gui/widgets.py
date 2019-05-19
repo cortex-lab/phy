@@ -12,7 +12,6 @@ import logging
 from functools import partial
 
 import numpy as np
-from six import text_type
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
 from phylib.utils import emit, connect
@@ -191,7 +190,7 @@ class JSEventEmitter(QObject):
     @pyqtSlot(str, str)
     def emitJS(self, name, arg_json):
         logger.log(5, "Emit from Python %s %s.", name, arg_json)
-        emit(text_type(name), self._parent, json.loads(text_type(arg_json)))
+        emit(str(name), self._parent, json.loads(str(arg_json)))
 
 
 class HTMLWidget(WebView):

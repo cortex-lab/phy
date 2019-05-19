@@ -6,17 +6,16 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import builtins
 from contextlib import contextmanager
 from cProfile import Profile
 import functools
+from io import StringIO
 import logging
 import os
 from pathlib import Path
 import sys
 from timeit import default_timer
-
-from six import StringIO
-from six.moves import builtins
 
 from .config import _ensure_dir_exists
 

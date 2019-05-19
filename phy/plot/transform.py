@@ -11,7 +11,6 @@ import logging
 from textwrap import dedent
 
 import numpy as np
-from six import string_types
 
 from phylib.utils.geometry import range_transform
 
@@ -48,7 +47,7 @@ def _wrap_glsl(f):
 
 def _glslify(r):
     """Transform a string or a n-tuple to a valid GLSL expression."""
-    if isinstance(r, string_types):
+    if isinstance(r, str):
         return r
     else:
         assert 2 <= len(r) <= 4
@@ -161,7 +160,7 @@ class Translate(BaseTransform):
         '''.format(var=var, translate=self.value)
 
     def inverse(self):
-        if isinstance(self.value, string_types):
+        if isinstance(self.value, str):
             return Translate('-' + self.value)
         else:
             return Translate(_minus(self.value))
@@ -180,7 +179,7 @@ class Scale(BaseTransform):
         '''.format(var=var, scale=self.value)
 
     def inverse(self):
-        if isinstance(self.value, string_types):
+        if isinstance(self.value, str):
             return Scale('1.0 / ' + self.value)
         else:
             return Scale(_inverse(self.value))
@@ -263,8 +262,8 @@ class Subplot(Range):
         self.from_bounds = NDC
         if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
             self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
-        elif (isinstance(self.shape, string_types) and
-                isinstance(self.index, string_types)):
+        elif (isinstance(self.shape, str) and
+                isinstance(self.index, str)):
             self.to_bounds = subplot_bounds_glsl(shape=self.shape,
                                                  index=self.index)
 

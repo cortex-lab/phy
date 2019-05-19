@@ -6,10 +6,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pickle import dump, load
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import fixture, yield_fixture
-from six.moves import cPickle
 
 from phylib.io.array import write_array, read_array
 from ..context import Context, _fullname
@@ -147,8 +148,8 @@ def test_context_memcache(tempdir, context):
 def test_pickle_cache(tempdir, context):
     """Make sure the Context is picklable."""
     with open(tempdir / 'test.pkl', 'wb') as f:
-        cPickle.dump(context, f)
+        dump(context, f)
     with open(tempdir / 'test.pkl', 'rb') as f:
-        ctx = cPickle.load(f)
+        ctx = load(f)
     assert isinstance(ctx, Context)
     assert ctx.cache_dir == context.cache_dir

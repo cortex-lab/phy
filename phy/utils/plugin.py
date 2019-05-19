@@ -16,8 +16,6 @@ import logging
 import os
 from pathlib import Path
 
-from six import with_metaclass
-
 from phylib.utils._misc import _fullname
 from .config import load_master_config
 
@@ -39,7 +37,7 @@ class IPluginRegistry(type):
                 IPluginRegistry.plugins.append(cls)
 
 
-class IPlugin(with_metaclass(IPluginRegistry)):
+class IPlugin(metaclass=IPluginRegistry):
     """A class deriving from IPlugin can implement the following methods:
 
     * `attach_to_cli(cli)`: called when the CLI is created.

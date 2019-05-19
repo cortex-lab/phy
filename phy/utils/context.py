@@ -11,8 +11,7 @@ import inspect
 import logging
 import os
 from pathlib import Path
-
-from six.moves.cPickle import dump, load
+from pickle import dump, load
 
 from phylib.utils._misc import (
     _save_json, _load_json,

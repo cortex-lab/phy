@@ -11,7 +11,6 @@ import gzip
 from pathlib import Path
 
 import numpy as np
-from six import string_types
 
 from .base import BaseVisual
 from .transform import Range, NDC
@@ -285,7 +284,7 @@ class PlotVisual(BaseVisual):
 
         n_signals = len(x)
 
-        if isinstance(data_bounds, string_types) and data_bounds == 'auto':
+        if isinstance(data_bounds, str) and data_bounds == 'auto':
             xmin = [_min(_) for _ in x]
             ymin = [_min(_) for _ in y]
             xmax = [_max(_) for _ in x]
@@ -397,7 +396,7 @@ class UniformPlotVisual(BaseVisual):
         masks = _get_array(masks, (n_signals, 1), 1., np.float32)
         assert masks.shape == (n_signals, 1)
 
-        if isinstance(data_bounds, string_types) and data_bounds == 'auto':
+        if isinstance(data_bounds, str) and data_bounds == 'auto':
             xmin = [_min(_) for _ in x]
             ymin = [_min(_) for _ in y]
             xmax = [_max(_) for _ in x]
@@ -600,7 +599,7 @@ class TextVisual(BaseVisual):
 
         if text is None:
             text = []
-        if isinstance(text, string_types):
+        if isinstance(text, str):
             text = [text]
         if pos is None:
             pos = np.zeros((len(text), 2))

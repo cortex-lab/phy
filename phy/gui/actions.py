@@ -14,8 +14,6 @@ import re
 import sys
 import traceback
 
-from six import string_types, PY3
-
 from .qt import QKeySequence, QAction, require_qt, _input_dialog
 from phylib.utils import Bunch
 
@@ -84,7 +82,7 @@ def _get_shortcut_string(shortcut):
         return ''
     if isinstance(shortcut, (tuple, list)):
         return ', '.join([_get_shortcut_string(s) for s in shortcut])
-    if isinstance(shortcut, string_types):
+    if isinstance(shortcut, str):
         if hasattr(QKeySequence, shortcut):
             shortcut = QKeySequence(getattr(QKeySequence, shortcut))
         else:
@@ -100,7 +98,7 @@ def _get_qkeysequence(shortcut):
         return []
     if isinstance(shortcut, (tuple, list)):
         return [_get_qkeysequence(s) for s in shortcut]
-    assert isinstance(shortcut, string_types)
+    assert isinstance(shortcut, str)
     if hasattr(QKeySequence, shortcut):
         return QKeySequence(getattr(QKeySequence, shortcut))
     sequence = QKeySequence.fromString(shortcut)
@@ -279,7 +277,7 @@ class Actions(object):
 
     def run(self, name, *args):
         """Run an action as specified by its name."""
-        assert isinstance(name, string_types)
+        assert isinstance(name, str)
         # Resolve the alias if it is an alias.
         name = self._aliases.get(name, name)
         # Get the action.
@@ -357,7 +355,7 @@ class Snippets(object):
     """
 
     # HACK: Unicode characters do not seem to work on Python 2
-    cursor = '\u200A\u258C' if PY3 else ''
+    cursor = '\u200A\u258C'
 
     # Allowed characters in snippet mode.
     # A Qt shortcut will be created for every character.

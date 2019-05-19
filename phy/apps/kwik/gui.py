@@ -11,6 +11,7 @@ import logging
 from operator import itemgetter
 from pathlib import Path
 import shutil
+from tempfile import TemporaryDirectory
 
 import numpy as np
 
@@ -19,7 +20,6 @@ from phylib.stats.clusters import get_waveform_amplitude
 from phylib.io.array import Selector
 from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._color import ColorSelector
-from phylib.utils.tempdir import TemporaryDirectory
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
