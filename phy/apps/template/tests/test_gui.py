@@ -11,9 +11,9 @@ import logging
 from phylib.utils._misc import _read_python
 from phylib.utils.testing import captured_output
 from phylib.utils import connect
-from phy.cluster.views import WaveformView, TraceView
+from phy.cluster.views import WaveformView, TraceView, ProbeView
 from phy.gui.widgets import Barrier
-from phy.plot.tests import key_press
+from phy.plot.tests import key_press, mouse_click
 from ..gui import TemplateController, template_describe
 
 logger = logging.getLogger(__name__)
@@ -101,6 +101,9 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     tv.actions.toggle_highlighted_spikes(True)
     tv.actions.go_to_next_spike()
     tv.actions.go_to_previous_spike()
+
+    mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
+
     assert s.cluster_meta.get('group', clu) == 'good'
 
     s.save()
@@ -135,6 +138,9 @@ def test_template_gui_2(qtbot, template_controller):
     gui.show()
     qtbot.waitForWindowShown(gui)
     _wait_controller(template_controller)
+
+    gui._create_and_add_view(WaveformView)
+    gui._create_and_add_view(ProbeView)
 
     key_press(qtbot, gui, 'Down')
     key_press(qtbot, gui, 'Down')

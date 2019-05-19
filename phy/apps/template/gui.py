@@ -86,6 +86,7 @@ class TemplateController(object):
             TemplateFeatureView: self.create_template_feature_view,
             CorrelogramView: self.create_correlogram_view,
             AmplitudeView: self.create_amplitude_view,
+            ProbeView: self.create_probe_view,
         }
 
         # Attach plugins before setting up the supervisor, so that plugins
@@ -316,7 +317,7 @@ class TemplateController(object):
             # NOTE: this callback function is called in WaveformView.attach().
 
             # Initialize show_what if it was not set in the GUI state.
-            if not hasattr(v, 'show_what'):
+            if not hasattr(v, 'show_what'):  # pragma: no cover
                 v.show_what = 'waveforms'
             # Set the waveforms function.
             v.waveforms = funs[v.show_what]
@@ -359,7 +360,7 @@ class TemplateController(object):
             n = nsf if not load_all else None
             spike_ids = self.selector.select_spikes([cluster_id], n)
         # Remove spike_ids that do not belong to model.features_rows
-        if self.model.features_rows is not None:
+        if self.model.features_rows is not None:  # pragma: no cover
             spike_ids = np.intersect1d(spike_ids, self.model.features_rows)
         return spike_ids
 
@@ -604,7 +605,7 @@ class TemplateController(object):
 # Template commands
 #------------------------------------------------------------------------------
 
-def template_gui(params_path):
+def template_gui(params_path):  # pragma: no cover
     # Create a `phy.log` log file with DEBUG level.
     _add_log_file(op.join(op.dirname(params_path), 'phy.log'))
 

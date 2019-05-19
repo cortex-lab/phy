@@ -34,8 +34,3 @@ def template_controller(tempdir, template_model):
     # NOTE: make sure all callback functions are unconnected at the end of the tests
     # to avoid side-effects and spurious dependencies between tests.
     reset()
-
-
-@fixture
-def template_controller_clean(tempdir, template_model_clean):
-    return template_controller(tempdir, template_model_clean)
