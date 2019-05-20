@@ -18,7 +18,7 @@ from phylib.io.array import Selector
 from phylib.io.model import TemplateModel
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._color import ColorSelector
+from phylib.utils._color import ClusterColorSelector
 from phylib.utils._misc import _read_python
 
 from phy.cluster.supervisor import Supervisor
@@ -99,7 +99,11 @@ class TemplateController(object):
         self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
-        self.color_selector = ColorSelector()
+        self.color_selector = ClusterColorSelector(
+            cluster_labels=self.supervisor.cluster_labels,
+            cluster_metrics=self.supervisor.cluster_metrics,
+            cluster_ids=self.supervisor.clustering.cluster_ids,
+        )
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -442,8 +446,7 @@ class TemplateController(object):
         k = self.model.n_samples_templates
         m = self.model
 
-        traces_interval = select_traces(m.traces, interval,
-                                        sample_rate=m.sample_rate)
+        traces_interval = select_traces(m.traces, interval, sample_rate=m.sample_rate)
         # Reorder vertically.
         out = Bunch(data=traces_interval)
         out.waveforms = []
@@ -460,14 +463,19 @@ class TemplateController(object):
                                        get_best_channels=gbc,
                                        show_all_spikes=show_all_spikes,
                                        ):
-            i = b.spike_id
-            # Compute the residual: waveform - amplitude * template.
-            residual = b.copy()
-            template_id = m.spike_templates[i]
-            template = m.get_template(template_id).template
-            amplitude = m.amplitudes[i]
-            residual.data = residual.data - amplitude * template
-            out.waveforms.extend([b, residual])
+            # i = b.spike_id
+            # assert b.data.shape[1] == len(b.channel_ids)
+
+            # # Compute the residual: waveform - amplitude * template.
+            # residual = b.copy()
+            # template_id = m.spike_templates[i]
+            # template = m.get_template(template_id, channel_ids=b.channel_ids).template
+            # assert template.shape[1] == len(residual.channel_ids) == residual.data.shape[1]
+
+            # residual.data = residual.data - m.amplitudes[i] * template
+            # assert residual.data.shape[1] == len(residual.channel_ids)
+            # out.waveforms.extend([b, residual])
+            out.waveforms.append(b)
         return out
 
     def _trace_spike_times(self):

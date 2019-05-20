@@ -19,7 +19,7 @@ from phylib.stats import correlograms
 from phylib.stats.clusters import get_waveform_amplitude
 from phylib.io.array import Selector
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._color import ColorSelector
+from phylib.utils._color import ClusterColorSelector
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
@@ -94,7 +94,11 @@ class KwikController(object):
         self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
-        self.color_selector = ColorSelector()
+        self.color_selector = ClusterColorSelector(
+            cluster_labels=self.supervisor.cluster_labels,
+            cluster_metrics=self.supervisor.cluster_metrics,
+            cluster_ids=self.supervisor.clustering.cluster_ids,
+        )
 
         attach_plugins(self, plugins=kwargs.get('plugins', None),
                        config_dir=config_dir)

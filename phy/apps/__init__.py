@@ -68,7 +68,7 @@ def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
 #sys.excepthook = exceptionHandler
 
 
-def _add_log_file(filename):
+def _add_log_file(filename):  # pragma: no cover
     """Create a `phy.log` log file with DEBUG level in the
     current directory."""
     handler = logging.FileHandler(filename)
