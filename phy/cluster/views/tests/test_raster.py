@@ -36,6 +36,7 @@ def test_raster_0(qtbot, gui):
     v.attach(gui)
     v.plot()
 
+    v.on_select([2])
     c.set_color_field('quality', 'categorical')
     v.plot()
 
