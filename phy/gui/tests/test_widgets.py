@@ -41,6 +41,7 @@ def table(qtbot):
     columns = ["id", "count"]
     data = [{"id": i,
              "count": 100 - 10 * i,
+             "float": float(i),
              "is_masked": True if i in (2, 3, 5) else False,
              } for i in range(10)]
     table = Table(columns=columns,
@@ -279,9 +280,8 @@ def test_table_sort(qtbot, table):
 
     _l = []
     @connect(sender=table)
-    def on_sort(sender, sort):
-        field, direction = sort
-        _l.append((field, direction))
+    def on_cluster_view_sort(sender, row_ids):
+        _l.append(row_ids)
 
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number).
@@ -297,7 +297,7 @@ def test_table_sort(qtbot, table):
     table.sort_by('count', 'desc')
     _assert(table.get_ids, list(range(10)))
 
-    assert _l == [('count', 'asc'), ('count', 'desc')]
+    assert _l == [list(range(9, -1, -1)), list(range(10))]
 
 
 def test_table_remove_all(qtbot, table):
