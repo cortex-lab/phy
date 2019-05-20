@@ -130,9 +130,9 @@ class GUI(QMainWindow):
         super(GUI, self).__init__()
         QMetaObject.connectSlotsByName(self)
         self.setDockOptions(QMainWindow.AllowTabbedDocks |
-                            QMainWindow.AllowNestedDocks |
-                            QMainWindow.AnimatedDocks
+                            QMainWindow.AllowNestedDocks
                             )
+        self.setAnimated(False)
 
         self._set_name(name, str(subtitle))
         position = position or (200, 200)

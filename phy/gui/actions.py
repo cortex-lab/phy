@@ -169,7 +169,11 @@ def _create_qaction(
                 "Invalid function arguments: expecting %d but got %d",
                 n_args, len(args))
             return
-        return callback(*args)
+        try:
+            return callback(*args)
+        except Exception:  # pragma: no cover
+            logger.warning("Error when executing action %s.", name)
+            logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
     action.triggered.connect(wrapped)
     sequence = _get_qkeysequence(shortcut)
