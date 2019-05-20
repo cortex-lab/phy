@@ -259,8 +259,7 @@ class Clustering(object):
         # Ensure spike_clusters has the right shape.
         spike_ids = _as_array(spike_ids)
         if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
-            new_spike_clusters = (np.ones(len(spike_ids), dtype=np.int64) *
-                                  new_spike_clusters[0])
+            new_spike_clusters = np.ones(len(spike_ids), dtype=np.int64) * new_spike_clusters[0]
         old_spike_clusters = self._spike_clusters[spike_ids]
 
         assert len(spike_ids) == len(old_spike_clusters)
@@ -278,9 +277,7 @@ class Clustering(object):
             return self._do_merge(spike_ids, old_clusters, new_clusters[0])
 
         # We return the UpdateInfo structure.
-        up = _assign_update_info(spike_ids,
-                                 old_spike_clusters,
-                                 new_spike_clusters)
+        up = _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters)
 
         # We update the new cluster id (strictly increasing during a session).
         self._new_cluster_id = max(self._new_cluster_id, max(up.added) + 1)
