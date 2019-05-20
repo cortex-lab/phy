@@ -277,6 +277,12 @@ def test_table_sort(qtbot, table):
     table.next()
     _assert(table.get_selected, [6])
 
+    _l = []
+    @connect(sender=table)
+    def on_sort(sender, sort):
+        field, direction = sort
+        _l.append((field, direction))
+
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number).
     table.sort_by('count', 'asc')
@@ -290,6 +296,8 @@ def test_table_sort(qtbot, table):
 
     table.sort_by('count', 'desc')
     _assert(table.get_ids, list(range(10)))
+
+    assert _l == [('count', 'asc'), ('count', 'desc')]
 
 
 def test_table_remove_all(qtbot, table):
