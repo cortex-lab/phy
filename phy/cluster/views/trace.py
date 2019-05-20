@@ -12,6 +12,7 @@ import logging
 import numpy as np
 
 from phylib.utils import Bunch, emit
+from phylib.utils._color import _colormap
 from phy.plot.transform import NDC, Range
 from .base import ManualClusteringView
 
@@ -55,13 +56,18 @@ def _iter_spike_waveforms(interval=None,
         # Skip non-selected spikes if requested.
         if (not show_all_spikes and c not in supervisor.selected):
             continue
-        cg = p.cluster_meta.get('group', c)
+        # cg = p.cluster_meta.get('group', c)
         channel_ids = get_best_channels(c)
         s = int(round(t * sr)) - s0
         # Skip partial spikes.
         if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
             continue
-        color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
+        # Choose cluster color.
+        if c in p.selected:
+            i = p.selected.index(c)
+            color = _colormap(i, alpha=.5)
+        else:  # pragma: no cover
+            color = cs.get(c, alpha=.5)
         # Extract the waveform.
         wave = Bunch(data=traces_interval[s - k:s + ns - k, channel_ids],
                      channel_ids=channel_ids,
@@ -70,9 +76,9 @@ def _iter_spike_waveforms(interval=None,
                      spike_id=i,
                      spike_time=t,
                      spike_cluster=c,
-                     cluster_group=cg,
+                     # cluster_group=cg,
                      )
-        assert wave.data.shape[0] == ns
+        assert wave.data.shape == (ns, len(channel_ids))
         yield wave
 
 
@@ -200,6 +206,7 @@ class TraceView(ManualClusteringView):
                         ):
         # The spike time corresponds to the first sample of the waveform.
         n_samples, n_channels = waveforms.shape
+        assert len(channel_ids) == n_channels
 
         # Generate the x coordinates of the waveform.
         t = start_time + self.dt * np.arange(n_samples)
@@ -208,9 +215,9 @@ class TraceView(ManualClusteringView):
         # The box index depends on the channel.
         box_index = self._permute_channels(channel_ids)
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
-        self.canvas.plot(
-            t, waveforms.T, color=color,
+        self.canvas.plot_batch(
             box_index=box_index,
+            x=t, y=waveforms.T, color=color,
             data_bounds=data_bounds,
         )
 
@@ -294,6 +301,8 @@ class TraceView(ManualClusteringView):
                                          w.spike_cluster,
                                          w.get('channel_ids', None),
                                          ))
+        if waveforms:
+            self.canvas.plot()
 
         # Plot the labels.
         if self.do_show_labels:

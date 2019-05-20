@@ -11,7 +11,7 @@ from numpy.testing import assert_allclose as ac
 
 from phylib.io.mock import artificial_traces, artificial_spike_clusters
 from phylib.utils import Bunch, connect
-from phylib.utils._color import ColorSelector
+from phylib.utils._color import ClusterColorSelector
 from phy.plot.tests import mouse_click
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
@@ -30,7 +30,7 @@ def test_trace_view(qtbot, tempdir, gui):
     st = np.linspace(0.1, .9, ns)
     sc = artificial_spike_clusters(ns, nc)
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
-    cs = ColorSelector()
+    cs = ClusterColorSelector(cluster_ids=list(range(nc)))
 
     m = Bunch(spike_times=st, spike_clusters=sc, sample_rate=sr)
     s = Bunch(cluster_meta={}, selected=[0])
@@ -57,8 +57,8 @@ def test_trace_view(qtbot, tempdir, gui):
             c = sc[i]
             s = int(round(t * sr))
             d = Bunch(data=traces[s - k:s + k, :],
-                      start_time=t - k / sr,
-                      color=cs.get(c),
+                      start_time=(s - k) / sr,
+                      color=cs.get(c, alpha=.5),
                       channel_ids=np.arange(5),
                       spike_id=i,
                       spike_cluster=c,
