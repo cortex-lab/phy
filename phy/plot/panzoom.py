@@ -461,6 +461,9 @@ class PanZoom(object):
         if key == 'R':
             self.reset()
 
+    def on_mouse_double_click(self, e):  # pragma: no cover
+        self.reset()
+
     # Canvas methods
     # -------------------------------------------------------------------------
 
