@@ -107,7 +107,7 @@ class BatchAccumulator(object):
 
     def add(self, b, noconcat=()):
         self.noconcat = noconcat
-        n = None
+        n = None  # total number of vertices for the current batch that is being added
         # We assume that the first element of the b dictionary is an
         # ndarray, that sets the number of vertices for all elements
         # in the dictionary.

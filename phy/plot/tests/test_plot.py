@@ -141,6 +141,17 @@ def test_plot_uscatter_batch_fail(qtbot, canvas):
         canvas.uscatter_batch(x=x, y=y, color=(1, 0, 0, 1))
 
 
+def test_plot_batch_1(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+    canvas.set_layout('grid', shape=(1, 2))
+    x, y = .25 * np.random.randn(2, 10)
+    canvas[0, 0].plot_batch(x=x, y=y)
+    canvas[0, 1].plot_batch(x=y, y=x)
+    canvas.plot()
+
+
 def test_plot_uscatter_batch_1(qtbot, canvas):
     if isinstance(canvas, PlotCanvasMpl):
         # TODO: not implemented yet

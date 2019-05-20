@@ -189,6 +189,17 @@ class PlotCanvas(BaseCanvas):
     def hist_batch(self, **kwargs):
         return self.add_batch(HistogramVisual, **kwargs)
 
+    def plot_batch(self, **kwargs):
+        # box_index scalar or vector
+        box_index = kwargs.pop('box_index', None)
+        b = PlotVisual.validate(**kwargs)
+        if box_index is not None:  # pragma: no cover
+            b.box_index = box_index
+        else:
+            n = PlotVisual.vertex_count(**kwargs)
+            b.box_index = np.tile(np.atleast_2d(self._default_box_index), (n, 1))
+        return self._acc[PlotVisual].add(b, noconcat=('x', 'y'))
+
     # Enable methods
     #--------------------------------------------------------------------------
 
