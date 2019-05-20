@@ -63,6 +63,7 @@
     "phy.cluster.views.correlogram.CorrelogramView": 1,
     "phy.cluster.views.feature.FeatureView": 1,
     "phy.cluster.views.trace.TraceView": 1,
-    "phy.cluster.views.waveform.WaveformView": 1
+    "phy.cluster.views.waveform.WaveformView": 1,
+    "phy.cluster.views.raster.RasterView": 1
   }
 }

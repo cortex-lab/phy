@@ -65,7 +65,7 @@ class RasterView(ManualClusteringView):
         return cluster_colors[spike_clusters_rel, :]
 
     def plot(self):
-        if len(self.spike_ids) == 0:
+        if not len(self.spike_clusters):
             return
         x = self._get_x()  # spike times for the selected spikes
         y = self._get_y()  # relative cluster index, in the specified cluster order

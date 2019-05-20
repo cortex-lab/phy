@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from itertools import chain, cycle
 import logging
 from operator import itemgetter
 import os
@@ -28,6 +29,7 @@ from phy.cluster.views import (WaveformView,
                                CorrelogramView,
                                ScatterView,
                                ProbeView,
+                               RasterView,
                                select_traces,
                                )
 from phy.cluster.views.trace import _iter_spike_waveforms
@@ -87,6 +89,7 @@ class TemplateController(object):
             CorrelogramView: self.create_correlogram_view,
             AmplitudeView: self.create_amplitude_view,
             ProbeView: self.create_probe_view,
+            RasterView: self.create_raster_view,
         }
 
         # Attach plugins before setting up the supervisor, so that plugins
@@ -152,6 +155,10 @@ class TemplateController(object):
             d = {cluster_id: {name: value} for cluster_id, value in values.items()}
             supervisor.cluster_meta.from_dict(d)
 
+        colormaps = cycle(('categorical', 'linear', 'diverging', 'rainbow'))
+        color_fields = cycle(
+            chain(supervisor.cluster_labels.keys(), supervisor.cluster_metrics.keys()))
+
         @connect(sender=supervisor)
         def on_attach_gui(sender):
             @supervisor.actions.add(shortcut='shift+ctrl+k')
@@ -161,6 +168,20 @@ class TemplateController(object):
                     cluster_ids = supervisor.selected
                 s = supervisor.clustering.spikes_in_clusters(cluster_ids)
                 supervisor.actions.split(s, self.model.spike_templates[s])
+
+            supervisor.actions.separator()
+
+            @supervisor.actions.add()
+            def change_colormap():
+                colormap = next(colormaps)
+                self.color_selector.set_color_field(colormap=colormap)
+                emit('colormap_changed', supervisor, colormap)
+
+            @supervisor.actions.add()
+            def change_color_field():
+                color_field = next(color_fields)
+                self.color_selector.set_color_field(field=color_field)
+                emit('color_field_changed', supervisor, color_field)
 
         # Save.
         @connect(sender=supervisor)
@@ -574,6 +595,39 @@ class TemplateController(object):
             positions=self.model.channel_positions,
             best_channels=self.get_best_channels,
         )
+
+    # Raster view
+    # -------------------------------------------------------------------------
+
+    def create_raster_view(self):
+        view = RasterView(
+            self.model.spike_times, self.supervisor.clustering.spike_clusters,
+            cluster_color_selector=self.color_selector,
+        )
+
+        def _update(sender, cluster_ids):
+            if cluster_ids is None or not len(cluster_ids):
+                return
+            view.set_cluster_ids(cluster_ids)
+            view.plot()
+
+        connect(_update, event='table_sort', sender=self.supervisor.cluster_view)
+        connect(_update, event='table_filter', sender=self.supervisor.cluster_view)
+
+        @connect(sender=self.supervisor)
+        def on_colormap_changed(sender, colormap):
+            view.plot()
+
+        @connect(sender=self.supervisor)
+        def on_color_field_changed(sender, field):
+            view.plot()
+
+        @connect(sender=view)
+        def on_close(sender):
+            unconnect(_update)
+            unconnect(on_colormap_changed)
+
+        return view
 
     # GUI
     # -------------------------------------------------------------------------

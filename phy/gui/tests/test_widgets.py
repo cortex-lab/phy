@@ -280,7 +280,7 @@ def test_table_sort(qtbot, table):
 
     _l = []
     @connect(sender=table)
-    def on_cluster_view_sort(sender, row_ids):
+    def on_table_sort(sender, row_ids):
         _l.append(row_ids)
 
     # Sort by count decreasing, and check that 0 (count 100) comes before
