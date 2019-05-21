@@ -72,15 +72,15 @@ class ManualClusteringView(object):
         gui.add_view(self, position=self._default_position)
         self.gui = gui
 
+        # Set the view state.
+        self.set_state(gui.state.get_view_state(self))
+
         self.actions = Actions(
             gui, name=self.name, menu=self.name, default_shortcuts=shortcuts)
 
         # Freeze and unfreeze the view when selecting clusters.
         self.actions.add(self.toggle_auto_update, checkable=True, checked=self.auto_update)
         self.actions.separator()
-
-        # Set the view state.
-        self.set_state(gui.state.get_view_state(self))
 
         emit('view_actions_created', self)
 

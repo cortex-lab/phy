@@ -44,9 +44,15 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class TemplateFeatureView(ScatterView):
-    def _get_data(self, cluster_ids):
+    def on_select(self, cluster_ids=(), **kwargs):
         if len(cluster_ids) != 2:
-            return []
+            self.canvas.clear()
+            self.canvas.update()
+            return
+        super(TemplateFeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
+
+    def _get_data(self, cluster_ids):
+        assert len(cluster_ids) == 2
         b = self.coords(cluster_ids)
         return [Bunch(x=b.x0, y=b.y0), Bunch(x=b.x1, y=b.y1)]
 
@@ -110,6 +116,7 @@ class TemplateController(object):
                      'get_best_channel',
                      'get_best_channels',
                      'get_probe_depth',
+                     'get_cluster_amplitude',
                      )
         cached = ('_get_waveforms',
                   '_get_template_waveforms',
