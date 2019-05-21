@@ -511,12 +511,13 @@ class Supervisor(object):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _set_color_actions(self):
+    def _set_color_actions(self, field=None, colormap=None, categorical=None):
         # Create the ClusterColorSelector instance.
         self.color_selector = ClusterColorSelector(
             cluster_meta=self.cluster_meta,
             cluster_metrics=self.cluster_metrics,
             cluster_ids=self.clustering.cluster_ids,
+            field=field, colormap=colormap, categorical=categorical,
         )
 
         # Change color field action.
@@ -758,8 +759,14 @@ class Supervisor(object):
 
         self.action_creator.attach(gui)
 
+        # Get the color selector parameters from the GUI state.
+        state = gui.state.get('color_selector', Bunch())
         # Create the cluster color selector and associated actions.
-        self._set_color_actions()
+        self._set_color_actions(
+            field=state.get('field', None),
+            colormap=state.get('colormap', None),
+            categorical=state.get('categorical', None),
+        )
 
         emit('attach_gui', self)
 
@@ -775,6 +782,7 @@ class Supervisor(object):
 
         @connect(sender=gui)
         def on_close(e):
+            gui.state['color_selector'] = self.color_selector.state
             unconnect(on_is_busy)
 
     @property

@@ -49,7 +49,7 @@ class TemplateFeatureView(ScatterView):
             self.canvas.clear()
             self.canvas.update()
             return
-        super(TemplateFeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
+        return super(TemplateFeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
 
     def _get_data(self, cluster_ids):
         assert len(cluster_ids) == 2

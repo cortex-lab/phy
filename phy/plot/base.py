@@ -372,7 +372,6 @@ class BaseCanvas(QOpenGLWindow):
             if v.get('clearable', True):  # pragma: no cover
                 v.close()
                 del v
-        gc.collect()
 
     def remove(self, *visuals):
         visuals = [v for v in visuals if v is not None]
