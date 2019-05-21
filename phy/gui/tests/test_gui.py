@@ -172,6 +172,14 @@ def test_gui_creator(tempdir, qtbot):
     gui.close()
 
 
+def test_gui_menu(qtbot, gui):
+    gui.get_menu('&File')
+    gui.get_submenu('&File', 'Submenu')
+    @gui.default_actions.add(menu='Submenu')
+    def my_action():
+        pass
+
+
 def test_gui_status_message(gui):
     assert gui.status_message == ''
     gui.status_message = ':hello world!'

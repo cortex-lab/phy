@@ -155,6 +155,19 @@ def test_actions_gui(qtbot, gui, actions):
     assert 'g\n' in stdout.getvalue()
 
 
+def test_actions_submenu(qtbot, gui, actions):
+    @actions.add(menu='&File', submenu='Submenu')
+    def my_action():
+        pass
+
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    # qtbot.stop()
+    gui.close()
+
+
 def test_actions_checkable(qtbot, gui, actions):
     qtbot.addWidget(gui)
     gui.show()

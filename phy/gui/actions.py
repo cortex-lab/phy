@@ -210,12 +210,13 @@ class Actions(object):
         gui.actions.append(self)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
-            docstring=None, menu=None, verbose=True, checkable=False, checked=False):
+            docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
-            return partial(self.add, name=name, shortcut=shortcut, prompt=prompt, n_args=n_args,
-                           alias=alias, menu=menu, checkable=checkable, checked=checked)
+            return partial(
+                self.add, name=name, shortcut=shortcut, prompt=prompt, n_args=n_args,
+                alias=alias, menu=menu, submenu=submenu, checkable=checkable, checked=checked)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -244,6 +245,12 @@ class Actions(object):
         self.gui.addAction(action)
         # Add the action to the menu.
         menu = menu or self.menu
+        # Create the submenu if there is one.
+        if submenu:
+            # Create the submenu.
+            self.gui.get_submenu(menu, submenu)
+            # Make sure the action gets added to the submenu.
+            menu = submenu
         # Do not show private actions in the menu.
         if menu and not name.startswith('_'):
             self.gui.get_menu(menu).addAction(action)

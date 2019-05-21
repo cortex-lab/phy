@@ -378,6 +378,12 @@ class GUI(QMainWindow):
             self._menus[name] = self.menuBar().addMenu(name)
         return self._menus[name]
 
+    def get_submenu(self, menu, name):
+        """Return or create a submenu."""
+        if name not in self._menus:
+            self._menus[name] = self.get_menu(menu).addMenu(name)
+        return self._menus[name]
+
     def remove_menu(self, name):
         """Remove a menu."""
         if name in self._menus:
