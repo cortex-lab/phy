@@ -252,9 +252,8 @@ def _color_styles():
             background-color: rgb(%d, %d, %d);
             %s
         }
-        ''' % (i, r, g, b, 'color: #000 !important;'
-                           if _is_bright((r / 255, g / 255, b / 255)) else '')
-        for i, (r, g, b) in enumerate(colormaps.default))
+        ''' % (i, r, g, b, 'color: #000 !important;' if _is_bright((r, g, b)) else '')
+        for i, (r, g, b) in enumerate(colormaps.default * 255))
 
 
 class Table(HTMLWidget):
