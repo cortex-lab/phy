@@ -95,7 +95,7 @@ class KwikController(object):
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
         self.color_selector = ClusterColorSelector(
-            cluster_labels=self.supervisor.cluster_labels,
+            cluster_meta=self.supervisor.cluster_meta,
             cluster_metrics=self.supervisor.cluster_metrics,
             cluster_ids=self.supervisor.clustering.cluster_ids,
         )
