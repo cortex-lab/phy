@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phylib.utils import Bunch, emit
-from phylib.utils._color import _colormap
+from phylib.utils._color import selected_cluster_color
 from phy.plot.transform import NDC, Range
 from .base import ManualClusteringView
 
@@ -65,7 +65,7 @@ def _iter_spike_waveforms(interval=None,
         # Choose cluster color.
         if c in p.selected:
             i = p.selected.index(c)
-            color = _colormap(i, alpha=.5)
+            color = selected_cluster_color(i, alpha=.5)
         else:  # pragma: no cover
             color = cs.get(c, alpha=.5)
         # Extract the waveform.

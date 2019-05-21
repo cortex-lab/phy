@@ -8,6 +8,7 @@
 
 import numpy as np
 
+from phylib.utils import Bunch
 from phylib.utils._color import ClusterColorSelector
 from phylib.io.mock import artificial_spike_clusters, artificial_spike_samples
 
@@ -23,10 +24,10 @@ def test_raster_0(qtbot, gui):
     spike_clusters = np.arange(4)
     cluster_ids = np.arange(4)
 
-    cluster_labels = {'group': {cl: cl for cl in spike_clusters}}
-    cluster_metrics = {'quality': lambda c: 3 - c}
+    cluster_meta = Bunch(fields=('group',), get=lambda f, cl: cl % 4)
+    cluster_metrics = {'quality': lambda c: 3. - c}
     c = ClusterColorSelector(
-        cluster_labels=cluster_labels,
+        cluster_meta=cluster_meta,
         cluster_metrics=cluster_metrics,
         cluster_ids=cluster_ids)
 
@@ -37,7 +38,7 @@ def test_raster_0(qtbot, gui):
     v.plot()
 
     v.on_select([2])
-    c.set_color_field('quality', 'categorical')
+    c.set_color_mapping('quality', 'categorical')
     v.plot()
 
     # qtbot.stop()
@@ -51,10 +52,10 @@ def test_raster_1(qtbot, gui):
     spike_clusters = artificial_spike_clusters(ns, nc)
     cluster_ids = np.arange(4)
 
-    cluster_labels = {'group': {cl: np.random.randint(0, 3) for cl in range(nc)}}
+    cluster_meta = Bunch(fields=('group',), get=lambda f, cl: cl % 4)
     cluster_metrics = {'quality': lambda c: 100 - c}
     c = ClusterColorSelector(
-        cluster_labels=cluster_labels,
+        cluster_meta=cluster_meta,
         cluster_metrics=cluster_metrics,
         cluster_ids=cluster_ids)
 
@@ -65,7 +66,7 @@ def test_raster_1(qtbot, gui):
 
     v.plot()
 
-    c.set_color_field('group', 'diverging')
+    c.set_color_mapping('group', 'cluster_group')
     v.plot()
 
     # qtbot.stop()

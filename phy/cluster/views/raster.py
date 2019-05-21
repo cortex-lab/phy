@@ -57,11 +57,13 @@ class RasterView(ManualClusteringView):
 
     def _get_y(self):
         """Return the y position of the spikes, given the relative position of the clusters."""
-        return _index_of(self.spike_clusters[self.spike_ids], self.cluster_ids)
+        cl = self.spike_clusters[self.spike_ids]
+        # Sanity check.
+        assert np.all(np.in1d(cl, self.cluster_ids))
+        return _index_of(cl, self.cluster_ids)
 
     def _get_color(self, spike_clusters_rel):
-        cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids)
-        cluster_colors[:, 3] = .75  # alpha channel
+        cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
         return cluster_colors[spike_clusters_rel, :]
 
     def plot(self):
@@ -82,7 +84,7 @@ class RasterView(ManualClusteringView):
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
-        self.cluster_ids = cluster_ids
+        # self.cluster_ids = cluster_ids
         if not cluster_ids:
             return
         # TODO

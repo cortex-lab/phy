@@ -15,7 +15,7 @@ import numpy as np
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
 from phylib.utils import emit, connect
-from phylib.utils._color import _COLORMAP, _is_bright
+from phylib.utils._color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, _read_text
 from phylib.utils._types import _is_integer
 
@@ -254,7 +254,7 @@ def _color_styles():
         }
         ''' % (i, r, g, b, 'color: #000 !important;'
                            if _is_bright((r / 255, g / 255, b / 255)) else '')
-        for i, (r, g, b) in enumerate(_COLORMAP))
+        for i, (r, g, b) in enumerate(colormaps.default))
 
 
 class Table(HTMLWidget):

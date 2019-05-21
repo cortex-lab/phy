@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phylib.utils._color import _colormap
+from phylib.utils._color import selected_cluster_color
 from .base import ManualClusteringView
 from phy.plot import NDC
 
@@ -56,7 +56,7 @@ class ScatterView(ManualClusteringView):
             x, y = d.x, d.y
             assert x.ndim == y.ndim == 1
             assert x.shape == y.shape
-            color = _colormap(i, .75)
+            color = selected_cluster_color(i, .75)
             # Create one visual per cluster.
             self.canvas.scatter(x=x, y=y, color=color, size=ms, data_bounds=data_bounds)
 

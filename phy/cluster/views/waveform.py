@@ -16,7 +16,7 @@ from phy.plot import _get_linear_x
 from phy.plot.interact import Boxed
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
-from phylib.utils._color import _colormap
+from phylib.utils._color import selected_cluster_color
 from phylib.utils.geometry import _get_boxes
 from .base import ManualClusteringView
 
@@ -174,7 +174,7 @@ class WaveformView(ManualClusteringView):
             # computation of the depth on the GPU.
             m += i
 
-            color = tuple(_colormap(i)) + (alpha,)
+            color = selected_cluster_color(i, alpha)
             assert len(color) == 4
 
             # Generate the box index (one number per channel).

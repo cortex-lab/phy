@@ -11,7 +11,7 @@ import logging
 from phylib.utils._misc import _read_python
 from phylib.utils.testing import captured_output
 from phylib.utils import connect
-from phy.cluster.views import WaveformView, TraceView, ProbeView
+from phy.cluster.views import WaveformView, TraceView, ProbeView, RasterView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press, mouse_click
 from ..gui import TemplateController, template_describe
@@ -108,6 +108,13 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
         mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
 
     assert s.cluster_meta.get('group', clu) == 'good'
+
+    rv = gui.list_views(RasterView)[0]
+    s.actions.toggle_categorical(False)
+    rv.dock_widget.close()
+
+    if tv:
+        tv.dock_widget.close()
 
     s.save()
     gui.close()

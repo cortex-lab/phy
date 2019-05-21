@@ -13,7 +13,7 @@ import re
 import numpy as np
 
 from phylib.utils import Bunch, connect
-from phylib.utils._color import _colormap
+from phylib.utils._color import selected_cluster_color
 from phy.plot.transform import Range
 from .base import ManualClusteringView
 
@@ -40,7 +40,7 @@ def _get_default_grid():
 
 def _get_point_color(clu_idx=None):
     if clu_idx is not None:
-        color = tuple(_colormap(clu_idx)) + (.5,)
+        color = selected_cluster_color(clu_idx, .5)
     else:
         color = (.5,) * 4
     assert len(color) == 4

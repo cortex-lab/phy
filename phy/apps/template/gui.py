@@ -7,7 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from itertools import chain, cycle
 import logging
 from operator import itemgetter
 import os
@@ -19,7 +18,6 @@ from phylib.io.array import Selector
 from phylib.io.model import TemplateModel
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._color import ClusterColorSelector
 from phylib.utils._misc import _read_python
 
 from phy.cluster.supervisor import Supervisor
@@ -102,11 +100,6 @@ class TemplateController(object):
         self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
-        self.color_selector = ClusterColorSelector(
-            cluster_labels=self.supervisor.cluster_labels,
-            cluster_metrics=self.supervisor.cluster_metrics,
-            cluster_ids=self.supervisor.clustering.cluster_ids,
-        )
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -155,10 +148,6 @@ class TemplateController(object):
             d = {cluster_id: {name: value} for cluster_id, value in values.items()}
             supervisor.cluster_meta.from_dict(d)
 
-        colormaps = cycle(('categorical', 'linear', 'diverging', 'rainbow'))
-        color_fields = cycle(
-            chain(supervisor.cluster_labels.keys(), supervisor.cluster_metrics.keys()))
-
         @connect(sender=supervisor)
         def on_attach_gui(sender):
             @supervisor.actions.add(shortcut='shift+ctrl+k')
@@ -169,19 +158,7 @@ class TemplateController(object):
                 s = supervisor.clustering.spikes_in_clusters(cluster_ids)
                 supervisor.actions.split(s, self.model.spike_templates[s])
 
-            supervisor.actions.separator()
-
-            @supervisor.actions.add()
-            def change_colormap():
-                colormap = next(colormaps)
-                self.color_selector.set_color_field(colormap=colormap)
-                emit('colormap_changed', supervisor, colormap)
-
-            @supervisor.actions.add()
-            def change_color_field():
-                color_field = next(color_fields)
-                self.color_selector.set_color_field(field=color_field)
-                emit('color_field_changed', supervisor, color_field)
+            self.color_selector = supervisor.color_selector
 
         # Save.
         @connect(sender=supervisor)
@@ -470,33 +447,20 @@ class TemplateController(object):
         traces_interval = select_traces(m.traces, interval, sample_rate=m.sample_rate)
         # Reorder vertically.
         out = Bunch(data=traces_interval)
-        out.waveforms = []
 
         def gbc(cluster_id):
             return self.get_best_channels(cluster_id)
 
-        for b in _iter_spike_waveforms(interval=interval,
-                                       traces_interval=traces_interval,
-                                       model=self.model,
-                                       supervisor=self.supervisor,
-                                       color_selector=self.color_selector,
-                                       n_samples_waveforms=k,
-                                       get_best_channels=gbc,
-                                       show_all_spikes=show_all_spikes,
-                                       ):
-            # i = b.spike_id
-            # assert b.data.shape[1] == len(b.channel_ids)
-
-            # # Compute the residual: waveform - amplitude * template.
-            # residual = b.copy()
-            # template_id = m.spike_templates[i]
-            # template = m.get_template(template_id, channel_ids=b.channel_ids).template
-            # assert template.shape[1] == len(residual.channel_ids) == residual.data.shape[1]
-
-            # residual.data = residual.data - m.amplitudes[i] * template
-            # assert residual.data.shape[1] == len(residual.channel_ids)
-            # out.waveforms.extend([b, residual])
-            out.waveforms.append(b)
+        out.waveforms = list(_iter_spike_waveforms(
+            interval=interval,
+            traces_interval=traces_interval,
+            model=self.model,
+            supervisor=self.supervisor,
+            color_selector=self.color_selector,
+            n_samples_waveforms=k,
+            get_best_channels=gbc,
+            show_all_spikes=show_all_spikes,
+        ))
         return out
 
     def _trace_spike_times(self):
@@ -533,6 +497,16 @@ class TemplateController(object):
             self.supervisor.select([cluster_id])
             # Update the trace view.
             v.on_select([cluster_id])
+
+        @connect(sender=self.supervisor)
+        def on_color_mapping_changed(sender):
+            v.on_select()
+
+        @connect
+        def on_close_view(sender, view):
+            if view == v:
+                unconnect(on_spike_click)
+                unconnect(on_color_mapping_changed)
 
         return v
 
@@ -615,17 +589,14 @@ class TemplateController(object):
         connect(_update, event='table_filter', sender=self.supervisor.cluster_view)
 
         @connect(sender=self.supervisor)
-        def on_colormap_changed(sender, colormap):
+        def on_color_mapping_changed(sender):
             view.plot()
 
-        @connect(sender=self.supervisor)
-        def on_color_field_changed(sender, field):
-            view.plot()
-
-        @connect(sender=view)
-        def on_close(sender):
-            unconnect(_update)
-            unconnect(on_colormap_changed)
+        @connect
+        def on_close_view(sender, view_):
+            if view_ == view:
+                unconnect(_update)
+                unconnect(on_color_mapping_changed)
 
         return view
 

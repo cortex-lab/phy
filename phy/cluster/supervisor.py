@@ -9,6 +9,7 @@
 
 from functools import partial
 import inspect
+from itertools import chain
 import logging
 
 import numpy as np
@@ -18,6 +19,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 
 from phylib.utils import Bunch, emit, connect, unconnect
+from phylib.utils._color import ClusterColorSelector
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
@@ -454,9 +456,17 @@ class Supervisor(object):
         self.context = context
         self.quality = quality or self.default_quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
-        self.cluster_metrics = cluster_metrics or {}  # dict {name: func cluster_id => value}
-        self.cluster_labels = cluster_labels or {}  # dict {name: {cl: value}}
-        self.columns = ['id', 'n_spikes', 'quality']
+
+        # Cluster metrics.
+        # This is a dict {name: func cluster_id => value}.
+        self.cluster_metrics = cluster_metrics or {}
+        self.cluster_metrics['n_spikes'] = self.n_spikes
+
+        # Cluster labels.
+        # This is a dict {name: {cl: value}}
+        self.cluster_labels = cluster_labels or {}
+
+        self.columns = ['id', 'quality']
         self.columns += [label for label in self.cluster_labels.keys() if label != 'group']
         self.columns += list(self.cluster_metrics.keys())
 
@@ -506,6 +516,55 @@ class Supervisor(object):
 
     # Internal methods
     # -------------------------------------------------------------------------
+
+    def _set_color_actions(self):
+        # Create the ClusterColorSelector instance.
+        self.color_selector = ClusterColorSelector(
+            cluster_meta=self.cluster_meta,
+            cluster_metrics=self.cluster_metrics,
+            cluster_ids=self.clustering.cluster_ids,
+        )
+
+        # Change color field action.
+        def _make_color_field_action(color_field):
+            def change_color_field():
+                self.color_selector.set_color_mapping(field=color_field)
+                emit('color_mapping_changed', self)
+            return change_color_field
+
+        for field in chain(
+                ('cluster', 'group', 'n_spikes'),
+                self.cluster_labels.keys(), self.cluster_metrics.keys()):
+            self.actions.add(
+                _make_color_field_action(field), name='Color field: %s' % field.lower(),
+                menu='Co&lor', submenu='Change color field')
+
+        # Change color map action.
+        def _make_colormap_action(colormap):
+            def change_colormap():
+                self.color_selector.set_color_mapping(colormap=colormap)
+                emit('color_mapping_changed', self)
+            return change_colormap
+
+        for colormap in ('categorical', 'linear', 'diverging', 'rainbow'):
+            self.actions.add(
+                _make_colormap_action(colormap), name='Colormap: %s' % colormap.lower(),
+                menu='Co&lor', submenu='Change colormap')
+
+        # Change colormap categorical or continous.
+        @self.actions.add(menu='Co&lor', checkable=True, checked=True)
+        def toggle_categorical(checked):
+            self.color_selector.set_color_mapping(categorical=checked)
+            emit('color_mapping_changed', self)
+
+        @connect(sender=self)
+        def on_cluster(sender, up):
+            # After a clustering action, get the cluster ids as shown
+            # in the cluster view, and update the color selector accordingly.
+            @self.cluster_view.get_ids
+            def _update(cluster_ids):
+                self.color_selector.set_cluster_ids(cluster_ids)
+                emit('color_mapping_changed', self)
 
     def _save_spikes_per_cluster(self):
         if not self.context:
@@ -707,6 +766,9 @@ class Supervisor(object):
         #self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view, gui))
 
         self.action_creator.attach(gui)
+
+        # Create the cluster color selector and associated actions.
+        self._set_color_actions()
 
         emit('attach_gui', self)
 

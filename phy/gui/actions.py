@@ -260,7 +260,7 @@ class Actions(object):
 
         # Set the callback method.
         if callback:
-            setattr(self, name, callback)
+            setattr(self, name.lower().replace(' ', '_').replace(':', ''), callback)
 
     def separator(self, menu=None):
         """Add a separator"""
