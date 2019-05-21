@@ -102,7 +102,7 @@ class PlotCanvas(BaseCanvas):
     def add_visual(self, *args, **kwargs):
         if not self._enabled:
             self._enable()
-        super(PlotCanvas, self).add_visual(*args, **kwargs)
+        return super(PlotCanvas, self).add_visual(*args, **kwargs)
 
     def add_one(self, visual, *args, box_index=None, **kwargs):
         # Finalize batch.
@@ -127,7 +127,7 @@ class PlotCanvas(BaseCanvas):
         data = visual.set_data(*args, **kwargs)
         if self.interact:
             visual.set_box_index(box_index, data=data)
-        return data
+        return visual
 
     def add_batch(self, visual_cls, box_index=None, **kwargs):
         # box_index scalar or vector

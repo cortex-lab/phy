@@ -149,6 +149,10 @@ class TraceView(ManualClusteringView):
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
 
+        # Visuals.
+        self._waveforms_visual = None
+        self._traces_visual = None
+
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
         self.box_size = np.array(self.canvas.stacked.box_size)
@@ -191,7 +195,7 @@ class TraceView(ManualClusteringView):
         assert traces.shape == (n_ch, n_samples)
         assert box_index.shape == (n_ch, n_samples)
 
-        self.canvas.uplot(
+        return self.canvas.uplot(
             t, traces,
             color=color,
             data_bounds=data_bounds,
@@ -231,7 +235,7 @@ class TraceView(ManualClusteringView):
                 anchor=[+1., -.1],
                 data_bounds=data_bounds,
             )
-        self.canvas.text()
+        return self.canvas.text()
 
     def _restrict_interval(self, interval):
         start, end = interval
@@ -254,47 +258,15 @@ class TraceView(ManualClusteringView):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_interval(self, interval=None, change_status=True):
-        """Display the traces and spikes in a given interval."""
-        if interval is None:
-            interval = self._interval
-        interval = self._restrict_interval(interval)
-        #if interval == self._interval:
-        #    return
-        self._interval = interval
-        start, end = interval
-        self.canvas.clear()
-
-        # Set the status message.
-        if change_status:
-            self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
-
-        # Load the traces.
-        traces = self.traces(interval)
-
-        # Find the data bounds.
-        ymin, ymax = traces.data.min(), traces.data.max()
-        data_bounds = (start, ymin, end, ymax)
-
-        # Used for spike click.
-        self._data_bounds = data_bounds
-        self._waveform_times = []
-
-        # Plot the traces.
-        self._plot_traces(traces.data,
-                          color=traces.get('color', None),
-                          data_bounds=data_bounds,
-                          )
-
+    def _plot_all_waveforms(self, waveforms):
         # Plot the spikes.
-        waveforms = traces.waveforms
         assert isinstance(waveforms, list)
         for w in waveforms:
             self._plot_waveforms(waveforms=w.data,
                                  color=w.color,
                                  channel_ids=w.get('channel_ids', None),
                                  start_time=w.start_time,
-                                 data_bounds=data_bounds,
+                                 data_bounds=self._data_bounds,
                                  )
             self._waveform_times.append((w.start_time,
                                          w.spike_id,
@@ -302,13 +274,51 @@ class TraceView(ManualClusteringView):
                                          w.get('channel_ids', None),
                                          ))
         if waveforms:
-            self.canvas.plot()
+            return self.canvas.plot(key='trace_waveforms')
 
-        # Plot the labels.
-        if self.do_show_labels:
-            self._plot_labels(traces.data, data_bounds=data_bounds)
+    def set_interval(self, interval=None, change_status=True):
+        """Display the traces and spikes in a given interval."""
+        if interval is None:
+            interval = self._interval
+        interval = self._restrict_interval(interval)
 
-        self.canvas.axes.reset_data_bounds(data_bounds)
+        # Load the traces.
+        traces = self.traces(interval)
+
+        if interval != self._interval:
+            logger.debug("Redraw the entire trace view.")
+            self._interval = interval
+            start, end = interval
+            self.canvas.clear()
+
+            # Set the status message.
+            if change_status:
+                self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
+
+            # Find the data bounds.
+            ymin, ymax = traces.data.min(), traces.data.max()
+            data_bounds = (start, ymin, end, ymax)
+
+            # Used for spike click.
+            self._data_bounds = data_bounds
+            self._waveform_times = []
+
+            # Plot the traces.
+            self._traces_visual = self._plot_traces(
+                traces.data, color=traces.get('color', None), data_bounds=self._data_bounds)
+
+            # Plot the labels.
+            if self.do_show_labels:
+                self._plot_labels(traces.data, data_bounds=self._data_bounds)
+
+        else:
+            logger.debug("Keeping the existing traces, removing the waveforms visual.")
+            self.canvas.remove(self._waveforms_visual)
+
+        # Plot the waveforms.
+        self._waveforms_visual = self._plot_all_waveforms(traces.waveforms)
+
+        self.canvas.axes.reset_data_bounds(self._data_bounds)
         self.canvas.update()
 
     def on_select(self, cluster_ids=None, **kwargs):

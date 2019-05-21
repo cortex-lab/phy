@@ -375,8 +375,10 @@ class BaseCanvas(QOpenGLWindow):
         gc.collect()
 
     def remove(self, *visuals):
+        visuals = [v for v in visuals if v is not None]
         self.visuals[:] = (v for v in self.visuals if v.visual not in visuals)
         for v in visuals:
+            logger.log(5, "Remove visual %s.", v)
             v.close()
             del v
         gc.collect()
@@ -415,6 +417,7 @@ class BaseCanvas(QOpenGLWindow):
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(Bunch(visual=visual, **kwargs))
         emit('visual_added', self, visual)
+        return visual
 
     def has_visual(self, visual):
         for v in self.visuals:
