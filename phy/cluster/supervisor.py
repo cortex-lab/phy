@@ -368,15 +368,14 @@ class ActionCreator(object):
         # Move.
         self.add('move', prompt=True, n_args=2,
                  docstring='Move some clusters to a group.')
-        self.separator()
-
         for which in ('best', 'similar', 'all'):
             for group in ('noise', 'mua', 'good', 'unsorted'):
                 self.add('move_%s_to_%s' % (which, group),
                          method_name='move',
+                         submenu='Move to %s' % which,
                          method_args=(group, which),
                          docstring='Move %s to %s.' % (which, group))
-            self.separator()
+        self.separator()
 
         # Label.
         self.add('label', alias='l', prompt=True, n_args=2,
