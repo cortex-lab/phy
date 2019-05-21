@@ -229,11 +229,10 @@ class TaskLogger(object):
 # -----------------------------------------------------------------------------
 
 class ClusterView(Table):
-    _required_columns = ('n_spikes', 'quality')
-    _defaut_sort = ('quality', 'desc')
+    _required_columns = ('n_spikes',)
     _view_name = 'cluster_view'
 
-    def __init__(self, *args, data=None, columns=()):
+    def __init__(self, *args, data=None, columns=(), sort=None):
         HTMLWidget.__init__(self, *args, title=self.__class__.__name__)
         self._set_styles()
         emit(self._view_name + '_init', self)
@@ -250,12 +249,9 @@ class ClusterView(Table):
 
         # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
         value_names = columns + [{'data': ['group']}]
-        self._init_table(columns=columns, value_names=value_names, data=data)
-
-        @connect(sender=self)
-        def on_ready(sender):
-            if sender == self:
-                self.sort_by(*self._defaut_sort)
+        # Default sort.
+        sort = sort or ('n_spikes', 'desc')
+        self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def _set_styles(self):
         self.builder.add_style('''
@@ -279,7 +275,6 @@ class ClusterView(Table):
 
 class SimilarityView(ClusterView):
     _required_columns = ('n_spikes', 'similarity')
-    _defaut_sort = ('similarity', 'desc')
     _view_name = 'similarity_view'
 
     def set_selected_index_offset(self, n):
@@ -423,7 +418,6 @@ class Supervisor(object):
     spike_clusters : ndarray
     cluster_groups : dictionary {cluster_id: group_name}
     cluster_metrics : dictionary {metrics_name: func cluster_id => value}
-    quality: func
     similarity: func
     new_cluster_id: func
     context: Context instance
@@ -447,15 +441,16 @@ class Supervisor(object):
                  cluster_groups=None,
                  cluster_metrics=None,
                  cluster_labels=None,
-                 quality=None,
                  similarity=None,
                  new_cluster_id=None,
+                 sort=None,
                  context=None,
                  ):
         super(Supervisor, self).__init__()
         self.context = context
-        self.quality = quality or self.default_quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
+
+        self._init_sort = sort
 
         # Cluster metrics.
         # This is a dict {name: func cluster_id => value}.
@@ -466,7 +461,7 @@ class Supervisor(object):
         # This is a dict {name: {cl: value}}
         self.cluster_labels = cluster_labels or {}
 
-        self.columns = ['id', 'quality']
+        self.columns = ['id']  # n_spikes comes from cluster_metrics
         self.columns += [label for label in self.cluster_labels.keys() if label != 'group']
         self.columns += list(self.cluster_metrics.keys())
 
@@ -619,9 +614,6 @@ class Supervisor(object):
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
 
-    def default_quality(self, cluster_id):
-        return self.n_spikes(cluster_id) * 1e-3
-
     def _get_similar_clusters(self, sender, cluster_id):
         sim = self.similarity(cluster_id)
         # Only keep existing clusters.
@@ -634,8 +626,7 @@ class Supervisor(object):
 
     def _get_cluster_info(self, cluster_id, exclude=()):
         out = {'id': cluster_id,
-               'n_spikes': self.n_spikes(cluster_id),
-               'quality': self.quality(cluster_id),
+               # 'n_spikes': self.n_spikes(cluster_id),
                }
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
@@ -649,12 +640,14 @@ class Supervisor(object):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
         # Create the cluster view.
-        self.cluster_view = ClusterView(gui, data=data, columns=self.columns)
+        self.cluster_view = ClusterView(
+            gui, data=data, columns=self.columns, sort=self._init_sort)
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
         # Create the similarity view.
-        self.similarity_view = SimilarityView(gui, columns=self.columns + ['similarity'])
+        self.similarity_view = SimilarityView(
+            gui, columns=self.columns + ['similarity'], sort=('similarity', 'desc'))
         connect(self._get_similar_clusters, event='request_similar_clusters',
                 sender=self.similarity_view)
         connect(self._similar_selected, event='select', sender=self.similarity_view)
@@ -866,11 +859,7 @@ class Supervisor(object):
                 for c in self.clustering.cluster_ids}
 
     def label(self, name, value, cluster_ids=None):
-        """Assign a label to clusters.
-
-        Example: `quality 3`
-
-        """
+        """Assign a label to clusters."""
         if cluster_ids is None:
             cluster_ids = self.selected
         if not hasattr(cluster_ids, '__len__'):

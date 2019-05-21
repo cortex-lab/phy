@@ -55,15 +55,15 @@ def gui(tempdir, qtbot):
 
 @fixture
 def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
-               quality, similarity, tempdir):
+               similarity, tempdir):
     spike_clusters = np.repeat(cluster_ids, 2)
 
     mc = Supervisor(spike_clusters,
                     cluster_groups=cluster_groups,
                     cluster_labels=cluster_labels,
-                    quality=quality,
                     similarity=similarity,
                     context=Context(tempdir),
+                    sort=('id', 'desc'),
                     )
     mc.attach(gui)
     b = Barrier()
@@ -202,7 +202,6 @@ def test_task_move_all(tl):
 def data():
     _data = [{"id": i,
               "n_spikes": 100 - 10 * i,
-              "quality": 100 - 10 * i,
               "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
               "is_masked": i in (2, 3, 5),
               } for i in range(10)]
@@ -237,7 +236,7 @@ def test_cluster_view_extra_columns(qtbot, gui, data):
     for cl in data:
         cl['my_metrics'] = cl['id'] * 1000
 
-    cv = ClusterView(gui, data=data, columns=['id', 'n_spikes', 'quality', 'my_metrics'])
+    cv = ClusterView(gui, data=data, columns=['id', 'n_spikes', 'my_metrics'])
     _wait_until_table_ready(qtbot, cv)
 
 
@@ -298,7 +297,7 @@ def test_supervisor_busy(qtbot, supervisor):
 
 
 def test_supervisor_cluster_metrics(
-        qtbot, gui, cluster_ids, cluster_groups, quality, similarity, tempdir):
+        qtbot, gui, cluster_ids, cluster_groups, similarity, tempdir):
     spike_clusters = np.repeat(cluster_ids, 2)
 
     def my_metrics(cluster_id):
@@ -309,7 +308,6 @@ def test_supervisor_cluster_metrics(
     mc = Supervisor(spike_clusters,
                     cluster_groups=cluster_groups,
                     cluster_metrics=cluster_metrics,
-                    quality=quality,
                     similarity=similarity,
                     context=Context(tempdir),
                     )
@@ -441,7 +439,7 @@ def test_supervisor_merge_move(qtbot, supervisor):
     _assert_selected(supervisor, [2])
 
 
-def test_supervisor_split_0(supervisor):
+def test_supervisor_split_0(qtbot, supervisor):
 
     _select(supervisor, [1, 2])
     _assert_selected(supervisor, [1, 2])
@@ -474,7 +472,7 @@ def test_supervisor_split_1(supervisor):
     _assert_selected(supervisor, [31, 32, 33])
 
 
-def test_supervisor_split_2(gui, quality, similarity):
+def test_supervisor_split_2(gui, similarity):
     spike_clusters = np.array([0, 0, 1])
 
     supervisor = Supervisor(spike_clusters,
@@ -495,7 +493,7 @@ def test_supervisor_split_2(gui, quality, similarity):
 def test_supervisor_state(tempdir, qtbot, gui, supervisor):
 
     cv = supervisor.cluster_view
-    assert supervisor.state.cluster_view.current_sort == ('quality', 'desc')
+    assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
 
     cv.sort_by('id')
     assert supervisor.state.cluster_view.current_sort == ('id', 'asc')

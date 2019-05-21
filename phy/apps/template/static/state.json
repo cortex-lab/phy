@@ -4,7 +4,7 @@
   },
   "ClusterView": {
     "current_sort": [
-      "quality",
+      "n_spikes",
       "desc"
     ]
   },

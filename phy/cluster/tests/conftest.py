@@ -32,13 +32,6 @@ def cluster_labels():
 
 
 @fixture
-def quality():
-    def quality(c):
-        return c
-    return quality
-
-
-@fixture
 def similarity(cluster_ids):
     sim = lambda c, d: (c * 1.01 + d)
 

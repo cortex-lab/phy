@@ -260,16 +260,16 @@ def _color_styles():
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    def __init__(self, *args, columns=None, value_names=None, data=None, title=''):
+    def __init__(self, *args, columns=None, value_names=None, data=None, sort=None, title=''):
         super(Table, self).__init__(*args, title=title)
-        self._init_table(columns=columns, value_names=value_names, data=data)
+        self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def eval_js(self, expr, callback=None):
         # Avoid JS errors when the table is not yet fully loaded.
         expr = 'if (typeof table !== "undefined") ' + expr
         return super(Table, self).eval_js(expr, callback=callback)
 
-    def _init_table(self, columns=None, value_names=None, data=None):
+    def _init_table(self, columns=None, value_names=None, data=None, sort=None):
         columns = columns or ['id']
         value_names = value_names or columns
         data = data or []
@@ -305,6 +305,7 @@ class Table(HTMLWidget):
         data_json = dumps(self.data)
         columns_json = dumps(self.columns)
         value_names_json = dumps(self.value_names)
+        sort_json = dumps(sort)
 
         b.body += '''
         <script>
@@ -313,12 +314,13 @@ class Table(HTMLWidget):
             var options = {
               valueNames: %s,
               columns: %s,
+              sort: %s,
             };
 
             var table = new Table('table', options, data);
 
         </script>
-        ''' % (data_json, value_names_json, columns_json)
+        ''' % (data_json, value_names_json, columns_json, sort_json)
         self.build(lambda html: emit('ready', self))
 
         # HACK: work-around a Qt bug where this widget is not properly refreshed
