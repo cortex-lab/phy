@@ -188,7 +188,6 @@ class WaveformView(ManualClusteringView):
             # Generate the waveform array.
             wave = np.transpose(wave, (0, 2, 1))
             wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
-            self._waveform_min_max = (wave.min(), wave.max())
 
             self.canvas.uplot(
                 x=t,

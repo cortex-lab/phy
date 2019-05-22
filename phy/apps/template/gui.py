@@ -28,6 +28,7 @@ from phy.cluster.views import (WaveformView,
                                ScatterView,
                                ProbeView,
                                RasterView,
+                               TemplateView,
                                select_traces,
                                )
 from phy.cluster.views.trace import _iter_spike_waveforms
@@ -94,6 +95,7 @@ class TemplateController(object):
             AmplitudeView: self.create_amplitude_view,
             ProbeView: self.create_probe_view,
             RasterView: self.create_raster_view,
+            TemplateView: self.create_template_view,
         }
 
         # Attach plugins before setting up the supervisor, so that plugins
@@ -605,6 +607,51 @@ class TemplateController(object):
                 unconnect(on_color_mapping_changed)
 
         view.plot()
+
+        return view
+
+    # Template view
+    # -------------------------------------------------------------------------
+
+    def get_templates(self, cluster_ids):
+        bunchs = {cluster_id: self._get_template_waveforms(cluster_id)
+                  for cluster_id in cluster_ids}
+        return {cluster_id: Bunch(
+                template=bunchs[cluster_id].data[0, ...],
+                channel_ids=bunchs[cluster_id].channel_ids)
+                for cluster_id in cluster_ids}
+
+    def create_template_view(self):
+        view = TemplateView(
+            templates=self.get_templates,
+            channel_ids=np.arange(self.model.n_channels),
+            cluster_ids=self.supervisor.clustering.cluster_ids,
+            cluster_color_selector=self.color_selector,
+        )
+        view.plot()
+
+        @connect
+        def on_cluster_click(sender, cluster_id, key=None, button=None):
+            emit('select', self.supervisor, [cluster_id])
+
+        def _update(sender, cluster_ids):
+            if cluster_ids is None or not len(cluster_ids):
+                return
+            view.cluster_ids = cluster_ids
+            view.plot()
+
+        connect(_update, event='table_sort', sender=self.supervisor.cluster_view)
+        connect(_update, event='table_filter', sender=self.supervisor.cluster_view)
+
+        @connect(sender=self.supervisor)
+        def on_color_mapping_changed(sender):
+            view.plot()
+
+        @connect
+        def on_close_view(sender, view_):
+            if view_ == view:
+                unconnect(_update)
+                unconnect(on_color_mapping_changed)
 
         return view
 
