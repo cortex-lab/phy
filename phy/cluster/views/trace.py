@@ -351,6 +351,8 @@ class TraceView(ManualClusteringView):
         # Default: freeze the view for performance reasons.
         # self.actions.get('toggle_auto_update').trigger()
 
+        self.set_interval()
+
     # Scaling
     # -------------------------------------------------------------------------
 
