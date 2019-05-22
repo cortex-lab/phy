@@ -60,14 +60,14 @@ class PlotCanvas(BaseCanvas):
 
     def set_layout(
             self, layout=None, shape=None, n_plots=None, origin=None,
-            box_bounds=None, box_pos=None, box_size=None):
+            box_bounds=None, box_pos=None, box_size=None, has_clip=None):
 
         self.layout = layout
 
         # Constrain pan zoom.
         if layout == 'grid':
             self._default_box_index = (0, 0)
-            self.grid = Grid(shape)
+            self.grid = Grid(shape, has_clip=has_clip)
             self.grid.attach(self)
             self.interact = self.grid
             self.constrain_bounds = (-1, -1, +1, +1)

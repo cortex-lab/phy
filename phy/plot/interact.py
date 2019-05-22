@@ -41,7 +41,7 @@ class Grid(BaseLayout):
     n_dims = 2
     active_box = (0, 0)
 
-    def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
+    def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None, has_clip=True):
         super(Grid, self).__init__(box_var=box_var)
         self.shape_var = shape_var
         self._shape = shape
@@ -51,6 +51,9 @@ class Grid(BaseLayout):
                             Clip([-mc, -mc, +mc, +mc]),
                             Subplot(self.shape_var, self.box_var),
                             ]
+        if not has_clip:
+            # Remove the Clip transform.
+            del self._transforms[1]
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
