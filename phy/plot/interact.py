@@ -226,8 +226,9 @@ class Boxed(BaseLayout):
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
         box_bounds = box_bounds.astype(np.float32)
         # TODO OPTIM: set the texture at initialization and update the data
-        visual.program['u_box_bounds'] = box_bounds
-        visual.program['n_boxes'] = self.n_boxes
+        if 'u_box_bounds' in visual.program:
+            visual.program['u_box_bounds'] = box_bounds
+            visual.program['n_boxes'] = self.n_boxes
 
     def add_boxes(self, canvas):
         n_boxes = len(self.box_bounds)
@@ -240,14 +241,13 @@ class Boxed(BaseLayout):
                         ])
         pos = np.tile(pos, (n_boxes, 1))
 
-        box_index = np.c_[np.arange(n_boxes)]
-        box_index = np.repeat(box_index, 8, axis=0)
+        # Transformation of the boxes data on CPU.
+        pos = self.transforms.apply(pos)
 
         boxes = LineVisual()
 
-        canvas.add_visual(boxes, clearable=False)
+        canvas.add_visual(boxes, clearable=False, exclude_origins=(self,))
         boxes.set_data(pos=pos)
-        boxes.set_box_index(box_index)
         canvas.update()
 
     # Change the box bounds, positions, or size
