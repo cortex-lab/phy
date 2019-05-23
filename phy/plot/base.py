@@ -7,7 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from collections import defaultdict
 import gc
 import logging
 import re
@@ -62,7 +61,6 @@ class BaseVisual(object):
         # added to the canvas.
         self.n_vertices = 0
         self.program = None
-        self.set_canvas_transforms_filter(lambda t: t)
 
     # Visual definition
     # -------------------------------------------------------------------------
@@ -87,6 +85,8 @@ class BaseVisual(object):
 
     def on_resize(self, width, height):
         s = self.program._vertex.code + '\n' + self.program.fragment.code
+        # HACK: ensure that u_window_size appears somewhere in the shaders body (discarding
+        # the headers).
         s = s.replace('uniform vec2 u_window_size;', '')
         if 'u_window_size' in s:
             self.program['u_window_size'] = (width, height)
@@ -113,10 +113,6 @@ class BaseVisual(object):
         """
         raise NotImplementedError()
 
-    def set_canvas_transforms_filter(self, f):
-        """Set a function filtering the canvas' transforms."""
-        self.canvas_transforms_filter = f
-
     def set_box_index(self, box_index, data=None):
         # data is the output of validate_data
         assert box_index is not None
@@ -142,80 +138,46 @@ class BaseVisual(object):
 # Build program with layouts
 #------------------------------------------------------------------------------
 
-def _insert_glsl(vertex, fragment, to_insert):
-    """Insert snippets in a shader.
-
-    to_insert is a dict `{(shader_type, location): snippet}`.
-
-    Snippets can contain `{{ var }}` placeholders for the transformed variable
-    name.
-
-    """
-    # Find the place where to insert the GLSL snippet.
-    # This is "gl_Position = transform(data_var_name);" where
-    # data_var_name is typically an attribute.
-    vs_regex = re.compile(r'gl_Position = transform\(([\S]+)\);')
-    r = vs_regex.search(vertex)
-    if not r:
-        logger.debug("The vertex shader doesn't contain the transform "
-                     "placeholder: skipping the transform chain "
-                     "GLSL insertion.")
-        return vertex, fragment
-    assert r
-    logger.log(5, "Found transform placeholder in vertex code: `%s`",
-               r.group(0))
-
-    # Find the GLSL variable with the data (should be a `vec2`).
-    var = r.group(1)
-    assert var and var in vertex
-
-    # Headers.
-    vertex = to_insert['vert', 'header'] + '\n\n' + vertex
-    fragment = to_insert['frag', 'header'] + '\n\n' + fragment
-
-    # Get the pre and post transforms.
-    vs_insert = to_insert['vert', 'before_transforms']
-    vs_insert += to_insert['vert', 'transforms']
-    vs_insert += to_insert['vert', 'after_transforms']
-
-    # Insert the GLSL snippet in the vertex shader.
-    vertex = vs_regex.sub(indent(vs_insert), vertex)
-
-    # Now, we make the replacements in the fragment shader.
-    fs_regex = re.compile(r'(void main\(\)\s*\{)')
-    # NOTE: we add the `void main(){` that was removed by the regex.
-    fs_insert = '\\1\n' + to_insert['frag', 'before_transforms']
-    fragment = fs_regex.sub(indent(fs_insert), fragment)
-
-    # Replace the transformed variable placeholder by its name.
-    vertex = vertex.replace('{{ var }}', var)
-
-    return vertex, fragment
+def _get_glsl(to_insert, shader_type=None, location=None, exclude_origins=()):
+    """From a `to_insert` list of (shader_type, location, origin, snippet), return the
+    concatenated snippet that satisfies the specified shader type, location, and origin."""
+    return '\n'.join((
+        snippet
+        for (shader_type_, location_, origin_, snippet) in to_insert
+        if shader_type_ == shader_type and location_ == location and
+        origin_ not in exclude_origins
+    ))
 
 
 class GLSLInserter(object):
     """Insert GLSL snippets into shader codes."""
 
     def __init__(self):
-        self._to_insert = defaultdict(list)
+        self._to_insert = []  # list of tuples (shader_type, location, origin, glsl)
+
+    def _init_insert(self):
         self.insert_vert('vec2 temp_pos_tr = {{ var }};\n'
                          'vec2 pos_orig = temp_pos_tr;\n',  # keep original value.
-                         'before_transforms')
+                         'before_transforms', index=0)
         self.insert_vert('gl_Position = vec4(temp_pos_tr, 0., 1.);',
-                         'after_transforms')
-        self.insert_vert('varying vec2 v_temp_pos_tr;\n', 'header')
-        self.insert_frag('varying vec2 v_temp_pos_tr;\n', 'header')
+                         'after_transforms', index=0)
+        self.insert_vert('varying vec2 v_temp_pos_tr;\n', 'header', index=0)
+        self.insert_frag('varying vec2 v_temp_pos_tr;\n', 'header', index=0)
 
-    def _insert(self, shader_type, glsl, location):
+    def _insert(self, shader_type, glsl, location, origin=None, index=None):
         assert location in (
             'header',
             'before_transforms',
             'transforms',
             'after_transforms',
         )
-        self._to_insert[shader_type, location].append(glsl)
+        item = (shader_type, location, origin, glsl)
+        if index is None:
+            self._to_insert.append(item)
+        else:
+            self._to_insert.insert(index, item)
 
-    def insert_vert(self, glsl, location='transforms'):
+    def insert_vert(self, glsl, location='transforms', origin=None, index=None):
         """Insert a GLSL snippet into the vertex shader.
 
         The location can be:
@@ -227,38 +189,90 @@ class GLSLInserter(object):
         * `after_transforms`: just after the GPU transforms
 
         """
-        self._insert('vert', glsl, location)
+        self._insert('vert', glsl, location, origin=origin, index=index)
 
-    def insert_frag(self, glsl, location=None):
+    def insert_frag(self, glsl, location=None, origin=None, index=None):
         """Insert a GLSL snippet into the fragment shader."""
-        self._insert('frag', glsl, location)
+        self._insert('frag', glsl, location, origin=origin, index=index)
 
     def add_transform_chain(self, tc):
         """Insert the GLSL snippets of a transform chain."""
         # Generate the transforms snippet.
-        for t in tc.gpu_transforms:
+        for where, t, origin in tc._transforms:
+            if where != 'gpu':
+                continue
             if isinstance(t, Clip):
                 # Set the varying value in the vertex shader.
-                self.insert_vert('v_temp_pos_tr = temp_pos_tr;')
+                self.insert_vert('v_temp_pos_tr = temp_pos_tr;', origin=origin)
                 continue
-            self.insert_vert(t.glsl('temp_pos_tr'))
+            self.insert_vert(t.glsl('temp_pos_tr'), origin=origin)
         # Clipping.
         clip = tc.get('Clip')
         if clip:
-            self.insert_frag(clip.glsl('v_temp_pos_tr'), 'before_transforms')
+            self.insert_frag(clip.glsl('v_temp_pos_tr'), 'before_transforms', origin=origin)
 
-    def insert_into_shaders(self, vertex, fragment):
-        """Apply the insertions to shader code."""
-        to_insert = defaultdict(str)
-        to_insert.update({key: '\n'.join(self._to_insert[key]) + '\n'
-                          for key in self._to_insert})
-        return _insert_glsl(vertex, fragment, to_insert)
+    def insert_into_shaders(self, vertex, fragment, exclude_origins=()):
+        """Insert snippets in a shader, possibly excluding some that come from specified origins.
+
+        to_insert is a list of tuples `(shader_type, location, origin, snippet)`.
+
+        Snippets can contain `{{ var }}` placeholders for the transformed variable
+        name.
+
+        """
+        assert None not in exclude_origins
+        self._init_insert()
+        to_insert = self._to_insert
+        # Find the place where to insert the GLSL snippet.
+        # This is "gl_Position = transform(data_var_name);" where
+        # data_var_name is typically an attribute.
+        vs_regex = re.compile(r'gl_Position = transform\(([\S]+)\);')
+        r = vs_regex.search(vertex)
+        if not r:
+            logger.debug("The vertex shader doesn't contain the transform "
+                         "placeholder: skipping the transform chain "
+                         "GLSL insertion.")
+            return vertex, fragment
+        assert r
+        logger.log(5, "Found transform placeholder in vertex code: `%s`",
+                   r.group(0))
+
+        # Find the GLSL variable with the data (should be a `vec2`).
+        var = r.group(1)
+        assert var and var in vertex
+
+        # Headers.
+        vertex = _get_glsl(
+            to_insert, 'vert', 'header', exclude_origins=exclude_origins) + '\n\n' + vertex
+        fragment = _get_glsl(
+            to_insert, 'frag', 'header', exclude_origins=exclude_origins) + '\n\n' + fragment
+
+        # Get the pre and post transforms.
+        vs_insert = _get_glsl(
+            to_insert, 'vert', 'before_transforms', exclude_origins=exclude_origins)
+        vs_insert += _get_glsl(
+            to_insert, 'vert', 'transforms', exclude_origins=exclude_origins)
+        vs_insert += _get_glsl(
+            to_insert, 'vert', 'after_transforms', exclude_origins=exclude_origins)
+
+        # Insert the GLSL snippet in the vertex shader.
+        vertex = vs_regex.sub(indent(vs_insert), vertex)
+
+        # Now, we make the replacements in the fragment shader.
+        fs_regex = re.compile(r'(void main\(\)\s*\{)')
+        # NOTE: we add the `void main(){` that was removed by the regex.
+        fs_insert = '\\1\n' + _get_glsl(
+            to_insert, 'frag', 'before_transforms', exclude_origins=exclude_origins)
+        fragment = fs_regex.sub(indent(fs_insert), fragment)
+
+        # Replace the transformed variable placeholder by its name.
+        vertex = vertex.replace('{{ var }}', var)
+
+        return vertex, fragment
 
     def __add__(self, inserter):
         """Concatenate two inserters."""
-        for key, values in self._to_insert.items():
-            values.extend([_ for _ in inserter._to_insert[key]
-                           if _ not in values])
+        self._to_insert += inserter._to_insert
         return self
 
 
@@ -395,22 +409,33 @@ class BaseCanvas(QOpenGLWindow):
         transforms first.
 
         """
+
+        # This is the list of origins (mostly, interacts and layouts) that should be ignored
+        # when adding this visual. For example, an AxesVisual would keep the PanZoom interact,
+        # but not the Grid layout.
+        exclude_origins = kwargs.pop('exclude_origins', ())
+
         # Retrieve the visual's GLSL inserter.
         inserter = visual.inserter
-        # Add the visual's transforms.
+
+        # Add the visual's transforms first.
         inserter.add_transform_chain(visual.transforms)
+
         # Then, add the canvas' transforms.
-        canvas_transforms = visual.canvas_transforms_filter(self.transforms)
-        inserter.add_transform_chain(canvas_transforms)
-        # Also, add the canvas' inserter.
+        inserter.add_transform_chain(self.transforms)
+        # Also, add the canvas' inserter. The snippets that should be ignored will be excluded
+        # in insert_into_shaders() below.
         inserter += self.inserter
+
         # Now, we insert the transforms GLSL into the shaders.
         vs, fs = visual.vertex_shader, visual.fragment_shader
-        vs, fs = inserter.insert_into_shaders(vs, fs)
+        vs, fs = inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
+
         # Finally, we create the visual's program.
         visual.program = gloo.Program(vs, fs)
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
+
         # Initialize the size.
         visual.on_resize(self.size().width(), self.size().height())
         # Register the visual in the list of visuals in the canvas.

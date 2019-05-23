@@ -276,38 +276,35 @@ class TransformChain(object):
     """A linear sequence of transforms that happen on the CPU and GPU."""
     def __init__(self):
         self.transformed_var_name = None
-        self.cpu_transforms = []
-        self.gpu_transforms = []
+        self._transforms = []  # list of tuples (cpu|gpu, transform, origin)
 
-    def add_on_cpu(self, transforms):
-        """Add some transforms."""
+    @property
+    def cpu_transforms(self):
+        return [t for (where, t, origin) in self._transforms if where == 'cpu']
+
+    @property
+    def gpu_transforms(self):
+        return [t for (where, t, origin) in self._transforms if where == 'gpu']
+
+    def add_on_cpu(self, transforms, origin=None):
+        """Add some transforms on the CPU."""
         if not isinstance(transforms, list):
             transforms = [transforms]
-        self.cpu_transforms.extend(transforms or [])
+        self._transforms.extend([('cpu', t, origin) for t in transforms])
         return self
 
-    def add_on_gpu(self, transforms):
-        """Add some transforms."""
+    def add_on_gpu(self, transforms, origin=None):
+        """Add some transforms on the GPU."""
         if not isinstance(transforms, list):
             transforms = [transforms]
-        self.gpu_transforms.extend(transforms or [])
+        self._transforms.extend([('gpu', t, origin) for t in transforms])
         return self
 
     def get(self, class_name):
         """Get a transform in the chain from its name."""
-        for transform in self.cpu_transforms + self.gpu_transforms:
+        for where, transform, origin in self._transforms:
             if transform.__class__.__name__ == class_name:
                 return transform
-
-    def _remove_transform(self, transforms, name):
-        return [t for t in transforms if t.__class__.__name__ != name]
-
-    def remove(self, name):
-        """Remove a transform in the chain."""
-        cpu_transforms = self._remove_transform(self.cpu_transforms, name)
-        gpu_transforms = self._remove_transform(self.gpu_transforms, name)
-        return (TransformChain().add_on_cpu(cpu_transforms).
-                add_on_gpu(gpu_transforms))
 
     def apply(self, arr):
         """Apply all CPU transforms on an array."""
@@ -317,16 +314,14 @@ class TransformChain(object):
 
     def inverse(self):
         """Return the inverse chain of transforms."""
-        transforms = self.cpu_transforms + self.gpu_transforms
-        inv_transforms = [transform.inverse()
-                          for transform in transforms[::-1]]
+        inv_transforms = [
+            transform.inverse() for (where, transform, origin) in self._transforms[::-1]]
         return TransformChain().add_on_cpu(inv_transforms)
 
     def __add__(self, tc):
         assert isinstance(tc, TransformChain)
         assert tc.transformed_var_name == self.transformed_var_name
-        self.cpu_transforms.extend(tc.cpu_transforms)
-        self.gpu_transforms.extend(tc.gpu_transforms)
+        self._transforms.extend(tc._transforms)
         return self
 
     def __repr__(self):

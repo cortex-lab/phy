@@ -234,8 +234,6 @@ def test_transform_chain_complete(array):
 
     ae(t.apply(array), [[0, .5], [1, 1.5]])
 
-    assert len(t.remove('Scale').cpu_transforms) == len(t.cpu_transforms) - 2
-
 
 def test_transform_chain_add():
     tc = TransformChain()

@@ -10,10 +10,11 @@
 import numpy as np
 
 from phylib.io.array import _in_polygon
-from .base import BaseLayout
-from .transform import Scale, Range, Subplot, Clip, NDC
-from .utils import _get_texture
 from phylib.utils.geometry import _get_boxes, _get_box_pos_size
+
+from .base import BaseLayout
+from .transform import Scale, Range, Subplot, Clip, NDC, TransformChain
+from .utils import _get_texture
 from .visuals import LineVisual, PolygonVisual
 
 
@@ -47,22 +48,26 @@ class Grid(BaseLayout):
         self._shape = shape
         ms = 1 - self.margin
         mc = 1 - self.margin
-        self._transforms = [Scale((ms, ms)),
-                            Clip([-mc, -mc, +mc, +mc]),
-                            Subplot(self.shape_var, self.box_var),
-                            ]
+        _transforms = [Scale((ms, ms)),
+                       Clip([-mc, -mc, +mc, +mc]),
+                       Subplot(self.shape_var, self.box_var),
+                       ]
         if not has_clip:
             # Remove the Clip transform.
-            del self._transforms[1]
+            del _transforms[1]
+        self._transforms = _transforms
+        self.transforms = TransformChain()
+        self.transforms.add_on_gpu(_transforms, origin=self)
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        canvas.transforms.add_on_gpu(self._transforms)
+        canvas.transforms += self.transforms
         canvas.inserter.insert_vert("""
                                     attribute vec2 {};
                                     uniform vec2 {};
                                     """.format(self.box_var, self.shape_var),
-                                    'header')
+                                    'header',
+                                    origin=self)
 
     def map(self, arr, box=None):
         assert box is not None
@@ -91,22 +96,22 @@ class Grid(BaseLayout):
                         ])
         pos = np.tile(pos, (n_boxes, 1))
 
-        box_index = []
-        for i in range(n):
-            for j in range(m):
-                box_index.append([i, j])
-        box_index = np.vstack(box_index)
-        box_index = np.repeat(box_index, 8, axis=0)
+        # Transform the positions on the CPU as the GPU transforms are excluded in this visual.
+        pos = self.transforms.apply(pos)
+
+        # box_index = []
+        # for i in range(n):
+        #     for j in range(m):
+        #         box_index.append([i, j])
+        # box_index = np.vstack(box_index)
+        # box_index = np.repeat(box_index, 8, axis=0)
 
         boxes = LineVisual()
 
-        @boxes.set_canvas_transforms_filter
-        def _remove_clip(tc):
-            return tc.remove('Clip')
-
-        canvas.add_visual(boxes, clearable=False)
+        # We exclude this interact when adding the visual.
+        canvas.add_visual(boxes, clearable=False, exclude_origins=(self,))
         boxes.set_data(pos=pos)
-        boxes.set_box_index(box_index)
+        # boxes.set_box_index(box_index)
         canvas.update()
 
     def get_closest_box(self, pos):
@@ -118,7 +123,8 @@ class Grid(BaseLayout):
 
     def update_visual(self, visual):
         super(Grid, self).update_visual(visual)
-        visual.program[self.shape_var] = self._shape
+        if self.shape_var in visual.program:
+            visual.program[self.shape_var] = self._shape
 
     @property
     def shape(self):
@@ -185,23 +191,25 @@ class Boxed(BaseLayout):
         assert self._box_bounds.shape[1] == 4
         self.n_boxes = len(self._box_bounds)
 
-        self._transforms = [Range(NDC, 'box_bounds')]
+        self.transforms = TransformChain()
+        self.transforms.add_on_gpu([Range(NDC, 'box_bounds')], origin=self)
 
     def attach(self, canvas):
         super(Boxed, self).attach(canvas)
-        canvas.transforms.add_on_gpu(self._transforms)
+        canvas.transforms += self.transforms
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
             attribute float {};
             uniform sampler2D u_box_bounds;
-            uniform float n_boxes;""".format(self.box_var), 'header')
+            uniform float n_boxes;
+            """.format(self.box_var), 'header', origin=self)
         canvas.inserter.insert_vert("""
             // Fetch the box bounds for the current box (`box_var`).
             vec4 box_bounds = fetch_texture({},
                                             u_box_bounds,
                                             n_boxes);
             box_bounds = (2 * box_bounds - 1);  // See hack in Python.
-            """.format(self.box_var), 'before_transforms')
+            """.format(self.box_var), 'before_transforms', origin=self)
 
     def map(self, arr, box=None):
         assert box is not None
@@ -329,6 +337,7 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
+        origin = origin or 'upper'
         if origin == 'upper':
             b = b[::-1, :]
 

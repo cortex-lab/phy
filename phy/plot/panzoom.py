@@ -493,11 +493,11 @@ class PanZoom(object):
         if not all(v.visual.program is None for v in canvas.visuals):  # pragma: no cover
             raise RuntimeError("The PanZoom instance must be attached before the visuals.")
 
-        canvas.transforms.add_on_gpu([self._translate, self._scale])
+        canvas.transforms.add_on_gpu([self._translate, self._scale], origin=self)
         # Add the variable declarations.
         vs = ('uniform vec2 {};\n'.format(self.pan_var_name) +
               'uniform vec2 {};\n'.format(self.zoom_var_name))
-        canvas.inserter.insert_vert(vs, 'header')
+        canvas.inserter.insert_vert(vs, 'header', origin=self)
 
         canvas.attach_events(self)
 

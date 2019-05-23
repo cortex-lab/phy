@@ -162,13 +162,18 @@ class Axes(object):
             return
         self._attached = canvas
 
-        if self.show_x:
-            canvas.add_visual(self.xvisual, clearable=False)
-            canvas.add_visual(self.txvisual, clearable=False)
+        visuals = []
 
+        if self.show_x:
+            visuals += [self.xvisual, self.txvisual]
         if self.show_y:
-            canvas.add_visual(self.yvisual, clearable=False)
-            canvas.add_visual(self.tyvisual, clearable=False)
+            visuals += [self.yvisual, self.tyvisual]
+        for visual in visuals:
+            # Exclude the axes visual from the interact/layout, but keep the PanZoom.
+            interact = getattr(canvas, 'interact', None)
+            exclude_origins = (interact,) if interact else ()
+            canvas.add_visual(
+                visual, clearable=False, exclude_origins=exclude_origins)
 
         self.locator.set_view_bounds(NDC)
         self.update_visuals()
