@@ -38,8 +38,9 @@ class RasterView(ManualClusteringView):
         self.cluster_color_selector = cluster_color_selector
 
         super(RasterView, self).__init__()
+        self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
         self.canvas.constrain_bounds = NDC
-        self.canvas.enable_axes()
+        self.canvas.enable_axes(show_y=False)
 
     def set_spike_clusters(self, spike_clusters):
         """Set the spike clusters for all spikes."""
@@ -57,30 +58,37 @@ class RasterView(ManualClusteringView):
 
     def _get_y(self):
         """Return the y position of the spikes, given the relative position of the clusters."""
+        return np.zeros_like(self.spike_ids)
+
+    def _get_box_index(self):
+        """Return, for every spike, its row in the raster plot. This depends on the ordering
+        in self.cluster_ids."""
         cl = self.spike_clusters[self.spike_ids]
         # Sanity check.
         assert np.all(np.in1d(cl, self.cluster_ids))
         return _index_of(cl, self.cluster_ids)
 
-    def _get_color(self, spike_clusters_rel):
+    def _get_color(self, box_index):
+        """Return, for every spike, its color, based on its box index."""
         cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
-        return cluster_colors[spike_clusters_rel, :]
+        return cluster_colors[box_index, :]
 
     def plot(self):
         if not len(self.spike_clusters):
             return
         x = self._get_x()  # spike times for the selected spikes
-        y = self._get_y()  # relative cluster index, in the specified cluster order
-        color = self._get_color(y)
-        ymax = y.max()
-        data_bounds = (0, 0, self.duration, ymax + 1)
+        y = self._get_y()  # just 0
+        box_index = self._get_box_index()
+        color = self._get_color(box_index)
+        # ymax = y.max()
+        data_bounds = (0, 0, self.duration, self.n_clusters)
 
         self.canvas.clear()
         self.canvas.scatter(
-            x=x, y=ymax - y,  # we count from top to bottom.
-            color=color, size=self.marker_size, marker='vbar',
-            data_bounds=data_bounds)
-        self.canvas.axes.reset_data_bounds(data_bounds)
+            x=x, y=y, color=color, size=self.marker_size, marker='vbar',
+            box_index=box_index, data_bounds=(0, 0, self.duration, 1))
+        self.canvas.stacked.n_plots = self.n_clusters
+        self.canvas.axes.reset_data_bounds(data_bounds, do_update=True)
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
