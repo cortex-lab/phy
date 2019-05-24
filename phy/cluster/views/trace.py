@@ -14,6 +14,7 @@ import numpy as np
 from phylib.utils import Bunch, emit
 from phylib.utils._color import selected_cluster_color
 from phy.plot.transform import NDC, Range
+from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -150,8 +151,14 @@ class TraceView(ManualClusteringView):
         self.canvas.enable_axes(show_y=False)
 
         # Visuals.
-        self._waveforms_visual = None
-        self._traces_visual = None
+        self.waveform_visual = PlotVisual()
+        self.canvas.add_visual(self.waveform_visual)
+
+        self.trace_visual = UniformPlotVisual()
+        self.canvas.add_visual(self.trace_visual)
+
+        self.label_visual = TextVisual()
+        self.canvas.add_visual(self.label_visual)
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
@@ -187,15 +194,14 @@ class TraceView(ManualClusteringView):
         t = np.tile(t, (n_ch, 1))
 
         box_index = self._permute_channels(np.arange(n_ch))
-        box_index = np.repeat(box_index[:, np.newaxis],
-                              n_samples,
-                              axis=1)
+        box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=1)
 
         assert t.shape == (n_ch, n_samples)
         assert traces.shape == (n_ch, n_samples)
         assert box_index.shape == (n_ch, n_samples)
 
-        return self.canvas.uplot(
+        self.canvas.update_visual(
+            self.trace_visual,
             t, traces,
             color=color,
             data_bounds=data_bounds,
@@ -219,23 +225,25 @@ class TraceView(ManualClusteringView):
         # The box index depends on the channel.
         box_index = self._permute_channels(channel_ids)
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
-        self.canvas.plot_batch(
+        self.waveform_visual.add_batch_data(
             box_index=box_index,
             x=t, y=waveforms.T, color=color,
             data_bounds=data_bounds,
         )
 
     def _plot_labels(self, traces, data_bounds=None):
+        self.label_visual.reset_batch()
         for ch in range(self.n_channels):
             bi = self._permute_channels(ch)
             ch_label = '%d' % ch
-            self.canvas[bi].text_batch(
+            self.label_visual.add_batch_data(
                 pos=[data_bounds[0], traces[0, ch]],
                 text=ch_label,
                 anchor=[+1., -.1],
                 data_bounds=data_bounds,
+                box_index=bi,
             )
-        return self.canvas.text()
+        self.canvas.update_visual(self.label_visual)
 
     def _restrict_interval(self, interval):
         start, end = interval
@@ -261,20 +269,23 @@ class TraceView(ManualClusteringView):
     def _plot_all_waveforms(self, waveforms):
         # Plot the spikes.
         assert isinstance(waveforms, list)
+        if not waveforms:
+            return
+        self.waveform_visual.reset_batch()
         for w in waveforms:
-            self._plot_waveforms(waveforms=w.data,
-                                 color=w.color,
-                                 channel_ids=w.get('channel_ids', None),
-                                 start_time=w.start_time,
-                                 data_bounds=self._data_bounds,
-                                 )
+            self._plot_waveforms(
+                waveforms=w.data,
+                color=w.color,
+                channel_ids=w.get('channel_ids', None),
+                start_time=w.start_time,
+                data_bounds=self._data_bounds,
+            )
             self._waveform_times.append((w.start_time,
                                          w.spike_id,
                                          w.spike_cluster,
                                          w.get('channel_ids', None),
                                          ))
-        if waveforms:
-            return self.canvas.plot(key='trace_waveforms')
+        self.canvas.update_visual(self.waveform_visual)
 
     def set_interval(self, interval=None, change_status=True):
         """Display the traces and spikes in a given interval."""
@@ -289,7 +300,6 @@ class TraceView(ManualClusteringView):
             logger.debug("Redraw the entire trace view.")
             self._interval = interval
             start, end = interval
-            self.canvas.clear()
 
             # Set the status message.
             if change_status:
@@ -304,19 +314,15 @@ class TraceView(ManualClusteringView):
             self._waveform_times = []
 
             # Plot the traces.
-            self._traces_visual = self._plot_traces(
+            self._plot_traces(
                 traces.data, color=traces.get('color', None), data_bounds=self._data_bounds)
 
             # Plot the labels.
             if self.do_show_labels:
                 self._plot_labels(traces.data, data_bounds=self._data_bounds)
 
-        else:
-            logger.debug("Keeping the existing traces, removing the waveforms visual.")
-            self.canvas.remove(self._waveforms_visual)
-
         # Plot the waveforms.
-        self._waveforms_visual = self._plot_all_waveforms(traces.waveforms)
+        self._plot_all_waveforms(traces.waveforms)
 
         self.canvas.axes.reset_data_bounds(self._data_bounds)
         self.canvas.update()
