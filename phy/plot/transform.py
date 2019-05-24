@@ -316,7 +316,9 @@ class TransformChain(object):
         """Return the inverse chain of transforms."""
         inv_transforms = [
             transform.inverse() for (where, transform, origin) in self._transforms[::-1]]
-        return TransformChain().add_on_cpu(inv_transforms)
+        inv = TransformChain()
+        inv._transforms = inv_transforms
+        return inv
 
     def __add__(self, tc):
         assert isinstance(tc, TransformChain)

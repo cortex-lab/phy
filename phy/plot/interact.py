@@ -62,12 +62,12 @@ class Grid(BaseLayout):
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
         canvas.transforms += self.transforms
-        canvas.inserter.insert_vert("""
-                                    attribute vec2 {};
-                                    uniform vec2 {};
-                                    """.format(self.box_var, self.shape_var),
-                                    'header',
-                                    origin=self)
+        canvas.inserter.insert_vert(
+            """
+            attribute vec2 {};
+            uniform vec2 {};
+            """.format(self.box_var, self.shape_var),
+            'header', origin=self)
 
     def map(self, arr, box=None):
         assert box is not None
@@ -96,22 +96,19 @@ class Grid(BaseLayout):
                         ])
         pos = np.tile(pos, (n_boxes, 1))
 
-        # Transform the positions on the CPU as the GPU transforms are excluded in this visual.
-        pos = self.transforms.apply(pos)
-
-        # box_index = []
-        # for i in range(n):
-        #     for j in range(m):
-        #         box_index.append([i, j])
-        # box_index = np.vstack(box_index)
-        # box_index = np.repeat(box_index, 8, axis=0)
+        box_index = []
+        for i in range(n):
+            for j in range(m):
+                box_index.append([i, j])
+        box_index = np.vstack(box_index)
+        box_index = np.repeat(box_index, 8, axis=0)
 
         boxes = LineVisual()
 
         # We exclude this interact when adding the visual.
-        canvas.add_visual(boxes, clearable=False, exclude_origins=(self,))
+        canvas.add_visual(boxes, clearable=False)
         boxes.set_data(pos=pos)
-        # boxes.set_box_index(box_index)
+        boxes.set_box_index(box_index)
         canvas.update()
 
     def get_closest_box(self, pos):
