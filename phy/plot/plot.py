@@ -110,6 +110,12 @@ class PlotCanvas(BaseCanvas):
             key=kwargs.pop('key', None),
             exclude_origins=kwargs.pop('exclude_origins', ()),
         )
+        self.update_visual(visual, *args, **kwargs)
+
+    def update_visual(self, visual, *args, **kwargs):
+        """Update a visual at the end of a batch."""
+        if not self._enabled:  # pragma: no cover
+            self._enable()
         # If a batch session has been initiated in the visual, add the data from the
         # visual's BatchAccumulator.
         if visual._acc.items:

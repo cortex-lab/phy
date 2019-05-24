@@ -129,10 +129,13 @@ class BaseVisual(object):
 
     def add_batch_data(self, **kwargs):
         """Prepare data to be added later with PlotCanvas.add_visual()."""
-        n = self.vertex_count(**kwargs)
         box_index = kwargs.pop('box_index', None)
+        data = self.validate(**kwargs)
+        # WARNING: size should be the number of items for correct batch array creation,
+        # not the number of vertices.
         self._acc.add(
-            self.validate(**kwargs), box_index=box_index, size=n, noconcat=self._noconcat)
+            data, box_index=box_index, n_items=data._n_items,
+            n_vertices=data._n_vertices, noconcat=self._noconcat)
 
     def reset_batch(self):
         """Reinitialize batch."""

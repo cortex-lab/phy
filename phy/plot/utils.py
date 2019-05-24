@@ -105,10 +105,12 @@ class BatchAccumulator(object):
         self.items = {}
         self.noconcat = ()
 
-    def add(self, b, noconcat=(), size=None, **kwargs):
+    def add(self, b, noconcat=(), n_items=None, n_vertices=None, **kwargs):
         b.update(kwargs)
         self.noconcat = noconcat
-        assert size >= 0  # total number of vertices for the current batch that is being added
+        assert n_items >= 0  # number of items for the current batch that is being added
+        # This may be smaller than the number of vertices, for example in LineVisual, where every
+        # item is a 4-tuple (x0, y0, x1, y1) that corresponds to 2 vertices.
         for key, val in b.items():
             if key not in self.items:
                 self.items[key] = []
@@ -124,11 +126,14 @@ class BatchAccumulator(object):
                 k = len(val)
             else:
                 k = 1
-            # Special consideration for list of strings (text visual).
+            # Special consideration for variables that are lists and not arrays, and that
+            # should not be concatenated here.
             if key in noconcat:
                 self.items[key].extend(val)
             else:
-                self.items[key].append(_get_array(val, (size, k)))
+                size = n_items if key != 'box_index' else n_vertices
+                val = _get_array(val, (size, k))
+                self.items[key].append(val)
         return b
 
     def __getattr__(self, key):

@@ -72,25 +72,17 @@ class ScatterVisual(BaseVisual):
         assert self.marker in self._supported_markers
 
         self.set_shader('scatter')
-        self.fragment_shader = self.fragment_shader.replace('%MARKER',
-                                                            self.marker)
+        self.fragment_shader = self.fragment_shader.replace('%MARKER', self.marker)
         self.set_primitive_type('points')
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def vertex_count(x=None, y=None, pos=None, **kwargs):
+    def vertex_count(self, x=None, y=None, pos=None, **kwargs):
         return y.size if y is not None else len(pos)
 
-    @staticmethod
-    def validate(x=None,
-                 y=None,
-                 pos=None,
-                 color=None,
-                 size=None,
-                 depth=None,
-                 data_bounds=None,
-                 ):
+    def validate(
+            self, x=None, y=None, pos=None, color=None, size=None, depth=None,
+            data_bounds=None, **kwargs):
         if pos is None:
             x, y = _get_pos(x, y)
             pos = np.c_[x, y]
@@ -110,7 +102,8 @@ class ScatterVisual(BaseVisual):
             assert data_bounds.shape[0] == n
 
         return Bunch(pos=pos, color=color, size=size,
-                     depth=depth, data_bounds=data_bounds)
+                     depth=depth, data_bounds=data_bounds,
+                     _n_items=n, _n_vertices=n)
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
@@ -173,17 +166,10 @@ class UniformScatterVisual(BaseVisual):
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def vertex_count(x=None, y=None, pos=None, **kwargs):
+    def vertex_count(self, x=None, y=None, pos=None, **kwargs):
         return y.size if y is not None else len(pos)
 
-    @staticmethod
-    def validate(x=None,
-                 y=None,
-                 pos=None,
-                 masks=None,
-                 data_bounds=None,
-                 ):
+    def validate(self, x=None, y=None, pos=None, masks=None, data_bounds=None, **kwargs):
         if pos is None:
             x, y = _get_pos(x, y)
             pos = np.c_[x, y]
@@ -206,6 +192,7 @@ class UniformScatterVisual(BaseVisual):
         return Bunch(pos=pos,
                      masks=masks,
                      data_bounds=data_bounds,
+                     _n_items=n, _n_vertices=n,
                      )
 
     def set_data(self, *args, **kwargs):
@@ -264,13 +251,7 @@ class PlotVisual(BaseVisual):
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def validate(x=None,
-                 y=None,
-                 color=None,
-                 depth=None,
-                 data_bounds=None,
-                 ):
+    def validate(self, x=None, y=None, color=None, depth=None, data_bounds=None, **kwargs):
 
         assert y is not None
         y = _as_list(y)
@@ -309,10 +290,10 @@ class PlotVisual(BaseVisual):
 
         return Bunch(x=x, y=y,
                      color=color, depth=depth,
-                     data_bounds=data_bounds)
+                     data_bounds=data_bounds,
+                     _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
-    @staticmethod
-    def vertex_count(y=None, **kwargs):
+    def vertex_count(self, y=None, **kwargs):
         """Take the output of validate() as input."""
         return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
 
@@ -374,12 +355,7 @@ class UniformPlotVisual(BaseVisual):
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def validate(x=None,
-                 y=None,
-                 masks=None,
-                 data_bounds=None,
-                 ):
+    def validate(self, x=None, y=None, masks=None, data_bounds=None, **kwargs):
 
         assert y is not None
         y = _as_list(y)
@@ -412,10 +388,10 @@ class UniformPlotVisual(BaseVisual):
 
         return Bunch(x=x, y=y, masks=masks,
                      data_bounds=data_bounds,
+                     _n_items=n_signals, _n_vertices=self.vertex_count(y=y)
                      )
 
-    @staticmethod
-    def vertex_count(y=None, **kwargs):
+    def vertex_count(self, y=None, **kwargs):
         """Take the output of validate() as input."""
         return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
 
@@ -482,10 +458,7 @@ class HistogramVisual(BaseVisual):
         self.data_range = Range([0, 0, 1, 1])
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def validate(hist=None,
-                 color=None,
-                 ylim=None):
+    def validate(self, hist=None, color=None, ylim=None, **kwargs):
         assert hist is not None
         hist = np.asarray(hist, np.float64)
         if hist.ndim == 1:
@@ -494,10 +467,7 @@ class HistogramVisual(BaseVisual):
         n_hists, n_bins = hist.shape
 
         # Validate the data.
-        color = _get_array(color, (n_hists, 4),
-                           HistogramVisual._default_color,
-                           dtype=np.float32,
-                           )
+        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color, dtype=np.float32)
 
         # Validate ylim.
         if ylim is None:
@@ -509,13 +479,11 @@ class HistogramVisual(BaseVisual):
             ylim = ylim[:, np.newaxis]
         assert ylim.shape == (n_hists, 1)
 
-        return Bunch(hist=hist,
-                     ylim=ylim,
-                     color=color,
-                     )
+        return Bunch(
+            hist=hist, ylim=ylim, color=color,
+            _n_items=n_hists, _n_vertices=self.vertex_count(hist))
 
-    @staticmethod
-    def vertex_count(hist, **kwargs):
+    def vertex_count(self, hist, **kwargs):
         hist = np.atleast_2d(hist)
         n_hists, n_bins = hist.shape
         return 6 * n_hists * n_bins
@@ -530,9 +498,7 @@ class HistogramVisual(BaseVisual):
 
         # NOTE: this must be set *before* `apply_cpu_transforms` such
         # that the histogram is correctly normalized.
-        data_bounds = np.c_[np.zeros((n_hists, 2)),
-                            n_bins * np.ones((n_hists, 1)),
-                            data.ylim]
+        data_bounds = np.c_[np.zeros((n_hists, 2)), n_bins * np.ones((n_hists, 1)), data.ylim]
         data_bounds = np.repeat(data_bounds, 6 * n_bins, axis=0)
         self.data_range.from_bounds = data_bounds
 
@@ -595,10 +561,7 @@ class TextVisual(BaseVisual):
     def _get_glyph_indices(self, s):
         return [self._chars.index(char) for char in s]
 
-    @staticmethod
-    def validate(pos=None, text=None, anchor=None,
-                 data_bounds=None,
-                 ):
+    def validate(self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs):
 
         if text is None:
             text = []
@@ -628,10 +591,10 @@ class TextVisual(BaseVisual):
             assert data_bounds.shape == (n_text, 4)
 
         return Bunch(pos=pos, text=text, anchor=anchor,
-                     data_bounds=data_bounds)
+                     data_bounds=data_bounds,
+                     _n_items=n_text, _n_vertices=self.vertex_count(pos=pos))
 
-    @staticmethod
-    def vertex_count(pos=None, **kwargs):
+    def vertex_count(self, pos=None, **kwargs):
         """Take the output of validate() as input."""
         # Total number of glyphs * 6 (6 vertices per glyph).
         return sum(map(len, kwargs.get('text', ''))) * 6
@@ -736,17 +699,14 @@ class LineVisual(BaseVisual):
     _default_color = (.3, .3, .3, 1.)
     _init_keywords = ('color',)
 
-    def __init__(self, color=None):
+    def __init__(self):
         super(LineVisual, self).__init__()
         self.set_shader('line')
         self.set_primitive_type('lines')
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def validate(pos=None, color=None,
-                 data_bounds=None,
-                 ):
+    def validate(self, pos=None, color=None, data_bounds=None, **kwargs):
         assert pos is not None
         pos = _as_array(pos)
         pos = np.atleast_2d(pos)
@@ -764,12 +724,14 @@ class LineVisual(BaseVisual):
         data_bounds = data_bounds.astype(np.float64)
         assert data_bounds.shape == (n_lines, 4)
 
-        return Bunch(pos=pos, color=color, data_bounds=data_bounds)
+        return Bunch(pos=pos, color=color, data_bounds=data_bounds,
+                     _n_items=n_lines, _n_vertices=self.vertex_count(pos=pos))
 
-    @staticmethod
-    def vertex_count(pos=None, **kwargs):
+    def vertex_count(self, pos=None, **kwargs):
         """Take the output of validate() as input."""
-        return np.atleast_2d(pos).shape[0] * 2
+        pos = np.atleast_2d(pos)
+        assert pos.shape[1] == 4
+        return pos.shape[0] * 2
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
@@ -815,10 +777,7 @@ class PolygonVisual(BaseVisual):
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    @staticmethod
-    def validate(pos=None,
-                 data_bounds=None,
-                 ):
+    def validate(self, pos=None, data_bounds=None, **kwargs):
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
@@ -831,10 +790,11 @@ class PolygonVisual(BaseVisual):
         data_bounds = data_bounds.astype(np.float64)
         assert data_bounds.shape == (1, 4)
 
-        return Bunch(pos=pos, data_bounds=data_bounds)
+        return Bunch(
+            pos=pos, data_bounds=data_bounds,
+            _n_items=pos.shape[0], _n_vertices=self.vertex_count(pos=pos))
 
-    @staticmethod
-    def vertex_count(pos=None, **kwargs):
+    def vertex_count(self, pos=None, **kwargs):
         """Take the output of validate() as input."""
         return pos.shape[0]
 

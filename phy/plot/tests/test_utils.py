@@ -126,8 +126,8 @@ def test_accumulator():
     b = BatchAccumulator()
     with raises(AttributeError):
         b.doesnotexist
-    b.add({'x': np.ones(4), 'y': 2}, size=4)
-    b.add({'x': np.zeros(2), 'y': 1}, size=2)
+    b.add({'x': np.ones(4), 'y': 2}, n_items=4)
+    b.add({'x': np.zeros(2), 'y': 1}, n_items=2)
     x = np.array([[1, 1, 1, 1, 0, 0]]).T
     y = np.array([[2, 2, 2, 2, 1, 1]]).T
     ae(b.x, x)
