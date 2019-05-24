@@ -14,12 +14,12 @@ from timeit import default_timer
 
 import numpy as np
 
+from phylib.utils import connect, emit, Bunch
 from phy.gui.qt import Qt, QEvent, QOpenGLWindow
 from . import gloo
 from .gloo import gl
 from .transform import TransformChain, Clip, pixels_to_ndc
-from .utils import _load_shader, _get_array
-from phylib.utils import connect, emit, Bunch
+from .utils import _load_shader, _get_array, BatchAccumulator
 
 
 logger = logging.getLogger(__name__)
@@ -49,8 +49,9 @@ class BaseVisual(object):
 
     """
 
-    """Data variables that can be lists of arrays."""
-    allow_list = ()
+    # Variables that are supposed to be lists, and that should not be
+    # batched together when adding batch data.
+    _noconcat = ()
 
     def __init__(self):
         self.gl_primitive_type = None
@@ -61,6 +62,7 @@ class BaseVisual(object):
         # added to the canvas.
         self.n_vertices = 0
         self.program = None
+        self._acc = BatchAccumulator()
 
     # Visual definition
     # -------------------------------------------------------------------------
@@ -91,6 +93,11 @@ class BaseVisual(object):
         if 'u_window_size' in s:
             self.program['u_window_size'] = (width, height)
 
+    def close(self):
+        self.program._deactivate()
+        del self.program
+        gc.collect()
+
     # To override
     # -------------------------------------------------------------------------
 
@@ -113,8 +120,22 @@ class BaseVisual(object):
         """
         raise NotImplementedError()
 
+    # Batch and PlotCanvas
+    # -------------------------------------------------------------------------
+
+    def add_batch_data(self, **kwargs):
+        """Prepare data to be added later with PlotCanvas.add_visual()."""
+        n = self.vertex_count(**kwargs)
+        box_index = kwargs.pop('box_index', None)
+        self._acc.add(
+            self.validate(**kwargs), box_index=box_index, size=n, noconcat=self._noconcat)
+
+    def reset_batch(self):
+        """Reinitialize batch."""
+        self._acc.reset()
+
     def set_box_index(self, box_index, data=None):
-        # data is the output of validate_data
+        # data is the output of validate_data. This is used by the child class TextVisual.
         assert box_index is not None
         n = self.n_vertices
         if not isinstance(box_index, np.ndarray):
@@ -127,11 +148,6 @@ class BaseVisual(object):
         assert a_box_index.ndim == 2
         assert a_box_index.shape[0] == n
         self.program['a_box_index'] = a_box_index.astype(np.float32)
-
-    def close(self):
-        self.program._deactivate()
-        del self.program
-        gc.collect()
 
 
 #------------------------------------------------------------------------------
@@ -409,7 +425,9 @@ class BaseCanvas(QOpenGLWindow):
         transforms first.
 
         """
-
+        if self.has_visual(visual):
+            logger.log(5, "This visual has already been added.")
+            return
         # This is the list of origins (mostly, interacts and layouts) that should be ignored
         # when adding this visual. For example, an AxesVisual would keep the PanZoom interact,
         # but not the Grid layout.

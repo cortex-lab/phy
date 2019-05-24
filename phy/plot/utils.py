@@ -105,12 +105,10 @@ class BatchAccumulator(object):
         self.items = {}
         self.noconcat = ()
 
-    def add(self, b, noconcat=()):
+    def add(self, b, noconcat=(), size=None, **kwargs):
+        b.update(kwargs)
         self.noconcat = noconcat
-        n = None  # total number of vertices for the current batch that is being added
-        # We assume that the first element of the b dictionary is an
-        # ndarray, that sets the number of vertices for all elements
-        # in the dictionary.
+        assert size >= 0  # total number of vertices for the current batch that is being added
         for key, val in b.items():
             if key not in self.items:
                 self.items[key] = []
@@ -130,8 +128,7 @@ class BatchAccumulator(object):
             if key in noconcat:
                 self.items[key].extend(val)
             else:
-                assert n is not None  # n should had been set above, or in a previous iteration.
-                self.items[key].append(_get_array(val, (n, k)))
+                self.items[key].append(_get_array(val, (size, k)))
         return b
 
     def __getattr__(self, key):

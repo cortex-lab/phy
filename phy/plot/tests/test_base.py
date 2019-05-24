@@ -112,6 +112,8 @@ def test_visual_1(qtbot, canvas):
 
     v = TestVisual()
     canvas.add_visual(v, key='key')
+    # Should be a no-op when adding the same visual twice.
+    canvas.add_visual(v, key='key')
     # Must be called *after* add_visual().
     v.set_data()
 

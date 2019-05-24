@@ -10,11 +10,12 @@
 import os
 
 import numpy as np
-from pytest import fixture, raises
+from pytest import fixture
 
 from phy.gui import GUI
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import _get_linear_x
+from ..visuals import PlotVisual
 
 
 #------------------------------------------------------------------------------
@@ -132,74 +133,37 @@ def test_plot_uscatter(qtbot, canvas):
     canvas.uscatter(x=x, y=y)
 
 
-def test_plot_uscatter_batch_fail(qtbot, canvas):
-    if isinstance(canvas, PlotCanvasMpl):
-        # TODO: not implemented yet
-        return
-    x, y = .25 * np.random.randn(2, 100)
-    with raises(TypeError):  # color cannot be passed to batch
-        canvas.uscatter_batch(x=x, y=y, color=(1, 0, 0, 1))
-
-
 def test_plot_batch_1(qtbot, canvas):
     if isinstance(canvas, PlotCanvasMpl):
         # TODO: not implemented yet
         return
-    canvas.set_layout('grid', shape=(1, 2))
-    x, y = .25 * np.random.randn(2, 10)
-    canvas[0, 0].plot_batch(x=x, y=y)
-    canvas[0, 1].plot_batch(x=y, y=x)
-    canvas.plot()
+
+    visual = PlotVisual()
+
+    for size in (3, 5):
+        x = np.linspace(-1, 1, size)
+        y = np.random.uniform(0, 1, size)
+        visual.add_batch_data(x=x, y=y)
+
+    canvas.add_visual(visual)
 
 
-def test_plot_uscatter_batch_1(qtbot, canvas):
+def test_plot_batch_2(qtbot, canvas):
     if isinstance(canvas, PlotCanvasMpl):
         # TODO: not implemented yet
         return
-    canvas.set_layout('grid', shape=(1, 2))
-    x, y = .25 * np.random.randn(2, 10)
-    canvas[0, 0].uscatter_batch(x=x, y=y)
-    canvas[0, 1].uscatter_batch(x=y, y=x)
-    canvas.uscatter(color=(1, 1, 0, 1))
 
+    canvas.set_layout('grid', shape=(2, 1))
 
-def test_plot_lines_batch_1(qtbot, canvas):
-    if isinstance(canvas, PlotCanvasMpl):
-        # TODO: not implemented yet
-        return
-    canvas.set_layout('grid', shape=(1, 2))
-    canvas[0, 0].lines_batch(pos=[0., 0., 1., 1.])
-    canvas[0, 1].lines_batch(pos=[-1., 1., 1., -1.])
-    canvas.lines()
+    visual = PlotVisual()
+    visual.reset_batch()
 
+    for i, size in enumerate((3, 5)):
+        x = np.linspace(-1, 1, size)
+        y = np.random.uniform(-1, 1, size)
+        visual.add_batch_data(x=x, y=y, box_index=(i, 0))
 
-def test_plot_hist_batch_1(qtbot, canvas):
-    if isinstance(canvas, PlotCanvasMpl):
-        # TODO: not implemented yet
-        return
-    canvas.set_layout('grid', shape=(1, 2))
-    canvas[0, 0].hist_batch(hist=[[3., 4., 1., 2.]], color=(1, 0, 0, 1))
-    canvas[0, 1].hist_batch(hist=[[0., 1., 0., 2.], [1., 0., 3., 0.]], color=(0, 1, 0, 1))
-    canvas.hist()
-
-
-def test_plot_text_batch_1(qtbot, canvas):
-    if isinstance(canvas, PlotCanvasMpl):
-        # TODO: not implemented yet
-        return
-    canvas.set_layout('grid', shape=(1, 2))
-    canvas[0, 0].text(pos=(0, 0), text='12', anchor=(0., 0.))
-    canvas[0, 1].text(pos=(0, 0), text='345', anchor=(0., 0.))
-
-
-def test_plot_text_batch_2(qtbot, canvas):
-    if isinstance(canvas, PlotCanvasMpl):
-        # TODO: not implemented yet
-        return
-    canvas.set_layout('grid', shape=(1, 2))
-    canvas[0, 0].text_batch(pos=(0, 0), text='12', anchor=(0., 0.))
-    canvas[0, 1].text_batch(pos=(0, 0), text='345', anchor=(0., 0.))
-    canvas.text()
+    canvas.add_visual(visual)
 
 
 #------------------------------------------------------------------------------

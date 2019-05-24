@@ -7,7 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from collections import defaultdict
 import logging
 
 import numpy as np
@@ -24,7 +23,6 @@ from .visuals import (
     HistogramVisual, TextVisual, LineVisual, PolygonVisual,
     DEFAULT_COLOR)
 from .transform import NDC
-from .utils import BatchAccumulator
 from phylib.utils._types import _as_tuple
 
 logger = logging.getLogger(__name__)
@@ -36,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class PlotCanvas(BaseCanvas):
     """Plotting canvas."""
-    _default_box_index = (0,)
+    _current_box_index = (0,)
     interact = None
     n_plots = 1
     has_panzoom = True
@@ -47,7 +45,6 @@ class PlotCanvas(BaseCanvas):
 
     def __init__(self, *args, **kwargs):
         super(PlotCanvas, self).__init__(*args, **kwargs)
-        self._acc = defaultdict(BatchAccumulator)  # dict visual_cls => BatchAccumulator()
 
     def _enable(self):
         self._enabled = True
@@ -66,7 +63,7 @@ class PlotCanvas(BaseCanvas):
 
         # Constrain pan zoom.
         if layout == 'grid':
-            self._default_box_index = (0, 0)
+            self._current_box_index = (0, 0)
             self.grid = Grid(shape, has_clip=has_clip)
             self.grid.attach(self)
             self.interact = self.grid
@@ -92,113 +89,77 @@ class PlotCanvas(BaseCanvas):
             self.interact.add_boxes(self)
 
     def __getitem__(self, box_index):
-        self._default_box_index = _as_tuple(box_index)
+        self._current_box_index = _as_tuple(box_index)
         return self
 
     @property
     def canvas(self):
         return self
 
-    def add_visual(self, *args, **kwargs):
+    def add_visual(self, visual, *args, **kwargs):
+        """Add a visual, supporting batch, and box_index."""
         if not self._enabled:
             self._enable()
-        return super(PlotCanvas, self).add_visual(*args, **kwargs)
-
-    def add_one(self, visual, *args, box_index=None, **kwargs):
-        # Finalize batch.
-        cls = visual.__class__
-        # WARNING: self._acc[cls] should not be silently created here
-        # when accessing self._acc[cls] of a defaultdict.
-        # If the first part of the if test fails, then the second part
-        # is not even run.
-        if cls in self._acc and self._acc[cls].items:
-            kwargs.update(self._acc[cls].data)
-            box_index = box_index if box_index is not None else self._acc[cls].box_index
-            self._acc[cls].reset()
-        else:
-            box_index = box_index if box_index is not None else self._default_box_index
-        self.add_visual(
+        # The visual is not added again if it has already been added, in which case
+        # the following call is a no-op.
+        super(PlotCanvas, self).add_visual(
             visual,
+            # Remove special reserved keywords from kwargs, which is otherwise supposed to
+            # contain data for visual.set_data().
             clearable=kwargs.pop('clearable', True),
             key=kwargs.pop('key', None),
+            exclude_origins=kwargs.pop('exclude_origins', ()),
         )
-        # Remove box_index from the kwargs updated with the BatchAccumulator.
-        kwargs.pop('box_index', None)
-        data = visual.set_data(*args, **kwargs)
-        if self.interact:
+        # If a batch session has been initiated in the visual, add the data from the
+        # visual's BatchAccumulator.
+        if visual._acc.items:
+            kwargs.update(visual._acc.data)
+            # If the batch accumulator has box_index, we get it in kwargs now.
+        # We remove the box_index before calling set_data().
+        box_index = kwargs.pop('box_index', None)
+        # If no data was obtained at this point, we return.
+        if box_index is None and not kwargs:
+            return visual
+        # If kwargs is not empty, we set the data on the visual.
+        data = visual.set_data(*args, **kwargs) if kwargs else None
+        # Finally, we may need to set the box index.
+        # box_index could be specified directly to add_visual, or it could have been
+        # constructed in the batch, or finally it should just be the current box index
+        # by default.
+        if self.interact and data:
+            box_index = box_index if box_index is not None else self._current_box_index
             visual.set_box_index(box_index, data=data)
         return visual
-
-    def add_batch(self, visual_cls, box_index=None, **kwargs):
-        # box_index scalar or vector
-        b = visual_cls.validate(**kwargs)
-        if box_index is not None:  # pragma: no cover
-            b.box_index = box_index
-        else:
-            n = visual_cls.vertex_count(**kwargs)
-            b.box_index = np.tile(np.atleast_2d(self._default_box_index), (n, 1))
-        return self._acc[visual_cls].add(b)
 
     # Plot methods
     #--------------------------------------------------------------------------
 
     def scatter(self, *args, **kwargs):
-        return self.add_one(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
+        return self.add_visual(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
 
     def uscatter(self, *args, **kwargs):
-        return self.add_one(UniformScatterVisual(
+        return self.add_visual(UniformScatterVisual(
             marker=kwargs.pop('marker', None),
             color=kwargs.pop('color', None),
             size=kwargs.pop('size', None)), *args, **kwargs)
 
     def plot(self, *args, **kwargs):
-        return self.add_one(PlotVisual(), *args, **kwargs)
+        return self.add_visual(PlotVisual(), *args, **kwargs)
 
     def uplot(self, *args, **kwargs):
-        return self.add_one(UniformPlotVisual(color=kwargs.pop('color', None)), *args, **kwargs)
+        return self.add_visual(UniformPlotVisual(color=kwargs.pop('color', None)), *args, **kwargs)
 
     def lines(self, *args, **kwargs):
-        return self.add_one(LineVisual(), *args, **kwargs)
+        return self.add_visual(LineVisual(), *args, **kwargs)
 
     def text(self, *args, **kwargs):
-        return self.add_one(TextVisual(color=kwargs.pop('color', None)), *args, **kwargs)
+        return self.add_visual(TextVisual(color=kwargs.pop('color', None)), *args, **kwargs)
 
     def polygon(self, *args, **kwargs):
-        return self.add_one(PolygonVisual(), *args, **kwargs)
+        return self.add_visual(PolygonVisual(), *args, **kwargs)
 
     def hist(self, *args, **kwargs):
-        return self.add_one(HistogramVisual(), *args, **kwargs)
-
-    # Batch methods
-    #--------------------------------------------------------------------------
-
-    def text_batch(self, **kwargs):
-        # box_index scalar or vector
-        b = TextVisual.validate(**kwargs)
-        b.box_index = kwargs.pop('box_index', self._default_box_index)
-        if isinstance(b.box_index, tuple):
-            b.box_index = [b.box_index]
-        return self._acc[TextVisual].add(b, noconcat=('text', 'box_index'))
-
-    def uscatter_batch(self, **kwargs):
-        return self.add_batch(UniformScatterVisual, **kwargs)
-
-    def lines_batch(self, **kwargs):
-        return self.add_batch(LineVisual, **kwargs)
-
-    def hist_batch(self, **kwargs):
-        return self.add_batch(HistogramVisual, **kwargs)
-
-    def plot_batch(self, **kwargs):
-        # box_index scalar or vector
-        box_index = kwargs.pop('box_index', None)
-        b = PlotVisual.validate(**kwargs)
-        if box_index is not None:  # pragma: no cover
-            b.box_index = box_index
-        else:
-            n = PlotVisual.vertex_count(**kwargs)
-            b.box_index = np.tile(np.atleast_2d(self._default_box_index), (n, 1))
-        return self._acc[PlotVisual].add(b, noconcat=('x', 'y'))
+        return self.add_visual(HistogramVisual(), *args, **kwargs)
 
     # Enable methods
     #--------------------------------------------------------------------------
@@ -256,7 +217,7 @@ _MPL_MARKER = {
 
 
 class PlotCanvasMpl(object):
-    _default_box_index = (0,)
+    _current_box_index = (0,)
     gui = None
     _shown = False
     axes = None
@@ -277,7 +238,7 @@ class PlotCanvasMpl(object):
         # Constrain pan zoom.
         if layout == 'grid':
             self.subplots(shape[0], shape[1])
-            self._default_box_index = (0, 0)
+            self._current_box_index = (0, 0)
 
         elif layout == 'boxed':  # pragma: no cover
             self.n_plots = (len(box_bounds)
@@ -327,15 +288,15 @@ class PlotCanvasMpl(object):
         self.canvas.mpl_connect('scroll_event', on_zoom)
 
     def __getitem__(self, box_index):
-        self._default_box_index = _as_tuple(box_index)
+        self._current_box_index = _as_tuple(box_index)
         return self
 
     @property
     def ax(self):
-        if len(self._default_box_index) == 1:
-            return self.axes[0, self._default_box_index[0]]
+        if len(self._current_box_index) == 1:
+            return self.axes[0, self._current_box_index[0]]
         else:
-            return self.axes[self._default_box_index]
+            return self.axes[self._current_box_index]
 
     def enable_axes(self):
         pass

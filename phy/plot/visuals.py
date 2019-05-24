@@ -251,7 +251,7 @@ def _max(arr):
 
 class PlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
-    allow_list = ('x', 'y')
+    _noconcat = ('x', 'y')
 
     def __init__(self):
         super(PlotVisual, self).__init__()
@@ -360,7 +360,7 @@ class PlotVisual(BaseVisual):
 
 class UniformPlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
-    allow_list = ('x', 'y')
+    _noconcat = ('x', 'y')
 
     def __init__(self, color=None, depth=None):
         super(UniformPlotVisual, self).__init__()
