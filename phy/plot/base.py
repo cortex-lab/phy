@@ -53,6 +53,10 @@ class BaseVisual(object):
     # batched together when adding batch data.
     _noconcat = ()
 
+    # Variables that need to be set in __init__() rather than __setdata__() because
+    # the shader depends on it.
+    _init_keywords = ()
+
     def __init__(self):
         self.gl_primitive_type = None
         self.transforms = TransformChain()

@@ -38,6 +38,7 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 #------------------------------------------------------------------------------
 
 class ScatterVisual(BaseVisual):
+    _init_keywords = ('marker',)
     _default_marker_size = 10.
     _default_marker = 'disc'
     _default_color = DEFAULT_COLOR
@@ -128,6 +129,7 @@ class ScatterVisual(BaseVisual):
 
 
 class UniformScatterVisual(BaseVisual):
+    _init_keywords = ('marker', 'color', 'size')
     _default_marker_size = 10.
     _default_marker = 'disc'
     _default_color = DEFAULT_COLOR
@@ -564,6 +566,7 @@ class TextVisual(BaseVisual):
 
     """
     _default_color = (1., 1., 1., 1.)
+    _init_keywords = ('color',)
 
     def __init__(self, color=None):
         super(TextVisual, self).__init__()
@@ -731,6 +734,7 @@ class TextVisual(BaseVisual):
 class LineVisual(BaseVisual):
     """Lines."""
     _default_color = (.3, .3, .3, 1.)
+    _init_keywords = ('color',)
 
     def __init__(self, color=None):
         super(LineVisual, self).__init__()

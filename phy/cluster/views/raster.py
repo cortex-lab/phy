@@ -15,6 +15,7 @@ from phylib.io.array import _unique, _index_of
 
 from .base import ManualClusteringView
 from phy.plot import NDC
+from phy.plot.visuals import ScatterVisual
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,9 @@ class RasterView(ManualClusteringView):
         self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
         self.canvas.constrain_bounds = NDC
         self.canvas.enable_axes(show_y=False)
+
+        self.visual = ScatterVisual(marker='vbar')
+        self.canvas.add_visual(self.visual)
 
     def set_spike_clusters(self, spike_clusters):
         """Set the spike clusters for all spikes."""
@@ -83,10 +87,10 @@ class RasterView(ManualClusteringView):
         # ymax = y.max()
         data_bounds = (0, 0, self.duration, self.n_clusters)
 
-        self.canvas.clear()
-        self.canvas.scatter(
-            x=x, y=y, color=color, size=self.marker_size, marker='vbar',
-            box_index=box_index, data_bounds=(0, 0, self.duration, 1))
+        self.visual.set_data(
+            x=x, y=y, color=color, size=self.marker_size,
+            data_bounds=(0, 0, self.duration, 1))
+        self.visual.set_box_index(box_index)
         self.canvas.stacked.n_plots = self.n_clusters
         self.canvas.axes.reset_data_bounds(data_bounds, do_update=True)
         self.canvas.update()
