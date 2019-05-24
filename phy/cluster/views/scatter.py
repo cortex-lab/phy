@@ -14,6 +14,7 @@ import numpy as np
 from phylib.utils._color import selected_cluster_color
 from .base import ManualClusteringView
 from phy.plot import NDC
+from phy.plot.visuals import ScatterVisual
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,8 @@ class ScatterView(ManualClusteringView):
         self.canvas.enable_axes()
         assert coords
         self.coords = coords
+        self.visual = ScatterVisual()
+        self.canvas.add_visual(self.visual)
 
     def _get_data(self, cluster_ids):
         return [self.coords(cluster_id) for cluster_id in cluster_ids]
@@ -52,13 +55,15 @@ class ScatterView(ManualClusteringView):
     def _plot_points(self, bunchs, data_bounds):
         ms = self._default_marker_size
         xmin, ymin, xmax, ymax = data_bounds
+        self.visual.reset_batch()
         for i, d in enumerate(bunchs):
             x, y = d.x, d.y
             assert x.ndim == y.ndim == 1
             assert x.shape == y.shape
             color = selected_cluster_color(i, .75)
             # Create one visual per cluster.
-            self.canvas.scatter(x=x, y=y, color=color, size=ms, data_bounds=data_bounds)
+            self.visual.add_batch_data(x=x, y=y, color=color, size=ms, data_bounds=data_bounds)
+        self.canvas.update_visual(self.visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
@@ -68,7 +73,6 @@ class ScatterView(ManualClusteringView):
         bunchs = self._get_data(cluster_ids)
         data_bounds = self._get_data_bounds(bunchs)
 
-        self.canvas.clear()
         self._plot_points(bunchs, data_bounds)
         self.canvas.axes.reset_data_bounds(data_bounds)
         self.canvas.update()
