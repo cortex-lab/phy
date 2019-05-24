@@ -77,6 +77,22 @@ class RasterView(ManualClusteringView):
         cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
         return cluster_colors[box_index, :]
 
+    @property
+    def data_bounds(self):
+        return (0, 0, self.duration, self.n_clusters)
+
+    def update_cluster_ids(self, cluster_ids):
+        self.set_cluster_ids(cluster_ids)
+        self.visual.set_box_index(self._get_box_index())
+        self.canvas.stacked.n_plots = self.n_clusters
+        self.canvas.axes.reset_data_bounds(self.data_bounds, do_update=True)
+        self.canvas.update()
+
+    def update_cluster_sort(self, cluster_ids):
+        self.cluster_ids = cluster_ids
+        self.visual.set_box_index(self._get_box_index())
+        self.canvas.update()
+
     def plot(self):
         if not len(self.spike_clusters):
             return
@@ -84,19 +100,16 @@ class RasterView(ManualClusteringView):
         y = self._get_y()  # just 0
         box_index = self._get_box_index()
         color = self._get_color(box_index)
-        # ymax = y.max()
-        data_bounds = (0, 0, self.duration, self.n_clusters)
 
         self.visual.set_data(
             x=x, y=y, color=color, size=self.marker_size,
             data_bounds=(0, 0, self.duration, 1))
         self.visual.set_box_index(box_index)
         self.canvas.stacked.n_plots = self.n_clusters
-        self.canvas.axes.reset_data_bounds(data_bounds, do_update=True)
+        self.canvas.axes.reset_data_bounds(self.data_bounds, do_update=True)
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
-        # self.cluster_ids = cluster_ids
         if not cluster_ids:
             return
         # TODO
