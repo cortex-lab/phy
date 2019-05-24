@@ -12,12 +12,13 @@ import logging
 
 import numpy as np
 
-from phy.plot import _get_linear_x
-from phy.plot.interact import Boxed
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phylib.utils._color import selected_cluster_color
 from phylib.utils.geometry import _get_boxes
+from phy.plot import _get_linear_x
+from phy.plot.interact import Boxed
+from phy.plot.visuals import PlotVisual, TextVisual
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,12 @@ class WaveformView(ManualClusteringView):
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
 
+        self.label_visual = TextVisual()
+        self.canvas.add_visual(self.label_visual)
+
+        self.waveform_visual = PlotVisual()
+        self.canvas.add_visual(self.waveform_visual)
+
     def _get_data_bounds(self, bunchs):
         m = min(b.data.min() for b in bunchs)
         M = max(b.data.max() for b in bunchs)
@@ -117,16 +124,18 @@ class WaveformView(ManualClusteringView):
                 x /= n_clusters
             else:
                 x = -1.
+            self.label_visual.reset_batch()
             for i, ch in enumerate(channel_ids):
                 label = (self.channel_labels[i]
                          if self.channel_labels is not None else ch)
-                self.canvas[i].text_batch(
+                self.label_visual.add_batch_data(
                     pos=[x, 0.],
                     text=str(label),
                     anchor=[-1.01, -.25],
                     data_bounds=data_bounds,
+                    box_index=i,
                 )
-            self.canvas.text()
+            self.canvas.update_visual(self.label_visual)
 
     def _plot_waveforms(self, bunchs, channel_ids, data_bounds=None):
         # Initialize the box scaling the first time.
@@ -136,6 +145,7 @@ class WaveformView(ManualClusteringView):
             self._update_boxes()
         clu_offsets = _get_clu_offsets(bunchs)
         max_clu_offsets = max(clu_offsets) + 1
+        self.waveform_visual.reset_batch()
         for i, d in enumerate(bunchs):
             wave = d.data
             alpha = d.get('alpha', .75)
@@ -189,7 +199,7 @@ class WaveformView(ManualClusteringView):
             wave = np.transpose(wave, (0, 2, 1))
             wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
 
-            self.canvas.uplot(
+            self.waveform_visual.add_batch_data(
                 x=t,
                 y=wave,
                 color=color,
@@ -197,6 +207,7 @@ class WaveformView(ManualClusteringView):
                 box_index=box_index,
                 data_bounds=data_bounds,
             )
+        self.canvas.update_visual(self.waveform_visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids
@@ -221,7 +232,6 @@ class WaveformView(ManualClusteringView):
         self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()
 
-        self.canvas.clear()
         data_bounds = self._get_data_bounds(bunchs)
         self._plot_waveforms(bunchs, channel_ids, data_bounds=data_bounds)
         self._plot_labels(channel_ids, n_clusters, data_bounds=data_bounds)
