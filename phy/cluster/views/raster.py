@@ -81,13 +81,6 @@ class RasterView(ManualClusteringView):
     def data_bounds(self):
         return (0, 0, self.duration, self.n_clusters)
 
-    def update_cluster_ids(self, cluster_ids):
-        self.set_cluster_ids(cluster_ids)
-        self.visual.set_box_index(self._get_box_index())
-        self.canvas.stacked.n_plots = self.n_clusters
-        self.canvas.axes.reset_data_bounds(self.data_bounds, do_update=True)
-        self.canvas.update()
-
     def update_cluster_sort(self, cluster_ids):
         self.cluster_ids = cluster_ids
         self.visual.set_box_index(self._get_box_index())

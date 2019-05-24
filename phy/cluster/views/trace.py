@@ -66,9 +66,9 @@ def _iter_spike_waveforms(interval=None,
         # Choose cluster color.
         if c in p.selected:
             i = p.selected.index(c)
-            color = selected_cluster_color(i, alpha=.5)
+            color = selected_cluster_color(i, alpha=1)
         else:  # pragma: no cover
-            color = cs.get(c, alpha=.5)
+            color = cs.get(c, alpha=1)
         # Extract the waveform.
         wave = Bunch(data=traces_interval[s - k:s + ns - k, channel_ids],
                      channel_ids=channel_ids,

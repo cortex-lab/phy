@@ -66,6 +66,8 @@ def test_raster_1(qtbot, gui):
 
     v.plot()
 
+    v.update_cluster_sort(np.arange(nc))
+
     c.set_color_mapping('group', 'cluster_group')
     v.plot()
 

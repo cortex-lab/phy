@@ -46,6 +46,8 @@ def test_template_view(qtbot, tempdir, gui):
     v.on_select([])
     v.on_select([0])
 
+    v.update_cluster_sort(cluster_ids[::-1])
+
     # Simulate channel selection.
     _clicked = []
 
@@ -57,7 +59,7 @@ def test_template_view(qtbot, tempdir, gui):
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left')
     key_release(qtbot, v.canvas, '2')
 
-    assert _clicked == [(4, 'Left', 2)]
+    assert _clicked == [(5, 'Left', 2)]
 
     # qtbot.stop()
     v.close()

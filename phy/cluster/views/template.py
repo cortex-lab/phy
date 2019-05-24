@@ -45,6 +45,7 @@ class TemplateView(ManualClusteringView):
         self.templates = templates
         self.visual = PlotVisual()
         self.canvas.add_visual(self.visual)
+        self._cluster_box_index = {}
 
     def _get_data_bounds(self, bunchs):
         m = np.median([b.template.min() for b in bunchs.values()])
@@ -52,6 +53,8 @@ class TemplateView(ManualClusteringView):
         return [-1, m, +1, M]
 
     def _plot_templates(self, bunchs, data_bounds=None):
+        if not bunchs:
+            return
         cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
         self.visual.reset_batch()
         for i, cluster_id in enumerate(self.cluster_ids):
@@ -76,14 +79,25 @@ class TemplateView(ManualClusteringView):
                 box_index.reshape((-1, 1)), i * np.ones((n_samples * n_channels_loc, 1))]
             assert box_index.shape == (n_channels_loc * n_samples, 2)
             assert box_index.size == wave.size * 2
+            self._cluster_box_index[cluster_id] = box_index
 
             # Generate the waveform array.
             wave = wave.T.copy()
 
             self.visual.add_batch_data(
                 x=t, y=wave, color=color, box_index=box_index, data_bounds=data_bounds)
-        if bunchs:
-            self.canvas.update_visual(self.visual)
+        self.canvas.update_visual(self.visual)
+
+    def update_cluster_sort(self, cluster_ids):
+        self.cluster_ids = cluster_ids
+        box_index = []
+        for i, cluster_id in enumerate(self.cluster_ids):
+            clu_box_index = self._cluster_box_index[cluster_id]
+            clu_box_index[:, 1] = i
+            box_index.append(clu_box_index)
+        box_index = np.concatenate(box_index, axis=0)
+        self.visual.set_box_index(box_index)
+        self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
