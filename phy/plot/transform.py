@@ -315,7 +315,8 @@ class TransformChain(object):
     def inverse(self):
         """Return the inverse chain of transforms."""
         inv_transforms = [
-            transform.inverse() for (where, transform, origin) in self._transforms[::-1]]
+            (where, transform.inverse(), origin)
+            for (where, transform, origin) in self._transforms[::-1]]
         inv = TransformChain()
         inv._transforms = inv_transforms
         return inv
