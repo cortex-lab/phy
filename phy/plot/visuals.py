@@ -533,6 +533,7 @@ class TextVisual(BaseVisual):
     """
     _default_color = (1., 1., 1., 1.)
     _init_keywords = ('color',)
+    _noconcat = ('text',)
 
     def __init__(self, color=None):
         super(TextVisual, self).__init__()
@@ -592,9 +593,9 @@ class TextVisual(BaseVisual):
 
         return Bunch(pos=pos, text=text, anchor=anchor,
                      data_bounds=data_bounds,
-                     _n_items=n_text, _n_vertices=self.vertex_count(pos=pos))
+                     _n_items=n_text, _n_vertices=self.vertex_count(text=text))
 
-    def vertex_count(self, pos=None, **kwargs):
+    def vertex_count(self, **kwargs):
         """Take the output of validate() as input."""
         # Total number of glyphs * 6 (6 vertices per glyph).
         return sum(map(len, kwargs.get('text', ''))) * 6
@@ -677,17 +678,6 @@ class TextVisual(BaseVisual):
 
         emit('visual_set_data', self)
         return data
-
-    def set_box_index(self, box_index, data=None):
-        # box_index has one item per text item.
-        if isinstance(box_index, tuple):
-            box_index = [box_index]
-        assert len(box_index) == len(data.text)
-        lengths = list(map(len, data.text))
-        a_box_index = np.repeat(box_index, lengths, axis=0)
-        a_box_index = np.repeat(a_box_index, 6, axis=0)
-        assert len(a_box_index) == self.n_vertices
-        self.program['a_box_index'] = a_box_index.astype(np.float32)
 
 
 #------------------------------------------------------------------------------

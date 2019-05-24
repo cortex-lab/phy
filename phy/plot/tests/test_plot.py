@@ -15,7 +15,7 @@ from pytest import fixture
 from phy.gui import GUI
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import _get_linear_x
-from ..visuals import PlotVisual
+from ..visuals import PlotVisual, TextVisual
 
 
 #------------------------------------------------------------------------------
@@ -164,6 +164,22 @@ def test_plot_batch_2(qtbot, canvas):
         visual.add_batch_data(x=x, y=y, box_index=(i, 0))
 
     canvas.add_visual(visual)
+
+
+def test_plot_batch_3(qtbot, canvas):
+    if isinstance(canvas, PlotCanvasMpl):
+        # TODO: not implemented yet
+        return
+
+    canvas.set_layout('grid', shape=(2, 1))
+
+    visual = TextVisual()
+    canvas.add_visual(visual)
+
+    for i, size in enumerate((3, 5)):
+        visual.add_batch_data(pos=(0, 0), text="hello " * (i + 1), box_index=(i, 0))
+
+    canvas.update_visual(visual)
 
 
 #------------------------------------------------------------------------------
