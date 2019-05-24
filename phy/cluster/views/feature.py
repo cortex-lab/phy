@@ -15,6 +15,7 @@ import numpy as np
 from phylib.utils import Bunch, connect
 from phylib.utils._color import selected_cluster_color
 from phy.plot.transform import Range
+from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,15 @@ class FeatureView(ManualClusteringView):
         # where each array is a `(n_spikes,)` array.
         self.attributes = attributes or {}
 
+        self.point_visual = ScatterVisual()
+        self.canvas.add_visual(self.point_visual)
+
+        self.label_visual = TextVisual()
+        self.canvas.add_visual(self.label_visual)
+
+        self.line_visual = LineVisual()
+        self.canvas.add_visual(self.line_visual)
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -187,23 +197,21 @@ class FeatureView(ManualClusteringView):
             masks = _get_masks_max(px, py)
             # Prepare the batch visual with all subplots
             # for the selected cluster.
-            self.canvas[i, j].uscatter_batch(
+            self.point_visual.add_batch_data(
                 x=px.data, y=py.data,
+                color=_get_point_color(clu_idx),
+                size=_get_point_size(clu_idx),
                 masks=_get_point_masks(clu_idx=clu_idx, masks=masks),
                 data_bounds=data_bounds,
+                box_index=(i, j),
             )
-        # Add the batch visual, omitted keyword arguments are taken
-        # from the batch (uscatter_batch method).
-        self.canvas.uscatter(
-            color=_get_point_color(clu_idx),
-            size=_get_point_size(clu_idx),
-        )
 
     def _plot_labels(self):
         """Plot feature labels along left and bottom edge of subplots"""
         # iterate simultaneously over kth row in left column and
         # kth column in bottom row:
         br = self.n_cols - 1  # bottom row
+        self.label_visual.reset_batch()
         for k in range(0, self.n_cols):
             dim_x, _ = self.grid_dim[0][k].split(',')
             _, dim_y = self.grid_dim[k][br].split(',')
@@ -213,27 +221,32 @@ class FeatureView(ManualClusteringView):
             dim_x = self._get_axis_label(dim_x)
             dim_y = self._get_axis_label(dim_y)
             # Right edge of right column of subplots.
-            self.canvas[k, br].text_batch(
+            self.label_visual.add_batch_data(
                 pos=[.8, .9],
                 text=self._get_axis_label(self.y_labels[k]),
                 data_bounds=None,
+                box_index=(k, br),
             )
             # Bottom edge of bottom row of subplots.
-            self.canvas[br, k].text_batch(
+            self.label_visual.add_batch_data(
                 pos=[0, -.9],
                 text=self._get_axis_label(self.x_labels[k]),
                 data_bounds=None,
+                box_index=(br, k),
             )
-        self.canvas.text()
+        self.canvas.update_visual(self.label_visual)
 
     def _plot_axes(self):
+        self.line_visual.reset_batch()
         for i, j, dim_x, dim_y in self._iter_subplots():
-            self.canvas[i, j].lines(
+            self.line_visual.add_batch_data(
                 pos=[[-1., 0., +1., 0.],
                      [0., -1., 0., +1.]],
                 color=(.5, .5, .5, .5),
+                box_index=(i, j),
                 data_bounds=None,
             )
+        self.canvas.update_visual(self.line_visual)
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -287,8 +300,6 @@ class FeatureView(ManualClusteringView):
         background = self.features(channel_ids=self.channel_ids)
 
         # Plot all features.
-        self.canvas.clear()
-        # self.canvas.grid.add_boxes(self.canvas)
         self._plot_axes()
 
         # NOTE: the columns in bunch.data are ordered by decreasing quality
@@ -301,12 +312,15 @@ class FeatureView(ManualClusteringView):
             m = m if m > 1e-9 else 1.
             self._scaling = .1 / m
 
+        # Plot points.
+        self.point_visual.reset_batch()
         # Plot the background points.
         self._plot_points(background)
-
         # Plot each cluster's data.
         for clu_idx, bunch in enumerate(bunchs):
             self._plot_points(bunch, clu_idx=clu_idx)
+        self.canvas.update_visual(self.point_visual)
+
         self._plot_labels()
         self.canvas.update()
 
