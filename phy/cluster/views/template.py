@@ -11,9 +11,10 @@ import logging
 
 import numpy as np
 
-from phy.plot import _get_linear_x
 from phylib.io.array import _index_of
 from phylib.utils import emit
+from phy.plot import _get_linear_x
+from phy.plot.visuals import PlotVisual
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,8 @@ class TemplateView(ManualClusteringView):
         self.n_channels = len(channel_ids)
         self.canvas.set_layout('grid', box_bounds=[[-1, -1, +1, +1]], has_clip=False)
         self.templates = templates
+        self.visual = PlotVisual()
+        self.canvas.add_visual(self.visual)
 
     def _get_data_bounds(self, bunchs):
         m = np.median([b.template.min() for b in bunchs.values()])
@@ -50,6 +53,7 @@ class TemplateView(ManualClusteringView):
 
     def _plot_templates(self, bunchs, data_bounds=None):
         cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
+        self.visual.reset_batch()
         for i, cluster_id in enumerate(self.cluster_ids):
             d = bunchs[cluster_id]
             wave = d.template  # shape: (n_samples, n_channels)
@@ -76,10 +80,10 @@ class TemplateView(ManualClusteringView):
             # Generate the waveform array.
             wave = wave.T.copy()
 
-            self.canvas.plot_batch(
+            self.visual.add_batch_data(
                 x=t, y=wave, color=color, box_index=box_index, data_bounds=data_bounds)
         if bunchs:
-            self.canvas.plot()
+            self.canvas.update_visual(self.visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
@@ -92,14 +96,9 @@ class TemplateView(ManualClusteringView):
         n_clusters = len(bunchs)
         self.canvas.grid.shape = (self.n_channels, n_clusters)
 
-        self.canvas.clear()
         data_bounds = self._get_data_bounds(bunchs)
         self._plot_templates(bunchs, data_bounds=data_bounds)
         self.canvas.update()
-
-    def attach(self, gui):
-        """Attach the view to the GUI."""
-        super(TemplateView, self).attach(gui)
 
     def on_mouse_click(self, e):
         b = e.button
