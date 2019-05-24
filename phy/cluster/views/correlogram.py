@@ -12,6 +12,7 @@ import logging
 import numpy as np
 
 from phy.plot.transform import Scale
+from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
 from phylib.utils._color import _spike_colors
 from .base import ManualClusteringView
 
@@ -53,8 +54,16 @@ class CorrelogramView(ManualClusteringView):
         self.firing_rate = firing_rate
 
         # Set the default bin and window size.
-        self.set_bin_window(bin_size=self.bin_size,
-                            window_size=self.window_size)
+        self.set_bin_window(bin_size=self.bin_size, window_size=self.window_size)
+
+        self.correlogram_visual = HistogramVisual()
+        self.canvas.add_visual(self.correlogram_visual)
+
+        self.line_visual = LineVisual()
+        self.canvas.add_visual(self.line_visual)
+
+        self.label_visual = TextVisual(color=(1., 1., 1., 1.))
+        self.canvas.add_visual(self.label_visual)
 
     def set_bin_window(self, bin_size=None, window_size=None):
         """Set the bin and window sizes."""
@@ -78,40 +87,50 @@ class CorrelogramView(ManualClusteringView):
         ylims = ylims or {}
         n_clusters = ccg.shape[0]
         colors = _spike_colors(np.arange(n_clusters), alpha=1.)
+        self.correlogram_visual.reset_batch()
         for i, j in self._iter_subplots(n_clusters):
             hist = ccg[i, j, :]
             color = colors[i] if i == j else np.ones(4)
-            self.canvas[i, j].hist_batch(hist=hist, color=color, ylim=ylims.get((i, j), None))
-        self.canvas.hist()
+            ylim = ylims.get((i, j), None)
+            self.correlogram_visual.add_batch_data(
+                hist=hist, color=color, ylim=ylim, box_index=(i, j))
+        # Call set_data() after creating the batch.
+        self.canvas.update_visual(self.correlogram_visual)
 
     def _plot_firing_rate(self, fr, ylims=None, n_bins=None):
         assert n_bins > 0
+        color = (.25, .25, .25, 1.)
         ylims = ylims or {}
+        self.line_visual.reset_batch()
         for i, j in self._iter_subplots(len(fr)):
             db = (0, 0, n_bins, ylims.get((i, j), None))
             f = fr[i, j]
-            self.canvas[i, j].lines_batch(
-                pos=[0, f, n_bins, f], color=(.25, .25, .25, 1.), data_bounds=db)
-        self.canvas.lines()
+            pos = np.array([[0, f, n_bins, f]])
+            self.line_visual.add_batch_data(
+                pos=pos, color=color, data_bounds=db, box_index=(i, j))
+        self.canvas.update_visual(self.line_visual)
 
     def _plot_labels(self, cluster_ids):
         n = len(cluster_ids)
         p = -1.0
         a = -.9
+        self.label_visual.reset_batch()
         for k in range(n):
-            self.canvas[k, 0].text_batch(
+            self.label_visual.add_batch_data(
                 pos=[p, 0.],
                 text=str(cluster_ids[k]),
                 anchor=[a, a],
                 data_bounds=None,
+                box_index=(k, 0),
             )
-            self.canvas[n - 1, k].text_batch(
+            self.label_visual.add_batch_data(
                 pos=[0., p],
                 text=str(cluster_ids[k]),
                 anchor=[a, a],
                 data_bounds=None,
+                box_index=(n - 1, k),
             )
-        self.canvas.text(color=(1., 1., 1., 1.))
+        self.canvas.update_visual(self.label_visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids
@@ -130,7 +149,6 @@ class CorrelogramView(ManualClusteringView):
             ylims = {(i, j): ccg[i, j, :].max() for i, j in self._iter_subplots(n_clusters)}
 
         self.canvas.grid.shape = (n_clusters, n_clusters)
-        self.canvas.clear()
         self._plot_correlograms(ccg, ylims=ylims)
 
         # Show firing rate as horizontal lines.
