@@ -129,6 +129,7 @@ class Grid(BaseLayout):
 
     @shape.setter
     def shape(self, value):
+        print("shape", value)
         self._shape = value
         self.update()
 
@@ -186,7 +187,6 @@ class Boxed(BaseLayout):
 
         self._box_bounds = np.atleast_2d(box_bounds)
         assert self._box_bounds.shape[1] == 4
-        self.n_boxes = len(self._box_bounds)
 
         self.transforms = TransformChain()
         self.transforms.add_on_gpu([Range(NDC, 'box_bounds')], origin=self)
@@ -251,6 +251,10 @@ class Boxed(BaseLayout):
     #--------------------------------------------------------------------------
 
     @property
+    def n_boxes(self):
+        return len(self.box_pos)
+
+    @property
     def box_bounds(self):
         return self._box_bounds
 
@@ -258,7 +262,6 @@ class Boxed(BaseLayout):
     def box_bounds(self, val):
         self._box_bounds = np.atleast_2d(val)
         assert self._box_bounds.shape[1] == 4
-        self.n_boxes = self._box_bounds.shape[0]
         self.update()
 
     @property
@@ -321,7 +324,19 @@ class Stacked(Boxed):
     margin = 0
 
     def __init__(self, n_boxes, box_var=None, origin=None):
+        self.origin = origin
+        b = self.get_box_bounds(n_boxes)
+        super(Stacked, self).__init__(b, box_var=box_var, keep_aspect_ratio=False)
 
+    @property
+    def n_boxes(self):
+        return len(self.box_pos)
+
+    @n_boxes.setter
+    def n_boxes(self, n_boxes):
+        self.box_bounds = self.get_box_bounds(n_boxes)
+
+    def get_box_bounds(self, n_boxes):
         # The margin must be in [-1, 1]
         margin = .05
         margin = np.clip(margin, -1, 1)
@@ -334,13 +349,10 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        origin = origin or 'upper'
+        origin = self.origin or 'upper'
         if origin == 'upper':
             b = b[::-1, :]
-
-        super(Stacked, self).__init__(b, box_var=box_var,
-                                      keep_aspect_ratio=False,
-                                      )
+        return b
 
 
 #------------------------------------------------------------------------------

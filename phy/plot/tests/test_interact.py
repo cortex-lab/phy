@@ -220,6 +220,8 @@ def test_stacked_closest_box():
     ac(stacked.get_closest_box((-.5, .9)), 3)
     ac(stacked.get_closest_box((+.5, -.9)), 0)
 
+    stacked.n_boxes = 3
+
 
 #------------------------------------------------------------------------------
 # Test lasso
