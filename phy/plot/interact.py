@@ -129,7 +129,6 @@ class Grid(BaseLayout):
 
     @shape.setter
     def shape(self, value):
-        print("shape", value)
         self._shape = value
         self.update()
 
