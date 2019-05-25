@@ -269,7 +269,7 @@ class KwikController(object):
 
             # Initialize show_what if it was not set in the GUI state.
             if not hasattr(v, 'show_what'):
-                v.show_what = 'waveforms'
+                v.show_what = 'waveforms'  # pragma: no cover
             # Set the waveforms function.
             v.waveforms = funs[v.show_what]
 
