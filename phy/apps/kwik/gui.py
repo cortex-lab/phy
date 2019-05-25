@@ -325,7 +325,7 @@ class KwikController(object):
     # Traces
     # -------------------------------------------------------------------------
 
-    def _get_traces(self, interval):
+    def _get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
         ns = self.model.n_samples_waveforms
         m = self.model
@@ -349,6 +349,7 @@ class KwikController(object):
                                        color_selector=self.color_selector,
                                        n_samples_waveforms=ns,
                                        get_best_channels=gbc,
+                                       show_all_spikes=show_all_spikes,
                                        ):
             b.channel_labels = m.channel_order[b.channel_ids]
             out.waveforms.append(b)
@@ -374,7 +375,12 @@ class KwikController(object):
                       channel_vertical_order=self.channel_vertical_order,
                       )
 
-        @connect
+        # Update the get_traces() function with show_all_spikes.
+        def get_traces(interval):
+            return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
+        v.traces = get_traces
+
+        @connect(sender=v)
         def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
