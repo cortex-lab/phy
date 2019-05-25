@@ -56,10 +56,10 @@ def test_template_view(qtbot, tempdir, gui):
         _clicked.append((cluster_id, button, key))
 
     key_press(qtbot, v.canvas, '2')
-    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left')
+    mouse_click(qtbot, v.canvas, pos=(10., 10.), button='Left')
     key_release(qtbot, v.canvas, '2')
 
-    assert _clicked == [(5, 'Left', 2)]
+    assert _clicked == [(9, 'Left', 2)]
 
     cluster_ids = np.arange(2, n_clusters + 2)
     v.set_cluster_ids(cluster_ids)
