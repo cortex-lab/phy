@@ -61,5 +61,9 @@ def test_template_view(qtbot, tempdir, gui):
 
     assert _clicked == [(5, 'Left', 2)]
 
+    cluster_ids = np.arange(2, n_clusters + 2)
+    v.set_cluster_ids(cluster_ids)
+    v.plot()
+
     # qtbot.stop()
     v.close()
