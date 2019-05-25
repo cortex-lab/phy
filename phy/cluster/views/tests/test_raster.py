@@ -71,5 +71,8 @@ def test_raster_1(qtbot, gui):
     c.set_color_mapping('group', 'cluster_group')
     v.plot()
 
+    v.set_cluster_ids(np.arange(0, nc, 2))
+    v.plot
+
     # qtbot.stop()
     v.close()

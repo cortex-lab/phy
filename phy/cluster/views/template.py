@@ -107,7 +107,7 @@ class TemplateView(ManualClusteringView):
     def plot(self):
         # Retrieve the waveform data.
         bunchs = self.templates(self.cluster_ids)
-        n_clusters = len(bunchs)
+        n_clusters = len(self.cluster_ids)
         self.canvas.grid.shape = (self.n_channels, n_clusters)
 
         data_bounds = self._get_data_bounds(bunchs)

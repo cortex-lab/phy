@@ -52,24 +52,26 @@ class RasterView(ManualClusteringView):
 
     def set_cluster_ids(self, cluster_ids):
         """Set the shown clusters, which can be filtered and in any order (from top to bottom)."""
+        if len(cluster_ids) == 0:
+            return
         self.cluster_ids = cluster_ids
         self.n_clusters = len(self.cluster_ids)
         # Only keep spikes that belong to the selected clusters.
-        self.spike_ids = np.in1d(self.spike_clusters, self.cluster_ids)
+        self.spike_ids = np.isin(self.spike_clusters, self.cluster_ids)
 
     def _get_x(self):
         return self.spike_times[self.spike_ids]
 
     def _get_y(self):
         """Return the y position of the spikes, given the relative position of the clusters."""
-        return np.zeros_like(self.spike_ids)
+        return np.zeros(np.sum(self.spike_ids))
 
     def _get_box_index(self):
         """Return, for every spike, its row in the raster plot. This depends on the ordering
         in self.cluster_ids."""
         cl = self.spike_clusters[self.spike_ids]
         # Sanity check.
-        assert np.all(np.in1d(cl, self.cluster_ids))
+        # assert np.all(np.in1d(cl, self.cluster_ids))
         return _index_of(cl, self.cluster_ids)
 
     def _get_color(self, box_index):
@@ -93,12 +95,14 @@ class RasterView(ManualClusteringView):
         y = self._get_y()  # just 0
         box_index = self._get_box_index()
         color = self._get_color(box_index)
+        assert x.shape == y.shape == box_index.shape
+        assert color.shape[0] == len(box_index)
 
         self.visual.set_data(
             x=x, y=y, color=color, size=self.marker_size,
             data_bounds=(0, 0, self.duration, 1))
         self.visual.set_box_index(box_index)
-        self.canvas.stacked.n_plots = self.n_clusters
+        self.canvas.stacked.n_boxes = self.n_clusters
         self.canvas.axes.reset_data_bounds(self.data_bounds, do_update=True)
         self.canvas.update()
 
