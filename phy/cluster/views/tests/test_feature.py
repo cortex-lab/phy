@@ -12,7 +12,6 @@ import pytest
 from phylib.io.array import _spikes_per_cluster
 from phylib.io.mock import artificial_features, artificial_spike_clusters
 from phylib.utils import Bunch
-from phylib.utils.testing import _in_travis
 from phy.plot.tests import mouse_click
 
 from ..feature import FeatureView
@@ -78,18 +77,13 @@ def test_feature_view(qtbot, gui, n_channels):
     spike_ids = v.on_request_split()
     assert len(spike_ids) == 0
 
-    a, b = 50, 200
+    a, b = 50, 1000
     mouse_click(qtbot, v.canvas, (a, a), modifiers=('Control',))
     mouse_click(qtbot, v.canvas, (a, b), modifiers=('Control',))
     mouse_click(qtbot, v.canvas, (b, b), modifiers=('Control',))
     mouse_click(qtbot, v.canvas, (b, a), modifiers=('Control',))
 
     # Split lassoed points.
-    if _in_travis():  # pragma: no cover
-        # HACK: mouse click seems to fail on travis, emulating the lasso
-        c = .8
-        v.canvas.lasso._points = [[-c, -c], [-c, c], [c, c], [c, -c]]
-        v.canvas.lasso.box = (0, 0)
     spike_ids = v.on_request_split()
     assert len(spike_ids) > 0
 

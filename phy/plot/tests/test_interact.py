@@ -14,7 +14,6 @@ from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 
 from phylib.utils import emit
-from phylib.utils.testing import _in_travis
 from ..base import BaseVisual, BaseCanvas
 from ..interact import Grid, Boxed, Stacked, Lasso
 from ..panzoom import PanZoom
@@ -300,9 +299,8 @@ def test_lasso_grid(qtbot, canvas):
     assert l.polygon.shape == (4, 2)
     assert l.box == (0, 1)
 
-    if not _in_travis():  # pragma: no cover
-        inlasso = l.in_polygon(visual.data)
-        assert .001 < inlasso.mean() < .999
+    inlasso = l.in_polygon(visual.data)
+    assert .001 < inlasso.mean() < .999
 
     # Clear box.
     _ctrl_click(x0, y0, 'right')

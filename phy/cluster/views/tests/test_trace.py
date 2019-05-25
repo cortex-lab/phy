@@ -21,7 +21,7 @@ from ..trace import TraceView, select_traces, _iter_spike_waveforms
 # Test trace view
 #------------------------------------------------------------------------------
 
-def test_trace_view_0(qtbot, tempdir, gui):
+def test_trace_view_0():
     nc = 5
     ns = 20
     sr = 2000.
@@ -35,15 +35,16 @@ def test_trace_view_0(qtbot, tempdir, gui):
     m = Bunch(spike_times=st, spike_clusters=sc, sample_rate=sr)
     s = Bunch(cluster_meta={}, selected=[0])
 
-    sw = _iter_spike_waveforms(interval=[0., 1.],
-                               traces_interval=traces,
-                               model=m,
-                               supervisor=s,
-                               n_samples_waveforms=ns,
-                               get_best_channels=lambda cluster_id: ch,
-                               color_selector=cs,
-                               )
-    assert len(list(sw)) > 0
+    for w in _iter_spike_waveforms(
+            interval=[0., 1.],
+            traces_interval=traces,
+            model=m,
+            supervisor=s,
+            n_samples_waveforms=ns,
+            show_all_spikes=True,
+            get_best_channels=lambda cluster_id: ch,
+            color_selector=cs):
+        assert w
 
 
 def test_trace_view_1(qtbot, tempdir, gui):
