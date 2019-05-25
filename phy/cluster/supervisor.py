@@ -559,7 +559,6 @@ class Supervisor(object):
             @self.cluster_view.get_ids
             def _update(cluster_ids):
                 self.color_selector.set_cluster_ids(cluster_ids)
-                emit('color_mapping_changed', self)
 
     def _save_spikes_per_cluster(self):
         if not self.context:
