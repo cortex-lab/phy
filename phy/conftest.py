@@ -12,7 +12,7 @@ import warnings
 
 import matplotlib
 
-from phy import add_default_handler
+from phylib import add_default_handler
 from phylib.conftest import *  # noqa
 
 

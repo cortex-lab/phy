@@ -13,7 +13,8 @@ from traceback import format_exception
 
 import click
 
-from phy import add_default_handler, __version_git__, _Formatter, _logger_fmt
+from phylib import add_default_handler, _Formatter
+from phy import __version_git__, _logger_fmt
 from phy.utils.profiling import _enable_profiler
 
 
