@@ -119,9 +119,9 @@ class TemplateController(object):
                      'get_best_channels',
                      'get_probe_depth',
                      'get_cluster_amplitude',
+                     '_get_template_waveforms',
                      )
         cached = ('_get_waveforms',
-                  '_get_template_waveforms',
                   '_get_features',
                   '_get_template_features',
                   '_get_amplitudes',
@@ -587,14 +587,26 @@ class TemplateController(object):
             cluster_color_selector=self.color_selector,
         )
 
-        def _update(sender, cluster_ids):
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            if up.added:
+                view.set_spike_clusters(self.supervisor.clustering.spike_clusters)
+                view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
+                view.plot()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_sort(sender, cluster_ids):
+            if cluster_ids is None or not len(cluster_ids):
+                return
+            # OPTIM: do not need to replot everything, but just to change the ordering)
+            view.update_cluster_sort(cluster_ids)
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_filter(sender, cluster_ids):
             if cluster_ids is None or not len(cluster_ids):
                 return
             view.set_cluster_ids(cluster_ids)
             view.plot()
-
-        connect(_update, event='table_sort', sender=self.supervisor.cluster_view)
-        connect(_update, event='table_filter', sender=self.supervisor.cluster_view)
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):
@@ -603,7 +615,8 @@ class TemplateController(object):
         @connect
         def on_close_view(sender, view_):
             if view_ == view:
-                unconnect(_update)
+                unconnect(on_table_sort)
+                unconnect(on_table_filter)
                 unconnect(on_color_mapping_changed)
 
         view.plot()
@@ -634,14 +647,23 @@ class TemplateController(object):
         def on_cluster_click(sender, cluster_id, key=None, button=None):
             emit('select', self.supervisor, [cluster_id])
 
-        def _update(sender, cluster_ids):
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            if up.added:
+                view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
+                view.plot()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_sort(sender, cluster_ids):
+            # OPTIM: do not need to replot everything, but just to change the ordering
+            view.update_cluster_sort(cluster_ids)
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_filter(sender, cluster_ids):
             if cluster_ids is None or not len(cluster_ids):
                 return
             view.cluster_ids = cluster_ids
             view.plot()
-
-        connect(_update, event='table_sort', sender=self.supervisor.cluster_view)
-        connect(_update, event='table_filter', sender=self.supervisor.cluster_view)
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):
@@ -650,7 +672,8 @@ class TemplateController(object):
         @connect
         def on_close_view(sender, view_):
             if view_ == view:
-                unconnect(_update)
+                unconnect(on_table_filter)
+                unconnect(on_table_sort)
                 unconnect(on_color_mapping_changed)
 
         return view

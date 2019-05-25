@@ -10,7 +10,7 @@ import logging
 
 from phylib.utils._misc import _read_python
 from phylib.utils.testing import captured_output
-from phylib.utils import connect
+from phylib.utils import connect, emit
 from phy.cluster.views import WaveformView, TraceView, ProbeView, RasterView, TemplateView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press, mouse_click
@@ -100,6 +100,9 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     wv.actions.toggle_templates(True)
     wv.actions.toggle_mean_waveforms(True)
 
+    s.actions.colormap_rainbow()
+    qtbot.wait(10)
+
     if tv:
         tv.actions.toggle_highlighted_spikes(True)
         tv.actions.go_to_next_spike()
@@ -109,8 +112,19 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
 
     assert s.cluster_meta.get('group', clu) == 'good'
 
+    # Emulate filtering in cluster view.
+    emit('table_filter', s.cluster_view, s.clustering.cluster_ids[::2])
+    qtbot.wait(10)
+    emit('table_filter', s.cluster_view, s.clustering.cluster_ids)
+    qtbot.wait(10)
+
+    # Emulate sorting in cluster view.
+    emit('table_sort', s.cluster_view, s.clustering.cluster_ids[::-1])
+    qtbot.wait(10)
+
     rv = gui.list_views(RasterView)[0]
     s.actions.toggle_categorical(False)
+    qtbot.wait(10)
     rv.dock_widget.close()
 
     tmpv = gui.list_views(TemplateView)[0]
