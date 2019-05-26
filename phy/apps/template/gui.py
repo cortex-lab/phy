@@ -437,7 +437,7 @@ class TemplateController(object):
         data_bounds = (
             min(x0.min(), x1.min()),
             min(y0.min(), y1.min()),
-            max(y0.max(), y1.max()),
+            max(x0.max(), x1.max()),
             max(y0.max(), y1.max()),
         )
 
