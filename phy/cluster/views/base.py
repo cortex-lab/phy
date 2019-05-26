@@ -134,7 +134,11 @@ class ManualClusteringView(object):
         def on_close(sender):
             gui.state.update_view_state(self, self.state)
 
-        self.canvas.show()
+        # HACK: Fix bug on macOS where docked OpenGL widgets were not displayed at startup.
+        self._set_floating = AsyncCaller(delay=1)
+        @self._set_floating.set
+        def _set_floating():
+            self.dock_widget.setFloating(False)
 
     def toggle_auto_update(self, checked):
         """Auto update means the view is updated automatically

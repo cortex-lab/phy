@@ -11,6 +11,7 @@ import gc
 import logging
 import re
 from timeit import default_timer
+import traceback
 
 import numpy as np
 
@@ -486,25 +487,28 @@ class BaseCanvas(QOpenGLWindow):
 
     def paintGL(self):
         """Draw all visuals."""
-        gloo.clear()
-        size = self.get_size()
-        # Flush the queue of next paint callbacks.
-        for f in self._next_paint_callbacks:
-            f()
-        self._next_paint_callbacks.clear()
-        # Draw all visuals, clearable first, non clearable last.
-        visuals = [v for v in self.visuals if v.get('clearable', True)]
-        visuals += [v for v in self.visuals if not v.get('clearable', True)]
-        logger.log(5, "Draw %d visuals.", len(visuals))
-        for v in visuals:
-            visual = v.visual
-            if size != self._size:
-                visual.on_resize(*size)
-            # Do not draw if there are no vertices.
-            if visual.n_vertices > 0:
-                logger.log(5, "Draw visual `%s`.", visual)
-                visual.on_draw()
-        self._size = size
+        try:
+            gloo.clear()
+            size = self.get_size()
+            # Flush the queue of next paint callbacks.
+            for f in self._next_paint_callbacks:
+                f()
+            self._next_paint_callbacks.clear()
+            # Draw all visuals, clearable first, non clearable last.
+            visuals = [v for v in self.visuals if v.get('clearable', True)]
+            visuals += [v for v in self.visuals if not v.get('clearable', True)]
+            logger.log(5, "Draw %d visuals.", len(visuals))
+            for v in visuals:
+                visual = v.visual
+                if size != self._size:
+                    visual.on_resize(*size)
+                # Do not draw if there are no vertices.
+                if visual.n_vertices > 0:
+                    logger.log(5, "Draw visual `%s`.", visual)
+                    visual.on_draw()
+            self._size = size
+        except Exception:  # pragma: no cover
+            traceback.print_exc()
 
     # Events
     # ---------------------------------------------------------------------------------------------
