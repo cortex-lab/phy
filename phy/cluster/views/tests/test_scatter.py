@@ -9,6 +9,7 @@
 import numpy as np
 
 from phylib.utils import Bunch
+from phy.plot.tests import mouse_click
 from ..scatter import ScatterView
 
 
@@ -19,11 +20,12 @@ from ..scatter import ScatterView
 def test_scatter_view(qtbot, gui):
     n = 1000
     v = ScatterView(
-        coords=lambda c: Bunch(
+        coords=lambda cluster_ids, load_all=False: [Bunch(
             x=np.random.randn(n),
             y=np.random.randn(n),
+            spike_ids=np.arange(n),
             data_bounds=None,
-        )
+        ) for c in cluster_ids]
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
@@ -35,6 +37,20 @@ def test_scatter_view(qtbot, gui):
     v.on_select(cluster_ids=[0, 2])
 
     v.set_state(v.state)
+
+    # Split without selection.
+    spike_ids = v.on_request_split()
+    assert len(spike_ids) == 0
+
+    a, b = 50, 1000
+    mouse_click(qtbot, v.canvas, (a, a), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (a, b), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (b, b), modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, (b, a), modifiers=('Control',))
+
+    # Split lassoed points.
+    spike_ids = v.on_request_split()
+    assert len(spike_ids) > 0
 
     # qtbot.stop()
     v.close()
