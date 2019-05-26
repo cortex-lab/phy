@@ -28,7 +28,7 @@ class ScatterView(ManualClusteringView):
     _default_position = 'right'
     _default_marker_size = 5.
 
-    def __init__(self, coords=None):  
+    def __init__(self, coords=None):
         # coords is a function cluster_ids => [Bunch(x, y) for _ in cluster_ids]
         super(ScatterView, self).__init__()
         self.canvas.enable_axes()
