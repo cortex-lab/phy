@@ -45,17 +45,18 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class TemplateFeatureView(ScatterView):
-    def on_select(self, cluster_ids=(), **kwargs):
-        if len(cluster_ids) != 2:
-            self.canvas.clear()
-            self.canvas.update()
-            return
-        return super(TemplateFeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
+    pass
+    # def on_select(self, cluster_ids=(), **kwargs):
+    #     if len(cluster_ids) != 2:
+    #         self.canvas.clear()
+    #         self.canvas.update()
+    #         return
+    #     return super(TemplateFeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
 
-    def _get_data(self, cluster_ids):
-        assert len(cluster_ids) == 2
-        b = self.coords(cluster_ids)
-        return [Bunch(x=b.x0, y=b.y0), Bunch(x=b.x1, y=b.y1)]
+    # def _get_data(self, cluster_ids):
+    #     assert len(cluster_ids) == 2
+    #     b = self.coords(cluster_ids)
+    #     return [Bunch(x=b.x0, y=b.y0), Bunch(x=b.x1, y=b.y1)]
 
 
 class AmplitudeView(ScatterView):
@@ -290,7 +291,7 @@ class TemplateController(object):
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
         # Get the mean amplitude for the cluster.
-        mean_amp = self._get_amplitudes(cluster_id).y.mean()
+        mean_amp = self._get_amplitudes([cluster_id])[0].y.mean()
         # Get all templates from which this cluster stems from.
         templates = [self.model.get_template(template_id)
                      for template_id in template_ids]
@@ -413,6 +414,8 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def _get_template_features(self, cluster_ids):
+        if len(cluster_ids) != 2:
+            return
         assert len(cluster_ids) == 2
         clu0, clu1 = cluster_ids
 
@@ -431,13 +434,17 @@ class TemplateController(object):
         x1 = np.average(t1, weights=n0, axis=1)
         y1 = np.average(t1, weights=n1, axis=1)
 
-        return Bunch(x0=x0, y0=y0, x1=x1, y1=y1,
-                     data_bounds=(min(x0.min(), x1.min()),
-                                  min(y0.min(), y1.min()),
-                                  max(y0.max(), y1.max()),
-                                  max(y0.max(), y1.max()),
-                                  ),
-                     )
+        data_bounds = (
+            min(x0.min(), x1.min()),
+            min(y0.min(), y1.min()),
+            max(y0.max(), y1.max()),
+            max(y0.max(), y1.max()),
+        )
+
+        return [
+            Bunch(x=x0, y=y0, data_bounds=data_bounds),
+            Bunch(x=x1, y=y1, data_bounds=data_bounds),
+        ]
 
     def create_template_feature_view(self):
         if self.model.template_features is None:
@@ -556,13 +563,20 @@ class TemplateController(object):
     # Amplitudes
     # -------------------------------------------------------------------------
 
-    def _get_amplitudes(self, cluster_id):
-        n = self.n_spikes_amplitudes
+    def _get_amplitudes(self, cluster_ids, load_all=False):
+        n = self.n_spikes_amplitudes if not load_all else None
         m = self.model
-        spike_ids = self.selector.select_spikes([cluster_id], n)
-        x = m.spike_times[spike_ids]
-        y = m.amplitudes[spike_ids]
-        return Bunch(x=x, y=y, data_bounds=(0., 0., m.duration, y.max()))
+        bunchs = []
+        data_bounds = [0., 0., m.duration, None]
+        for cluster_id in cluster_ids:
+            spike_ids = self.selector.select_spikes([cluster_id], n)
+            x = m.spike_times[spike_ids]
+            y = m.amplitudes[spike_ids]
+            bunchs.append(Bunch(x=x, y=y, spike_ids=spike_ids, data_bounds=data_bounds))
+        ymax = max(b.y.max() for b in bunchs)
+        for bunch in bunchs:
+            bunch.data_bounds[-1] = ymax
+        return bunchs
 
     def create_amplitude_view(self):
         if self.model.amplitudes is None:

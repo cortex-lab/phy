@@ -413,8 +413,10 @@ class Lasso(object):
         if 'Control' in e.modifiers:
             if e.button == 'Left':
                 layout = getattr(self.canvas, 'layout', None)
-                f = getattr(layout, 'box_map', self.canvas.window_to_ndc)
-                self.box, pos = f(e.pos)
+                if hasattr(layout, 'box_map'):
+                    self.box, pos = layout.box_map(e.pos)
+                else:  # pragma: no cover
+                    pos = self.canvas.window_to_ndc(e.pos)
                 self.add(pos)  # call update_lasso_visual
             else:
                 self.clear()
