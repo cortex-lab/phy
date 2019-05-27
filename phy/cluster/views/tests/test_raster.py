@@ -80,6 +80,7 @@ def test_raster_1(qtbot, gui):
     v.attach(gui)
 
     v.plot()
+    v.on_select([0])
 
     v.update_cluster_sort(np.arange(nc))
 
@@ -87,6 +88,7 @@ def test_raster_1(qtbot, gui):
     v.update_color()
 
     v.set_cluster_ids(np.arange(0, nc, 2))
+    v.plot()
 
     # qtbot.stop()
     v.close()

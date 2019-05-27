@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 
+from phylib.utils._color import _add_selected_clusters_colors
 from phylib.io.array import _index_of
 from phylib.utils import emit, Bunch
 from phy.plot import _get_linear_x
@@ -123,20 +124,25 @@ class TemplateView(ManualClusteringView):
         self.visual.set_box_index(box_index)
         self.canvas.update()
 
-    def update_color(self):
+    def update_color(self, selected_clusters=None):
         # The call to set_cluster_ids() update the cluster_colors array.
         self.set_cluster_ids(self.cluster_ids)
+        # Selected cluster colors.
+        cluster_colors = self.cluster_colors
+        if selected_clusters is not None:
+            cluster_colors = _add_selected_clusters_colors(
+                selected_clusters, self.cluster_ids, cluster_colors)
         # Number of vertices per cluster = number of vertices per signal
         n_vertices_clu = [
             len(self._cluster_box_index[cluster_id]) for cluster_id in self.cluster_ids]
         # The argument passed to set_color() must have 1 row per vertex.
-        self.visual.set_color(np.repeat(self.cluster_colors, n_vertices_clu, axis=0))
+        self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
             return
-        # TODO
+        self.update_color(selected_clusters=cluster_ids)
 
     def plot(self):
         # Retrieve the waveform data.

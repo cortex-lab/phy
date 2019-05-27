@@ -13,6 +13,7 @@ import numpy as np
 
 from phylib.io.array import _unique, _index_of
 from phylib.utils import emit
+from phylib.utils._color import _add_selected_clusters_colors
 
 from .base import ManualClusteringView
 from phy.plot import NDC
@@ -91,9 +92,13 @@ class RasterView(ManualClusteringView):
         # assert np.all(np.in1d(cl, self.cluster_ids))
         return _index_of(cl, self.cluster_ids)
 
-    def _get_color(self, box_index):
+    def _get_color(self, box_index, selected_clusters=None):
         """Return, for every spike, its color, based on its box index."""
         cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
+        # Selected cluster colors.
+        if selected_clusters is not None:
+            cluster_colors = _add_selected_clusters_colors(
+                selected_clusters, self.cluster_ids, cluster_colors)
         return cluster_colors[box_index, :]
 
     # Main methods
@@ -108,9 +113,9 @@ class RasterView(ManualClusteringView):
         self.visual.set_box_index(self._get_box_index())
         self.canvas.update()
 
-    def update_color(self):
+    def update_color(self, selected_clusters=None):
         box_index = self._get_box_index()
-        color = self._get_color(box_index)
+        color = self._get_color(box_index, selected_clusters=selected_clusters)
         self.visual.set_color(color)
         self.canvas.update()
 
@@ -135,7 +140,7 @@ class RasterView(ManualClusteringView):
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
             return
-        # TODO
+        self.update_color(selected_clusters=cluster_ids)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
