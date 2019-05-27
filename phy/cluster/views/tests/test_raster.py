@@ -72,7 +72,7 @@ def test_raster_1(qtbot, gui):
     v.update_cluster_sort(np.arange(nc))
 
     c.set_color_mapping('group', 'cluster_group')
-    v.plot()
+    v.update_color()
 
     v.set_cluster_ids(np.arange(0, nc, 2))
     v.plot

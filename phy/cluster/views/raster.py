@@ -107,6 +107,12 @@ class RasterView(ManualClusteringView):
         self.visual.set_box_index(self._get_box_index())
         self.canvas.update()
 
+    def update_color(self):
+        box_index = self._get_box_index()
+        color = self._get_color(box_index)
+        self.visual.set_color(color)
+        self.canvas.update()
+
     def plot(self):
         if not len(self.spike_clusters):
             return

@@ -614,7 +614,7 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):
-            view.plot()
+            view.update_color()
 
         @connect
         def on_close_view(sender, view_):

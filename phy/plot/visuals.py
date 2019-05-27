@@ -120,6 +120,10 @@ class ScatterVisual(BaseVisual):
         emit('visual_set_data', self)
         return data
 
+    def set_color(self, color):
+        color = _get_array(color, (self.n_vertices, 4), ScatterVisual._default_color)
+        self.program['a_color'] = color.astype(np.float32)
+
     def set_marker_size(self, marker_size):
         assert marker_size > 0
         size = _get_array(marker_size, (self.n_vertices, 1))
