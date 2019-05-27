@@ -26,6 +26,7 @@ from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   _wait,
                   Worker,
                   _block,
+                  _screenshot,
                   )
 
 
@@ -144,6 +145,17 @@ def test_javascript_2(qtbot):
         _block(lambda: view.html is not None)
         view.close()
     assert len(exceptions) >= 1
+
+
+def test_screenshot(qtbot, tempdir):
+    path = tempdir / 'capture.png'
+    view = WebView()
+    view.set_html('hello', lambda e: _screenshot(view, path))
+    qtbot.addWidget(view)
+    view.show()
+    qtbot.waitForWindowShown(view)
+    _block(lambda: path.exists())
+    view.close()
 
 
 def test_prompt(qtbot):

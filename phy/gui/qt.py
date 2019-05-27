@@ -180,6 +180,10 @@ def _block(until_true, timeout=None):
         raise RuntimeError("Timeout in _block().")
 
 
+def _screenshot(widget, path):
+    widget.grab().save(str(path))
+
+
 def _wait(ms):
     from PyQt5 import QtTest
     QtTest.QTest.qWait(ms)
