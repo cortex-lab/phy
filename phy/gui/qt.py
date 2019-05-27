@@ -181,7 +181,11 @@ def _block(until_true, timeout=None):
 
 
 def _screenshot(widget, path):
-    widget.grab().save(str(path))
+    if isinstance(widget, QOpenGLWindow):
+        widget.grabFramebuffer().save(str(path))
+    else:
+        widget.grab().save(str(path))
+    logger.info("Saved screenshot to %s.", path)
 
 
 def _wait(ms):

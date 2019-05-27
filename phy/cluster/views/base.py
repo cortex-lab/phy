@@ -7,13 +7,16 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from datetime import datetime
 import gc
 import logging
+from pathlib import Path
 
-from phy.gui import Actions
-from phy.gui.qt import AsyncCaller
-from phy.plot import PlotCanvas
 from phylib.utils import Bunch, connect, unconnect, emit
+from phylib.utils._misc import phy_config_dir
+from phy.gui import Actions
+from phy.gui.qt import AsyncCaller, _screenshot
+from phy.plot import PlotCanvas
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +83,8 @@ class ManualClusteringView(object):
 
         # Freeze and unfreeze the view when selecting clusters.
         self.actions.add(self.toggle_auto_update, checkable=True, checked=self.auto_update)
+        self.actions.add(self.screenshot)
+        self.actions.separator()
 
         emit('view_actions_created', self)
 
@@ -143,6 +148,14 @@ class ManualClusteringView(object):
         """Auto update means the view is updated automatically
         when the cluster selection changes."""
         self.auto_update = checked
+
+    def screenshot(self, dir=None):
+        date = datetime.now().strftime('%Y%m%d%H%M%S')
+        name = 'phy_screenshot_%s_%s.png' % (self.__class__.__name__, date)
+        path = (Path(dir) if dir else phy_config_dir() / 'screenshots') / name
+        path.parent.mkdir(exist_ok=True, parents=True)
+        _screenshot(self.canvas, path)
+        return path
 
     @property
     def state(self):

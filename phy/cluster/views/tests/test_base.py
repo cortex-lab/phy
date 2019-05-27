@@ -23,7 +23,7 @@ class MyView(ManualClusteringView):
             self.canvas.scatter(pos=.25 * np.random.randn(100, 2), color=selected_cluster_color(i))
 
 
-def test_manual_clustering_view_1(qtbot):
+def test_manual_clustering_view_1(qtbot, tempdir):
     v = MyView()
     v.canvas.show()
     # qtbot.addWidget(v.canvas)
@@ -33,6 +33,11 @@ def test_manual_clustering_view_1(qtbot):
     assert v.auto_update is False
 
     qtbot.wait(1)
+
+    path = v.screenshot(dir=tempdir)
+    assert str(path).startswith(str(tempdir))
+    assert path.exists()
+
     # qtbot.stop()
     v.canvas.close()
 
