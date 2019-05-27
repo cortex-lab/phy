@@ -51,8 +51,14 @@ class ScatterView(ManualClusteringView):
             ymin = min(ymin, ymin_)
             xmax = max(xmax, xmax_)
             ymax = max(ymax, ymax_)
-        assert xmin <= xmax
-        assert ymin <= ymax
+
+        if xmin == xmax == 0:
+            xmin, xmax = -1, 1
+        if ymin == ymax == 0:
+            ymin, ymax = -1, 1
+
+        assert xmin < xmax
+        assert ymin < ymax
         return (xmin, ymin, xmax, ymax)
 
     def _plot_points(self, bunchs, data_bounds):
@@ -76,7 +82,10 @@ class ScatterView(ManualClusteringView):
         # Retrieve the data.
         bunchs = self.coords(self.cluster_ids)
         if bunchs is None:
+            self.visual.hide()
+            self.canvas.update()
             return
+        self.visual.show()
         self.data_bounds = self._get_data_bounds(bunchs)
 
         self._plot_points(bunchs, self.data_bounds)
@@ -89,8 +98,7 @@ class ScatterView(ManualClusteringView):
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
-        if (self.canvas.lasso.count < 3 or
-                not len(self.cluster_ids)):  # pragma: no cover
+        if (self.canvas.lasso.count < 3 or not len(self.cluster_ids)):  # pragma: no cover
             return np.array([], dtype=np.int64)
 
         # Get all points from all clusters.

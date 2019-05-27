@@ -17,7 +17,31 @@ from ..scatter import ScatterView
 # Test scatter view
 #------------------------------------------------------------------------------
 
-def test_scatter_view(qtbot, gui):
+def test_scatter_view_0(qtbot, gui):
+    v = ScatterView(
+        coords=lambda cluster_ids, load_all=False: None
+    )
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
+    v.on_select(cluster_ids=[0])
+    v.close()
+
+
+def test_scatter_view_1(qtbot, gui):
+    x = np.zeros(1)
+    v = ScatterView(
+        coords=lambda cluster_ids, load_all=False: [
+            Bunch(x=x, y=x, spike_ids=[0], data_bounds=(0, 0, 0, 0))]
+    )
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
+    v.on_select(cluster_ids=[0])
+    v.close()
+
+
+def test_scatter_view_2(qtbot, gui):
     n = 1000
     v = ScatterView(
         coords=lambda cluster_ids, load_all=False: [Bunch(
