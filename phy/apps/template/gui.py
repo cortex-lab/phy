@@ -709,6 +709,9 @@ class TemplateController(object):
                   view_count=view_count,
                   **kwargs)
         gui.set_default_actions()
+        # Get the state's current sort, and make sure the cluster view is initialized
+        # with it.
+        self.supervisor._init_sort = gui.state.ClusterView.current_sort
         self.supervisor.attach(gui)
 
         gui.set_default_actions()
