@@ -68,5 +68,8 @@ def test_template_view(qtbot, tempdir, gui):
     cluster_color_selector.set_color_mapping(colormap='linear')
     v.update_color()
 
+    v.increase()
+    v.decrease()
+
     # qtbot.stop()
     v.close()

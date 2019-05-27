@@ -645,7 +645,6 @@ class TemplateController(object):
             cluster_ids=self.supervisor.clustering.cluster_ids,
             cluster_color_selector=self.color_selector,
         )
-        view.plot()
 
         @connect
         def on_cluster_click(sender, cluster_id, key=None, button=None):
@@ -681,6 +680,8 @@ class TemplateController(object):
                 unconnect(on_table_filter)
                 unconnect(on_table_sort)
                 unconnect(on_color_mapping_changed)
+
+        view.plot()
 
         return view
 

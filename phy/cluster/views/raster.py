@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 class RasterView(ManualClusteringView):
     _default_position = 'right'
     _marker_size = 5
-    _marker_size_increment = .1
+    _marker_size_increment = 1.1
 
     default_shortcuts = {
-        'increase_marker_size': 'ctrl+shift++',
-        'decrease_marker_size': 'ctrl+shift+-',
+        'increase': 'ctrl+shift++',
+        'decrease': 'ctrl+shift+-',
     }
 
     def __init__(self, spike_times, spike_clusters, cluster_color_selector=None):
@@ -139,8 +139,8 @@ class RasterView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(RasterView, self).attach(gui)
-        self.actions.add(self.increase_marker_size)
-        self.actions.add(self.decrease_marker_size)
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
         self.actions.separator()
 
     # Marker size
@@ -157,9 +157,8 @@ class RasterView(ManualClusteringView):
         self.visual.set_marker_size(val)
         self.canvas.update()
 
-    def increase_marker_size(self):
-        self.marker_size += self._marker_size_increment
+    def increase(self):
+        self.marker_size *= self._marker_size_increment
 
-    def decrease_marker_size(self):
-        dms = self._marker_size_increment
-        self.marker_size = max(dms, self.marker_size - .1)
+    def decrease(self):
+        self.marker_size = max(.1, self.marker_size / self._marker_size_increment)

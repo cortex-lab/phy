@@ -27,13 +27,20 @@ logger = logging.getLogger(__name__)
 class TemplateView(ManualClusteringView):
     _default_position = 'right'
     cluster_ids = ()
+    _scaling = 1.
+    _scaling_increment = 1.1
 
     default_shortcuts = {
+        'increase': 'ctrl+alt++',
+        'decrease': 'ctrl+alt+-',
     }
 
     def __init__(self, templates=None, channel_ids=None, cluster_ids=None,
                  cluster_color_selector=None):
         super(TemplateView, self).__init__()
+        self.state_attrs += ('scaling',)
+        self.local_state_attrs += ('scaling',)
+
         self.cluster_color_selector = cluster_color_selector
         # Full list of channels.
         self.channel_ids = channel_ids
@@ -48,9 +55,8 @@ class TemplateView(ManualClusteringView):
         self.canvas.add_visual(self.visual)
         self._cluster_box_index = {}
 
-    def set_cluster_ids(self, cluster_ids):
-        self.cluster_ids = cluster_ids
-        self.cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
+    # Internal plot functions
+    # -------------------------------------------------------------------------
 
     def _get_data_bounds(self, bunchs):
         m = np.median([b.template.min() for b in bunchs.values()])
@@ -82,7 +88,7 @@ class TemplateView(ManualClusteringView):
         self._cluster_box_index[cluster_id] = box_index
 
         # Generate the waveform array.
-        wave = wave.T.copy()
+        wave = wave.T * (self._scaling or 1.)
 
         return Bunch(
             x=t, y=wave, color=color, box_index=box_index)
@@ -95,6 +101,13 @@ class TemplateView(ManualClusteringView):
             data = self._get_batch_data(bunchs[cluster_id], cluster_id, i)
             self.visual.add_batch_data(**data, data_bounds=data_bounds)
         self.canvas.update_visual(self.visual)
+
+    # Main methods
+    # -------------------------------------------------------------------------
+
+    def set_cluster_ids(self, cluster_ids):
+        self.cluster_ids = cluster_ids
+        self.cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
 
     def update_cluster_sort(self, cluster_ids):
         # Only the order of the cluster_ids is supposed to change here.
@@ -146,3 +159,30 @@ class TemplateView(ManualClusteringView):
             cluster_id = self.cluster_ids[cluster_idx]
             logger.debug("Click on cluster %d with key %s and button %s.", cluster_id, key, b)
             emit('cluster_click', self, cluster_id, key=key, button=b)
+
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+        super(TemplateView, self).attach(gui)
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
+        self.actions.separator()
+
+    # Template scaling
+    # -------------------------------------------------------------------------
+
+    @property
+    def scaling(self):
+        return self._scaling or 1.
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
+        self.plot()
+
+    def increase(self):
+        """Increase the scaling of the features."""
+        self.scaling *= self._scaling_increment
+
+    def decrease(self):
+        """Decrease the scaling of the features."""
+        self.scaling /= self._scaling_increment
