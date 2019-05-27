@@ -42,6 +42,7 @@ class TemplateView(ManualClusteringView):
         # Total number of channels.
         self.n_channels = len(channel_ids)
         self.canvas.set_layout('grid', box_bounds=[[-1, -1, +1, +1]], has_clip=False)
+        self.canvas.enable_axes()
         self.templates = templates
         self.visual = PlotVisual()
         self.canvas.add_visual(self.visual)
@@ -122,6 +123,7 @@ class TemplateView(ManualClusteringView):
 
         data_bounds = self._get_data_bounds(bunchs)
         self._plot_templates(bunchs, data_bounds=data_bounds)
+        self.canvas.axes.reset_data_bounds((0, 0, n_clusters, self.n_channels), do_update=True)
         self.canvas.update()
 
     def on_mouse_click(self, e):
