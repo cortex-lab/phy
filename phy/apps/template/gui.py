@@ -581,7 +581,9 @@ class TemplateController(object):
     def create_amplitude_view(self):
         if self.model.amplitudes is None:
             return
-        return AmplitudeView(coords=self._get_amplitudes)
+        view = AmplitudeView(coords=self._get_amplitudes)
+        view.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
+        return view
 
     # Probe view
     # -------------------------------------------------------------------------
