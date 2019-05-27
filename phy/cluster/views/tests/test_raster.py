@@ -12,7 +12,7 @@ from phylib.utils import Bunch, connect
 from phylib.utils._color import ClusterColorSelector
 from phylib.io.mock import artificial_spike_clusters, artificial_spike_samples
 
-from phy.plot.tests import mouse_click, key_press, key_release
+from phy.plot.tests import mouse_click
 from ..raster import RasterView
 
 
@@ -49,12 +49,12 @@ def test_raster_0(qtbot, gui):
     _clicked = []
 
     @connect(sender=v)
-    def on_cluster_click(sender, cluster_id=None, button=None, key=None):
-        _clicked.append((cluster_id, button, key))
+    def on_cluster_click(sender, cluster_id=None, button=None):
+        _clicked.append((cluster_id, button))
 
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
 
-    assert _clicked == [(1, 'Left', None)]
+    assert _clicked == [(1, 'Left')]
 
     # qtbot.stop()
     v.close()

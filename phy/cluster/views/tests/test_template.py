@@ -13,7 +13,7 @@ from phylib.utils import Bunch, connect
 from phylib.utils._color import ClusterColorSelector
 
 from ..template import TemplateView
-from phy.plot.tests import mouse_click, key_press, key_release
+from phy.plot.tests import mouse_click
 
 
 #------------------------------------------------------------------------------
@@ -52,14 +52,12 @@ def test_template_view(qtbot, tempdir, gui):
     _clicked = []
 
     @connect(sender=v)
-    def on_cluster_click(sender, cluster_id=None, button=None, key=None):
-        _clicked.append((cluster_id, button, key))
+    def on_cluster_click(sender, cluster_id=None, button=None):
+        _clicked.append((cluster_id, button))
 
-    key_press(qtbot, v.canvas, '2')
-    mouse_click(qtbot, v.canvas, pos=(10., 10.), button='Left')
-    key_release(qtbot, v.canvas, '2')
+    mouse_click(qtbot, v.canvas, pos=(10., 10.), button='Left', modifiers=('Control',))
 
-    assert _clicked == [(9, 'Left', 2)]
+    assert _clicked == [(9, 'Left')]
 
     cluster_ids = np.arange(2, n_clusters + 2)
     v.set_cluster_ids(cluster_ids)

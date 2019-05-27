@@ -594,7 +594,7 @@ class TemplateController(object):
 
         @connect
         def on_cluster_click(sender, cluster_id, key=None, button=None):
-            emit('select', self.supervisor, [cluster_id])
+            self.supervisor.select([cluster_id])
 
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
@@ -653,7 +653,7 @@ class TemplateController(object):
 
         @connect
         def on_cluster_click(sender, cluster_id, key=None, button=None):
-            emit('select', self.supervisor, [cluster_id])
+            self.supervisor.select([cluster_id])
 
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):

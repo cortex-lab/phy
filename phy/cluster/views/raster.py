@@ -146,14 +146,12 @@ class RasterView(ManualClusteringView):
 
     def on_mouse_click(self, e):
         b = e.button
-        nums = tuple('%d' % i for i in range(10))
-        if 'Control' in e.modifiers or e.key in nums:
-            key = int(e.key) if e.key in nums else None
+        if 'Control' in e.modifiers:
             # Get mouse position in NDC.
             cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
             cluster_id = self.cluster_ids[cluster_idx]
-            logger.debug("Click on cluster %d with key %s and button %s.", cluster_id, key, b)
-            emit('cluster_click', self, cluster_id, key=key, button=b)
+            logger.debug("Click on cluster %d with key %s and button %s.", cluster_id, b)
+            emit('cluster_click', self, cluster_id, button=b)
 
     # Marker size
     # -------------------------------------------------------------------------
