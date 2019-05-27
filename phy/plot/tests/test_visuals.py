@@ -314,6 +314,7 @@ def test_text_2(qtbot, canvas_pz):
     v = ScatterVisual()
     c.add_visual(v)
     v.set_data(pos=pos, data_bounds=None)
+    v.set_marker_size(10)
 
     c.show()
     qtbot.waitForWindowShown(c)

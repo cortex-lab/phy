@@ -41,6 +41,9 @@ def test_raster_0(qtbot, gui):
     c.set_color_mapping('quality', 'categorical')
     v.plot()
 
+    v.increase_marker_size()
+    v.decrease_marker_size()
+
     # qtbot.stop()
     v.close()
 

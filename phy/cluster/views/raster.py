@@ -26,7 +26,13 @@ logger = logging.getLogger(__name__)
 
 class RasterView(ManualClusteringView):
     _default_position = 'right'
-    marker_size = 5
+    _marker_size = 5
+    _marker_size_increment = .1
+
+    default_shortcuts = {
+        'increase_marker_size': 'ctrl+shift++',
+        'decrease_marker_size': 'ctrl+shift+-',
+    }
 
     def __init__(self, spike_times, spike_clusters, cluster_color_selector=None):
         self.spike_times = spike_times
@@ -39,12 +45,19 @@ class RasterView(ManualClusteringView):
         self.cluster_color_selector = cluster_color_selector
 
         super(RasterView, self).__init__()
+        # Save the marker size in the global and local view's config.
+        self.state_attrs += ('marker_size',)
+        self.local_state_attrs += ('marker_size',)
+
         self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
         self.canvas.constrain_bounds = NDC
         self.canvas.enable_axes(show_y=False)
 
         self.visual = ScatterVisual(marker='vbar')
         self.canvas.add_visual(self.visual)
+
+    # Data-related functions
+    # -------------------------------------------------------------------------
 
     def set_spike_clusters(self, spike_clusters):
         """Set the spike clusters for all spikes."""
@@ -58,6 +71,9 @@ class RasterView(ManualClusteringView):
         self.n_clusters = len(self.cluster_ids)
         # Only keep spikes that belong to the selected clusters.
         self.spike_ids = np.isin(self.spike_clusters, self.cluster_ids)
+
+    # Internal plotting functions
+    # -------------------------------------------------------------------------
 
     def _get_x(self):
         return self.spike_times[self.spike_ids]
@@ -78,6 +94,9 @@ class RasterView(ManualClusteringView):
         """Return, for every spike, its color, based on its box index."""
         cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
         return cluster_colors[box_index, :]
+
+    # Main methods
+    # -------------------------------------------------------------------------
 
     @property
     def data_bounds(self):
@@ -110,3 +129,31 @@ class RasterView(ManualClusteringView):
         if not cluster_ids:
             return
         # TODO
+
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+        super(RasterView, self).attach(gui)
+        self.actions.add(self.increase_marker_size)
+        self.actions.add(self.decrease_marker_size)
+        self.actions.separator()
+
+    # Marker size
+    # -------------------------------------------------------------------------
+
+    @property
+    def marker_size(self):
+        return self._marker_size
+
+    @marker_size.setter
+    def marker_size(self, val):
+        assert val > 0
+        self._marker_size = val
+        self.visual.set_marker_size(val)
+        self.canvas.update()
+
+    def increase_marker_size(self):
+        self.marker_size += self._marker_size_increment
+
+    def decrease_marker_size(self):
+        dms = self._marker_size_increment
+        self.marker_size = max(dms, self.marker_size - .1)
