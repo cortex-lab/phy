@@ -49,9 +49,7 @@ def test_scatter_markers(qtbot, canvas_pz):
     x = .2 * np.random.randn(n)
     y = .2 * np.random.randn(n)
 
-    _test_visual(qtbot, canvas_pz,
-                 ScatterVisual(marker='vbar'),
-                 x=x, y=y, data_bounds='auto')
+    _test_visual(qtbot, canvas_pz, ScatterVisual(marker='vbar'), x=x, y=y, data_bounds='auto')
 
 
 def test_scatter_custom(qtbot, canvas_pz):
@@ -68,8 +66,7 @@ def test_scatter_custom(qtbot, canvas_pz):
     # Random sizes
     s = 5 + 20 * np.random.rand(n)
 
-    _test_visual(qtbot, canvas_pz, ScatterVisual(),
-                 pos=pos, color=c, size=s)
+    _test_visual(qtbot, canvas_pz, ScatterVisual(), pos=pos, color=c, size=s)
 
 
 #------------------------------------------------------------------------------
@@ -77,8 +74,7 @@ def test_scatter_custom(qtbot, canvas_pz):
 #------------------------------------------------------------------------------
 
 def test_uniform_scatter_empty(qtbot, canvas):
-    _test_visual(qtbot, canvas, UniformScatterVisual(),
-                 x=np.zeros(0), y=np.zeros(0))
+    _test_visual(qtbot, canvas, UniformScatterVisual(), x=np.zeros(0), y=np.zeros(0))
 
 
 def test_uniform_scatter_markers(qtbot, canvas_pz):
@@ -87,9 +83,8 @@ def test_uniform_scatter_markers(qtbot, canvas_pz):
     x = .2 * np.random.randn(n)
     y = .2 * np.random.randn(n)
 
-    _test_visual(qtbot, canvas_pz,
-                 UniformScatterVisual(marker='vbar'),
-                 x=x, y=y, data_bounds='auto')
+    _test_visual(
+        qtbot, canvas_pz, UniformScatterVisual(marker='vbar'), x=x, y=y, data_bounds='auto')
 
 
 def test_uniform_scatter_custom(qtbot, canvas_pz):
@@ -99,14 +94,9 @@ def test_uniform_scatter_custom(qtbot, canvas_pz):
     # Random position.
     pos = .2 * np.random.randn(n, 2)
 
-    _test_visual(qtbot, canvas_pz,
-                 UniformScatterVisual(color=_random_color() + (.5,),
-                                      size=10.,
-                                      ),
-                 pos=pos,
-                 masks=np.linspace(0., 1., n),
-                 data_bounds=None,
-                 )
+    _test_visual(
+        qtbot, canvas_pz, UniformScatterVisual(color=_random_color() + (.5,), size=10., ),
+        pos=pos, masks=np.linspace(0., 1., n), data_bounds=None)
 
 
 #------------------------------------------------------------------------------
@@ -121,14 +111,24 @@ def test_plot_empty(qtbot, canvas):
 
 def test_plot_0(qtbot, canvas_pz):
     y = np.zeros((1, 10))
-    _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 y=y)
+    _test_visual(qtbot, canvas_pz, PlotVisual(), y=y)
 
 
 def test_plot_1(qtbot, canvas_pz):
     y = .2 * np.random.randn(10)
-    _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 y=y, data_bounds='auto')
+    _test_visual(qtbot, canvas_pz, PlotVisual(), y=y, data_bounds='auto')
+
+
+def test_plot_color(qtbot, canvas_pz):
+    v = PlotVisual()
+    canvas_pz.add_visual(v)
+    data = v.validate(y=.2 * np.random.randn(10), data_bounds='auto')
+    assert v.vertex_count(**data) >= 0
+    v.set_data(**data)
+    v.set_color(np.random.uniform(low=.5, high=.9, size=(10, 4)))
+    canvas_pz.show()
+    qtbot.waitForWindowShown(canvas_pz)
+    canvas_pz.close()
 
 
 def test_plot_2(qtbot, canvas_pz):
@@ -144,11 +144,8 @@ def test_plot_2(qtbot, canvas_pz):
     # Depth.
     depth = np.linspace(0., -1., n_signals)
 
-    _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 y=y, depth=depth,
-                 data_bounds=[-1, -50, 1, 50],
-                 color=c,
-                 )
+    _test_visual(
+        qtbot, canvas_pz, PlotVisual(), y=y, depth=depth, data_bounds=[-1, -50, 1, 50], color=c)
 
 
 def test_plot_list(qtbot, canvas_pz):
@@ -156,8 +153,7 @@ def test_plot_list(qtbot, canvas_pz):
     c = np.random.uniform(.5, 1, size=(2, 4))
     c[:, 3] = .5
 
-    _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 y=y, color=c)
+    _test_visual(qtbot, canvas_pz, PlotVisual(), y=y, color=c)
 
 
 #------------------------------------------------------------------------------
@@ -166,44 +162,28 @@ def test_plot_list(qtbot, canvas_pz):
 
 def test_uniform_plot_empty(qtbot, canvas):
     y = np.zeros((1, 0))
-    _test_visual(qtbot, canvas, UniformPlotVisual(),
-                 y=y)
+    _test_visual(qtbot, canvas, UniformPlotVisual(), y=y)
 
 
 def test_uniform_plot_0(qtbot, canvas_pz):
     y = np.zeros((1, 10))
-    _test_visual(qtbot, canvas_pz, UniformPlotVisual(),
-                 y=y)
+    _test_visual(qtbot, canvas_pz, UniformPlotVisual(), y=y)
 
 
 def test_uniform_plot_1(qtbot, canvas_pz):
     y = .2 * np.random.randn(10)
-    _test_visual(qtbot, canvas_pz,
-                 UniformPlotVisual(),
-                 y=y,
-                 masks=.5,
-                 data_bounds=NDC,
-                 )
+    _test_visual(qtbot, canvas_pz, UniformPlotVisual(), y=y, masks=.5, data_bounds=NDC)
 
 
 def test_uniform_plot_2(qtbot, canvas_pz):
     y = .2 * np.random.randn(10)
-    _test_visual(qtbot, canvas_pz,
-                 UniformPlotVisual(),
-                 y=y,
-                 masks=.5,
-                 data_bounds='auto',
-                 )
+    _test_visual(qtbot, canvas_pz, UniformPlotVisual(), y=y, masks=.5, data_bounds='auto')
 
 
 def test_uniform_plot_list(qtbot, canvas_pz):
     y = [np.random.randn(i) for i in (5, 20)]
 
-    _test_visual(qtbot, canvas_pz,
-                 UniformPlotVisual(color=(1., 0., 0., 1.)),
-                 y=y,
-                 masks=[.1, .9],
-                 )
+    _test_visual(qtbot, canvas_pz, UniformPlotVisual(color=(1., 0., 0., 1.)), y=y, masks=[.1, .9])
 
 
 #------------------------------------------------------------------------------
@@ -212,20 +192,17 @@ def test_uniform_plot_list(qtbot, canvas_pz):
 
 def test_histogram_empty(qtbot, canvas):
     hist = np.zeros((1, 0))
-    _test_visual(qtbot, canvas, HistogramVisual(),
-                 hist=hist)
+    _test_visual(qtbot, canvas, HistogramVisual(), hist=hist)
 
 
 def test_histogram_0(qtbot, canvas_pz):
     hist = np.zeros((10,))
-    _test_visual(qtbot, canvas_pz, HistogramVisual(),
-                 hist=hist)
+    _test_visual(qtbot, canvas_pz, HistogramVisual(), hist=hist)
 
 
 def test_histogram_1(qtbot, canvas_pz):
     hist = np.random.rand(1, 10)
-    _test_visual(qtbot, canvas_pz, HistogramVisual(),
-                 hist=hist)
+    _test_visual(qtbot, canvas_pz, HistogramVisual(), hist=hist)
 
 
 def test_histogram_2(qtbot, canvas_pz):
@@ -237,8 +214,8 @@ def test_histogram_2(qtbot, canvas_pz):
     c = np.random.uniform(.3, .6, size=(n_hists, 4))
     c[:, 3] = 1
 
-    _test_visual(qtbot, canvas_pz, HistogramVisual(),
-                 hist=hist, color=c, ylim=2 * np.ones(n_hists))
+    _test_visual(
+        qtbot, canvas_pz, HistogramVisual(), hist=hist, color=c, ylim=2 * np.ones(n_hists))
 
 
 #------------------------------------------------------------------------------
@@ -255,8 +232,7 @@ def test_line_0(qtbot, canvas_pz):
     y = np.linspace(-.5, .5, 10)
     pos = np.c_[-np.ones(n), y, np.ones(n), y]
     color = np.random.uniform(.5, .9, (n, 4))
-    _test_visual(qtbot, canvas_pz, LineVisual(),
-                 pos=pos, color=color, data_bounds=[-1, -1, 1, 1])
+    _test_visual(qtbot, canvas_pz, LineVisual(), pos=pos, color=color, data_bounds=[-1, -1, 1, 1])
 
 
 #------------------------------------------------------------------------------
@@ -296,8 +272,7 @@ def test_text_1(qtbot, canvas_pz):
 
     pos = np.c_[np.linspace(-.5, .5, 10), np.linspace(-.5, .5, 10)]
 
-    _test_visual(qtbot, canvas_pz, TextVisual(color=(1, 1, 0, 1)),
-                 pos=pos, text=text)
+    _test_visual(qtbot, canvas_pz, TextVisual(color=(1, 1, 0, 1)), pos=pos, text=text)
 
 
 def test_text_2(qtbot, canvas_pz):

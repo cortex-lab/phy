@@ -302,6 +302,11 @@ class PlotVisual(BaseVisual):
                      data_bounds=data_bounds,
                      _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
+    def set_color(self, color):
+        """Update the visual's color."""
+        assert color.shape == (self.n_vertices, 4)
+        self.program['a_color'] = color.astype(np.float32)
+
     def vertex_count(self, y=None, **kwargs):
         """Take the output of validate() as input."""
         return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
@@ -313,6 +318,10 @@ class PlotVisual(BaseVisual):
         assert isinstance(data.y, list)
         n_signals = len(data.y)
         n_samples = [len(_) for _ in data.y]
+
+        self.n_signals = n_signals
+        self.n_samples = n_samples
+
         n = sum(n_samples)
         x = np.concatenate(data.x) if len(data.x) else np.array([])
         y = np.concatenate(data.y) if len(data.y) else np.array([])
