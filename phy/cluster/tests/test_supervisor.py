@@ -44,6 +44,7 @@ def gui(tempdir, qtbot):
     _supervisor._show_box = lambda _: _
 
     gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
+    gui.set_default_actions()
     gui.show()
     qtbot.waitForWindowShown(gui)
     yield gui
@@ -333,7 +334,7 @@ def test_supervisor_select_1(qtbot, supervisor):
 def test_supervisor_color(qtbot, supervisor):
     supervisor.actions.colormap_linear()
     supervisor.actions.color_field_n_spikes()
-    supervisor.actions.toggle_categorical(False)
+    supervisor.actions.toggle_categorical_colormap(False)
 
 
 def test_supervisor_select_2(qtbot, supervisor):
@@ -385,6 +386,10 @@ def test_supervisor_edge_cases(supervisor):
     supervisor.block()
 
     supervisor.save()
+
+
+def test_supervisor_save(qtbot, gui, supervisor):
+    emit('request_save', gui)
 
 
 def test_supervisor_skip(qtbot, gui, supervisor):
@@ -511,8 +516,6 @@ def test_supervisor_label(supervisor):
     supervisor.label("my_field", 1.23, cluster_ids=30)
     supervisor.block()
 
-    supervisor.save()
-
     assert 'my_field' in supervisor.fields
     assert supervisor.get_labels('my_field')[20] == 3.14
     assert supervisor.get_labels('my_field')[30] == 1.23
@@ -635,7 +638,7 @@ def test_supervisor_reset(qtbot, supervisor):
 
     supervisor.actions.select([10, 11])
 
-    supervisor.actions.reset()
+    supervisor.actions.reset_wizard()
     supervisor.block()
     _assert_selected(supervisor, [30])
 
@@ -654,7 +657,7 @@ def test_supervisor_reset(qtbot, supervisor):
 
 def test_supervisor_nav(qtbot, supervisor):
 
-    supervisor.actions.reset()
+    supervisor.actions.reset_wizard()
     supervisor.block()
     _assert_selected(supervisor, [30])
 

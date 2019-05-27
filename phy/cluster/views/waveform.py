@@ -191,9 +191,7 @@ class WaveformView(ManualClusteringView):
             box_index = _index_of(channel_ids_loc, channel_ids)
             box_index = np.repeat(box_index, n_samples)
             box_index = np.tile(box_index, n_spikes_clu)
-            assert box_index.shape == (n_spikes_clu *
-                                       n_channels *
-                                       n_samples,)
+            assert box_index.shape == (n_spikes_clu * n_channels * n_samples,)
 
             # Generate the waveform array.
             wave = np.transpose(wave, (0, 2, 1))

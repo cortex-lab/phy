@@ -329,9 +329,7 @@ class ActionCreator(object):
         'previous_best': 'up',
 
         # Misc.
-        'save': 'Save',
-        'show_shortcuts': 'Save',
-        'undo': 'Undo',
+        'undo': 'ctrl+z',
         'redo': ('ctrl+shift+z', 'ctrl+y'),
     }
 
@@ -349,7 +347,7 @@ class ActionCreator(object):
     def attach(self, gui):
         self.actions = Actions(gui,
                                name='Clustering',
-                               menu='&Clustering',
+                               menu='&Edit',
                                default_shortcuts=self.default_shortcuts)
 
         # Selection.
@@ -381,18 +379,15 @@ class ActionCreator(object):
         self.add('label', alias='l', prompt=True, n_args=2,
                  docstring='Label the selected clusters.')
 
-        # Others.
-        self.add('save', menu='&File', docstring='Save all pending changes.')
-
         # Wizard.
-        self.add('reset', menu='&Wizard', docstring='Reset the wizard.')
-        self.separator(menu='&Wizard')
-        self.add('next', menu='&Wizard', docstring='Select the next similar cluster.')
-        self.add('previous', menu='&Wizard', docstring='Select the previous similar cluster.')
-        self.separator(menu='&Wizard')
-        self.add('next_best', menu='&Wizard', docstring='Select the next best cluster.')
-        self.add('previous_best', menu='&Wizard', docstring='Select the previous best cluster.')
-        self.separator(menu='&Wizard')
+        self.add('reset_wizard', docstring='Reset the wizard.')
+        self.separator()
+        self.add('next', docstring='Select the next similar cluster.')
+        self.add('previous', docstring='Select the previous similar cluster.')
+        self.separator()
+        self.add('next_best', docstring='Select the next best cluster.')
+        self.add('previous_best', docstring='Select the previous best cluster.')
+        self.separator()
 
 
 # -----------------------------------------------------------------------------
@@ -430,7 +425,7 @@ class Supervisor(object):
         when clusters are selected
     cluster(up)
         when a merge or split happens
-    request_save(spike_clusters, cluster_groups)
+    save_clustering(spike_clusters, cluster_groups)
         when a save is requested by the user
 
     """
@@ -532,7 +527,7 @@ class Supervisor(object):
                 self.cluster_labels.keys(), self.cluster_metrics.keys()):
             self.actions.add(
                 _make_color_field_action(field), name='Color field: %s' % field.lower(),
-                menu='Co&lor', submenu='Change color field')
+                menu='&View', submenu='Change color field')
 
         # Change color map action.
         def _make_colormap_action(colormap):
@@ -544,13 +539,15 @@ class Supervisor(object):
         for colormap in ('categorical', 'linear', 'diverging', 'rainbow'):
             self.actions.add(
                 _make_colormap_action(colormap), name='Colormap: %s' % colormap.lower(),
-                menu='Co&lor', submenu='Change colormap')
+                menu='&View', submenu='Change colormap')
 
         # Change colormap categorical or continous.
-        @self.actions.add(menu='Co&lor', checkable=True, checked=True)
-        def toggle_categorical(checked):
+        @self.actions.add(menu='&View', checkable=True, checked=True)
+        def toggle_categorical_colormap(checked):
             self.color_selector.set_color_mapping(categorical=checked)
             emit('color_mapping_changed', self)
+
+        self.actions.separator(menu='&View')
 
         @connect(sender=self)
         def on_cluster(sender, up):
@@ -769,6 +766,11 @@ class Supervisor(object):
 
         emit('attach_gui', self)
 
+        # Call supervisor.save() when the save/ctrl+s action is triggered in the GUI.
+        @connect(sender=gui)
+        def on_request_save(sender):
+            self.save()
+
         # Set the debouncer.
         self._busy = {}
         self._is_busy = False
@@ -894,7 +896,7 @@ class Supervisor(object):
     # Wizard actions
     # -------------------------------------------------------------------------
 
-    def reset(self, callback=None):
+    def reset_wizard(self, callback=None):
         """Reset the wizard."""
         self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
 
@@ -939,7 +941,7 @@ class Supervisor(object):
                   for field in self.cluster_meta.fields
                   if field not in ('next_cluster')]
         # TODO: add option in add_field to declare a field unsavable.
-        emit('request_save', self, spike_clusters, groups, *labels)
+        emit('save_clustering', self, spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
