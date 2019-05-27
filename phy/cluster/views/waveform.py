@@ -18,7 +18,7 @@ from phylib.utils._color import selected_cluster_color
 from phylib.utils.geometry import _get_boxes
 from phy.plot import _get_linear_x
 from phy.plot.interact import Boxed
-from phy.plot.visuals import PlotVisual, TextVisual
+from phy.plot.visuals import PlotVisual, TextVisual, _min, _max
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -111,8 +111,8 @@ class WaveformView(ManualClusteringView):
         self.canvas.add_visual(self.waveform_visual)
 
     def _get_data_bounds(self, bunchs):
-        m = min(b.data.min() for b in bunchs)
-        M = max(b.data.max() for b in bunchs)
+        m = min(_min(b.data) for b in bunchs)
+        M = max(_max(b.data) for b in bunchs)
         return [-1, m, +1, M]
 
     def _plot_labels(self, channel_ids, n_clusters, channel_labels=None, data_bounds=None):
@@ -148,6 +148,8 @@ class WaveformView(ManualClusteringView):
         self.waveform_visual.reset_batch()
         for i, d in enumerate(bunchs):
             wave = d.data
+            if not wave.size:
+                continue
             alpha = d.get('alpha', .75)
             channel_ids_loc = d.channel_ids
 

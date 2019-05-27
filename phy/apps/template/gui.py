@@ -46,17 +46,6 @@ logger = logging.getLogger(__name__)
 
 class TemplateFeatureView(ScatterView):
     pass
-    # def on_select(self, cluster_ids=(), **kwargs):
-    #     if len(cluster_ids) != 2:
-    #         self.canvas.clear()
-    #         self.canvas.update()
-    #         return
-    #     return super(TemplateFeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
-
-    # def _get_data(self, cluster_ids):
-    #     assert len(cluster_ids) == 2
-    #     b = self.coords(cluster_ids)
-    #     return [Bunch(x=b.x0, y=b.y0), Bunch(x=b.x1, y=b.y1)]
 
 
 class AmplitudeView(ScatterView):
@@ -74,6 +63,7 @@ class TemplateController(object):
     batch_size_waveforms = 10
 
     n_spikes_features = 2500
+    n_spikes_features_background = 1000
     n_spikes_amplitudes = 5000
     n_spikes_correlograms = 100000
 
@@ -103,8 +93,7 @@ class TemplateController(object):
         # can register callbacks to events raised during setup.
         # For example, 'request_cluster_metrics' to specify custom metrics
         # in the cluster and similarity views.
-        attach_plugins(self, plugins=kwargs.get('plugins', None),
-                       config_dir=config_dir)
+        attach_plugins(self, plugins=kwargs.get('plugins', None), config_dir=config_dir)
 
         self._set_cache()
         self.supervisor = self._set_supervisor()
@@ -260,10 +249,8 @@ class TemplateController(object):
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         pos = self.model.channel_positions
-        spike_ids = self.selector.select_spikes([cluster_id],
-                                                self.n_spikes_waveforms,
-                                                self.batch_size_waveforms,
-                                                )
+        spike_ids = self.selector.select_spikes(
+            [cluster_id], self.n_spikes_waveforms, self.batch_size_waveforms)
         channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_waveforms(spike_ids, channel_ids)
         data = data - data.mean() if data is not None else None
@@ -362,14 +349,15 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def _get_spike_ids(self, cluster_id=None, load_all=None):
-        nsf = self.n_spikes_features
         if cluster_id is None:
+            nsf = self.n_spikes_features_background
             # Background points.
             ns = self.model.n_spikes
-            spike_ids = np.arange(0, ns, max(1, ns // nsf))
+            k = max(1, ns // nsf) if nsf is not None else 1
+            spike_ids = np.arange(0, ns, k)
         else:
             # Load all spikes from the cluster if load_all is True.
-            n = nsf if not load_all else None
+            n = self.n_spikes_features if not load_all else None
             spike_ids = self.selector.select_spikes([cluster_id], n)
         # Remove spike_ids that do not belong to model.features_rows
         if self.model.features_rows is not None:  # pragma: no cover
