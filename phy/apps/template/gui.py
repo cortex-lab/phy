@@ -672,7 +672,7 @@ class TemplateController(object):
         def on_table_filter(sender, cluster_ids):
             if not view.auto_update or cluster_ids is None or not len(cluster_ids):
                 return
-            view.cluster_ids = cluster_ids
+            view.set_cluster_ids(cluster_ids)
             view.plot()
 
         @connect(sender=self.supervisor)
