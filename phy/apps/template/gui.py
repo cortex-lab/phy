@@ -402,14 +402,14 @@ class TemplateController(object):
     # Template features
     # -------------------------------------------------------------------------
 
-    def _get_template_features(self, cluster_ids):
+    def _get_template_features(self, cluster_ids, load_all=None):
         if len(cluster_ids) != 2:
             return
         assert len(cluster_ids) == 2
         clu0, clu1 = cluster_ids
 
-        s0 = self._get_spike_ids(clu0)
-        s1 = self._get_spike_ids(clu1)
+        s0 = self._get_spike_ids(clu0, load_all=load_all)
+        s1 = self._get_spike_ids(clu1, load_all=load_all)
 
         n0 = self.get_template_counts(clu0)
         n1 = self.get_template_counts(clu1)
@@ -431,8 +431,8 @@ class TemplateController(object):
         )
 
         return [
-            Bunch(x=x0, y=y0, data_bounds=data_bounds),
-            Bunch(x=x1, y=y1, data_bounds=data_bounds),
+            Bunch(x=x0, y=y0, spike_ids=s0, data_bounds=data_bounds),
+            Bunch(x=x1, y=y1, spike_ids=s1, data_bounds=data_bounds),
         ]
 
     def create_template_feature_view(self):
