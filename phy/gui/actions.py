@@ -152,7 +152,8 @@ def _create_qaction(
         gui, name, callback, shortcut, docstring=None,
         checkable=False, checked=False, prompt=False, n_args=None, alias=''):
     # Create the QAction instance.
-    action = QAction(name.replace('_', ' ').capitalize(), gui)
+    name = name[0].upper() + name[1:].replace('_', ' ')
+    action = QAction(name, gui)
 
     # Show an input dialog if there are args.
     title = getattr(callback, '__name__', 'action')
@@ -200,14 +201,18 @@ class Actions(object):
     * Display all shortcuts
 
     """
-    def __init__(self, gui, name=None, menu=None, default_shortcuts=None):
+    def __init__(self, gui, name=None, menu=None, submenu=None, default_shortcuts=None):
         self._actions_dict = {}
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
         self.name = name
         self.menu = menu
+        self.submenu = submenu
         self.gui = gui
         gui.actions.append(self)
+        # Create the menu when creating the Actions instance.
+        if menu:
+            gui.get_menu(menu)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False):
@@ -245,6 +250,7 @@ class Actions(object):
         self.gui.addAction(action)
         # Add the action to the menu.
         menu = menu or self.menu
+        submenu = submenu or self.submenu
         # Create the submenu if there is one.
         if submenu:
             # Create the submenu.
@@ -264,7 +270,7 @@ class Actions(object):
 
     def separator(self, menu=None):
         """Add a separator"""
-        self.gui.get_menu(menu or self.menu).addSeparator()
+        self.gui.get_menu(menu or self.submenu or self.menu).addSeparator()
 
     def disable(self, name=None):
         """Disable one or all actions."""
@@ -376,7 +382,7 @@ class Snippets(object):
         self.gui = gui
         self._status_message = gui.status_message
 
-        self.actions = Actions(gui, name='Snippets', menu='Snippets')
+        self.actions = Actions(gui, name='Snippets', menu='&File')
 
         # Register snippet mode shortcut.
         @self.actions.add(shortcut=':')

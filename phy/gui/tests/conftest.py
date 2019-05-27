@@ -19,6 +19,7 @@ from ..gui import GUI
 @yield_fixture
 def gui(tempdir, qtbot):
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
+    gui.set_default_actions()
     gui.show()
     qtbot.addWidget(gui)
     qtbot.waitForWindowShown(gui)

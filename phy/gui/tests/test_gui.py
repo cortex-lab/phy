@@ -68,6 +68,7 @@ def test_gui_noapp(tempdir):
 def test_gui_1(tempdir, qtbot):
 
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
+    gui.set_default_actions()
     qtbot.addWidget(gui)
 
     assert gui.name == 'GUI'
@@ -110,8 +111,9 @@ def test_gui_1(tempdir, qtbot):
     assert gui.state.geometry_state['geometry']
     assert gui.state.geometry_state['state']
 
-    gui.default_actions.show_all_shortcuts()
-    gui.default_actions.exit()
+    gui.help_actions.show_all_shortcuts()
+    gui.file_actions.save()
+    gui.file_actions.exit()
 
 
 def test_gui_creator(tempdir, qtbot):
@@ -133,6 +135,7 @@ def test_gui_creator(tempdir, qtbot):
     vc = {BaseCanvas: _create_canvas, MyCanvas: _create_my_canvas}
 
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir, view_creator=vc)
+    gui.set_default_actions()
     qtbot.addWidget(gui)
 
     # Automatically create the views with the view counts.
@@ -148,7 +151,7 @@ def test_gui_creator(tempdir, qtbot):
     views = gui.list_views(MyCanvas)
     assert len(views) == 2
 
-    add_action = gui.view_actions.get('add_MyCanvas')
+    add_action = gui.view_actions.get('Add MyCanvas')
 
     # Close the first dock widget.
     views[0].dock_widget.toggleViewAction().activate(0)
@@ -175,7 +178,7 @@ def test_gui_creator(tempdir, qtbot):
 def test_gui_menu(qtbot, gui):
     gui.get_menu('&File')
     gui.get_submenu('&File', 'Submenu')
-    @gui.default_actions.add(menu='Submenu')
+    @gui.file_actions.add(menu='Submenu')
     def my_action():
         pass
 
@@ -196,6 +199,7 @@ def test_gui_status_message(gui):
 def test_gui_geometry_state(tempdir, qtbot):
     _gs = []
     gui = GUI(size=(800, 600), config_dir=tempdir)
+    gui.set_default_actions()
     qtbot.addWidget(gui)
 
     @connect(sender=gui)
@@ -212,6 +216,7 @@ def test_gui_geometry_state(tempdir, qtbot):
 
     # Recreate the GUI with the saved state.
     gui = GUI(config_dir=tempdir)
+    gui.set_default_actions()
 
     gui.add_view(_create_canvas())
     gui.add_view(_create_canvas())

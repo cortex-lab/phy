@@ -142,8 +142,15 @@ class GUI(QMainWindow):
         # Registered functions.
         self._registered = {}
 
+        # List of attached Actions instances.
+        self.actions = []
+
         # Mapping {name: menuBar}.
         self._menus = {}
+        self.file_actions = Actions(self, name='File', menu='&File')
+        self.edit_actions = Actions(self, name='Edit', menu='&Edit')
+        self.view_actions = Actions(self, name='View', menu='&View')
+        self.help_actions = Actions(self, name='Help', menu='&Help')
 
         # Views,
         self._views = []
@@ -163,13 +170,6 @@ class GUI(QMainWindow):
         self._lock_status = False
         self._status_bar = QStatusBar(self)
         self.setStatusBar(self._status_bar)
-
-        # List of attached Actions instances.
-        self.actions = []
-
-        # Default actions.
-        self._set_default_actions()
-        self._set_view_actions()
 
         # Create and attach snippets.
         self.snippets = Snippets(self)
@@ -195,16 +195,39 @@ class GUI(QMainWindow):
         if size is not None:
             self.resize(QSize(size[0], size[1]))
 
-    def _set_default_actions(self):
-        self.default_actions = Actions(self, name='Default', menu='&File')
+    def set_default_actions(self):
+        # File menu.
+        @self.file_actions.add(shortcut='ctrl+s')
+        def save():
+            emit('request_save', self)
 
-        @self.default_actions.add(shortcut=('HelpContents', 'h'))
+        @self.file_actions.add(shortcut='ctrl+q')
+        def exit():
+            """Close the GUI."""
+            self.close()
+
+        # View menu.
+        @self.view_actions.add(name='Reset main window layout')
+        def reset_views():
+            """Reset all views."""
+            # TODO
+
+        # Add "Add view" action.
+        for view_cls in self.view_creator.keys():
+            self.view_actions.add(
+                partial(self._create_and_add_view, view_cls),
+                submenu='&New view',
+                name='Add %s' % view_cls.__name__)
+        self.view_actions.separator()
+
+        # Help menu.
+        @self.help_actions.add(shortcut=('HelpContents', 'h'))
         def show_all_shortcuts():
             """Show the shortcuts of all actions."""
             for actions in self.actions:
                 actions.show_shortcuts()
 
-        @self.default_actions.add(shortcut='?')
+        @self.help_actions.add(shortcut='?')
         def about():  # pragma: no cover
             """Display an about dialog."""
             from phy import __version_git__
@@ -215,28 +238,6 @@ class GUI(QMainWindow):
             except ImportError:
                 pass
             QMessageBox.about(self, "About", msg)
-
-        @self.default_actions.add(shortcut='ctrl+q')
-        def exit():
-            """Close the GUI."""
-            self.close()
-
-        self.default_actions.separator()
-
-    def _set_view_actions(self):
-        self.view_actions = Actions(self, name='Views', menu='&Views')
-
-        @self.view_actions.add
-        def reset_views():
-            """Reset all views."""
-            # TODO
-
-        self.view_actions.separator()
-
-        # Add "Add view" action.
-        for view_cls in self.view_creator.keys():
-            self.view_actions.add(
-                partial(self._create_and_add_view, view_cls), name='add_%s' % view_cls.__name__)
 
     # Events
     # -------------------------------------------------------------------------
@@ -329,6 +330,7 @@ class GUI(QMainWindow):
 
     def create_views(self):
         """view_count is a dictionary {view_cls: n_views}."""
+        self.view_actions.separator()
         for view_cls, n_views in self._requested_view_count.items():
             if n_views <= 0:
                 continue
