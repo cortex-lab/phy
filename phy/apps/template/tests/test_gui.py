@@ -14,7 +14,7 @@ from phylib.utils import connect, emit
 from phy.cluster.views import WaveformView, TraceView, ProbeView, RasterView, TemplateView
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press, mouse_click
-from ..gui import TemplateController, template_describe
+from ..gui import TemplateController, template_describe, AmplitudeView
 
 logger = logging.getLogger(__name__)
 
@@ -208,6 +208,34 @@ def test_template_gui_sim(qtbot, template_controller):
     s.block()
     assert s.selected == [cl - 1, cl + 1]
 
+    gui.close()
+
+
+def test_template_gui_split_amplitude(qtbot, tempdir, template_controller):
+    gui = template_controller.create_gui()
+    s = template_controller.supervisor
+    _wait_controller(qtbot, s, gui)
+
+    s.actions.next()
+    s.block()
+
+    av = gui.list_views(AmplitudeView)[0]
+
+    a, b = 50, 1000
+    mouse_click(qtbot, av.canvas, (a, a), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (a, b), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (b, b), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (b, a), modifiers=('Control',))
+
+    n = max(s.clustering.cluster_ids)
+
+    s.actions.split()
+    s.block()
+
+    # Split one cluster => Two new clusters should be selected after the split.
+    assert s.selected_clusters == [n + 1, n + 2]
+
+    # qtbot.stop()
     gui.close()
 
 
