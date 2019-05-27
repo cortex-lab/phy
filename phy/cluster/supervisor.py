@@ -443,7 +443,7 @@ class Supervisor(object):
         super(Supervisor, self).__init__()
         self.context = context
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
-
+        self._is_dirty = None
         self._init_sort = sort
 
         # Cluster metrics.
@@ -923,6 +923,10 @@ class Supervisor(object):
     # Other actions
     # -------------------------------------------------------------------------
 
+    def is_dirty(self):
+        """Return whether there are pending changes."""
+        return self._is_dirty if self._is_dirty in (False, True) else len(self._global_history) > 1
+
     def undo(self):
         """Undo the last action."""
         self._global_history.undo()
@@ -944,6 +948,7 @@ class Supervisor(object):
         emit('save_clustering', self, spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
+        self._is_dirty = False
 
     def block(self):
         """Block until there are no pending actions."""

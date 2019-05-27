@@ -33,6 +33,7 @@ from phy.cluster.views import (WaveformView,
                                )
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
+from phy.gui.gui import _prompt_save
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 from .. import _add_log_file
@@ -715,6 +716,15 @@ class TemplateController(object):
         # Save the memcache when closing the GUI.
         @connect(sender=gui)
         def on_close(sender):
+            # Show save prompt if an action was done.
+            if self.supervisor.is_dirty():  # pragma: no cover
+                r = _prompt_save()
+                if r == 'save':
+                    self.supervisor.save()
+                elif r == 'cancel':
+                    # Prevent closing of the GUI by returning False.
+                    return False
+                # Otherwise (r is 'close') we do nothing and close as usual.
             unconnect(on_add_view)
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.

@@ -11,8 +11,9 @@ from collections import defaultdict
 from functools import partial
 import logging
 
-from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
-                 QMessageBox, Qt, QSize, QMetaObject, _wait)
+from .qt import (
+    QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow, QMessageBox, Qt,
+    QSize, QMetaObject, _wait, _prompt, _show_box)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
 from phylib.utils import emit, connect
@@ -96,6 +97,18 @@ def _encode_view_count(vc):
 
 def _decode_view_count(vc):
     return {_load_from_fullname(view_cls_name): n_views for view_cls_name, n_views in vc.items()}
+
+
+def _prompt_save():  # pragma: no cover
+    """Show a prompt asking the user whether he wants to save or not.
+
+    Output is 'save', 'cancel', or 'close'
+
+    """
+    b = _prompt(
+        "Do you want to save your changes before quitting?",
+        buttons=['save', 'cancel', 'close'], title='Save')
+    return _show_box(b)
 
 
 class GUI(QMainWindow):

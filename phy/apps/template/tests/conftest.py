@@ -24,7 +24,13 @@ logger = logging.getLogger(__name__)
 
 @fixture
 def template_controller(tempdir, template_model):
-    plugins = []  # ['PrecachePlugin', 'SavePrompt', 'BackupPlugin']
+    plugins = []
+
+    # HACK: mock _prompt_save to avoid GUI block in test when closing
+    import phy.apps.template.gui
+    prompt = phy.apps.template.gui._prompt_save
+    phy.apps.template.gui._prompt_save = lambda: None
+
     c = TemplateController(model=template_model,
                            config_dir=tempdir,
                            plugins=plugins)
@@ -34,3 +40,5 @@ def template_controller(tempdir, template_model):
     # NOTE: make sure all callback functions are unconnected at the end of the tests
     # to avoid side-effects and spurious dependencies between tests.
     reset()
+
+    phy.apps.template.gui._prompt_save = prompt

@@ -423,6 +423,8 @@ def test_supervisor_merge_1(qtbot, supervisor):
     supervisor.task_logger.show_history()
     _assert_selected(supervisor, [31, 11])
 
+    assert supervisor.is_dirty()
+
 
 def test_supervisor_merge_move(qtbot, supervisor):
     """Check that merge then move selects the next cluster in the original

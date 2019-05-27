@@ -77,7 +77,6 @@ def _iter_spike_waveforms(interval=None,
                      spike_id=i,
                      spike_time=t,
                      spike_cluster=c,
-                     # cluster_group=cg,
                      )
         assert wave.data.shape == (ns, len(channel_ids))
         yield wave
