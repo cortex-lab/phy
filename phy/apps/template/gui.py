@@ -592,6 +592,10 @@ class TemplateController(object):
             cluster_color_selector=self.color_selector,
         )
 
+        @connect
+        def on_cluster_click(sender, cluster_id, key=None, button=None):
+            emit('select', self.supervisor, [cluster_id])
+
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
             if up.added:

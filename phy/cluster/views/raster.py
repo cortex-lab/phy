@@ -12,6 +12,7 @@ import logging
 import numpy as np
 
 from phylib.io.array import _unique, _index_of
+from phylib.utils import emit
 
 from .base import ManualClusteringView
 from phy.plot import NDC
@@ -142,6 +143,17 @@ class RasterView(ManualClusteringView):
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
         self.actions.separator()
+
+    def on_mouse_click(self, e):
+        b = e.button
+        nums = tuple('%d' % i for i in range(10))
+        if 'Control' in e.modifiers or e.key in nums:
+            key = int(e.key) if e.key in nums else None
+            # Get mouse position in NDC.
+            cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
+            cluster_id = self.cluster_ids[cluster_idx]
+            logger.debug("Click on cluster %d with key %s and button %s.", cluster_id, key, b)
+            emit('cluster_click', self, cluster_id, key=key, button=b)
 
     # Marker size
     # -------------------------------------------------------------------------

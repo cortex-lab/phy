@@ -8,10 +8,11 @@
 
 import numpy as np
 
-from phylib.utils import Bunch
+from phylib.utils import Bunch, connect
 from phylib.utils._color import ClusterColorSelector
 from phylib.io.mock import artificial_spike_clusters, artificial_spike_samples
 
+from phy.plot.tests import mouse_click, key_press, key_release
 from ..raster import RasterView
 
 
@@ -44,6 +45,17 @@ def test_raster_0(qtbot, gui):
     v.increase()
     v.decrease()
 
+    # Simulate channel selection.
+    _clicked = []
+
+    @connect(sender=v)
+    def on_cluster_click(sender, cluster_id=None, button=None, key=None):
+        _clicked.append((cluster_id, button, key))
+
+    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
+
+    assert _clicked == [(1, 'Left', None)]
+
     # qtbot.stop()
     v.close()
 
@@ -75,7 +87,6 @@ def test_raster_1(qtbot, gui):
     v.update_color()
 
     v.set_cluster_ids(np.arange(0, nc, 2))
-    v.plot
 
     # qtbot.stop()
     v.close()
