@@ -104,6 +104,9 @@ class PanZoom(object):
         self._translate = Translate(self.pan_var_name)
         self._scale = Scale(self.zoom_var_name)
 
+    def set_constrain_bounds(self, bounds):
+        self._xmin, self._ymin, self._xmax, self._ymax = bounds
+
     # Various properties
     # -------------------------------------------------------------------------
 

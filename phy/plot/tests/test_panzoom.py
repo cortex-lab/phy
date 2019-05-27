@@ -77,7 +77,8 @@ def test_panzoom_basic_attrs():
 
 
 def test_panzoom_basic_constrain():
-    pz = PanZoom(constrain_bounds=(-1, -1, 1, 1))
+    pz = PanZoom(constrain_bounds=(-1, -1, 1, 10))
+    pz.set_constrain_bounds((-1, -1, 1, 1))
 
     # Aspect.
     assert pz.aspect is None
