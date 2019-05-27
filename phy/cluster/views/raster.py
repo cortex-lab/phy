@@ -51,7 +51,7 @@ class RasterView(ManualClusteringView):
 
         self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
         self.canvas.constrain_bounds = NDC
-        self.canvas.enable_axes(show_y=False)
+        self.canvas.enable_axes()
 
         self.visual = ScatterVisual(marker='vbar')
         self.canvas.add_visual(self.visual)
