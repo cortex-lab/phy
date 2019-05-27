@@ -600,14 +600,14 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
-            if cluster_ids is None or not len(cluster_ids):
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
                 return
             # OPTIM: do not need to replot everything, but just to change the ordering)
             view.update_cluster_sort(cluster_ids)
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_filter(sender, cluster_ids):
-            if cluster_ids is None or not len(cluster_ids):
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
                 return
             view.set_cluster_ids(cluster_ids)
             view.plot()
@@ -659,12 +659,14 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
+            if not view.auto_update:
+                return
             # OPTIM: do not need to replot everything, but just to change the ordering
             view.update_cluster_sort(cluster_ids)
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_filter(sender, cluster_ids):
-            if cluster_ids is None or not len(cluster_ids):
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
                 return
             view.cluster_ids = cluster_ids
             view.plot()
