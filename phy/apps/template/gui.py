@@ -171,7 +171,7 @@ class TemplateController(object):
 
         # Save.
         @connect(sender=supervisor)
-        def on_request_save(sender, spike_clusters, groups, *labels):
+        def on_save_clustering(sender, spike_clusters, groups, *labels):
             """Save the modified data."""
             # Save the clusters.
             self.model.save_spike_clusters(spike_clusters)
@@ -706,8 +706,10 @@ class TemplateController(object):
                   view_creator=self.view_creator,
                   view_count=view_count,
                   **kwargs)
+        gui.set_default_actions()
         self.supervisor.attach(gui)
 
+        gui.set_default_actions()
         gui.create_views()
 
         @connect(sender=gui)

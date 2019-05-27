@@ -123,7 +123,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     qtbot.wait(10)
 
     rv = gui.list_views(RasterView)[0]
-    s.actions.toggle_categorical(False)
+    s.actions.toggle_categorical_colormap(False)
     qtbot.wait(10)
     rv.dock_widget.close()
 

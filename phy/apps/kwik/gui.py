@@ -158,7 +158,7 @@ class KwikController(object):
 
         # Save.
         @connect(sender=supervisor)
-        def on_request_save(sender, spike_clusters, groups, *labels):
+        def on_save_clustering(sender, spike_clusters, groups, *labels):
             """Save the modified data."""
             groups = {c: g.title() for c, g in groups.items()}
             self.model.save(spike_clusters, groups)
@@ -422,6 +422,7 @@ class KwikController(object):
                   view_creator=self.view_creator,
                   view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
                   **kwargs)
+        gui.set_default_actions()
         self.supervisor.attach(gui)
 
         gui.create_views()
