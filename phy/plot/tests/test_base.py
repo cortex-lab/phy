@@ -120,6 +120,11 @@ def test_visual_1(qtbot, canvas):
     canvas.show()
     qtbot.waitForWindowShown(canvas)
 
+    v.hide()
+    canvas.update()
+    qtbot.wait(5)
+    v.show()
+
     assert canvas.get_visual('key') == v
     canvas.remove(v)
     assert canvas.get_visual('key') is None

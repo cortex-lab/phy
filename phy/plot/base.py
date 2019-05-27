@@ -58,6 +58,8 @@ class BaseVisual(object):
     # the shader depends on it.
     _init_keywords = ()
 
+    _hidden = False
+
     def __init__(self):
         self.gl_primitive_type = None
         self.transforms = TransformChain()
@@ -97,6 +99,12 @@ class BaseVisual(object):
         s = s.replace('uniform vec2 u_window_size;', '')
         if 'u_window_size' in s:
             self.program['u_window_size'] = (width, height)
+
+    def hide(self):
+        self._hidden = True
+
+    def show(self):
+        self._hidden = False
 
     def close(self):
         self.program._deactivate()
@@ -503,7 +511,7 @@ class BaseCanvas(QOpenGLWindow):
                 if size != self._size:
                     visual.on_resize(*size)
                 # Do not draw if there are no vertices.
-                if visual.n_vertices > 0:
+                if not visual._hidden and visual.n_vertices > 0:
                     logger.log(5, "Draw visual `%s`.", visual)
                     visual.on_draw()
             self._size = size
