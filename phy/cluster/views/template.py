@@ -155,7 +155,7 @@ class TemplateView(ManualClusteringView):
             # Get mouse position in NDC.
             (channel_idx, cluster_idx), _ = self.canvas.grid.box_map(e.pos)
             cluster_id = self.cluster_ids[cluster_idx]
-            logger.debug("Click on cluster %d with key %s and button %s.", cluster_id, b)
+            logger.debug("Click on cluster %d with button %s.", cluster_id, b)
             emit('cluster_click', self, cluster_id, button=b)
 
     def attach(self, gui):
