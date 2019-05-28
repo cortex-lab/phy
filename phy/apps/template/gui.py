@@ -21,16 +21,9 @@ from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._misc import _read_python
 
 from phy.cluster.supervisor import Supervisor
-from phy.cluster.views import (WaveformView,
-                               FeatureView,
-                               TraceView,
-                               CorrelogramView,
-                               ScatterView,
-                               ProbeView,
-                               RasterView,
-                               TemplateView,
-                               select_traces,
-                               )
+from phy.cluster.views import (
+    WaveformView, FeatureView, TraceView, CorrelogramView, ScatterView, ProbeView,
+    RasterView, TemplateView, HistogramView, select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
 from phy.gui.gui import _prompt_save
@@ -46,6 +39,18 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class TemplateFeatureView(ScatterView):
+    pass
+
+
+class ISIView(HistogramView):
+    pass
+
+
+class FiringRateView(HistogramView):
+    pass
+
+
+class AmplitudeHistogramView(HistogramView):
     pass
 
 
@@ -88,6 +93,12 @@ class TemplateController(object):
             ProbeView: self.create_probe_view,
             RasterView: self.create_raster_view,
             TemplateView: self.create_template_view,
+
+            # Cluster statistics.
+            ISIView: self._make_histogram_view(ISIView, self.get_isi),
+            FiringRateView: self._make_histogram_view(FiringRateView, self.get_firing_rate),
+            AmplitudeHistogramView: self._make_histogram_view(
+                AmplitudeHistogramView, self.get_amplitude_histogram),
         }
 
         # Attach plugins before setting up the supervisor, so that plugins
@@ -689,6 +700,33 @@ class TemplateController(object):
         view.plot()
 
         return view
+
+    # Histogram views
+    # -------------------------------------------------------------------------
+
+    def _make_histogram_view(self, view_cls, method):
+        """Return a function that creates a HistogramView of a given class."""
+        def _make():
+            return view_cls(cluster_stat=method)
+        return _make
+
+    def get_isi(self, cluster_id):
+        st = self._get_spike_times(cluster_id, load_all=True).data
+        isi_max = .1
+        isi, _ = np.histogram(np.diff(st), bins=np.linspace(0., isi_max, 100))
+        return Bunch(histogram=isi, data_bounds=(0, 0, isi_max, isi.max()))
+
+    def get_firing_rate(self, cluster_id):
+        st = self._get_spike_times(cluster_id, load_all=True).data
+        dur = self.model.duration
+        fr, _ = np.histogram(st, np.linspace(0., dur, 200))
+        return Bunch(histogram=fr, data_bounds=(0, 0, dur, fr.max()))
+
+    def get_amplitude_histogram(self, cluster_id):
+        amp = self._get_amplitudes([cluster_id])[0].y
+        amp_max = amp.max()
+        h, _ = np.histogram(amp, bins=np.linspace(0., amp_max, 100))
+        return Bunch(histogram=h, data_bounds=(0, 0, amp_max, h.max()))
 
     # GUI
     # -------------------------------------------------------------------------
