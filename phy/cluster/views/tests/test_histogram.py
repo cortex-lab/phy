@@ -20,8 +20,9 @@ def test_histogram_view_0(qtbot, gui):
     v = HistogramView(
         cluster_stat=lambda cluster_id: Bunch(
             histogram=np.random.uniform(low=0, high=10, size=10),
-            plot=np.random.uniform(low=8, high=10, size=100),
+            plot=np.random.uniform(low=5, high=10, size=100),
             text='this is:\ncluster %d' % cluster_id,
+            data_bounds=(0, 0, 27, 10),
         )
     )
     v.show()

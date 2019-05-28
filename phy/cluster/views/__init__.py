@@ -15,3 +15,4 @@ from .waveform import WaveformView  # noqa
 from .probe import ProbeView  # noqa
 from .raster import RasterView  # noqa
 from .template import TemplateView  # noqa
+from .histogram import HistogramView  # noqa

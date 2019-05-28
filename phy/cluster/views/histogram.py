@@ -48,41 +48,41 @@ class HistogramView(ManualClusteringView):
         self.text_visual = TextVisual(color=(1., 1., 1., 1.))
         self.canvas.add_visual(self.text_visual)
 
-    def _plot_cluster(self, idx, cluster_id, bunch=None, color=None, ylim=None, n_clusters=None):
+    def _plot_cluster(
+            self, idx, cluster_id, bunch=None, color=None, n_clusters=None):
         assert bunch
         n_bins = len(bunch.histogram)
         assert n_bins >= 0
-        assert ylim > 0
-        data_bounds = (0, 0, n_bins, ylim)
+        data_bounds = bunch.data_bounds
+        assert len(data_bounds) == 4
 
         # Histogram.
         self.visual.add_batch_data(
-            hist=bunch.histogram, color=color, ylim=ylim, box_index=idx,
+            hist=bunch.histogram, color=color, ylim=data_bounds[-1], box_index=idx,
         )
 
         # Plot.
         plot = bunch.get('plot', None)
         if plot is not None:
             self.plot_visual.add_batch_data(
-                x=np.linspace(0., n_bins, len(plot)),
+                x=np.linspace(data_bounds[0], data_bounds[2], len(plot)),
                 y=plot,
                 color=(1, 1, 1, 1),
                 data_bounds=data_bounds,
                 box_index=idx,
             )
 
-        text = bunch.get('text', None)
-        if text is not None:
-            text = text.splitlines()
-            n = len(text)
-            x = [n_bins * .95] * n
-            y = [n_bins * (.9 - .1 * i) for i in range(n)]
-            self.text_visual.add_batch_data(
-                text=text,
-                pos=list(zip(x, y)),
-                data_bounds=data_bounds,
-                box_index=idx,
-            )
+        text = bunch.get('text', 'cluster %d' % cluster_id)
+        text = text.splitlines()
+        n = len(text)
+        x = [data_bounds[2] * .2] * n
+        y = [data_bounds[3] * (.9 - .08 * i) for i in range(n)]
+        self.text_visual.add_batch_data(
+            text=text,
+            pos=list(zip(x, y)),
+            data_bounds=data_bounds,
+            box_index=idx,
+        )
 
     def on_select(self, cluster_ids=(), **kwargs):
         self.cluster_ids = cluster_ids
@@ -91,13 +91,8 @@ class HistogramView(ManualClusteringView):
             return
 
         bunchs = [self.cluster_stat(cluster_id) for cluster_id in cluster_ids]
-        ylim = max(np.max(b.histogram) for b in bunchs)
-        # NOTE: We assume, for now, that all histogram of all clusters have the same
-        # number of bins.
-        n_bins = len(bunchs[0].histogram)
 
-        data_bounds = (0, 0, n_bins, n_clusters * ylim)
-
+        # Cluster colors.
         colors = _categorical_colormap(colormaps.default, np.arange(n_clusters))
         colors = add_alpha(colors, 1)
 
@@ -107,12 +102,15 @@ class HistogramView(ManualClusteringView):
         for idx, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
             color = colors[idx]
             self._plot_cluster(
-                idx, cluster_id, bunch=bunch, color=color, ylim=ylim, n_clusters=n_clusters)
+                idx, cluster_id, bunch=bunch, color=color, n_clusters=n_clusters)
         self.canvas.update_visual(self.visual)
         self.canvas.update_visual(self.plot_visual)
         self.canvas.update_visual(self.text_visual)
 
         self.canvas.stacked.n_boxes = n_clusters
+        # Get the axes data bounds (the first subplot's extended n_cluster times on the y axis).
+        data_bounds = list(bunchs[0].data_bounds)
+        data_bounds[-1] *= n_clusters
         self.canvas.axes.reset_data_bounds(data_bounds)
         self.canvas.update()
 
