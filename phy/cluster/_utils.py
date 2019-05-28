@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from copy import deepcopy
-from collections import defaultdict
 import logging
 
 from ._history import History
@@ -171,26 +170,39 @@ class ClusterMeta(object):
         default = self._fields[field]
         return self._data.get(cluster, {}).get(field, default)
 
-    def set_from_descendants(self, descendants):
+    def set_from_descendants(self, descendants, largest_old_cluster=None):
         """Update metadata of some clusters given the metadata of their
         ascendants."""
         for field in self.fields:
-
-            # This gives a set of metadata values of all the parents
-            # of any new cluster.
-            candidates = defaultdict(set)
-            for old, new in descendants:
-                candidates[new].add(self.get(field, old))
-
-            # Loop over all new clusters.
-            for new, vals in candidates.items():
-                vals = list(vals)
-                default = self._fields[field]
-                # If all the parents have the same value, assign it to
-                # the new cluster if it is not the default.
-                if len(vals) == 1 and vals[0] != default:
-                    self.set(field, new, vals[0])
-                # Otherwise, the default is assumed.
+            # Consider the default value for the current field.
+            default = self._fields[field]
+            # This maps old cluster ids to their values.
+            old_values = {old: self.get(field, old) for old, _ in descendants}
+            # This is the set of new clusters.
+            new_clusters = set(new for _, new in descendants)
+            # This is the set of old non-default values.
+            old_values_set = set(old_values.values())
+            if default in old_values_set:
+                old_values_set.remove(default)
+            # old_values_set contains all non-default values of the modified clusters.
+            n = len(old_values_set)
+            if n == 0:
+                # If this set is empty, it means no old clusters had a value.
+                return
+            elif n == 1:
+                # If all old clusters had the same non-default value, this will be the
+                # value of the new clusters.
+                new_value = old_values_set.pop()
+            else:
+                # Otherwise, there is a conflict between several possible old values.
+                # We ensure that the largest old cluster is specified.
+                assert largest_old_cluster is not None
+                # We choose this value.
+                new_value = old_values[largest_old_cluster]
+            # Set the new value to all new clusters that don't already have a non-default value.
+            for new in new_clusters:
+                if self.get(field, new) == default:
+                    self.set(field, new, new_value)
 
     def undo(self):
         """Undo the last metadata change.

@@ -165,17 +165,18 @@ def test_metadata_descendants():
     meta.set_from_descendants([(1, 4)])
     assert meta.group(4) == 1
 
-    meta.set_from_descendants([(1, 5), (2, 5)])
-    # This is the default value because the parents have different values.
-    assert meta.group(5) == 3
+    meta.set_from_descendants([(1, 5), (2, 5)], largest_old_cluster=2)
+    # This is the value of the largest old cluster.
+    assert meta.group(5) == 2
 
+    # The old clusters 2 and 3 have the same value, so we set it to the new cluster.
     meta.set('group', 3, 2)
     meta.set_from_descendants([(2, 6), (3, 6), (10, 10)])
     assert meta.group(6) == 2
 
     # If the value of the new cluster is non-default, it should not
     # be changed by set_from_descendants.
-    meta.set_from_descendants([(3, 2)])
+    meta.set_from_descendants([(0, 2)])
     assert meta.group(2) == 2
 
 
