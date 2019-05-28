@@ -771,6 +771,56 @@ class LineVisual(BaseVisual):
 
 
 #------------------------------------------------------------------------------
+# Image visual
+#------------------------------------------------------------------------------
+
+class ImageVisual(BaseVisual):
+    def __init__(self):
+        super(ImageVisual, self).__init__()
+
+        self.set_shader('image')
+        self.set_primitive_type('triangles')
+
+    def validate(self, image=None, **kwargs):
+        assert image is not None
+        image = np.asarray(image, np.float32)
+        assert image.ndim == 3
+        assert image.shape[2] == 4
+        return Bunch(image=image, _n_items=1, _n_vertices=self.vertex_count())
+
+    def vertex_count(self, image=None, **kwargs):
+        return 6
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
+        image = data.image
+
+        pos = np.array([
+            [-1, -1],
+            [-1, +1],
+            [+1, -1],
+            [-1, +1],
+            [+1, +1],
+            [+1, -1],
+        ])
+        tex_coords = np.array([
+            [0, 1],
+            [0, 0],
+            [+1, 1],
+            [0, 0],
+            [+1, 0],
+            [+1, 1],
+        ])
+        self.program['a_position'] = pos.astype(np.float32)
+        self.program['a_tex_coords'] = tex_coords.astype(np.float32)
+        self.program['u_tex'] = image.astype(np.float32)
+
+        emit('visual_set_data', self)
+        return data
+
+
+#------------------------------------------------------------------------------
 # Polygon visual
 #------------------------------------------------------------------------------
 

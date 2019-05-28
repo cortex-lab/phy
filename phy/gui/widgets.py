@@ -322,13 +322,6 @@ class Table(HTMLWidget):
         ''' % (data_json, value_names_json, columns_json, sort_json)
         self.build(lambda html: emit('ready', self))
 
-        # HACK: work-around a Qt bug where this widget is not properly refreshed
-        # when an OpenGL widget is docked to the main window.
-        # self._timer = QTimer()
-        # self._timer.setSingleShot(True)
-        # self._timer.timeout.connect(lambda: self.update())
-        # Note: this event should be raised LAST, after all OpenGL widgets have been updated.
-        #connect(event='select', sender=self, func=lambda *args: self._timer.start(100), last=True)
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
 
     def sort_by(self, name, sort_dir='asc'):

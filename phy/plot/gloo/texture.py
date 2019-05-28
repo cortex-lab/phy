@@ -304,6 +304,9 @@ class Texture2D(Texture):
     def _update(self):
         """ Update texture on GPU """
 
+        if self.width == 0:
+            return
+
         if self.pending_data:
             log.log(5, "GPU: Updating texture")
 

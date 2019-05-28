@@ -11,10 +11,9 @@ import os
 
 import numpy as np
 
-from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                       LineVisual, PolygonVisual, TextVisual,
-                       UniformPlotVisual, UniformScatterVisual,
-                       )
+from ..visuals import (
+    ScatterVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual, TextVisual,
+    ImageVisual, UniformPlotVisual, UniformScatterVisual)
 from ..transform import NDC
 from phylib.utils._color import _random_color
 
@@ -216,6 +215,30 @@ def test_histogram_2(qtbot, canvas_pz):
 
     _test_visual(
         qtbot, canvas_pz, HistogramVisual(), hist=hist, color=c, ylim=2 * np.ones(n_hists))
+
+
+#------------------------------------------------------------------------------
+# Test image visual
+#------------------------------------------------------------------------------
+
+def test_image_empty(qtbot, canvas):
+    image = np.zeros((0, 0, 4))
+    _test_visual(qtbot, canvas, ImageVisual(), image=image)
+
+
+def test_image_1(qtbot, canvas):
+    image = np.zeros((2, 2, 4))
+    image[0, 0, 0] = 1
+    image[1, 1, 1] = 2
+    image[..., 3] = 1
+    _test_visual(qtbot, canvas, ImageVisual(), image=image)
+
+
+def test_image_2(qtbot, canvas):
+    n = 100
+    _test_visual(
+        qtbot, canvas, ImageVisual(),
+        image=np.random.uniform(low=.5, high=.9, size=(n, n, 4)))
 
 
 #------------------------------------------------------------------------------
