@@ -25,14 +25,15 @@ logger = logging.getLogger(__name__)
 class HistogramView(ManualClusteringView):
     _default_position = 'right'
     cluster_ids = ()
+    n_bins = 100
 
     default_shortcuts = {
     }
 
     def __init__(self, cluster_stat=None):
         super(HistogramView, self).__init__()
-        self.state_attrs += ()
-        self.local_state_attrs += ()
+        self.state_attrs += ('n_bins',)
+        self.local_state_attrs += ('n_bins',)
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 
@@ -51,14 +52,15 @@ class HistogramView(ManualClusteringView):
     def _plot_cluster(
             self, idx, cluster_id, bunch=None, color=None, n_clusters=None):
         assert bunch
-        n_bins = len(bunch.histogram)
+        n_bins = self.n_bins
         assert n_bins >= 0
         data_bounds = bunch.data_bounds
         assert len(data_bounds) == 4
 
         # Histogram.
+        histogram, _ = np.histogram(bunch.data, bins=n_bins)
         self.visual.add_batch_data(
-            hist=bunch.histogram, color=color, ylim=data_bounds[-1], box_index=idx,
+            hist=histogram, color=color, ylim=None, box_index=idx,
         )
 
         # Plot.
@@ -73,9 +75,10 @@ class HistogramView(ManualClusteringView):
             )
 
         text = bunch.get('text', 'cluster %d' % cluster_id)
+        # Support multiline text.
         text = text.splitlines()
         n = len(text)
-        x = [data_bounds[2] * .2] * n
+        x = [data_bounds[2] * .1] * n  # text left-aligned
         y = [data_bounds[3] * (.9 - .08 * i) for i in range(n)]
         self.text_visual.add_batch_data(
             text=text,
@@ -117,3 +120,9 @@ class HistogramView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(HistogramView, self).attach(gui)
+        self.actions.add(self.set_n_bins, prompt=True, prompt_default=lambda: self.n_bins)
+
+    def set_n_bins(self, n_bins):
+        self.n_bins = n_bins
+        logger.debug("Change number of bins to %d for %s.", n_bins, self.__class__.__name__)
+        self.on_select(cluster_ids=self.cluster_ids)
