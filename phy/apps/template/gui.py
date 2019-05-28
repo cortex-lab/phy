@@ -42,20 +42,24 @@ class TemplateFeatureView(ScatterView):
     pass
 
 
-class ISIView(HistogramView):
+class AmplitudeView(ScatterView):
     pass
+
+
+class ISIView(HistogramView):
+    n_bins = 100
+    x_max = .1
+    alias_char = 'i'  # provide `in` (set number of bins) and `im` (set max bin) snippets
 
 
 class FiringRateView(HistogramView):
-    pass
+    n_bins = 200
+    alias_char = 'f'
 
 
 class AmplitudeHistogramView(HistogramView):
-    pass
-
-
-class AmplitudeView(ScatterView):
-    _default_position = 'right'
+    n_bins = 100
+    alias_char = 'a'
 
 
 #------------------------------------------------------------------------------
@@ -712,21 +716,17 @@ class TemplateController(object):
 
     def get_isi(self, cluster_id):
         st = self._get_spike_times(cluster_id, load_all=True).data
-        isi_max = .1
-        isi, _ = np.histogram(np.diff(st), bins=np.linspace(0., isi_max, 100))
-        return Bunch(histogram=isi, data_bounds=(0, 0, isi_max, isi.max()))
+        intervals = np.diff(st)
+        return Bunch(data=intervals)
 
     def get_firing_rate(self, cluster_id):
         st = self._get_spike_times(cluster_id, load_all=True).data
         dur = self.model.duration
-        fr, _ = np.histogram(st, np.linspace(0., dur, 200))
-        return Bunch(histogram=fr, data_bounds=(0, 0, dur, fr.max()))
+        return Bunch(data=st, x_max=dur)
 
     def get_amplitude_histogram(self, cluster_id):
         amp = self._get_amplitudes([cluster_id])[0].y
-        amp_max = amp.max()
-        h, _ = np.histogram(amp, bins=np.linspace(0., amp_max, 100))
-        return Bunch(histogram=h, data_bounds=(0, 0, amp_max, h.max()))
+        return Bunch(data=amp)
 
     # GUI
     # -------------------------------------------------------------------------
@@ -745,7 +745,7 @@ class TemplateController(object):
         gui.set_default_actions()
         # Get the state's current sort, and make sure the cluster view is initialized
         # with it.
-        self.supervisor._init_sort = gui.state.ClusterView.current_sort
+        self.supervisor._init_sort = gui.state.get('ClusterView', {}).get('current_sort', None)
         self.supervisor.attach(gui)
 
         gui.set_default_actions()

@@ -20,9 +20,8 @@ def test_histogram_view_0(qtbot, gui):
     v = HistogramView(
         cluster_stat=lambda cluster_id: Bunch(
             data=np.random.uniform(low=0, high=10, size=500),
-            plot=np.random.uniform(low=5, high=10, size=100),
+            plot=np.random.uniform(low=0, high=.5, size=100),
             text='this is:\ncluster %d' % cluster_id,
-            data_bounds=(0, 0, 27, 10),
         )
     )
     v.show()
@@ -34,6 +33,9 @@ def test_histogram_view_0(qtbot, gui):
 
     v.set_n_bins(200)
     assert v.n_bins == 200
+
+    v.set_x_max(5)
+    assert v.x_max == 5
 
     # qtbot.stop()
     v.close()

@@ -26,19 +26,22 @@ class HistogramView(ManualClusteringView):
     _default_position = 'right'
     cluster_ids = ()
     n_bins = 100
+    x_max = None  # x range of the histogram, None (the default) means data.max()
+    alias_char = 'h'
 
     default_shortcuts = {
     }
 
     def __init__(self, cluster_stat=None):
         super(HistogramView, self).__init__()
-        self.state_attrs += ('n_bins',)
-        self.local_state_attrs += ('n_bins',)
+        self.state_attrs += ('n_bins', 'x_max')
+        self.local_state_attrs += ('n_bins', 'x_max')
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 
         # function cluster_id => Bunch(histogram (1D array), plot, text)
         self.cluster_stat = cluster_stat
+        self._hist_max = None
 
         self.visual = HistogramVisual()
         self.canvas.add_visual(self.visual)
@@ -54,20 +57,32 @@ class HistogramView(ManualClusteringView):
         assert bunch
         n_bins = self.n_bins
         assert n_bins >= 0
-        data_bounds = bunch.data_bounds
-        assert len(data_bounds) == 4
 
-        # Histogram.
-        histogram, _ = np.histogram(bunch.data, bins=n_bins)
+        # Update self.x_max if it was not set before.
+        self.x_max = self.x_max or bunch.get('x_max', None) or bunch.data.max()
+        assert self.x_max is not None
+        assert self.x_max > 0
+
+        # Compute the histogram.
+        bins = np.linspace(0., self.x_max, self.n_bins)
+        histogram, _ = np.histogram(bunch.data, bins=bins)
+
+        # Normalize by the integral of the histogram.
+        hist_sum = histogram.sum() * bins[1]
+        histogram = histogram / hist_sum
+        self._hist_max = histogram.max()
+        data_bounds = (0, 0, self.x_max, self._hist_max)
+
+        # Update the visual's data.
         self.visual.add_batch_data(
-            hist=histogram, color=color, ylim=None, box_index=idx,
-        )
+            hist=histogram, ylim=self._hist_max, color=color, box_index=idx)
 
         # Plot.
         plot = bunch.get('plot', None)
         if plot is not None:
+            x = np.linspace(0., self.x_max, len(plot))
             self.plot_visual.add_batch_data(
-                x=np.linspace(data_bounds[0], data_bounds[2], len(plot)),
+                x=x,
                 y=plot,
                 color=(1, 1, 1, 1),
                 data_bounds=data_bounds,
@@ -78,12 +93,11 @@ class HistogramView(ManualClusteringView):
         # Support multiline text.
         text = text.splitlines()
         n = len(text)
-        x = [data_bounds[2] * .1] * n  # text left-aligned
-        y = [data_bounds[3] * (.9 - .08 * i) for i in range(n)]
+        x = [-.75] * n
+        y = [+.8 - i * .25 for i in range(n)]  # improve positioning of text
         self.text_visual.add_batch_data(
             text=text,
             pos=list(zip(x, y)),
-            data_bounds=data_bounds,
             box_index=idx,
         )
 
@@ -111,18 +125,27 @@ class HistogramView(ManualClusteringView):
         self.canvas.update_visual(self.text_visual)
 
         self.canvas.stacked.n_boxes = n_clusters
-        # Get the axes data bounds (the first subplot's extended n_cluster times on the y axis).
-        data_bounds = list(bunchs[0].data_bounds)
-        data_bounds[-1] *= n_clusters
+        # Get the axes data bounds (the last subplot's extended n_cluster times on the y axis).
+        data_bounds = (0, 0, self.x_max, self._hist_max * n_clusters)
         self.canvas.axes.reset_data_bounds(data_bounds)
         self.canvas.update()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(HistogramView, self).attach(gui)
-        self.actions.add(self.set_n_bins, prompt=True, prompt_default=lambda: self.n_bins)
+        self.actions.add(
+            self.set_n_bins, alias=self.alias_char + 'n',
+            prompt=True, prompt_default=lambda: self.n_bins)
+        self.actions.add(
+            self.set_x_max, alias=self.alias_char + 'm',
+            prompt=True, prompt_default=lambda: self.x_max)
 
     def set_n_bins(self, n_bins):
         self.n_bins = n_bins
         logger.debug("Change number of bins to %d for %s.", n_bins, self.__class__.__name__)
+        self.on_select(cluster_ids=self.cluster_ids)
+
+    def set_x_max(self, x_max):
+        self.x_max = x_max
+        logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.on_select(cluster_ids=self.cluster_ids)
