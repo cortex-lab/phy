@@ -69,7 +69,7 @@ class HistogramView(ManualClusteringView):
 
         # Normalize by the integral of the histogram.
         hist_sum = histogram.sum() * bins[1]
-        histogram = histogram / hist_sum
+        histogram = histogram / (hist_sum or 1.)
         self._hist_max = histogram.max()
         data_bounds = (0, 0, self.x_max, self._hist_max)
 
