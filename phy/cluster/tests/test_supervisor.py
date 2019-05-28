@@ -523,6 +523,66 @@ def test_supervisor_label(supervisor):
     assert supervisor.get_labels('my_field')[30] == 1.23
 
 
+def test_supervisor_label_cluster_1(supervisor):
+
+    _select(supervisor, [20, 30])
+    supervisor.label("my_field", 3.14)
+    supervisor.block()
+
+    # Same value for the old clusters.
+    l = supervisor.get_labels('my_field')
+    assert l[20] == l[30] == 3.14
+
+    up = supervisor.merge()
+    supervisor.block()
+
+    assert supervisor.get_labels('my_field')[up.added[0]] == 3.14
+
+
+def test_supervisor_label_cluster_2(supervisor):
+
+    _select(supervisor, [20])
+
+    supervisor.label("my_field", 3.14)
+    supervisor.block()
+
+    # One of the parents.
+    l = supervisor.get_labels('my_field')
+    assert l[20] == 3.14
+    assert l[30] is None
+
+    up = supervisor.merge([20, 30])
+    supervisor.block()
+
+    assert supervisor.get_labels('my_field')[up.added[0]] == 3.14
+
+
+def test_supervisor_label_cluster_3(supervisor):
+
+    # Conflict: largest cluster wins.
+    _select(supervisor, [20, 30])
+    supervisor.label("my_field", 3.14)
+    supervisor.block()
+
+    # Create merged cluster from 20 and 30.
+    up = supervisor.merge()
+    new = up.added[0]
+    supervisor.block()
+
+    # It fot the label of its parents.
+    assert supervisor.get_labels('my_field')[new] == 3.14
+
+    # Now, we label a smaller cluster.
+    supervisor.label("my_field", 2.718, cluster_ids=[10])
+
+    # We merge the large and small cluster together.
+    up = supervisor.merge(up.added + [10])
+    supervisor.block()
+
+    # The new cluster should have the value of the first, merged big cluster, i.e. 3.14.
+    assert supervisor.get_labels('my_field')[up.added[0]] == 3.14
+
+
 def test_supervisor_move_1(supervisor):
 
     _select(supervisor, [20])

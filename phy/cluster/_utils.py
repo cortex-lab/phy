@@ -167,12 +167,10 @@ class ClusterMeta(object):
         if _is_list(cluster):
             return [self.get(field, c) for c in cluster]
         assert field in self._fields
-        default = self._fields[field]
-        return self._data.get(cluster, {}).get(field, default)
+        return self._data.get(cluster, {}).get(field, self._fields[field])
 
     def set_from_descendants(self, descendants, largest_old_cluster=None):
-        """Update metadata of some clusters given the metadata of their
-        ascendants."""
+        """Update metadata of some clusters given the metadata of their ascendants."""
         for field in self.fields:
             # Consider the default value for the current field.
             default = self._fields[field]
@@ -188,7 +186,7 @@ class ClusterMeta(object):
             n = len(old_values_set)
             if n == 0:
                 # If this set is empty, it means no old clusters had a value.
-                return
+                continue
             elif n == 1:
                 # If all old clusters had the same non-default value, this will be the
                 # value of the new clusters.
@@ -202,7 +200,7 @@ class ClusterMeta(object):
             # Set the new value to all new clusters that don't already have a non-default value.
             for new in new_clusters:
                 if self.get(field, new) == default:
-                    self.set(field, new, new_value)
+                    self.set(field, new, new_value, add_to_stack=False)
 
     def undo(self):
         """Undo the last metadata change.

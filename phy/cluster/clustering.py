@@ -91,15 +91,17 @@ def _extend_assignment(spike_ids,
 def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     old_clusters = _unique(old_spike_clusters)
     new_clusters = _unique(new_spike_clusters)
-    descendants = list(set(zip(old_spike_clusters,
-                               new_spike_clusters)))
-    update_info = UpdateInfo(description='assign',
-                             spike_ids=spike_ids,
-                             spike_clusters=new_spike_clusters,
-                             added=list(new_clusters),
-                             deleted=list(old_clusters),
-                             descendants=descendants,
-                             )
+    largest_old_cluster = np.bincount(old_spike_clusters).argmax()
+    descendants = list(set(zip(old_spike_clusters, new_spike_clusters)))
+    update_info = UpdateInfo(
+        description='assign',
+        spike_ids=spike_ids,
+        spike_clusters=new_spike_clusters,
+        added=list(new_clusters),
+        deleted=list(old_clusters),
+        descendants=descendants,
+        largest_old_cluster=largest_old_cluster,
+    )
     return update_info
 
 
@@ -293,12 +295,15 @@ class Clustering(object):
 
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
-        up = UpdateInfo(description='merge',
-                        spike_ids=spike_ids,
-                        added=[to],
-                        deleted=list(cluster_ids),
-                        descendants=descendants,
-                        )
+        largest_old_cluster = np.bincount(self.spike_clusters[spike_ids]).argmax()
+        up = UpdateInfo(
+            description='merge',
+            spike_ids=spike_ids,
+            added=[to],
+            deleted=list(cluster_ids),
+            descendants=descendants,
+            largest_old_cluster=largest_old_cluster,
+        )
 
         # We update the new cluster id (strictly increasing during a session).
         self._new_cluster_id = max(max(up.added) + 1, self._new_cluster_id)

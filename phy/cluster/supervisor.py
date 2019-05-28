@@ -496,6 +496,12 @@ class Supervisor(object):
         # Raise supervisor.cluster
         @connect(sender=self.clustering)
         def on_cluster(sender, up):
+            # NOTE: update the cluster meta of new clusters, depending on the values of the
+            # ancestor clusters. In case of a conflict between the values of the old clusters,
+            # the largest cluster wins and its value is set to its descendants.
+            if up.added:
+                self.cluster_meta.set_from_descendants(
+                    up.descendants, largest_old_cluster=up.largest_old_cluster)
             emit('cluster', self, up)
 
         @connect(sender=self.cluster_meta)  # noqa
