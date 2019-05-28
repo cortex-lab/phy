@@ -55,15 +55,19 @@ def _parse_snippet(s):
     return tuple(map(_parse_list, s.split(' ')))
 
 
-def _prompt_args(title, docstring):
-    """Display a prompt dialog requesting function arguments."""
+def _prompt_args(title, docstring, default=None):
+    """Display a prompt dialog requesting function arguments.
+
+    'default' is a function returning the default value for the proposed input dialog.
+
+    """
     # There are args, need to display the dialog.
     # Extract Example: `...` in the docstring to put a predefined text
     # in the input dialog.
     logger.debug("Prompting arguments for %s", title)
     r = re.search('Example: `([^`]+)`', docstring)
     docstring_ = docstring[:r.start()].strip() if r else docstring
-    text = r.group(1) if r else None
+    text = str(default()) if default else (r.group(1) if r else None)
     s, ok = _input_dialog(title, docstring_, text)
     if not ok or not s:
         return
@@ -149,7 +153,7 @@ def _expected_args(f):
 
 @require_qt
 def _create_qaction(
-        gui, name, callback, shortcut, docstring=None,
+        gui, name, callback, shortcut, docstring=None, prompt_default=None,
         checkable=False, checked=False, prompt=False, n_args=None, alias=''):
     # Create the QAction instance.
     name = name[0].upper() + name[1:].replace('_', ' ')
@@ -164,11 +168,13 @@ def _create_qaction(
         if checkable:
             args = (is_checked,) + args
         if prompt:
-            args += _prompt_args(title, docstring) or ()
+            args += _prompt_args(title, docstring, default=prompt_default) or ()
+            if not args:  # pragma: no cover
+                logger.debug("User cancelled input prompt, aborting.")
+                return
         if len(args) != n_args:
             logger.warning(
-                "Invalid function arguments: expecting %d but got %d",
-                n_args, len(args))
+                "Invalid function arguments: expecting %d but got %d", n_args, len(args))
             return
         try:
             return callback(*args)
@@ -215,13 +221,15 @@ class Actions(object):
             gui.get_menu(menu)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
-            docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False):
+            docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
+            prompt_default=None):
         """Add an action with a keyboard shortcut."""
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
             return partial(
                 self.add, name=name, shortcut=shortcut, prompt=prompt, n_args=n_args,
-                alias=alias, menu=menu, submenu=submenu, checkable=checkable, checked=checked)
+                alias=alias, menu=menu, submenu=submenu, checkable=checkable, checked=checked,
+                prompt_default=prompt_default)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -241,7 +249,8 @@ class Actions(object):
         # Create and register the action.
         action = _create_qaction(
             self.gui, name, callback, shortcut, docstring=docstring, prompt=prompt,
-            n_args=n_args, alias=alias, checkable=checkable, checked=checked)
+            n_args=n_args, alias=alias, checkable=checkable, checked=checked,
+            prompt_default=prompt_default)
         action_obj = Bunch(
             qaction=action, name=name, alias=alias, checkable=checkable,
             checked=checked, shortcut=shortcut, callback=callback, menu=menu)
