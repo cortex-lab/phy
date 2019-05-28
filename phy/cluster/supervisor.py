@@ -235,6 +235,9 @@ class ClusterView(Table):
     def __init__(self, *args, data=None, columns=(), sort=None):
         HTMLWidget.__init__(self, *args, title=self.__class__.__name__)
         self._set_styles()
+        self._reset_table(data=data, columns=columns, sort=sort)
+
+    def _reset_table(self, data=None, columns=(), sort=None):
         emit(self._view_name + '_init', self)
         # Ensure 'id' is the first column.
         if 'id' in columns:
@@ -456,8 +459,8 @@ class Supervisor(object):
         self.cluster_labels = cluster_labels or {}
 
         self.columns = ['id']  # n_spikes comes from cluster_metrics
-        self.columns += [label for label in self.cluster_labels.keys() if label != 'group']
         self.columns += list(self.cluster_metrics.keys())
+        self.columns += [label for label in self.cluster_labels.keys() if label != 'group']
 
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
@@ -649,6 +652,11 @@ class Supervisor(object):
 
         # Change the state after every clustering action, according to the action flow.
         connect(self._after_action, event='cluster', sender=self)
+
+    def _reset_cluster_view(self):
+        logger.debug("Reset the cluster view.")
+        data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+        self.cluster_view._reset_table(data=data, columns=self.columns, sort=self._init_sort)
 
     def _clusters_added(self, cluster_ids):
         logger.log(5, "Clusters added: %s", cluster_ids)
@@ -876,6 +884,11 @@ class Supervisor(object):
             return
         self.cluster_meta.set(name, cluster_ids, value)
         self._global_history.action(self.cluster_meta)
+        # Add column if needed.
+        if name != 'group' and name not in self.columns:
+            logger.debug("Add column %s.", name)
+            self.columns.append(name)
+            self._reset_cluster_view()
 
     def move(self, group, which):
         """Assign a group to some clusters."""
