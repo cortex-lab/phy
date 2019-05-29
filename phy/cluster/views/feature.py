@@ -205,36 +205,24 @@ class FeatureView(ManualClusteringView):
                 data_bounds=data_bounds,
                 box_index=(i, j),
             )
-
-    def _plot_labels(self):
-        """Plot feature labels along left and bottom edge of subplots"""
-        # iterate simultaneously over kth row in left column and
-        # kth column in bottom row:
-        br = self.n_cols - 1  # bottom row
-        self.label_visual.reset_batch()
-        for k in range(0, self.n_cols):
-            dim_x, _ = self.grid_dim[0][k].split(',')
-            _, dim_y = self.grid_dim[k][br].split(',')
             # Get the channel ids corresponding to the relative channel indices
             # specified in the dimensions. Channel 0 corresponds to the first
             # best channel for the selected cluster, and so on.
-            dim_x = self._get_axis_label(dim_x)
-            dim_y = self._get_axis_label(dim_y)
-            # Right edge of right column of subplots.
+            label_x = self._get_axis_label(dim_x)
+            label_y = self._get_axis_label(dim_y)
+            # Add labels.
             self.label_visual.add_batch_data(
                 pos=[.8, .9],
-                text=self._get_axis_label(self.y_labels[k]),
+                text=label_y,
                 data_bounds=None,
-                box_index=(k, br),
+                box_index=(i, j),
             )
-            # Bottom edge of bottom row of subplots.
             self.label_visual.add_batch_data(
                 pos=[0, -.9],
-                text=self._get_axis_label(self.x_labels[k]),
+                text=label_x,
                 data_bounds=None,
-                box_index=(br, k),
+                box_index=(i, j),
             )
-        self.canvas.update_visual(self.label_visual)
 
     def _plot_axes(self):
         self.line_visual.reset_batch()
@@ -314,14 +302,17 @@ class FeatureView(ManualClusteringView):
 
         # Plot points.
         self.point_visual.reset_batch()
-        # Plot the background points.
-        self._plot_points(background)
-        # Plot each cluster's data.
+        self.label_visual.reset_batch()
+
+        self._plot_points(background)  # background spikes
+
+        # Plot each cluster.
         for clu_idx, bunch in enumerate(bunchs):
             self._plot_points(bunch, clu_idx=clu_idx)
-        self.canvas.update_visual(self.point_visual)
 
-        self._plot_labels()
+        # Upload the data on the GPU.
+        self.canvas.update_visual(self.point_visual)
+        self.canvas.update_visual(self.label_visual)
         self.canvas.update()
 
     def attach(self, gui):
