@@ -38,6 +38,8 @@ def _cache_methods(obj, memcached, cached):  # pragma: no cover
 
 class Context(object):
     """Handle function cacheing and parallel map with ipyparallel."""
+    cache_limit = 2 * 1024 ** 3  # 2 GB
+
     def __init__(self, cache_dir, ipy_view=None, verbose=0):
         self.verbose = verbose
         # Make sure the cache directory exists.
@@ -60,9 +62,11 @@ class Context(object):
         try:
             from joblib import Memory
             self._memory = Memory(
-                location=self.cache_dir, mmap_mode=None, verbose=self.verbose)
-            logger.debug("Initialize joblib cache dir at `%s`.",
-                         self.cache_dir)
+                location=self.cache_dir, mmap_mode=None, verbose=self.verbose,
+                bytes_limit=self.cache_limit)
+            logger.debug("Initialize joblib cache dir at `%s`.", self.cache_dir)
+            logger.debug("Reducing the size of the cache if needed.")
+            self._memory.reduce_size()
         except ImportError:  # pragma: no cover
             logger.warning(
                 "Joblib is not installed. Install it with `conda install joblib`.")
