@@ -187,11 +187,6 @@ class TemplateController(object):
             # Save cluster metadata.
             for name, values in labels:
                 self.model.save_metadata(name, values)
-            # Save mean waveforms.
-            cluster_ids = self.supervisor.clustering.cluster_ids
-            mean_waveforms = {cluster_id: self._get_mean_waveforms(cluster_id)
-                              for cluster_id in cluster_ids}
-            self.model.save_mean_waveforms(mean_waveforms)
 
         return supervisor
 

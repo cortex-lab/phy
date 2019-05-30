@@ -221,7 +221,6 @@ class Boxed(BaseLayout):
         # Signal bounds (positions).
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
         box_bounds = box_bounds.astype(np.float32)
-        # TODO OPTIM: set the texture at initialization and update the data
         if 'u_box_bounds' in visual.program:
             visual.program['u_box_bounds'] = box_bounds
             visual.program['n_boxes'] = self.n_boxes

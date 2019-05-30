@@ -968,7 +968,6 @@ class Supervisor(object):
         labels = [(field, self.get_labels(field))
                   for field in self.cluster_meta.fields
                   if field not in ('next_cluster')]
-        # TODO: add option in add_field to declare a field unsavable.
         emit('save_clustering', self, spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()

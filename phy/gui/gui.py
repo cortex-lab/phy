@@ -219,12 +219,6 @@ class GUI(QMainWindow):
             """Close the GUI."""
             self.close()
 
-        # View menu.
-        @self.view_actions.add(name='Reset main window layout')
-        def reset_views():
-            """Reset all views."""
-            # TODO
-
         # Add "Add view" action.
         for view_cls in sorted(self.view_creator.keys(), key=lambda cls: cls.__name__):
             self.view_actions.add(
