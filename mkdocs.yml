@@ -1,6 +1,7 @@
 site_name: phy
 pages:
-- Introduction: 'intro.md'
+- Getting started:
+  - Introduction: 'intro.md'
   - Release notes: 'release.md'
   - Installation: 'installation.md'
 - Interactive visualization of ephys data: 'visualization.md'
