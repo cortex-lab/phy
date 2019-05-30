@@ -262,8 +262,12 @@ class ClusterView(Table):
                 color: #86D16D;
             }
 
-            table tr[data-group='mua'], table tr[data-group='noise'] {
-                color: #888;
+            table tr[data-group='mua'] {
+                color: #afafaf;
+            }
+
+            table tr[data-group='noise'] {
+                color: #777;
             }
             ''')
 
