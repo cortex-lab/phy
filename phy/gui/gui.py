@@ -226,7 +226,7 @@ class GUI(QMainWindow):
             # TODO
 
         # Add "Add view" action.
-        for view_cls in self.view_creator.keys():
+        for view_cls in sorted(self.view_creator.keys(), key=lambda cls: cls.__name__):
             self.view_actions.add(
                 partial(self._create_and_add_view, view_cls),
                 submenu='&New view',
@@ -355,6 +355,8 @@ class GUI(QMainWindow):
     def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
         """Add a widget to the main window."""
 
+        logging.debug("Add view %s to GUI.", view)
+
         name = self._set_view_name(view)
         self._views.append(view)
         self._view_class_indices[view.__class__] += 1
@@ -363,10 +365,7 @@ class GUI(QMainWindow):
         widget = _try_get_matplotlib_canvas(view)
         widget = _try_get_opengl_canvas(widget)
 
-        dock_widget = _create_dock_widget(widget, name,
-                                          closable=closable,
-                                          floatable=floatable,
-                                          )
+        dock_widget = _create_dock_widget(widget, name, closable=closable, floatable=floatable)
         self.addDockWidget(_get_dock_position(position), dock_widget, Qt.Horizontal)
         if floating is not None:
             dock_widget.setFloating(floating)

@@ -21,12 +21,14 @@ from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._misc import _read_python
 
 from phy.cluster.supervisor import Supervisor
+from phy.cluster.views.base import ManualClusteringView
 from phy.cluster.views import (
-    WaveformView, FeatureView, TraceView, CorrelogramView, ScatterView, ProbeView,
-    RasterView, TemplateView, HistogramView, select_traces)
+    WaveformView, FeatureView, TraceView, CorrelogramView,
+    ScatterView, ProbeView, RasterView, TemplateView, HistogramView, select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
 from phy.gui.gui import _prompt_save
+from phy.gui.widgets import IPythonView
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 from .. import _add_log_file
@@ -97,6 +99,7 @@ class TemplateController(object):
             ProbeView: self.create_probe_view,
             RasterView: self.create_raster_view,
             TemplateView: self.create_template_view,
+            IPythonView: self.create_ipython_view,
 
             # Cluster statistics.
             ISIView: self._make_histogram_view(ISIView, self.get_isi),
@@ -731,6 +734,12 @@ class TemplateController(object):
     # GUI
     # -------------------------------------------------------------------------
 
+    def create_ipython_view(self):
+        view = IPythonView()
+        view.start_kernel()
+        view.inject(controller=self, c=self, m=self.model, s=self.supervisor)
+        return view
+
     def create_gui(self, **kwargs):
         view_count = {
             view_cls: 1 for view_cls in self.view_creator.keys() if view_cls != ProbeView}
@@ -753,7 +762,8 @@ class TemplateController(object):
 
         @connect(sender=gui)
         def on_add_view(sender, view):
-            view.on_select(cluster_ids=self.supervisor.selected_clusters)
+            if isinstance(view, ManualClusteringView):
+                view.on_select(cluster_ids=self.supervisor.selected_clusters)
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)

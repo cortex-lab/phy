@@ -8,12 +8,12 @@
 
 from functools import partial
 from pathlib import Path
-from pytest import yield_fixture
+from pytest import yield_fixture, mark
 
 from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table, Barrier, AsyncTasks
+from ..widgets import HTMLWidget, Table, Barrier, AsyncTasks, IPythonView
 
 
 #------------------------------------------------------------------------------
@@ -166,6 +166,37 @@ def _test_widget_javascript_2(qtbot):  # pragma: no cover
     unconnect(on_test)
     # qtbot.stop()
     widget.close()
+
+
+#------------------------------------------------------------------------------
+# Test IPython view
+#------------------------------------------------------------------------------
+
+@mark.filterwarnings("ignore")
+def test_ipython_view_1(qtbot):
+    view = IPythonView()
+    view.show()
+    view.start_kernel()
+    view.stop()
+    qtbot.wait(10)
+
+
+@mark.filterwarnings("ignore")
+def test_ipython_view_2(qtbot, tempdir):
+    from ..gui import GUI
+    gui = GUI(config_dir=tempdir)
+    gui.set_default_actions()
+
+    view = IPythonView()
+    view.show()
+
+    view.attach(gui)  # start the kernel and inject the GUI
+
+    gui.show()
+    view.dock_widget.close()
+    qtbot.wait(10)
+    gui.close()
+    qtbot.wait(10)
 
 
 #------------------------------------------------------------------------------

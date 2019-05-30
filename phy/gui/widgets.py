@@ -12,6 +12,8 @@ import logging
 from functools import partial
 
 import numpy as np
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
 from phylib.utils import emit, connect
@@ -20,6 +22,49 @@ from phylib.utils._misc import _CustomEncoder, _read_text
 from phylib.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# IPython widget
+# -----------------------------------------------------------------------------
+
+class IPythonView(RichJupyterWidget):
+    def __init__(self, *args, **kwargs):
+        super(IPythonView, self).__init__(*args, **kwargs)
+
+    def start_kernel(self):
+        logger.debug("Starting the kernel.")
+
+        self.kernel_manager = QtInProcessKernelManager()
+        self.kernel_manager.start_kernel(show_banner=False)
+        self.kernel_manager.kernel.gui = 'qt'
+        self.kernel = self.kernel_manager.kernel
+        self.shell = self.kernel.shell
+
+        self.kernel_client = self.kernel_manager.client()
+        self.kernel_client.start_channels()
+
+        self.set_default_style('linux')
+        self.exit_requested.connect(self.stop)
+
+    def inject(self, **kwargs):
+        logger.debug("Injecting variables into the kernel: %s.", ', '.join(kwargs.keys()))
+        self.kernel.shell.push(kwargs)
+
+    def attach(self, gui, **kwargs):
+        gui.add_view(self)
+        self.start_kernel()
+        self.inject(gui=gui, **kwargs)
+
+        @connect
+        def on_close_view(sender, view):
+            if view == self:
+                self.stop()
+
+    def stop(self):
+        logger.debug("Stopping the kernel.")
+        self.kernel_client.stop_channels()
+        self.kernel_manager.shutdown_kernel()
 
 
 # -----------------------------------------------------------------------------
