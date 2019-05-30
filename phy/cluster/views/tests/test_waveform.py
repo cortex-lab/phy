@@ -24,16 +24,16 @@ from ..waveform import WaveformView
 def test_waveform_view(qtbot, tempdir, gui):
     nc = 5
 
-    w = artificial_waveforms(10, 20, nc)
+    w = 10 + 100 * artificial_waveforms(10, 20, nc)
 
     def get_waveforms(cluster_id):
-        return Bunch(data=w,
-                     channel_ids=np.arange(nc),
-                     channel_positions=staggered_positions(nc),
-                     )
+        return Bunch(
+            data=w,
+            channel_ids=np.arange(nc),
+            waveform_duration=1000,
+            channel_positions=staggered_positions(nc))
 
-    v = WaveformView(waveforms=get_waveforms,
-                     )
+    v = WaveformView(waveforms=get_waveforms)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)

@@ -15,9 +15,10 @@ import numpy as np
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phylib.utils._color import selected_cluster_color
-from phylib.utils.geometry import _get_boxes
+from phylib.utils.geometry import _get_boxes, range_transform
 from phy.plot import _get_linear_x
 from phy.plot.interact import Boxed
+from phy.plot.transform import NDC
 from phy.plot.visuals import PlotVisual, TextVisual, _min, _max
 from .base import ManualClusteringView
 
@@ -47,7 +48,7 @@ def _get_clu_offsets(bunchs):
 
     # Determine the offset.
     for bunch in bunchs:
-        # For very cluster, find the largest existing offset of its channels.
+        # For every cluster, find the largest existing offset of its channels.
         offset = max(n_clu_per_channel[ch] for ch in bunch.channel_ids)
         offsets.append(offset)
         # Increase the offsets of all channels in the cluster.
@@ -55,6 +56,14 @@ def _get_clu_offsets(bunchs):
             n_clu_per_channel[ch] += 1
 
     return offsets
+
+
+def _overlap_transform(t, offset=0, n=1, overlap=None):
+    if overlap:
+        return t
+    k = 8  # the waveform size is k times the margin between the margins
+    t = -1 + (2 * offset * (k + 1) + (t + 1) * k) / (n * (k + 1) - 1)
+    return t
 
 
 class WaveformView(ManualClusteringView):
@@ -93,6 +102,7 @@ class WaveformView(ManualClusteringView):
 
         # Box and probe scaling.
         self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
+        self.canvas.enable_axes()
 
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
@@ -115,41 +125,30 @@ class WaveformView(ManualClusteringView):
         M = max(_max(b.data) for b in bunchs)
         return [-1, m, +1, M]
 
-    def _plot_labels(self, channel_ids, n_clusters, channel_labels=None, data_bounds=None):
+    def _plot_labels(self, channel_ids, n_clusters, channel_labels=None):
         # Add channel labels.
-        if self.do_show_labels:
-            # Label positions.
-            if not self.overlap:
-                x = -1 - 2.5 * (n_clusters - 1) / 2.
-                x /= n_clusters
-            else:
-                x = -1.
-            self.label_visual.reset_batch()
-            for i, ch in enumerate(channel_ids):
-                label = (self.channel_labels[i]
-                         if self.channel_labels is not None else ch)
-                self.label_visual.add_batch_data(
-                    pos=[x, 0.],
-                    text=str(label),
-                    anchor=[-1.01, -.25],
-                    data_bounds=data_bounds,
-                    box_index=i,
-                )
-            self.canvas.update_visual(self.label_visual)
+        if not self.do_show_labels:
+            return
+        self.label_visual.reset_batch()
+        for i, ch in enumerate(channel_ids):
+            label = self.channel_labels[i] if self.channel_labels is not None else ch
+            self.label_visual.add_batch_data(
+                pos=[-1.05, 0],
+                text=str(label),
+                anchor=[-1.01, -.25],
+                box_index=i,
+            )
+        self.canvas.update_visual(self.label_visual)
 
     def _plot_waveforms(self, bunchs, channel_ids, data_bounds=None):
-        # Initialize the box scaling the first time.
-        if self.box_scaling[1] == 1.:
-            M = np.max([np.max(np.abs(b.data)) for b in bunchs])
-            self.box_scaling[1] = 1. / M
-            self._update_boxes()
         clu_offsets = _get_clu_offsets(bunchs)
-        max_clu_offsets = max(clu_offsets) + 1
+        n_clu = max(clu_offsets) + 1
         self.waveform_visual.reset_batch()
         for i, d in enumerate(bunchs):
             wave = d.data
             if not wave.size:
                 continue
+
             alpha = d.get('alpha', .75)
             channel_ids_loc = d.channel_ids
 
@@ -158,7 +157,6 @@ class WaveformView(ManualClusteringView):
             # By default, this is 0, 1, 2 for the first 3 clusters.
             # But it can be customized when displaying several sets
             # of waveforms per cluster.
-            # i = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
 
             n_spikes_clu, n_samples = wave.shape[:2]
             assert wave.shape[2] == n_channels
@@ -166,15 +164,7 @@ class WaveformView(ManualClusteringView):
 
             # Find the x coordinates.
             t = _get_linear_x(n_spikes_clu * n_channels, n_samples)
-            if not self.overlap:
-
-                # Determine the cluster offset.
-                offset = clu_offsets[i]
-                t = t + 2.5 * (offset - (max_clu_offsets - 1) / 2.)
-                # The total width should not depend on the number of
-                # clusters.
-                t /= max_clu_offsets
-
+            t = _overlap_transform(t, offset=clu_offsets[i], n=n_clu, overlap=self.overlap)
             # Get the spike masks.
             m = masks
             # HACK: on the GPU, we get the actual masks with fract(masks)
@@ -234,7 +224,17 @@ class WaveformView(ManualClusteringView):
 
         data_bounds = self._get_data_bounds(bunchs)
         self._plot_waveforms(bunchs, channel_ids, data_bounds=data_bounds)
-        self._plot_labels(channel_ids, n_clusters, data_bounds=data_bounds)
+        self._plot_labels(channel_ids, n_clusters)
+
+        # Update the axes data bounds.
+        _, m, _, M = data_bounds
+        # Waveform duration, scaled by overlap factor if needed.
+        wave_dur = bunchs[0].get('waveform_duration', 1.)
+        wave_dur /= .5 * (1 + _overlap_transform(1, n=n_clusters, overlap=self.overlap))
+        x1, y1 = range_transform(box_bounds[0], NDC, [wave_dur, M - m])
+        axes_data_bounds = (0, 0, x1, y1)
+        self.canvas.axes.reset_data_bounds(axes_data_bounds, do_update=True)
+        # self.canvas.boxed.add_boxes(self.canvas)  # for debugging
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -257,8 +257,6 @@ class WaveformView(ManualClusteringView):
         self.actions.separator()
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
-
-        # TODO: channel_click event
 
     # Overlap
     # -------------------------------------------------------------------------
