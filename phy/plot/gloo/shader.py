@@ -96,11 +96,11 @@ class Shader(GLObject):
         self._version = version
 
         if os.path.isfile(code):
-            with open(code, 'rt') as file:
+            with open(str(code), 'rt') as file:
                 self._code = preprocess(file.read())
                 self._source = os.path.basename(code)
         else:
-            self._code = preprocess(code)
+            self._code = preprocess(str(code))
             self._source = '<string>'
 
         self._hooked = self._code
