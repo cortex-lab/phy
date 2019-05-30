@@ -35,6 +35,7 @@ __version_git__ = __version__ + _git_version()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
+logger.propagate = False
 
 
 _logger_fmt = '%(asctime)s [%(levelname)s] %(caller)s %(message)s'
