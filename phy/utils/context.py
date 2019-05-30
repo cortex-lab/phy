@@ -44,7 +44,7 @@ class Context(object):
         self.cache_dir = Path(cache_dir).expanduser()
         if not self.cache_dir.exists():
             logger.debug("Create cache directory `%s`.", self.cache_dir)
-            os.makedirs(self.cache_dir)
+            os.makedirs(str(self.cache_dir))
 
         # Ensure the memcache directory exists.
         path = self.cache_dir / 'memcache'
@@ -87,7 +87,7 @@ class Context(object):
         path = self.cache_dir / 'memcache' / (name + '.pkl')
         if path.exists():
             logger.debug("Load memcache for `%s`.", name)
-            with open(path, 'rb') as fd:
+            with open(str(path), 'rb') as fd:
                 cache = load(fd)
         else:
             cache = {}
@@ -98,7 +98,7 @@ class Context(object):
         for name, cache in self._memcache.items():
             path = self.cache_dir / 'memcache' / (name + '.pkl')
             logger.debug("Save memcache for `%s`.", name)
-            with open(path, 'wb') as fd:
+            with open(str(path), 'wb') as fd:
                 dump(cache, fd)
 
     def memcache(self, f):

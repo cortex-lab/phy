@@ -86,7 +86,7 @@ class TemplateController(object):
             self.model = TemplateModel(dat_path, **kwargs)
         else:
             self.model = model
-        self.cache_dir = op.join(self.model.dir_path, '.phy')
+        self.cache_dir = op.join(str(self.model.dir_path), '.phy')
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
         self.view_creator = {
