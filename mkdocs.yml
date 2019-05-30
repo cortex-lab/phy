@@ -4,9 +4,10 @@ pages:
   - Introduction: 'intro.md'
   - Release notes: 'release.md'
   - Installation: 'installation.md'
-- Interactive visualization of ephys data: 'visualization.md'
+- Interactive visualization: 'visualization.md'
 - Manual clustering: 'clustering.md'
-- Customization: 'customization.md'
-  - Keyboard shortcuts and snippets: shortcuts.md
+- Customization and keyboard shortcuts:
+  - Customization: 'customization.md'
+  - Keyboard shortcuts and snippets: 'shortcuts.md'
 - Developing with phy: 'developer.md'
 theme: readthedocs
