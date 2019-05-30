@@ -1,7 +1,7 @@
 site_name: phy
 pages:
 - Getting started:
-  - Introduction: 'intro.md'
+  - Introduction: 'index.md'
   - Release notes: 'release.md'
   - Installation: 'installation.md'
 - Interactive visualization: 'visualization.md'
