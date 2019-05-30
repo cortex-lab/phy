@@ -3,6 +3,7 @@ colorcet
 pyopengl
 requests
 traitlets
+qtconsole
 tqdm
 six
 joblib
