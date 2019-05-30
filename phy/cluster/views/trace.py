@@ -150,11 +150,11 @@ class TraceView(ManualClusteringView):
         self.canvas.enable_axes(show_y=False)
 
         # Visuals.
-        self.waveform_visual = PlotVisual()
-        self.canvas.add_visual(self.waveform_visual)
-
         self.trace_visual = UniformPlotVisual()
         self.canvas.add_visual(self.trace_visual)
+
+        self.waveform_visual = PlotVisual()
+        self.canvas.add_visual(self.waveform_visual)
 
         self.label_visual = TextVisual()
         self.canvas.add_visual(self.label_visual)
