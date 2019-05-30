@@ -453,9 +453,17 @@ class Snippets(object):
                     self.command += char
                 return callback
 
-            self.actions.add(name='_snippet_{}'.format(i),
-                             shortcut=char,
-                             callback=_make_func(char))
+            # Lowercase letters.
+            self.actions.add(
+                name='_snippet_{}'.format(i),
+                shortcut=char,
+                callback=_make_func(char))
+
+            # Uppercase letters.
+            self.actions.add(
+                name='_snippet_{}_upper'.format(i),
+                shortcut='shift+' + char,
+                callback=_make_func(char.upper()))
 
         self.actions.add(name='_snippet_backspace',
                          shortcut='backspace',

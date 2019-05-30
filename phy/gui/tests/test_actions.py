@@ -200,7 +200,7 @@ def test_actions_dialog(qtbot, gui, actions):
             actions.get('hello').trigger()
     assert 'hello world' in stdout.getvalue()
 
-    with captured_logging() as buf:
+    with captured_logging('phy.gui.actions') as buf:
         with mock_dialogs(('world world', True)):
             actions.get('hello').trigger()
     assert 'invalid' in buf.getvalue().lower()
@@ -275,7 +275,7 @@ def test_snippets_parse():
     _check('a', ['a'])
     _check('abc', ['abc'])
     _check('a,b,c', [['a', 'b', 'c']])
-    _check('a b,c', ['a', ['b', 'c']])
+    _check('a b,C', ['a', ['b', 'C']])
 
     _check('1', [1])
     _check('10', [10])
@@ -308,19 +308,20 @@ def test_snippets_errors(actions, snippets):
         assert len(str(arg)) == 1
         _actions.append(arg)
 
-    with captured_logging() as buf:
+    logging_name = 'phy.gui.actions'
+    with captured_logging(logging_name) as buf:
         snippets.run(':t1')
     assert 'couldn\'t' in buf.getvalue().lower()
 
-    with captured_logging() as buf:
+    with captured_logging(logging_name) as buf:
         snippets.run(':t')
     assert 'invalid' in buf.getvalue().lower()
 
-    with captured_logging() as buf:
+    with captured_logging(logging_name) as buf:
         snippets.run(':t 1 2')
     assert 'invalid' in buf.getvalue().lower()
 
-    with captured_logging() as buf:
+    with captured_logging(logging_name) as buf:
         snippets.run(':t aa')
     assert 'assert 2 == 1' in buf.getvalue()
 
