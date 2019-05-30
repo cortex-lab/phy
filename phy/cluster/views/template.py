@@ -181,12 +181,13 @@ class TemplateView(ManualClusteringView):
     @scaling.setter
     def scaling(self, value):
         self._scaling = value
-        self.plot()
 
     def increase(self):
         """Increase the scaling of the features."""
         self.scaling *= self._scaling_increment
+        self.plot()
 
     def decrease(self):
         """Decrease the scaling of the features."""
         self.scaling /= self._scaling_increment
+        self.plot()

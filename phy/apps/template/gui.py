@@ -606,7 +606,8 @@ class TemplateController(object):
 
     def create_raster_view(self):
         view = RasterView(
-            self.model.spike_times, self.supervisor.clustering.spike_clusters,
+            self.model.spike_times,
+            self.supervisor.clustering.spike_clusters,
             cluster_color_selector=self.color_selector,
         )
 
@@ -646,7 +647,14 @@ class TemplateController(object):
                 unconnect(on_table_filter)
                 unconnect(on_color_mapping_changed)
 
-        view.plot()
+        # Initial sort.
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            @self.supervisor.cluster_view.get_ids
+            def init_cluster_ids(cluster_ids):
+                assert cluster_ids is not None
+                view.set_cluster_ids(cluster_ids)
+                view.plot()
 
         return view
 
@@ -704,7 +712,14 @@ class TemplateController(object):
                 unconnect(on_table_sort)
                 unconnect(on_color_mapping_changed)
 
-        view.plot()
+        # Initial sort.
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            @self.supervisor.cluster_view.get_ids
+            def init_cluster_ids(cluster_ids):
+                assert cluster_ids is not None
+                view.set_cluster_ids(cluster_ids)
+                view.plot()
 
         return view
 

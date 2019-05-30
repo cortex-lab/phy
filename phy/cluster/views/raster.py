@@ -36,14 +36,14 @@ class RasterView(ManualClusteringView):
         'decrease': 'ctrl+shift+-',
     }
 
-    def __init__(self, spike_times, spike_clusters, cluster_color_selector=None):
+    def __init__(self, spike_times, spike_clusters, cluster_ids=None, cluster_color_selector=None):
         self.spike_times = spike_times
         self.n_spikes = len(spike_times)
         self.duration = spike_times[-1] * 1.01
 
         assert len(spike_clusters) == self.n_spikes
         self.set_spike_clusters(spike_clusters)
-        self.set_cluster_ids(_unique(spike_clusters))
+        self.set_cluster_ids(cluster_ids if cluster_ids is not None else _unique(spike_clusters))
         self.cluster_color_selector = cluster_color_selector
 
         super(RasterView, self).__init__()
