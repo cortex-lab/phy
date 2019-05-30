@@ -15,7 +15,7 @@ from ..visuals import (
     ScatterVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual, TextVisual,
     ImageVisual, UniformPlotVisual, UniformScatterVisual)
 from ..transform import NDC
-from phylib.utils._color import _random_color
+from phylib.utils.color import _random_color
 
 
 #------------------------------------------------------------------------------

@@ -14,7 +14,7 @@ import numpy as np
 
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
-from phylib.utils._color import selected_cluster_color
+from phylib.utils.color import selected_cluster_color
 from phylib.utils.geometry import _get_boxes, range_transform
 from phy.plot import _get_linear_x
 from phy.plot.interact import Boxed

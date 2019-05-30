@@ -19,7 +19,7 @@ from phylib.stats import correlograms
 from phylib.stats.clusters import get_waveform_amplitude
 from phylib.io.array import Selector
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._color import ClusterColorSelector
+from phylib.utils.color import ClusterColorSelector
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,

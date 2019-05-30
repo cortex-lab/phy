@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phylib.utils._color import _add_selected_clusters_colors
+from phylib.utils.color import _add_selected_clusters_colors
 from phylib.io.array import _index_of
 from phylib.utils import emit, Bunch
 from phy.plot import _get_linear_x

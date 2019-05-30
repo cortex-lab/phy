@@ -10,7 +10,7 @@ import numpy as np
 
 from phylib.io.mock import artificial_waveforms
 from phylib.utils import Bunch, connect
-from phylib.utils._color import ClusterColorSelector
+from phylib.utils.color import ClusterColorSelector
 
 from ..template import TemplateView
 from phy.plot.tests import mouse_click

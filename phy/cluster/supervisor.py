@@ -19,7 +19,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._color import ClusterColorSelector
+from phylib.utils.color import ClusterColorSelector
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier

@@ -9,7 +9,7 @@
 import numpy as np
 
 from phylib.utils import emit
-from phylib.utils._color import selected_cluster_color
+from phylib.utils.color import selected_cluster_color
 from ..base import ManualClusteringView
 
 

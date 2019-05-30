@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phylib.utils.geometry import range_transform
-from phylib.utils._color import selected_cluster_color
+from phylib.utils.color import selected_cluster_color
 from phylib.utils import connect
 from .base import ManualClusteringView
 from phy.plot import NDC

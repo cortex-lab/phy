@@ -13,7 +13,7 @@ import numpy as np
 
 from phylib.io.array import _unique, _index_of
 from phylib.utils import emit
-from phylib.utils._color import _add_selected_clusters_colors
+from phylib.utils.color import _add_selected_clusters_colors
 
 from .base import ManualClusteringView
 from phy.plot import NDC
