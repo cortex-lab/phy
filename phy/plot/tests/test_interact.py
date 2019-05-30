@@ -64,8 +64,8 @@ def _create_visual(qtbot, canvas, layout, box_index):
 
     visual = MyTestVisual()
     c.add_visual(visual)
-    visual.program['a_box_index'] = box_index.astype(np.float32)
     visual.set_data()
+    visual.set_box_index(box_index)
 
     c.show()
     qtbot.waitForWindowShown(c)
@@ -95,12 +95,12 @@ def test_grid_closest_box():
 
 def test_grid_1(qtbot, canvas):
 
-    n = 1000
+    n = 100
 
-    box_index = [[i, j] for i, j in product(range(2), range(3))]
+    box_index = [[i, j] for i, j in product(range(2), range(5))]
     box_index = np.repeat(box_index, n, axis=0)
 
-    grid = Grid((2, 3))
+    grid = Grid((2, 5))
     _create_visual(qtbot, canvas, grid, box_index)
 
     grid.add_boxes(canvas)
@@ -110,15 +110,15 @@ def test_grid_1(qtbot, canvas):
 
 def test_grid_2(qtbot, canvas):
 
-    n = 1000
+    n = 100
 
-    box_index = [[i, j] for i, j in product(range(2), range(3))]
+    box_index = [[i, j] for i, j in product(range(2), range(5))]
     box_index = np.repeat(box_index, n, axis=0)
 
     grid = Grid()
     _create_visual(qtbot, canvas, grid, box_index)
-    grid.shape = (3, 3)
-    assert grid.shape == (3, 3)
+    grid.shape = (5, 2)
+    assert grid.shape == (5, 2)
 
     # qtbot.stop()
 
@@ -129,14 +129,14 @@ def test_grid_2(qtbot, canvas):
 
 def test_boxed_1(qtbot, canvas):
 
-    n = 6
+    n = 5
     b = np.zeros((n, 4))
 
     b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 1. / 3., n)
     b[:, 2] = b[:, 3] = np.linspace(-1. + 1. / 3., 1., n)
 
     n = 1000
-    box_index = np.repeat(np.arange(6), n, axis=0)
+    box_index = np.repeat(np.arange(5), n // 5, axis=0)
 
     boxed = Boxed(box_bounds=b)
     _create_visual(qtbot, canvas, boxed, box_index)
@@ -154,8 +154,8 @@ def test_boxed_2(qtbot, canvas):
     """Test setting the box position and size dynamically."""
 
     n = 1000
-    pos = np.c_[np.zeros(6), np.linspace(-1., 1., 6)]
-    box_index = np.repeat(np.arange(6), n, axis=0)
+    pos = np.c_[np.zeros(5), np.linspace(-1., 1., 5)]
+    box_index = np.repeat(np.arange(5), n // 5, axis=0)
 
     boxed = Boxed(box_pos=pos)
     _create_visual(qtbot, canvas, boxed, box_index)
@@ -165,7 +165,7 @@ def test_boxed_2(qtbot, canvas):
     boxed.box_size = [1, .1]
 
     idx = boxed.get_closest_box((.5, .25))
-    assert idx == 4
+    assert idx == 3
 
     # qtbot.stop()
 
@@ -201,9 +201,9 @@ def test_boxed_closest_box():
 def test_stacked_1(qtbot, canvas):
 
     n = 1000
-    box_index = np.repeat(np.arange(6), n, axis=0)
+    box_index = np.repeat(np.arange(5), n // 5, axis=0)
 
-    stacked = Stacked(n_boxes=6, origin='upper')
+    stacked = Stacked(n_boxes=5, origin='upper')
     _create_visual(qtbot, canvas, stacked, box_index)
     stacked.update_boxes(stacked.box_pos, stacked.box_size)
 

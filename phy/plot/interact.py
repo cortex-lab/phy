@@ -237,13 +237,12 @@ class Boxed(BaseLayout):
                         ])
         pos = np.tile(pos, (n_boxes, 1))
 
-        # Transformation of the boxes data on CPU.
-        pos = self.transforms.apply(pos)
-
         boxes = LineVisual()
+        box_index = np.repeat(np.arange(n_boxes), 8)
 
-        canvas.add_visual(boxes, clearable=False, exclude_origins=(self,))
-        boxes.set_data(pos=pos)
+        canvas.add_visual(boxes, clearable=False)
+        boxes.set_data(pos=pos, color=(.5, .5, .5, 1))
+        boxes.set_box_index(box_index)
         canvas.update()
 
     # Change the box bounds, positions, or size

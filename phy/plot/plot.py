@@ -70,11 +70,8 @@ class PlotCanvas(BaseCanvas):
             self.constrain_bounds = (-1, -1, +1, +1)
 
         elif layout == 'boxed':
-            self.n_plots = (len(box_bounds)
-                            if box_bounds is not None else len(box_pos))
-            self.boxed = Boxed(box_bounds=box_bounds,
-                               box_pos=box_pos,
-                               box_size=box_size)
+            self.n_plots = len(box_bounds) if box_bounds is not None else len(box_pos)
+            self.boxed = Boxed(box_bounds=box_bounds, box_pos=box_pos, box_size=box_size)
             self.boxed.attach(self)
             self.interact = self.boxed
 
