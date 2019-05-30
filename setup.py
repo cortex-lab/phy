@@ -42,10 +42,9 @@ setup(
     name='phy',
     version=version,
     license="BSD",
-    description='Spike sorting and ephys data analysis '
-                'for 1000 channels and beyond',
+    description='Interactive visualization and manual spike sorting of large-scale ephys data',
     long_description=readme,
-    author='Kwik Team',
+    author='Cyrille Rossant (cortex-lab/UCL/IBL)',
     author_email='cyrille.rossant at gmail.com',
     url='https://phy.cortexlab.net',
     packages=_package_tree('phy'),
