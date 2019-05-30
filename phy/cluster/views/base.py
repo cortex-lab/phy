@@ -114,7 +114,6 @@ class ManualClusteringView(object):
                 def finished():
                     logger.log(5, "Done selecting %s in %s.", cluster_ids, self)
                     emit('is_busy', self, False)
-                    gc.collect()
 
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the view.
