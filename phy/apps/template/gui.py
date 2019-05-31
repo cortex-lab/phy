@@ -109,6 +109,11 @@ class TemplateController(object):
                 AmplitudeHistogramView, self.get_amplitude_histogram),
         }
 
+        self.default_views = (
+            WaveformView, TraceView, FeatureView, TemplateFeatureView, CorrelogramView,
+            AmplitudeView, RasterView, TemplateView, ISIView, FiringRateView,
+            AmplitudeHistogramView)
+
         # Attach plugins before setting up the supervisor, so that plugins
         # can register callbacks to events raised during setup.
         # For example, 'request_cluster_metrics' to specify custom metrics
@@ -753,7 +758,7 @@ class TemplateController(object):
 
     def create_gui(self, **kwargs):
         view_count = {
-            view_cls: 1 for view_cls in self.view_creator.keys() if view_cls != ProbeView}
+            view_cls: 1 for view_cls in self.view_creator.keys() if view_cls in self.default_views}
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
