@@ -109,10 +109,10 @@ class TemplateController(object):
                 AmplitudeHistogramView, self.get_amplitude_histogram),
         }
 
-        self.default_views = (
+        self.default_views = [
             WaveformView, TraceView, FeatureView, TemplateFeatureView, CorrelogramView,
             AmplitudeView, RasterView, TemplateView, ISIView, FiringRateView,
-            AmplitudeHistogramView)
+            AmplitudeHistogramView]
 
         # Attach plugins before setting up the supervisor, so that plugins
         # can register callbacks to events raised during setup.
@@ -756,9 +756,11 @@ class TemplateController(object):
         view.inject(controller=self, c=self, m=self.model, s=self.supervisor)
         return view
 
-    def create_gui(self, **kwargs):
+    def create_gui(self, default_views=None, **kwargs):
+        default_views = self.default_views if default_views is None else default_views
         view_count = {
-            view_cls: 1 for view_cls in self.view_creator.keys() if view_cls in self.default_views}
+            view_cls: 1 for view_cls in self.view_creator.keys()
+            if view_cls in default_views or default_views}
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
@@ -767,7 +769,7 @@ class TemplateController(object):
                   view_creator=self.view_creator,
                   view_count=view_count,
                   **kwargs)
-        gui.set_default_actions()
+        # gui.set_default_actions()
         # Get the state's current sort, and make sure the cluster view is initialized
         # with it.
         self.supervisor._init_sort = gui.state.get('ClusterView', {}).get('current_sort', None)

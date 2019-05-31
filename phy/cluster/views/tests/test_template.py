@@ -41,7 +41,7 @@ def test_template_view(qtbot, tempdir, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
-    v.plot()
+    v.update_color()  # should call .plot() instead as update_color() is for subsequent updates
 
     v.on_select([])
     v.on_select([0])

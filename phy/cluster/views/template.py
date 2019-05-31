@@ -125,6 +125,10 @@ class TemplateView(ManualClusteringView):
         self.canvas.update()
 
     def update_color(self, selected_clusters=None):
+        # This method is only used when the view has been plotted at least once,
+        # such that self._cluster_box_index has been filled.
+        if not self._cluster_box_index:
+            self.plot()
         # The call to set_cluster_ids() update the cluster_colors array.
         self.set_cluster_ids(self.cluster_ids)
         # Selected cluster colors.

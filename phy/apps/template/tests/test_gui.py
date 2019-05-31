@@ -178,6 +178,22 @@ def test_template_gui_2(qtbot, template_controller):
     gui.close()
 
 
+def test_template_gui_views(qtbot, template_controller):
+    """Test adding new views once clusters are selected."""
+    gui = template_controller.create_gui(default_views=())
+    _wait_controller(qtbot, template_controller.supervisor, gui)
+
+    template_controller.supervisor.next_best()
+    template_controller.supervisor.block()
+
+    template_controller.supervisor.next()
+    template_controller.supervisor.block()
+
+    for view_cls in template_controller.default_views:
+        gui._create_and_add_view(view_cls)
+        qtbot.wait(100)
+
+
 def test_template_gui_sim(qtbot, template_controller):
     """Ensure that the similarity is refreshed when clusters change."""
     gui = template_controller.create_gui()
