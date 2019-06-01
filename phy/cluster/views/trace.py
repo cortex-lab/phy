@@ -93,6 +93,7 @@ class TraceView(ManualClusteringView):
     default_shortcuts = {
         'go_left': 'alt+left',
         'go_right': 'alt+right',
+        'go_to': 'alt+t',
         'decrease': 'alt+down',
         'increase': 'alt+up',
         'toggle_show_labels': 'alt+l',

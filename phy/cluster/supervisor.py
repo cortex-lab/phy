@@ -540,6 +540,7 @@ class Supervisor(object):
                 self.cluster_labels.keys(), self.cluster_metrics.keys()):
             self.actions.add(
                 _make_color_field_action(field), name='Color field: %s' % field.lower(),
+                alias='cf%s' % field[:2],
                 menu='&View', submenu='Change color field')
 
         # Change color map action.
@@ -552,6 +553,7 @@ class Supervisor(object):
         for colormap in ('categorical', 'linear', 'diverging', 'rainbow'):
             self.actions.add(
                 _make_colormap_action(colormap), name='Colormap: %s' % colormap.lower(),
+                alias='cm%s' % colormap[:2],
                 menu='&View', submenu='Change colormap')
 
         # Change colormap categorical or continous.
