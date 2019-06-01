@@ -82,7 +82,7 @@ def _prompt_args(title, docstring, default=None):
 
 def _get_shortcut_string(shortcut):
     """Return a string representation of a shortcut."""
-    if shortcut is None:
+    if not shortcut:
         return ''
     if isinstance(shortcut, (tuple, list)):
         return ', '.join([_get_shortcut_string(s) for s in shortcut])
@@ -333,8 +333,11 @@ class Actions(object):
     @property
     def shortcuts(self):
         """A dictionary of action shortcuts."""
-        return {name: action.shortcut
-                for name, action in self._actions_dict.items()}
+        return {name: '%s%s' % (
+            action.shortcut or '',
+            ' (%s)' % action.alias
+            if action.alias and action.alias != action.name else '')
+            for name, action in self._actions_dict.items()}
 
     def show_shortcuts(self):
         """Print all shortcuts."""
