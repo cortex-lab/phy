@@ -166,9 +166,7 @@ class FeatureView(ManualClusteringView):
         d = s.index(dim[-1])
         if masks is not None:
             masks = masks[:, c]
-        return Bunch(data=bunch.data[:, c, d],
-                     masks=masks,
-                     )
+        return Bunch(data=bunch.data[:, c, d], masks=masks)
 
     def _get_axis_bounds(self, dim, bunch):
         """Return the min/max of an axis."""

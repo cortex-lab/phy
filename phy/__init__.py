@@ -38,10 +38,6 @@ logger.addHandler(logging.NullHandler())
 logger.propagate = False
 
 
-_logger_fmt = '%(asctime)s [%(levelname)s] %(caller)s %(message)s'
-_logger_date_fmt = '%H:%M:%S'
-
-
 @atexit.register
 def on_exit():  # pragma: no cover
     # Close the logging handlers.

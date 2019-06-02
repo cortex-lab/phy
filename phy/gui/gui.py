@@ -147,6 +147,8 @@ class GUI(QMainWindow):
                             )
         self.setAnimated(False)
 
+        logger.debug("Creating GUI.")
+
         self._set_name(name, str(subtitle))
         position = position or (200, 200)
         size = size or (800, 600)
@@ -344,14 +346,13 @@ class GUI(QMainWindow):
             if n_views <= 0:
                 continue
             assert n_views >= 1
-            # Extra views.
             for i in range(n_views):
                 self._create_and_add_view(view_cls)
 
     def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
         """Add a widget to the main window."""
 
-        logging.debug("Add view %s to GUI.", view)
+        logger.debug("Add view %s to GUI.", view.__class__.__name__)
 
         name = self._set_view_name(view)
         self._views.append(view)

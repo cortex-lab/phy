@@ -92,7 +92,11 @@ class ManualClusteringView(object):
         # Call on_select() asynchronously after a delay, and set a busy
         # cursor.
         self.async_caller = AsyncCaller(delay=1)
+        # WARNING: we should ensure that all on_select events do not finish too early,
+        # otherwise the global is_busy will be False before new on_select events have a chance
+        # to start.
         self.async_caller2 = AsyncCaller(delay=10)
+        name = self.__class__.__name__  # current view name
 
         @connect
         def on_select(sender, cluster_ids, **kwargs):
@@ -109,11 +113,11 @@ class ManualClusteringView(object):
             # Set the view as busy.
             @self.async_caller.set
             def update_view():
-                logger.log(5, "Selecting %s in %s.", cluster_ids, self)
+                logger.log(5, "Selecting %s in %s.", cluster_ids, name)
                 self.on_select(cluster_ids=cluster_ids, **kwargs)
                 @self.async_caller2.set
                 def finished():
-                    logger.log(5, "Done selecting %s in %s.", cluster_ids, self)
+                    logger.log(5, "Done selecting %s in %s.", cluster_ids, name)
                     emit('is_busy', self, False)
 
         # Update the GUI status message when the `self.set_status()` method
@@ -127,7 +131,7 @@ class ManualClusteringView(object):
         def on_close_view(sender, view):
             if view != self:
                 return
-            logger.debug("Close view %s.", view.__class__.__name__)
+            logger.debug("Close view %s.", name)
             gui.remove_menu(self.name)
             unconnect(on_select)
             gui.state.update_view_state(self, self.state)

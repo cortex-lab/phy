@@ -711,8 +711,7 @@ class Supervisor(object):
 
     def _on_action(self, sender, name, *args):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
-        if sender != self.action_creator:
-            return
+        assert sender == self.action_creator
         # The GUI should not be busy when calling a new action.
         if 'select' not in name and self._is_busy:
             logger.log(5, "The GUI is busy, waiting before calling the action.")
