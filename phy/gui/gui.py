@@ -338,7 +338,8 @@ class GUI(QMainWindow):
     def create_views(self):
         """view_count is a dictionary {view_cls: n_views}."""
         self.view_actions.separator()
-        for view_cls, n_views in self._requested_view_count.items():
+        req_view_count = self._requested_view_count.items()
+        for view_cls, n_views in sorted(req_view_count, key=lambda _: _[0].__name__):
             if n_views <= 0:
                 continue
             assert n_views >= 1
