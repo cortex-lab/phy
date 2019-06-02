@@ -1,6 +1,6 @@
 # Release notes
 
-Upcoming version is phy 2.0.
+Upcoming version is phy 2.0. Note: most changes concern the template GUI.
 
 ## New views
 
@@ -11,6 +11,7 @@ Upcoming version is phy 2.0.
     * Instantaneous firing rate
     * Template amplitude histogram
     * Write your own
+* Spike attributes: a scatter view is automatically created for any `spike_somename.npy` (n_spikes * 1 or n_spikes * 2)
 * IPython view
 
 ## New features
@@ -41,8 +42,8 @@ Upcoming version is phy 2.0.
 
 ## Internal changes
 
-* Dropped Python 2 support (end of life early 2020), Python 3.7+
-* Updated to PyQt5
+* Dropped Python 2 support (end of life early 2020), support Python 3.7+
+* Updated to PyQt5 from PyQt4, which is now unsupported
 * Improved OpenGL-based plotting API (based on a fork of glumpy instead of vispy)
 * Dropped the phy-contrib repository
 * Created a small phylib dependency with I/O code and non-graphical utilities, used by ibllib
