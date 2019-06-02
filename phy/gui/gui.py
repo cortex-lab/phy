@@ -217,7 +217,6 @@ class GUI(QMainWindow):
             self.close()
 
         # Add "Add view" action.
-        print(self.view_creator)
         for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
                 partial(self._create_and_add_view, view_name),
