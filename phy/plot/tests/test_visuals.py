@@ -31,6 +31,7 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
     qtbot.waitForWindowShown(c)
     if os.environ.get('PHY_TEST_STOP', None) or stop:  # pragma: no cover
         qtbot.stop()
+    v.close()
     c.close()
 
 
