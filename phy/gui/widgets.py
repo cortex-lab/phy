@@ -376,7 +376,7 @@ class Table(HTMLWidget):
 
     def filter(self, text=''):
         logger.log(5, "Filter table with `%s`.", text)
-        self.eval_js('table.filter_("{}");'.format(text))
+        self.eval_js('table.filter_("{}", true);'.format(text))
 
     def get_ids(self, callback=None):
         """Get the list of ids."""

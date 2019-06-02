@@ -352,13 +352,13 @@ class ActionCreator(object):
         self.actions.separator(**kwargs)
 
     def attach(self, gui):
-        self.actions = Actions(gui,
-                               name='Clustering',
-                               menu='&Edit',
-                               default_shortcuts=self.default_shortcuts)
+        self.actions = Actions(
+            gui, name='Clustering', menu='&Edit', default_shortcuts=self.default_shortcuts)
 
         # Selection.
         self.add('select', alias='c', docstring='Select some clusters.')
+        self.add('sort', alias='s')
+        self.add('filter', alias='f')
         self.separator()
 
         self.add('undo', docstring='Undo the last action.')
@@ -629,10 +629,8 @@ class Supervisor(object):
         sim = self.similarity(cluster_id)
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
-        data = [dict(similarity='%.3f' % s,
-                     **self._get_cluster_info(c))
-                for c, s in sim
-                if c in clusters_set]
+        data = [dict(similarity='%.3f' % s, **self._get_cluster_info(c))
+                for c, s in sim if c in clusters_set]
         return data
 
     def _get_cluster_info(self, cluster_id, exclude=()):
@@ -825,6 +823,17 @@ class Supervisor(object):
         #cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids, callback=callback)
+
+    # Cluster view actions
+    # -------------------------------------------------------------------------
+
+    def sort(self, column, sort_dir='desc'):
+        """Sort the cluster view by a given column."""
+        self.cluster_view.sort_by(column, sort_dir=sort_dir)
+
+    def filter(self, text):
+        """Filter the clusters using a Javascript expression on the column names."""
+        self.cluster_view.filter(text)
 
     # Clustering actions
     # -------------------------------------------------------------------------

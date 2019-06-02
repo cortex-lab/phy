@@ -404,6 +404,21 @@ def test_supervisor_skip(qtbot, gui, supervisor):
         _assert_selected(supervisor, [clu])
 
 
+def test_supervisor_sort(qtbot, supervisor):
+    supervisor.sort('id', 'desc')
+    qtbot.wait(50)
+    assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
+
+
+def test_supervisor_filter(qtbot, supervisor):
+    supervisor.filter('5 <= id && id <= 20')
+    qtbot.wait(50)
+    _cl = []
+    supervisor.cluster_view.get_ids(lambda cluster_ids: _cl.extend(cluster_ids))
+    qtbot.wait(50)
+    assert _cl == [20, 11, 10]
+
+
 def test_supervisor_merge_1(qtbot, supervisor):
 
     _select(supervisor, [30], [20])
