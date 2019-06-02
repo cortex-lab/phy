@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""Spike sorting and ephys data analysis for 1000 channels and beyond."""
+"""phy: interactive visualization and manual spike sorting of large-scale ephys data."""
 
 
 #------------------------------------------------------------------------------
