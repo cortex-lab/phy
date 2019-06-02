@@ -7,7 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import gc
+# import gc
 import logging
 from operator import itemgetter
 import os
