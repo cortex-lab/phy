@@ -132,19 +132,19 @@ def test_gui_creator(tempdir, qtbot):
         return MyCanvas()
 
     # View creator.
-    vc = {BaseCanvas: _create_canvas, MyCanvas: _create_my_canvas}
+    vc = {'BaseCanvas': _create_canvas, 'MyCanvas': _create_my_canvas}
 
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir, view_creator=vc)
     gui.set_default_actions()
     qtbot.addWidget(gui)
 
     # Automatically create the views with the view counts.
-    gui._requested_view_count = {BaseCanvas: 1, MyCanvas: 2, UnusedClass: 0}
+    gui._requested_view_count = {'BaseCanvas': 1, 'MyCanvas': 2, 'UnusedClass': 0}
     gui.create_views()
     gui.show()
     qtbot.waitForWindowShown(gui)
 
-    assert gui.view_count == {BaseCanvas: 1, MyCanvas: 2}
+    assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 2}
     assert len(gui.list_views(BaseCanvas)) == 1
 
     # Two MyCanvas views.
@@ -161,7 +161,7 @@ def test_gui_creator(tempdir, qtbot):
     views = gui.list_views(MyCanvas)
     assert len(views) == 1
     assert views[0].name == 'MyCanvas (1)'
-    assert gui.view_count == {BaseCanvas: 1, MyCanvas: 1}
+    assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 1}
 
     # Add a new MyCanvas.
     add_action.activate(0)
@@ -169,7 +169,7 @@ def test_gui_creator(tempdir, qtbot):
     assert len(views) == 2
     assert views[0].name == 'MyCanvas (1)'
     assert views[1].name == 'MyCanvas (2)'
-    assert gui.view_count == {BaseCanvas: 1, MyCanvas: 2}
+    assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 2}
 
     # qtbot.stop()
     gui.close()

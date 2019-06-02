@@ -17,7 +17,6 @@ from .qt import (
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
 from phylib.utils import emit, connect
-from phylib.utils._misc import _fullname, _load_from_fullname
 
 logger = logging.getLogger(__name__)
 
@@ -90,15 +89,6 @@ def _get_dock_position(position):
             }[position or 'right']
 
 
-def _encode_view_count(vc):
-    """Make view class type objects serializables via the fully qualified names."""
-    return {_fullname(view_cls): n_views for view_cls, n_views in vc.items()}
-
-
-def _decode_view_count(vc):
-    return {_load_from_fullname(view_cls_name): n_views for view_cls_name, n_views in vc.items()}
-
-
 def _prompt_save():  # pragma: no cover
     """Show a prompt asking the user whether he wants to save or not.
 
@@ -132,6 +122,7 @@ class GUI(QMainWindow):
                  subtitle=None,
                  view_creator=None,
                  view_count=None,
+                 default_views=None,
                  config_dir=None,
                  **kwargs
                  ):
@@ -169,7 +160,7 @@ class GUI(QMainWindow):
 
         # Views,
         self._views = []
-        self._view_class_indices = defaultdict(int)  # Dictionary {view_cls: next_usable_index}
+        self._view_class_indices = defaultdict(int)  # Dictionary {view_name: next_usable_index}
 
         # Create the GUI state.
         state_path = _gui_state_path(self.name, config_dir=config_dir)
@@ -178,8 +169,12 @@ class GUI(QMainWindow):
 
         # View creator: dictionary {view_class: function_that_adds_view}
         self.view_creator = view_creator or {}
-        self._requested_view_count = view_count if view_count is not None else _decode_view_count(
-            self.state.get('view_count', {}))
+        # View count: take the requested one, or the GUI state one.
+        self._requested_view_count = (
+            view_count if view_count is not None else self.state.get('view_count', {}))
+        # If there is still no view count, use a default one.
+        self._requested_view_count = self._requested_view_count or {
+            view_name: 1 for view_name in default_views or ()}
 
         # Status bar.
         self._lock_status = False
@@ -222,11 +217,12 @@ class GUI(QMainWindow):
             self.close()
 
         # Add "Add view" action.
-        for view_cls in sorted(self.view_creator.keys(), key=lambda cls: cls.__name__):
+        print(self.view_creator)
+        for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
-                partial(self._create_and_add_view, view_cls),
+                partial(self._create_and_add_view, view_name),
                 submenu='&New view',
-                name='Add %s' % view_cls.__name__,
+                name='Add %s' % view_name,
                 show_shortcut=False)
         self.view_actions.separator()
 
@@ -270,7 +266,7 @@ class GUI(QMainWindow):
         logger.debug("Save the geometry state.")
         gs = self.save_geometry_state()
         self.state['geometry_state'] = gs
-        self.state['view_count'] = _encode_view_count(self.view_count)
+        self.state['view_count'] = self.view_count
         self.state.save()
 
     def show(self):
@@ -290,7 +286,7 @@ class GUI(QMainWindow):
         """Dictionary {view_class: n_views}."""
         vc = defaultdict(int)
         for v in self.views:
-            vc[v.__class__] += 1
+            vc[v.__class__.__name__] += 1
         return dict(vc)
 
     def list_views(self, cls):
@@ -321,14 +317,14 @@ class GUI(QMainWindow):
         view.name = name
         return name
 
-    def _create_and_add_view(self, view_cls):
-        fn = self.view_creator.get(view_cls, None)
+    def _create_and_add_view(self, view_name):
+        fn = self.view_creator.get(view_name, None)
         if fn is None:
             return
         # Create the view with the view creation function.
         view = fn()
         if view is None:  # pragma: no cover
-            logger.warning("Could not create view %s.", view_cls.__name__)
+            logger.warning("Could not create view %s.", view_name)
             return
         # Attach the view to the GUI if it has an attach(gui) method,
         # otherwise add the view.
@@ -339,15 +335,15 @@ class GUI(QMainWindow):
         return view
 
     def create_views(self):
-        """view_count is a dictionary {view_cls: n_views}."""
+        """view_count is a dictionary {view_name: n_views}."""
         self.view_actions.separator()
         req_view_count = self._requested_view_count.items()
-        for view_cls, n_views in req_view_count:
+        for view_name, n_views in req_view_count:
             if n_views <= 0:
                 continue
             assert n_views >= 1
             for i in range(n_views):
-                self._create_and_add_view(view_cls)
+                self._create_and_add_view(view_name)
 
     def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
         """Add a widget to the main window."""
