@@ -1,4 +1,4 @@
-pytest
+pytest==4.5.0
 pytest-qt
 flake8
 coverage
