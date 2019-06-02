@@ -224,7 +224,8 @@ class GUI(QMainWindow):
             self.view_actions.add(
                 partial(self._create_and_add_view, view_cls),
                 submenu='&New view',
-                name='Add %s' % view_cls.__name__)
+                name='Add %s' % view_cls.__name__,
+                show_shortcut=False)
         self.view_actions.separator()
 
         # Help menu.

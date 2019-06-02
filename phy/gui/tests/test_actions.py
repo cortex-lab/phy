@@ -95,7 +95,7 @@ def test_actions_simple(actions):
 
     actions.show_my_shortcuts()
     assert 'show_my_shortcuts' in _captured[0]
-    assert ': h' in _captured[0]
+    assert 'h\n' in _captured[0]
 
     actions.run('t', 1)
     assert _res == [(1,)]

@@ -120,7 +120,7 @@ def _show_shortcuts(shortcuts, name=None):
     for name in sorted(shortcuts):
         shortcut = _get_shortcut_string(shortcuts[name])
         if not name.startswith('_'):
-            print('- {0:<40}: {1:s}'.format(name, shortcut))
+            print('- {0:<40} {1:s}'.format(name, shortcut))
 
 
 # -----------------------------------------------------------------------------
@@ -130,6 +130,7 @@ def _show_shortcuts(shortcuts, name=None):
 def _alias(name):
     # Get the alias from the character after & if it exists.
     alias = name[name.index('&') + 1] if '&' in name else name
+    alias = alias.replace(' ', '_').lower()
     return alias
 
 
@@ -153,7 +154,7 @@ def _expected_args(f):
 
 @require_qt
 def _create_qaction(
-        gui, name, callback, shortcut, docstring=None, prompt_default=None,
+        gui, name, callback, shortcut, docstring=None, prompt_default=None, show_shortcut=True,
         checkable=False, checked=False, prompt=False, n_args=None, alias=''):
     # Create the QAction instance.
     name = name[0].upper() + name[1:].replace('_', ' ')
@@ -222,7 +223,7 @@ class Actions(object):
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
-            prompt_default=None):
+            prompt_default=None, show_shortcut=True):
         """Add an action with a keyboard shortcut."""
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
@@ -250,10 +251,11 @@ class Actions(object):
         action = _create_qaction(
             self.gui, name, callback, shortcut, docstring=docstring, prompt=prompt,
             n_args=n_args, alias=alias, checkable=checkable, checked=checked,
-            prompt_default=prompt_default)
+            prompt_default=prompt_default, show_shortcut=show_shortcut)
         action_obj = Bunch(
             qaction=action, name=name, alias=alias, checkable=checkable,
-            checked=checked, shortcut=shortcut, callback=callback, menu=menu)
+            show_shortcut=show_shortcut, checked=checked, shortcut=shortcut, callback=callback,
+            menu=menu)
         if verbose and not name.startswith('_'):
             logger.log(5, "Add action `%s` (%s).", name, _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
@@ -333,11 +335,20 @@ class Actions(object):
     @property
     def shortcuts(self):
         """A dictionary of action shortcuts."""
-        return {name: '%s%s' % (
-            action.shortcut or '',
-            ' (%s)' % action.alias
-            if action.alias and action.alias != action.name else '')
-            for name, action in self._actions_dict.items()}
+        out = {}
+        for name in sorted(self._actions_dict):
+            action = self._actions_dict[name]
+            if not action.show_shortcut:
+                continue
+            # Discard actions without shortcut and without an alias.
+            if not action.shortcut and not action.alias:
+                continue
+            # Only show alias for actions with no shortcut.
+            alias_str = ' (:%s)' % action.alias if not action.shortcut else ''
+            shortcut = action.shortcut or '-'
+            shortcut = shortcut if isinstance(action.shortcut, str) else ', '.join(shortcut)
+            out[name] = '%s%s' % (shortcut, alias_str)
+        return out
 
     def show_shortcuts(self):
         """Print all shortcuts."""
