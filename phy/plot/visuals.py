@@ -22,7 +22,7 @@ from .utils import (_tesselate_histogram,
                     )
 from phy.gui.qt import _is_high_dpi
 from phylib.io.array import _as_array
-from phylib.utils import Bunch, emit
+from phylib.utils import Bunch
 from phylib.utils.geometry import _get_data_bounds
 
 
@@ -117,7 +117,7 @@ class ScatterVisual(BaseVisual):
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_size'] = data.size.astype(np.float32)
         self.program['a_color'] = data.color.astype(np.float32)
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
     def set_color(self, color):
@@ -221,7 +221,7 @@ class UniformScatterVisual(BaseVisual):
         self.program['u_size'] = self.marker_size
         self.program['u_color'] = self.color
         self.program['u_mask_max'] = _max(masks)
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -355,7 +355,7 @@ class PlotVisual(BaseVisual):
         self.program['a_color'] = color.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -456,7 +456,7 @@ class UniformPlotVisual(BaseVisual):
         self.program['u_color'] = self.color
         self.program['u_mask_max'] = _max(masks)
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -535,7 +535,7 @@ class HistogramVisual(BaseVisual):
         self.program['u_color'] = tex.astype(np.float32)
         self.program['n_hists'] = n_hists
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -694,7 +694,7 @@ class TextVisual(BaseVisual):
 
         self.program['u_tex'] = tex[::-1, :]
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -766,7 +766,7 @@ class LineVisual(BaseVisual):
         color = np.repeat(data.color, 2, axis=0)
         self.program['a_color'] = color.astype(np.float32)
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -816,7 +816,7 @@ class ImageVisual(BaseVisual):
         self.program['a_tex_coords'] = tex_coords.astype(np.float32)
         self.program['u_tex'] = image.astype(np.float32)
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data
 
 
@@ -876,5 +876,5 @@ class PolygonVisual(BaseVisual):
 
         self.program['u_color'] = self._default_color
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
         return data

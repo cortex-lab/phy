@@ -71,6 +71,9 @@ class BaseVisual(object):
         self.program = None
         self._acc = BatchAccumulator()
 
+    def emit_visual_set_data(self):
+        emit('visual_set_data', self.canvas, self)
+
     # Visual definition
     # -------------------------------------------------------------------------
 
@@ -444,6 +447,7 @@ class BaseCanvas(QOpenGLWindow):
         if self.has_visual(visual):
             logger.log(5, "This visual has already been added.")
             return
+        visual.canvas = self
         # This is the list of origins (mostly, interacts and layouts) that should be ignored
         # when adding this visual. For example, an AxesVisual would keep the PanZoom interact,
         # but not the Grid layout.
@@ -648,8 +652,8 @@ class BaseLayout(object):
         canvas.layout = self
         canvas.attach_events(self)
 
-        @connect
-        def on_visual_set_data(visual):
+        @connect(sender=canvas)
+        def on_visual_set_data(sender, visual):
             if canvas.has_visual(visual):
                 self.update_visual(visual)
 

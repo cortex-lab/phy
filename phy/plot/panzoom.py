@@ -487,8 +487,8 @@ class PanZoom(object):
         def on_visual_added(sender, visual):
             self.update_visual(visual)
 
-        @connect
-        def on_visual_set_data(visual):
+        @connect(sender=canvas)
+        def on_visual_set_data(sender, visual):
             if canvas.has_visual(visual):
                 self.update_visual(visual)
 

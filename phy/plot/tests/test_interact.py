@@ -13,7 +13,6 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from phylib.utils import emit
 from ..base import BaseVisual, BaseCanvas
 from ..interact import Grid, Boxed, Stacked, Lasso
 from ..panzoom import PanZoom
@@ -52,7 +51,7 @@ class MyTestVisual(BaseVisual):
         self.data = position
         self.program['a_position'] = position.astype(np.float32)
 
-        emit('visual_set_data', self)
+        self.emit_visual_set_data()
 
 
 def _create_visual(qtbot, canvas, layout, box_index):

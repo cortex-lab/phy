@@ -10,7 +10,6 @@
 import numpy as np
 from pytest import yield_fixture
 
-from phylib.utils import emit
 from ..base import BaseVisual, BaseLayout, GLSLInserter
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)
@@ -194,7 +193,7 @@ def test_layout_1(qtbot, canvas):
             self.n_vertices = 2
             self.program['a_position'] = [[-1, 0], [1, 0]]
             self.program['u_color'] = [1, 1, 1, 1]
-            emit('visual_set_data', self)
+            self.emit_visual_set_data()
 
     v = TestVisual()
     canvas.add_visual(v)
