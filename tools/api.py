@@ -185,9 +185,8 @@ def _concat(header, docstring):
 def _function_header(subpackage, func):
     """Generate the docstring of a function."""
     args = inspect.formatargspec(*inspect.getfullargspec(func))
-    return "{name}{args}".format(name=_full_name(subpackage, func),
-                                   args=args,
-                                   )
+    return "{name}{args}".format(
+        name=_full_name(subpackage, func), args=args)
 
 
 def _doc_function(subpackage, func):
@@ -203,19 +202,16 @@ def _doc_method(klass, func):
     if argspec.args and argspec.args[0] == 'self':
         del argspec.args[0]
     args = inspect.formatargspec(*argspec)
-    header = "{klass}.{name}{args}".format(klass=klass.__name__,
-                                             name=_name(func),
-                                             args=args,
-                                             )
+    header = "{klass}.{name}{args}".format(
+        klass=klass.__name__, name=_name(func), args=args)
     docstring = _doc(func)
     return _concat(header, docstring)
 
 
 def _doc_property(klass, prop):
     """Generate the docstring of a property."""
-    header = "{klass}.{name}".format(klass=klass.__name__,
-                                       name=_name(prop),
-                                       )
+    header = "{klass}.{name}".format(
+        klass=klass.__name__, name=_name(prop))
     docstring = _doc(prop)
     return _concat(header, docstring)
 
@@ -313,17 +309,8 @@ def generate_api_doc(package, subpackages, path=None):
 if __name__ == '__main__':
 
     package = 'phy'
-    subpackages = [
-                   'cluster',
-                   'electrode',
-                   'gui',
-                   'io',
-                   'plot',
-                   'stats',
-                   'traces',
-                   'utils',
-                   ]
+    subpackages = ['apps', 'cluster', 'gui', 'plot', 'utils']
 
     curdir = op.dirname(op.realpath(__file__))
-    path = op.join(curdir, '../doc/docs/api.md')
+    path = op.join(curdir, '../docs/api.md')
     generate_api_doc(package, subpackages, path=path)
