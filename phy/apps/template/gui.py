@@ -90,28 +90,32 @@ class TemplateController(object):
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
         self.view_creator = {
-            WaveformView: self.create_waveform_view,
-            TraceView: self.create_trace_view,
-            FeatureView: self.create_feature_view,
-            TemplateFeatureView: self.create_template_feature_view,
-            CorrelogramView: self.create_correlogram_view,
-            AmplitudeView: self.create_amplitude_view,
-            ProbeView: self.create_probe_view,
-            RasterView: self.create_raster_view,
-            TemplateView: self.create_template_view,
-            IPythonView: self.create_ipython_view,
+            'WaveformView': self.create_waveform_view,
+            'TraceView': self.create_trace_view,
+            'FeatureView': self.create_feature_view,
+            'TemplateFeatureView': self.create_template_feature_view,
+            'CorrelogramView': self.create_correlogram_view,
+            'AmplitudeView': self.create_amplitude_view,
+            'ProbeView': self.create_probe_view,
+            'RasterView': self.create_raster_view,
+            'TemplateView': self.create_template_view,
+            'IPythonView': self.create_ipython_view,
 
-            # Cluster statistics.
-            ISIView: self._make_histogram_view(ISIView, self.get_isi),
-            FiringRateView: self._make_histogram_view(FiringRateView, self.get_firing_rate),
-            AmplitudeHistogramView: self._make_histogram_view(
+            # Cluster statistics
+            'ISIView': self._make_histogram_view(ISIView, self.get_isi),
+            'FiringRateView': self._make_histogram_view(FiringRateView, self.get_firing_rate),
+            'AmplitudeHistogramView': self._make_histogram_view(
                 AmplitudeHistogramView, self.get_amplitude_histogram),
         }
+        # Spike attributes.
+        for name, arr in self.model.spike_attributes.items():
+            view_name = 'Spike%sView' % name.title()
+            self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
 
         self.default_views = [
-            WaveformView, TraceView, FeatureView, TemplateFeatureView, CorrelogramView,
-            AmplitudeView, RasterView, TemplateView, ISIView, FiringRateView,
-            AmplitudeHistogramView]
+            'WaveformView', 'TraceView', 'FeatureView', 'TemplateFeatureView',
+            'CorrelogramView', 'AmplitudeView', 'RasterView', 'TemplateView',
+            'ISIView', 'FiringRateView', 'AmplitudeHistogramView']
 
         # Attach plugins before setting up the supervisor, so that plugins
         # can register callbacks to events raised during setup.
@@ -746,6 +750,31 @@ class TemplateController(object):
         amp = self._get_amplitudes([cluster_id])[0].y
         return Bunch(data=amp)
 
+    # Spike attributes views
+    # -------------------------------------------------------------------------
+
+    def _make_spike_attributes_view(self, view_name, name, arr):
+        """Create a special class deriving from ScatterView for each spike attribute."""
+        def coords(cluster_ids, load_all=False):
+            bunchs = []
+            for cluster_id in cluster_ids:
+                spike_ids = self._get_spike_ids(cluster_id=cluster_id, load_all=load_all)
+                if arr.ndim == 1:
+                    x = self.model.spike_times[spike_ids]
+                    y = arr[spike_ids]
+                    assert x.shape == y.shape == (len(spike_ids),)
+                elif arr.ndim >= 2:
+                    x, y = arr[spike_ids, :2].T
+                bunchs.append(Bunch(x=x, y=y, spike_ids=spike_ids, data_bounds=None))
+            return bunchs
+
+        # Dynamic type deriving from ScatterView.
+        view_cls = type(view_name, (ScatterView,), {})
+
+        def _make():
+            return view_cls(coords=coords)
+        return _make
+
     # GUI
     # -------------------------------------------------------------------------
 
@@ -757,15 +786,13 @@ class TemplateController(object):
 
     def create_gui(self, default_views=None, **kwargs):
         default_views = self.default_views if default_views is None else default_views
-        view_count = {
-            view_cls: 1 for view_cls in self.view_creator.keys() if view_cls in default_views}
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
                   local_path=op.join(self.cache_dir, 'state.json'),
                   default_state_path=op.join(op.dirname(__file__), 'static/state.json'),
                   view_creator=self.view_creator,
-                  view_count=view_count,
+                  default_views=default_views,
                   **kwargs)
         # gui.set_default_actions()
         # Get the state's current sort, and make sure the cluster view is initialized

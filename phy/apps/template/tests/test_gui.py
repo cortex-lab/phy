@@ -53,7 +53,7 @@ def test_template_gui_0(qtbot, tempdir, template_controller):
 def test_template_gui_1(qtbot, tempdir, template_controller):
     controller = template_controller
     gui = controller.create_gui(
-        default_views=(cv.WaveformView, cv.CorrelogramView, AmplitudeView))
+        default_views=('WaveformView', 'CorrelogramView', 'AmplitudeView'))
     s = controller.supervisor
     _wait_controller(qtbot, controller.supervisor, gui)
 

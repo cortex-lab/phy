@@ -85,10 +85,10 @@ class KwikController(object):
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
         self.view_creator = {
-            WaveformView: self.create_waveform_view,
-            TraceView: self.create_trace_view,
-            FeatureView: self.create_feature_view,
-            CorrelogramView: self.create_correlogram_view,
+            'WaveformView': self.create_waveform_view,
+            'TraceView': self.create_trace_view,
+            'FeatureView': self.create_feature_view,
+            'CorrelogramView': self.create_correlogram_view,
         }
 
         self._set_cache()
@@ -420,7 +420,7 @@ class KwikController(object):
                   config_dir=self.config_dir,
                   default_state_path=Path(__file__).parent / 'static/state.json',
                   view_creator=self.view_creator,
-                  view_count={view_cls: 1 for view_cls in self.view_creator.keys()},
+                  view_count={view_name: 1 for view_name in self.view_creator.keys()},
                   **kwargs)
         gui.set_default_actions()
         self.supervisor.attach(gui)

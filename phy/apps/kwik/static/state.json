@@ -61,11 +61,11 @@
     }
   },
   "view_count": {
-    "phy.cluster.supervisor.ClusterView": 1,
-    "phy.cluster.supervisor.SimilarityView": 1,
-    "phy.cluster.views.correlogram.CorrelogramView": 1,
-    "phy.cluster.views.feature.FeatureView": 1,
-    "phy.cluster.views.trace.TraceView": 1,
-    "phy.cluster.views.waveform.WaveformView": 1
+    "ClusterView": 1,
+    "SimilarityView": 1,
+    "CorrelogramView": 1,
+    "FeatureView": 1,
+    "TraceView": 1,
+    "WaveformView": 1
   }
 }
