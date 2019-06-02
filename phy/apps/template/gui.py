@@ -778,10 +778,10 @@ class TemplateController(object):
         gui.set_default_actions()
         gui.create_views()
 
-        @connect(sender=self.supervisor)
-        def on_select(sender, cluster_ids):
-            logger.debug("Garbage collection.")
-            gc.collect(0)
+        # @connect(sender=self.supervisor)
+        # def on_select(sender, cluster_ids):
+        #     logger.debug("Garbage collection.")
+        #     gc.collect(0)
 
         @connect(sender=gui)
         def on_add_view(sender, view):
