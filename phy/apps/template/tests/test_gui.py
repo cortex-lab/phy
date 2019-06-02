@@ -101,7 +101,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     wv.actions.toggle_mean_waveforms(True)
 
     s.actions.colormap_rainbow()
-    qtbot.wait(10)
+    qtbot.wait(100)
 
     if tv:
         tv.actions.toggle_highlighted_spikes(True)
@@ -114,32 +114,40 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
 
     # Emulate filtering in cluster view.
     emit('table_filter', s.cluster_view, s.clustering.cluster_ids[::2])
-    qtbot.wait(10)
+    qtbot.wait(100)
     emit('table_filter', s.cluster_view, s.clustering.cluster_ids)
-    qtbot.wait(10)
+    qtbot.wait(100)
 
     # Emulate sorting in cluster view.
     emit('table_sort', s.cluster_view, s.clustering.cluster_ids[::-1])
-    qtbot.wait(10)
+    qtbot.wait(100)
 
+    # Test raster view.
     rv = gui.list_views(RasterView)[0]
     s.actions.toggle_categorical_colormap(False)
-    mouse_click(qtbot, rv.canvas, (10, 10), modifiers=('Control',))
-    qtbot.wait(10)
-    rv.dock_widget.close()
 
+    mouse_click(qtbot, rv.canvas, (10, 10), modifiers=('Control',))
+    qtbot.wait(100)
+
+    rv.dock_widget.close()
+    qtbot.wait(100)
+
+    # Test template view.
     tmpv = gui.list_views(TemplateView)[0]
     mouse_click(qtbot, tmpv.canvas, (100, 100), modifiers=('Control',))
-    tmpv.dock_widget.close()
+    qtbot.wait(100)
 
+    tmpv.dock_widget.close()
+    qtbot.wait(100)
+
+    # Save and close.
     s.save()
     gui.close()
 
     # Create a new controller and a new GUI with the same data.
     params = _read_python(tempdir / 'params.py')
     params['dat_path'] = controller.model.dat_path
-    controller = TemplateController(config_dir=tempdir,
-                                    **params)
+    controller = TemplateController(config_dir=tempdir, **params)
 
     gui = controller.create_gui()
     s = controller.supervisor
@@ -153,6 +161,8 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     for clu in clu_to_merge:
         assert clu not in s.clustering.cluster_ids
     assert clu_merged in s.clustering.cluster_ids
+
+    qtbot.wait(100)
     gui.close()
 
 

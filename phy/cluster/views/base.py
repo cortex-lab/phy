@@ -127,7 +127,7 @@ class ManualClusteringView(object):
         def on_close_view(sender, view):
             if view != self:
                 return
-            logger.debug("Close view %s.", view)
+            logger.debug("Close view %s.", view.__class__.__name__)
             gui.remove_menu(self.name)
             unconnect(on_select)
             gui.state.update_view_state(self, self.state)
