@@ -11,7 +11,7 @@ import logging
 from phylib.utils._misc import _read_python
 from phylib.utils.testing import captured_output
 from phylib.utils import connect, emit
-from phy.cluster.views import WaveformView, TraceView, ProbeView, RasterView, TemplateView
+import phy.cluster.views as cv
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press, mouse_click
 from ..gui import TemplateController, template_describe, AmplitudeView, TemplateFeatureView
@@ -52,17 +52,10 @@ def test_template_gui_0(qtbot, tempdir, template_controller):
 
 def test_template_gui_1(qtbot, tempdir, template_controller):
     controller = template_controller
-    gui = controller.create_gui()
+    gui = controller.create_gui(
+        default_views=(cv.WaveformView, cv.CorrelogramView, AmplitudeView))
     s = controller.supervisor
     _wait_controller(qtbot, controller.supervisor, gui)
-
-    wv = gui.list_views(WaveformView)[0]
-    tv = gui.list_views(TraceView)
-    if tv:
-        tv = tv[0]
-        tv.actions.go_to_next_spike()
-    else:
-        tv = None
 
     s.actions.next()
     s.block()
@@ -97,48 +90,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     s.actions.move_all_to_good()
     s.block()
 
-    wv.actions.toggle_templates(True)
-    wv.actions.toggle_mean_waveforms(True)
-
-    s.actions.colormap_rainbow()
-    qtbot.wait(100)
-
-    if tv:
-        tv.actions.toggle_highlighted_spikes(True)
-        tv.actions.go_to_next_spike()
-        tv.actions.go_to_previous_spike()
-        mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
-        tv.dock_widget.close()
-
     assert s.cluster_meta.get('group', clu) == 'good'
-
-    # Emulate filtering in cluster view.
-    emit('table_filter', s.cluster_view, s.clustering.cluster_ids[::2])
-    qtbot.wait(100)
-    emit('table_filter', s.cluster_view, s.clustering.cluster_ids)
-    qtbot.wait(100)
-
-    # Emulate sorting in cluster view.
-    emit('table_sort', s.cluster_view, s.clustering.cluster_ids[::-1])
-    qtbot.wait(100)
-
-    # Test raster view.
-    rv = gui.list_views(RasterView)[0]
-    s.actions.toggle_categorical_colormap(False)
-
-    mouse_click(qtbot, rv.canvas, (10, 10), modifiers=('Control',))
-    qtbot.wait(100)
-
-    rv.dock_widget.close()
-    qtbot.wait(100)
-
-    # Test template view.
-    tmpv = gui.list_views(TemplateView)[0]
-    mouse_click(qtbot, tmpv.canvas, (100, 100), modifiers=('Control',))
-    qtbot.wait(100)
-
-    tmpv.dock_widget.close()
-    qtbot.wait(100)
 
     # Save and close.
     s.save()
@@ -162,7 +114,70 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
         assert clu not in s.clustering.cluster_ids
     assert clu_merged in s.clustering.cluster_ids
 
-    qtbot.wait(100)
+    qtbot.wait(50)
+    gui.close()
+
+
+def test_template_gui_views(qtbot, template_controller):
+    controller = template_controller
+    gui = controller.create_gui()
+    s = controller.supervisor
+    _wait_controller(qtbot, controller.supervisor, gui)
+
+    s.actions.next()
+    s.block()
+
+    # Emulate filtering in cluster view.
+    emit('table_filter', s.cluster_view, s.clustering.cluster_ids[::2])
+    qtbot.wait(50)
+
+    emit('table_filter', s.cluster_view, s.clustering.cluster_ids)
+    qtbot.wait(50)
+
+    # Emulate sorting in cluster view.
+    emit('table_sort', s.cluster_view, s.clustering.cluster_ids[::-1])
+    qtbot.wait(50)
+
+    s.actions.colormap_rainbow()
+    qtbot.wait(50)
+
+    wv = gui.list_views(cv.WaveformView)
+    if wv:
+        wv = wv[0]
+        wv.actions.toggle_templates(True)
+        wv.actions.toggle_mean_waveforms(True)
+
+    tv = gui.list_views(cv.TraceView)
+    if tv:
+        tv = tv[0]
+        tv.actions.go_to_next_spike()
+        tv.actions.go_to_previous_spike()
+        tv.actions.toggle_highlighted_spikes(True)
+        mouse_click(qtbot, tv.canvas, (100, 100), modifiers=('Control',))
+        tv.dock_widget.close()
+
+    # Test raster view.
+    rv = gui.list_views(cv.RasterView)
+    if rv:
+        rv = rv[0]
+        s.actions.toggle_categorical_colormap(False)
+
+        mouse_click(qtbot, rv.canvas, (10, 10), modifiers=('Control',))
+        qtbot.wait(50)
+
+        rv.dock_widget.close()
+        qtbot.wait(50)
+
+    # Test template view.
+    tmpv = gui.list_views(cv.TemplateView)
+    if tmpv:
+        tmpv = tmpv[0]
+        mouse_click(qtbot, tmpv.canvas, (100, 100), modifiers=('Control',))
+        qtbot.wait(50)
+
+        tmpv.dock_widget.close()
+        qtbot.wait(50)
+
     gui.close()
 
 
@@ -170,8 +185,8 @@ def test_template_gui_2(qtbot, template_controller):
     gui = template_controller.create_gui()
     _wait_controller(qtbot, template_controller.supervisor, gui)
 
-    gui._create_and_add_view(WaveformView)
-    gui._create_and_add_view(ProbeView)
+    gui._create_and_add_view(cv.WaveformView)
+    gui._create_and_add_view(cv.ProbeView)
 
     key_press(qtbot, gui, 'Down')
     key_press(qtbot, gui, 'Down')
@@ -188,7 +203,7 @@ def test_template_gui_2(qtbot, template_controller):
     gui.close()
 
 
-def test_template_gui_views(qtbot, template_controller):
+def test_template_gui_new_views(qtbot, template_controller):
     """Test adding new views once clusters are selected."""
     gui = template_controller.create_gui(default_views=())
     _wait_controller(qtbot, template_controller.supervisor, gui)

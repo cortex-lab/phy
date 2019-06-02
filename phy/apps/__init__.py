@@ -14,8 +14,9 @@ from traceback import format_exception
 import click
 
 from phylib import add_default_handler, _Formatter
-from phy import __version_git__, _logger_fmt
+from phy import __version_git__
 from phy.utils.profiling import _enable_profiler
+from phylib import _logger_date_fmt, _logger_fmt
 
 
 logger = logging.getLogger(__name__)
@@ -59,9 +60,7 @@ if '--lprof' in sys.argv or '--prof' in sys.argv:  # pragma: no cover
 def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
     logger.error("An error has occurred (%s): %s",
                  exception_type.__name__, exception)
-    logger.debug(''.join(format_exception(exception_type,
-                                          exception,
-                                          traceback)))
+    logger.debug(''.join(format_exception(exception_type, exception, traceback)))
 
 
 # Only show traceback in debug mode (--debug).
@@ -75,8 +74,7 @@ def _add_log_file(filename):  # pragma: no cover
     handler = logging.FileHandler(filename)
 
     handler.setLevel(logging.DEBUG)
-    formatter = _Formatter(fmt=_logger_fmt,
-                           datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = _Formatter(fmt=_logger_fmt, datefmt=_logger_date_fmt)
     handler.setFormatter(formatter)
     logging.getLogger('phy').addHandler(handler)
 

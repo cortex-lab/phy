@@ -40,7 +40,7 @@ try:
     from klusta.kwik import KwikModel
     from klusta.launch import cluster
 except ImportError:  # pragma: no cover
-    logger.warning("Package klusta not installed: the KwikGUI will not work.")
+    logger.debug("Package klusta not installed: the KwikGUI will not work.")
 
 
 #------------------------------------------------------------------------------

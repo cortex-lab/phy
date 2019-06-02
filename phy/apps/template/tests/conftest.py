@@ -42,3 +42,9 @@ def template_controller(tempdir, template_model):
     reset()
 
     phy.apps.template.gui._prompt_save = prompt
+
+
+# NOTE: use this to repeat tests.
+# def pytest_generate_tests(metafunc):
+#     metafunc.fixturenames.append('tmp_ct')
+#     metafunc.parametrize('tmp_ct', list(range(10)))

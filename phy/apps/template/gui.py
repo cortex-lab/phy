@@ -758,8 +758,7 @@ class TemplateController(object):
     def create_gui(self, default_views=None, **kwargs):
         default_views = self.default_views if default_views is None else default_views
         view_count = {
-            view_cls: 1 for view_cls in self.view_creator.keys()
-            if view_cls in default_views or default_views}
+            view_cls: 1 for view_cls in self.view_creator.keys() if view_cls in default_views}
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
