@@ -6,8 +6,7 @@ pages:
   - Installation: 'installation.md'
 - Interactive visualization: 'visualization.md'
 - Manual clustering: 'clustering.md'
-- Customization and keyboard shortcuts:
-  - Customization: 'customization.md'
-  - Keyboard shortcuts and snippets: 'shortcuts.md'
+- Customization: 'customization.md'
+- Keyboard shortcuts and snippets: 'shortcuts.md'
 - Developing with phy: 'developer.md'
 theme: readthedocs

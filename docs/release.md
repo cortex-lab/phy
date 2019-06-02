@@ -11,12 +11,14 @@ Upcoming version is phy 2.0.
     * Instantaneous firing rate
     * Template amplitude histogram
     * Write your own
+* IPython view
 
 ## New features
 
 * Split clusters in the amplitude view or in the template feature view, in addition to the feature view
 * Cluster view:
     * Dynamically filter the list of clusters based on cluster metrics and labels
+    * Snippets to quickly sort and filter clusters
     * New default column: template waveform amplitude
 * Correlogram view: show baseline firing rate and refractory period
 * All views:
@@ -32,6 +34,7 @@ Upcoming version is phy 2.0.
 
 * Selection of "best" channels is now based on template waveform amplitude and probe geometry (this is the peak channel, plus all neighbor channels where the amplitude is higher than a fixed fraction of the peak channel template amplitude)
 * Fix scaling issues in waveform view
+* Different colors for noise and MUA clusters in the cluster view
 * Menu reorganization
 * Bug fixes with cluster labeling
 
