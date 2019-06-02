@@ -189,7 +189,7 @@ def test_template_gui_views(qtbot, template_controller):
     template_controller.supervisor.next()
     template_controller.supervisor.block()
 
-    for view_cls in template_controller.default_views:
+    for view_cls in template_controller.view_creator.keys():
         gui._create_and_add_view(view_cls)
         qtbot.wait(100)
 
