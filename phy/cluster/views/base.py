@@ -11,6 +11,7 @@ from datetime import datetime
 import gc
 import logging
 from pathlib import Path
+import traceback
 
 from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils._misc import phy_config_dir
@@ -114,7 +115,11 @@ class ManualClusteringView(object):
             @self.async_caller.set
             def update_view():
                 logger.log(5, "Selecting %s in %s.", cluster_ids, name)
-                self.on_select(cluster_ids=cluster_ids, **kwargs)
+                try:
+                    self.on_select(cluster_ids=cluster_ids, **kwargs)
+                except Exception:  # pragma: no cover
+                    traceback.print_exc()
+
                 @self.async_caller2.set
                 def finished():
                     logger.log(5, "Done selecting %s in %s.", cluster_ids, name)
@@ -136,7 +141,7 @@ class ManualClusteringView(object):
             unconnect(on_select)
             gui.state.update_view_state(self, self.state)
             self.canvas.close()
-            gc.collect()
+            gc.collect(0)
 
         @connect(sender=gui)
         def on_close(sender):
