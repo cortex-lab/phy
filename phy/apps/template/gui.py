@@ -9,8 +9,7 @@
 
 import logging
 from operator import itemgetter
-import os
-import os.path as op
+from pathlib import Path
 
 import numpy as np
 
@@ -80,13 +79,8 @@ class TemplateController(object):
     n_spikes_correlograms = 100000
 
     def __init__(self, dat_path=None, config_dir=None, model=None, **kwargs):
-        if model is None:
-            assert dat_path
-            dat_path = op.abspath(dat_path)
-            self.model = TemplateModel(dat_path, **kwargs)
-        else:
-            self.model = model
-        self.cache_dir = op.join(str(self.model.dir_path), '.phy')
+        self.model = TemplateModel(dat_path, **kwargs) if not model else model
+        self.cache_dir = self.model.dir_path / '.phy'
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
         self.view_creator = {
@@ -789,8 +783,8 @@ class TemplateController(object):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
                   config_dir=self.config_dir,
-                  local_path=op.join(self.cache_dir, 'state.json'),
-                  default_state_path=op.join(op.dirname(__file__), 'static/state.json'),
+                  local_path=self.cache_dir / 'state.json',
+                  default_state_path=Path(__file__).parent / 'static/state.json',
                   view_creator=self.view_creator,
                   default_views=default_views,
                   **kwargs)
@@ -836,17 +830,28 @@ class TemplateController(object):
 # Template commands
 #------------------------------------------------------------------------------
 
-def template_gui(params_path):  # pragma: no cover
+def get_template_params(params_path):
+    """Get a dictionary of parameters from a params.py file."""
+    params_path = Path(params_path)
     # Create a `phy.log` log file with DEBUG level.
-    _add_log_file(op.join(op.dirname(params_path), 'phy.log'))
+    _add_log_file(params_path.parent / 'phy.log')
 
     params = _read_python(params_path)
-    if not os.path.isabs(params['dat_path']):
-        params['dat_path'] = op.join(op.dirname(params_path), params['dat_path'])
+    if isinstance(params['dat_path'], str):
+        params['dat_path'] = [params['dat_path']]
+    params['dat_path'] = [Path(_) for _ in params['dat_path']]
     params['dtype'] = np.dtype(params['dtype'])
+    if 'dir_path' not in params:
+        params['dir_path'] = params_path.parent
+    params['dir_path'] = Path(params['dir_path'])
+    assert params['dir_path'].exists()
+    assert params['dir_path'].is_dir()
+    return params
 
+
+def template_gui(params_path):  # pragma: no cover
     create_app()
-    controller = TemplateController(**params)
+    controller = TemplateController(**get_template_params(params_path))
     gui = controller.create_gui()
     gui.show()
     run_app()
@@ -855,7 +860,4 @@ def template_gui(params_path):  # pragma: no cover
 
 def template_describe(params_path):
     """Describe a template dataset."""
-    params = _read_python(params_path)
-    if not os.path.isabs(params['dat_path']):
-        params['dat_path'] = op.join(op.dirname(params_path), params['dat_path'])
-    TemplateModel(**params).describe()
+    TemplateModel(**get_template_params(params_path)).describe()
