@@ -515,8 +515,9 @@ class PanZoom(object):
         return arr
 
     def update_visual(self, visual):
-        visual.program[self.pan_var_name] = self._pan
-        visual.program[self.zoom_var_name] = self._zoom_aspect()
+        if hasattr(visual, 'program'):
+            visual.program[self.pan_var_name] = self._pan
+            visual.program[self.zoom_var_name] = self._zoom_aspect()
 
     def update(self):
         """Update all visuals in the attached canvas."""

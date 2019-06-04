@@ -866,7 +866,7 @@ class Supervisor(object):
         if spike_ids is None:
             # Concatenate all spike_ids returned by views who respond to request_split.
             spike_ids = emit('request_split', self)
-            spike_ids = np.concatenate(spike_ids)
+            spike_ids = np.concatenate(spike_ids).astype(np.int64)
             assert spike_ids.dtype == np.int64
             assert spike_ids.ndim == 1
         if len(spike_ids) == 0:

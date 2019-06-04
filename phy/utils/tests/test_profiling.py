@@ -23,8 +23,8 @@ def test_benchmark():
 
 
 @mark.parametrize('line_by_line', [False, True])
-def test_profile(chdir_tempdir, line_by_line):
+def test_profile(tempdir, line_by_line):
     # Remove the profile from the builtins.
     prof = _enable_profiler(line_by_line=line_by_line)
     _profile(prof, 'import time; time.sleep(.001)', {}, {})
-    assert (chdir_tempdir / '.profile/stats.txt').exists()
+    assert (tempdir / '.profile/stats.txt').exists()

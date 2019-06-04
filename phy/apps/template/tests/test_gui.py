@@ -263,7 +263,7 @@ def test_template_gui_split_amplitude(qtbot, tempdir, template_controller):
 
     av = gui.list_views(AmplitudeView)[0]
 
-    a, b = 50, 1000
+    a, b = 10, 1000
     mouse_click(qtbot, av.canvas, (a, a), modifiers=('Control',))
     mouse_click(qtbot, av.canvas, (a, b), modifiers=('Control',))
     mouse_click(qtbot, av.canvas, (b, b), modifiers=('Control',))

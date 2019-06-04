@@ -14,8 +14,6 @@ import os.path as op
 import re
 from subprocess import call
 
-import six
-from six.moves import input
 from github3 import login
 
 
@@ -59,7 +57,7 @@ def _update_version(dev_n='+1', dev=True):
 
     def func(m):
         if dev:
-            if isinstance(dev_n, six.string_types):
+            if isinstance(dev_n, str):
                 n = int(m.group(3)) + int(dev_n)
             assert n >= 0
         else:
