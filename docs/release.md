@@ -11,7 +11,7 @@ Upcoming version is phy 2.0. Note: most changes concern the template GUI.
     * Instantaneous firing rate
     * Template amplitude histogram
     * Write your own
-* Spike attributes: a scatter view is automatically created for any `spike_somename.npy` (n_spikes * 1 or n_spikes * 2)
+* Spike attributes: a scatter view is automatically created for any `spike_somename.npy` (n_spikes * 1 or n_spikes * 2 array)
 * IPython view
 
 ## New features

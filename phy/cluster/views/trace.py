@@ -282,11 +282,8 @@ class TraceView(ManualClusteringView):
                 start_time=w.start_time,
                 data_bounds=self._data_bounds,
             )
-            self._waveform_times.append((w.start_time,
-                                         w.spike_id,
-                                         w.spike_cluster,
-                                         w.get('channel_ids', None),
-                                         ))
+            self._waveform_times.append(
+                (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
         self.canvas.update_visual(self.waveform_visual)
 
     def set_interval(self, interval=None, change_status=True):
