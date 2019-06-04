@@ -1,14 +1,20 @@
 # Keyboard shortcuts and snippets
 
-This is the list of shortcuts and snippets as returned by the Template GUI. While keyboard shortcuts are straightforward, snippets are used by actions that require parameters. They are specified below between parentheses as, e.g., `(:cb)`.
+This pages presents the list of shortcuts and snippets in the template GUI.
 
-For example, to change the number of bins in the Correlogram View:
+## Snippets
+
+Complex actions that cannot be bound to a keyboard shortcut can be quickly activate via keyboard snippets. Snippets are actiavte by first pressing the `:` key, and typing the snippet name followed by some parameters.
+
+For example, to change the number of bins in the Correlogram View (`:cb` snippet as shown in the list below):
 
 1. Activate the snippet mode by typing `:` on the keyboard. You can see the snippet bar at the bottom of the GUI.
 2. Type `cb 200` to change the number of bins to 200.
 3. Press Enter.
 
-You can leave the snippet mode by pressing Escape.
+To cancel, press Escape to leave the snippet mode.
+
+## List of keyboard shortcuts and snippets
 
 ```
 

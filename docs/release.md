@@ -6,7 +6,7 @@ Upcoming version is phy 2.0. Note: most changes concern the template GUI.
 
 * Raster view: spike trains of all clusters
 * Template view: template waveforms of all clusters
-* Cluster statistics:
+* Cluster statistics (histogram):
     * ISI
     * Instantaneous firing rate
     * Template amplitude histogram
@@ -18,7 +18,7 @@ Upcoming version is phy 2.0. Note: most changes concern the template GUI.
 
 * Split clusters in the amplitude view or in the template feature view, in addition to the feature view
 * Cluster view:
-    * Dynamically filter the list of clusters based on cluster metrics and labels
+    * Dynamically filter the list of clusters based on cluster metrics and labels (using JavaScript syntax)
     * Snippets to quickly sort and filter clusters
     * New default column: template waveform amplitude
 * Correlogram view: show baseline firing rate and refractory period
