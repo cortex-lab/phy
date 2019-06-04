@@ -781,7 +781,7 @@ class TemplateController(object):
     def create_gui(self, default_views=None, **kwargs):
         default_views = self.default_views if default_views is None else default_views
         gui = GUI(name=self.gui_name,
-                  subtitle=self.model.dat_path,
+                  subtitle=str(self.model.dir_path),
                   config_dir=self.config_dir,
                   local_path=self.cache_dir / 'state.json',
                   default_state_path=Path(__file__).parent / 'static/state.json',
