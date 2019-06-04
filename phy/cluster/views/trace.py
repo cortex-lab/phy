@@ -270,7 +270,9 @@ class TraceView(ManualClusteringView):
         # Plot the spikes.
         assert isinstance(waveforms, list)
         if not waveforms:
+            self.waveform_visual.hide()
             return
+        self.waveform_visual.show()
         self.waveform_visual.reset_batch()
         for w in waveforms:
             self._plot_waveforms(
