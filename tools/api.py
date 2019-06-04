@@ -12,8 +12,6 @@ import os.path as op
 import re
 import sys
 
-from six import string_types
-
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -112,7 +110,7 @@ def _import_module(module_name):
 #------------------------------------------------------------------------------
 
 def _is_public(obj):
-    name = _name(obj) if not isinstance(obj, string_types) else obj
+    name = _name(obj) if not isinstance(obj, str) else obj
     if name:
         return not name.startswith('_')
     else:

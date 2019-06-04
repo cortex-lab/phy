@@ -13,7 +13,6 @@ dependencies:
     - vispy
     - requests
     - traitlets
-    - six
     - joblib
     - click
     - tqdm

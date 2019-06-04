@@ -5,7 +5,6 @@ requests
 traitlets
 qtconsole
 tqdm
-six
 joblib
 click
 mkdocs==1.0.4

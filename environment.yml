@@ -14,6 +14,5 @@ dependencies:
     - requests
     - traitlets
     - tqdm
-    - six
     - joblib
     - click

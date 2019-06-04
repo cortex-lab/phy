@@ -32,9 +32,11 @@ def test_manual_clustering_view_1(qtbot, tempdir):
     v.set_state({'auto_update': False})
     assert v.auto_update is False
 
-    qtbot.wait(1)
+    qtbot.wait(10)
 
     path = v.screenshot(dir=tempdir)
+    qtbot.wait(10)
+
     assert str(path).startswith(str(tempdir))
     assert path.exists()
 

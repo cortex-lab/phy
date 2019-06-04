@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import logging
+import os
 import shutil
 
 from ..state import GUIState, _gui_state_path, _get_default_state_path, _filter_nested_dict
@@ -24,7 +25,8 @@ class MyClass(object):
 
 
 def test_get_default_state_path():
-    assert str(_get_default_state_path(MyClass())).endswith('gui/tests/static/state.json')
+    assert str(_get_default_state_path(MyClass())).endswith(
+        os.sep.join(('gui', 'tests', 'static', 'state.json')))
 
 
 def test_gui_state_view_1(tempdir):
