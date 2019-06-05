@@ -335,6 +335,7 @@ def test_supervisor_color(qtbot, supervisor):
     supervisor.actions.colormap_linear()
     supervisor.actions.color_field_n_spikes()
     supervisor.actions.toggle_categorical_colormap(False)
+    supervisor.actions.toggle_logarithmic_colormap(True)
 
 
 def test_supervisor_select_2(qtbot, supervisor):
@@ -408,6 +409,10 @@ def test_supervisor_sort(qtbot, supervisor):
     supervisor.sort('id', 'desc')
     qtbot.wait(50)
     assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
+
+    supervisor.actions.sort_by_n_spikes()
+    qtbot.wait(50)
+    assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
 
 
 def test_supervisor_filter(qtbot, supervisor):

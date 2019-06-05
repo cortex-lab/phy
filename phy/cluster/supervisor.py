@@ -451,7 +451,7 @@ class Supervisor(object):
         self.context = context
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
         self._is_dirty = None
-        self._init_sort = sort
+        self._sort = sort  # Initial sort requested in the constructor
 
         # Cluster metrics.
         # This is a dict {name: func cluster_id => value}.
@@ -519,13 +519,26 @@ class Supervisor(object):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _set_color_actions(self, field=None, colormap=None, categorical=None):
+    def _set_sort_actions(self):
+        """Create snippets for sorting in the cluster view."""
+
+        def _make_sort_action(column):
+            def change_sort():
+                self.sort(column)
+            return change_sort
+
+        for column in self.columns:
+            self.actions.add(
+                _make_sort_action(column), name='Sort by: %s' % column.lower(),
+                alias='s%s' % column.replace('_', '')[:2])
+
+    def _set_color_actions(self, field=None, colormap=None, categorical=None, logarithmic=False):
         # Create the ClusterColorSelector instance.
         self.color_selector = ClusterColorSelector(
             cluster_meta=self.cluster_meta,
             cluster_metrics=self.cluster_metrics,
             cluster_ids=self.clustering.cluster_ids,
-            field=field, colormap=colormap, categorical=categorical,
+            field=field, colormap=colormap, categorical=categorical, logarithmic=logarithmic,
         )
 
         # Change color field action.
@@ -540,7 +553,7 @@ class Supervisor(object):
                 self.cluster_labels.keys(), self.cluster_metrics.keys()):
             self.actions.add(
                 _make_color_field_action(field), name='Color field: %s' % field.lower(),
-                alias='cf%s' % field[:2],
+                alias='cf%s' % field.replace('_', '')[:2],
                 menu='&View', submenu='Change color field')
 
         # Change color map action.
@@ -557,9 +570,15 @@ class Supervisor(object):
                 menu='&View', submenu='Change colormap')
 
         # Change colormap categorical or continous.
-        @self.actions.add(menu='&View', checkable=True, checked=True)
+        @self.actions.add(menu='&View', checkable=True, checked=categorical is True)
         def toggle_categorical_colormap(checked):
             self.color_selector.set_color_mapping(categorical=checked)
+            emit('color_mapping_changed', self)
+
+        # Change colormap logarithmic.
+        @self.actions.add(menu='&View', checkable=True, checked=logarithmic is True)
+        def toggle_logarithmic_colormap(checked):
+            self.color_selector.set_color_mapping(logarithmic=checked)
             emit('color_mapping_changed', self)
 
         self.actions.separator(menu='&View')
@@ -644,12 +663,13 @@ class Supervisor(object):
         out['is_masked'] = _is_group_masked(out.get('group', None))
         return {k: v for k, v in out.items() if k not in exclude}
 
-    def _create_views(self, gui=None):
+    def _create_views(self, gui=None, sort=None):
+        sort = sort or self._sort  # comes from either the GUI state or constructor
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
         # Create the cluster view.
         self.cluster_view = ClusterView(
-            gui, data=data, columns=self.columns, sort=self._init_sort)
+            gui, data=data, columns=self.columns, sort=sort)
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
@@ -666,7 +686,7 @@ class Supervisor(object):
     def _reset_cluster_view(self):
         logger.debug("Reset the cluster view.")
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
-        self.cluster_view._reset_table(data=data, columns=self.columns, sort=self._init_sort)
+        self.cluster_view._reset_table(data=data, columns=self.columns, sort=self._sort)
 
     def _clusters_added(self, cluster_ids):
         logger.log(5, "Clusters added: %s", cluster_ids)
@@ -756,7 +776,8 @@ class Supervisor(object):
 
     def attach(self, gui):
         # Create the cluster view and similarity view.
-        self._create_views(gui=gui)
+        self._create_views(
+            gui=gui, sort=gui.state.get('ClusterView', {}).get('current_sort', None))
 
         # Create the TaskLogger.
         self.task_logger = TaskLogger(
@@ -766,8 +787,8 @@ class Supervisor(object):
         )
 
         connect(self._save_gui_state, event='close', sender=gui)
-        gui.add_view(self.cluster_view, position='left')
-        gui.add_view(self.similarity_view, position='left')
+        gui.add_view(self.cluster_view, position='left', closable=False)
+        gui.add_view(self.similarity_view, position='left', closable=False)
         #self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view, gui))
 
         self.action_creator.attach(gui)
@@ -776,10 +797,13 @@ class Supervisor(object):
         state = gui.state.get('color_selector', Bunch())
         # Create the cluster color selector and associated actions.
         self._set_color_actions(
-            field=state.get('field', None),
+            field=state.get('color_field', None),
             colormap=state.get('colormap', None),
             categorical=state.get('categorical', None),
+            logarithmic=state.get('logarithmic', None),
         )
+        # Sort actions.
+        self._set_sort_actions()
 
         emit('attach_gui', self)
 
