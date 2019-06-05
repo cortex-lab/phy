@@ -83,6 +83,8 @@ class TemplateController(object):
         self.cache_dir = self.model.dir_path / '.phy'
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
+        # mapping name => function {cluster_id: value}, to update in plugins
+        self.cluster_metrics = {}
         self.view_creator = {
             'WaveformView': self.create_waveform_view,
             'TraceView': self.create_trace_view,
@@ -131,13 +133,13 @@ class TemplateController(object):
                      'get_best_channels',
                      'get_probe_depth',
                      'get_cluster_amplitude',
-                     '_get_template_waveforms',
+                     'get_template_waveforms',
                      )
-        cached = ('_get_waveforms',
-                  '_get_features',
-                  '_get_template_features',
-                  '_get_amplitudes',
-                  '_get_correlograms',
+        cached = ('get_waveforms',
+                  'get_features',
+                  'get_template_features',
+                  'get_amplitudes',
+                  'get_correlograms',
                   )
         _cache_methods(self, memcached, cached)
 
@@ -152,6 +154,7 @@ class TemplateController(object):
             'depth': self.get_probe_depth,
             'amplitude': self.get_cluster_amplitude,
         }
+        cluster_metrics.update(self.cluster_metrics)
         supervisor = Supervisor(spike_clusters=self.model.spike_clusters,
                                 cluster_groups=cluster_groups,
                                 cluster_metrics=cluster_metrics,
@@ -216,7 +219,7 @@ class TemplateController(object):
         return template_ids[ind]
 
     def get_cluster_amplitude(self, cluster_id):
-        bunch = self._get_template_waveforms(cluster_id)
+        bunch = self.get_template_waveforms(cluster_id)
         data = bunch.data
         masks = bunch.masks
         assert data.ndim == 3
@@ -263,7 +266,7 @@ class TemplateController(object):
     # Waveforms
     # -------------------------------------------------------------------------
 
-    def _get_waveforms(self, cluster_id):
+    def get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         pos = self.model.channel_positions
         spike_ids = self.selector.select_spikes(
@@ -276,14 +279,14 @@ class TemplateController(object):
                      channel_positions=pos[channel_ids],
                      )
 
-    def _get_mean_waveforms(self, cluster_id):
-        b = self._get_waveforms(cluster_id)
+    def get_mean_waveforms(self, cluster_id):
+        b = self.get_waveforms(cluster_id)
         if b.data is not None:
             b.data = b.data.mean(axis=0)[np.newaxis, ...]
         b['alpha'] = 1.
         return b
 
-    def _get_template_waveforms(self, cluster_id):
+    def get_template_waveforms(self, cluster_id):
         """Return the waveforms of the templates corresponding to a cluster."""
         pos = self.model.channel_positions
         count = self.get_template_counts(cluster_id)
@@ -295,7 +298,7 @@ class TemplateController(object):
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
         # Get the mean amplitude for the cluster.
-        mean_amp = self._get_amplitudes([cluster_id])[0].y.mean()
+        mean_amp = self.get_amplitudes([cluster_id])[0].y.mean()
         # Get all templates from which this cluster stems from.
         templates = [self.model.get_template(template_id)
                      for template_id in template_ids]
@@ -314,17 +317,17 @@ class TemplateController(object):
                      )
 
     def create_waveform_view(self):
-        f = (self._get_waveforms if self.model.traces is not None
-             else self._get_template_waveforms)
+        f = (self.get_waveforms if self.model.traces is not None
+             else self.get_template_waveforms)
         v = WaveformView(waveforms=f)
         v.shortcuts['toggle_templates'] = 'w'
         v.shortcuts['toggle_mean_waveforms'] = 'm'
 
         v.state_attrs += ('show_what',)
         funs = {
-            'waveforms': self._get_waveforms,
-            'templates': self._get_template_waveforms,
-            'mean_waveforms': self._get_mean_waveforms,
+            'waveforms': self.get_waveforms,
+            'templates': self.get_template_waveforms,
+            'mean_waveforms': self.get_mean_waveforms,
         }
 
         # Add extra actions.
@@ -365,7 +368,7 @@ class TemplateController(object):
     # Features
     # -------------------------------------------------------------------------
 
-    def _get_spike_ids(self, cluster_id=None, load_all=None):
+    def get_spike_ids(self, cluster_id=None, load_all=None):
         if cluster_id is None:
             nsf = self.n_spikes_features_background
             # Background points.
@@ -381,14 +384,14 @@ class TemplateController(object):
             spike_ids = np.intersect1d(spike_ids, self.model.features_rows)
         return spike_ids
 
-    def _get_spike_times(self, cluster_id=None, load_all=None):
-        spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
+    def get_spike_times(self, cluster_id=None, load_all=None):
+        spike_ids = self.get_spike_ids(cluster_id, load_all=load_all)
         return Bunch(data=self.model.spike_times[spike_ids],
                      spike_ids=spike_ids,
                      lim=(0., self.model.duration))
 
-    def _get_features(self, cluster_id=None, channel_ids=None, load_all=None):
-        spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
+    def get_features(self, cluster_id=None, channel_ids=None, load_all=None):
+        spike_ids = self.get_spike_ids(cluster_id, load_all=load_all)
         # Use the best channels only if a cluster is specified and
         # channels are not specified.
         if cluster_id is not None and channel_ids is None:
@@ -411,21 +414,21 @@ class TemplateController(object):
         if self.model.features is None:
             return
         return FeatureView(
-            features=self._get_features,
-            attributes={'time': self._get_spike_times}
+            features=self.get_features,
+            attributes={'time': self.get_spike_times}
         )
 
     # Template features
     # -------------------------------------------------------------------------
 
-    def _get_template_features(self, cluster_ids, load_all=None):
+    def get_template_features(self, cluster_ids, load_all=None):
         if len(cluster_ids) != 2:
             return
         assert len(cluster_ids) == 2
         clu0, clu1 = cluster_ids
 
-        s0 = self._get_spike_ids(clu0, load_all=load_all)
-        s1 = self._get_spike_ids(clu1, load_all=load_all)
+        s0 = self.get_spike_ids(clu0, load_all=load_all)
+        s1 = self.get_spike_ids(clu1, load_all=load_all)
 
         n0 = self.get_template_counts(clu0)
         n1 = self.get_template_counts(clu1)
@@ -454,12 +457,12 @@ class TemplateController(object):
     def create_template_feature_view(self):
         if self.model.template_features is None:
             return
-        return TemplateFeatureView(coords=self._get_template_features)
+        return TemplateFeatureView(coords=self.get_template_features)
 
     # Traces
     # -------------------------------------------------------------------------
 
-    def _get_traces(self, interval, show_all_spikes=False):
+    def get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
         k = self.model.n_samples_templates
         m = self.model
@@ -498,7 +501,7 @@ class TemplateController(object):
             return
 
         m = self.model
-        v = TraceView(traces=self._get_traces,
+        v = TraceView(traces=self.get_traces,
                       spike_times=self._trace_spike_times,
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
@@ -508,7 +511,7 @@ class TemplateController(object):
 
         # Update the get_traces() function with show_all_spikes.
         def get_traces(interval):
-            return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
+            return self.get_traces(interval, show_all_spikes=v.show_all_spikes)
         v.traces = get_traces
 
         @connect(sender=v)
@@ -533,7 +536,7 @@ class TemplateController(object):
     # Correlograms
     # -------------------------------------------------------------------------
 
-    def _get_correlograms(self, cluster_ids, bin_size, window_size):
+    def get_correlograms(self, cluster_ids, bin_size, window_size):
         spike_ids = self.selector.select_spikes(cluster_ids,
                                                 self.n_spikes_correlograms,
                                                 subset='random',
@@ -548,7 +551,7 @@ class TemplateController(object):
                             window_size=window_size,
                             )
 
-    def _get_firing_rate(self, cluster_ids, bin_size):
+    def get_correlograms_rate(self, cluster_ids, bin_size):
         spike_ids = self.selector.select_spikes(cluster_ids,
                                                 self.n_spikes_correlograms,
                                                 subset='random',
@@ -560,15 +563,15 @@ class TemplateController(object):
     def create_correlogram_view(self):
         m = self.model
         return CorrelogramView(
-            correlograms=self._get_correlograms,
-            firing_rate=self._get_firing_rate,
+            correlograms=self.get_correlograms,
+            firing_rate=self.get_correlograms_rate,
             sample_rate=m.sample_rate,
         )
 
     # Amplitudes
     # -------------------------------------------------------------------------
 
-    def _get_amplitudes(self, cluster_ids, load_all=False):
+    def get_amplitudes(self, cluster_ids, load_all=False):
         n = self.n_spikes_amplitudes if not load_all else None
         m = self.model
         bunchs = []
@@ -586,7 +589,7 @@ class TemplateController(object):
     def create_amplitude_view(self):
         if self.model.amplitudes is None:
             return
-        view = AmplitudeView(coords=self._get_amplitudes)
+        view = AmplitudeView(coords=self.get_amplitudes)
         view.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
         return view
 
@@ -660,7 +663,7 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def get_templates(self, cluster_ids):
-        bunchs = {cluster_id: self._get_template_waveforms(cluster_id)
+        bunchs = {cluster_id: self.get_template_waveforms(cluster_id)
                   for cluster_id in cluster_ids}
         return {cluster_id: Bunch(
                 template=bunchs[cluster_id].data[0, ...],
@@ -731,17 +734,17 @@ class TemplateController(object):
         return _make
 
     def get_isi(self, cluster_id):
-        st = self._get_spike_times(cluster_id, load_all=True).data
+        st = self.get_spike_times(cluster_id, load_all=True).data
         intervals = np.diff(st)
         return Bunch(data=intervals)
 
     def get_firing_rate(self, cluster_id):
-        st = self._get_spike_times(cluster_id, load_all=True).data
+        st = self.get_spike_times(cluster_id, load_all=True).data
         dur = self.model.duration
         return Bunch(data=st, x_max=dur)
 
     def get_amplitude_histogram(self, cluster_id):
-        amp = self._get_amplitudes([cluster_id])[0].y
+        amp = self.get_amplitudes([cluster_id])[0].y
         return Bunch(data=amp)
 
     # Spike attributes views
@@ -752,7 +755,7 @@ class TemplateController(object):
         def coords(cluster_ids, load_all=False):
             bunchs = []
             for cluster_id in cluster_ids:
-                spike_ids = self._get_spike_ids(cluster_id=cluster_id, load_all=load_all)
+                spike_ids = self.get_spike_ids(cluster_id=cluster_id, load_all=load_all)
                 if arr.ndim == 1:
                     x = self.model.spike_times[spike_ids]
                     y = arr[spike_ids]

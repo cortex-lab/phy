@@ -15,6 +15,7 @@ import sys
 
 from io import StringIO
 
+from phylib.utils import Bunch
 from phylib.utils._misc import _git_version
 from phylib.utils.event import connect, unconnect, emit
 from .utils.config import load_master_config
