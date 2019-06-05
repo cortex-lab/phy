@@ -5,6 +5,8 @@ phy provides two GUIs:
 * the **Template GUI** for KiloSort/SpykingCircus datasets.
 * the **Kwik GUI** for Kwik datasets, obtained with the klusta spike-sorting program.
 
+These GUIs let you visualize ephys data that has already been spike-sorted. You can also refine the clustering manually if needed. Finally, you can use the GUI as a platform for interactive ephys data analysis. The **IPython view** lets you interact with the data interactively from within the GUI.
+
 
 ## Opening a dataset in the GUI
 
@@ -171,6 +173,14 @@ Background spikes from all clusters are shown in grey.
 ```
 
 
+### Template feature view
+
+This view is only active when exactly two clusters are selected. It shows the `template_features.npy` file, which is created by KiloSort.
+
+![image](https://user-images.githubusercontent.com/1942359/58952660-9ff42d00-8794-11e9-88ff-a31394ee9cea.png)
+
+
+
 ### Correlogram view
 
 This view shows the autocorrelograms and cross-correlograms between all pairs of selected clusters.
@@ -274,3 +284,18 @@ This view shows all templates. The position of the templates depends on the sort
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
 ```
+
+
+## IPython view
+
+The **IPython view** is an interactive IPython console that runs in the GUI's process. It lets you interact with the data and the GUI interactively.
+
+For convenience, the following variables are available in the GUI:
+
+* `m`: the `TemplateModel` instance that represents the dataset.
+* `c`: the `TemplateController` instance that links the model to the views.
+* `s`: the `Supervisor` instance that handles the cluster and similarity views, the cluster assignments, the clustering actions, etc. The clustering process by itself (which spikes are assigned to which clusters) is managed by `s.clustering`, a `Clustering` instance.
+
+![image](https://user-images.githubusercontent.com/1942359/58953022-96b79000-8795-11e9-9bdd-77523c1c099e.png)
+
+You can use matplotlib to make quick plots in the IPython view, although it is better to write a custom view properly if you need to reuse it (see the developer section in this documentation).
