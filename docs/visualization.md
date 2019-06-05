@@ -286,6 +286,20 @@ This view shows all templates. The position of the templates depends on the sort
 ```
 
 
+### Spike attribute view
+
+A **spike attribute view** is a view automatically created for every `spike_somename.npy` file in the data directory, that contains as many 1D or 2D points as spikes. In other words, the array shape should be `(n_spikes,)` or `(n_spikes, 2)`:
+
+* 1D array: the view shows time (x axis) versus the value (y axis) for every spike
+* 2D array: the view shows the (x, y) values for every spike
+
+In the following screenshot, a `spike_hello.npy` array containing `sin(spike_time)` was saved, and a `SpikeHelloView` was automatically created:
+
+![image](https://user-images.githubusercontent.com/1942359/58956662-2a418e80-879f-11e9-8227-2c56db2965e4.png)
+
+You can split clusters by drawing polygons in the spike attribute views, as in the feature, amplitude, and template feature views.
+
+
 ## IPython view
 
 The **IPython view** is an interactive IPython console that runs in the GUI's process. It lets you interact with the data and the GUI interactively.

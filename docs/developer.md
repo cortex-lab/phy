@@ -2,18 +2,6 @@
 
 This section gives some information to develop new features in phy, as plugins or as pull requests to the main repository.
 
-## Code overview
-
-### Event system
-
-example of on_cluster, singleton instance
-
-### Cache system
-
-### GUI state
-
-global and local
-
 
 ## Writing custom OpenGL view
 

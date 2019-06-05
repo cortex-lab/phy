@@ -15,7 +15,7 @@ All spikes belonging to either of the selected clusters will be assigned to that
 
 ## Splitting clusters
 
-You can create a new cluster by drawing a polygon around a set of spikes in the feature view, the amplitude view, or the template amplitude view (**Control+click** to add points to the polygon).
+You can create a new cluster by drawing a polygon around a set of spikes in the feature view, the amplitude view, the template amplitude view, or the spike attribute views (**Control+click** to add points to the polygon).
 
 ![image](https://user-images.githubusercontent.com/1942359/58953705-8d2f2780-8797-11e9-8cca-e64567b9bb1b.png)
 
