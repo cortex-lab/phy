@@ -612,7 +612,7 @@ class TemplateController(object):
             cluster_color_selector=self.color_selector,
         )
 
-        @connect
+        @connect(sender=view)
         def on_cluster_click(sender, cluster_id, key=None, button=None):
             self.supervisor.select([cluster_id])
 
@@ -639,7 +639,7 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):
-            view.update_color()
+            view.update_color(self.supervisor.selected_clusters)
 
         @connect
         def on_close_view(sender, view_):
@@ -678,7 +678,7 @@ class TemplateController(object):
             cluster_color_selector=self.color_selector,
         )
 
-        @connect
+        @connect(sender=view)
         def on_cluster_click(sender, cluster_id, key=None, button=None):
             self.supervisor.select([cluster_id])
 
@@ -704,7 +704,7 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):
-            view.update_color()
+            view.update_color(self.supervisor.selected_clusters)
 
         @connect
         def on_close_view(sender, view_):
@@ -794,7 +794,6 @@ class TemplateController(object):
         # gui.set_default_actions()
         # Get the state's current sort, and make sure the cluster view is initialized
         # with it.
-        self.supervisor._init_sort = gui.state.get('ClusterView', {}).get('current_sort', None)
         self.supervisor.attach(gui)
 
         gui.set_default_actions()
