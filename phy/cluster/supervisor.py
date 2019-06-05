@@ -357,8 +357,6 @@ class ActionCreator(object):
 
         # Selection.
         self.add('select', alias='c', docstring='Select some clusters.')
-        self.add('sort', alias='s')
-        self.add('filter', alias='f')
         self.separator()
 
         self.add('undo', docstring='Undo the last action.')
@@ -394,6 +392,11 @@ class ActionCreator(object):
         self.separator()
         self.add('next_best', docstring='Select the next best cluster.')
         self.add('previous_best', docstring='Select the previous best cluster.')
+        self.separator()
+
+        # Sort and filter
+        self.add('filter', alias='f', prompt=True, n_args=1)
+        self.add('sort', alias='s', prompt=True, n_args=1)
         self.separator()
 
 
@@ -530,6 +533,7 @@ class Supervisor(object):
         for column in self.columns:
             self.actions.add(
                 _make_sort_action(column), name='Sort by: %s' % column.lower(),
+                menu='&Edit', submenu='Sort by',
                 alias='s%s' % column.replace('_', '')[:2])
 
     def _set_color_actions(self, field=None, colormap=None, categorical=None, logarithmic=False):
@@ -793,6 +797,9 @@ class Supervisor(object):
 
         self.action_creator.attach(gui)
 
+        # Sort actions.
+        self._set_sort_actions()
+
         # Get the color selector parameters from the GUI state.
         state = gui.state.get('color_selector', Bunch())
         # Create the cluster color selector and associated actions.
@@ -802,8 +809,6 @@ class Supervisor(object):
             categorical=state.get('categorical', None),
             logarithmic=state.get('logarithmic', None),
         )
-        # Sort actions.
-        self._set_sort_actions()
 
         emit('attach_gui', self)
 
