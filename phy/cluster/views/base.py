@@ -36,6 +36,7 @@ class ManualClusteringView(object):
     }
     auto_update = True  # automatically update the view when the cluster selection changes
     _default_position = None
+    plot_canvas_class = PlotCanvas
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -57,7 +58,7 @@ class ManualClusteringView(object):
         # Attached GUI.
         self.gui = None
 
-        self.canvas = PlotCanvas()
+        self.canvas = self.plot_canvas_class()
 
         # Attach the Qt events to this class, so that derived class
         # can override on_mouse_click() and so on.

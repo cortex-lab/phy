@@ -35,6 +35,8 @@ def _try_get_matplotlib_canvas(view):
         # Case where the view has a .figure property which is a matplotlib figure.
         elif isinstance(getattr(view, 'figure', None), Figure):
             view = FigureCanvasQTAgg(view.figure)
+        elif isinstance(getattr(getattr(view, 'canvas', None), 'figure', None), Figure):
+            view = FigureCanvasQTAgg(view.canvas.figure)
     except ImportError as e:  # pragma: no cover
         logger.warning("Import error: %s", e)
     return view

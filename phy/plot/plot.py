@@ -294,6 +294,9 @@ class PlotCanvasMpl(object):
         self._current_box_index = _as_tuple(box_index)
         return self
 
+    def attach_events(self, view):
+        pass
+
     @property
     def ax(self):
         if len(self._current_box_index) == 1:
@@ -370,8 +373,10 @@ class PlotCanvasMpl(object):
         if not self.gui and not self._shown:
             self.nav = NavigationToolbar(self.canvas, None, coordinates=False)
             self.nav.pan()
-            self.figure.show()
         self._shown = True
+
+    def update(self):  # pragma: no cover
+        return self.show()
 
     def close(self):
         self.canvas.close()

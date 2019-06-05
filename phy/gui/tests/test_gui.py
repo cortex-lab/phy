@@ -44,6 +44,13 @@ def test_matplotlib_view():
         figure = Figure()
     assert isinstance(_try_get_matplotlib_canvas(MyFigure()), QWidget)
 
+    class Canvas(object):
+        figure = Figure()
+
+    class MyFigure(object):
+        canvas = Canvas()
+    assert isinstance(_try_get_matplotlib_canvas(MyFigure()), QWidget)
+
 
 def test_opengl_view():
     from phy.plot.base import BaseCanvas

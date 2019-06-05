@@ -269,7 +269,7 @@ class TraceView(ManualClusteringView):
     def _plot_all_waveforms(self, waveforms):
         # Plot the spikes.
         assert isinstance(waveforms, list)
-        if not waveforms:
+        if not waveforms:  # pragma: no cover
             self.waveform_visual.hide()
             return
         self.waveform_visual.show()

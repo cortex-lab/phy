@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from .base import ManualClusteringView  # noqa
 from .correlogram import CorrelogramView  # noqa
 from .feature import FeatureView  # noqa
 from .scatter import ScatterView  # noqa
