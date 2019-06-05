@@ -54,7 +54,7 @@ The **Cluster view** shows the list of all clusters in your dataset.
 
 #### Definition
 
-A cluster is a given set of spikes, supposed to correspond to a single neuron. A cluster is identified by a unique integer, the **cluster id**. The cluster id is unique: when the cluster changes (i.e. some spikes are removed or added), the cluster id changes.
+A **cluster** is a set of spikes, supposed to correspond to a single neuron. A cluster is identified by a unique integer, the **cluster id**. The cluster id is unique: when the cluster changes (i.e. spikes are removed or added), the cluster id changes.
 
 #### Cluster selection
 
@@ -263,6 +263,7 @@ This view shows a raster plot of *all* clusters. The order of the rows depends o
 
 ![image](https://user-images.githubusercontent.com/1942359/58951801-599dce80-8792-11e9-83af-ba78f6a2437b.png)
 
+Select a cluster with **Control+click**.
 
 #### Keyboard shortcuts and snippets
 
@@ -277,6 +278,8 @@ This view shows a raster plot of *all* clusters. The order of the rows depends o
 This view shows all templates. The position of the templates depends on the sort in the cluster view. If filtering is enabled in the cluster view, only filtered in clusters are shown in the template view.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951871-894cd680-8792-11e9-85bb-f14441a132b7.png)
+
+Select a cluster with **Control+click**.
 
 #### Keyboard shortcuts and snippets
 
