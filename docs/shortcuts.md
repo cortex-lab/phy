@@ -1,23 +1,25 @@
 # Keyboard shortcuts and snippets
 
-This pages presents the list of shortcuts and snippets in the template GUI.
+This page presents the list of shortcuts and snippets in the template GUI. You can also display them in the console by pressing `F1`.
 
 ## Snippets
 
-Complex actions that cannot be bound to a keyboard shortcut can be quickly activate via keyboard snippets. Snippets are actiavte by first pressing the `:` key, and typing the snippet name followed by some parameters.
+Complex actions cannot be easily bound to a keyboard shortcut as they may require parameters. For these, you can use **keyboard snippets**. Snippets are activated by first pressing the `:` key, typing the snippet name followed by some parameters, and pressing `Enter`.
 
-For example, to change the number of bins in the Correlogram View (`:cb` snippet as shown in the list below):
+For example, to change the window size in the Correlogram View (`:cw` snippet as shown in the list below):
 
 1. Activate the snippet mode by typing `:` on the keyboard. You can see the snippet bar at the bottom of the GUI.
-2. Type `cb 200` to change the number of bins to 200.
+2. Type `cw 200` to change the window to 200 ms.
 3. Press Enter.
 
 To cancel, press Escape to leave the snippet mode.
 
+![image](https://user-images.githubusercontent.com/1942359/58952151-3cb5cb00-8793-11e9-9ace-f941891448dc.png)
+
+
 ## List of keyboard shortcuts and snippets
 
 ```
-
 Keyboard shortcuts for TemplateGUI - File
 - exit                                     ctrl+q
 - save                                     ctrl+s

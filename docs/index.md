@@ -1,6 +1,6 @@
 # Introduction
 
-**NOTE: this documentation is for the development version of phy 2.0, available on GitHub, cortex-lab/phy repository, dev branch. A release should be available soon.**
+**NOTE: this documentation is for the development version of phy 2.0, available on GitHub, cortex-lab/phy repository, dev branch. A release should be available soon. This is still a work-in-progress.**
 
 [**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites (mostly Neuropixels probes).
 
