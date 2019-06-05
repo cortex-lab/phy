@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from textwrap import dedent
+
 from pytest import yield_fixture, raises
 
 from ..plugin import (IPluginRegistry,
@@ -60,17 +62,23 @@ def test_attach_plugins(tempdir):
     class MyController(object):
         pass
 
-    class MyPlugin1(IPlugin):
-        def attach_to_controller(self, controller):
-            controller.plugin1 = True
+    _write_text(tempdir / 'plugin1.py', dedent(
+        '''
+            from phy import IPlugin
+            class MyPlugin1(IPlugin):
+                def attach_to_controller(self, controller):
+                    controller.plugin1 = True
+        '''))
 
     class MyPlugin2(IPlugin):
         def attach_to_controller(self, controller):
             controller.plugin2 = True
 
-    contents = '''
+    contents = dedent('''
+    c = get_config()
+    c.Plugins.dirs = ['%s']
     c.MyController.plugins = ['MyPlugin1']
-    '''
+    ''' % tempdir)
     _write_text(tempdir / 'phy_config.py', contents)
 
     controller = MyController()

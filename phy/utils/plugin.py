@@ -32,8 +32,7 @@ class IPluginRegistry(type):
     def __init__(cls, name, bases, attrs):
         if name != 'IPlugin':
             logger.debug("Register plugin `%s`.", _fullname(cls))
-            if _fullname(cls) not in (_fullname(_)
-                                      for _ in IPluginRegistry.plugins):
+            if _fullname(cls) not in (_fullname(_) for _ in IPluginRegistry.plugins):
                 IPluginRegistry.plugins.append(cls)
 
 
@@ -98,6 +97,8 @@ def discover_plugins(dirs):
     for path in _iter_plugin_files(dirs):
         subdir = path.parent
         modname = path.stem
+        if modname == 'phy_config':
+            continue
         file, path, descr = imp.find_module(modname, [subdir])
         if file:
             # Loading the module registers the plugin in
@@ -117,6 +118,9 @@ def attach_plugins(controller, plugins=None, config_dir=None):
     config = load_master_config(config_dir=config_dir)
     name = getattr(controller, 'gui_name', None) or controller.__class__.__name__
     c = config.get(name)
+    # Discover plugin files in the plugin directories, as specified in the phy config file.
+    dirs = config.get('Plugins', {}).get('dirs', [])
+    discover_plugins(dirs)
     default_plugins = c.plugins if c else []
     if len(default_plugins):
         plugins = default_plugins + plugins
