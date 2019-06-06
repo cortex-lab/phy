@@ -569,7 +569,7 @@ class TextVisual(BaseVisual):
         # Load the font.
         curdir = Path(__file__).parent
         font_name = 'SourceCodePro-Regular'
-        font_size = 16 if not _is_high_dpi() else 32
+        font_size = 24 if not _is_high_dpi() else 32
         # The font texture is gzipped.
         fn = '%s-%d.npy.gz' % (font_name, font_size)
         with gzip.open(str(curdir / 'static' / fn), 'rb') as f:
