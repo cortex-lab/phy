@@ -386,7 +386,7 @@ class Attribute(Variable):
         log.log(5, "GPU: Updating %s" % self.name)
 
         if self.data is None or self.data.size == 0:
-            log.error("Data is empty for %s" % self.name)
+            log.warning("Data is empty for %s" % self.name)
             return
         else:
             log.log(5, "data shape is %s" % self.data.shape)
@@ -406,10 +406,10 @@ class Attribute(Variable):
         # Regular vertex buffer
         elif self.handle >= 0:
             if self.data is None:
-                log.error("data %s is None" % self.name)
+                log.warning("data %s is None" % self.name)
                 return
             elif self.data.size == 0:
-                log.error("data %s is empty, %s" % (self.name, self.data.shape))
+                log.warning("data %s is empty, %s" % (self.name, self.data.shape))
                 return
             else:
                 log.log(5, "data %s is okay %s" % (self.name, self.data.shape))
