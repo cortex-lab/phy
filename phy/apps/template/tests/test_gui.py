@@ -57,14 +57,14 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     s = controller.supervisor
     _wait_controller(qtbot, controller.supervisor, gui)
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     s.actions.move_best_to_good()
     s.block()
 
     assert len(s.selected) == 1
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     clu_to_merge = s.selected
@@ -80,7 +80,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     s.actions.split_init()
     s.block()
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     clu = s.selected[0]
@@ -124,7 +124,7 @@ def test_template_gui_views(qtbot, template_controller):
     s = controller.supervisor
     _wait_controller(qtbot, controller.supervisor, gui)
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     # Emulate filtering in cluster view.
@@ -138,7 +138,7 @@ def test_template_gui_views(qtbot, template_controller):
     emit('table_sort', s.cluster_view, s.clustering.cluster_ids[::-1])
     qtbot.wait(50)
 
-    s.actions.colormap_rainbow()
+    s.view_actions.colormap_rainbow()
     qtbot.wait(50)
 
     wv = gui.list_views(cv.WaveformView)
@@ -160,7 +160,7 @@ def test_template_gui_views(qtbot, template_controller):
     rv = gui.list_views(cv.RasterView)
     if rv:
         rv = rv[0]
-        s.actions.toggle_categorical_colormap(False)
+        s.view_actions.toggle_categorical_colormap(False)
 
         mouse_click(qtbot, rv.canvas, (10, 10), modifiers=('Control',))
         qtbot.wait(50)
@@ -226,27 +226,27 @@ def test_template_gui_sim(qtbot, template_controller):
     _wait_controller(qtbot, s, gui)
 
     s.cluster_view.sort_by('id', 'desc')
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     s.similarity_view.sort_by('id', 'desc')
     cl = 63
     assert s.selected == [cl]
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     assert s.selected == [cl, cl - 1]
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     assert s.selected == [cl, cl - 2]
     s.actions.merge()
     s.block()
 
-    s.actions.next_best()
+    s.select_actions.next_best()
     s.block()
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
     assert s.selected == [cl - 1, cl + 1]
 
@@ -258,7 +258,7 @@ def test_template_gui_split_amplitude(qtbot, tempdir, template_controller):
     s = template_controller.supervisor
     _wait_controller(qtbot, s, gui)
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     av = gui.list_views(AmplitudeView)[0]
@@ -286,9 +286,9 @@ def test_template_gui_split_template_feature(qtbot, tempdir, template_controller
     s = template_controller.supervisor
     _wait_controller(qtbot, s, gui)
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     assert len(s.selected) == 2
