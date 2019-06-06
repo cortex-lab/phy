@@ -157,7 +157,7 @@ class GUI(QMainWindow):
         self._menus = {}
         self.file_actions = Actions(self, name='File', menu='&File')
         self.edit_actions = Actions(self, name='Edit', menu='&Edit')
-        self.select_actions = Actions(self, name='Select', menu='&Select')
+        self.select_actions = Actions(self, name='Select', menu='Sele&ct')
         self.view_actions = Actions(self, name='View', menu='&View')
         self.help_actions = Actions(self, name='Help', menu='&Help')
 

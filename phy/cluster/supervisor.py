@@ -360,7 +360,7 @@ class ActionCreator(object):
         self.edit_actions = Actions(
             gui, menu='&Edit', default_shortcuts=self.default_shortcuts)
         self.select_actions = Actions(
-            gui, menu='&Select', default_shortcuts=self.default_shortcuts)
+            gui, menu='Sele&ct', default_shortcuts=self.default_shortcuts)
         self.view_actions = Actions(
             gui, menu='&View', default_shortcuts=self.default_shortcuts)
 
