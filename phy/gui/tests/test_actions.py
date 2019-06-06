@@ -184,7 +184,7 @@ def test_actions_checkable(qtbot, gui, actions):
     assert _l == [True, False]
 
 
-def test_actions_dialog(qtbot, gui, actions):
+def test_actions_dialog_1(qtbot, gui, actions):
 
     @actions.add(shortcut='a', prompt=True)
     def hello(arg):
@@ -200,8 +200,25 @@ def test_actions_dialog(qtbot, gui, actions):
             actions.get('hello').trigger()
     assert 'hello world' in stdout.getvalue()
 
-    with captured_logging('phy.gui.actions') as buf:
+
+def test_actions_dialog_2(qtbot, gui, actions):
+
+    @actions.add(shortcut='a', prompt=True)
+    def hello(arg1, arg2):
+        print("hello", arg1, arg2)
+
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    with captured_output() as (stdout, stderr):
         with mock_dialogs(('world world', True)):
+            # return string, ok
+            actions.get('hello').trigger()
+    assert 'hello world' in stdout.getvalue()
+
+    with captured_logging('phy.gui.actions') as buf:
+        with mock_dialogs(('world', True)):
             actions.get('hello').trigger()
     assert 'invalid' in buf.getvalue().lower()
 

@@ -173,7 +173,7 @@ def _create_qaction(
             if not args:  # pragma: no cover
                 logger.debug("User cancelled input prompt, aborting.")
                 return
-        if len(args) != n_args:
+        if len(args) < n_args:
             logger.warning(
                 "Invalid function arguments: expecting %d but got %d", n_args, len(args))
             return
