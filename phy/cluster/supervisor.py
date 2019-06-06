@@ -340,64 +340,127 @@ class ActionCreator(object):
         'redo': ('ctrl+shift+z', 'ctrl+y'),
     }
 
-    def add(self, name, **kwargs):
+    def __init__(self, supervisor=None):
+        self.supervisor = supervisor
+
+    def add(self, which, name, **kwargs):
         # This special keyword argument lets us use a different name for the
         # action and the event name/method (used for different move flavors).
         method_name = kwargs.pop('method_name', name)
         method_args = kwargs.pop('method_args', ())
         emit_fun = partial(emit, 'action', self, method_name, *method_args)
-        self.actions.add(emit_fun, name=name, **kwargs)
-
-    def separator(self, **kwargs):
-        self.actions.separator(**kwargs)
+        f = getattr(self.supervisor, method_name, None)
+        docstring = inspect.getdoc(f) if f else name
+        if not kwargs.get('docstring', None):
+            kwargs['docstring'] = docstring
+        getattr(self, '%s_actions' % which).add(emit_fun, name=name, **kwargs)
 
     def attach(self, gui):
-        self.actions = Actions(
-            gui, name='Clustering', menu='&Edit', default_shortcuts=self.default_shortcuts)
+        # Create the menus.
+        self.edit_actions = Actions(
+            gui, menu='&Edit', default_shortcuts=self.default_shortcuts)
+        self.select_actions = Actions(
+            gui, menu='&Select', default_shortcuts=self.default_shortcuts)
+        self.view_actions = Actions(
+            gui, menu='&View', default_shortcuts=self.default_shortcuts)
 
-        # Selection.
-        self.add('select', alias='c', docstring='Select some clusters.')
-        self.separator()
+        # Create the actions.
+        self._create_edit_actions(gui.state)
+        self._create_select_actions(gui.state)
+        self._create_view_actions(gui.state)
 
-        self.add('undo', docstring='Undo the last action.')
-        self.add('redo', docstring='Redo the last undone action.')
-        self.separator()
+    def _create_edit_actions(self, state):
+        w = 'edit'
+        self.add(w, 'undo')
+        self.add(w, 'redo')
+        self.edit_actions.separator()
 
         # Clustering.
-        self.add('merge', alias='g', docstring='Merge the selected clusters.')
-        self.add('split', alias='k', docstring='Create a new cluster out of the selected spikes')
-        self.separator()
+        self.add(w, 'merge', alias='g')
+        self.add(w, 'split', alias='k')
+        self.edit_actions.separator()
 
         # Move.
-        self.add('move', prompt=True, n_args=2,
-                 docstring='Move some clusters to a group.')
+        self.add(w, 'move', prompt=True, n_args=2)
         for which in ('best', 'similar', 'all'):
             for group in ('noise', 'mua', 'good', 'unsorted'):
-                self.add('move_%s_to_%s' % (which, group),
+                self.add(w, 'move_%s_to_%s' % (which, group),
                          method_name='move',
-                         submenu='Move to %s' % which,
                          method_args=(group, which),
+                         submenu='Move to %s' % which,
                          docstring='Move %s to %s.' % (which, group))
-        self.separator()
+        self.edit_actions.separator()
 
         # Label.
-        self.add('label', alias='l', prompt=True, n_args=2,
-                 docstring='Label the selected clusters.')
+        self.add(w, 'label', alias='l', prompt=True, n_args=2)
+        self.edit_actions.separator()
 
-        # Wizard.
-        self.add('reset_wizard', docstring='Reset the wizard.')
-        self.separator()
-        self.add('next', docstring='Select the next similar cluster.')
-        self.add('previous', docstring='Select the previous similar cluster.')
-        self.separator()
-        self.add('next_best', docstring='Select the next best cluster.')
-        self.add('previous_best', docstring='Select the previous best cluster.')
-        self.separator()
+    def _create_select_actions(self, state):
+        w = 'select'
+
+        # Selection.
+        self.add(w, 'select', alias='c', prompt=True, n_args=1)
+        self.select_actions.separator()
 
         # Sort and filter
-        self.add('filter', alias='f', prompt=True, n_args=1)
-        self.add('sort', alias='s', prompt=True, n_args=1)
-        self.separator()
+        self.add(w, 'filter', alias='f', prompt=True, n_args=1)
+        self.add(w, 'sort', alias='s', prompt=True, n_args=1)
+
+        # Sort by:
+        for column in getattr(self.supervisor, 'columns', ()):
+            self.add(
+                w, 'sort_by_%s' % column.lower(), method_name='sort', method_args=(column,),
+                docstring='Sort by %s' % column,
+                submenu='Sort by', alias='s%s' % column.replace('_', '')[:2])
+
+        self.select_actions.separator()
+
+        self.add(w, 'reset_wizard')
+        self.select_actions.separator()
+
+        self.add(w, 'next')
+        self.add(w, 'previous')
+        self.select_actions.separator()
+
+        self.add(w, 'next_best')
+        self.add(w, 'previous_best')
+        self.select_actions.separator()
+
+    def _create_view_actions(self, state):
+        w = 'view'
+        cluster_labels_keys = getattr(self.supervisor, 'cluster_labels', {}).keys()
+        cluster_metrics_keys = getattr(self.supervisor, 'cluster_metrics', {}).keys()
+
+        # Change color field action.
+        for field in chain(
+                ('cluster', 'group', 'n_spikes'), cluster_labels_keys, cluster_metrics_keys):
+            self.add(
+                w, name='color_field_%s' % field.lower(),
+                method_name='change_color_field',
+                method_args=(field,),
+                docstring='Change color field to %s' % field,
+                alias='cf%s' % field.replace('_', '')[:2],
+                submenu='Change color field')
+
+        # Change color map action.
+        for colormap in ('categorical', 'linear', 'diverging', 'rainbow'):
+            self.add(
+                w, name='colormap_%s' % colormap.lower(),
+                method_name='change_colormap',
+                method_args=(colormap,),
+                docstring='Change colormap to %s' % colormap,
+                alias='cm%s' % colormap[:2],
+                submenu='Change colormap')
+
+        # Change colormap categorical or continous.
+        categorical = state.get('color_selector', Bunch()).get('categorical', None)
+        self.add(w, 'toggle_categorical_colormap', checkable=True, checked=categorical is True)
+
+        # Change colormap logarithmic.
+        logarithmic = state.get('color_selector', Bunch()).get('logarithmic', None)
+        self.add(w, 'toggle_logarithmic_colormap', checkable=True, checked=logarithmic is True)
+
+        self.view_actions.separator()
 
 
 # -----------------------------------------------------------------------------
@@ -453,6 +516,7 @@ class Supervisor(object):
         super(Supervisor, self).__init__()
         self.context = context
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
+        self.actions = None  # will be set when attaching the GUI
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
 
@@ -472,9 +536,8 @@ class Supervisor(object):
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
         spc = context.load('spikes_per_cluster') if context else None
-        self.clustering = Clustering(spike_clusters,
-                                     spikes_per_cluster=spc,
-                                     new_cluster_id=new_cluster_id)
+        self.clustering = Clustering(
+            spike_clusters, spikes_per_cluster=spc, new_cluster_id=new_cluster_id)
 
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
@@ -493,7 +556,7 @@ class Supervisor(object):
         self._global_history = GlobalHistory(process_ups=_process_ups)
 
         # Create The Action Creator instance.
-        self.action_creator = ActionCreator()
+        self.action_creator = ActionCreator(self)
         connect(self._on_action, event='action', sender=self.action_creator)
 
         # Log the actions.
@@ -521,79 +584,6 @@ class Supervisor(object):
 
     # Internal methods
     # -------------------------------------------------------------------------
-
-    def _set_sort_actions(self):
-        """Create snippets for sorting in the cluster view."""
-
-        def _make_sort_action(column):
-            def change_sort():
-                self.sort(column)
-            return change_sort
-
-        for column in self.columns:
-            self.actions.add(
-                _make_sort_action(column), name='Sort by: %s' % column.lower(),
-                menu='&Edit', submenu='Sort by',
-                alias='s%s' % column.replace('_', '')[:2])
-
-    def _set_color_actions(self, field=None, colormap=None, categorical=None, logarithmic=False):
-        # Create the ClusterColorSelector instance.
-        self.color_selector = ClusterColorSelector(
-            cluster_meta=self.cluster_meta,
-            cluster_metrics=self.cluster_metrics,
-            cluster_ids=self.clustering.cluster_ids,
-            field=field, colormap=colormap, categorical=categorical, logarithmic=logarithmic,
-        )
-
-        # Change color field action.
-        def _make_color_field_action(color_field):
-            def change_color_field():
-                self.color_selector.set_color_mapping(field=color_field)
-                emit('color_mapping_changed', self)
-            return change_color_field
-
-        for field in chain(
-                ('cluster', 'group', 'n_spikes'),
-                self.cluster_labels.keys(), self.cluster_metrics.keys()):
-            self.actions.add(
-                _make_color_field_action(field), name='Color field: %s' % field.lower(),
-                alias='cf%s' % field.replace('_', '')[:2],
-                menu='&View', submenu='Change color field')
-
-        # Change color map action.
-        def _make_colormap_action(colormap):
-            def change_colormap():
-                self.color_selector.set_color_mapping(colormap=colormap)
-                emit('color_mapping_changed', self)
-            return change_colormap
-
-        for colormap in ('categorical', 'linear', 'diverging', 'rainbow'):
-            self.actions.add(
-                _make_colormap_action(colormap), name='Colormap: %s' % colormap.lower(),
-                alias='cm%s' % colormap[:2],
-                menu='&View', submenu='Change colormap')
-
-        # Change colormap categorical or continous.
-        @self.actions.add(menu='&View', checkable=True, checked=categorical is True)
-        def toggle_categorical_colormap(checked):
-            self.color_selector.set_color_mapping(categorical=checked)
-            emit('color_mapping_changed', self)
-
-        # Change colormap logarithmic.
-        @self.actions.add(menu='&View', checkable=True, checked=logarithmic is True)
-        def toggle_logarithmic_colormap(checked):
-            self.color_selector.set_color_mapping(logarithmic=checked)
-            emit('color_mapping_changed', self)
-
-        self.actions.separator(menu='&View')
-
-        @connect(sender=self)
-        def on_cluster(sender, up):
-            # After a clustering action, get the cluster ids as shown
-            # in the cluster view, and update the color selector accordingly.
-            @self.cluster_view.get_ids
-            def _update(cluster_ids):
-                self.color_selector.set_cluster_ids(cluster_ids)
 
     def _save_spikes_per_cluster(self):
         if not self.context:
@@ -795,22 +785,29 @@ class Supervisor(object):
         gui.add_view(self.similarity_view, position='left', closable=False)
         #self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view, gui))
 
-        self.action_creator.attach(gui)
-
-        # Sort actions.
-        self._set_sort_actions()
-
-        # Get the color selector parameters from the GUI state.
-        state = gui.state.get('color_selector', Bunch())
-        # Create the cluster color selector and associated actions.
-        self._set_color_actions(
-            field=state.get('color_field', None),
-            colormap=state.get('colormap', None),
-            categorical=state.get('categorical', None),
-            logarithmic=state.get('logarithmic', None),
+        # Create the ClusterColorSelector instance.
+        # Pass the state variables: color_field, colormap, categorical, logarithmic
+        self.color_selector = ClusterColorSelector(
+            cluster_meta=self.cluster_meta,
+            cluster_metrics=self.cluster_metrics,
+            cluster_ids=self.clustering.cluster_ids,
+            **gui.state.get('color_selector', Bunch())
         )
 
+        # Create all supervisor actions (edit and view menu).
+        self.action_creator.attach(gui)
+        self.actions = self.action_creator.edit_actions  # clustering actions
+        self.select_actions = self.action_creator.select_actions
+        self.view_actions = self.action_creator.view_actions
         emit('attach_gui', self)
+
+        @connect(sender=self)
+        def on_cluster(sender, up):
+            # After a clustering action, get the cluster ids as shown
+            # in the cluster view, and update the color selector accordingly.
+            @self.cluster_view.get_ids
+            def _update(cluster_ids):
+                self.color_selector.set_cluster_ids(cluster_ids)
 
         # Call supervisor.save() when the save/ctrl+s action is triggered in the GUI.
         @connect(sender=gui)
@@ -831,11 +828,6 @@ class Supervisor(object):
         def on_close(e):
             gui.state['color_selector'] = self.color_selector.state
             unconnect(on_is_busy)
-
-    @property
-    def actions(self):
-        """Works only after a GUI has been attached to the supervisor."""
-        return getattr(self.action_creator, 'actions', None)
 
     # Selection actions
     # -------------------------------------------------------------------------
@@ -982,6 +974,29 @@ class Supervisor(object):
     def previous(self, callback=None):
         """Select the previous cluster."""
         self.similarity_view.previous(callback=callback or partial(emit, 'wizard_done', self))
+
+    # Color mapping actions
+    # -------------------------------------------------------------------------
+
+    def change_color_field(self, color_field):
+        """Change color field."""
+        self.color_selector.set_color_mapping(color_field=color_field)
+        emit('color_mapping_changed', self)
+
+    def change_colormap(self, colormap):
+        """Change colormap."""
+        self.color_selector.set_color_mapping(colormap=colormap)
+        emit('color_mapping_changed', self)
+
+    def toggle_categorical_colormap(self, checked):
+        """Toggle categorical colormap."""
+        self.color_selector.set_color_mapping(categorical=checked)
+        emit('color_mapping_changed', self)
+
+    def toggle_logarithmic_colormap(self, checked):
+        """Toggle logarithmic transform for colormap."""
+        self.color_selector.set_color_mapping(logarithmic=checked)
+        emit('color_mapping_changed', self)
 
     # Other actions
     # -------------------------------------------------------------------------

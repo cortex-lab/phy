@@ -59,19 +59,19 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
                similarity, tempdir):
     spike_clusters = np.repeat(cluster_ids, 2)
 
-    mc = Supervisor(spike_clusters,
-                    cluster_groups=cluster_groups,
-                    cluster_labels=cluster_labels,
-                    similarity=similarity,
-                    context=Context(tempdir),
-                    sort=('id', 'desc'),
-                    )
-    mc.attach(gui)
+    s = Supervisor(spike_clusters,
+                   cluster_groups=cluster_groups,
+                   cluster_labels=cluster_labels,
+                   similarity=similarity,
+                   context=Context(tempdir),
+                   sort=('id', 'desc'),
+                   )
+    s.attach(gui)
     b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
+    connect(b('cluster_view'), event='ready', sender=s.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=s.similarity_view)
     b.wait()
-    return mc
+    return s
 
 
 #------------------------------------------------------------------------------
@@ -325,21 +325,21 @@ def test_supervisor_select_1(qtbot, supervisor):
     # WARNING: always use actions in tests, because this doesn't call
     # the supervisor method directly, but raises an event, enqueue the task,
     # and call TaskLogger.process() which handles the cascade of callbacks.
-    supervisor.actions.select([0])
+    supervisor.select_actions.select([0])
     supervisor.block()
     _assert_selected(supervisor, [0])
     supervisor.task_logger.show_history()
 
 
 def test_supervisor_color(qtbot, supervisor):
-    supervisor.actions.colormap_linear()
-    supervisor.actions.color_field_n_spikes()
-    supervisor.actions.toggle_categorical_colormap(False)
-    supervisor.actions.toggle_logarithmic_colormap(True)
+    supervisor.view_actions.colormap_linear()
+    supervisor.view_actions.color_field_n_spikes()
+    supervisor.view_actions.toggle_categorical_colormap(False)
+    supervisor.view_actions.toggle_logarithmic_colormap(True)
 
 
 def test_supervisor_select_2(qtbot, supervisor):
-    supervisor.actions.next_best()
+    supervisor.select_actions.next_best()
     supervisor.block()
     _assert_selected(supervisor, [30])
 
@@ -400,7 +400,7 @@ def test_supervisor_skip(qtbot, gui, supervisor):
     expected = [30, 20, 11, 2, 1]
 
     for clu in expected:
-        supervisor.actions.next_best()
+        supervisor.select_actions.next_best()
         supervisor.block()
         _assert_selected(supervisor, [clu])
 
@@ -410,7 +410,7 @@ def test_supervisor_sort(qtbot, supervisor):
     qtbot.wait(50)
     assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
 
-    supervisor.actions.sort_by_n_spikes()
+    supervisor.select_actions.sort_by_n_spikes()
     qtbot.wait(50)
     assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
 
@@ -487,7 +487,7 @@ def test_supervisor_split_0(qtbot, supervisor):
 
 def test_supervisor_split_1(supervisor):
 
-    supervisor.actions.select([1, 2])
+    supervisor.select_actions.select([1, 2])
     supervisor.block()
 
     @connect(sender=supervisor)
@@ -643,7 +643,7 @@ def test_supervisor_move_2(supervisor):
 
 def test_supervisor_move_3(qtbot, supervisor):
 
-    supervisor.actions.next()
+    supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [30])
 
@@ -694,7 +694,7 @@ def test_supervisor_move_5(supervisor):
     supervisor.block()
     _assert_selected(supervisor, [11, 2])
 
-    supervisor.actions.next()
+    supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [11, 1])
 
@@ -718,35 +718,35 @@ def test_supervisor_move_5(supervisor):
 
 def test_supervisor_reset(qtbot, supervisor):
 
-    supervisor.actions.select([10, 11])
+    supervisor.select_actions.select([10, 11])
 
-    supervisor.actions.reset_wizard()
+    supervisor.select_actions.reset_wizard()
     supervisor.block()
     _assert_selected(supervisor, [30])
 
-    supervisor.actions.next()
+    supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
 
-    supervisor.actions.next()
+    supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [30, 11])
 
-    supervisor.actions.previous()
+    supervisor.select_actions.previous()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
 
 
 def test_supervisor_nav(qtbot, supervisor):
 
-    supervisor.actions.reset_wizard()
+    supervisor.select_actions.reset_wizard()
     supervisor.block()
     _assert_selected(supervisor, [30])
 
-    supervisor.actions.next_best()
+    supervisor.select_actions.next_best()
     supervisor.block()
     _assert_selected(supervisor, [20])
 
-    supervisor.actions.previous_best()
+    supervisor.select_actions.previous_best()
     supervisor.block()
     _assert_selected(supervisor, [30])
