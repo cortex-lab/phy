@@ -34,15 +34,10 @@ def select_traces(traces, interval, sample_rate=None):
     return traces
 
 
-def _iter_spike_waveforms(interval=None,
-                          traces_interval=None,
-                          model=None,
-                          supervisor=None,
-                          n_samples_waveforms=None,
-                          get_best_channels=None,
-                          show_all_spikes=False,
-                          color_selector=None,
-                          ):
+def _iter_spike_waveforms(
+        interval=None, traces_interval=None, model=None, supervisor=None,
+        n_samples_waveforms=None, get_best_channels=None, show_all_spikes=False,
+        color_selector=None,):
     m = model
     p = supervisor
     cs = color_selector
@@ -84,7 +79,7 @@ def _iter_spike_waveforms(interval=None,
 
 class TraceView(ManualClusteringView):
     _default_position = 'left'
-    auto_update = False
+    auto_update = True
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.25

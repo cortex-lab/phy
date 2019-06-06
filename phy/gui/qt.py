@@ -124,16 +124,6 @@ def _input_dialog(title, sentence, text=None):
                                 text=text)  # pragma: no cover
 
 
-def _screen_size():
-    screen = QGuiApplication.primaryScreen()
-    geometry = screen.geometry()
-    return (geometry.width(), geometry.height())
-
-
-def _is_high_dpi():
-    return _screen_size()[0] > 3000
-
-
 @contextmanager
 def _wait_signal(signal, timeout=None):
     """Block loop until signal emitted, or timeout (ms) elapses."""
@@ -242,9 +232,22 @@ def require_qt(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
         if not QApplication.instance():  # pragma: no cover
-            raise RuntimeError("A Qt application must be created.")
+            logger.warning("Creating a Qt application.")
+            create_app()
         return func(*args, **kwargs)
     return wrapped
+
+
+@require_qt
+def _screen_size():
+    screen = QGuiApplication.primaryScreen()
+    geometry = screen.geometry()
+    return (geometry.width(), geometry.height())
+
+
+@require_qt
+def _is_high_dpi():
+    return _screen_size()[0] > 3000
 
 
 # Global variable with the current Qt application.
