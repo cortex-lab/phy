@@ -267,6 +267,18 @@ def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
     assert pz.zoom[1] > 1
     pz.reset()
 
+    pz.aspect = 1
+
+    mouse_drag(qtbot, c, (150, 150), (50, 100), button='right')
+    assert pz.zoom[0] < 1
+    assert pz.zoom[1] < 1
+
+    mouse_drag(qtbot, c, (150, 150), (-50, -100), button='right')
+    assert pz.zoom[0] > 1
+    assert pz.zoom[1] > 1
+
+    # mouse_drag(qtbot, c, (150, 150), (-100, -50), button='right')
+
     # Zoom with mouse wheel.
     # size = np.asarray(c.size)
     # TODO

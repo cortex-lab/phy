@@ -192,8 +192,7 @@ class PanZoom(object):
     def _zoom_aspect(self, zoom=None):
         zoom = zoom if zoom is not None else self._zoom
         zoom = _as_array(zoom)
-        aspect = (self._canvas_aspect * self._aspect
-                  if self._aspect is not None else 1.)
+        aspect = (self._canvas_aspect * self._aspect if self._aspect is not None else 1.)
         return zoom * aspect
 
     def _normalize(self, pos):
@@ -294,6 +293,11 @@ class PanZoom(object):
     def zoom_delta(self, d, p=(0., 0.), c=1.):
         """Zoom the view by a given amount."""
         dx, dy = d
+        if self.aspect is not None:
+            if abs(dx) > abs(dy):
+                dy = dx
+            else:
+                dx = dy
         x0, y0 = p
 
         pan_x, pan_y = self._pan
@@ -307,10 +311,8 @@ class PanZoom(object):
         self.zoom = zoom_x_new, zoom_y_new
 
         if self._zoom_to_pointer:
-            zoom_x, zoom_y = self._zoom_aspect((zoom_x,
-                                                zoom_y))
-            zoom_x_new, zoom_y_new = self._zoom_aspect((zoom_x_new,
-                                                        zoom_y_new))
+            zoom_x, zoom_y = self._zoom_aspect((zoom_x, zoom_y))
+            zoom_x_new, zoom_y_new = self._zoom_aspect((zoom_x_new, zoom_y_new))
 
             self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
                         pan_y - y0 * (1. / zoom_y - 1. / zoom_y_new))
