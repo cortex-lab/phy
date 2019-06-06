@@ -26,7 +26,7 @@ def test_probe_view(qtbot, gui):
                   best_channels=best_channels,
                   )
     v.show()
-    qtbot.addWidget(v)
+    qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
     class Supervisor(object):
