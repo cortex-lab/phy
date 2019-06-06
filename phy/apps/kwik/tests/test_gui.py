@@ -74,7 +74,7 @@ def test_gui_1(qtbot, tempdir, controller):
     tv.actions.go_to_next_spike()
     s.block()
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     clu_moved = s.selected[0]
@@ -82,7 +82,7 @@ def test_gui_1(qtbot, tempdir, controller):
     s.block()
     assert len(s.selected) == 1
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     clu_to_merge = s.selected
@@ -96,7 +96,7 @@ def test_gui_1(qtbot, tempdir, controller):
     s.actions.move_all_to_mua()
     s.block()
 
-    s.actions.next()
+    s.select_actions.next()
     s.block()
 
     clu = s.selected[0]

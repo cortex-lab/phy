@@ -20,9 +20,14 @@ Type `phy template-gui params.py` in the directory that contains the `params.py`
 
 The dataset is made of a set of `.npy` files (`spike_times.npy`, `spike_clusters.npy`, and so on). There are also `.tsv` files for cluster-dependent data.
 
+*Note*: only `spike_clusters.npy` and TSV files are ever modified by phy. The rest of the data files are open in read-only mode.
+
+
 ### Kwik/Klusta
 
 Type `phy kwik-gui filename.kwik` in the directory that contains the `filename.kwik` file.
+
+*Note*: only the `filename.kwik` file is ever modified by phy.
 
 
 
