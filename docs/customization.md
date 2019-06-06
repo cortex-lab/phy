@@ -135,6 +135,10 @@ This object (`controller.supervisor`) is responsible for creating the cluster an
 
 *Note*: the code of the table is in a separate Javascript project, `tablejs` that uses the `ListJS` library.
 
+#### Context
+
+Disk cache and memory cache are stored in the `.phy` subdirectory within the data directory. Functions retrieving cluster-dependent data such as waveforms, templates, and so on, are all cached for performance reasons. It is important to ensure that this directory is stored on an SSD.
+
 
 ### GUI
 
@@ -145,7 +149,20 @@ This object provides a lightweight generic GUI with the following features:
 * Menu bar and submenus
 * Keyboard shortcuts
 * Snippets
-* GUI state (saving GUI- and view-specific options globally and locally)
+* GUI state
+
+#### GUI state
+
+The **GUI state** contains information about the GUI, like the position, size, dock widget layout, and view options that can be changed via the menu or keyboard shortcuts, like the number of bins in the correlogram view and so on. The GUI state is saved in two JSON files:
+
+* Global state: in `~/.phy/TemplateGUI/state.json`
+* Local state: in `<data_directory>/.phy/state.json`
+
+Values saved in the local state (like data-dependent scaling in the views) override those saved in the global state.
+
+These files are automatically recreated if they're missing.
+
+*Note*: in case of visualization problem in the GUI, feel free to delete these files.
 
 
 ## Events used in phy
