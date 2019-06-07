@@ -15,7 +15,7 @@ import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
-from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi
+from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, _is_high_dpi, Debouncer
 from phylib.utils import emit, connect
 from phylib.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, _read_text
@@ -112,10 +112,8 @@ _DEFAULT_SCRIPT = """
             // All phy_events emitted from JS are relayed to
             // Python's emitJS().
             document.addEventListener("phy_event", function (e) {
-                console.debug("Emit from JS global: " +
-                              e.detail.name + " " + e.detail.data);
-                eventEmitter.emitJS(e.detail.name,
-                                    JSON.stringify(e.detail.data));
+                console.debug("Emit from JS global: " + e.detail.name + " " + e.detail.data);
+                eventEmitter.emitJS(e.detail.name, JSON.stringify(e.detail.data));
             });
 
         });
@@ -232,18 +230,28 @@ class HTMLBuilder(object):
 class JSEventEmitter(QObject):
     _parent = None
 
+    def __init__(self, *args, debounce_events=()):
+        super(JSEventEmitter, self).__init__(*args)
+        self._debouncer = Debouncer()
+        self._debounce_events = debounce_events
+
     @pyqtSlot(str, str)
     def emitJS(self, name, arg_json):
         logger.log(5, "Emit from Python %s %s.", name, arg_json)
-        emit(str(name), self._parent, json.loads(str(arg_json)))
+        args = str(name), self._parent, json.loads(str(arg_json))
+        # NOTE: debounce select events but not other events coming from JS.
+        if name in self._debounce_events:
+            self._debouncer.submit(emit, *args)
+        else:
+            emit(*args)
 
 
 class HTMLWidget(WebView):
     """An HTML widget that is displayed with Qt."""
-    def __init__(self, *args, title=''):
+    def __init__(self, *args, title='', debounce_events=()):
         # Due to a limitation of QWebChannel, need to register a Python object
         # BEFORE this web view is created?!
-        self._event = JSEventEmitter(*args)
+        self._event = JSEventEmitter(*args, debounce_events=debounce_events)
         self._event._parent = self
         self.channel = QWebChannel(*args)
         self.channel.registerObject('eventEmitter', self._event)
@@ -304,8 +312,10 @@ def _color_styles():
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    def __init__(self, *args, columns=None, value_names=None, data=None, sort=None, title=''):
-        super(Table, self).__init__(*args, title=title)
+    def __init__(
+            self, *args, columns=None, value_names=None, data=None, sort=None, title='',
+            debounce_events=()):
+        super(Table, self).__init__(*args, title=title, debounce_events=debounce_events)
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def eval_js(self, expr, callback=None):

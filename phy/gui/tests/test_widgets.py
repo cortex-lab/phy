@@ -138,31 +138,33 @@ def test_widget_javascript_1(qtbot):
     widget.close()
 
 
-def _test_widget_javascript_2(qtbot):  # pragma: no cover
-    widget = HTMLWidget()
-    widget.builder.add_script("var l = [1, 2];")
-    widget.builder.add_script('''
-        onWidgetReady(function (widget) {
-            var event = new CustomEvent("phy_event",
-                {detail: {name: "test", data: {"hello": "world"}}});
-            document.dispatchEvent(event);
-        });
-    ''')
-
-    _out = []
-
-    @connect(sender=widget)
-    def on_test(sender, arg):
-        _out.append(arg)
-
+@mark.parametrize("event_name", ('select', 'nodebounce'))
+def test_widget_javascript_debounce(qtbot, event_name):
+    widget = HTMLWidget(debounce_events=('select',))
     widget.build()
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
+    _block(lambda: widget.html is not None)
 
-    _block(lambda: _out == [{'hello': 'world'}])
+    event_code = lambda i: r'''
+    var event = new CustomEvent("phy_event", {detail: {name: '%s', data: {'i': %s}}});
+    document.dispatchEvent(event);
+    ''' % (event_name, i)
 
-    unconnect(on_test)
+    _l = []
+
+    def f(sender, *args):
+        _l.append(args)
+    connect(f, sender=widget, event=event_name)
+
+    for i in range(5):
+        widget.eval_js(event_code(i))
+        qtbot.wait(10)
+    qtbot.wait(500)
+
+    assert len(_l) == (2 if event_name == 'select' else 5)
+
     # qtbot.stop()
     widget.close()
 
