@@ -8,5 +8,4 @@ pages:
 - Manual clustering: 'clustering.md'
 - Customization: 'customization.md'
 - Keyboard shortcuts and snippets: 'shortcuts.md'
-- Developing with phy: 'developer.md'
 theme: readthedocs
