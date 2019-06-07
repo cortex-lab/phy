@@ -12,6 +12,7 @@ from pytest import yield_fixture, mark
 
 from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
+import phy
 from .test_qt import _block
 from ..widgets import HTMLWidget, Table, Barrier, AsyncTasks, IPythonView
 
@@ -140,6 +141,8 @@ def test_widget_javascript_1(qtbot):
 
 @mark.parametrize("event_name", ('select', 'nodebounce'))
 def test_widget_javascript_debounce(qtbot, event_name):
+    phy.gui.qt.Debouncer.delay = 300
+
     widget = HTMLWidget(debounce_events=('select',))
     widget.build()
     widget.show()
@@ -167,6 +170,8 @@ def test_widget_javascript_debounce(qtbot, event_name):
 
     # qtbot.stop()
     widget.close()
+
+    phy.gui.qt.Debouncer.delay = 1
 
 
 #------------------------------------------------------------------------------
