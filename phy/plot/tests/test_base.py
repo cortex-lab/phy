@@ -50,6 +50,18 @@ def fragment_shader():
         """
 
 
+class MyVisual(BaseVisual):
+    def __init__(self):
+        super(MyVisual, self).__init__()
+        self.set_shader('simple')
+        self.set_primitive_type('lines')
+
+    def set_data(self):
+        self.n_vertices = 2
+        self.program['a_position'] = [[-1, 0], [1, 0]]
+        self.program['u_color'] = [1, 1, 1, 1]
+
+
 #------------------------------------------------------------------------------
 # Test base
 #------------------------------------------------------------------------------
@@ -98,18 +110,7 @@ def test_next_paint(qtbot, canvas):
 
 
 def test_visual_1(qtbot, canvas):
-    class TestVisual(BaseVisual):
-        def __init__(self):
-            super(TestVisual, self).__init__()
-            self.set_shader('simple')
-            self.set_primitive_type('lines')
-
-        def set_data(self):
-            self.n_vertices = 2
-            self.program['a_position'] = [[-1, 0], [1, 0]]
-            self.program['u_color'] = [1, 1, 1, 1]
-
-    v = TestVisual()
+    v = MyVisual()
     canvas.add_visual(v, key='key')
     # Should be a no-op when adding the same visual twice.
     canvas.add_visual(v, key='key')
@@ -139,9 +140,9 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
 
     """
 
-    class TestVisual(BaseVisual):
+    class MyVisual2(BaseVisual):
         def __init__(self):
-            super(TestVisual, self).__init__()
+            super(MyVisual2, self).__init__()
             self.vertex_shader = vertex_shader
             self.fragment_shader = fragment_shader
             self.set_primitive_type('points')
@@ -165,11 +166,11 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
                                   ])
 
     # We attach the visual to the canvas. By default, a BaseLayout is used.
-    v = TestVisual()
+    v = MyVisual2()
     canvas.add_visual(v)
     v.set_data()
 
-    v = TestVisual()
+    v = MyVisual2()
     canvas.add_visual(v)
     v.set_data()
 
@@ -183,9 +184,9 @@ def test_layout_1(qtbot, canvas):
     layout.attach(canvas)
     #layout.update()
 
-    class TestVisual(BaseVisual):
+    class MyVisual(BaseVisual):
         def __init__(self):
-            super(TestVisual, self).__init__()
+            super(MyVisual, self).__init__()
             self.set_shader('simple')
             self.set_primitive_type('lines')
 
@@ -195,10 +196,21 @@ def test_layout_1(qtbot, canvas):
             self.program['u_color'] = [1, 1, 1, 1]
             self.emit_visual_set_data()
 
-    v = TestVisual()
+    v = MyVisual()
     canvas.add_visual(v)
     v.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas)
     layout.update()
+
+
+def test_canvas_lazy(qtbot, canvas):
+    v = MyVisual()
+    canvas.add_visual(v)
+    canvas.set_lazy(True)
+    v.set_data()
+    canvas.show()
+    qtbot.waitForWindowShown(canvas)
+
+    assert len(list(canvas.iter_update_queue())) == 2

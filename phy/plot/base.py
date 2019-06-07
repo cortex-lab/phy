@@ -382,6 +382,21 @@ def key_info(e):
                 return name
 
 
+class LazyProgram(gloo.Program):
+    def __init__(self, *args, **kwargs):
+        self._update_queue = []
+        self._is_lazy = False
+        super(LazyProgram, self).__init__(*args, **kwargs)
+
+    def __setitem__(self, name, data):
+        # Remove all past items with the current name.
+        if self._is_lazy:
+            self._update_queue[:] = ((n, d) for (n, d) in self._update_queue if n != name)
+            self._update_queue.append((name, data))
+        else:
+            super(LazyProgram, self).__setitem__(name, data)
+
+
 class BaseCanvas(QOpenGLWindow):
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
@@ -390,6 +405,7 @@ class BaseCanvas(QOpenGLWindow):
         self.visuals = []
         self._next_paint_callbacks = []
         self._size = (0, 0)
+        self._is_lazy = False
 
         # Events.
         self._attached = []
@@ -414,6 +430,18 @@ class BaseCanvas(QOpenGLWindow):
             panzoom.window_to_ndc(mouse_pos) if panzoom else
             np.asarray(pixels_to_ndc(mouse_pos, size=self.get_size())))
         return ndc
+
+    # Queue
+    # ---------------------------------------------------------------------------------------------
+
+    def set_lazy(self, lazy):
+        """Must be called *after* the visuals have been added, but *before* set_data()."""
+        self._is_lazy = lazy
+        for visual in self.visuals:
+            visual.visual.program._is_lazy = lazy
+
+    # Visuals
+    # ---------------------------------------------------------------------------------------------
 
     def clear(self):
         self.visuals[:] = (v for v in self.visuals if not v.get('clearable', True))
@@ -470,7 +498,7 @@ class BaseCanvas(QOpenGLWindow):
         vs, fs = inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
 
         # Finally, we create the visual's program.
-        visual.program = gloo.Program(vs, fs)
+        visual.program = LazyProgram(vs, fs)
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
 
@@ -486,6 +514,16 @@ class BaseCanvas(QOpenGLWindow):
             if v.visual == visual:
                 return True
         return False
+
+    def iter_update_queue(self):
+        """Iterate through all OpenGL program updates from all visuals while set_lazy."""
+        for v in self.visuals:
+            while v.visual.program._update_queue:
+                name, data = v.visual.program._update_queue.pop(0)
+                yield v.visual.program, name, data
+
+    # OpenGL methods
+    # ---------------------------------------------------------------------------------------------
 
     def on_next_paint(self, f):
         """Register a function to be called at the next frame refresh (in paintGL())."""
@@ -630,6 +668,10 @@ class BaseCanvas(QOpenGLWindow):
                 for p in points])
             self.emit('touch', pos=pos, last_pos=last_pos)
         return out
+
+    def update(self):
+        if not self._is_lazy:
+            super(BaseCanvas, self).update()
 
 
 #------------------------------------------------------------------------------
