@@ -113,6 +113,8 @@ class HistogramView(ManualClusteringView):
         colors = _categorical_colormap(colormaps.default, np.arange(n_clusters))
         colors = add_alpha(colors, 1)
 
+        self.canvas.stacked.n_boxes = n_clusters
+
         self.visual.reset_batch()
         self.plot_visual.reset_batch()
         self.text_visual.reset_batch()
@@ -124,7 +126,6 @@ class HistogramView(ManualClusteringView):
         self.canvas.update_visual(self.plot_visual)
         self.canvas.update_visual(self.text_visual)
 
-        self.canvas.stacked.n_boxes = n_clusters
         # Get the axes data bounds (the last subplot's extended n_cluster times on the y axis).
         data_bounds = (0, 0, self.x_max, self._hist_max * n_clusters)
         self.canvas.axes.reset_data_bounds(data_bounds)
