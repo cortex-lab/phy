@@ -52,7 +52,7 @@ class Grid(BaseLayout):
                        Clip([-mc, -mc, +mc, +mc]),
                        Subplot(self.shape_var, self.box_var),
                        ]
-        if not has_clip:
+        if has_clip is False:
             # Remove the Clip transform.
             del _transforms[1]
         self._transforms = _transforms
@@ -87,7 +87,7 @@ class Grid(BaseLayout):
         assert isinstance(shape, tuple)
         n, m = shape
         n_boxes = n * m
-        a = 1 + .05
+        a = 1 - .0001
 
         pos = np.array([[-a, -a, +a, -a],
                         [+a, -a, +a, +a],
