@@ -2,7 +2,7 @@
   "AmplitudeHistogramView": {
     "auto_update": true,
     "n_bins": 100,
-    "x_max": 1
+    "x_max": 30
   },
   "AmplitudeView": {
     "auto_update": true
