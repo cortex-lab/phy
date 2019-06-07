@@ -260,7 +260,7 @@ def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
     pz = panzoom
 
     # Zoom with mouse.
-    mouse_drag(qtbot, c, (150, 150), (50, 50), button='right')
+    mouse_drag(qtbot, c, (10, 10), (5, 5), button='right')
     assert pz.pan[0] < 0
     assert pz.pan[1] < 0
     assert pz.zoom[0] < 1
@@ -269,31 +269,13 @@ def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
 
     pz.aspect = 1
 
-    mouse_drag(qtbot, c, (150, 150), (50, 100), button='right')
+    mouse_drag(qtbot, c, (10, 10), (5, 100), button='right')
     assert pz.zoom[0] < 1
     assert pz.zoom[1] < 1
 
-    mouse_drag(qtbot, c, (150, 150), (-50, -100), button='right')
+    mouse_drag(qtbot, c, (10, 10), (-5, -100), button='right')
     assert pz.zoom[0] > 1
     assert pz.zoom[1] > 1
-
-    # mouse_drag(qtbot, c, (150, 150), (-100, -50), button='right')
-
-    # Zoom with mouse wheel.
-    # size = np.asarray(c.size)
-    # TODO
-    # c.events.mouse_wheel(pos=size / 2., delta=(0., 1.))
-    # assert pz.pan == [0, 0]
-    # assert pz.zoom[0] > 1
-    # assert pz.zoom[1] > 1
-    # pz.reset()
-
-    # # Using modifiers with the wheel should not zoom.
-    # c.events.mouse_wheel(pos=(0., 0.), delta=(0., 1.),
-    #                      modifiers=(keys.CONTROL,))
-    # assert pz.pan == [0, 0]
-    # assert pz.zoom == [1, 1]
-    # pz.reset()
 
 
 def test_panzoom_zoom_keyboard(qtbot, canvas_pz, panzoom):
