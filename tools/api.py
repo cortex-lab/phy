@@ -7,6 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
+import imp
 import inspect
 import os.path as op
 import re
@@ -34,28 +35,15 @@ def _anchor(name):
     return anchor
 
 
-_docstring_header_pattern = re.compile(r'^([^\n]+)\n[\-\=]{3,}$',
-                                       flags=re.MULTILINE,
-                                       )
-_docstring_parameters_pattern = re.compile(r'^([^ \n]+) \: ([^\n]+)$',
-                                           flags=re.MULTILINE,
-                                           )
+_docstring_header_pattern = re.compile(r'^([^\n]+)\n[\-\=]{3,}$', flags=re.MULTILINE)
+_docstring_parameters_pattern = re.compile(r'^([^ \n]+) \: ([^\n]+)$', flags=re.MULTILINE)
 
 
 def _replace_docstring_header(paragraph):
     """Process NumPy-like function docstrings."""
-
     # Replace Markdown headers in docstrings with light headers in bold.
-    paragraph = re.sub(_docstring_header_pattern,
-                       r'*\1*',
-                       paragraph,
-                       )
-
-    paragraph = re.sub(_docstring_parameters_pattern,
-                       r'\n* `\1` (\2)\n',
-                       paragraph,
-                       )
-
+    paragraph = re.sub(_docstring_header_pattern, r'*\1*', paragraph)
+    paragraph = re.sub(_docstring_parameters_pattern, r'\n* `\1` (\2)\n', paragraph)
     return paragraph
 
 
@@ -188,9 +176,7 @@ def _function_header(subpackage, func):
 
 
 def _doc_function(subpackage, func):
-    return _concat(_function_header(subpackage, func),
-                   _doc(func),
-                   )
+    return _concat(_function_header(subpackage, func), _doc(func))
 
 
 def _doc_method(klass, func):
@@ -215,9 +201,7 @@ def _doc_property(klass, prop):
 
 
 def _link(name, anchor=None):
-    return "[{name}](#{anchor})".format(name=name,
-                                        anchor=anchor or _anchor(name),
-                                        )
+    return "[{name}](#{anchor})".format(name=name, anchor=anchor or _anchor(name))
 
 
 def _generate_preamble(package, subpackages):
