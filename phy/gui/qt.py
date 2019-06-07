@@ -217,6 +217,56 @@ class Worker(QRunnable):
             self.signals.finished.emit()
 
 
+class Debouncer(object):
+    """Jobs are submitted at given times. They are executed immediately if the
+    delay since the last submission is greater than some threshold. Otherwise, execution
+    is delayed until the delay since the last submission is greater than the threshold.
+    During the waiting time, all submitted jobs erase previous jobs in the queue, so
+    only the last jobs are taken into account."""
+
+    _log_level = 5
+
+    def __init__(self, delay=300):
+        self.delay = delay  # minimum delay between job executions, in ms.
+        self._last_submission_time = 0
+        self.is_waiting = False  # whether we're already waiting for the end of the interactions
+        self.pending_functions = {}  # assign keys to pending functions.
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._timer_callback)
+
+    def _elapsed_enough(self):
+        return default_timer() - self._last_submission_time > self.delay * .001
+
+    def _timer_callback(self):
+        if self._elapsed_enough():
+            logger.log(self._log_level, "Stop waiting and triggering.")
+            self._timer.stop()
+            self.trigger()
+
+    def submit(self, f, *args, key=None, **kwargs):
+        self.pending_functions[key] = (f, args, kwargs)
+        if self._elapsed_enough():
+            logger.log(self._log_level, "Triggering action immediately.")
+            # Trigger the action immediately if the delay since the last submission is greater
+            # than the threshold.
+            self.trigger()
+        else:
+            logger.log(self._log_level, "Waiting...")
+            # Otherwise, we start the timer.
+            if not self._timer.isActive():
+                self._timer.start(25)
+        self._last_submission_time = default_timer()
+
+    def trigger(self):
+        for key, item in self.pending_functions.items():
+            if item is None:
+                continue
+            f, args, kwargs = item
+            logger.log(self._log_level, "Trigger %s.", f.__name__)
+            f(*args, **kwargs)
+            self.pending_functions[key] = None
+
+
 # -----------------------------------------------------------------------------
 # Qt app
 # -----------------------------------------------------------------------------

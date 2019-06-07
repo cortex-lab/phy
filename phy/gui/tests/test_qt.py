@@ -9,25 +9,11 @@
 from pytest import raises
 
 from phylib.utils.testing import captured_logging
-from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
-                  _button_name_from_enum,
-                  _button_enum_from_name,
-                  _prompt,
-                  _screen_size,
-                  _is_high_dpi,
-                  _wait_signal,
-                  require_qt,
-                  create_app,
-                  QApplication,
-                  WebView,
-                  busy_cursor,
-                  AsyncCaller,
-                  QThreadPool,
-                  _wait,
-                  Worker,
-                  _block,
-                  _screenshot,
-                  )
+from ..qt import (
+    QMessageBox, Qt, QWebEngineView, QTimer, _button_name_from_enum, _button_enum_from_name,
+    _prompt, _screen_size, _is_high_dpi, _wait_signal, require_qt, create_app, QApplication,
+    WebView, busy_cursor, AsyncCaller, QThreadPool, _wait, Worker, _block, _screenshot,
+    Debouncer)
 
 
 #------------------------------------------------------------------------------
@@ -77,6 +63,20 @@ def test_worker(qtbot):
     pool.start(w)
     _wait(10)
     assert _l == [0]
+
+
+def test_debouncer(qtbot):
+    d = Debouncer(delay=50)
+    _l = []
+
+    def f(i):
+        _l.append(i)
+
+    for i in range(10):
+        qtbot.wait(10)
+        d.submit(f, i)
+    qtbot.wait(500)
+    assert _l == [0, 9]
 
 
 def test_block(qtbot):
