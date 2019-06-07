@@ -225,9 +225,10 @@ class Debouncer(object):
     only the last jobs are taken into account."""
 
     _log_level = 5
+    delay = 300
 
-    def __init__(self, delay=300):
-        self.delay = delay  # minimum delay between job executions, in ms.
+    def __init__(self, delay=None):
+        self.delay = delay or self.delay  # minimum delay between job executions, in ms.
         self._last_submission_time = 0
         self.is_waiting = False  # whether we're already waiting for the end of the interactions
         self.pending_functions = {}  # assign keys to pending functions.

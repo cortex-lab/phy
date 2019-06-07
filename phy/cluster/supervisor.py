@@ -233,7 +233,9 @@ class ClusterView(Table):
     _view_name = 'cluster_view'
 
     def __init__(self, *args, data=None, columns=(), sort=None):
-        HTMLWidget.__init__(self, *args, title=self.__class__.__name__)
+        # NOTE: debounce select events.
+        HTMLWidget.__init__(
+            self, *args, title=self.__class__.__name__, debounce_events=('select',))
         self._set_styles()
         self._reset_table(data=data, columns=columns, sort=sort)
 

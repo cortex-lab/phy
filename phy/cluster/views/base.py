@@ -11,12 +11,13 @@ from datetime import datetime
 import gc
 import logging
 from pathlib import Path
+import sys
 import traceback
 
 from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils._misc import phy_config_dir
 from phy.gui import Actions
-from phy.gui.qt import AsyncCaller, _screenshot
+from phy.gui.qt import AsyncCaller, _screenshot, QThreadPool, Worker
 from phy.plot import PlotCanvas
 
 logger = logging.getLogger(__name__)
@@ -43,8 +44,6 @@ class ManualClusteringView(object):
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
-
-        self._is_busy = False
 
         # Message to show in the status bar.
         self.status = None
@@ -91,15 +90,6 @@ class ManualClusteringView(object):
 
         emit('view_actions_created', self)
 
-        # Call on_select() asynchronously after a delay, and set a busy
-        # cursor.
-        self.async_caller = AsyncCaller(delay=1)
-        # WARNING: we should ensure that all on_select events do not finish too early,
-        # otherwise the global is_busy will be False before new on_select events have a chance
-        # to start.
-        self.async_caller2 = AsyncCaller(delay=10)
-        name = self.__class__.__name__  # current view name
-
         @connect
         def on_select(sender, cluster_ids, **kwargs):
             if not self.auto_update:
@@ -110,21 +100,28 @@ class ManualClusteringView(object):
             if not cluster_ids:
                 return
 
-            # Immediately set is_busy to True.
-            emit('is_busy', self, True)
-            # Set the view as busy.
-            @self.async_caller.set
-            def update_view():
-                logger.log(5, "Selecting %s in %s.", cluster_ids, name)
+            # Task that executes in the thread pool.
+            def _worker():  # pragma: no cover
                 try:
                     self.on_select(cluster_ids=cluster_ids, **kwargs)
-                except Exception:  # pragma: no cover
-                    traceback.print_exc()
+                except Exception:
+                    logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
-                @self.async_caller2.set
-                def finished():
-                    logger.log(5, "Done selecting %s in %s.", cluster_ids, name)
-                    emit('is_busy', self, False)
+            worker = Worker(_worker)
+            @worker.signals.finished.connect
+            def finished():
+                # When the task has finished in the thread pool, we recover all program
+                # updates of the view, and we execute them on the GPU.
+                self.canvas.set_lazy(False)
+                for program, name, data in self.canvas.iter_update_queue():
+                    program[name] = data
+                self.canvas.update()
+                emit('is_busy', self, False)
+
+            # Start the task on the thread pool.
+            emit('is_busy', self, True)
+            self.canvas.set_lazy(True)
+            QThreadPool.globalInstance().start(worker)
 
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the view.
@@ -137,7 +134,7 @@ class ManualClusteringView(object):
         def on_close_view(sender, view):
             if view != self:
                 return
-            logger.debug("Close view %s.", name)
+            logger.debug("Close view %s.", self.name)
             gui.remove_menu(self.name)
             unconnect(on_select)
             gui.state.update_view_state(self, self.state)

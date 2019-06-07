@@ -149,7 +149,7 @@ def test_trace_view_1(qtbot, tempdir, gui):
     qtbot.wait(1)
 
     v.toggle_highlighted_spikes(True)
-    qtbot.wait(1)
+    qtbot.wait(50)
 
     # Change channel scaling.
     bs = v.stacked.box_size
