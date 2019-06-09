@@ -1,4 +1,4 @@
-name: phy
+name: phy2
 dependencies:
   - python
   - pip
@@ -16,3 +16,5 @@ dependencies:
     - tqdm
     - joblib
     - click
+    - git+https://github.com/cortex-lab/phy.git@dev
+    - git+https://github.com/cortex-lab/phy-contrib.git@dev
