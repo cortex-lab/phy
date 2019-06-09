@@ -16,5 +16,6 @@ dependencies:
     - tqdm
     - joblib
     - click
+    - qtconsole
     - git+https://github.com/cortex-lab/phy.git@dev
     - git+https://github.com/cortex-lab/phylib.git
