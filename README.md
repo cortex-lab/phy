@@ -11,6 +11,19 @@
 
 [![phy 2.0a0 screenshot](https://user-images.githubusercontent.com/1942359/58665615-90f32200-8331-11e9-8403-9961c13b8f17.png)](https://user-images.githubusercontent.com/1942359/58665615-90f32200-8331-11e9-8403-9961c13b8f17.png)
 
+## Quick installation
+1. Install [anaconda](https://docs.anaconda.com/anaconda/install/)
+2. Download the [environment file](https://github.com/cortex-lab/phy/blob/dev/environment.yml)
+3. Open a terminal and run:
+`conda env create -f path/to/environment.yml`.\
+Wait for the virtual environment to be created and the dependencies installed...
+4. Activate the virtual environment: conda activate phy2
+5. Run phy:
+```
+cd path/to/my/spikesorting/output
+phy template-gui params.py
+```
+
 ## Links
 
 * [Documentation](http://phy.readthedocs.org/en/latest/)
