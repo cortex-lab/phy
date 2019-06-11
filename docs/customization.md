@@ -224,7 +224,7 @@ The following events are raised with **Control+click** in specific views:
 
 ## Plugin examples
 
-In this section, we give a few examples of plugins/
+In this section, we give a few examples of plugins.
 
 ### Hello world
 
@@ -272,6 +272,9 @@ class MyPlugin(IPlugin):
         controller.n_spikes_features_background = 1000
         controller.n_spikes_amplitudes = 5000
         controller.n_spikes_correlograms = 100000
+
+        # Number of "best" channels kept for displaying the waveforms.
+        controller.model.n_closest_channels = 16
 ```
 
 *Note*: you need to manually delete the `.phy` subdirectory within your data directory when changing these parameters, otherwise errors will happen in the GUI.
@@ -352,7 +355,7 @@ class MyPlugin(IPlugin):
 
 ### Writing a custom matplotlib view
 
-Most built-in views in phy are based on OpenGL instead of matplotlib, for performance reasons. Since writing OpenGL views is significantly more complex than with matplotlib, we cover OpenGL views in the developer section later in this documentation.
+Most built-in views in phy are based on OpenGL instead of matplotlib, for performance reasons. Since writing OpenGL views is significantly more complex than with matplotlib, we cover OpenGL views later in this documentation.
 
 In this example, we show how to create a custom view based on matplotlib. Specifically, we show a 2D histogram of spike features.
 
