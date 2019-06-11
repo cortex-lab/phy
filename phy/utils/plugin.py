@@ -97,7 +97,7 @@ def discover_plugins(dirs):
     for path in _iter_plugin_files(dirs):
         subdir = path.parent
         modname = path.stem
-        if modname == 'phy_config':
+        if modname in ('phy_config', 'phycontrib_loader'):
             continue
         file, path, descr = imp.find_module(modname, [subdir])
         if file:
