@@ -34,9 +34,7 @@ def _get_default_grid():
     0A,0B   1A,0B   time,0B 1B,0B
     0A,1B   1A,1B   0B,1B   time,1B
     """.strip()
-    dims = [[_ for _ in re.split(' +', line.strip())]
-            for line in s.splitlines()]
-    return dims, ('0A', '1A', '0B', '1B'), ('0A', '1A', '0B', '1B')
+    return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
 
 
 def _get_point_color(clu_idx=None):
@@ -109,13 +107,10 @@ class FeatureView(ManualClusteringView):
         assert features
         self.features = features
 
-        self.n_cols = 4
-        self.canvas.set_layout('grid', shape=(self.n_cols, self.n_cols))
+        self.grid_dim = _get_default_grid()
+        self.n_rows, self.n_cols = np.array(self.grid_dim).shape
+        self.canvas.set_layout('grid', shape=(self.n_rows, self.n_cols))
         self.canvas.enable_lasso()
-        # grid_dim[i][j] = '..,..'
-        # x_labels[j] is the label of x axis of subplots in col j
-        # y_labels[i] is the label of y axis of subplots in row i
-        self.grid_dim, self.x_labels, self.y_labels = _get_default_grid()
 
         # Channels being shown.
         self.channel_ids = None
@@ -134,16 +129,19 @@ class FeatureView(ManualClusteringView):
         self.line_visual = LineVisual()
         self.canvas.add_visual(self.line_visual)
 
+    def set_grid_dim(self, grid_dim):
+        """Change the grid dim dynamically."""
+        self.grid_dim = grid_dim
+        self.n_rows, self.n_cols = np.array(grid_dim).shape
+        self.canvas.grid.shape = (self.n_rows, self.n_cols)
+
     # Internal methods
     # -------------------------------------------------------------------------
 
     def _iter_subplots(self):
         """Yield (i, j, dim)."""
-        for i in range(self.n_cols):
+        for i in range(self.n_rows):
             for j in range(self.n_cols):
-                # Skip lower-diagonal subplots.
-                if i > j:
-                    continue
                 dim = self.grid_dim[i][j]
                 dim_x, dim_y = dim.split(',')
                 yield i, j, dim_x, dim_y

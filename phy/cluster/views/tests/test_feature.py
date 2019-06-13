@@ -14,7 +14,7 @@ from phylib.io.mock import artificial_features, artificial_spike_clusters
 from phylib.utils import Bunch
 from phy.plot.tests import mouse_click
 
-from ..feature import FeatureView
+from ..feature import FeatureView, _get_default_grid
 
 
 #------------------------------------------------------------------------------
@@ -58,6 +58,8 @@ def test_feature_view(qtbot, gui, n_channels):
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
+
+    v.set_grid_dim(_get_default_grid())
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
