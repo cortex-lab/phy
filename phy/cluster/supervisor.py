@@ -223,14 +223,13 @@ class TaskLogger(object):
             h = self._history[:i]
         for (sender, name, args, output) in reversed(h):
             # Last selection is cluster view selection: return the state.
-            if (sender == self.similarity_view and
-                    similarity_state == (None, None) and
+            if (sender == self.similarity_view and similarity_state == (None, None) and
                     name in ('select', 'next', 'previous')):
-                similarity_state = output or (None, None)
+                similarity_state = (output['selected'], output['next']) if output else (None, None)
             if (sender == self.cluster_view and
                     cluster_state == (None, None) and
                     name in ('select', 'next', 'previous')):
-                cluster_state = output or (None, None)
+                cluster_state = (output['selected'], output['next']) if output else (None, None)
                 return (*cluster_state, *similarity_state)
 
     def show_history(self):
@@ -740,24 +739,29 @@ class Supervisor(object):
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
-    def _clusters_selected(self, sender, cluster_ids_and_next):
+    def _clusters_selected(self, sender, obj):
         if sender != self.cluster_view:
             return
-        cluster_ids, next_cluster = cluster_ids_and_next
+        cluster_ids = obj['selected']
+        next_cluster = obj['next']
+        kwargs = obj.get('kwargs', {})
         logger.debug("Clusters selected: %s (%s)", cluster_ids, next_cluster)
-        self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=cluster_ids_and_next)
+        self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=obj)
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
         self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
-        emit('select', self, self.selected)
+        # Emit supervisor.select event.
+        emit('select', self, self.selected, **kwargs)
 
-    def _similar_selected(self, sender, similar_and_next):
+    def _similar_selected(self, sender, obj):
         if sender != self.similarity_view:
             return
-        similar, next_similar = similar_and_next
+        similar = obj['selected']
+        next_similar = obj['next']
+        kwargs = obj.get('kwargs', {})
         logger.debug("Similar clusters selected: %s (%s)", similar, next_similar)
-        self.task_logger.log(self.similarity_view, 'select', similar, output=similar_and_next)
-        emit('select', self, self.selected)
+        self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
+        emit('select', self, self.selected, **kwargs)
 
     def _on_action(self, sender, name, *args):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""

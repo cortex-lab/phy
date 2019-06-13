@@ -59,13 +59,14 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
                similarity, tempdir):
     spike_clusters = np.repeat(cluster_ids, 2)
 
-    s = Supervisor(spike_clusters,
-                   cluster_groups=cluster_groups,
-                   cluster_labels=cluster_labels,
-                   similarity=similarity,
-                   context=Context(tempdir),
-                   sort=('id', 'desc'),
-                   )
+    s = Supervisor(
+        spike_clusters,
+        cluster_groups=cluster_groups,
+        cluster_labels=cluster_labels,
+        similarity=similarity,
+        context=Context(tempdir),
+        sort=('id', 'desc'),
+    )
     s.attach(gui)
     b = Barrier()
     connect(b('cluster_view'), event='ready', sender=s.cluster_view)
@@ -85,13 +86,13 @@ def tl():
 
         def select(self, cl, callback=None):
             self._selected = cl
-            callback((cl, cl[-1] + 1))
+            callback({'selected': cl, 'next': cl[-1] + 1})
 
         def next(self, callback=None):
-            callback(([self._selected[-1] + 1], self._selected[-1] + 2))
+            callback({'selected': [self._selected[-1] + 1], 'next': self._selected[-1] + 2})
 
         def previous(self, callback=None):  # pragma: no cover
-            callback(([self._selected[-1] - 1], self._selected[-1]))
+            callback({'selected': [self._selected[-1] - 1], 'next': self._selected[-1]})
 
     class MockSimilarityView(MockClusterView):
         pass
@@ -444,6 +445,22 @@ def test_supervisor_merge_1(qtbot, supervisor):
     _assert_selected(supervisor, [31, 11])
 
     assert supervisor.is_dirty()
+
+
+def test_supervisor_merge_event(qtbot, supervisor):
+    _select(supervisor, [30], [20])
+
+    _l = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        _l.append(cluster_ids)
+
+    supervisor.actions.merge()
+    supervisor.block()
+
+    # After a merge, there should be only one select event.
+    # assert len(_l) == 1
 
 
 def test_supervisor_merge_move(qtbot, supervisor):

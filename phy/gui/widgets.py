@@ -412,11 +412,11 @@ class Table(HTMLWidget):
         """Select the previous non-skipped row."""
         self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
 
-    def select(self, ids, callback=None):
+    def select(self, ids, callback=None, **kwargs):
         """Select some rows in the table."""
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        self.eval_js('table.select({});'.format(dumps(ids)), callback=callback)
+        self.eval_js('table.select({}, {});'.format(dumps(ids), dumps(kwargs)), callback=callback)
 
     def set_busy(self, busy):
         #logger.debug("Set %s busy to %s.", self.__class__.__name__, busy)

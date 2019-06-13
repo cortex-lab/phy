@@ -65,14 +65,15 @@ def _iter_spike_waveforms(
         else:  # pragma: no cover
             color = cs.get(c, alpha=1)
         # Extract the waveform.
-        wave = Bunch(data=traces_interval[s - k:s + ns - k, channel_ids],
-                     channel_ids=channel_ids,
-                     start_time=(s + s0 - k) / sr,
-                     color=color,
-                     spike_id=i,
-                     spike_time=t,
-                     spike_cluster=c,
-                     )
+        wave = Bunch(
+            data=traces_interval[s - k:s + ns - k, channel_ids],
+            channel_ids=channel_ids,
+            start_time=(s + s0 - k) / sr,
+            color=color,
+            spike_id=i,
+            spike_time=t,
+            spike_cluster=c,
+        )
         assert wave.data.shape == (ns, len(channel_ids))
         yield wave
 
