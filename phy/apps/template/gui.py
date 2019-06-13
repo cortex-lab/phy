@@ -162,14 +162,15 @@ class TemplateController(object):
             'amplitude': self.get_cluster_amplitude,
         }
         cluster_metrics.update(self.cluster_metrics)
-        supervisor = Supervisor(spike_clusters=self.model.spike_clusters,
-                                cluster_groups=cluster_groups,
-                                cluster_metrics=cluster_metrics,
-                                cluster_labels=self.model.metadata,
-                                similarity=self.similarity,
-                                new_cluster_id=new_cluster_id,
-                                context=self.context,
-                                )
+        supervisor = Supervisor(
+            spike_clusters=self.model.spike_clusters,
+            cluster_groups=cluster_groups,
+            cluster_metrics=cluster_metrics,
+            cluster_labels=self.model.metadata,
+            similarity=self.similarity,
+            new_cluster_id=new_cluster_id,
+            context=self.context,
+        )
         # Load the non-group metadata from the model to the cluster_meta.
         for name in self.model.metadata_fields:
             if name == 'group':

@@ -590,7 +590,9 @@ class Supervisor(object):
 
         self.columns = ['id']  # n_spikes comes from cluster_metrics
         self.columns += list(self.cluster_metrics.keys())
-        self.columns += [label for label in self.cluster_labels.keys() if label != 'group']
+        self.columns += [
+            label for label in self.cluster_labels.keys()
+            if label not in self.columns + ['group']]
 
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
