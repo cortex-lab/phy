@@ -16,4 +16,4 @@ Main dependencies are NumPy, SciPy, PyQt5, pyopengl, joblib. The full list of de
 ## Windows
 
 
-## macOS
+## macOS

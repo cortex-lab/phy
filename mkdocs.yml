@@ -4,8 +4,11 @@ pages:
   - Introduction: 'index.md'
   - Release notes: 'release.md'
   - Installation: 'installation.md'
-- Interactive visualization: 'visualization.md'
-- Manual clustering: 'clustering.md'
-- Customization: 'customization.md'
+- User guide:
+  - Interactive visualization: 'visualization.md'
+  - Manual clustering: 'clustering.md'
+- Developer guide:
+  - Customization: 'customization.md'
+  - Plugin examples: 'plugins.md'
 - Keyboard shortcuts and snippets: 'shortcuts.md'
 theme: readthedocs
