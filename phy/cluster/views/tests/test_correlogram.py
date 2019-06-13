@@ -48,6 +48,9 @@ def test_correlogram_view(qtbot, gui):
     assert v.window_size == .1
     assert v.refractory_period == 3e-3
 
+    v.increase()
+    v.decrease()
+
     v.set_state(v.state)
 
     # qtbot.stop()

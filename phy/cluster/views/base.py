@@ -198,6 +198,14 @@ class ManualClusteringView(object):
         def _set_floating():
             self.dock_widget.setFloating(False)
 
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Change the scaling with the wheel."""
+        if hasattr(self, 'increase') and hasattr(self, 'decrease') and e.modifiers == ('Control',):
+            if e.delta > 0:
+                self.increase()
+            else:
+                self.decrease()
+
     def toggle_auto_update(self, checked):
         """When on, the view is automatically updated when the cluster selection changes."""
         self.auto_update = checked

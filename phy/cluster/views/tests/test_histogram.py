@@ -37,5 +37,8 @@ def test_histogram_view_0(qtbot, gui):
     v.set_x_max(5)
     assert v.x_max == 5
 
+    v.increase()
+    v.decrease()
+
     # qtbot.stop()
     v.close()

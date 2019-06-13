@@ -233,3 +233,9 @@ class CorrelogramView(ManualClusteringView):
         """
         self._set_bin_window(window_size=window_size * 1e-3)
         self.on_select(cluster_ids=self.cluster_ids)
+
+    def increase(self):
+        self.set_window(1000 * self.window_size * 1.1)
+
+    def decrease(self):
+        self.set_window(1000 * self.window_size / 1.1)

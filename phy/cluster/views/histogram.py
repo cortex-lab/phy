@@ -167,3 +167,9 @@ class HistogramView(ManualClusteringView):
         self.x_max = x_max
         logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.on_select(cluster_ids=self.cluster_ids)
+
+    def increase(self):
+        self.set_x_max(self.x_max * 1.1)
+
+    def decrease(self):
+        self.set_x_max(self.x_max / 1.1)

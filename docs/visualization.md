@@ -118,7 +118,12 @@ Graphical views constitute the most important part of the GUI. They represent di
 
 Views can be resized, moved around, tabbed in the GUI. You can close views that you don't need, you can add new views. You can also add multiple views of the same type. You can disable automatic updating of any view upon cluster selection.
 
-You can pan (left-click and drag) and zoom (right-click and drag, mouse wheel) with the mouse in every graphical view. Double-click to reset the view.
+Interactivity in all graphical views:
+
+* **Pan**: left-click and drag
+* **Zoom**: right-click and drag, mouse wheel
+* **Reset pan and zoom**: double-click
+* **Increase or decrease scaling**: control+wheel (only in some views)
 
 
 ### Waveform view
