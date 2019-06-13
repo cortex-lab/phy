@@ -67,7 +67,11 @@ def _prompt_args(title, docstring, default=None):
     logger.debug("Prompting arguments for %s", title)
     r = re.search('Example: `([^`]+)`', docstring)
     docstring_ = docstring[:r.start()].strip() if r else docstring
-    text = str(default()) if default else (r.group(1) if r else None)
+    try:
+        text = str(default()) if default else (r.group(1) if r else None)
+    except Exception as e:  # pragma: no cover
+        logger.error("Error while handling user input: %s", str(e))
+        return
     s, ok = input_dialog(title, docstring_, text)
     if not ok or not s:
         return
@@ -224,7 +228,43 @@ class Actions(object):
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
             prompt_default=None, show_shortcut=True):
-        """Add an action with a keyboard shortcut."""
+        """Add an action with a keyboard shortcut.
+
+        Parameters
+        ----------
+
+        callback : function
+            Take no argument if checkable is False, or a boolean (checked) if it is True
+        name : str
+            Action name, the callback's name by default.
+        shortcut : str
+            The keyboard shortcut for this action.
+        alias : str
+            Snippet, the name by default.
+        prompt : boolean
+            Whether this action should display a dialog with an input box where the user can
+            write arguments to the callback function.
+        n_args : int
+            If prompt is True, specify the number of expected arguments.
+        prompt_default : str
+            The default text in the input text box, if prompt is True.
+        docstring : str
+            The action docstring, to be displayed in the status bar when hovering over the action
+            item in the menu. By default, the function's docstring.
+        menu : str
+            The name of the menu where the action should be added. It is automatically created
+            if it doesn't exist.
+        submenu : str
+            The name of the submenu where the action should be added. It is automatically created
+            if it doesn't exist.
+        checkable : boolean
+            Whether the action is checkable (toggle on/off).
+        checked : boolean
+            Whether the checkable action is initially checked or not.
+        show_shortcut : boolean
+            Whether to show the shortcut in the Help action that displays all GUI shortcuts.
+
+        """
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
             return partial(
