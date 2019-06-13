@@ -158,8 +158,8 @@ def cli_alf_convert(ctx, params_path, out_dir):
     """Describe a template file."""
     from phylib.io.alf import EphysAlfCreator
     from phylib.io.model import TemplateModel
-    from phylib.utils._misc import _read_python
+    from phylib.utils._misc import read_python
 
-    model = TemplateModel(**_read_python(params_path))
+    model = TemplateModel(**read_python(params_path))
     c = EphysAlfCreator(model)
     c.convert(out_dir)

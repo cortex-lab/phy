@@ -72,16 +72,19 @@ class BaseVisual(object):
         self._acc = BatchAccumulator()
 
     def emit_visual_set_data(self):
+        """Emit canvas.visual_set_data event after data has been set in the visual."""
         emit('visual_set_data', self.canvas, self)
 
     # Visual definition
     # -------------------------------------------------------------------------
 
     def set_shader(self, name):
+        """Set the built-in vertex and fragment shader."""
         self.vertex_shader = _load_shader(name + '.vert')
         self.fragment_shader = _load_shader(name + '.frag')
 
     def set_primitive_type(self, primitive_type):
+        """Set the primitive type (points, lines, line_strip, line_fan, triangles)."""
         self.gl_primitive_type = primitive_type
 
     def on_draw(self):
@@ -96,6 +99,7 @@ class BaseVisual(object):
                          "has not been built yet.", self)
 
     def on_resize(self, width, height):
+        """Update the window size in the OpenGL program."""
         s = self.program._vertex.code + '\n' + self.program.fragment.code
         # HACK: ensure that u_window_size appears somewhere in the shaders body (discarding
         # the headers).
@@ -104,12 +108,15 @@ class BaseVisual(object):
             self.program['u_window_size'] = (width, height)
 
     def hide(self):
+        """Hide the visual."""
         self._hidden = True
 
     def show(self):
+        """Show the visual."""
         self._hidden = False
 
     def close(self):
+        """Close the visual."""
         self.program._deactivate()
         del self.program
         gc.collect()
@@ -154,6 +161,7 @@ class BaseVisual(object):
         self._acc.reset()
 
     def set_box_index(self, box_index, data=None):
+        """Set the visual's box index."""
         # data is the output of validate_data. This is used by the child class TextVisual.
         assert box_index is not None
         n = self.n_vertices
@@ -366,6 +374,7 @@ _SUPPORTED_KEYS = (
 
 
 def mouse_info(e):
+    """Extract the position and button of a Qt mouse event."""
     p = e.pos()
     x, y = p.x(), p.y()
     b = e.button()
@@ -373,6 +382,7 @@ def mouse_info(e):
 
 
 def key_info(e):
+    """Extract the key of a Qt keyboard event."""
     key = int(e.key())
     if 32 <= key <= 127:
         return chr(key)
@@ -383,6 +393,12 @@ def key_info(e):
 
 
 class LazyProgram(gloo.Program):
+    """Register OpenGL program updates for later evaluation instead of executing them directly.
+
+    This is used when updating visuals in background threads. The actual OpenGL update commands
+    should always be sent from the main GUI thread.
+
+    """
     def __init__(self, *args, **kwargs):
         self._update_queue = []
         self._is_lazy = False
@@ -398,6 +414,8 @@ class LazyProgram(gloo.Program):
 
 
 class BaseCanvas(QOpenGLWindow):
+    """Base canvas class."""
+
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self.transforms = TransformChain()
@@ -420,6 +438,7 @@ class BaseCanvas(QOpenGLWindow):
         self.setGeometry(20, 20, 800, 600)
 
     def get_size(self):
+        """Return the window size."""
         return self.size().width() or 1, self.size().height() or 1
 
     def window_to_ndc(self, mouse_pos):
@@ -444,6 +463,7 @@ class BaseCanvas(QOpenGLWindow):
     # ---------------------------------------------------------------------------------------------
 
     def clear(self):
+        """Remove all visuals except those which should not be cleared."""
         self.visuals[:] = (v for v in self.visuals if not v.get('clearable', True))
         for v in self.visuals:
             if v.get('clearable', True):  # pragma: no cover
@@ -451,6 +471,7 @@ class BaseCanvas(QOpenGLWindow):
                 del v
 
     def remove(self, *visuals):
+        """Remove some visuals."""
         visuals = [v for v in visuals if v is not None]
         self.visuals[:] = (v for v in self.visuals if v.visual not in visuals)
         for v in visuals:
@@ -460,6 +481,7 @@ class BaseCanvas(QOpenGLWindow):
         gc.collect()
 
     def get_visual(self, key):
+        """Get a visual from its key."""
         for v in self.visuals:
             if v.get('key', None) == key:
                 return v.visual
@@ -510,6 +532,7 @@ class BaseCanvas(QOpenGLWindow):
         return visual
 
     def has_visual(self, visual):
+        """Return whether a visual belongs to the canvas."""
         for v in self.visuals:
             if v.visual == visual:
                 return True
@@ -670,6 +693,7 @@ class BaseCanvas(QOpenGLWindow):
         return out
 
     def update(self):
+        """Update the OpenGL canvas."""
         if not self._is_lazy:
             super(BaseCanvas, self).update()
 

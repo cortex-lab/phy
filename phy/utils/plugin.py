@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class IPluginRegistry(type):
+    """Regjster all plugin instances."""
+
     plugins = []
 
     def __init__(cls, name, bases, attrs):
@@ -37,11 +39,7 @@ class IPluginRegistry(type):
 
 
 class IPlugin(metaclass=IPluginRegistry):
-    """A class deriving from IPlugin can implement the following methods:
-
-    * `attach_to_cli(cli)`: called when the CLI is created.
-
-    """
+    """Plugin base class."""
     pass
 
 
@@ -58,6 +56,7 @@ def get_plugin(name):
 #------------------------------------------------------------------------------
 
 def _iter_plugin_files(dirs):
+    """Iterate through all found plugin files."""
     for plugin_dir in dirs:
         plugin_dir = Path(plugin_dir).expanduser()
         if not plugin_dir.exists():  # pragma: no cover
@@ -70,8 +69,7 @@ def _iter_plugin_files(dirs):
                 continue
             logger.debug("Scanning `%s`.", subdir)
             for filename in files:
-                if (filename.startswith('__') or
-                        not filename.endswith('.py')):
+                if (filename.startswith('__') or not filename.endswith('.py')):
                     continue  # pragma: no cover
                 logger.debug("Found plugin module `%s`.", filename)
                 yield subdir / filename
@@ -113,7 +111,8 @@ def discover_plugins(dirs):
 
 
 def attach_plugins(controller, plugins=None, config_dir=None):
-    # Attach the plugins.
+    """Attach specified or default plugins to a controller object."""
+
     plugins = plugins or []
     config = load_master_config(config_dir=config_dir)
     name = getattr(controller, 'gui_name', None) or controller.__class__.__name__

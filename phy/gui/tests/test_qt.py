@@ -11,8 +11,8 @@ from pytest import raises
 from phylib.utils.testing import captured_logging
 from ..qt import (
     QMessageBox, Qt, QWebEngineView, QTimer, _button_name_from_enum, _button_enum_from_name,
-    _prompt, _screen_size, _is_high_dpi, _wait_signal, require_qt, create_app, QApplication,
-    WebView, busy_cursor, AsyncCaller, QThreadPool, _wait, Worker, _block, _screenshot,
+    prompt, screen_size, is_high_dpi, _wait_signal, require_qt, create_app, QApplication,
+    WebView, busy_cursor, AsyncCaller, QThreadPool, _wait, Worker, _block, screenshot,
     Debouncer)
 
 
@@ -49,8 +49,8 @@ def test_qt_app(qtbot):
 
 
 def test_screen_size(qtbot):
-    _screen_size()
-    assert _is_high_dpi() in (False, True)
+    screen_size()
+    assert is_high_dpi() in (False, True)
 
 
 def test_worker(qtbot):
@@ -150,7 +150,7 @@ def test_javascript_2(qtbot):
 def test_screenshot(qtbot, tempdir):
     path = tempdir / 'capture.png'
     view = WebView()
-    view.set_html('hello', lambda e: _screenshot(view, path))
+    view.set_html('hello', lambda e: screenshot(view, path))
     qtbot.addWidget(view)
     view.show()
     qtbot.waitForWindowShown(view)
@@ -163,9 +163,7 @@ def test_prompt(qtbot):
     assert _button_name_from_enum(QMessageBox.Save) == 'save'
     assert _button_enum_from_name('save') == QMessageBox.Save
 
-    box = _prompt("How are you doing?",
-                  buttons=['save', 'cancel', 'close'],
-                  )
+    box = prompt("How are you doing?", buttons=['save', 'cancel', 'close'])
     qtbot.mouseClick(box.buttons()[0], Qt.LeftButton)
     assert 'save' in str(box.clickedButton().text()).lower()
 

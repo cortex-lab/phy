@@ -160,8 +160,8 @@ def test_trace_view_1(qtbot, tempdir, gui):
     ac(v.stacked.box_size, bs, atol=.05)
     qtbot.wait(1)
 
-    v.origin = 'upper'
-    assert v.origin == 'upper'
+    v.origin = 'top'
+    assert v.origin == 'top'
     qtbot.wait(1)
 
     # Simulate spike selection.

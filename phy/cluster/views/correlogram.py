@@ -24,12 +24,31 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(ManualClusteringView):
+    """A view showing the autocorrelogram of the selected clusters, and all cross-correlograms
+    of cluster pairs.
+
+    Constructor:
+
+    - `correlograms`: a function
+      `(cluster_ids, bin_size, window_size) => (n_clusters, n_clusters, n_bins) array`
+
+    - `firing_rate`: a function `(cluster_ids, bin_size) => (n_clusters, n_clusters) array`
+
+    """
+
     _default_position = 'left'
     cluster_ids = ()
 
-    bin_size = 1e-3  # in seconds
-    window_size = 50e-3  # in seconds
-    refractory_period = 2e-3  # in seconds
+    # Bin size, in seconds.
+    bin_size = 1e-3
+
+    # Window size, in seconds.
+    window_size = 50e-3
+
+    # Refactory period, in seconds
+    refractory_period = 2e-3
+
+    # Whether the normalization is uniform across entire rows or not.
     uniform_normalization = False
 
     default_shortcuts = {
@@ -59,7 +78,7 @@ class CorrelogramView(ManualClusteringView):
         self.firing_rate = firing_rate
 
         # Set the default bin and window size.
-        self.set_bin_window(bin_size=self.bin_size, window_size=self.window_size)
+        self._set_bin_window(bin_size=self.bin_size, window_size=self.window_size)
 
         self.correlogram_visual = HistogramVisual()
         self.canvas.add_visual(self.correlogram_visual)
@@ -179,12 +198,7 @@ class CorrelogramView(ManualClusteringView):
             self.set_refractory_period, alias='cr', prompt=True,
             prompt_default=lambda: self.refractory_period * 1000)
 
-    def set_refractory_period(self, value):
-        """Set the refractory period (in milliseconds)."""
-        self.refractory_period = np.clip(value, .1, 100) * 1e-3
-        self.on_select(cluster_ids=self.cluster_ids)
-
-    def set_bin_window(self, bin_size=None, window_size=None):
+    def _set_bin_window(self, bin_size=None, window_size=None):
         """Set the bin and window sizes (in seconds)."""
         bin_size = bin_size or self.bin_size
         window_size = window_size or self.window_size
@@ -197,13 +211,18 @@ class CorrelogramView(ManualClusteringView):
         b, w = self.bin_size * 1000, self.window_size * 1000
         self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
 
+    def set_refractory_period(self, value):
+        """Set the refractory period (in milliseconds)."""
+        self.refractory_period = np.clip(value, .1, 100) * 1e-3
+        self.on_select(cluster_ids=self.cluster_ids)
+
     def set_bin(self, bin_size):
         """Set the correlogram bin size (in milliseconds).
 
         Example: `1`
 
         """
-        self.set_bin_window(bin_size=bin_size * 1e-3)
+        self._set_bin_window(bin_size=bin_size * 1e-3)
         self.on_select(cluster_ids=self.cluster_ids)
 
     def set_window(self, window_size):
@@ -212,5 +231,5 @@ class CorrelogramView(ManualClusteringView):
         Example: `100`
 
         """
-        self.set_bin_window(window_size=window_size * 1e-3)
+        self._set_bin_window(window_size=window_size * 1e-3)
         self.on_select(cluster_ids=self.cluster_ids)

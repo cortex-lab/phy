@@ -17,7 +17,7 @@ import traceback
 from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils._misc import phy_config_dir
 from phy.gui import Actions
-from phy.gui.qt import AsyncCaller, _screenshot, QThreadPool, Worker
+from phy.gui.qt import AsyncCaller, screenshot, QThreadPool, Worker
 from phy.plot import PlotCanvas
 
 logger = logging.getLogger(__name__)
@@ -27,10 +27,21 @@ logger = logging.getLogger(__name__)
 # Manual clustering view
 # -----------------------------------------------------------------------------
 
+_ENABLE_THREADING = True
+
+
 class ManualClusteringView(object):
     """Base class for clustering views.
 
-    The views take their data with functions `cluster_ids: spike_ids, data`.
+    Typical property objects:
+
+    - `self.canvas`: a `PlotCanvas` instance by default (can also be a `PlotCanvasMpl` instance).
+    - `self.default_shortcuts`: a dictionary with the default keyboard shortcuts for the view
+    - `self.shortcuts`: a dictionary with the actual keyboard shortcuts for the view (can be passed
+      to the view's constructor).
+    - `self.state_attrs`: a tuple with all attributes that should be automatically saved in the
+      view's global GUI state.
+    - `self.local_state_attrs`: like above, but for the local GUI state (dataset-dependent).
 
     """
     default_shortcuts = {
@@ -64,11 +75,21 @@ class ManualClusteringView(object):
         self.canvas.attach_events(self)
 
     def on_select(self, cluster_ids=None, **kwargs):
-        # To override.
+        """Callback functions when clusters are selected. To be overriden."""
         pass
 
     def attach(self, gui):
-        """Attach the view to the GUI."""
+        """Attach the view to the GUI.
+
+        Perform the following:
+
+        - Add the view to the GUI.
+        - Update the view's attribute from the GUI state
+        - Add the default view actions (auto_update, screenshot)
+        - Bind the on_select() method to the select event raised by the supervisor.
+          This runs on a background thread not to block the GUI thread.
+
+        """
 
         # Add shortcuts only for the first view of any given type.
         shortcuts = self.shortcuts if not gui.list_views(self.__class__) else None
@@ -92,6 +113,7 @@ class ManualClusteringView(object):
 
         @connect
         def on_select(sender, cluster_ids, **kwargs):
+            # Decide whether the view should react to the select event or not.
             if not self.auto_update:
                 return
             if sender.__class__.__name__ != 'Supervisor':
@@ -100,28 +122,53 @@ class ManualClusteringView(object):
             if not cluster_ids:
                 return
 
-            # Task that executes in the thread pool.
+            # The view update occurs in a thread in order not to block the main GUI thread.
+            # A complication is that OpenGL updates should only occur in the main GUI thread,
+            # whereas the computation of the data buffers to upload to the GPU should happen
+            # in a thread. Finally, the select events are throttled (more precisely, debounced)
+            # to avoid clogging the GUI when many clusters are successively selected, but this
+            # is implemented at the level of the table widget, not here.
+
+            # This function executes in the Qt thread pool.
             def _worker():  # pragma: no cover
                 try:
+                    # All errors happening in the view updates are collected here.
                     self.on_select(cluster_ids=cluster_ids, **kwargs)
                 except Exception:
                     logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
+            # We launch this function in the thread pool.
             worker = Worker(_worker)
+
+            # Once the worker has finished in the thread, the finished signal is raised,
+            # and the callback function below runs on the main GUI thread.
+            # All OpenGL updates triggered in the worker (background thread) where recorded
+            # instead of being immediately executed (which would have caused errors because
+            # OpenGL updates should not be executed from a background thread).
+            # Once these updates have been collected in the right order, we execute all of
+            # them here, in the main GUI thread.
             @worker.signals.finished.connect
             def finished():
                 # When the task has finished in the thread pool, we recover all program
                 # updates of the view, and we execute them on the GPU.
                 self.canvas.set_lazy(False)
+                # We go through all collected OpenGL updates.
                 for program, name, data in self.canvas.iter_update_queue():
+                    # We update data buffers in OpenGL programs.
                     program[name] = data
+                # Finally, we update the canvas.
                 self.canvas.update()
                 emit('is_busy', self, False)
 
-            # Start the task on the thread pool.
+            # Start the task on the thread pool, and let the OpenGL canvas know that we're
+            # starting to record all OpenGL calls instead of executing them immediately.
+            # This is what we call the "lazy" mode.
             emit('is_busy', self, True)
             self.canvas.set_lazy(True)
-            QThreadPool.globalInstance().start(worker)
+            if _ENABLE_THREADING:
+                QThreadPool.globalInstance().start(worker)
+            else:
+                worker.run()
 
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the view.
@@ -152,28 +199,23 @@ class ManualClusteringView(object):
             self.dock_widget.setFloating(False)
 
     def toggle_auto_update(self, checked):
-        """Auto update means the view is updated automatically
-        when the cluster selection changes."""
+        """When on, the view is automatically updated when the cluster selection changes."""
         self.auto_update = checked
 
     def screenshot(self, dir=None):
+        """Save a PNG screenshot of the view into a given directory. By default, the screenshots
+        are saved in `~/.phy/screenshots/`."""
         date = datetime.now().strftime('%Y%m%d%H%M%S')
-        name = 'phy_screenshot_%s_%s.png' % (self.__class__.__name__, date)
+        name = 'phy_screenshot_%s_%s.png' % (date, self.__class__.__name__)
         path = (Path(dir) if dir else phy_config_dir() / 'screenshots') / name
         path.parent.mkdir(exist_ok=True, parents=True)
-        _screenshot(self.canvas, path)
+        screenshot(self.canvas, path)
         return path
 
     @property
     def state(self):
-        """View state.
-
-        This Bunch will be automatically persisted in the GUI state when the
-        GUI is closed.
-
-        To be overriden.
-
-        """
+        """View state, a Bunch instance automatically persisted in the GUI state when the
+        GUI is closed. To be overriden."""
         return Bunch({key: getattr(self, key, None) for key in self.state_attrs})
 
     def set_state(self, state):
@@ -189,14 +231,17 @@ class ManualClusteringView(object):
             setattr(self, k, v)
 
     def set_status(self, message=None):
+        """Set the status bar message in the GUI."""
         message = message or self.status
         if not message:
             return
         self.status = message
 
     def show(self):
+        """Show the underlying canvas."""
         return self.canvas.show()
 
     def close(self):
+        """Close the underlying canvas."""
         self.canvas.close()
         gc.collect()

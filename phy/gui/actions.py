@@ -14,7 +14,7 @@ import re
 import sys
 import traceback
 
-from .qt import QKeySequence, QAction, require_qt, _input_dialog
+from .qt import QKeySequence, QAction, require_qt, input_dialog
 from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def _prompt_args(title, docstring, default=None):
     r = re.search('Example: `([^`]+)`', docstring)
     docstring_ = docstring[:r.start()].strip() if r else docstring
     text = str(default()) if default else (r.group(1) if r else None)
-    s, ok = _input_dialog(title, docstring_, text)
+    s, ok = input_dialog(title, docstring_, text)
     if not ok or not s:
         return
     # Parse user-supplied arguments and call the function.
@@ -518,9 +518,11 @@ class Snippets(object):
             logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
     def is_mode_on(self):
+        """Whether the snippet mode is enabled."""
         return self.command.startswith(':')
 
     def mode_on(self):
+        """Enable the snippet mode."""
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
         # Save the current status message.
         self._status_message = self.gui.status_message
@@ -535,6 +537,7 @@ class Snippets(object):
         self.command = ':'
 
     def mode_off(self):
+        """Disable the snippet mode."""
         self.gui.unlock_status()
         # Reset the GUI status message that was set before the mode was
         # activated.

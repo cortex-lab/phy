@@ -38,6 +38,8 @@ def _iter_spike_waveforms(
         interval=None, traces_interval=None, model=None, supervisor=None,
         n_samples_waveforms=None, get_best_channels=None, show_all_spikes=False,
         color_selector=None,):
+    """Iterate through the spike waveforms belonging in the current trace view."""
+
     m = model
     p = supervisor
     cs = color_selector
@@ -79,6 +81,22 @@ def _iter_spike_waveforms(
 
 
 class TraceView(ManualClusteringView):
+    """This view shows the raw traces along with spike waveforms.
+
+    Constructor:
+
+    - `traces`: a function `(t0, t1) => Bunch(data, color, waveforms)` where
+      `data` is an `(n_samples, n_channels)` array, and `waveforms` is a list of bunchs with
+      the following attributes: `data`, `color`, `channel_ids`, `start_time`, `spike_id`,
+      `spike_cluster`.
+
+    - `spike_times`: a function that returns the list of relevant spike times
+    - `sample_rate`
+    - `duration`
+    - `n_channels`
+    - `channel_vertical_order`: permutation of the channels
+
+    """
     _default_position = 'left'
     auto_update = True
     interval_duration = .25  # default duration of the interval
@@ -359,6 +377,7 @@ class TraceView(ManualClusteringView):
 
     @property
     def scaling(self):
+        """Scaling of the traces."""
         return self._scaling
 
     @scaling.setter
@@ -371,6 +390,8 @@ class TraceView(ManualClusteringView):
 
     @property
     def origin(self):
+        """Whether to show the channels from top to bottom (`top` option, the default), or from
+        bottom to top (`bottom`)."""
         return self._origin
 
     @origin.setter
@@ -388,6 +409,7 @@ class TraceView(ManualClusteringView):
 
     @property
     def interval(self):
+        """Interval as `(tmin, tmax)`."""
         return self._interval
 
     @interval.setter
@@ -458,6 +480,7 @@ class TraceView(ManualClusteringView):
         self.set_interval((t - h, t + h))
 
     def toggle_show_labels(self, checked):
+        """Toggle the display of the channel ids."""
         self.do_show_labels = checked
         self.set_interval()
 
@@ -479,6 +502,7 @@ class TraceView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def on_mouse_click(self, e):
+        """Select a cluster by clicking on a spike."""
         if 'Control' in e.modifiers:
             # Get mouse position in NDC.
             box_id, _ = self.canvas.stacked.box_map(e.pos)

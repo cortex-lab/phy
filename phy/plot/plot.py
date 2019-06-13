@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class PlotCanvas(BaseCanvas):
-    """Plotting canvas."""
+    """Plotting canvas that supports different layouts, subplots, lasso, axes, panzoom."""
+
     _current_box_index = (0,)
     interact = None
     n_plots = 1
@@ -47,6 +48,7 @@ class PlotCanvas(BaseCanvas):
         super(PlotCanvas, self).__init__(*args, **kwargs)
 
     def _enable(self):
+        """Enable panzoom, axes, and lasso if required."""
         self._enabled = True
         if self.has_panzoom:
             self.enable_panzoom()
@@ -58,6 +60,7 @@ class PlotCanvas(BaseCanvas):
     def set_layout(
             self, layout=None, shape=None, n_plots=None, origin=None,
             box_bounds=None, box_pos=None, box_size=None, has_clip=None):
+        """Set the plot layout: grid, boxed, stacked, or None."""
 
         self.layout = layout
 
@@ -94,7 +97,14 @@ class PlotCanvas(BaseCanvas):
         return self
 
     def add_visual(self, visual, *args, **kwargs):
-        """Add a visual, supporting batch, and box_index."""
+        """Add a visual and possibly set some data directly.
+
+        Special keyword arguments include:
+
+        - `clearable`: whether the visual should be removed when calling clear() (True by default)
+        - `exclude_origins`: list of interact instances that should not be applied to this visual
+
+        """
         if not self._enabled:
             self._enable()
         # The visual is not added again if it has already been added, in which case
@@ -110,7 +120,7 @@ class PlotCanvas(BaseCanvas):
         self.update_visual(visual, *args, **kwargs)
 
     def update_visual(self, visual, *args, **kwargs):
-        """Update a visual at the end of a batch."""
+        """Set the data of a visual, standalone or at the end of a batch."""
         if not self._enabled:  # pragma: no cover
             self._enable()
         # If a batch session has been initiated in the visual, add the data from the
@@ -138,44 +148,55 @@ class PlotCanvas(BaseCanvas):
     #--------------------------------------------------------------------------
 
     def scatter(self, *args, **kwargs):
+        """Add a standalone (no batch) scatter plot."""
         return self.add_visual(ScatterVisual(marker=kwargs.pop('marker', None)), *args, **kwargs)
 
     def uscatter(self, *args, **kwargs):
+        """Add a standalone (no batch) uniform scatter plot."""
         return self.add_visual(UniformScatterVisual(
             marker=kwargs.pop('marker', None),
             color=kwargs.pop('color', None),
             size=kwargs.pop('size', None)), *args, **kwargs)
 
     def plot(self, *args, **kwargs):
+        """Add a standalone (no batch) plot."""
         return self.add_visual(PlotVisual(), *args, **kwargs)
 
     def uplot(self, *args, **kwargs):
+        """Add a standalone (no batch) uniform plot."""
         return self.add_visual(UniformPlotVisual(color=kwargs.pop('color', None)), *args, **kwargs)
 
     def lines(self, *args, **kwargs):
+        """Add a standalone (no batch) line plot."""
         return self.add_visual(LineVisual(), *args, **kwargs)
 
     def text(self, *args, **kwargs):
+        """Add a standalone (no batch) text plot."""
         return self.add_visual(TextVisual(color=kwargs.pop('color', None)), *args, **kwargs)
 
     def polygon(self, *args, **kwargs):
+        """Add a standalone (no batch) polygon plot."""
         return self.add_visual(PolygonVisual(), *args, **kwargs)
 
     def hist(self, *args, **kwargs):
+        """Add a standalone (no batch) histogram plot."""
         return self.add_visual(HistogramVisual(), *args, **kwargs)
 
     # Enable methods
     #--------------------------------------------------------------------------
 
     def enable_panzoom(self):
+        """Enable pan zoom in the canvas."""
         self.panzoom = PanZoom(aspect=None, constrain_bounds=self.constrain_bounds)
         self.panzoom.attach(self)
 
     def enable_lasso(self):
+        """Enable lasso in the canvas."""
         self.lasso = Lasso()
         self.lasso.attach(self)
 
     def enable_axes(self, data_bounds=None, show_x=True, show_y=True):
+        """Show axes in the canvas."""
         self.axes = Axes(data_bounds=data_bounds, show_x=show_x, show_y=show_y)
         self.axes.attach(self)
 
@@ -184,7 +205,7 @@ class PlotCanvas(BaseCanvas):
 # Matplotlib plotting interface
 #------------------------------------------------------------------------------
 
-def zoom_fun(ax, event):  # pragma: no cover
+def _zoom_fun(ax, event):  # pragma: no cover
     cur_xlim = ax.get_xlim()
     cur_ylim = ax.get_ylim()
     xdata = event.xdata
@@ -220,6 +241,8 @@ _MPL_MARKER = {
 
 
 class PlotCanvasMpl(object):
+    """Matplotlib backend for a plot canvas (incomplete, work in progress)."""
+
     _current_box_index = (0,)
     gui = None
     _shown = False
@@ -285,7 +308,7 @@ class PlotCanvasMpl(object):
         ax.grid(color='w', alpha=.2)
 
         def on_zoom(event):  # pragma: no cover
-            zoom_fun(ax, event)
+            _zoom_fun(ax, event)
             self.show()
 
         self.canvas.mpl_connect('scroll_event', on_zoom)

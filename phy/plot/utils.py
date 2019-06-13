@@ -71,6 +71,7 @@ def _get_array(val, shape, default=None, dtype=np.float64):
 
 
 def _get_pos(x, y):
+    """Ensure x and y are valid position arrays."""
     assert x is not None
     assert y is not None
 
@@ -94,18 +95,23 @@ def _get_index(n_items, item_size, n):
 
 
 def _get_linear_x(n_signals, n_samples):
+    """Get a number of signals ranging from -1 to 1."""
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
 
 
 class BatchAccumulator(object):
+    """Accumulate data arrays for batch visuals."""
+
     def __init__(self):
         self.reset()
 
     def reset(self):
+        """Reset the accumulator."""
         self.items = {}
         self.noconcat = ()
 
     def add(self, b, noconcat=(), n_items=None, n_vertices=None, **kwargs):
+        """Add data for a given batch item."""
         b.update(kwargs)
         self.noconcat = noconcat
         assert n_items >= 0  # number of items for the current batch that is being added
@@ -149,6 +155,7 @@ class BatchAccumulator(object):
 
     @property
     def data(self):
+        """Return the concatenate data."""
         return Bunch({key: getattr(self, key) for key in self.items.keys()})
 
 
@@ -162,6 +169,7 @@ def _load_shader(filename):
 
 
 def _tesselate_histogram(hist):
+    """Return the vertices of triangles composing a histogram."""
     r"""
 
     2/4  3

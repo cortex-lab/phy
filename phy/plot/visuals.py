@@ -20,7 +20,7 @@ from .utils import (_tesselate_histogram,
                     _get_pos,
                     _get_index,
                     )
-from phy.gui.qt import _is_high_dpi
+from phy.gui.qt import is_high_dpi
 from phylib.io.array import _as_array
 from phylib.utils import Bunch
 from phylib.utils.geometry import _get_data_bounds
@@ -38,6 +38,8 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 #------------------------------------------------------------------------------
 
 class ScatterVisual(BaseVisual):
+    """Scatter visual, displaying a given marker at specified positions, with various colors
+    and sizes."""
     _init_keywords = ('marker',)
     _default_marker_size = 10.
     _default_marker = 'disc'
@@ -121,16 +123,20 @@ class ScatterVisual(BaseVisual):
         return data
 
     def set_color(self, color):
+        """Change the color of the markers."""
         color = _get_array(color, (self.n_vertices, 4), ScatterVisual._default_color)
         self.program['a_color'] = color.astype(np.float32)
 
     def set_marker_size(self, marker_size):
+        """Change the size of the markers."""
         assert marker_size > 0
         size = _get_array(marker_size, (self.n_vertices, 1))
         self.program['a_size'] = size.astype(np.float32)
 
 
 class UniformScatterVisual(BaseVisual):
+    """Scatter visual with a fixed marker color and size."""
+
     _init_keywords = ('marker', 'color', 'size')
     _default_marker_size = 10.
     _default_marker = 'disc'
@@ -240,14 +246,18 @@ def _as_list(arr):
 
 
 def _min(arr):
+    """Minimum of an array, return 0 on empty arrays."""
     return arr.min() if len(arr) else 0
 
 
 def _max(arr):
+    """Minimum of an array, return 1 on empty arrays."""
     return arr.max() if len(arr) else 1.
 
 
 class PlotVisual(BaseVisual):
+    """Plot visual, with multiple line plots of various sizes and colors."""
+
     _default_color = DEFAULT_COLOR
     _noconcat = ('x', 'y')
 
@@ -360,6 +370,8 @@ class PlotVisual(BaseVisual):
 
 
 class UniformPlotVisual(BaseVisual):
+    """A plot visual with a uniform color."""
+
     _default_color = DEFAULT_COLOR
     _noconcat = ('x', 'y')
 
@@ -465,6 +477,8 @@ class UniformPlotVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class HistogramVisual(BaseVisual):
+    """A histogram visual."""
+
     _default_color = DEFAULT_COLOR
 
     def __init__(self):
@@ -546,7 +560,7 @@ class HistogramVisual(BaseVisual):
 class TextVisual(BaseVisual):
     """Display strings at multiple locations.
 
-    Currently, the color, font family, and font size is not customizable.
+    Note: at the moment, the color, font family, and font size are not customizable.
 
     """
     _default_color = (1., 1., 1., 1.)
@@ -569,7 +583,7 @@ class TextVisual(BaseVisual):
         # Load the font.
         curdir = Path(__file__).parent
         font_name = 'SourceCodePro-Regular'
-        font_size = 24 if not _is_high_dpi() else 32
+        font_size = 24 if not is_high_dpi() else 32
         # The font texture is gzipped.
         fn = '%s-%d.npy.gz' % (font_name, font_size)
         with gzip.open(str(curdir / 'static' / fn), 'rb') as f:
@@ -703,7 +717,8 @@ class TextVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class LineVisual(BaseVisual):
-    """Lines."""
+    """Line segments."""
+
     _default_color = (.3, .3, .3, 1.)
     _init_keywords = ('color',)
 
@@ -775,6 +790,8 @@ class LineVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class ImageVisual(BaseVisual):
+    """Display a 2D image."""
+
     def __init__(self):
         super(ImageVisual, self).__init__()
 

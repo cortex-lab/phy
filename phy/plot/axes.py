@@ -15,7 +15,7 @@ from .transform import NDC, Range
 from .visuals import LineVisual, TextVisual
 from phylib import connect
 from phylib.utils._types import _is_integer
-from phy.gui.qt import _is_high_dpi
+from phy.gui.qt import is_high_dpi
 
 
 #------------------------------------------------------------------------------
@@ -23,6 +23,8 @@ from phy.gui.qt import _is_high_dpi
 #------------------------------------------------------------------------------
 
 class AxisLocator(object):
+    """Determine the location of ticks in a view."""
+
     _default_nbinsx = 24
     _default_nbinsy = 16
     # ticks are extended beyond the viewport for smooth transition
@@ -38,13 +40,14 @@ class AxisLocator(object):
         self.set_nbins(nbinsx, nbinsy)
 
     def set_nbins(self, nbinsx=None, nbinsy=None):
+        """Change the number of bins on the x and y axes."""
         nbinsx = self._bins_margin * nbinsx if _is_integer(nbinsx) else self._default_nbinsx
         nbinsy = self._bins_margin * nbinsy if _is_integer(nbinsy) else self._default_nbinsy
         self.locx = MaxNLocator(nbins=nbinsx, steps=self._default_steps)
         self.locy = MaxNLocator(nbins=nbinsy, steps=self._default_steps)
 
     def _transform_ticks(self, xticks, yticks):
-        """From data coordinates to view coordinates."""
+        """Transform ticks from data coordinates to view coordinates."""
         nx, ny = len(xticks), len(yticks)
         arr = np.zeros((nx + ny, 2))
         arr[:nx, 0] = xticks
@@ -53,7 +56,7 @@ class AxisLocator(object):
         return out[:nx, 0], out[nx:, 1]
 
     def set_view_bounds(self, view_bounds=None):
-        """Set the view bounds in NDC."""
+        """Set the view bounds in normalized device coordinates."""
         view_bounds = view_bounds or NDC
         x0, y0, x1, y1 = view_bounds
         dx = 2 * (x1 - x0)
@@ -81,6 +84,7 @@ class AxisLocator(object):
 #------------------------------------------------------------------------------
 
 def _fix_coordinate_in_visual(visual, coord):
+    """Insert GLSL code to fix the position on the x or y coordinate."""
     assert coord in ('x', 'y')
     visual.inserter.insert_vert(
         'gl_Position.{coord} = pos_orig.{coord};'.format(coord=coord),
@@ -88,26 +92,28 @@ def _fix_coordinate_in_visual(visual, coord):
 
 
 def _set_line_data(xticks, yticks):
+    """Return the positions of the line ticks."""
     xdata = np.c_[xticks, -np.ones(len(xticks)), xticks, np.ones(len(xticks))]
     ydata = np.c_[-np.ones(len(yticks)), yticks, np.ones(len(yticks)), yticks]
     return xdata, ydata
 
 
 def get_nbins(w, h):
-    """Return a sensible number of bins on the x and y axes as a function
-    of the window size."""
-    if _is_high_dpi():  # pragma: no cover
+    """Return a sensible number of bins on the x and y axes as a function of the window size."""
+    if is_high_dpi():  # pragma: no cover
         w, h = w // 2, h // 2
     return max(1, w // 150), max(1, h // 80)
 
 
 def _quant_zoom(z):
+    """Return the zoom level as a positive or negative integer."""
     if z == 0:
         return 0  # pragma: no cover
     return int(z) if z >= 1 else -int(1. / z)
 
 
 class Axes(object):
+    """Dynamic axes."""
     default_color = (1, 1, 1, .25)
 
     def __init__(self, data_bounds=None, color=None, show_x=True, show_y=True):
@@ -119,6 +125,7 @@ class Axes(object):
         self._attached = None
 
     def reset_data_bounds(self, data_bounds, do_update=True):
+        """Reset the bounds of the view in data coordinates."""
         self.locator = AxisLocator(data_bounds=data_bounds)
         self.locator.set_view_bounds(NDC)
         if do_update:
@@ -127,6 +134,7 @@ class Axes(object):
         self._last_pan = (0, 0)
 
     def _create_visuals(self):
+        """Create the line and text visuals on the x and/or y axes."""
         if self.show_x:
             self.xvisual = LineVisual()
             self.txvisual = TextVisual()
@@ -140,6 +148,7 @@ class Axes(object):
             _fix_coordinate_in_visual(self.tyvisual, 'x')
 
     def update_visuals(self):
+        """Update the visuals."""
         # Get the text data.
         xtext, ytext = self.locator.xtext, self.locator.ytext
         # GPU data for the grid.
@@ -157,6 +166,8 @@ class Axes(object):
             self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
 
     def attach(self, canvas):
+        """Add the axes to the canvas."""
+
         # Only attach once to avoid binding lots of events.
         if self._attached:
             return

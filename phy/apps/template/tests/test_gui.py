@@ -8,7 +8,7 @@
 
 import logging
 
-from phylib.utils._misc import _read_python
+from phylib.utils._misc import read_python
 from phylib.utils.testing import captured_output
 from phylib.utils import connect, emit
 import phy.cluster.views as cv
@@ -97,7 +97,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     gui.close()
 
     # Create a new controller and a new GUI with the same data.
-    params = _read_python(tempdir / 'params.py')
+    params = read_python(tempdir / 'params.py')
     params['dat_path'] = controller.model.dat_path
     controller = TemplateController(config_dir=tempdir, **params)
 

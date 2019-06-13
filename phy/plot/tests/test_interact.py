@@ -202,7 +202,7 @@ def test_stacked_1(qtbot, canvas):
     n = 1000
     box_index = np.repeat(np.arange(5), n // 5, axis=0)
 
-    stacked = Stacked(n_boxes=5, origin='upper')
+    stacked = Stacked(n_boxes=5, origin='top')
     _create_visual(qtbot, canvas, stacked, box_index)
     stacked.update_boxes(stacked.box_pos, stacked.box_size)
 
@@ -210,7 +210,7 @@ def test_stacked_1(qtbot, canvas):
 
 
 def test_stacked_closest_box():
-    stacked = Stacked(n_boxes=4, origin='upper')
+    stacked = Stacked(n_boxes=4, origin='top')
     ac(stacked.get_closest_box((-.5, .9)), 0)
     ac(stacked.get_closest_box((+.5, -.9)), 3)
 

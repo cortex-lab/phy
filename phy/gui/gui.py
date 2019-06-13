@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow, QMessageBox, Qt,
-    QSize, QMetaObject, _wait, _prompt, _show_box)
+    QSize, QMetaObject, _wait, prompt, show_box)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
 from phylib.utils import emit, connect
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 def _try_get_matplotlib_canvas(view):
-    # Get the Qt widget from a matplotlib figure.
+    """Get the Qt widget from a matplotlib figure."""
     try:
         from matplotlib.pyplot import Figure
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -60,7 +60,7 @@ class DockWidget(QDockWidget):
 
 
 def _create_dock_widget(widget, name, closable=True, floatable=True):
-    # Create the gui widget.
+    """Create a dock widget."""
     dock_widget = DockWidget()
     dock_widget.setObjectName(name)
     dock_widget.setWindowTitle(name)
@@ -97,14 +97,14 @@ def _prompt_save():  # pragma: no cover
     Output is 'save', 'cancel', or 'close'
 
     """
-    b = _prompt(
+    b = prompt(
         "Do you want to save your changes before quitting?",
         buttons=['save', 'cancel', 'close'], title='Save')
-    return _show_box(b)
+    return show_box(b)
 
 
 class GUI(QMainWindow):
-    """A Qt main window holding docking Qt.
+    """A Qt main window containing docking widgets.
 
     `GUI` derives from `QMainWindow`.
 
@@ -117,17 +117,9 @@ class GUI(QMainWindow):
     close_view
 
     """
-    def __init__(self,
-                 position=None,
-                 size=None,
-                 name=None,
-                 subtitle=None,
-                 view_creator=None,
-                 view_count=None,
-                 default_views=None,
-                 config_dir=None,
-                 **kwargs
-                 ):
+    def __init__(
+            self, position=None, size=None, name=None, subtitle=None, view_creator=None,
+            view_count=None, default_views=None, config_dir=None, **kwargs):
         # HACK to ensure that closeEvent is called only twice (seems like a
         # Qt bug).
         self._closed = False
@@ -194,6 +186,7 @@ class GUI(QMainWindow):
             self.restore_geometry_state(gs)
 
     def _set_name(self, name, subtitle):
+        """Set the GUI name."""
         if name is None:
             name = self.__class__.__name__
         title = name if not subtitle else name + ' - ' + subtitle
@@ -203,12 +196,15 @@ class GUI(QMainWindow):
         self.name = name
 
     def _set_pos_size(self, position, size):
+        """Set the position and size of the GUI."""
         if position is not None:
             self.move(position[0], position[1])
         if size is not None:
             self.resize(QSize(size[0], size[1]))
 
     def set_default_actions(self):
+        """Create the default actions (file, views, help...)."""
+
         # File menu.
         @self.file_actions.add(shortcut='ctrl+s')
         def save():
@@ -282,6 +278,7 @@ class GUI(QMainWindow):
 
     @property
     def views(self):
+        """Return the list of views in the GUI."""
         return self._views
 
     @property
@@ -293,7 +290,7 @@ class GUI(QMainWindow):
         return dict(vc)
 
     def list_views(self, cls):
-        """Return the list of views from a given class."""
+        """Return the list of views deriving from given class."""
         return [view for view in self._views if view.__class__ == cls]
 
     def get_view(self, cls, index=0):
@@ -321,6 +318,7 @@ class GUI(QMainWindow):
         return name
 
     def _create_and_add_view(self, view_name):
+        """Create a view and add it to the GUI."""
         fn = self.view_creator.get(view_name, None)
         if fn is None:
             return
@@ -338,7 +336,7 @@ class GUI(QMainWindow):
         return view
 
     def create_views(self):
-        """view_count is a dictionary {view_name: n_views}."""
+        """Create and add the views depending on the number of views specified in view_coun}."""
         self.view_actions.separator()
         req_view_count = self._requested_view_count.items()
         for view_name, n_views in req_view_count:
@@ -423,9 +421,11 @@ class GUI(QMainWindow):
         self._status_bar.showMessage(str(value))
 
     def lock_status(self):
+        """Lock the status bar."""
         self._lock_status = True
 
     def unlock_status(self):
+        """Unlock the status bar."""
         self._lock_status = False
 
     # State

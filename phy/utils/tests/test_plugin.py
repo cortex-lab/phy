@@ -17,7 +17,7 @@ from ..plugin import (IPluginRegistry,
                       discover_plugins,
                       attach_plugins
                       )
-from phylib.utils._misc import _write_text
+from phylib.utils._misc import write_text
 
 
 #------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ def test_plugin_1(no_native_plugins):
 def test_discover_plugins(tempdir, no_native_plugins):
     path = tempdir / 'my_plugin.py'
     contents = '''from phy import IPlugin\nclass MyPlugin(IPlugin): pass'''
-    _write_text(path, contents)
+    write_text(path, contents)
 
     plugins = discover_plugins([tempdir])
     assert plugins
@@ -62,7 +62,7 @@ def test_attach_plugins(tempdir):
     class MyController(object):
         pass
 
-    _write_text(tempdir / 'plugin1.py', dedent(
+    write_text(tempdir / 'plugin1.py', dedent(
         '''
             from phy import IPlugin
             class MyPlugin1(IPlugin):
@@ -79,7 +79,7 @@ def test_attach_plugins(tempdir):
     c.Plugins.dirs = ['%s']
     c.MyController.plugins = ['MyPlugin1']
     ''' % tempdir)
-    _write_text(tempdir / 'phy_config.py', contents)
+    write_text(tempdir / 'phy_config.py', contents)
 
     controller = MyController()
     attach_plugins(controller, plugins=['MyPlugin2'], config_dir=tempdir)

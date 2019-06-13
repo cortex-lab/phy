@@ -26,6 +26,20 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class TemplateView(ManualClusteringView):
+    """This view shows all template waveforms of all clusters in a large grid of shape
+    `(n_channels, n_clusters)`.
+
+    Constructor:
+
+    - `templates`: a function `cluster_ids => [Bunch(template, channel_ids)]` where `template` is
+      an `(n_samples, n_channels)` array, and `channel_ids` represents the channel ids of the
+      channels in the template array.
+
+    - `channel_ids`: the list of all channel ids
+    - `cluster_ids`: the list of all cluster ids
+    - `cluster_color_selector`: the object responsible for the color mapping
+
+    """
     _default_position = 'right'
     cluster_ids = ()
     _scaling = 1.
@@ -111,6 +125,8 @@ class TemplateView(ManualClusteringView):
         self.cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
 
     def update_cluster_sort(self, cluster_ids):
+        """Update the order of all clusters."""
+
         # Only the order of the cluster_ids is supposed to change here.
         # We just have to update box_index instead of replotting everything.
         assert len(cluster_ids) == len(self.cluster_ids)
@@ -125,6 +141,8 @@ class TemplateView(ManualClusteringView):
         self.canvas.update()
 
     def update_color(self, selected_clusters=None):
+        """Update the color of the clusters, taking the selected clusters into account."""
+
         # This method is only used when the view has been plotted at least once,
         # such that self._cluster_box_index has been filled.
         if not self._cluster_box_index:
@@ -149,6 +167,8 @@ class TemplateView(ManualClusteringView):
         self.update_color(selected_clusters=cluster_ids)
 
     def plot(self):
+        """Make the template plot."""
+
         # Retrieve the waveform data.
         bunchs = self.templates(self.cluster_ids)
         n_clusters = len(self.cluster_ids)
@@ -160,6 +180,7 @@ class TemplateView(ManualClusteringView):
         self.canvas.update()
 
     def on_mouse_click(self, e):
+        """Select a cluster by clicking on its template waveform."""
         b = e.button
         if 'Control' in e.modifiers:
             # Get mouse position in NDC.
@@ -180,6 +201,7 @@ class TemplateView(ManualClusteringView):
 
     @property
     def scaling(self):
+        """Scaling of the template waveforms."""
         return self._scaling or 1.
 
     @scaling.setter
@@ -187,11 +209,11 @@ class TemplateView(ManualClusteringView):
         self._scaling = value
 
     def increase(self):
-        """Increase the scaling of the features."""
+        """Increase the scaling of the template waveforms."""
         self.scaling *= self._scaling_increment
         self.plot()
 
     def decrease(self):
-        """Decrease the scaling of the features."""
+        """Decrease the scaling of the template waveforms."""
         self.scaling /= self._scaling_increment
         self.plot()

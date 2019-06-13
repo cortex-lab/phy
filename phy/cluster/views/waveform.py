@@ -67,6 +67,9 @@ def _overlap_transform(t, offset=0, n=1, overlap=None):
 
 
 class WaveformView(ManualClusteringView):
+    """This view shows the waveforms of the selected clusters, on relevant channels,
+    following the probe geometry."""
+
     _default_position = 'right'
     scaling_coeff = 1.1
     cluster_ids = ()
@@ -263,6 +266,7 @@ class WaveformView(ManualClusteringView):
 
     @property
     def overlap(self):
+        """Whether to overlap the waveforms belonging to different clusters."""
         return self._overlap
 
     @overlap.setter
@@ -283,10 +287,12 @@ class WaveformView(ManualClusteringView):
 
     @property
     def boxed(self):
+        """Layout instance."""
         return self.canvas.boxed
 
     @property
     def box_scaling(self):
+        """Scaling of the channel boxes."""
         return self._box_scaling
 
     @box_scaling.setter
@@ -320,6 +326,7 @@ class WaveformView(ManualClusteringView):
 
     @property
     def probe_scaling(self):
+        """Scaling of the entire probe."""
         return self._probe_scaling
 
     @probe_scaling.setter
@@ -352,10 +359,12 @@ class WaveformView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def toggle_show_labels(self, checked):
+        """Whether to show the channel ids or not."""
         self.do_show_labels = checked
         self.on_select(cluster_ids=self.cluster_ids)
 
     def on_mouse_click(self, e):
+        """Select a channel by clicking on a box in the waveform view."""
         b = e.button
         nums = tuple('%d' % i for i in range(10))
         if 'Control' in e.modifiers or e.key in nums:

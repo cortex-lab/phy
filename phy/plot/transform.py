@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 def _wrap_apply(f):
+    """Validate the input and output of transform apply functions."""
     def wrapped(arr, **kwargs):
         if arr is None or not len(arr):
             return arr
@@ -38,6 +39,7 @@ def _wrap_apply(f):
 
 
 def _wrap_glsl(f):
+    """Validate the output of GLSL functions."""
     def wrapped(var, **kwargs):
         out = f(var, **kwargs)
         out = dedent(out).strip()
@@ -84,6 +86,7 @@ def _normalize(arr, m, M):
 
 
 def subplot_bounds(shape=None, index=None):
+    """Get the data bounds of a subplot."""
     i, j = index
     n_rows, n_cols = shape
 
@@ -100,6 +103,7 @@ def subplot_bounds(shape=None, index=None):
 
 
 def subplot_bounds_glsl(shape=None, index=None):
+    """Get the data bounds in GLSL of a subplot."""
     x0 = '-1.0 + 2.0 * {i}.y / {s}.y'.format(s=shape, i=index)
     y0 = '+1.0 - 2.0 * ({i}.x + 1) / {s}.x'.format(s=shape, i=index)
     x1 = '-1.0 + 2.0 * ({i}.y + 1) / {s}.y'.format(s=shape, i=index)
@@ -128,18 +132,22 @@ NDC = (-1.0, -1.0, +1.0, +1.0)
 #------------------------------------------------------------------------------
 
 class BaseTransform(object):
+    """Base class for all transforms."""
     def __init__(self, value=None):
         self.value = value
         self.apply = _wrap_apply(self.apply)
         self.glsl = _wrap_glsl(self.glsl)
 
     def apply(self, arr):
+        """Apply the transform to an (n, 2) array."""
         raise NotImplementedError()
 
     def glsl(self, var):
+        """Return the GLSL code for the transform."""
         raise NotImplementedError()
 
     def inverse(self):
+        """Return a Transform instance for the inverse transform."""
         raise NotImplementedError()
 
     def __repr__(self):
@@ -147,6 +155,8 @@ class BaseTransform(object):
 
 
 class Translate(BaseTransform):
+    """Translation transform."""
+
     def apply(self, arr, value=None):
         assert isinstance(arr, np.ndarray)
         value = value if value is not None else self.value
@@ -167,6 +177,8 @@ class Translate(BaseTransform):
 
 
 class Scale(BaseTransform):
+    """Scaling transform."""
+
     def apply(self, arr, value=None):
         value = value if value is not None else self.value
         return arr * np.asarray(value)
@@ -186,6 +198,8 @@ class Scale(BaseTransform):
 
 
 class Range(BaseTransform):
+    """Range transform from a source rectangle to a target rectangle."""
+
     def __init__(self, from_bounds=None, to_bounds=None):
         super(Range, self).__init__()
         self.from_bounds = from_bounds if from_bounds is not None else NDC
@@ -222,6 +236,8 @@ class Range(BaseTransform):
 
 
 class Clip(BaseTransform):
+    """Transform that discards data outside a given rectangle."""
+
     def __init__(self, bounds=None):
         super(Clip, self).__init__()
         self.bounds = bounds or NDC
@@ -253,7 +269,7 @@ class Clip(BaseTransform):
 
 
 class Subplot(Range):
-    """Assume that the from_bounds is [-1, -1, 1, 1]."""
+    """Transforms to a subplot rectangle."""
 
     def __init__(self, shape, index=None):
         super(Subplot, self).__init__()
@@ -280,10 +296,12 @@ class TransformChain(object):
 
     @property
     def cpu_transforms(self):
+        """List of CPU transforms."""
         return [t for (where, t, origin) in self._transforms if where == 'cpu']
 
     @property
     def gpu_transforms(self):
+        """List of GPU transforms."""
         return [t for (where, t, origin) in self._transforms if where == 'gpu']
 
     def add_on_cpu(self, transforms, origin=None):
@@ -322,6 +340,7 @@ class TransformChain(object):
         return inv
 
     def __add__(self, tc):
+        """Concatenate multiple transform chains."""
         assert isinstance(tc, TransformChain)
         assert tc.transformed_var_name == self.transformed_var_name
         self._transforms.extend(tc._transforms)

@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def benchmark(name='', repeats=1):
+    """Contexts manager to benchmark an action."""
     start = default_timer()
     yield
     duration = (default_timer() - start) * 1000.
@@ -35,6 +36,8 @@ def benchmark(name='', repeats=1):
 
 
 class ContextualProfile(Profile):  # pragma: no cover
+    """Class used for profiling."""
+
     def __init__(self, *args, **kwds):
         super(ContextualProfile, self).__init__(*args, **kwds)
         self.enable_count = 0
@@ -81,6 +84,7 @@ class ContextualProfile(Profile):  # pragma: no cover
 
 
 def _enable_profiler(line_by_line=False):  # pragma: no cover
+    """Enable the profiler."""
     if 'profile' in builtins.__dict__:
         return builtins.__dict__['profile']
     if line_by_line:
@@ -93,6 +97,7 @@ def _enable_profiler(line_by_line=False):  # pragma: no cover
 
 
 def _profile(prof, statement, glob, loc):
+    """Profile a Python statement."""
     dir = Path('.profile')
     _ensure_dir_exists(dir)
     prof.runctx(statement, glob, loc)
@@ -119,17 +124,16 @@ def _profile(prof, statement, glob, loc):
 
 
 def _enable_pdb():  # pragma: no cover
+    """Enable a Qt-aware IPython debugger."""
     from IPython.core import ultratb
     logger.debug("Enabling debugger.")
     from PyQt5.QtCore import pyqtRemoveInputHook
     pyqtRemoveInputHook()
-    sys.excepthook = ultratb.FormattedTB(mode='Verbose',
-                                         color_scheme='Linux',
-                                         call_pdb=True,
-                                         )
+    sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=True)
 
 
-def memory_usage():  # pragma: no cover
+def _memory_usage():  # pragma: no cover
+    """Get the memory usage of the current Python process."""
     import psutil
     process = psutil.Process(os.getpid())
     return process.memory_info().rss

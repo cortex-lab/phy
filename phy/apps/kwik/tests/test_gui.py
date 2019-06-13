@@ -28,6 +28,18 @@ logger = logging.getLogger(__name__)
 
 @fixture
 def controller(tempdir):
+    from phy.cluster.views import base
+    from phy.gui.qt import Debouncer
+    import phy.apps.template.gui
+
+    # Disable threading in the tests for better coverage.
+    base._ENABLE_THREADING = False
+    delay = Debouncer.delay
+    Debouncer.delay = 1
+    # HACK: mock _prompt_save to avoid GUI block in test when closing
+    prompt = phy.apps.template.gui._prompt_save
+    phy.apps.template.gui._prompt_save = lambda: None
+
     # Download the dataset.
     paths = list(map(download_test_file, ('kwik/hybrid_10sec.kwik',
                                           'kwik/hybrid_10sec.kwx',
@@ -41,6 +53,10 @@ def controller(tempdir):
     # NOTE: make sure all callback functions are unconnected at the end of the tests
     # to avoid side-effects and spurious dependencies between tests.
     reset()
+
+    phy.apps.template.gui._prompt_save = prompt
+    base._ENABLE_THREADING = True
+    Debouncer.delay = delay
 
 
 def _wait_controller(controller):

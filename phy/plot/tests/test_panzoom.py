@@ -273,6 +273,10 @@ def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
     assert pz.zoom[0] < 1
     assert pz.zoom[1] < 1
 
+    mouse_drag(qtbot, c, (10, 10), (100, 5), button='right')
+    assert pz.zoom[0] < 1
+    assert pz.zoom[1] < 1
+
     mouse_drag(qtbot, c, (10, 10), (-5, -100), button='right')
     assert pz.zoom[0] > 1
     assert pz.zoom[1] > 1

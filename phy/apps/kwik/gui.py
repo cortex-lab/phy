@@ -60,6 +60,8 @@ def _get_distance_max(pos):
 
 
 class KwikController(object):
+    """Controller for the Kwik GUI."""
+
     gui_name = 'KwikGUI'
 
     n_spikes_waveforms = 100
@@ -174,10 +176,11 @@ class KwikController(object):
     # -------------------------------------------------------------------------
 
     def get_best_channel(self, cluster_id):
+        """Get the best channel of a given cluster."""
         return self.get_best_channels(cluster_id)[0]
 
     def get_best_channels(self, cluster_id):
-        """Only used in the trace view."""
+        """Get the best channels of a given cluster."""
         mm = self._get_mean_masks(cluster_id)
         channel_ids = np.argsort(mm)[::-1]
         ind = mm[channel_ids] > .1
@@ -188,10 +191,12 @@ class KwikController(object):
         return channel_ids
 
     def get_cluster_position(self, cluster_id):
+        """Get the position of a cluster on the probe."""
         channel_id = self.get_best_channel(cluster_id)
         return self.model.channel_positions[channel_id]
 
     def get_probe_depth(self, cluster_id):
+        """Get the depth of a cluster on the probe."""
         return self.get_cluster_position(cluster_id)[1]
 
     def similarity(self, cluster_id):
@@ -415,6 +420,7 @@ class KwikController(object):
     # -------------------------------------------------------------------------
 
     def create_gui(self, **kwargs):
+        """Create the Kwik GUI."""
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.kwik_path,
                   config_dir=self.config_dir,
@@ -444,6 +450,7 @@ class KwikController(object):
 #------------------------------------------------------------------------------
 
 def kwik_gui(path, channel_group=None, clustering=None):  # pragma: no cover
+    """Launch the Kwik GUI."""
     # Create a `phy.log` log file with 0 level.
     _add_log_file(Path(path).parent / 'phy.log')
 

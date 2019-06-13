@@ -23,10 +23,26 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class HistogramView(ManualClusteringView):
+    """This view displays a histogram for every selected cluster.
+
+    Constructor:
+
+    - `cluster_stat`: a function `cluster_id => Bunch(histogram (1D array), plot (1D array), text)`
+
+    """
+
     _default_position = 'right'
     cluster_ids = ()
+
+    # Number of bins in the histogram.
     n_bins = 100
-    x_max = None  # x range of the histogram, None (the default) means data.max()
+
+    # Maximum value on the x axis (determines the range of the histogram)
+    # If None, then `data.max()` is used.
+    x_max = None
+
+    # The snippet to update this view are `hn` to change the number of bins, and `hm` to
+    # change the maximum value on the x axis. The character `h` can be customized by child classes.
     alias_char = 'h'
 
     default_shortcuts = {
@@ -39,7 +55,6 @@ class HistogramView(ManualClusteringView):
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 
-        # function cluster_id => Bunch(histogram (1D array), plot, text)
         self.cluster_stat = cluster_stat
         self._hist_max = None
 
@@ -142,11 +157,13 @@ class HistogramView(ManualClusteringView):
             prompt=True, prompt_default=lambda: self.x_max)
 
     def set_n_bins(self, n_bins):
+        """Set the number of bins in the histogram."""
         self.n_bins = n_bins
         logger.debug("Change number of bins to %d for %s.", n_bins, self.__class__.__name__)
         self.on_select(cluster_ids=self.cluster_ids)
 
     def set_x_max(self, x_max):
+        """Set the maximum value on the x axis for the histogram."""
         self.x_max = x_max
         logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.on_select(cluster_ids=self.cluster_ids)

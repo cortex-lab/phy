@@ -320,6 +320,7 @@ class PanZoom(object):
         self.update()
 
     def set_pan_zoom(self, pan=None, zoom=None):
+        """Set at once the pan and zoom."""
         self._pan = pan
         self._zoom = np.clip(zoom, self._zmin, self._zmax)
 
@@ -413,29 +414,31 @@ class PanZoom(object):
                 c = np.sqrt(self.size[0]) * .03
                 self.zoom_delta((dx, dy), (x0, y0), c=c)
 
-    def on_touch(self, e):  # pragma: no cover
-        if e.type == 'end':
-            self._pinch = None
-        elif e.type == 'pinch':
-            if e.scale in (1., self._last_pinch_scale):
-                self._pinch = None
-                return
-            self._last_pinch_scale = e.scale
-            x0, y0 = self._normalize(e.pos)
-            s = math.log(e.scale / e.last_scale)
-            c = np.sqrt(self.size[0]) * .05
-            self.zoom_delta((s, s),
-                            (x0, y0),
-                            c=c)
-            self._pinch = True
-        elif e.type == 'touch':
-            if self._pinch:
-                return
-            x0, y0 = self._normalize(np.array(e.pos).mean(axis=0))
-            x1, y1 = self._normalize(np.array(e.last_pos).mean(axis=0))
-            dx, dy = x0 - x1, y0 - y1
-            c = 5
-            self.pan_delta((c * dx, c * dy))
+    # def on_touch(self, e):
+    #     """Support touch events."""
+    #     # TODO
+    #     if e.type == 'end':
+    #         self._pinch = None
+    #     elif e.type == 'pinch':
+    #         if e.scale in (1., self._last_pinch_scale):
+    #             self._pinch = None
+    #             return
+    #         self._last_pinch_scale = e.scale
+    #         x0, y0 = self._normalize(e.pos)
+    #         s = math.log(e.scale / e.last_scale)
+    #         c = np.sqrt(self.size[0]) * .05
+    #         self.zoom_delta((s, s),
+    #                         (x0, y0),
+    #                         c=c)
+    #         self._pinch = True
+    #     elif e.type == 'touch':
+    #         if self._pinch:
+    #             return
+    #         x0, y0 = self._normalize(np.array(e.pos).mean(axis=0))
+    #         x1, y1 = self._normalize(np.array(e.last_pos).mean(axis=0))
+    #         dx, dy = x0 - x1, y0 - y1
+    #         c = 5
+    #         self.pan_delta((c * dx, c * dy))
 
     def on_mouse_wheel(self, e):  # pragma: no cover
         """Zoom with the mouse wheel."""
@@ -467,6 +470,7 @@ class PanZoom(object):
             self.reset()
 
     def on_mouse_double_click(self, e):  # pragma: no cover
+        """Reset the view by double clicking anywhere in the canvas."""
         self.reset()
 
     # Canvas methods
@@ -474,6 +478,7 @@ class PanZoom(object):
 
     @property
     def size(self):
+        """Window size of the canvas."""
         if self.canvas:
             return self.canvas.size().width() or 1, self.canvas.size().height() or 1
         else:
@@ -507,16 +512,19 @@ class PanZoom(object):
         canvas.attach_events(self)
 
     def map(self, arr):
+        """Apply the current panzoom transformation to a position array."""
         arr = Translate(self.pan).apply(arr)
         arr = Scale(self.zoom).apply(arr)
         return arr
 
     def imap(self, arr):
+        """Apply the current panzoom inverse transformation to a position array."""
         arr = Scale(self.zoom).inverse().apply(arr)
         arr = Translate(self.pan).inverse().apply(arr)
         return arr
 
     def update_visual(self, visual):
+        """Update a visual with the current pan and zoom values."""
         if hasattr(visual, 'program'):
             visual.program[self.pan_var_name] = self._pan
             visual.program[self.zoom_var_name] = self._zoom_aspect()

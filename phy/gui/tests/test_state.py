@@ -11,7 +11,7 @@ import os
 import shutil
 
 from ..state import GUIState, _gui_state_path, _get_default_state_path, _filter_nested_dict
-from phylib.utils import Bunch, _load_json, _save_json
+from phylib.utils import Bunch, load_json, save_json
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ def test_gui_state_view_2(tempdir):
     state.save()
 
     # Local and global files are identical.
-    assert _load_json(global_path) == _load_json(local_path)
+    assert load_json(global_path) == load_json(local_path)
 
     state = GUIState(global_path, local_path=local_path, local_keys=('a',))
     assert state == data
@@ -99,11 +99,11 @@ def test_gui_state_view_3(tempdir):
     state.save()
 
     # Global file is not affected by local state.
-    assert _load_json(global_path) == state
+    assert load_json(global_path) == state
     # Only kept key 'b'.
-    assert _load_json(local_path) == {'a': {'b': 2}}
+    assert load_json(local_path) == {'a': {'b': 2}}
     # Update the JSON
-    _save_json(local_path, {'a': {'b': 3}})
+    save_json(local_path, {'a': {'b': 3}})
 
     state = GUIState(global_path, local_path=local_path, local_keys=('b',))
     data_1 = data.copy()

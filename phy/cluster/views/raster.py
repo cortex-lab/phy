@@ -27,6 +27,17 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class RasterView(ManualClusteringView):
+    """This view shows a raster plot of all clusters.
+
+    Constructor:
+
+    - `spike_times`: an `(n_spikes,)` array with the spike times, in seconds
+    - `spike_clusters`: an `(n_spikes,)` array with the cluster assignments
+    - `cluster_ids=None`: the list of all clusters to show initially
+    - `cluster_color_selector=None`: the object managing the color mapping
+
+    """
+
     _default_position = 'right'
     _marker_size = 5
     _marker_size_increment = 1.1
@@ -78,6 +89,7 @@ class RasterView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def _get_x(self):
+        """Return the x position of the spikes."""
         return self.spike_times[self.spike_ids]
 
     def _get_y(self):
@@ -106,20 +118,24 @@ class RasterView(ManualClusteringView):
 
     @property
     def data_bounds(self):
+        """Bounds of the raster plot view."""
         return (0, 0, self.duration, self.n_clusters)
 
     def update_cluster_sort(self, cluster_ids):
+        """Update the order of all clusters."""
         self.cluster_ids = cluster_ids
         self.visual.set_box_index(self._get_box_index())
         self.canvas.update()
 
     def update_color(self, selected_clusters=None):
+        """Update the color of the spikes, depending on the selected clustersd."""
         box_index = self._get_box_index()
         color = self._get_color(box_index, selected_clusters=selected_clusters)
         self.visual.set_color(color)
         self.canvas.update()
 
     def plot(self):
+        """Make the raster plot."""
         if not len(self.spike_clusters):
             return
         x = self._get_x()  # spike times for the selected spikes
@@ -150,6 +166,7 @@ class RasterView(ManualClusteringView):
         self.actions.separator()
 
     def on_mouse_click(self, e):
+        """Select a cluster by clicking in the raster plot."""
         b = e.button
         if 'Control' in e.modifiers:
             # Get mouse position in NDC.
@@ -163,6 +180,7 @@ class RasterView(ManualClusteringView):
 
     @property
     def marker_size(self):
+        """Size of the spike markers, in pixels."""
         return self._marker_size
 
     @marker_size.setter
@@ -173,7 +191,9 @@ class RasterView(ManualClusteringView):
         self.canvas.update()
 
     def increase(self):
+        """Increase the marker size."""
         self.marker_size *= self._marker_size_increment
 
     def decrease(self):
+        """Decrease the marker size."""
         self.marker_size = max(.1, self.marker_size / self._marker_size_increment)

@@ -24,17 +24,23 @@ logger = logging.getLogger(__name__)
 
 @fixture
 def template_controller(tempdir, template_model):
-    plugins = []
-
-    # HACK: mock _prompt_save to avoid GUI block in test when closing
     import phy.apps.template.gui
+    from phy.cluster.views import base
+    from phy.gui.qt import Debouncer
+
+    # Disable threading in the tests for better coverage.
+    base._ENABLE_THREADING = False
+    delay = Debouncer.delay
+    Debouncer.delay = 1
+    # HACK: mock _prompt_save to avoid GUI block in test when closing
     prompt = phy.apps.template.gui._prompt_save
     phy.apps.template.gui._prompt_save = lambda: None
+
+    plugins = []
 
     c = TemplateController(model=template_model,
                            config_dir=tempdir,
                            plugins=plugins)
-
     yield c
 
     # NOTE: make sure all callback functions are unconnected at the end of the tests
@@ -42,9 +48,5 @@ def template_controller(tempdir, template_model):
     reset()
 
     phy.apps.template.gui._prompt_save = prompt
-
-
-# NOTE: use this to repeat tests.
-# def pytest_generate_tests(metafunc):
-#     metafunc.fixturenames.append('tmp_ct')
-#     metafunc.parametrize('tmp_ct', list(range(10)))
+    base._ENABLE_THREADING = True
+    Debouncer.delay = delay

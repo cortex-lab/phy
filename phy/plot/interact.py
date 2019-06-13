@@ -60,6 +60,7 @@ class Grid(BaseLayout):
         self.transforms.add_on_gpu(_transforms, origin=self)
 
     def attach(self, canvas):
+        """Attach the grid to a canvas."""
         super(Grid, self).attach(canvas)
         canvas.transforms += self.transforms
         canvas.inserter.insert_vert(
@@ -70,6 +71,7 @@ class Grid(BaseLayout):
             'header', origin=self)
 
     def map(self, arr, box=None):
+        """Apply the subplot transformation to a position array."""
         assert box is not None
         assert len(box) == self.n_dims
         arr = self._transforms[0].apply(arr)
@@ -77,12 +79,14 @@ class Grid(BaseLayout):
         return arr
 
     def imap(self, arr, box=None):
+        """Apply the subplot inverse transformation to a position array."""
         assert box is not None
         arr = Subplot(self.shape, box).inverse().apply(arr)
         arr = self._transforms[0].inverse().apply(arr)
         return arr
 
     def add_boxes(self, canvas, shape=None):
+        """Show subplot boxes."""
         shape = shape or self.shape
         assert isinstance(shape, tuple)
         n, m = shape
@@ -112,6 +116,7 @@ class Grid(BaseLayout):
         canvas.update()
 
     def get_closest_box(self, pos):
+        """Get the box index (i, j) closest to a given position in NDC coordinates."""
         x, y = pos
         rows, cols = self.shape
         j = np.clip(int(cols * (1. + x) / 2.), 0, cols - 1)
@@ -119,12 +124,14 @@ class Grid(BaseLayout):
         return i, j
 
     def update_visual(self, visual):
+        """Update a visual."""
         super(Grid, self).update_visual(visual)
         if self.shape_var in visual.program:
             visual.program[self.shape_var] = self._shape
 
     @property
     def shape(self):
+        """Return the grid shape."""
         return self._shape
 
     @shape.setter
@@ -191,6 +198,7 @@ class Boxed(BaseLayout):
         self.transforms.add_on_gpu([Range(NDC, 'box_bounds')], origin=self)
 
     def attach(self, canvas):
+        """Attach the boxed interact to a canvas."""
         super(Boxed, self).attach(canvas)
         canvas.transforms += self.transforms
         canvas.inserter.insert_vert("""
@@ -208,15 +216,18 @@ class Boxed(BaseLayout):
             """.format(self.box_var), 'before_transforms', origin=self)
 
     def map(self, arr, box=None):
+        """Apply the boxed transformation to a position array."""
         assert box is not None
         assert 0 <= box < len(self.box_bounds)
         return Range(NDC, self.box_bounds[box]).apply(arr)
 
     def imap(self, arr, box=None):
+        """Apply the boxed inverse transformation to a position array."""
         assert 0 <= box < len(self.box_bounds)
         return Range(NDC, self.box_bounds[box]).inverse().apply(arr)
 
     def update_visual(self, visual):
+        """Update a visual."""
         super(Boxed, self).update_visual(visual)
         # Signal bounds (positions).
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
@@ -226,6 +237,7 @@ class Boxed(BaseLayout):
             visual.program['n_boxes'] = self.n_boxes
 
     def add_boxes(self, canvas):
+        """Show the boxes borders."""
         n_boxes = len(self.box_bounds)
         a = 1 + .05
 
@@ -249,10 +261,12 @@ class Boxed(BaseLayout):
 
     @property
     def n_boxes(self):
+        """Total number of boxes."""
         return len(self.box_pos)
 
     @property
     def box_bounds(self):
+        """Bounds of the boxes."""
         return self._box_bounds
 
     @box_bounds.setter
@@ -263,6 +277,7 @@ class Boxed(BaseLayout):
 
     @property
     def box_pos(self):
+        """Position of the box centers."""
         box_pos, _ = _get_box_pos_size(self._box_bounds)
         return box_pos
 
@@ -274,6 +289,7 @@ class Boxed(BaseLayout):
 
     @property
     def box_size(self):
+        """Sizes of the boxes."""
         _, box_size = _get_box_pos_size(self._box_bounds)
         return box_size
 
@@ -331,9 +347,11 @@ class Stacked(Boxed):
 
     @n_boxes.setter
     def n_boxes(self, n_boxes):
+        """Number of boxes."""
         self.box_bounds = self.get_box_bounds(n_boxes)
 
     def get_box_bounds(self, n_boxes):
+        """Return the box bounds for a given number of stacked boxes."""
         # The margin must be in [-1, 1]
         margin = .05
         margin = np.clip(margin, -1, 1)
@@ -346,8 +364,8 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        origin = self.origin or 'upper'
-        if origin == 'upper':
+        origin = self.origin or 'top'
+        if origin == 'top':
             b = b[::-1, :]
         return b
 
@@ -357,6 +375,8 @@ class Stacked(Boxed):
 #------------------------------------------------------------------------------
 
 class Lasso(object):
+    """Draw a polygon with the mouse and find the points that belong to the inside of the
+    polygon."""
     def __init__(self):
         self._points = []
         self.canvas = None
@@ -364,12 +384,14 @@ class Lasso(object):
         self.box = None
 
     def add(self, pos):
+        """Add a point to the polygon."""
         x, y = pos.flat if isinstance(pos, np.ndarray) else pos
         self._points.append((x, y))
         self.update_lasso_visual()
 
     @property
     def polygon(self):
+        """Coordinates of the polygon vertices."""
         l = self._points
         # Close the polygon.
         # l = l + l[0] if len(l) else l
@@ -380,27 +402,33 @@ class Lasso(object):
         return out
 
     def clear(self):
+        """Reset the lasso."""
         self._points = []
         self.box = None
         self.update_lasso_visual()
 
     @property
     def count(self):
+        """Number of vertices in the polygon."""
         return len(self._points)
 
     def in_polygon(self, pos):
+        """Return which points belong to the polygon."""
         return _in_polygon(pos, self.polygon)
 
     def attach(self, canvas):
+        """Attach the lasso to a canvas."""
         canvas.attach_events(self)
         self.canvas = canvas
         self.create_lasso_visual()
 
     def create_lasso_visual(self):
+        """Create the lasso visual."""
         self.visual = PolygonVisual()
         self.canvas.add_visual(self.visual, clearable=False)
 
     def update_lasso_visual(self):
+        """Update the lasso visual with the current polygon."""
         if not self.visual:
             return
         # The following call updates a_box_index with the active box in BaseLayout.
@@ -408,6 +436,7 @@ class Lasso(object):
         self.canvas.update()
 
     def on_mouse_click(self, e):
+        """Add a polygon point when doing Control+click."""
         if 'Control' in e.modifiers:
             if e.button == 'Left':
                 layout = getattr(self.canvas, 'layout', None)

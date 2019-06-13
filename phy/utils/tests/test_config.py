@@ -14,7 +14,7 @@ from traitlets import Float
 from traitlets.config import Configurable
 
 from .. import config as _config
-from phylib.utils._misc import _write_text
+from phylib.utils._misc import write_text
 from ..config import (_ensure_dir_exists,
                       load_config,
                       load_master_config,
@@ -65,7 +65,7 @@ def py_config(tempdir):
        c.MyConfigurable.my_var = 1.0
        """
     path = tempdir / 'config.py'
-    _write_text(path, config_contents)
+    write_text(path, config_contents)
     return path
 
 
@@ -80,7 +80,7 @@ def json_config(tempdir):
         }
     """
     path = tempdir / 'config.json'
-    _write_text(path, config_contents)
+    write_text(path, config_contents)
     return path
 
 

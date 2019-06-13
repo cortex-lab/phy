@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 import shutil
 
-from phylib.utils import Bunch, _bunchify, _load_json, _save_json
+from phylib.utils import Bunch, _bunchify, load_json, save_json
 from phy.utils import _ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
@@ -40,9 +40,10 @@ def _gui_state_path(gui_name, config_dir=None):
 
 
 def _load_state(path):
+    """Load a GUI state from a JSON file."""
     try:
         logger.debug("Load %s for GUIState.", path)
-        data = _load_json(str(path))
+        data = load_json(str(path))
     except json.decoder.JSONDecodeError as e:  # pragma: no cover
         logger.warning("Error decoding JSON: %s", e)
         data = {}
@@ -51,6 +52,7 @@ def _load_state(path):
 
 def _filter_nested_dict(value, key=None, search_terms=None):
     """Return a copy of a nested dictionary where only keys belonging to search_terms are kept."""
+
     # key is None for the root only.
     # Expression used to test whether we keep a key or not.
     keep = lambda k: k is None or (
@@ -82,10 +84,10 @@ def _recursive_update(d, u):
 
 
 class GUIState(Bunch):
-    """Represent the state of the GUI: positions of the views and
-    all parameters associated to the GUI and views.
+    """Represent the state of the GUI: positions of the views and all parameters associated
+    to the GUI and views.
 
-    This is automatically loaded from the configuration directory.
+    The GUI state is automatically loaded from the configuration directory.
 
     """
     def __init__(self, path, local_path=None, default_state_path=None, local_keys=None, **kwargs):
@@ -119,6 +121,8 @@ class GUIState(Bunch):
         logger.debug("Update GUI state for %s", name)
 
     def _copy_default_state(self):
+        """Copy the default GUI state to the user directory."""
+
         if self._default_state_path and self._default_state_path.exists():
             logger.debug(
                 "The GUI state file `%s` doesn't exist, creating a default one...", self._path)
@@ -143,10 +147,12 @@ class GUIState(Bunch):
 
     @property
     def _global_data(self):
+        """Select non-private fields in the GUI state."""
         return {k: v for k, v in self.items() if not k.startswith('_')}
 
     @property
     def _local_data(self):
+        """Select fields for the local GUI state."""
         # Select only keys included in self._local_keys.
         return _filter_nested_dict(self, search_terms=self._local_keys)
 
@@ -154,10 +160,10 @@ class GUIState(Bunch):
         """Save the entire GUIState to the global file."""
         path = self._path
         logger.debug("Save global GUI state to `%s`.", path)
-        _save_json(str(path), self._global_data)
+        save_json(str(path), self._global_data)
 
     def _save_local(self):
-        """Only save fields which keys are in self._local_keys.
+        """Only save local fields (keys are in self._local_keys).
 
         Need to recursively go through the nested dictionaries to get all fields.
 
@@ -168,7 +174,7 @@ class GUIState(Bunch):
         assert self._local_path
 
         logger.debug("Save local GUI state to `%s`.", path)
-        _save_json(str(path), self._local_data)
+        save_json(str(path), self._local_data)
 
     def save(self):
         """Save the state to the JSON files in the config dir (global) and local dir (if any)."""

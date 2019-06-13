@@ -43,8 +43,22 @@ def _get_pos_data_bounds(positions):
 
 
 class ProbeView(ManualClusteringView):
+    """This view displays the positions of all channels on the probe, highlighting channels
+    where the selected clusters belong.
+
+    Constructor:
+
+    - `positions`: an `(n_channels, 2)` array with the channel positions
+    - `best_channels`: a function `cluster_id => best_channel_ids`
+
+    """
+
     _default_position = 'right'
+
+    # Marker size of channels without selected clusters.
     unselected_marker_size = 10
+
+    # Marker size of channels with selected clusters.
     selected_marker_size = 15
 
     def __init__(self, positions=None, best_channels=None):
@@ -71,8 +85,12 @@ class ProbeView(ManualClusteringView):
         self.canvas.add_visual(self.cluster_visual)
 
     def _get_clu_positions(self, cluster_ids):
+        """Get the positions of the channels containing selected clusters."""
+
+        # List of channels per cluster.
         cluster_channels = {i: self.best_channels(cl) for i, cl in enumerate(cluster_ids)}
 
+        # List of clusters per channel.
         clusters_per_channel = defaultdict(lambda: [])
         for clu_idx, channels in cluster_channels.items():
             for channel in channels:

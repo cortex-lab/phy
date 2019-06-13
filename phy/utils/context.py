@@ -14,8 +14,8 @@ from pathlib import Path
 from pickle import dump, load
 
 from phylib.utils._misc import (
-    _save_json, _load_json,
-    _load_pickle, _save_pickle,
+    save_json, load_json,
+    load_pickle, save_pickle,
     _fullname,)
 from .config import phy_config_dir, _ensure_dir_exists
 
@@ -58,6 +58,8 @@ class Context(object):
         self._memcache = {}
 
     def _set_memory(self, cache_dir):
+        """Create the joblib Memory instance."""
+
         # Try importing joblib.
         try:
             from joblib import Memory
@@ -87,7 +89,7 @@ class Context(object):
         return disk_cached
 
     def load_memcache(self, name):
-        # Load the memcache from disk, if it exists.
+        """Load the memcache from disk, if it exists."""
         path = self.cache_dir / 'memcache' / (name + '.pkl')
         if path.exists():
             logger.debug("Load memcache for `%s`.", name)
@@ -99,6 +101,7 @@ class Context(object):
         return cache
 
     def save_memcache(self):
+        """Save the memcach to disk (pickle)."""
         for name, cache in self._memcache.items():
             path = self.cache_dir / 'memcache' / (name + '.pkl')
             logger.debug("Save memcache for `%s`.", name)
@@ -123,6 +126,7 @@ class Context(object):
         return memcached
 
     def _get_path(self, name, location, file_ext='.json'):
+        """Get the path to the cache file."""
         if location == 'local':
             return self.cache_dir / (name + file_ext)
         elif location == 'global':
@@ -135,18 +139,18 @@ class Context(object):
         _ensure_dir_exists(path.parent)
         logger.debug("Save data to `%s`.", path)
         if kind == 'json':
-            _save_json(path, data)
+            save_json(path, data)
         else:
-            _save_pickle(path, data)
+            save_pickle(path, data)
 
     def load(self, name, location='local'):
         """Load saved data from the cache directory."""
         path = self._get_path(name, location, file_ext='.json')
         if path.exists():
-            return _load_json(path)
+            return load_json(path)
         path = self._get_path(name, location, file_ext='.pkl')
         if path.exists():
-            return _load_pickle(path)
+            return load_pickle(path)
         logger.debug("The file `%s` doesn't exist.", path)
         return {}
 

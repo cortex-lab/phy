@@ -54,8 +54,7 @@ def _get_point_size(clu_idx=None):
 
 def _get_point_masks(masks=None, clu_idx=None):
     masks = masks if masks is not None else 1.
-    # NOTE: we add the cluster relative index for the computation
-    # of the depth on the GPU.
+    # NOTE: we add the cluster relative index for the computation of the depth on the GPU.
     return masks * .99999 + (clu_idx or 0)
 
 
@@ -74,9 +73,25 @@ def _uniq(seq):
 
 
 class FeatureView(ManualClusteringView):
+    """This view displays a 4x4 subplot matrix with different projections of the principal
+    component features.
+
+    Constructor:
+
+    - `features`: a function `(cluster_id, channel_ids=None, load_all=False) => Bunch(data,
+      channel_ids, spike_ids , masks)` where `data` is an `(n_spikes, n_channels, n_features)`
+      array, and `channel_ids` contains the channel ids of every row in `data`.
+      This allows for a sparse format.
+
+    - `attributes`: a dictionary `{name: (n_spikes,) array}` (for example with spike times)
+
+    """
+
     _default_position = 'right'
     cluster_ids = ()
-    fixed_channels = False  # true to disable automatic selection of channels
+
+    # Whether to disable automatic selection of channels.
+    fixed_channels = False
 
     _default_marker_size = 5.
     default_shortcuts = {
@@ -377,13 +392,9 @@ class FeatureView(ManualClusteringView):
 
         for cluster_id in self.cluster_ids:
             # Load all spikes.
-            bunch = self.features(cluster_id,
-                                  channel_ids=self.channel_ids,
-                                  load_all=True)
-            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id,
-                                     load_all=True)
-            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id,
-                                     load_all=True)
+            bunch = self.features(cluster_id, channel_ids=self.channel_ids, load_all=True)
+            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id, load_all=True)
+            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id, load_all=True)
             points = np.c_[px.data, py.data]
 
             # Normalize the points.
