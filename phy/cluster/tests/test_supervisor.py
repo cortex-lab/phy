@@ -84,7 +84,7 @@ def tl():
     class MockClusterView(object):
         _selected = [0]
 
-        def select(self, cl, callback=None):
+        def select(self, cl, callback=None, **kwargs):
             self._selected = cl
             callback({'selected': cl, 'next': cl[-1] + 1})
 
@@ -460,7 +460,7 @@ def test_supervisor_merge_event(qtbot, supervisor):
     supervisor.block()
 
     # After a merge, there should be only one select event.
-    # assert len(_l) == 1
+    assert len(_l) == 1
 
 
 def test_supervisor_merge_move(qtbot, supervisor):

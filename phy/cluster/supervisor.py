@@ -77,11 +77,12 @@ class TaskLogger(object):
         # Tasks that have yet to be performed.
         self._queue = []
 
-    def enqueue(self, sender, name, *args, output=None):
+    def enqueue(self, sender, name, *args, output=None, **kwargs):
         """Enqueue an action, which has a sender, a function name, a list of arguments,
         and an optional output."""
-        logger.log(5, "Enqueue %s %s %s (%s)", sender.__class__.__name__, name, args, output)
-        self._queue.append((sender, name, args))
+        logger.log(
+            5, "Enqueue %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
+        self._queue.append((sender, name, args, kwargs))
 
     def dequeue(self):
         """Dequeue the oldest item in the queue."""
@@ -97,20 +98,20 @@ class TaskLogger(object):
 
     def _eval(self, task):
         """Evaluate a task and call a callback function."""
-        sender, name, args = task
-        logger.log(5, "Calling %s.%s(%s)", sender.__class__.__name__, name, args)
+        sender, name, args, kwargs = task
+        logger.log(5, "Calling %s.%s(%s)", sender.__class__.__name__, name, args, kwargs)
         f = getattr(sender, name)
         callback = partial(self._callback, task)
         argspec = inspect.getfullargspec(f)
         argspec = argspec.args + argspec.kwonlyargs
         if 'callback' in argspec:
-            f(*args, callback=callback)
+            f(*args, **kwargs, callback=callback)
         else:
             # HACK: use on_cluster event instead of callback.
             def _cluster_callback(tsender, up):
                 self._callback(task, up)
             connect(_cluster_callback, event='cluster', sender=self.supervisor)
-            f(*args)
+            f(*args, **kwargs)
             unconnect(_cluster_callback)
 
     def process(self):
@@ -125,26 +126,28 @@ class TaskLogger(object):
 
     def enqueue_after(self, task, output):
         """Enqueue tasks after a given action."""
-        sender, name, args = task
-        f = lambda *args: logger.log(5, "No method _after_%s", name)
+        sender, name, args, kwargs = task
+        f = lambda *args, **kwargs: logger.log(5, "No method _after_%s", name)
         getattr(self, '_after_%s' % name, f)(task, output)
 
     def _after_merge(self, task, output):
         """Tasks that should follow a merge."""
-        sender, name, args = task
+        sender, name, args, kwargs = task
         merged, to = output.deleted, output.added[0]
-        self.enqueue(self.cluster_view, 'select', [to])
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
+        # Update views after cluster_view.select event only if there is no similar clusters.
+        # Otherwise, this is only the similarity_view that will raise the select event leading
+        # to view updates.
+        self.enqueue(self.cluster_view, 'select', [to], update_views=similar is None)
         if similar is None:
             return
         if set(merged).intersection(similar) and next_similar is not None:
-            self.enqueue(self.similarity_view, 'select', [next_similar])
-        else:
-            self.enqueue(self.similarity_view, 'select', similar)
+            similar = [next_similar]
+        self.enqueue(self.similarity_view, 'select', similar)
 
     def _after_split(self, task, output):
         """Tasks that should follow a split."""
-        sender, name, args = task
+        sender, name, args, kwargs = task
         self.enqueue(self.cluster_view, 'select', output.added)
 
     def _get_clusters(self, which):
@@ -159,7 +162,7 @@ class TaskLogger(object):
 
     def _after_move(self, task, output):
         """Tasks that should follow a move."""
-        sender, name, args = task
+        sender, name, args, kwargs = task
         which = output.metadata_changed
         moved = set(self._get_clusters(which))
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
@@ -194,23 +197,24 @@ class TaskLogger(object):
             self.enqueue(self.similarity_view, 'select', similar)
 
     def _log(self, task, output):
-        sender, name, args = task
+        sender, name, args, kwargs = task
         assert sender
         assert name
-        logger.log(5, "Log %s %s %s (%s)", sender.__class__.__name__, name, args, output)
-        task = (sender, name, args, output)
+        logger.log(
+            5, "Log %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
+        task = (sender, name, args, kwargs, output)
         # Avoid successive duplicates (even if sender is different).
         if not self._history or self._history[-1][1:] != task[1:]:
             self._history.append(task)
 
-    def log(self, sender, name, *args, output=None):
-        self._log((sender, name, args), output)
+    def log(self, sender, name, *args, output=None, **kwargs):
+        self._log((sender, name, args, kwargs), output)
 
     def last_task(self, name=None, name_not_in=()):
-        for (sender, name_, args, output) in reversed(self._history):
+        for (sender, name_, args, kwargs, output) in reversed(self._history):
             if (name and name_ == name) or (name_not_in and name_ and name_ not in name_not_in):
                 assert name_
-                return (sender, name_, args, output)
+                return (sender, name_, args, kwargs, output)
 
     def last_state(self, task=None):
         """Return (cluster_ids, next_cluster, similar, next_similar)."""
@@ -221,7 +225,7 @@ class TaskLogger(object):
         if task:
             i = self._history.index(task)
             h = self._history[:i]
-        for (sender, name, args, output) in reversed(h):
+        for (sender, name, args, kwargs, output) in reversed(h):
             # Last selection is cluster view selection: return the state.
             if (sender == self.similarity_view and similarity_state == (None, None) and
                     name in ('select', 'next', 'previous')):
@@ -234,8 +238,9 @@ class TaskLogger(object):
 
     def show_history(self):
         print("=== History ===")
-        for sender, name, args, output in self._history:
-            print('{: <24} {: <8}'.format(sender.__class__.__name__, name), *args, output)
+        for sender, name, args, kwargs, output in self._history:
+            print(
+                '{: <24} {: <8}'.format(sender.__class__.__name__, name), *args, output, kwargs)
 
     def has_finished(self):
         """Return whether the queue has finished being processed."""
@@ -739,7 +744,7 @@ class Supervisor(object):
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
-    def _clusters_selected(self, sender, obj):
+    def _clusters_selected(self, sender, obj, **kwargs):
         if sender != self.cluster_view:
             return
         cluster_ids = obj['selected']
@@ -750,8 +755,11 @@ class Supervisor(object):
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
         self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
-        # Emit supervisor.select event.
-        emit('select', self, self.selected, **kwargs)
+        # Emit supervisor.select event unless update_views is False. This happens after
+        # a merge event, where the views should not be updated after the first cluster_view.select
+        # event, but instead after the second similarity_view.select event.
+        if kwargs.get('update_views', True):
+            emit('select', self, self.selected, **kwargs)
 
     def _similar_selected(self, sender, obj):
         if sender != self.similarity_view:
