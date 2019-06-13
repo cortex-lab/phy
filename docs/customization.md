@@ -236,7 +236,7 @@ from phy import IPlugin, connect
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect(sender=controller)
-        def on_gui_ready(gui):
+        def on_gui_ready(sender, gui):
             """This is called when the GUI and all objects are fully loaded.
             This is to make sure that controller.supervisor is properly defined.
             """
@@ -351,6 +351,39 @@ class MyPlugin(IPlugin):
 ```
 
 ![image](https://user-images.githubusercontent.com/1942359/58968835-fd00da80-87b6-11e9-8218-5adfc6e22a78.png)
+
+
+### Customizing the styling of the cluster view
+
+The cluster view is written in HTML/CSS/Javascript. The styling can be customized in a plugin as follows.
+
+In this example, we change the text color of "good" clusters in the cluster view.
+
+```python
+from phy import IPlugin, connect
+
+class MyPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        # Make sure the GUI is ready so that all objects are available.
+        @connect(sender=controller)
+        def on_gui_ready(sender, gui):
+
+            # We add a custom CSS style to the HTML builder of the ClusterView.
+            controller.supervisor.cluster_view.builder.add_style("""
+
+                /* This CSS selector represents all rows for good clusters. */
+                table tr[data-group='good'] {
+
+                    /* We change the text color. Many other CSS attributes can be changed,
+                    such as background-color, the font weight, etc. */
+                    color: red;
+                }
+
+            """)
+
+            # We rebuild the HTML code of the cluster view.
+            controller.supervisor.cluster_view.build()
+```
 
 
 ### Writing a custom matplotlib view
