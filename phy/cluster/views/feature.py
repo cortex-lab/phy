@@ -122,7 +122,7 @@ class FeatureView(ManualClusteringView):
 
         # Attributes: extra features. This is a dictionary
         # {name: array}
-        # where each array is a `(n_spikes,)` array.
+        # where each array is a `(n_spikes,)` array.
         self.attributes = attributes or {}
 
         self.point_visual = ScatterVisual()

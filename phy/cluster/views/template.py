@@ -143,7 +143,7 @@ class TemplateView(ManualClusteringView):
     def update_color(self, selected_clusters=None):
         """Update the color of the clusters, taking the selected clusters into account."""
 
-        # This method is only used when the view has been plotted at least once,
+        # This method is only used when the view has been plotted at least once,
         # such that self._cluster_box_index has been filled.
         if not self._cluster_box_index:
             self.plot()

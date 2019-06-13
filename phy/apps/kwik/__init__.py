@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# flake8: noqa
+# flake8: noqa
 
 """Kwik GUI."""
 

@@ -282,6 +282,7 @@ class ClusterView(Table):
 
     _required_columns = ('n_spikes',)
     _view_name = 'cluster_view'
+    _styles = _CLUSTER_VIEW_STYLES
 
     def __init__(self, *args, data=None, columns=(), sort=None):
         # NOTE: debounce select events.
@@ -311,7 +312,7 @@ class ClusterView(Table):
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def _set_styles(self):
-        self.builder.add_style(_CLUSTER_VIEW_STYLES)
+        self.builder.add_style(self._styles)
 
     def get_state(self, callback=None):
         """Return the cluster view state, with the current sort."""
