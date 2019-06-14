@@ -11,7 +11,6 @@ import json
 import logging
 from functools import partial
 
-import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
@@ -19,7 +18,7 @@ from .qt import (
     WebView, QObject, QWebChannel, pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
 from phylib.utils import emit, connect
 from phylib.utils.color import colormaps, _is_bright
-from phylib.utils._misc import _CustomEncoder, read_text
+from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
 from phylib.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
@@ -290,17 +289,6 @@ class HTMLWidget(WebView):
 # -----------------------------------------------------------------------------
 # HTML table
 # -----------------------------------------------------------------------------
-
-def _pretty_floats(obj):
-    """Display floating point numbers properly."""
-    if isinstance(obj, (float, np.float64, np.float32)):
-        return '%.4g' % obj
-    elif isinstance(obj, dict):
-        return dict((k, _pretty_floats(v)) for k, v in obj.items())
-    elif isinstance(obj, (list, tuple)):
-        return list(map(_pretty_floats, obj))
-    return obj
-
 
 def dumps(o):
     """Dump a JSON object into a string, with pretty floats."""
