@@ -107,7 +107,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
 
     # Check that the data has been updated.
     assert s.get_labels('some_field')[clu - 1] is None
-    assert s.get_labels('some_field')[clu] == '3'
+    assert s.get_labels('some_field')[clu] == 3
 
     assert s.cluster_meta.get('group', clu) == 'good'
     for clu in clu_to_merge:

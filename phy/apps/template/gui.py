@@ -17,7 +17,7 @@ from phylib.io.array import Selector
 from phylib.io.model import TemplateModel
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._misc import read_python
+from phylib.utils._misc import read_python, write_tsv
 
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views.base import ManualClusteringView
@@ -200,6 +200,10 @@ class TemplateController(object):
             # Save cluster metadata.
             for name, values in labels:
                 self.model.save_metadata(name, values)
+            # Save all the contents of the cluster view into cluster_info.tsv.
+            write_tsv(
+                self.model.dir_path / 'cluster_info.tsv', self.supervisor.cluster_info,
+                first_field='id', exclude_fields=('is_masked',), n_significant_figures=8)
 
         return supervisor
 
