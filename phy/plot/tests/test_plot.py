@@ -176,8 +176,13 @@ def test_plot_batch_3(qtbot, canvas):
     visual = TextVisual()
     canvas.add_visual(visual)
 
-    for i, size in enumerate((3, 5)):
-        visual.add_batch_data(pos=(0, 0), text="hello " * (i + 1), box_index=(i, 0))
+    visual.add_batch_data(
+        pos=np.zeros((5, 2)), text=["a" * (i + 1) for i in range(5)],
+        data_bounds=None, box_index=(0, 0))
+
+    visual.add_batch_data(
+        pos=np.zeros((7, 2)), text=["a" * (i + 1) for i in range(7)],
+        data_bounds=(-1, -1, 1, 1), box_index=(0, 1))
 
     canvas.update_visual(visual)
 

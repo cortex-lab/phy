@@ -617,15 +617,15 @@ class TextVisual(BaseVisual):
         assert anchor.ndim == 2
         assert anchor.shape == (n_text, 2)
 
-        if data_bounds is not None:
-            data_bounds = _get_data_bounds(data_bounds, pos)
-            assert data_bounds.shape[0] == n_text
-            data_bounds = data_bounds.astype(np.float64)
-            assert data_bounds.shape == (n_text, 4)
+        data_bounds = data_bounds if data_bounds is not None else NDC
+        data_bounds = _get_data_bounds(data_bounds, pos)
+        assert data_bounds.shape[0] == n_text
+        data_bounds = data_bounds.astype(np.float64)
+        assert data_bounds.shape == (n_text, 4)
 
-        return Bunch(pos=pos, text=text, anchor=anchor,
-                     data_bounds=data_bounds,
-                     _n_items=n_text, _n_vertices=self.vertex_count(text=text))
+        return Bunch(
+            pos=pos, text=text, anchor=anchor, data_bounds=data_bounds,
+            _n_items=n_text, _n_vertices=self.vertex_count(text=text))
 
     def vertex_count(self, **kwargs):
         """Take the output of validate() as input."""
@@ -678,18 +678,15 @@ class TextVisual(BaseVisual):
         n_vertices = n_glyphs * 6
 
         # Transform the positions.
-        if data.data_bounds is not None:
-            data_bounds = data.data_bounds
-            data_bounds = np.repeat(data_bounds, lengths, axis=0)
-            data_bounds = np.repeat(data_bounds, 6, axis=0)
-            assert data_bounds.shape == (n_vertices, 4)
-            self.data_range.from_bounds = data_bounds
-            pos_tr = self.transforms.apply(a_position)
-            assert pos_tr.shape == (n_vertices, 2)
-        else:
-            pos_tr = a_position
-
+        assert data.data_bounds is not None
+        data_bounds = data.data_bounds
+        data_bounds = np.repeat(data_bounds, lengths, axis=0)
+        data_bounds = np.repeat(data_bounds, 6, axis=0)
+        assert data_bounds.shape == (n_vertices, 4)
+        self.data_range.from_bounds = data_bounds
+        pos_tr = self.transforms.apply(a_position)
         assert pos_tr.shape == (n_vertices, 2)
+
         assert a_glyph_index.shape == (n_vertices,)
         assert a_quad_index.shape == (n_vertices,)
         assert a_char_index.shape == (n_vertices,)
