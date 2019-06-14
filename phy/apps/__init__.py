@@ -15,7 +15,7 @@ import click
 
 from phylib import add_default_handler, _Formatter
 from phy import __version_git__
-from phy.utils.profiling import _enable_profiler
+from phy.utils.profiling import _enable_profiler, _enable_pdb
 from phylib import _logger_date_fmt, _logger_fmt
 
 
@@ -32,16 +32,9 @@ if '--debug' in sys.argv:  # pragma: no cover
     sys.argv.remove('--debug')
 
 
-PDB = False
 if '--pdb' in sys.argv:  # pragma: no cover
-    PDB = True
     sys.argv.remove('--pdb')
-
-
-IPYTHON = False
-if '--ipython' in sys.argv:  # pragma: no cover
-    IPYTHON = True
-    sys.argv.remove('--ipython')
+    _enable_pdb()
 
 
 # Add `profile` in the builtins.
@@ -87,7 +80,7 @@ def _add_log_file(filename):  # pragma: no cover
 @click.version_option(version=__version_git__)
 @click.help_option('-h', '--help')
 @click.pass_context
-def phycli(ctx, pdb=None, ipython=None, prof=None, lprof=None):
+def phycli(ctx):
     """Ephys data tool."""
     add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phy'))
     add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phylib'))
