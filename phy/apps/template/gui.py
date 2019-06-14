@@ -79,11 +79,15 @@ class TemplateController(object):
 
     n_spikes_waveforms = 100
     batch_size_waveforms = 10
-
     n_spikes_features = 2500
     n_spikes_features_background = 1000
     n_spikes_amplitudes = 5000
     n_spikes_correlograms = 100000
+
+    # Controller attributes to load/save in the GUI state.
+    _state_params = (
+        'n_spikes_waveforms', 'batch_size_waveforms', 'n_spikes_features',
+        'n_spikes_features_background', 'n_spikes_amplitudes', 'n_spikes_correlograms')
 
     def __init__(self, dat_path=None, config_dir=None, model=None, **kwargs):
         self.model = TemplateModel(dat_path, **kwargs) if not model else model
@@ -142,7 +146,7 @@ class TemplateController(object):
                      'get_cluster_amplitude',
                      'get_template_waveforms',
                      )
-        cached = ('get_waveforms',
+        cached = ('_get_waveforms_with_n_spikes',
                   'get_features',
                   'get_template_features',
                   'get_amplitudes',
@@ -278,15 +282,19 @@ class TemplateController(object):
     # Waveforms
     # -------------------------------------------------------------------------
 
-    def get_waveforms(self, cluster_id):
-        """Return a selection of waveforms for a cluster."""
+    def _get_waveforms_with_n_spikes(self, cluster_id, n_spikes_waveforms, batch_size_waveforms):
         pos = self.model.channel_positions
         spike_ids = self.selector.select_spikes(
-            [cluster_id], self.n_spikes_waveforms, self.batch_size_waveforms)
+            [cluster_id], n_spikes_waveforms, batch_size_waveforms)
         channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_waveforms(spike_ids, channel_ids)
         data = data - data.mean() if data is not None else None
         return Bunch(data=data, channel_ids=channel_ids, channel_positions=pos[channel_ids])
+
+    def get_waveforms(self, cluster_id):
+        """Return a selection of waveforms for a cluster."""
+        return self._get_waveforms_with_n_spikes(
+            cluster_id, self.n_spikes_waveforms, self.batch_size_waveforms)
 
     def get_mean_waveforms(self, cluster_id):
         """Get the mean waveform of a cluster on its best channels."""
@@ -350,6 +358,7 @@ class TemplateController(object):
 
             @v.actions.add(checkable=True, checked=v.show_what == 'templates')
             def toggle_templates(checked):
+                """Show templates instead of spike waveforms."""
                 # Both checkboxes are mutually exclusive.
                 if checked:
                     v.actions.get('toggle_mean_waveforms').setChecked(False)
@@ -361,11 +370,19 @@ class TemplateController(object):
 
             @v.actions.add(checkable=True, checked=v.show_what == 'mean_waveforms')
             def toggle_mean_waveforms(checked):
+                """Show mean waveforms instead of spike waveforms."""
                 # Both checkboxes are mutually exclusive.
                 if checked:
                     v.actions.get('toggle_templates').setChecked(False)
                 v.show_what = 'mean_waveforms' if checked else 'waveforms'
                 v.waveforms = funs[v.show_what]
+                v.on_select(cluster_ids=v.cluster_ids)
+
+            @v.actions.add(
+                alias='wn', prompt=True, prompt_default=lambda: str(self.n_spikes_waveforms))
+            def change_n_spikes_waveforms(n_spikes_waveforms):
+                """Change the number of spikes displayed in the waveform view."""
+                self.n_spikes_waveforms = n_spikes_waveforms
                 v.on_select(cluster_ids=v.cluster_ids)
 
             v.actions.separator()
@@ -415,10 +432,7 @@ class TemplateController(object):
         spike_ids = spike_ids[nonnan]
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         assert np.isnan(data).sum() == 0
-        return Bunch(data=data,
-                     spike_ids=spike_ids,
-                     channel_ids=channel_ids,
-                     )
+        return Bunch(data=data, spike_ids=spike_ids, channel_ids=channel_ids)
 
     def create_feature_view(self):
         if self.model.features is None:
@@ -793,17 +807,21 @@ class TemplateController(object):
 
     def create_gui(self, default_views=None, **kwargs):
         default_views = self.default_views if default_views is None else default_views
-        gui = GUI(name=self.gui_name,
-                  subtitle=str(self.model.dir_path),
-                  config_dir=self.config_dir,
-                  local_path=self.cache_dir / 'state.json',
-                  default_state_path=Path(__file__).parent / 'static/state.json',
-                  view_creator=self.view_creator,
-                  default_views=default_views,
-                  **kwargs)
-        # gui.set_default_actions()
-        # Get the state's current sort, and make sure the cluster view is initialized
-        # with it.
+        gui = GUI(
+            name=self.gui_name,
+            subtitle=str(self.model.dir_path),
+            config_dir=self.config_dir,
+            local_path=self.cache_dir / 'state.json',
+            default_state_path=Path(__file__).parent / 'static/state.json',
+            view_creator=self.view_creator,
+            default_views=default_views,
+            **kwargs)
+
+        # If the n_spikes_* parameters are set in the GUI state, load them in the controller.
+        for param in self._state_params:
+            setattr(self, param, gui.state.get(param, getattr(self, param, None)))
+
+        # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
 
         gui.set_default_actions()
@@ -827,10 +845,16 @@ class TemplateController(object):
                     return False
                 # Otherwise (r is 'close') we do nothing and close as usual.
             unconnect(on_add_view)
+
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.
             gui.state._local_keys = set().union(
                 *(getattr(view, 'local_state_attrs', ()) for view in gui.views))
+
+            # Update the controller params in the GUI state.
+            for param in self._state_params:
+                gui.state[param] = getattr(self, param, None)
+
             self.context.save_memcache()
 
         emit('gui_ready', self, gui)
