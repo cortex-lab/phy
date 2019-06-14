@@ -96,7 +96,7 @@ Rows in the cluster view are shown in different colors according to the cluster 
 
 #### Cluster filtering
 
-You can filter the list of clusters shown in the cluster view, in the `filter` text box at the top of the cluster view. Type a boolean expression using the column names as variables, and press `Enter`. You can also use the `:f` snippet. The syntax is Javascript. Here are a few examples:
+You can filter the list of clusters shown in the cluster view, in the `filter` text box at the top of the cluster view. Type a boolean expression using the column names as variables, and press `Enter`. Press `Escape` to clear the filtering. You can also use the `:f` snippet. The syntax is Javascript. Here are a few examples:
 
 ```
 group == 'good'
