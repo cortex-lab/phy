@@ -2,43 +2,60 @@
 
 Upcoming version is phy 2.0. Note: most changes concern the template GUI.
 
+
 ## New views
 
 * **Raster view**: spike trains of all clusters
 * **Template view**: template waveforms of all clusters
-* **Cluster statistics** (histograms):
+* **Cluster statistics views** (histograms):
     * ISI
     * Instantaneous firing rate
     * Template amplitude histogram
     * Write your own
-* **Spike attributes**: a scatter view is automatically created for every `spike_somename.npy` (n_spikes * 1 or n_spikes * 2 array)
+* **Spike attributes views**: a scatter view is automatically created for every `spike_somename.npy` containing 1D or 2D values per spike
 * **IPython view**
+
 
 ## New features
 
 * **Split clusters in the amplitude view or in the template feature view**, in addition to the feature view
-* Cluster view:
+* **Cluster view**:
     * Dynamically **filter** the list of clusters based on cluster metrics and labels (using JavaScript syntax)
     * Snippets to quickly **sort and filter** clusters
     * New default column: template waveform amplitude
-* Correlogram view: show baseline firing rate and refractory period
-* All views:
+    * The styling can be customized with CSS in a plugin (see plugin examples in the documentation)
+* **Correlogram view**:
+    * Show baseline firing rate and refractory period
+* **Waveform view**:
+    * Change the number of waveforms directly from the GUI
+**Feature view**:
+    * One can now change the specification of the subplots in a plugin
+* **All views**:
     * Add multiple views of the same type
     * Closable views
     * Toggle automatic update of views upon cluster selection
-    * Axes
+    * Axes (in most views)
     * PNG screenshot
     * Control+mouse wheel to change the scaling (in most views)
-* Trace view, raster view, template view: color mapping for clusters based on any cluster metrics or labels
+    * Change the number of "best" channels in the user configuration file
+* **Trace view**:
+    * Auto-update by default
+* **Trace view, raster view, template view**: color mapping for clusters based on any cluster metrics or labels
+* Support multiple data files (virtually concatenated) in the template GUI
 
 
 ## Improvements
 
+* There is a new `cluster_info.tsv` is automatically saved, it contains all information from the cluster view.
 * Selection of "best" channels is now based on template waveform amplitude and probe geometry (this is the peak channel, plus all neighbor channels where the amplitude is higher than a fixed fraction of the peak channel template amplitude)
+* Minimal high-level data access API in the Template Model
+* Improved performance, avoid blocking the GUI when loading large amounts of data
 * Fix scaling issues in waveform view
+* More efficient probe view
 * Different colors for noise and MUA clusters in the cluster view
 * Menu reorganization
 * Bug fixes with cluster labeling
+* Documentation rewritten from scratch, with many plugin and API examples
 
 
 ## Internal changes

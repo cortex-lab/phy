@@ -20,6 +20,8 @@ Type `phy template-gui params.py` in the directory that contains the `params.py`
 
 The dataset is made of a set of `.npy` files (`spike_times.npy`, `spike_clusters.npy`, and so on). There are also `.tsv` files for cluster-dependent data.
 
+The `cluster_info.tsv` is automatically saved along with your data. It contains all information from the cluster view.
+
 *Note*: only `spike_clusters.npy` and TSV files are ever modified by phy. The rest of the data files are open in read-only mode.
 
 
@@ -153,6 +155,7 @@ You can show: spike waveforms, mean spike waveforms, or template waveforms (`tog
 - toggle_templates                         w
 - toggle_waveform_overlap                  o
 - widen                                    ctrl+right
+- change waveform scaling                  ctrl+wheel
 ```
 
 
@@ -185,6 +188,8 @@ The documentation provides a plugin example showing how to customize the subplot
 - decrease                                 ctrl+-
 - increase                                 ctrl++
 - toggle_automatic_channel_selection       c
+- change feature scaling                   ctrl+wheel
+- change marker size                       shift+wheel
 ```
 
 
@@ -200,6 +205,8 @@ This view is only active when exactly two clusters are selected. It shows the `t
 
 This view shows the autocorrelograms and cross-correlograms between all pairs of selected clusters.
 
+Subplot at row i, column j, shows the cross-correlogram of selected cluster #i versus cluster #j.
+
 The baseline firing rate is shown. You can also display horizontal lines for the refractory period.
 
 The parameter `controller.n_spikes_correlograms=100000`, by default, specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
@@ -213,6 +220,7 @@ The parameter `controller.n_spikes_correlograms=100000`, by default, specifies t
 - set_refractory_period                    - (:cr)
 - set_window                               - (:cw)
 - toggle_normalization                     n
+- increase window                          ctrl+wheel
 ```
 
 
@@ -237,6 +245,7 @@ This view shows the raw data traces across all channels, with spikes from the se
 - toggle_highlighted_spikes                alt+s
 - toggle_show_labels                       alt+l
 - widen                                    alt+-
+- change trace scaling                     ctrl+wheel
 ```
 
 
@@ -247,6 +256,12 @@ This view shows the amplitude of a selection of spikes belonging to the selected
 The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951635-e98f4880-8791-11e9-8a80-7e25d04a0fb4.png)
+
+#### Keyboard shortcuts and snippets
+
+```
+- change marker size                       ctrl+wheel
+```
 
 
 ### Cluster statistics view
@@ -265,14 +280,17 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 Keyboard shortcuts for TemplateGUI - AmplitudeHistogramView
 - set_n_bins                               - (:an)
 - set_x_max                                - (:am)
+- change window size                       ctrl+wheel
 
 Keyboard shortcuts for TemplateGUI - FiringRateView
 - set_n_bins                               - (:fn)
 - set_x_max                                - (:fm)
+- change window size                       ctrl+wheel
 
 Keyboard shortcuts for TemplateGUI - ISIView
 - set_n_bins                               - (:in)
 - set_x_max                                - (:im)
+- change window size                       ctrl+wheel
 ```
 
 
@@ -289,6 +307,7 @@ Select a cluster with **Control+click**.
 ```
 - decrease                                 ctrl+shift+-
 - increase                                 ctrl+shift++
+- change marker size                       ctrl+wheel
 ```
 
 
@@ -305,6 +324,7 @@ Select a cluster with **Control+click**.
 ```
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
+- change template scaling                  ctrl+wheel
 ```
 
 
@@ -320,6 +340,12 @@ In the following screenshot, a `spike_hello.npy` array containing `sin(spike_tim
 ![image](https://user-images.githubusercontent.com/1942359/58956662-2a418e80-879f-11e9-8227-2c56db2965e4.png)
 
 You can split clusters by drawing polygons in the spike attribute views, as in the feature, amplitude, and template feature views.
+
+#### Keyboard shortcuts and snippets
+
+```
+- change marker size                       ctrl+wheel
+```
 
 
 ## IPython view
