@@ -35,10 +35,15 @@ class ScatterView(ManualClusteringView):
     """
 
     _default_position = 'right'
-    _default_marker_size = 5.
+    _marker_size = 5.
+    _marker_size_increment = 1.1
 
     def __init__(self, coords=None):
         super(ScatterView, self).__init__()
+        # Save the marker size in the global and local view's config.
+        self.state_attrs += ('marker_size',)
+        self.local_state_attrs += ('marker_size',)
+
         self.canvas.enable_axes()
         self.canvas.enable_lasso()
         assert coords
@@ -69,7 +74,7 @@ class ScatterView(ManualClusteringView):
         return (xmin, ymin, xmax, ymax)
 
     def _plot_points(self, bunchs, data_bounds):
-        ms = self._default_marker_size
+        ms = self._marker_size
         xmin, ymin, xmax, ymax = data_bounds
         self.visual.reset_batch()
         for i, d in enumerate(bunchs):
@@ -129,3 +134,26 @@ class ScatterView(ManualClusteringView):
         ind = self.canvas.lasso.in_polygon(pos)
         self.canvas.lasso.clear()
         return np.unique(spike_ids[ind])
+
+    # Marker size
+    # -------------------------------------------------------------------------
+
+    @property
+    def marker_size(self):
+        """Size of the spike markers, in pixels."""
+        return self._marker_size
+
+    @marker_size.setter
+    def marker_size(self, val):
+        assert val > 0
+        self._marker_size = val
+        self.visual.set_marker_size(val)
+        self.canvas.update()
+
+    def increase(self):
+        """Increase the marker size."""
+        self.marker_size *= self._marker_size_increment
+
+    def decrease(self):
+        """Decrease the marker size."""
+        self.marker_size = max(.1, self.marker_size / self._marker_size_increment)

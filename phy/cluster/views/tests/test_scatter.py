@@ -25,6 +25,10 @@ def test_scatter_view_0(qtbot, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
     v.on_select(cluster_ids=[0])
+
+    v.increase()
+    v.decrease()
+
     v.close()
 
 
