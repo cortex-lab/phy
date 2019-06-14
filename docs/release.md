@@ -28,6 +28,7 @@ Upcoming version is phy 2.0. Note: most changes concern the template GUI.
     * Toggle automatic update of views upon cluster selection
     * Axes
     * PNG screenshot
+    * Control+mouse wheel to change the scaling (in most views)
 * Trace view, raster view, template view: color mapping for clusters based on any cluster metrics or labels
 
 
