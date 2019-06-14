@@ -38,8 +38,28 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 #------------------------------------------------------------------------------
 
 class ScatterVisual(BaseVisual):
-    """Scatter visual, displaying a given marker at specified positions, with various colors
-    and sizes."""
+    """Scatter visual, displaying a fixed marker at various positions, colors, and marker sizes.
+
+    Constructor
+    -----------
+
+    marker : string (used for all points in the scatter visual)
+        Default: disc. Can be one of: arrow, asterisk, chevron, clover, club, cross, diamond,
+        disc, ellipse, hbar, heart, infinity, pin, ring, spade, square, tag, triangle, vbar
+
+    Parameters
+    ----------
+
+    x : array-like (1D)
+    y : array-like (1D)
+    pos : array-like (2D)
+    color : array-like (2D, shape[1] == 4)
+    size : array-like (1D)
+        Marker sizes, in pixels
+    depth : array-like (1D)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
     _init_keywords = ('marker',)
     _default_marker_size = 10.
     _default_marker = 'disc'
@@ -135,7 +155,26 @@ class ScatterVisual(BaseVisual):
 
 
 class UniformScatterVisual(BaseVisual):
-    """Scatter visual with a fixed marker color and size."""
+    """Scatter visual with a fixed marker color and size.
+
+    Constructor
+    -----------
+
+    marker : str
+    color : 4-tuple
+    size : scalar
+
+    Parameters
+    ----------
+
+    x : array-like (1D)
+    y : array-like (1D)
+    pos : array-like (2D)
+    masks : array-like (1D)
+        Similar to an alpha channel, but for color saturation instead of transparency.
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
 
     _init_keywords = ('marker', 'color', 'size')
     _default_marker_size = 10.
@@ -256,7 +295,18 @@ def _max(arr):
 
 
 class PlotVisual(BaseVisual):
-    """Plot visual, with multiple line plots of various sizes and colors."""
+    """Plot visual, with multiple line plots of various sizes and colors.
+
+    Parameters
+    ----------
+
+    x : array-like (1D), or list of 1D arrays for different plots
+    y : array-like (1D), or list of 1D arrays, for different plots
+    color : array-like (2D, shape[-1] == 4)
+    depth : array-like (1D)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
 
     _default_color = DEFAULT_COLOR
     _noconcat = ('x', 'y')
@@ -370,7 +420,24 @@ class PlotVisual(BaseVisual):
 
 
 class UniformPlotVisual(BaseVisual):
-    """A plot visual with a uniform color."""
+    """A plot visual with a uniform color.
+
+    Constructor
+    -----------
+
+    color : 4-tuple
+    depth : scalar
+
+    Parameters
+    ----------
+
+    x : array-like (1D), or list of 1D arrays for different plots
+    y : array-like (1D), or list of 1D arrays, for different plots
+    masks : array-like (1D)
+        Similar to an alpha channel, but for color saturation instead of transparency.
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
 
     _default_color = DEFAULT_COLOR
     _noconcat = ('x', 'y')
@@ -477,7 +544,17 @@ class UniformPlotVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class HistogramVisual(BaseVisual):
-    """A histogram visual."""
+    """A histogram visual.
+
+    Parameters
+    ----------
+
+    hist : array-like (1D), or list of 1D arrays, or 2D array
+    color : array-like (2D, shape[1] == 4)
+    ylim : array-like (1D)
+        The maximum hist value in the viewport.
+
+    """
 
     _default_color = DEFAULT_COLOR
 
@@ -560,7 +637,28 @@ class HistogramVisual(BaseVisual):
 class TextVisual(BaseVisual):
     """Display strings at multiple locations.
 
-    Note: at the moment, the color, font family, and font size are not customizable.
+    Constructor
+    -----------
+
+    color : 4-tuple
+
+    Parameters
+    ----------
+
+    pos : array-like (2D)
+        Position of each string (of variable length).
+    text : list of strings (variable lengths)
+    anchor : array-like (2D)
+        For each string, specifies the anchor of the string with respect to the string's position.
+        Examples:
+          * (0, 0): text centered at the position
+          * (1, 1): the position is at the lower left of the string
+          * (1, -1): the position is at the upper left of the string
+          * (-1, 1): the position is at the lower right of the string
+          * (-1, -1): the position is at the upper right of the string
+        Values higher than 1 or lower than -1 can be used as margins, knowing that the unit
+        of the anchor is (string width, string height).
+    data_bounds : array-like (2D, shape[1] == 4)
 
     """
     _default_color = (1., 1., 1., 1.)
@@ -714,7 +812,15 @@ class TextVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class LineVisual(BaseVisual):
-    """Line segments."""
+    """Line segments.
+
+    Parameters
+    ----------
+    pos : array-like (2D)
+    color : array-like (2D, shape[1] == 4)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
 
     _default_color = (.3, .3, .3, 1.)
     _init_keywords = ('color',)
@@ -787,7 +893,13 @@ class LineVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class ImageVisual(BaseVisual):
-    """Display a 2D image."""
+    """Display a 2D image.
+
+    Parameters
+    ----------
+    image : array-like (3D)
+
+    """
 
     def __init__(self):
         super(ImageVisual, self).__init__()
@@ -839,7 +951,14 @@ class ImageVisual(BaseVisual):
 #------------------------------------------------------------------------------
 
 class PolygonVisual(BaseVisual):
-    """Polygon."""
+    """Polygon.
+
+    Parameters
+    ----------
+    pos : array-like (2D)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
     _default_color = (1, 1, 1, 1)
 
     def __init__(self):

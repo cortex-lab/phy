@@ -41,12 +41,25 @@ def indent(text):
 class BaseVisual(object):
     """A Visual represents one object (or homogeneous set of objects).
 
-    It is rendered with a single pass of a single gloo program with a single
-    type of GL primitive.
+    It is rendered with a single pass of a single gloo program with a single type of GL primitive.
 
-    NOTE:
+    Main abstract methods
+    ---------------------
+
+    validate
+        takes as input the visual's parameters, set the default values, and validates all
+        values
+    vertex_count
+        takes as input the visual's parameters, and return the total number of vertices
+    set_data
+        takes as input the visual's parameters, and ends with update calls to the underlying
+        OpenGL program: `self.program[name] = data`
+
+    Notes
+    -----
+
     * set_data MUST set self.n_vertices (necessary for a_box_index in layouts)
-    * set_data MUST emit('visual_set_data', self) at the end (registration point for layouts)
+    * set_data MUST call `self.emit_visual_set_data()` at the end, and return the data
 
     """
 
