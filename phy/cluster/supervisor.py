@@ -720,15 +720,19 @@ class Supervisor(object):
         out['is_masked'] = _is_group_masked(out.get('group', None))
         return {k: v for k, v in out.items() if k not in exclude}
 
+    @property
+    def cluster_info(self):
+        """The cluster view table as a list of per-cluster dictionaries."""
+        return [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+
     def _create_views(self, gui=None, sort=None):
         """Create the cluster view and similarity view."""
 
         sort = sort or self._sort  # comes from either the GUI state or constructor
-        data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
         # Create the cluster view.
         self.cluster_view = ClusterView(
-            gui, data=data, columns=self.columns, sort=sort)
+            gui, data=self.cluster_info, columns=self.columns, sort=sort)
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
@@ -745,8 +749,8 @@ class Supervisor(object):
     def _reset_cluster_view(self):
         """Recreate the cluster view."""
         logger.debug("Reset the cluster view.")
-        data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
-        self.cluster_view._reset_table(data=data, columns=self.columns, sort=self._sort)
+        self.cluster_view._reset_table(
+            data=self.cluster_info, columns=self.columns, sort=self._sort)
 
     def _clusters_added(self, cluster_ids):
         """Update the cluster and similarity views when new clusters are created."""
