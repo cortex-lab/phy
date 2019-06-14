@@ -107,6 +107,9 @@ class ScatterView(ManualClusteringView):
     def attach(self, gui):
         super(ScatterView, self).attach(gui)
         connect(self.on_request_split)
+        self.actions.separator()
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""

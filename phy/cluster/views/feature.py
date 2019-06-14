@@ -46,10 +46,6 @@ def _get_point_color(clu_idx=None):
     return color
 
 
-def _get_point_size(clu_idx=None):
-    return FeatureView._default_marker_size if clu_idx is not None else 1.
-
-
 def _get_point_masks(masks=None, clu_idx=None):
     masks = masks if masks is not None else 1.
     # NOTE: we add the cluster relative index for the computation of the depth on the GPU.
@@ -91,7 +87,9 @@ class FeatureView(ManualClusteringView):
     # Whether to disable automatic selection of channels.
     fixed_channels = False
 
-    _default_marker_size = 5.
+    _marker_size = 5.
+    _marker_size_increment = 1.1
+
     default_shortcuts = {
         'increase': 'ctrl++',
         'decrease': 'ctrl+-',
@@ -100,7 +98,7 @@ class FeatureView(ManualClusteringView):
 
     def __init__(self, features=None, attributes=None):
         super(FeatureView, self).__init__()
-        self.state_attrs += ('scaling', 'fixed_channels')
+        self.state_attrs += ('scaling', 'marker_size', 'fixed_channels')
         self.local_state_attrs += ('scaling',)
         self._scaling = None
 
@@ -211,7 +209,8 @@ class FeatureView(ManualClusteringView):
             self.point_visual.add_batch_data(
                 x=px.data, y=py.data,
                 color=_get_point_color(clu_idx),
-                size=_get_point_size(clu_idx),
+                # Reduced marker size for background features
+                size=self._marker_size if clu_idx is not None else .5 * self._marker_size,
                 masks=_get_point_masks(clu_idx=clu_idx, masks=masks),
                 data_bounds=data_bounds,
                 box_index=(i, j),
@@ -337,6 +336,9 @@ class FeatureView(ManualClusteringView):
         self.actions.separator()
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.separator()
+        self.actions.add(self.increase_marker)
+        self.actions.add(self.decrease_marker)
 
         connect(self.on_channel_click)
         connect(self.on_request_split)
@@ -436,3 +438,34 @@ class FeatureView(ManualClusteringView):
         """Decrease the scaling of the features."""
         self.scaling /= 1.2
         self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
+
+    # Marker size
+    # -------------------------------------------------------------------------
+
+    @property
+    def marker_size(self):
+        """Size of the spike markers, in pixels."""
+        return self._marker_size
+
+    @marker_size.setter
+    def marker_size(self, val):
+        assert val > 0
+        self._marker_size = val
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
+
+    def increase_marker(self):
+        """Increase the marker size."""
+        self.marker_size *= self._marker_size_increment
+
+    def decrease_marker(self):
+        """Decrease the marker size."""
+        self.marker_size = max(.1, self.marker_size / self._marker_size_increment)
+
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Change the scaling with the wheel."""
+        super(FeatureView, self).on_mouse_wheel(e)
+        if e.modifiers == ('Shift',):
+            if e.delta > 0:
+                self.increase_marker()
+            else:
+                self.decrease_marker()
