@@ -130,6 +130,8 @@ Interactivity in all graphical views:
 
 This view shows the waveforms of a selection of spikes, on the relevant channels (based on amplitude and proximity to the peak waveform amplitude channel).
 
+The parameter `controller.n_spikes_waveforms=100`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the waveform view. The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
+
 You can select a channel with **Control+click** (this impacts the feature view). You can change the scaling of the channel positions and the waveforms.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951290-0414f200-8791-11e9-8858-096fa3f5dee4.png)
@@ -158,6 +160,10 @@ You can show: spike waveforms, mean spike waveforms, or template waveforms (`tog
 
 This view shows the principal component features of a selection of spikes in the selected clusters, on the relevant channels. The exact channels can be changed by control-clicking in the waveform view. A, B, C... refer to the first, second, third... principal components.
 
+Background spikes from all clusters are shown in grey.
+
+The parameter `controller.n_spikes_features=2500`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the feature view. The parameter `controller.n_spikes_features_background=1000`, by default, specifies the maximum number of spikes to pick for the background features. These background spikes are uniformly spaced in time across the entire recording, and across all clusters indistinctively.
+
 ![image](https://user-images.githubusercontent.com/1942359/58951435-6bcb3d00-8791-11e9-89e6-d2a901ee5c56.png)
 
 The default subplot organization of the feature view is (x and y for each of the 4x4 subplots, 0 refers to first selected channel, 1 refers to second select channel):
@@ -169,9 +175,8 @@ time,0A 1A,0A   0B,0A   1B,0A
                         time,1B
 ```
 
-Background spikes from all clusters are shown in grey.
+The documentation provides a plugin example showing how to customize the subplot organization.
 
-*To do*: show something useful in the empty subplots.
 
 #### Keyboard shortcuts and snippets
 
@@ -196,6 +201,8 @@ This view is only active when exactly two clusters are selected. It shows the `t
 This view shows the autocorrelograms and cross-correlograms between all pairs of selected clusters.
 
 The baseline firing rate is shown. You can also display horizontal lines for the refractory period.
+
+The parameter `controller.n_spikes_correlograms=100000`, by default, specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951508-9c12db80-8791-11e9-8cac-a6ca1ba7da9d.png)
 
@@ -237,6 +244,8 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 This view shows the amplitude of a selection of spikes belonging to the selected clusters. The spike amplitudes are stored in `amplitudes.npy`.
 
+The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
+
 ![image](https://user-images.githubusercontent.com/1942359/58951635-e98f4880-8791-11e9-8a80-7e25d04a0fb4.png)
 
 
@@ -244,9 +253,9 @@ This view shows the amplitude of a selection of spikes belonging to the selected
 
 This generic view shows histogram related to the selected clusters. Built-in statistics views include:
 
-* Inter-spike intervals
-* Instantenous firing-rate
-* Template amplitude
+* Inter-spike intervals (computed using all spikes for the selected clusters)
+* Instantenous firing-rate (computed using all spikes for the selected clusters)
+* Template amplitude (computed using the same subset of spikes as in the amplitude view)
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 
