@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
 import logging
 import sys
 from traceback import format_exception
@@ -14,9 +15,11 @@ from traceback import format_exception
 import click
 
 from phylib import add_default_handler, _Formatter
-from phy import __version_git__
-from phy.utils.profiling import _enable_profiler, _enable_pdb
 from phylib import _logger_date_fmt, _logger_fmt
+
+from phy import __version_git__
+from phy.gui.qt import QtDialogLogger
+from phy.utils.profiling import _enable_profiler, _enable_pdb
 
 
 logger = logging.getLogger(__name__)
@@ -51,14 +54,33 @@ if '--lprof' in sys.argv or '--prof' in sys.argv:  # pragma: no cover
 #------------------------------------------------------------------------------
 
 def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
-    logger.error("An error has occurred (%s): %s",
-                 exception_type.__name__, exception)
-    logger.debug(''.join(format_exception(exception_type, exception, traceback)))
+    tb = ''.join(format_exception(exception_type, exception, traceback))
+    logger.error("An error has occurred (%s): %s\n%s", exception_type.__name__, exception, tb)
 
 
-# Only show traceback in debug mode (--debug).
-# if not DEBUG:
-#sys.excepthook = exceptionHandler
+@contextmanager
+def capture_exceptions():  # pragma: no cover
+    """Log exceptions instead of crashing the GUI, and display an error dialog on errors."""
+    logger.debug("Start capturing exceptions.")
+
+    # Add a custom exception hook.
+    excepthook = sys.excepthook
+    sys.excepthook = exceptionHandler
+
+    # Add a dialog exception handler.
+    handler = QtDialogLogger()
+    handler.setLevel(logging.ERROR)
+    logging.getLogger('phy').addHandler(handler)
+
+    yield
+
+    # Reset the original exception hook.
+    sys.excepthook = excepthook
+
+    # Remove the dialog exception handler.
+    logging.getLogger('phy').removeHandler(handler)
+
+    logger.debug("Stop capturing exceptions.")
 
 
 def _add_log_file(filename):  # pragma: no cover
@@ -97,10 +119,11 @@ def cli_template_gui(ctx, params_path):
     """Launch the template GUI on a params.py file."""
     from .template.gui import template_gui
     prof = __builtins__.get('profile', None)
-    if prof:
-        from phy.utils.profiling import _profile
-        return _profile(prof, 'template_gui(params_path)', globals(), locals())
-    template_gui(params_path)
+    with capture_exceptions():
+        if prof:
+            from phy.utils.profiling import _profile
+            return _profile(prof, 'template_gui(params_path)', globals(), locals())
+        template_gui(params_path)
 
 
 @phycli.command('template-describe')
@@ -125,7 +148,8 @@ def cli_template_describe(ctx, params_path):
 def cli_kwik_gui(ctx, path, channel_group=None, clustering=None):
     """Launch the Kwik GUI on a Kwik file."""
     from .kwik.gui import kwik_gui
-    kwik_gui(path, channel_group=channel_group, clustering=clustering)
+    with capture_exceptions():
+        kwik_gui(path, channel_group=channel_group, clustering=clustering)
 
 
 @phycli.command('kwik-describe')
