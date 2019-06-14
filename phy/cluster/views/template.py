@@ -66,9 +66,10 @@ class TemplateView(ManualClusteringView):
         self.canvas.set_layout('grid', box_bounds=[[-1, -1, +1, +1]], has_clip=False)
         self.canvas.enable_axes()
         self.templates = templates
+
         self.visual = PlotVisual()
         self.canvas.add_visual(self.visual)
-        self._cluster_box_index = {}
+        self._cluster_box_index = {}  # dict {cluster_id: box_index} used to quickly reorder
 
     # Internal plot functions
     # -------------------------------------------------------------------------
@@ -78,7 +79,21 @@ class TemplateView(ManualClusteringView):
         M = np.median([b.template.max() for b in bunchs.values()])
         return [-1, m, +1, M]
 
-    def _get_batch_data(self, bunch, cluster_id, cluster_idx):
+    def _get_batch_data(self, bunch, cluster_id, cluster_rel, cluster_idx):
+        """Get the data for a single call to add_batch_data().
+
+        Parameters
+        ----------
+        bunch : Bunch
+        cluster_id : int
+            The cluster unique identifier.
+        cluster_rel : int
+            The cluster relative index (among sorted cluster ids).
+        cluster_idx : int
+            The cluster position in self.cluster_ids. Equal to cluster_rel if self.cluster_ids
+            is sorted.
+
+        """
         d = bunch
         wave = d.template  # shape: (n_samples, n_channels)
         channel_ids_loc = d.channel_ids
@@ -90,7 +105,7 @@ class TemplateView(ManualClusteringView):
         # Find the x coordinates.
         t = _get_linear_x(n_channels_loc, n_samples)
 
-        color = self.cluster_colors[cluster_idx]
+        color = self.cluster_colors[cluster_rel]
         assert len(color) == 4
 
         # Generate the box index (channel_idx, cluster_idx) per vertex.
@@ -105,15 +120,16 @@ class TemplateView(ManualClusteringView):
         # Generate the waveform array.
         wave = wave.T * (self._scaling or 1.)
 
-        return Bunch(
-            x=t, y=wave, color=color, box_index=box_index)
+        return Bunch(x=t, y=wave, color=color, box_index=box_index)
 
     def _plot_templates(self, bunchs, data_bounds=None):
         if not bunchs:
             return
         self.visual.reset_batch()
-        for i, cluster_id in enumerate(self.cluster_ids):
-            data = self._get_batch_data(bunchs[cluster_id], cluster_id, i)
+        # Go through all clusters, ordered by cluster id.
+        for cluster_rel, cluster_idx in enumerate(self.cluster_idxs):
+            cluster_id = self.cluster_ids[cluster_idx]
+            data = self._get_batch_data(bunchs[cluster_id], cluster_id, cluster_rel, cluster_idx)
             self.visual.add_batch_data(**data, data_bounds=data_bounds)
         self.canvas.update_visual(self.visual)
 
@@ -121,20 +137,28 @@ class TemplateView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def set_cluster_ids(self, cluster_ids):
-        self.cluster_ids = cluster_ids
-        self.cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
+        self.cluster_ids = np.array(cluster_ids, dtype=np.int32)
+        # Permutation of the clusters.
+        self.cluster_idxs = np.argsort(self.cluster_ids)
+        self.cluster_ids_sorted = self.cluster_ids[self.cluster_idxs]
+        # Cluster colors, ordered by cluster id.
+        self.cluster_colors = self.cluster_color_selector.get_colors(
+            self.cluster_ids_sorted, alpha=.75)
 
     def update_cluster_sort(self, cluster_ids):
-        """Update the order of all clusters."""
-
+        """Update the order of the clusters."""
         # Only the order of the cluster_ids is supposed to change here.
         # We just have to update box_index instead of replotting everything.
         assert len(cluster_ids) == len(self.cluster_ids)
-        self.cluster_ids = cluster_ids
+        # Update the cluster ids, in the new order.
+        self.cluster_ids = np.array(cluster_ids, dtype=np.int32)
+        # Update the permutation of the clusters.
+        self.cluster_idxs = np.argsort(self.cluster_ids)
         box_index = []
-        for i, cluster_id in enumerate(self.cluster_ids):
+        for cluster_rel, cluster_idx in enumerate(self.cluster_idxs):
+            cluster_id = self.cluster_ids[cluster_idx]
             clu_box_index = self._cluster_box_index[cluster_id]
-            clu_box_index[:, 1] = i
+            clu_box_index[:, 1] = cluster_idx
             box_index.append(clu_box_index)
         box_index = np.concatenate(box_index, axis=0)
         self.visual.set_box_index(box_index)
@@ -142,21 +166,20 @@ class TemplateView(ManualClusteringView):
 
     def update_color(self, selected_clusters=None):
         """Update the color of the clusters, taking the selected clusters into account."""
-
         # This method is only used when the view has been plotted at least once,
         # such that self._cluster_box_index has been filled.
         if not self._cluster_box_index:
-            self.plot()
+            return self.plot()
         # The call to set_cluster_ids() update the cluster_colors array.
         self.set_cluster_ids(self.cluster_ids)
         # Selected cluster colors.
         cluster_colors = self.cluster_colors
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
-                selected_clusters, self.cluster_ids, cluster_colors)
+                selected_clusters, self.cluster_ids_sorted, cluster_colors)
         # Number of vertices per cluster = number of vertices per signal
         n_vertices_clu = [
-            len(self._cluster_box_index[cluster_id]) for cluster_id in self.cluster_ids]
+            len(self._cluster_box_index[cluster_id]) for cluster_id in self.cluster_ids_sorted]
         # The argument passed to set_color() must have 1 row per vertex.
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
