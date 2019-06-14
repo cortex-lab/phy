@@ -130,26 +130,44 @@ class CorrelogramView(ManualClusteringView):
                 pos=pos, color=color, data_bounds=db, box_index=(i, j))
         self.canvas.update_visual(self.line_visual)
 
-    def _plot_labels(self, cluster_ids):
+    def _plot_labels(self, cluster_ids, fr=None, ylims=None, n_bins=None):
         n = len(cluster_ids)
-        p = -1.0
-        a = -.9
         self.label_visual.reset_batch()
+
+        # Display the cluster ids in the subplots.
         for k in range(n):
             self.label_visual.add_batch_data(
-                pos=[p, 0.],
+                pos=[-1, 0],
                 text=str(cluster_ids[k]),
-                anchor=[a, a],
+                anchor=[1, 0],
                 data_bounds=None,
                 box_index=(k, 0),
             )
             self.label_visual.add_batch_data(
-                pos=[0., p],
+                pos=[0, -1],
                 text=str(cluster_ids[k]),
-                anchor=[a, a],
+                anchor=[0, 1],
                 data_bounds=None,
                 box_index=(n - 1, k),
             )
+
+        # Display the window size in the bottom right subplot.
+        self.label_visual.add_batch_data(
+            pos=[.9, -.9],
+            text='%.1f ms' % (1000 * .5 * self.window_size),
+            box_index=(n - 1, n - 1),
+        )
+
+        # Display the firing rate in every subplot.
+        for i, j in self._iter_subplots(n):
+            self.label_visual.add_batch_data(
+                pos=[n_bins, fr[i, j]],
+                text='%.2f' % (fr[i, j]),
+                anchor=(-1, 0),
+                box_index=(i, j),
+                data_bounds=(0, 0, n_bins, ylims.get((i, j), None)),
+            )
+
         self.canvas.update_visual(self.label_visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
@@ -176,7 +194,7 @@ class CorrelogramView(ManualClusteringView):
             fr = self.firing_rate(cluster_ids, self.bin_size)
             self._plot_firing_rate(fr, ylims=ylims, n_bins=ccg.shape[2])
 
-        self._plot_labels(cluster_ids)
+        self._plot_labels(cluster_ids, fr=fr, ylims=ylims, n_bins=ccg.shape[2])
 
     def toggle_normalization(self, checked):
         """Change the normalization of the correlograms."""

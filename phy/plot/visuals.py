@@ -687,11 +687,11 @@ class TextVisual(BaseVisual):
         pos_tr = self.transforms.apply(a_position)
         assert pos_tr.shape == (n_vertices, 2)
 
-        assert a_glyph_index.shape == (n_vertices,)
-        assert a_quad_index.shape == (n_vertices,)
-        assert a_char_index.shape == (n_vertices,)
-        assert a_anchor.shape == (n_vertices, 2)
-        assert a_lengths.shape == (n_vertices,)
+        assert a_glyph_index.shape == (n_vertices,)  # 000000111111...
+        assert a_quad_index.shape == (n_vertices,)  # 012345012345....
+        assert a_char_index.shape == (n_vertices,)  # 67.67.67.67.67.67.97.97.97.97.97...
+        assert a_anchor.shape == (n_vertices, 2)  # (1, 1), (1, 1), ...
+        assert a_lengths.shape == (n_vertices,)  # 7777777777777777777...
 
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)

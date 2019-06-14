@@ -4,6 +4,9 @@ attribute float a_glyph_index;  // glyph index in the text
 attribute float a_quad_index;  // quad index in the glyph
 attribute float a_char_index;  // index of the glyph in the texture
 attribute float a_lengths;
+
+// (1, 1) for lower left, (-1, 1) for lower right,
+// (1, -1) for upper left, (-1, -1) for upper right
 attribute vec2 a_anchor;
 
 uniform vec2 u_glyph_size;  // (w, h)
@@ -14,9 +17,11 @@ const float rows = 6;
 const float cols = 16;
 
 void main() {
+    // Size of one glyph in NDC.
     float w = u_glyph_size.x / u_window_size.x;
     float h = u_glyph_size.y / u_window_size.y;
 
+    // Rectangle vertex displacement (one glyph = one rectangle = 6 vertices)
     float dx = mod(a_quad_index, 2.);
     float dy = 0.;
     if ((2. <= a_quad_index) && (a_quad_index <= 4.)) {
@@ -25,11 +30,13 @@ void main() {
 
     // Position of the glyph.
     gl_Position = transform(a_position);
-    gl_Position.xy = gl_Position.xy + vec2(a_glyph_index * w + dx * w, dy * h);
-    // Anchor: the part in [-1, 1] is relative to the text size.
-    gl_Position.xy += (a_anchor - 1.) * .5 * vec2(a_lengths * w, h);
-    // NOTE: The part beyond [-1, 1] is absolute, so that texts stay aligned.
-    gl_Position.xy += (a_anchor - clamp(a_anchor, -1., 1.));
+
+    // Displacement based on anchor and glyph index.
+    float x = (a_glyph_index + dx) * w;  // relative x position of the vertex
+    float y = dy * h;  // relative y position of the vertex
+    float xmax = a_lengths * w;  // relative x position of the vertex of the last char
+    vec2 origin = .5 * vec2(xmax, h) * (a_anchor - 1);
+    gl_Position.xy = gl_Position.xy + origin + vec2(x, y);
 
     // Index in the texture
     float i = floor(a_char_index / cols);

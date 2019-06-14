@@ -159,11 +159,11 @@ class Axes(object):
         # Set the visuals data.
         if self.show_x:
             self.xvisual.set_data(xdata, color=self.color)
-            self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, +1.02))
+            self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, +1))
 
         if self.show_y:
             self.yvisual.set_data(ydata, color=self.color)
-            self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
+            self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1, 0))
 
     def attach(self, canvas):
         """Add the axes to the canvas."""

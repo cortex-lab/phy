@@ -136,9 +136,9 @@ class WaveformView(ManualClusteringView):
         for i, ch in enumerate(channel_ids):
             label = self.channel_labels[i] if self.channel_labels is not None else ch
             self.label_visual.add_batch_data(
-                pos=[-1.05, 0],
+                pos=[-1, 0],
                 text=str(label),
-                anchor=[-1.01, -.25],
+                anchor=[-2, 0],
                 box_index=i,
             )
         self.canvas.update_visual(self.label_visual)

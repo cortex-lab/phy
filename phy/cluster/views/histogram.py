@@ -108,11 +108,10 @@ class HistogramView(ManualClusteringView):
         # Support multiline text.
         text = text.splitlines()
         n = len(text)
-        x = [-.75] * n
-        y = [+.8 - i * .25 for i in range(n)]  # improve positioning of text
         self.text_visual.add_batch_data(
             text=text,
-            pos=list(zip(x, y)),
+            pos=[(-1, .8)] * n,
+            anchor=[(1, -1 - i) for i in range(n)],
             box_index=idx,
         )
 

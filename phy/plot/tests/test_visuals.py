@@ -302,7 +302,7 @@ def test_text_1(qtbot, canvas_pz):
 def test_text_2(qtbot, canvas_pz):
     c = canvas_pz
 
-    text = ['--x--'] * 5
+    text = ['12345'] * 5
     pos = [[0, 0], [-.5, +.5], [+.5, +.5], [-.5, -.5], [+.5, -.5]]
     anchor = [[0, 0], [-1, +1], [+1, +1], [-1, -1], [+1, -1]]
 

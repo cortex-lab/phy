@@ -541,7 +541,7 @@ class Snippets(object):
         snippet_args = _parse_snippet(snippet)
         name = snippet_args[0]
 
-        logger.info("Processing snippet `%s`.", snippet)
+        logger.debug("Processing snippet `%s`.", snippet)
         try:
             # Try to run the snippet on all attached Actions instances.
             for actions in self.gui.actions:
@@ -563,7 +563,7 @@ class Snippets(object):
 
     def mode_on(self):
         """Enable the snippet mode."""
-        logger.info("Snippet mode enabled, press `escape` to leave this mode.")
+        logger.debug("Snippet mode enabled, press `escape` to leave this mode.")
         # Save the current status message.
         self._status_message = self.gui.status_message
         self.gui.lock_status()

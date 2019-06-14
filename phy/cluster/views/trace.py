@@ -253,7 +253,7 @@ class TraceView(ManualClusteringView):
             self.label_visual.add_batch_data(
                 pos=[data_bounds[0], traces[0, ch]],
                 text=ch_label,
-                anchor=[+1., -.1],
+                anchor=[+1., 0],
                 data_bounds=data_bounds,
                 box_index=bi,
             )
