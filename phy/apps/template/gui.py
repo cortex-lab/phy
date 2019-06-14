@@ -14,10 +14,10 @@ from pathlib import Path
 import numpy as np
 
 from phylib.io.array import Selector
-from phylib.io.model import TemplateModel
+from phylib.io.model import TemplateModel, get_template_params, load_model
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils._misc import read_python, write_tsv
+from phylib.utils._misc import write_tsv
 
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views.base import ManualClusteringView
@@ -842,27 +842,11 @@ class TemplateController(object):
 # Template commands
 #------------------------------------------------------------------------------
 
-def get_template_params(params_path):
-    """Get a dictionary of parameters from a params.py file."""
-    params_path = Path(params_path)
-    # Create a `phy.log` log file with DEBUG level.
-    _add_log_file(params_path.parent / 'phy.log')
-
-    params = read_python(params_path)
-    if isinstance(params['dat_path'], str):
-        params['dat_path'] = [params['dat_path']]
-    params['dat_path'] = [Path(_) for _ in params['dat_path']]
-    params['dtype'] = np.dtype(params['dtype'])
-    if 'dir_path' not in params:
-        params['dir_path'] = params_path.parent
-    params['dir_path'] = Path(params['dir_path'])
-    assert params['dir_path'].exists()
-    assert params['dir_path'].is_dir()
-    return params
-
-
 def template_gui(params_path):  # pragma: no cover
     """Launch the Template GUI."""
+    # Create a `phy.log` log file with DEBUG level.
+    _add_log_file(Path(params_path).parent / 'phy.log')
+
     create_app()
     controller = TemplateController(**get_template_params(params_path))
     gui = controller.create_gui()
@@ -873,4 +857,4 @@ def template_gui(params_path):  # pragma: no cover
 
 def template_describe(params_path):
     """Describe a template dataset."""
-    TemplateModel(**get_template_params(params_path)).describe()
+    load_model(params_path).describe()
