@@ -206,6 +206,28 @@ def prompt(message, buttons=('yes', 'no'), title='Question'):
 
 
 @mockable
+def message_box(message, title='Message', level=None):  # pragma: no cover
+    """Display a message box.
+
+    Parameters
+    ----------
+    message : str
+    title : str
+    level : str
+        information, warning, or critical
+
+    """
+    getattr(QMessageBox, level, 'information')(None, title, message)
+
+
+class QtDialogLogger(logging.Handler):
+    """Display a message box for all errors."""
+    def emit(self, record):  # pragma: no cover
+        msg = self.format(record)
+        message_box(msg, title='An error has occurred', level='critical')
+
+
+@mockable
 def input_dialog(title, sentence, text=None):  # pragma: no cover
     """Display a dialog with a text box."""
     return QInputDialog.getText(None, title, sentence, text=text)
