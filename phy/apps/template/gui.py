@@ -139,6 +139,7 @@ class TemplateController(object):
 
     def _set_cache(self):
         memcached = ('get_template_counts',
+                     'get_mean_firing_rate',
                      'get_template_for_cluster',
                      'get_best_channel',
                      'get_best_channels',
@@ -164,6 +165,7 @@ class TemplateController(object):
             'channel': self.get_best_channel,
             'depth': self.get_probe_depth,
             'amplitude': self.get_cluster_amplitude,
+            'firing_rate': self.get_mean_firing_rate,
         }
         cluster_metrics.update(self.cluster_metrics)
         supervisor = Supervisor(
@@ -244,6 +246,10 @@ class TemplateController(object):
         template_amplitudes = (data.max(axis=1) - data.min(axis=1)).max(axis=1)
         assert template_amplitudes.shape == (n_templates,)
         return (template_amplitudes * masks[:, 0]).sum()
+
+    def get_mean_firing_rate(self, cluster_id):
+        """Return the mean firing rate of a cluster."""
+        return "%.1f spk/s" % (self.supervisor.n_spikes(cluster_id) / max(1, self.model.duration))
 
     def similarity(self, cluster_id):
         """Return the list of similar clusters to a given cluster."""
