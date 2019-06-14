@@ -153,7 +153,8 @@ class CorrelogramView(ManualClusteringView):
 
         # Display the window size in the bottom right subplot.
         self.label_visual.add_batch_data(
-            pos=[.9, -.9],
+            pos=[1, -1],
+            anchor=[-1, 1],
             text='%.1f ms' % (1000 * .5 * self.window_size),
             box_index=(n - 1, n - 1),
         )
