@@ -119,7 +119,14 @@ This is the main object, that holds together the model (access to the data), the
 
 This object (`controller.model`) holds the data: spike times, template waveforms, raw data, initial template assignments, etc.
 
-*Note*: this class is defined in `phylib.io.model`.
+A few remarks:
+
+* There is a distinction between **templates** and **clusters**: spike templates assignments are done by the spike sorting algorithm (e.g. KiloSort), whereas spike clusters assignments are manual refinements of the original spike templates assignments. Therefore:
+    * `spike_templates.npy` is created by the spike sorting algorithm, and never modified by phy
+    * `spike_clusters.npy` is initially a copy of `spike_templates.npy`, but it is modified by phy during the manual clustering session
+* The TemplateModel supports both dense and sparse arrays for templates, features...
+* In several methods, the TemplateModel requires the channel ids to be passed explicitly. There are methods to find the "best" channels associated to a given template or cluster.
+
 
 ### Supervisor
 
@@ -226,3 +233,43 @@ The following events are raised with **Control+click** in specific views:
 * `emit('close_view', gui, view)`: when a view is closed in the GUI.
 * `emit('show', gui)`: when the GUI is shown.
 * `emit('close', gui)`: when the GUI is closed.
+
+
+## Examples of using the API
+
+You can use the phy API to write custom analysis and visualization scripts, without using the GUI. We give a few examples here.
+
+*Note*: the high-level methods provided by `TemplateModel` are convenient but not particularly efficient. If you need better performance, you should use the `TemplateController` class which leverages the cache in the `.phy` subdirectory.
+
+### Extracting waveforms
+
+Here is a Python script that will extract the waveforms of a given cluster directly from the raw data, and display them.
+
+![image](https://user-images.githubusercontent.com/1942359/59498589-fc8ed080-8e95-11e9-86b6-b251f8c887be.png)
+
+```python
+import sys
+import matplotlib.pyplot as plt
+from phylib.io.model import load_model
+from phylib.utils.color import selected_cluster_color
+
+# First, we load the TemplateModel.
+model = load_model(sys.argv[1])  # first argument: path to params.py
+
+# We obtain the cluster id from the command-line arguments.
+cluster_id = int(sys.argv[2])  # second argument: cluster index
+
+# We get the waveforms of the cluster.
+waveforms = model.get_cluster_spike_waveforms(cluster_id)
+n_spikes, n_samples, n_channels_loc = waveforms.shape
+
+# We get the channel ids where the waveforms are located.
+channel_ids = model.get_cluster_channels(cluster_id)
+
+# We plot the waveforms on the first four channels.
+f, axes = plt.subplots(1, min(4, n_channels_loc), sharey=True)
+for ch in range(min(4, n_channels_loc)):
+    axes[ch].plot(waveforms[::100, :, ch].T, c=selected_cluster_color(0, .05))
+    axes[ch].set_title("channel %d" % channel_ids[ch])
+plt.show()
+```
