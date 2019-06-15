@@ -508,7 +508,7 @@ class ActionCreator(object):
                 submenu='Change color field')
 
         # Change color map action.
-        for colormap in ('categorical', 'linear', 'diverging', 'rainbow'):
+        for colormap in ('categorical', 'cluster_group', 'diverging', 'linear', 'rainbow'):
             self.add(
                 w, name='colormap_%s' % colormap.lower(),
                 method_name='change_colormap',
@@ -710,8 +710,7 @@ class Supervisor(object):
 
     def _get_cluster_info(self, cluster_id, exclude=()):
         """Return the data associated to a given cluster."""
-        out = {'id': cluster_id,
-               }
+        out = {'id': cluster_id}
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
         for key in self.cluster_meta.fields:
@@ -739,8 +738,9 @@ class Supervisor(object):
         # Create the similarity view.
         self.similarity_view = SimilarityView(
             gui, columns=self.columns + ['similarity'], sort=('similarity', 'desc'))
-        connect(self._get_similar_clusters, event='request_similar_clusters',
-                sender=self.similarity_view)
+        connect(
+            self._get_similar_clusters, event='request_similar_clusters',
+            sender=self.similarity_view)
         connect(self._similar_selected, event='select', sender=self.similarity_view)
 
         # Change the state after every clustering action, according to the action flow.
@@ -1114,12 +1114,13 @@ class Supervisor(object):
 
         """
         spike_clusters = self.clustering.spike_clusters
-        groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
-                  for c in self.clustering.cluster_ids}
+        groups = {
+            c: self.cluster_meta.get('group', c) or 'unsorted'
+            for c in self.clustering.cluster_ids}
         # List of tuples (field_name, dictionary).
-        labels = [(field, self.get_labels(field))
-                  for field in self.cluster_meta.fields
-                  if field not in ('next_cluster')]
+        labels = [
+            (field, self.get_labels(field)) for field in self.cluster_meta.fields
+            if field not in ('next_cluster')]
         emit('save_clustering', self, spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
