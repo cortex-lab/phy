@@ -215,18 +215,14 @@ class PanZoom(object):
     def _constrain_zoom(self):
         """Constrain bounding box."""
         if self.xmin is not None:
-            self._zoom[0] = max(self._zoom[0],
-                                1. / (self._pan[0] - self.xmin))
+            self._zoom[0] = max(self._zoom[0], 1. / (self._pan[0] - self.xmin))
         if self.xmax is not None:
-            self._zoom[0] = max(self._zoom[0],
-                                1. / (self.xmax - self._pan[0]))
+            self._zoom[0] = max(self._zoom[0], 1. / (self.xmax - self._pan[0]))
 
         if self.ymin is not None:
-            self._zoom[1] = max(self._zoom[1],
-                                1. / (self._pan[1] - self.ymin))
+            self._zoom[1] = max(self._zoom[1], 1. / (self._pan[1] - self.ymin))
         if self.ymax is not None:
-            self._zoom[1] = max(self._zoom[1],
-                                1. / (self.ymax - self._pan[1]))
+            self._zoom[1] = max(self._zoom[1], 1. / (self.ymax - self._pan[1]))
 
     def window_to_ndc(self, pos):
         """Return the mouse coordinates in NDC, taking panzoom into account."""
@@ -302,8 +298,9 @@ class PanZoom(object):
 
         pan_x, pan_y = self._pan
         zoom_x, zoom_y = self._zoom
-        zoom_x_new, zoom_y_new = (zoom_x * math.exp(c * self._zoom_coeff * dx),
-                                  zoom_y * math.exp(c * self._zoom_coeff * dy))
+        zoom_x_new, zoom_y_new = (
+            zoom_x * math.exp(c * self._zoom_coeff * dx),
+            zoom_y * math.exp(c * self._zoom_coeff * dy))
 
         zoom_x_new = max(min(zoom_x_new, self._zmax), self._zmin)
         zoom_y_new = max(min(zoom_y_new, self._zmax), self._zmin)
@@ -314,8 +311,9 @@ class PanZoom(object):
             zoom_x, zoom_y = self._zoom_aspect((zoom_x, zoom_y))
             zoom_x_new, zoom_y_new = self._zoom_aspect((zoom_x_new, zoom_y_new))
 
-            self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
-                        pan_y - y0 * (1. / zoom_y - 1. / zoom_y_new))
+            self.pan = (
+                pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
+                pan_y - y0 * (1. / zoom_y - 1. / zoom_y_new))
 
         self.update()
 

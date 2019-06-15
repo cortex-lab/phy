@@ -70,7 +70,6 @@ class PlotCanvas(BaseCanvas):
             self.grid = Grid(shape, has_clip=has_clip)
             self.grid.attach(self)
             self.interact = self.grid
-            self.constrain_bounds = (-1, -1, +1, +1)
 
         elif layout == 'boxed':
             self.n_plots = len(box_bounds) if box_bounds is not None else len(box_pos)
@@ -83,7 +82,6 @@ class PlotCanvas(BaseCanvas):
             self.stacked = Stacked(n_plots, origin=origin)
             self.stacked.attach(self)
             self.interact = self.stacked
-            self.constrain_bounds = (-1, -1, +1, +1)
 
         if layout == 'grid' and shape is not None:
             self.interact.add_boxes(self)
