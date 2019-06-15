@@ -690,10 +690,14 @@ class TemplateController(object):
 
     def get_templates(self, cluster_ids):
         """Get the template waveforms of a set of clusters."""
-        bunchs = {cluster_id: self.get_template_waveforms(cluster_id)
-                  for cluster_id in cluster_ids}
+        bunchs = {
+            cluster_id: self.get_template_waveforms(cluster_id)
+            for cluster_id in cluster_ids}
+        mean_amp = {
+            cluster_id: self.get_amplitudes([cluster_id])[0].y.mean()
+            for cluster_id in cluster_ids}
         return {cluster_id: Bunch(
-                template=bunchs[cluster_id].data[0, ...],
+                template=bunchs[cluster_id].data[0, ...] * mean_amp[cluster_id],
                 channel_ids=bunchs[cluster_id].channel_ids)
                 for cluster_id in cluster_ids}
 
