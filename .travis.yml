@@ -15,11 +15,11 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda install pyyaml
-  - conda env create -f environment.yml
-  - source activate phy2
+  - conda install pyyaml numpy matplotlib scipy h5py pyqt cython
+  - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
+  - pip install -e .
 before_script:
   # see https://github.com/pytest-dev/pytest-qt/pull/207/files
     - export DISPLAY=:99.0

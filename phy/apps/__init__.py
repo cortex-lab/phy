@@ -103,7 +103,7 @@ def _add_log_file(filename):  # pragma: no cover
 @click.help_option('-h', '--help')
 @click.pass_context
 def phycli(ctx):
-    """Ephys data tool."""
+    """Interactive visualization and manual spike sorting of large-scale ephys data."""
     add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phy'))
     add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phylib'))
 
