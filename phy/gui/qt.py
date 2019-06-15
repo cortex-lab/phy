@@ -63,6 +63,7 @@ _MOCK = None
 
 def mockable(f):
     """Wrap interactive Qt functions that should be mockable in the testing suite."""
+    @wraps(f)
     def wrapped(*args, **kwargs):
         if _MOCK is not None:
             return _MOCK
@@ -102,7 +103,7 @@ def create_app():
 
 
 def require_qt(func):
-    """Specify that a function requires a Qt application.
+    """Function decorator to specify that a function requires a Qt application.
 
     Use this decorator to specify that a function needs a running
     Qt application before it can run. An error is raised if that is not
@@ -192,7 +193,20 @@ def _debug_trace():  # pragma: no cover
 
 @mockable
 def prompt(message, buttons=('yes', 'no'), title='Question'):
-    """Display a dialog with several buttons to confirm or cancel an action."""
+    """Display a dialog with several buttons to confirm or cancel an action.
+
+    Parameters
+    ----------
+
+    message : str
+        Dialog message.
+    buttons : tuple
+        Name of the standard buttons to show in the prompt: yes, no, ok, cancel, close, etc.
+        See the full list at https://doc.qt.io/qt-5/qmessagebox.html#StandardButton-enum
+    title : str
+        Dialog title.
+
+    """
     buttons = [(button, _button_enum_from_name(button)) for button in buttons]
     arg_buttons = 0
     for (_, button) in buttons:
@@ -229,7 +243,19 @@ class QtDialogLogger(logging.Handler):
 
 @mockable
 def input_dialog(title, sentence, text=None):  # pragma: no cover
-    """Display a dialog with a text box."""
+    """Display a dialog with a text box.
+
+    Parameters
+    ----------
+
+    title : str
+        Title of the dialog.
+    sentence : str
+        Message of the dialog.
+    text : str
+        Default text in the text box.
+
+    """
     return QInputDialog.getText(None, title, sentence, text=text)
 
 
@@ -258,7 +284,17 @@ def busy_cursor():
 
 
 def screenshot(widget, path):
-    """Save a screenshot of a Qt widget to a PNG file."""
+    """Save a screenshot of a Qt widget to a PNG file.
+
+    Parameters
+    ----------
+
+    widget : Qt widget
+        Any widget to capture (including OpenGL widgets).
+    path : str or Path
+        Path to the PNG file.
+
+    """
     if isinstance(widget, QOpenGLWindow):
         # Special call for OpenGL widgets.
         widget.grabFramebuffer().save(str(path))
@@ -270,7 +306,7 @@ def screenshot(widget, path):
 
 @require_qt
 def screen_size():
-    """Return the screen size."""
+    """Return the screen size as a tuple (width, height)."""
     screen = QGuiApplication.primaryScreen()
     geometry = screen.geometry()
     return (geometry.width(), geometry.height())
@@ -280,7 +316,8 @@ def screen_size():
 def is_high_dpi():
     """Return whether the screen has a high density.
 
-    NOTE: currently, this only returns whether the screen width is greater than 3000.
+    Note: currently, this only returns whether the screen width is greater than an arbitrary
+    value chosen at 3000.
 
     """
     return screen_size()[0] > 3000
@@ -348,8 +385,32 @@ class WorkerSignals(QObject):
     result = pyqtSignal(object)
 
 
+def thread_pool():
+    """Return a QThreadPool instance that can `start()` Worker instances for multithreading.
+
+    Example
+    -------
+
+    ```python
+    w = Worker(print, "hello world")
+    thread_pool().start(w)
+    ```
+
+    """
+    return QThreadPool.globalInstance()
+
+
 class Worker(QRunnable):
-    """A task (just a Python function) running in the thread pool."""
+    """A task (just a Python function) running in the thread pool.
+
+    Constructor
+    -----------
+
+    fn : function
+    *args : function positional arguments
+    **kwargs : function keyword arguments
+
+    """
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
         self.fn = fn
@@ -359,6 +420,8 @@ class Worker(QRunnable):
 
     @pyqtSlot()
     def run(self):  # pragma: no cover
+        """Run the task. Should not be called directly unless you want to bypass the
+        thread pool."""
         # Bug with coverage, which doesn't recognize these lines as
         # called when they are called from a different thread.
         try:
@@ -374,7 +437,7 @@ class Worker(QRunnable):
 
 
 class Debouncer(object):
-    """Debouncer.
+    """Debouncer to work in a Qt application.
 
     Jobs are submitted at given times. They are executed immediately if the
     delay since the last submission is greater than some threshold. Otherwise, execution
@@ -384,6 +447,23 @@ class Debouncer(object):
 
     This is used when multiple row selections are done in an HTML table, and each row
     selection is taking a perceptible time to finish.
+
+    Constructor
+    -----------
+
+    delay : int
+        The minimal delay between the execution of two successive actions.
+
+    Example
+    -------
+
+    ```python
+    d = Debouncer(delay=250)
+    for i in range(10):
+        d.submit(print, "hello world", i)
+    d.trigger()  # show "hello world 0" and "hello world 9" after a delay
+
+    ```
 
     """
 

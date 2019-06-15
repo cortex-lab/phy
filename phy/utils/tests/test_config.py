@@ -15,7 +15,7 @@ from traitlets.config import Configurable
 
 from .. import config as _config
 from phylib.utils._misc import write_text
-from ..config import (_ensure_dir_exists,
+from ..config import (ensure_dir_exists,
                       load_config,
                       load_master_config,
                       save_config,
@@ -45,7 +45,7 @@ def test_phy_config_dir():
 
 def test_ensure_dir_exists(tempdir):
     path = tempdir / 'a/b/c'
-    _ensure_dir_exists(path)
+    ensure_dir_exists(path)
     assert path.is_dir()
 
 

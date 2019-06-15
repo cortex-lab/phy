@@ -22,9 +22,50 @@ from phylib.utils import emit, connect
 #------------------------------------------------------------------------------
 
 class PanZoom(object):
-    """Pan and zoom interact.
+    """Pan and zoom interact. Support mouse and keyboard interactivity.
 
-    To use it:
+    Constructor
+    -----------
+
+    aspect : float
+        Aspect ratio to keep while panning and zooming.
+    pan : 2-tuple
+        Initial pan.
+    zoom : 2-tuple
+        Initial zoom.
+    zmin : float
+        Minimum zoom allowed.
+    zmax : float
+        Maximum zoom allowed.
+    xmin : float
+        Minimum x allowed.
+    xmax : float
+        Maximum x allowed.
+    ymin : float
+        Minimum y allowed.
+    ymax : float
+        Maximum y allowed.
+    constrain_bounds : 4-tuple
+        Equivalent to (xmin, ymin, xmax, ymax).
+    pan_var_name : str
+        Name of the pan GLSL variable name
+    zoom_var_name : str
+        Name of the zoom GLSL variable name
+    enable_mouse_wheel : boolean
+        Whether to enable the mouse wheel for zooming.
+
+    Interactivity
+    -------------
+
+    * Keyboard arrows for panning
+    * Keyboard + and - for zooming
+    * Mouse left button + drag for panning
+    * Mouse right button + drag for zooming
+    * Mouse wheel for zooming
+    * R and double-click for reset
+
+    Example
+    -------
 
     ```python
 
@@ -51,17 +92,10 @@ class PanZoom(object):
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _pm = ('+', '-')
 
-    def __init__(self,
-                 aspect=None,
-                 pan=(0.0, 0.0), zoom=(1.0, 1.0),
-                 zmin=1e-5, zmax=1e5,
-                 xmin=None, xmax=None,
-                 ymin=None, ymax=None,
-                 constrain_bounds=None,
-                 pan_var_name='u_pan',
-                 zoom_var_name='u_zoom',
-                 enable_mouse_wheel=None,
-                 ):
+    def __init__(
+            self, aspect=None, pan=(0.0, 0.0), zoom=(1.0, 1.0), zmin=1e-5, zmax=1e5,
+            xmin=None, xmax=None, ymin=None, ymax=None, constrain_bounds=None,
+            pan_var_name='u_pan', zoom_var_name='u_zoom', enable_mouse_wheel=None):
         if constrain_bounds:
             assert xmin is None
             assert ymin is None

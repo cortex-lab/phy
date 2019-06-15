@@ -203,13 +203,26 @@ def _create_qaction(
 
 
 class Actions(object):
-    """Handle GUI actions.
+    """Group of actions bound to a GUI.
 
     This class attaches to a GUI and implements the following features:
 
     * Add and remove actions
     * Keyboard shortcuts for the actions
     * Display all shortcuts
+
+    Constructor
+    -----------
+
+    gui : GUI instance
+    name : str
+        Name of this group of actions.
+    menu : str
+        Name of the GUI menu that will contain the actions.
+    submenu : str
+        Name of the GUI submenu that will contain the actions.
+    default_shortcuts : dict
+        Map action names to keyboard shortcuts (regular strings).
 
     """
     def __init__(self, gui, name=None, menu=None, submenu=None, default_shortcuts=None):
@@ -320,11 +333,19 @@ class Actions(object):
             setattr(self, name.lower().replace(' ', '_').replace(':', ''), callback)
 
     def separator(self, menu=None):
-        """Add a separator"""
+        """Add a separator.
+
+        Parameters
+        ----------
+
+        menu : str
+            The menu that will contain the separator, or the Actions menu by default.
+
+        """
         self.gui.get_menu(menu or self.submenu or self.menu).addSeparator()
 
     def disable(self, name=None):
-        """Disable one or all actions."""
+        """Disable all actions, or only one if a name is passed."""
         if name is None:
             for name in self._actions_dict:
                 self.disable(name)
@@ -332,7 +353,7 @@ class Actions(object):
         self._actions_dict[name].qaction.setEnabled(False)
 
     def enable(self, name=None):
-        """Enable one or all actions."""
+        """Enable all actions, or only one if a name is passed.."""
         if name is None:
             for name in self._actions_dict:
                 self.enable(name)
@@ -374,7 +395,7 @@ class Actions(object):
 
     @property
     def shortcuts(self):
-        """A dictionary of action shortcuts."""
+        """A dictionary mapping action names to keyboard shortcuts."""
         out = {}
         for name in sorted(self._actions_dict):
             action = self._actions_dict[name]
@@ -391,7 +412,7 @@ class Actions(object):
         return out
 
     def show_shortcuts(self):
-        """Print all shortcuts."""
+        """Display all shortcuts in the console."""
         gui_name = self.gui.name
         actions_name = self.name
         name = ('{} - {}'.format(gui_name, actions_name)
@@ -399,6 +420,7 @@ class Actions(object):
         _show_shortcuts(self.shortcuts, name)
 
     def __contains__(self, name):
+        """Whether the Actions group contains a specified action."""
         return name in self._actions_dict
 
     def __repr__(self):
@@ -432,6 +454,14 @@ class Snippets(object):
     command is activated with `Enter`, and one can leave the snippet mode
     with `Escape`.
 
+    When the snippet mode is enabled (with `:`), this object adds a hidden Qt action
+    for every keystroke. These actions are removed when the snippet mode is disabled.
+
+    Constructor
+    -----------
+
+    gui : GUI instance
+
     """
 
     # HACK: Unicode characters do not seem to work on Python 2
@@ -459,11 +489,8 @@ class Snippets(object):
 
     @property
     def command(self):
-        """This is used to write a snippet message in the status bar.
-
-        A cursor is appended at the end.
-
-        """
+        """This is used to write a snippet message in the status bar. A cursor is appended at
+        the end."""
         msg = self.gui.status_message
         n = len(msg)
         n_cur = len(self.cursor)
@@ -531,7 +558,7 @@ class Snippets(object):
                          callback=self.mode_off)
 
     def run(self, snippet):
-        """Executes a snippet command.
+        """Execute a snippet command.
 
         May be overridden.
 

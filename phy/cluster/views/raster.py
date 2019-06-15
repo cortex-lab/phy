@@ -29,12 +29,17 @@ logger = logging.getLogger(__name__)
 class RasterView(ManualClusteringView):
     """This view shows a raster plot of all clusters.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `spike_times`: an `(n_spikes,)` array with the spike times, in seconds
-    - `spike_clusters`: an `(n_spikes,)` array with the cluster assignments
-    - `cluster_ids=None`: the list of all clusters to show initially
-    - `cluster_color_selector=None`: the object managing the color mapping
+    spike_times : array-like
+        An `(n_spikes,)` array with the spike times, in seconds.
+    spike_clusters : array-like
+        An `(n_spikes,)` array with the spike-cluster assignments.
+    cluster_ids : array-like
+        The list of all clusters to show initially.
+    cluster_color_selector : ClusterColorSelector
+        The object managing the color mapping.
 
     """
 
@@ -154,6 +159,7 @@ class RasterView(ManualClusteringView):
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         if not cluster_ids:
             return
         self.update_color(selected_clusters=cluster_ids)

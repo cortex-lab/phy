@@ -3,7 +3,7 @@
 
 """Manual clustering facilities."""
 
-from ._utils import ClusterMeta
+from ._utils import ClusterMeta, UpdateInfo
 from .clustering import Clustering
-from .supervisor import Supervisor
-from .views import WaveformView, TraceView, FeatureView, CorrelogramView
+from .supervisor import Supervisor, ClusterView, SimilarityView
+from .views import *  # noqa

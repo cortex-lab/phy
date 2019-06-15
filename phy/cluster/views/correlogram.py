@@ -27,12 +27,14 @@ class CorrelogramView(ManualClusteringView):
     """A view showing the autocorrelogram of the selected clusters, and all cross-correlograms
     of cluster pairs.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `correlograms`: a function
-      `(cluster_ids, bin_size, window_size) => (n_clusters, n_clusters, n_bins) array`
+    correlograms : function
+        Maps `(cluster_ids, bin_size, window_size)` to an `(n_clusters, n_clusters, n_bins) array`.
 
-    - `firing_rate`: a function `(cluster_ids, bin_size) => (n_clusters, n_clusters) array`
+    firing_rate : function
+        Maps `(cluster_ids, bin_size)` to an `(n_clusters, n_clusters) array`
 
     """
 
@@ -172,6 +174,7 @@ class CorrelogramView(ManualClusteringView):
         self.canvas.update_visual(self.label_visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Show the correlograms of the selected clusters."""
         self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
         if not cluster_ids:
@@ -254,7 +257,9 @@ class CorrelogramView(ManualClusteringView):
         self.on_select(cluster_ids=self.cluster_ids)
 
     def increase(self):
+        """Increase the window size."""
         self.set_window(1000 * self.window_size * 1.1)
 
     def decrease(self):
+        """Decrease the window size."""
         self.set_window(1000 * self.window_size / 1.1)

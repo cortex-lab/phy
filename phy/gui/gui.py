@@ -53,6 +53,7 @@ def _try_get_opengl_canvas(view):
 
 
 class DockWidget(QDockWidget):
+    """QDockWidget that raises the `close_dock_widget` event when closing."""
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
         emit('close_dock_widget', self)
@@ -60,7 +61,7 @@ class DockWidget(QDockWidget):
 
 
 def _create_dock_widget(widget, name, closable=True, floatable=True):
-    """Create a dock widget."""
+    """Create a dock widget wrapping any Qt widget."""
     dock_widget = DockWidget()
     dock_widget.setObjectName(name)
     dock_widget.setWindowTitle(name)
@@ -104,9 +105,29 @@ def _prompt_save():  # pragma: no cover
 
 
 class GUI(QMainWindow):
-    """A Qt main window containing docking widgets.
+    """A Qt main window containing docking widgets. This class derives from `QMainWindow`.
 
-    `GUI` derives from `QMainWindow`.
+    Constructor
+    -----------
+
+    position : 2-tuple
+        Coordinates of the GUI window on the screen, in pixels.
+    size : 2-tuple
+        Requested size of the GUI window, in pixels.
+    name : str
+        Name of the GUI window, set in the title bar.
+    subtitle : str
+        Subtitle of the GUI window, set in the title bar after the name.
+    view_creator : dict
+        Map view classnames to functions that take no arguments and return a new view instance
+        of that class.
+    view_count : dict
+        Map view classnames to integers specifying the number of views to create for every
+        view class.
+    default_views : list-like
+        List of view names to create by default (overriden by `view_count` if not empty).
+    config_dir : str or Path
+        User configuration directory used to load/save the GUI state
 
     Events
     ------
@@ -283,18 +304,20 @@ class GUI(QMainWindow):
 
     @property
     def view_count(self):
-        """Dictionary {view_class: n_views}."""
+        """Return the number of views of every type, as a dictionary mapping view class names
+        to an integer."""
         vc = defaultdict(int)
         for v in self.views:
             vc[v.__class__.__name__] += 1
         return dict(vc)
 
     def list_views(self, cls):
-        """Return the list of views deriving from given class."""
+        """Return the list of views deriving from a given class."""
         return [view for view in self._views if view.__class__ == cls]
 
     def get_view(self, cls, index=0):
-        """Return a view from a given class."""
+        """Return a view from a given class. If there are multiple views of the same class,
+        specify the view index (0 by default)."""
         views = self.list_views(cls)
         if index <= len(views) - 1:
             return views[index]
@@ -336,7 +359,7 @@ class GUI(QMainWindow):
         return view
 
     def create_views(self):
-        """Create and add the views depending on the number of views specified in view_coun}."""
+        """Create and add as many views as specified in view_count."""
         self.view_actions.separator()
         req_view_count = self._requested_view_count.items()
         for view_name, n_views in req_view_count:
@@ -347,7 +370,22 @@ class GUI(QMainWindow):
                 self._create_and_add_view(view_name)
 
     def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
-        """Add a widget to the main window."""
+        """Add a dock widget to the main window.
+
+        Parameters
+        ----------
+
+        view : View
+        position : str
+            Relative position where to add the view (left, right, top, bottom).
+        closable : boolean
+            Whether the view can be closed by the user.
+        floatable : boolean
+            Whether the view can be detached from the main GUI.
+        floating : boolean
+            Whether the view should be added in floating mode or not.
+
+        """
 
         logger.debug("Add view %s to GUI.", view.__class__.__name__)
 
@@ -381,13 +419,13 @@ class GUI(QMainWindow):
     # -------------------------------------------------------------------------
 
     def get_menu(self, name):
-        """Return or create a menu."""
+        """Get or create a menu."""
         if name not in self._menus:
             self._menus[name] = self.menuBar().addMenu(name)
         return self._menus[name]
 
     def get_submenu(self, menu, name):
-        """Return or create a submenu."""
+        """Get or create a submenu."""
         if name not in self._menus:
             self._menus[name] = self.get_menu(menu).addMenu(name)
         return self._menus[name]
@@ -411,7 +449,7 @@ class GUI(QMainWindow):
 
     @property
     def status_message(self):
-        """The message in the status bar."""
+        """The message in the status bar, can be set by the user."""
         return str(self._status_bar.currentMessage())
 
     @status_message.setter
@@ -445,7 +483,7 @@ class GUI(QMainWindow):
     def restore_geometry_state(self, gs):
         """Restore the position of the main window and the docks.
 
-        The gui widgets need to be recreated first.
+        The GUI widgets need to be recreated first.
 
         This function can be called in `on_show()`.
 

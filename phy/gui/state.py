@@ -18,7 +18,7 @@ from pathlib import Path
 import shutil
 
 from phylib.utils import Bunch, _bunchify, load_json, save_json
-from phy.utils import _ensure_dir_exists, phy_config_dir
+from phy.utils import ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -85,20 +85,21 @@ def _recursive_update(d, u):
 
 class GUIState(Bunch):
     """Represent the state of the GUI: positions of the views and all parameters associated
-    to the GUI and views.
+    to the GUI and views. Derive from `Bunch`, which itself derives from `dict`.
 
-    The GUI state is automatically loaded from the configuration directory.
+    The GUI state is automatically loaded from the user configuration directory.
+    The default path is `~/.phy/GUIName/state.json`.
 
     """
     def __init__(self, path, local_path=None, default_state_path=None, local_keys=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
         self._path = Path(path)
-        _ensure_dir_exists(str(self._path.parent))
+        ensure_dir_exists(str(self._path.parent))
 
         self._local_path = Path(local_path) if local_path else None
         self._local_keys = local_keys or ()
         if self._local_path:
-            _ensure_dir_exists(str(self._local_path.parent))
+            ensure_dir_exists(str(self._local_path.parent))
 
         if not default_state_path:
             logger.warning("The default state path %s does not exist.", default_state_path)
@@ -109,11 +110,19 @@ class GUIState(Bunch):
         self.load()
 
     def get_view_state(self, view):
-        """Return the state of a view."""
+        """Return the state of a view instance."""
         return self.get(view.name, Bunch())
 
     def update_view_state(self, view, state):
-        """Update the state of a view."""
+        """Update the state of a view instance.
+
+        Parameters
+        ----------
+
+        view : View instance
+        state : Bunch instance
+
+        """
         name = view.name
         if name not in self:
             self[name] = Bunch()

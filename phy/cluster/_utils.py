@@ -48,20 +48,46 @@ def create_cluster_meta(cluster_groups):
 #------------------------------------------------------------------------------
 
 class UpdateInfo(Bunch):
-    """Hold information about clustering changes."""
+    """Object created every time the dataset is modified via a clustering or cluster metadata
+    action. It is passed to event callbacks that react to these changes. Derive from Bunch.
+
+    Parameters
+    ----------
+
+    description : str
+        Information about the update: merge, assign, or metadata_xxx for metadata changes
+    history : str
+        undo, redo, or None
+    spike_ids : array-like
+        All spike ids that were affected by the clustering action.
+    added : list
+        List of new cluster ids.
+    deleted : list
+        List of cluster ids that were deleted during the action. There are no modified clusters:
+        every change triggers the deletion of and addition of clusters.
+    descendants : list
+        List of pairs (old_cluster_id, new_cluster_id), used to track the history of
+        the clusters.
+    metadata_changed : list
+        List of cluster ids that had a change of metadata.
+    metadata_value : str
+        The new metadata value for the affected change.
+    undo_state : Bunch
+        Returned during an undo, it contains information about the undone action. This is used
+        when redoing the undone action.
+
+    """
     def __init__(self, **kwargs):
         d = dict(
-            description='',  # information about the update: 'merge', 'assign',
-                             # or 'metadata_<name>'
-            history=None,  # None, 'undo', or 'redo'
-            spike_ids=[],  # all spikes affected by the update
-            added=[],  # new clusters
-            deleted=[],  # deleted clusters
-            descendants=[],  # pairs of (old_cluster, new_cluster)
-            metadata_changed=[],  # clusters with changed metadata
-            metadata_value=None,  # new metadata value
-            undo_state=None,  # returned during an undo: it contains
-                              # information about the undone action
+            description='',
+            history=None,
+            spike_ids=[],
+            added=[],
+            deleted=[],
+            descendants=[],
+            metadata_changed=[],
+            metadata_value=None,
+            undo_state=None,
         )
         d.update(kwargs)
         super(UpdateInfo, self).__init__(d)
@@ -73,19 +99,13 @@ class UpdateInfo(Bunch):
             return '<UpdateInfo>'
         elif desc in ('merge', 'assign'):
             a, d = _join(self.added), _join(self.deleted)
-            return '<{desc}{h} {d} => {a}>'.format(desc=desc,
-                                                   a=a,
-                                                   d=d,
-                                                   h=h,
-                                                   )
+            return '<{desc}{h} {d} => {a}>'.format(
+                desc=desc, a=a, d=d, h=h)
         elif desc.startswith('metadata'):
             c = _join(self.metadata_changed)
             m = self.metadata_value
-            return '<{desc}{h} {c} => {m}>'.format(desc=desc,
-                                                   c=c,
-                                                   m=m,
-                                                   h=h,
-                                                   )
+            return '<{desc}{h} {c} => {m}>'.format(
+                desc=desc, c=c, m=m, h=h)
         return '<UpdateInfo>'
 
 
@@ -121,7 +141,7 @@ class ClusterMeta(object):
         setattr(self, name, func)
 
     def from_dict(self, dic):
-        """Import data from a {cluster: {field: value}} dictionary."""
+        """Import data from a `{cluster_id: {field: value}}` dictionary."""
         #self._reset_data()
         # Do not raise events here.
         with silent():
@@ -131,14 +151,31 @@ class ClusterMeta(object):
         self._data_base = deepcopy(self._data)
 
     def to_dict(self, field):
-        """Export data to a {cluster: value} dictionary, for a particular
-        field."""
+        """Export data to a `{cluster_id: value}` dictionary, for a particular field."""
         assert field in self._fields, "This field doesn't exist"
-        return {cluster: self.get(field, cluster)
-                for cluster in self._data.keys()}
+        return {cluster: self.get(field, cluster) for cluster in self._data.keys()}
 
     def set(self, field, clusters, value, add_to_stack=True):
-        """Set the value of one of several clusters."""
+        """Set the value of one of several clusters.
+
+        Parameters
+        ----------
+
+        field : str
+            The field to set.
+        clusters : list
+            The list of cluster ids to change.
+        value : str
+            The new metadata value for the given clusters.
+        add_to_stack : boolean
+            Whether this metadata change should be recorded in the undo stack.
+
+        Returns
+        -------
+
+        up : UpdateInfo instance
+
+        """
         # Add the field if it doesn't exist.
         if field not in self._fields:
             self.add_field(field)
@@ -163,14 +200,24 @@ class ClusterMeta(object):
         return up
 
     def get(self, field, cluster):
-        """Retrieve the value of one cluster."""
+        """Retrieve the value of one cluster for a given field."""
         if _is_list(cluster):
             return [self.get(field, c) for c in cluster]
         assert field in self._fields
         return self._data.get(cluster, {}).get(field, self._fields[field])
 
     def set_from_descendants(self, descendants, largest_old_cluster=None):
-        """Update metadata of some clusters given the metadata of their ascendants."""
+        """Update metadata of some clusters given the metadata of their ascendants.
+
+        Parameters
+        ----------
+
+        descendants : list
+            List of pairs (old_cluster_id, new_cluster_id)
+        largest_old_cluster : int
+            If available, the cluster id of the largest old cluster, used as a reference.
+
+        """
         for field in self.fields:
             # Consider the default value for the current field.
             default = self._fields[field]
@@ -234,6 +281,7 @@ class ClusterMeta(object):
         -------
 
         up : UpdateInfo instance
+
         """
         args = self._undo_stack.forward()
         if args is None:

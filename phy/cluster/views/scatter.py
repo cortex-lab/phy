@@ -28,9 +28,11 @@ logger = logging.getLogger(__name__)
 class ScatterView(ManualClusteringView):
     """This view displays a scatter plot for all selected clusters.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `coords`: a function `cluster_ids => [Bunch(x, y) for _ in cluster_ids]`
+    coords : function
+        Maps `cluster_ids` to a list `[Bunch(x, y), ...]` for each cluster.
 
     """
 
@@ -87,6 +89,7 @@ class ScatterView(ManualClusteringView):
         self.canvas.update_visual(self.visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         self.cluster_ids = cluster_ids
         if not cluster_ids:
             return

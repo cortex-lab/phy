@@ -278,7 +278,21 @@ table tr[data-group='noise'] {
 
 
 class ClusterView(Table):
-    """Display a table of all clusters with metrics and labels as columns."""
+    """Display a table of all clusters with metrics and labels as columns. Derive from Table.
+
+    Constructor
+    -----------
+
+    parent : Qt widget
+    data : list
+        List of dictionaries mapping fields to values.
+    columns : list
+        List of columns in the table.
+    sort : 2-tuple
+        Initial sort of the table as a pair (column_name, order), where order is
+        either `asc` or `desc`.
+
+    """
 
     _required_columns = ('n_spikes',)
     _view_name = 'cluster_view'
@@ -539,34 +553,51 @@ def _is_group_masked(group):
 class Supervisor(object):
     """Component that brings manual clustering facilities to a GUI:
 
-    * Clustering instance: merge, split, undo, redo
-    * ClusterMeta instance: change cluster metadata (e.g. group)
-    * Selection
+    * `Clustering` instance: merge, split, undo, redo.
+    * `ClusterMeta` instance: change cluster metadata (e.g. group).
+    * Cluster selection.
     * Many manual clustering-related actions, snippets, shortcuts, etc.
+    * Two HTML tables : `ClusterView` and `SimilarityView`.
 
     Parameters
     ----------
 
-    spike_clusters : ndarray
-    cluster_groups : dictionary {cluster_id: group_name}
-    cluster_metrics : dictionary {metrics_name: function cluster_id => value}
-    similarity: function cluster_id => [(cl, sim), ...]
-    new_cluster_id: function that returns a brand new cluster id
-    sort: initial sort (field_name, asc|desc)
-    context: Context instance
+    spike_clusters : array-like
+        Spike-clusters assignments.
+    cluster_groups : dict
+        Maps a cluster id to a group name (noise, mea, good, None for unsorted).
+    cluster_metrics : dict
+        Maps a metric name to a function `cluster_id => value`
+    similarity : function
+        Maps a cluster id to a list of pairs `[(similar_cluster_id, similarity), ...]`
+    new_cluster_id : function
+        Function that takes no argument and returns a brand new cluster id (smallest cluster id
+        not used in the cache).
+    sort : 2-tuple
+        Initial sort as a pair `(column_name, order)` where `order` is either `asc` or `desc`
+    context : Context
+        Handles the cache.
 
     Events
     ------
 
     When this component is attached to a GUI, the following events are emitted:
 
-    * select(cluster_ids)
-    * cluster(up)
-    * attach_gui(gui)
-    * request_split()
-    * error(msg)
-    * color_mapping_changed()
-    * save_clustering(spike_clusters, cluster_groups, *cluster_labels)
+    * `select(cluster_ids)`
+        When clusters are selected in the cluster view or similarity view.
+    * `cluster(up)`
+        When a clustering action occurs, changing the spike clusters assignment of the cluster
+        metadata.
+    * `attach_gui(gui)`
+        When the Supervisor instance is attached to the GUI.
+    * `request_split()`
+        When the user requests to split (typically, a lasso has been drawn before).
+    * `error(msg)`
+        When an error is raised.
+    * `color_mapping_changed()`
+        When the color mapping changed.
+    * `save_clustering(spike_clusters, cluster_groups, *cluster_labels)`
+        When the user wants to save the spike cluster assignments and the cluster metadata.
 
     """
 
@@ -695,10 +726,6 @@ class Supervisor(object):
         state = b.result(1)[0][0]
         gui.state.update_view_state(self.cluster_view, state)
 
-    def n_spikes(self, cluster_id):
-        """Number of spikes in a given cluster."""
-        return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
-
     def _get_similar_clusters(self, sender, cluster_id):
         """Return the clusters similar to a given cluster."""
         sim = self.similarity(cluster_id)
@@ -718,11 +745,6 @@ class Supervisor(object):
             out[key] = self.cluster_meta.get(key, cluster_id)
         out['is_masked'] = _is_group_masked(out.get('group', None))
         return {k: v for k, v in out.items() if k not in exclude}
-
-    @property
-    def cluster_info(self):
-        """The cluster view table as a list of per-cluster dictionaries."""
-        return [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
     def _create_views(self, gui=None, sort=None):
         """Create the cluster view and similarity view."""
@@ -831,17 +853,6 @@ class Supervisor(object):
         # like selection of new clusters in the tables.
         self.task_logger.process()
 
-    @property
-    def state(self):
-        """GUI state, with the cluster view and similarity view states."""
-        b = Barrier()
-        self.cluster_view.get_state(b(1))
-        self.similarity_view.get_state(b(2))
-        b.wait()
-        sc = b.result(1)[0][0]
-        ss = b.result(2)[0][0]
-        return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
-
     def _set_busy(self, busy):
         # If busy is the same, do nothing.
         if busy is self._is_busy:
@@ -853,6 +864,51 @@ class Supervisor(object):
         # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)
         self.similarity_view.set_busy(busy)
+
+    # Selection actions
+    # -------------------------------------------------------------------------
+
+    def select(self, *cluster_ids, callback=None):
+        """Select a list of clusters."""
+        # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
+        # This makes it more convenient to select multiple clusters with
+        # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
+        if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
+            cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
+        # Remove non-existing clusters from the selection.
+        #cluster_ids = self._keep_existing_clusters(cluster_ids)
+        # Update the cluster view selection.
+        self.cluster_view.select(cluster_ids, callback=callback)
+
+    # Cluster view actions
+    # -------------------------------------------------------------------------
+
+    def sort(self, column, sort_dir='desc'):
+        """Sort the cluster view by a given column, in a given order (asc or desc)."""
+        self.cluster_view.sort_by(column, sort_dir=sort_dir)
+
+    def filter(self, text):
+        """Filter the clusters using a Javascript expression on the column names."""
+        self.cluster_view.filter(text)
+
+    # Properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def cluster_info(self):
+        """The cluster view table as a list of per-cluster dictionaries."""
+        return [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+
+    @property
+    def state(self):
+        """GUI state, with the cluster view and similarity view states."""
+        b = Barrier()
+        self.cluster_view.get_state(b(1))
+        self.similarity_view.get_state(b(2))
+        b.wait()
+        sc = b.result(1)[0][0]
+        ss = b.result(2)[0][0]
+        return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
 
     def attach(self, gui):
         """Attach to the GUI."""
@@ -916,35 +972,6 @@ class Supervisor(object):
             gui.state['color_selector'] = self.color_selector.state
             unconnect(on_is_busy)
 
-    # Selection actions
-    # -------------------------------------------------------------------------
-
-    def select(self, *cluster_ids, callback=None):
-        """Select a list of clusters."""
-        # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
-        # This makes it more convenient to select multiple clusters with
-        # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
-        if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
-            cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
-        # Remove non-existing clusters from the selection.
-        #cluster_ids = self._keep_existing_clusters(cluster_ids)
-        # Update the cluster view selection.
-        self.cluster_view.select(cluster_ids, callback=callback)
-
-    # Cluster view actions
-    # -------------------------------------------------------------------------
-
-    def sort(self, column, sort_dir='desc'):
-        """Sort the cluster view by a given column, in a given order (asc or desc)."""
-        self.cluster_view.sort_by(column, sort_dir=sort_dir)
-
-    def filter(self, text):
-        """Filter the clusters using a Javascript expression on the column names."""
-        self.cluster_view.filter(text)
-
-    # Clustering actions
-    # -------------------------------------------------------------------------
-
     @property
     def selected_clusters(self):
         """Selected clusters in the cluster view only."""
@@ -961,6 +988,13 @@ class Supervisor(object):
     def selected(self):
         """Selected clusters in the cluster and similarity views."""
         return _uniq(self.selected_clusters + self.selected_similar)
+
+    def n_spikes(self, cluster_id):
+        """Number of spikes in a given cluster."""
+        return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
+
+    # Clustering actions
+    # -------------------------------------------------------------------------
 
     def merge(self, cluster_ids=None, to=None):
         """Merge the selected clusters."""

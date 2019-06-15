@@ -3,7 +3,10 @@
 
 """GUI routines."""
 
-from .qt import require_qt, create_app, run_app
+from .qt import (
+    require_qt, create_app, run_app, prompt, message_box, input_dialog, busy_cursor,
+    screenshot, screen_size, is_high_dpi, thread_pool, Worker, Debouncer
+)
 from .gui import GUI, GUIState
-from .actions import Actions
-from .widgets import HTMLWidget, Table
+from .actions import Actions, Snippets
+from .widgets import HTMLWidget, HTMLBuilder, Table, IPythonView

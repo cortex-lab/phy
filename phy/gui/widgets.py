@@ -252,7 +252,20 @@ class JSEventEmitter(QObject):
 
 
 class HTMLWidget(WebView):
-    """An HTML widget that is displayed with Qt."""
+    """An HTML widget that is displayed with Qt, with Javascript support and Python-Javascript
+    interactions capabilities. These interactions are asynchronous in Qt5, which requires
+    extensive use of callback functions in Python, as well as synchronization primitives
+    for unit tests.
+
+    Constructor
+    ------------
+
+    parent : Widget
+    title : window title
+    debounce_events : list-like
+        The list of event names, raised by the underlying HTML widget, that should be debounced.
+
+    """
     def __init__(self, *args, title='', debounce_events=()):
         # Due to a limitation of QWebChannel, need to register a Python object
         # BEFORE this web view is created?!
@@ -269,7 +282,7 @@ class HTMLWidget(WebView):
         self.builder.add_script(_DEFAULT_SCRIPT)
 
     def build(self, callback=None):
-        """We rebuild the HTML code of the widget."""
+        """Rebuild the HTML code of the widget."""
         self.set_html(self.builder.html, callback=callback)
 
     def view_source(self, callback=None):
@@ -281,7 +294,18 @@ class HTMLWidget(WebView):
     # -------------------------------------------------------------------------
 
     def eval_js(self, expr, callback=None):
-        """Evaluate a Javascript expression."""
+        """Evaluate a Javascript expression.
+
+        Parameters
+        ----------
+
+        expr : str
+            A Javascript expression.
+        callback : function
+            A Python function that is called once the Javascript expression has been
+            evaluated. It takes as input the output of the Javascript expression.
+
+        """
         logger.log(5, "%s eval JS %s", self.__class__.__name__, expr)
         return self.page().runJavaScript(expr, callback or (lambda _: _))
 
@@ -308,7 +332,12 @@ def _color_styles():
 
 
 class Table(HTMLWidget):
-    """A sortable table with support for selection."""
+    """A sortable table with support for selection. Derives from HTMLWidget.
+
+    This table uses the following Javascript implementation: https://github.com/kwikteam/tablejs
+    This Javascript class builds upon ListJS: https://listjs.com/
+
+    """
 
     def __init__(
             self, *args, columns=None, value_names=None, data=None, sort=None, title='',
@@ -317,7 +346,28 @@ class Table(HTMLWidget):
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def eval_js(self, expr, callback=None):
-        """Evaluate Javascript code."""
+        """Evaluate a Javascript expression.
+
+        The `table` Javascript variable can be used to interact with the underlying Javascript
+        table.
+
+        The table has sortable columns, a filter text box, support for single and multi selection
+        of rows. Rows can be skippable (used for ignored clusters in phy).
+
+        The table can raise Javascript events that are relayed to Python. Objects are
+        transparently serialized and deserialized in JSON. Basic types (numbers, strings, lists)
+        are transparently converted between Python and Javascript.
+
+        Parameters
+        ----------
+
+        expr : str
+            A Javascript expression.
+        callback : function
+            A Python function that is called once the Javascript expression has been
+            evaluated. It takes as input the output of the Javascript expression.
+
+        """
         # Avoid JS errors when the table is not yet fully loaded.
         expr = 'if (typeof table !== "undefined") ' + expr
         return super(Table, self).eval_js(expr, callback=callback)
@@ -415,7 +465,13 @@ class Table(HTMLWidget):
         self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
 
     def select(self, ids, callback=None, **kwargs):
-        """Select some rows in the table."""
+        """Select some rows in the table from Python.
+
+        This function calls `table.select()` in Javascript, which raises a Javascript event
+        relayed to Python. This sequence of actions is the same when the user selects
+        rows directly in the HTML view.
+
+        """
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
         self.eval_js('table.select({}, {});'.format(dumps(ids), dumps(kwargs)), callback=callback)
@@ -429,7 +485,7 @@ class Table(HTMLWidget):
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
 
     def add(self, objects):
-        """Get objects object to the table."""
+        """Add objects object to the table."""
         if not objects:
             return
         self.eval_js('table.add_({});'.format(dumps(objects)))

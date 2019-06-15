@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Config."""
+"""Configuration utilities based on the traitlets package."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -10,11 +10,8 @@ import logging
 from pathlib import Path
 from textwrap import dedent
 
-from traitlets.config import (Config,
-                              PyFileConfigLoader,
-                              JSONFileConfigLoader,
-                              )
-from phylib.utils._misc import _ensure_dir_exists, phy_config_dir
+from traitlets.config import Config, PyFileConfigLoader, JSONFileConfigLoader
+from phylib.utils._misc import ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +21,7 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 def load_config(path=None):
-    """Load a Python or JSON config file."""
+    """Load a Python or JSON config file and return a `Config` instance."""
     if not path:
         return Config()
     path = Path(path)
@@ -40,6 +37,8 @@ def load_config(path=None):
 
 
 def _default_config(config_dir=None):
+    """Default configuration Python file, with a plugin placeholder."""
+
     if not config_dir:  # pragma: no cover
         config_dir = Path.home() / '.phy'
     path = config_dir / 'plugins'
@@ -61,12 +60,13 @@ def _default_config(config_dir=None):
 
 
 def load_master_config(config_dir=None):
-    """Load a master Config file from `~/.phy/phy_config.py`."""
+    """Load a master Config file from the user configuration file (by default, this is
+    `~/.phy/phy_config.py`)."""
     config_dir = config_dir or phy_config_dir()
     path = config_dir / 'phy_config.py'
     # Create a default config file if necessary.
     if not path.exists():
-        _ensure_dir_exists(path.parent)
+        ensure_dir_exists(path.parent)
         logger.debug("Creating default phy config file at `%s`.", path)
         path.write_text(_default_config(config_dir=config_dir))
     assert path.exists()
@@ -74,7 +74,7 @@ def load_master_config(config_dir=None):
 
 
 def save_config(path, config):
-    """Save a config object to a JSON file."""
+    """Save a Config instance to a JSON file."""
     import json
     config['version'] = 1
     with open(path, 'w') as f:

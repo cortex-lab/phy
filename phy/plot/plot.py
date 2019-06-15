@@ -97,10 +97,17 @@ class PlotCanvas(BaseCanvas):
     def add_visual(self, visual, *args, **kwargs):
         """Add a visual and possibly set some data directly.
 
-        Special keyword arguments include:
+        Parameters
+        ----------
 
-        - `clearable`: whether the visual should be removed when calling clear() (True by default)
-        - `exclude_origins`: list of interact instances that should not be applied to this visual
+        visual : Visual
+        clearable : True
+            Whether the visual should be deleted when calling `canvas.clear()`.
+        exclude_origins : list-like
+            List of interact instances that should not apply to that visual. For example, use to
+            add a visual outside of the subplots, or with no support for pan and zoom.
+        key : str
+            An optional key to identify a visual
 
         """
         if not self._enabled:

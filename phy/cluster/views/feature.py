@@ -68,16 +68,21 @@ def _uniq(seq):
 
 class FeatureView(ManualClusteringView):
     """This view displays a 4x4 subplot matrix with different projections of the principal
-    component features.
+    component features. This view keeps track of which channels are currently shown.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `features`: a function `(cluster_id, channel_ids=None, load_all=False) => Bunch(data,
-      channel_ids, spike_ids , masks)` where `data` is an `(n_spikes, n_channels, n_features)`
-      array, and `channel_ids` contains the channel ids of every row in `data`.
-      This allows for a sparse format.
+    features : function
+        Maps `(cluster_id, channel_ids=None, load_all=False)` to
+        `Bunch(data, channel_ids, spike_ids , masks)`.
+        * `data` is an `(n_spikes, n_channels, n_features)` array
+        * `channel_ids` contains the channel ids of every row in `data`
 
-    - `attributes`: a dictionary `{name: (n_spikes,) array}` (for example with spike times)
+        This allows for a sparse format.
+
+    attributes : dict
+        Maps an attribute name to a 1D array with `n_spikes` numbers (for example, spike times).
 
     """
 
@@ -250,11 +255,12 @@ class FeatureView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def clear_channels(self):
-        """Reset the dimensions."""
+        """Reset the current channels."""
         self.channel_ids = None
         self.on_select(cluster_ids=self.cluster_ids)
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         self.cluster_ids = cluster_ids
         if not cluster_ids:
             return
@@ -344,7 +350,8 @@ class FeatureView(ManualClusteringView):
         connect(self.on_request_split)
 
     def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
-        """Respond to the click on a channel."""
+        """Respond to the click on a channel from another view, and update the
+        relevant subplots."""
         channels = self.channel_ids
         if channels is None:
             return
@@ -414,8 +421,7 @@ class FeatureView(ManualClusteringView):
         return np.unique(spike_ids[ind])
 
     def toggle_automatic_channel_selection(self, checked):
-        """Toggle the automatic selection of channels when the cluster
-        selection changes."""
+        """Toggle the automatic selection of channels when the cluster selection changes."""
         self.fixed_channels = not checked
 
     # Feature scaling
@@ -423,6 +429,7 @@ class FeatureView(ManualClusteringView):
 
     @property
     def scaling(self):
+        """Scaling of the features."""
         return self._scaling or 1.
 
     @scaling.setter

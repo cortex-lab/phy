@@ -23,18 +23,25 @@ from .visuals import LineVisual, PolygonVisual
 #------------------------------------------------------------------------------
 
 class Grid(BaseLayout):
-    """Grid layout.
+    """Layout showing subplots arranged in a 2D grid.
 
-    NOTE: to be used in a grid, a visual must define `a_box_index`
-    (by default) or another GLSL variable specified in `box_var`.
-
-    Parameters
-    ----------
+    Constructor
+    -----------
 
     shape : tuple or str
         Number of rows, cols in the grid.
+    shape_var : str
+        Name of the GLSL uniform variable that holds the shape, when it is variable.
     box_var : str
         Name of the GLSL variable with the box index.
+    has_clip : boolean
+        Whether subplots should be clipped.
+
+    Note
+    ----
+
+    To be used in a grid, a visual must define `a_box_index` (by default) or another GLSL
+    variable specified in `box_var`.
 
     """
 
@@ -48,10 +55,8 @@ class Grid(BaseLayout):
         self._shape = shape
         ms = 1 - self.margin
         mc = 1 - self.margin
-        _transforms = [Scale((ms, ms)),
-                       Clip([-mc, -mc, +mc, +mc]),
-                       Subplot(self.shape_var, self.box_var),
-                       ]
+        _transforms = [
+            Scale((ms, ms)), Clip([-mc, -mc, +mc, +mc]), Subplot(self.shape_var, self.box_var)]
         if has_clip is False:
             # Remove the Clip transform.
             del _transforms[1]
@@ -145,24 +150,38 @@ class Grid(BaseLayout):
 #------------------------------------------------------------------------------
 
 class Boxed(BaseLayout):
-    """Boxed layout.
+    """Layout showing plots in rectangles at arbitrary positions. Used by the waveform view.
 
-    NOTE: to be used in a boxed, a visual must define `a_box_index`
-    (by default) or another GLSL variable specified in `box_var`.
+    The boxes can be specified from their corner coordinates, or from their centers and
+    optional sizes. If the sizes are not specified, they will be computed automatically.
+    An iterative algorithm is used to find the largest box size that will not make them overlap.
 
-    Parameters
+    Constructor
     ----------
 
     box_bounds : array-like
         A (n, 4) array where each row contains the `(xmin, ymin, xmax, ymax)`
         bounds of every box, in normalized device coordinates.
 
-        NOTE: the box bounds need to be contained within [-1, 1] at all times,
+        Note: the box bounds need to be contained within [-1, 1] at all times,
         otherwise an error will be raised. This is to prevent silent clipping
         of the values when they are passed to a gloo Texture2D.
 
+    box_pos : array-like (2D, shape[1] == 2)
+        Position of the centers of the boxes.
+    box_size : array-like (2D, shape[1] == 2)
+        Size of the boxes.
+
     box_var : str
         Name of the GLSL variable with the box index.
+    keep_aspect_ratio : boolean
+        Whether to keep the aspect ratio of the bounds.
+
+    Note
+    ----
+
+    To be used in a boxed layout, a visual must define `a_box_index` (by default) or another GLSL
+    variable specified in `box_var`.
 
     """
 
@@ -170,13 +189,9 @@ class Boxed(BaseLayout):
     n_dims = 1
     active_box = 0
 
-    def __init__(self,
-                 box_bounds=None,
-                 box_pos=None,
-                 box_size=None,
-                 box_var=None,
-                 keep_aspect_ratio=True,
-                 ):
+    def __init__(
+            self, box_bounds=None, box_pos=None, box_size=None, box_var=None,
+            keep_aspect_ratio=True):
         super(Boxed, self).__init__(box_var=box_var)
         self._key_pressed = None
         self.keep_aspect_ratio = keep_aspect_ratio
@@ -186,10 +201,9 @@ class Boxed(BaseLayout):
             assert box_pos is not None
             # This will find a good box size automatically if it is not
             # specified.
-            box_bounds = _get_boxes(box_pos, size=box_size,
-                                    keep_aspect_ratio=self.keep_aspect_ratio,
-                                    margin=self.margin,
-                                    )
+            box_bounds = _get_boxes(
+                box_pos, size=box_size, keep_aspect_ratio=self.keep_aspect_ratio,
+                margin=self.margin)
 
         self._box_bounds = np.atleast_2d(box_bounds)
         assert self._box_bounds.shape[1] == 4
@@ -320,10 +334,7 @@ class Boxed(BaseLayout):
 
 
 class Stacked(Boxed):
-    """Stacked layout.
-
-    NOTE: to be used in a stacked, a visual must define `a_box_index`
-    (by default) or another GLSL variable specified in `box_var`.
+    """Layout showing a number of subplots stacked vertically.
 
     Parameters
     ----------
@@ -332,6 +343,14 @@ class Stacked(Boxed):
         Number of boxes to stack vertically.
     box_var : str
         Name of the GLSL variable with the box index.
+    origin : str
+        top or bottom
+
+    Note
+    ----
+
+    To be used in a boxed layout, a visual must define `a_box_index` (by default) or another GLSL
+    variable specified in `box_var`.
 
     """
     margin = 0
@@ -343,11 +362,11 @@ class Stacked(Boxed):
 
     @property
     def n_boxes(self):
+        """Number of boxes."""
         return len(self.box_pos)
 
     @n_boxes.setter
     def n_boxes(self, n_boxes):
-        """Number of boxes."""
         self.box_bounds = self.get_box_bounds(n_boxes)
 
     def get_box_bounds(self, n_boxes):
@@ -436,7 +455,7 @@ class Lasso(object):
         self.canvas.update()
 
     def on_mouse_click(self, e):
-        """Add a polygon point when doing Control+click."""
+        """Add a polygon point with ctrl+click."""
         if 'Control' in e.modifiers:
             if e.button == 'Left':
                 layout = getattr(self.canvas, 'layout', None)

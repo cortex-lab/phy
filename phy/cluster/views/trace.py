@@ -83,18 +83,27 @@ def _iter_spike_waveforms(
 class TraceView(ManualClusteringView):
     """This view shows the raw traces along with spike waveforms.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `traces`: a function `(t0, t1) => Bunch(data, color, waveforms)` where
-      `data` is an `(n_samples, n_channels)` array, and `waveforms` is a list of bunchs with
-      the following attributes: `data`, `color`, `channel_ids`, `start_time`, `spike_id`,
-      `spike_cluster`.
+    traces : function
+        Maps a time interval `(t0, t1)` to a `Bunch(data, color, waveforms)` where
+        * `data` is an `(n_samples, n_channels)` array
+        * `waveforms` is a list of bunchs with the following attributes:
+            * `data`
+            * `color`
+            * `channel_ids`
+            * `start_time`
+            * `spike_id`
+            * `spike_cluster`
 
-    - `spike_times`: a function that returns the list of relevant spike times
-    - `sample_rate`
-    - `duration`
-    - `n_channels`
-    - `channel_vertical_order`: permutation of the channels
+    spike_times : function
+        Teturns the list of relevant spike times.
+    sample_rate : float
+    duration : float
+    n_channels : int
+    channel_vertical_order : array-like
+        Permutation of the channels.
 
     """
     _default_position = 'left'
@@ -118,13 +127,9 @@ class TraceView(ManualClusteringView):
         'toggle_highlighted_spikes': 'alt+s',
     }
 
-    def __init__(self,
-                 traces=None,
-                 sample_rate=None,
-                 spike_times=None,  # function that returns spike times for the selected clusters
-                 duration=None,
-                 n_channels=None,
-                 channel_vertical_order=None):
+    def __init__(
+            self, traces=None, sample_rate=None, spike_times=None, duration=None, n_channels=None,
+            channel_vertical_order=None):
 
         self.do_show_labels = True
         self.show_all_spikes = False
@@ -146,8 +151,7 @@ class TraceView(ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
-        assert (channel_vertical_order is None or
-                channel_vertical_order.shape == (n_channels,))
+        assert (channel_vertical_order is None or channel_vertical_order.shape == (n_channels,))
         self._channel_perm = channel_vertical_order
         if self._channel_perm is not None:
             self._channel_perm = np.argsort(self._channel_perm)
@@ -222,12 +226,8 @@ class TraceView(ManualClusteringView):
             box_index=box_index.ravel(),
         )
 
-    def _plot_waveforms(self, waveforms=None,
-                        channel_ids=None,
-                        start_time=None,
-                        color=None,
-                        data_bounds=None,
-                        ):
+    def _plot_waveforms(
+            self, waveforms=None, channel_ids=None, start_time=None, color=None, data_bounds=None):
         # The spike time corresponds to the first sample of the waveform.
         n_samples, n_channels = waveforms.shape
         assert len(channel_ids) == n_channels
@@ -277,9 +277,6 @@ class TraceView(ManualClusteringView):
         assert 0 <= start < end <= self.duration
         return start, end
 
-    # Public methods
-    # -------------------------------------------------------------------------
-
     def _plot_all_waveforms(self, waveforms):
         # Plot the spikes.
         assert isinstance(waveforms, list)
@@ -299,6 +296,9 @@ class TraceView(ManualClusteringView):
             self._waveform_times.append(
                 (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
         self.canvas.update_visual(self.waveform_visual)
+
+    # Public methods
+    # -------------------------------------------------------------------------
 
     def set_interval(self, interval=None, change_status=True):
         """Display the traces and spikes in a given interval."""
@@ -341,6 +341,7 @@ class TraceView(ManualClusteringView):
         self.canvas.update()
 
     def on_select(self, cluster_ids=None, **kwargs):
+        """Update the view with the selected clusters."""
         super(TraceView, self).on_select(cluster_ids=cluster_ids, **kwargs)
         self.set_interval(self._interval, change_status=False)
 

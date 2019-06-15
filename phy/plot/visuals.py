@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Common visuals."""
+"""Common visuals.
+
+All visuals derive from the base class `BaseVisual()`. They all follow the same structure.
+Constant parameters are passed to the constructor. Variable parameters are passed to `set_data()`
+which is the main method: it updates the OpenGL objects to update the graphics.
+The `validate()` method is used to fill default values and validate the requested data.
+
+"""
 
 
 #------------------------------------------------------------------------------
@@ -14,12 +21,8 @@ import numpy as np
 
 from .base import BaseVisual
 from .transform import Range, NDC
-from .utils import (_tesselate_histogram,
-                    _get_texture,
-                    _get_array,
-                    _get_pos,
-                    _get_index,
-                    )
+from .utils import (
+    _tesselate_histogram, _get_texture, _get_array, _get_pos, _get_index)
 from phy.gui.qt import is_high_dpi
 from phylib.io.array import _as_array
 from phylib.utils import Bunch
@@ -100,11 +103,13 @@ class ScatterVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def vertex_count(self, x=None, y=None, pos=None, **kwargs):
+        """Number of vertices for the requested data."""
         return y.size if y is not None else len(pos)
 
     def validate(
             self, x=None, y=None, pos=None, color=None, size=None, depth=None,
             data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
         if pos is None:
             x, y = _get_pos(x, y)
             pos = np.c_[x, y]
@@ -114,20 +119,19 @@ class ScatterVisual(BaseVisual):
         n = pos.shape[0]
 
         # Validate the data.
-        color = _get_array(color, (n, 4),
-                           ScatterVisual._default_color,
-                           dtype=np.float32)
+        color = _get_array(color, (n, 4), ScatterVisual._default_color, dtype=np.float32)
         size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
         depth = _get_array(depth, (n, 1), 0)
         if data_bounds is not None:
             data_bounds = _get_data_bounds(data_bounds, pos)
             assert data_bounds.shape[0] == n
 
-        return Bunch(pos=pos, color=color, size=size,
-                     depth=depth, data_bounds=data_bounds,
-                     _n_items=n, _n_vertices=n)
+        return Bunch(
+            pos=pos, color=color, size=size, depth=depth, data_bounds=data_bounds,
+            _n_items=n, _n_vertices=n)
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
         if data.data_bounds is not None:
@@ -210,8 +214,7 @@ class UniformScatterVisual(BaseVisual):
         assert self.marker in self._supported_markers
 
         self.set_shader('uni_scatter')
-        self.fragment_shader = self.fragment_shader.replace('%MARKER',
-                                                            self.marker)
+        self.fragment_shader = self.fragment_shader.replace('%MARKER', self.marker)
 
         self.color = color or self._default_color
         self.marker_size = size or self._default_marker_size
@@ -221,9 +224,11 @@ class UniformScatterVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def vertex_count(self, x=None, y=None, pos=None, **kwargs):
+        """Number of vertices for the requested data."""
         return y.size if y is not None else len(pos)
 
     def validate(self, x=None, y=None, pos=None, masks=None, data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
         if pos is None:
             x, y = _get_pos(x, y)
             pos = np.c_[x, y]
@@ -243,13 +248,10 @@ class UniformScatterVisual(BaseVisual):
             data_bounds = _get_data_bounds(data_bounds, pos)
             assert data_bounds.shape[0] == n
 
-        return Bunch(pos=pos,
-                     masks=masks,
-                     data_bounds=data_bounds,
-                     _n_items=n, _n_vertices=n,
-                     )
+        return Bunch(pos=pos, masks=masks, data_bounds=data_bounds, _n_items=n, _n_vertices=n)
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
         if data.data_bounds is not None:
@@ -321,6 +323,7 @@ class PlotVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def validate(self, x=None, y=None, color=None, depth=None, data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
         y = _as_list(y)
@@ -357,10 +360,9 @@ class PlotVisual(BaseVisual):
             data_bounds = data_bounds.astype(np.float64)
             assert data_bounds.shape == (n_signals, 4)
 
-        return Bunch(x=x, y=y,
-                     color=color, depth=depth,
-                     data_bounds=data_bounds,
-                     _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
+        return Bunch(
+            x=x, y=y, color=color, depth=depth, data_bounds=data_bounds,
+            _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
     def set_color(self, color):
         """Update the visual's color."""
@@ -368,10 +370,12 @@ class PlotVisual(BaseVisual):
         self.program['a_color'] = color.astype(np.float32)
 
     def vertex_count(self, y=None, **kwargs):
+        """Number of vertices for the requested data."""
         """Take the output of validate() as input."""
         return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
 
@@ -453,6 +457,7 @@ class UniformPlotVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def validate(self, x=None, y=None, masks=None, data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
         y = _as_list(y)
@@ -483,16 +488,17 @@ class UniformPlotVisual(BaseVisual):
             data_bounds = data_bounds.astype(np.float64)
             assert data_bounds.shape == (n_signals, 4)
 
-        return Bunch(x=x, y=y, masks=masks,
-                     data_bounds=data_bounds,
-                     _n_items=n_signals, _n_vertices=self.vertex_count(y=y)
-                     )
+        return Bunch(
+            x=x, y=y, masks=masks, data_bounds=data_bounds,
+            _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
     def vertex_count(self, y=None, **kwargs):
+        """Number of vertices for the requested data."""
         """Take the output of validate() as input."""
         return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
 
@@ -568,6 +574,7 @@ class HistogramVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def validate(self, hist=None, color=None, ylim=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
         assert hist is not None
         hist = np.asarray(hist, np.float64)
         if hist.ndim == 1:
@@ -593,11 +600,13 @@ class HistogramVisual(BaseVisual):
             _n_items=n_hists, _n_vertices=self.vertex_count(hist))
 
     def vertex_count(self, hist, **kwargs):
+        """Number of vertices for the requested data."""
         hist = np.atleast_2d(hist)
         n_hists, n_bins = hist.shape
         return 6 * n_hists * n_bins
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
         hist = data.hist
@@ -650,14 +659,18 @@ class TextVisual(BaseVisual):
     text : list of strings (variable lengths)
     anchor : array-like (2D)
         For each string, specifies the anchor of the string with respect to the string's position.
+
         Examples:
-          * (0, 0): text centered at the position
-          * (1, 1): the position is at the lower left of the string
-          * (1, -1): the position is at the upper left of the string
-          * (-1, 1): the position is at the lower right of the string
-          * (-1, -1): the position is at the upper right of the string
+
+        * (0, 0): text centered at the position
+        * (1, 1): the position is at the lower left of the string
+        * (1, -1): the position is at the upper left of the string
+        * (-1, 1): the position is at the lower right of the string
+        * (-1, -1): the position is at the upper right of the string
+
         Values higher than 1 or lower than -1 can be used as margins, knowing that the unit
         of the anchor is (string width, string height).
+
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
@@ -693,6 +706,7 @@ class TextVisual(BaseVisual):
         return [self._chars.index(char) for char in s]
 
     def validate(self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
 
         if text is None:
             text = []
@@ -726,11 +740,13 @@ class TextVisual(BaseVisual):
             _n_items=n_text, _n_vertices=self.vertex_count(text=text))
 
     def vertex_count(self, **kwargs):
+        """Number of vertices for the requested data."""
         """Take the output of validate() as input."""
         # Total number of glyphs * 6 (6 vertices per glyph).
         return sum(map(len, kwargs.get('text', ''))) * 6
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
 
@@ -833,6 +849,7 @@ class LineVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def validate(self, pos=None, color=None, data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
         assert pos is not None
         pos = _as_array(pos)
         pos = np.atleast_2d(pos)
@@ -850,16 +867,19 @@ class LineVisual(BaseVisual):
         data_bounds = data_bounds.astype(np.float64)
         assert data_bounds.shape == (n_lines, 4)
 
-        return Bunch(pos=pos, color=color, data_bounds=data_bounds,
-                     _n_items=n_lines, _n_vertices=self.vertex_count(pos=pos))
+        return Bunch(
+            pos=pos, color=color, data_bounds=data_bounds,
+            _n_items=n_lines, _n_vertices=self.vertex_count(pos=pos))
 
     def vertex_count(self, pos=None, **kwargs):
+        """Number of vertices for the requested data."""
         """Take the output of validate() as input."""
         pos = np.atleast_2d(pos)
         assert pos.shape[1] == 4
         return pos.shape[0] * 2
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
 
@@ -908,6 +928,7 @@ class ImageVisual(BaseVisual):
         self.set_primitive_type('triangles')
 
     def validate(self, image=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
         assert image is not None
         image = np.asarray(image, np.float32)
         assert image.ndim == 3
@@ -915,9 +936,11 @@ class ImageVisual(BaseVisual):
         return Bunch(image=image, _n_items=1, _n_vertices=self.vertex_count())
 
     def vertex_count(self, image=None, **kwargs):
+        """Number of vertices for the requested data."""
         return 6
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
         image = data.image
@@ -969,6 +992,7 @@ class PolygonVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     def validate(self, pos=None, data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
@@ -986,10 +1010,12 @@ class PolygonVisual(BaseVisual):
             _n_items=pos.shape[0], _n_vertices=self.vertex_count(pos=pos))
 
     def vertex_count(self, pos=None, **kwargs):
+        """Number of vertices for the requested data."""
         """Take the output of validate() as input."""
         return pos.shape[0]
 
     def set_data(self, *args, **kwargs):
+        """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
 

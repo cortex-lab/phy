@@ -55,11 +55,11 @@ class History(object):
 
         Parameters
         ----------
-        end : int
-            Index of the last item to loop through + 1.
 
         start : int
-            Initial index for the loop (0 by default).
+            Initial index for the loop.
+        end : int
+            Index of the last item to loop through + 1.
 
         """
         if end is None:

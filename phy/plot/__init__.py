@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""Plotting."""
+"""Plotting module based on OpenGL.
+
+For advanced users!
+
+"""
 
 
 #------------------------------------------------------------------------------
@@ -10,8 +14,13 @@
 
 import os.path as op
 
-from .base import BaseCanvas
+from .base import BaseVisual, GLSLInserter, BaseCanvas, BaseLayout
 from .plot import PlotCanvas
-from .transform import Translate, Scale, Range, Subplot, NDC
+from .transform import Translate, Scale, Range, Subplot, NDC, TransformChain
 from .panzoom import PanZoom
-from .utils import _get_linear_x
+from .axes import AxisLocator, Axes
+from .utils import get_linear_x, BatchAccumulator
+from .interact import Grid, Boxed, Lasso
+from .visuals import (
+    ScatterVisual, UniformScatterVisual, PlotVisual, UniformPlotVisual, HistogramVisual,
+    TextVisual, LineVisual, ImageVisual, PolygonVisual)

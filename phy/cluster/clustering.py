@@ -98,6 +98,19 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
 class Clustering(object):
     """Handle cluster changes in a set of spikes.
 
+    Constructor
+    -----------
+
+    spike_clusters : array-like
+        Spike-cluster assignments, giving the cluster id of every spike.
+    new_cluster_id : int
+        Cluster id that is not used yet (and not used in the cache if there is one). We need to
+        ensure that cluster ids are unique and not reused in a given session.
+    spikes_per_cluster : dict
+        Dictionary mapping each cluster id to the spike ids belonging to it. This is recomputed
+        if not given. This object may take a while to compute, so it may be cached and passed
+        to the constructor.
+
     Features
     --------
 
@@ -117,30 +130,12 @@ class Clustering(object):
     UpdateInfo
     ----------
 
-    Most methods of this class return an UpdateInfo instance. This object
+    Most methods of this class return an `UpdateInfo` instance. This object
     contains information about the clustering changes done by the operation.
     This object is used throughout the `phy.cluster.manual` package to let
     different classes know about clustering changes.
 
     `UpdateInfo` is a dictionary that also supports dot access (`Bunch` class).
-    The keys are the following:
-
-    description : str
-        Description of the clustering operation. It is one of  `merge`,
-        `assign`, or `metadata_group`.
-    history : str or None
-        This is None except when it is `undo` or `redo`.
-    spikes : array
-        Array of all spike ids affected by the update.
-    added : list
-        New cluster ids created by this operation.
-    deleted : list
-        Cluster ids that are deleted following this operation.
-    descendants : list
-        List of `(old, new)` pairs of cluster ids to track provenance
-        information about the clusters.
-    metadata_changed : list
-        List of clusters with changed metadata (cluster group changes)
 
     """
 
@@ -191,7 +186,10 @@ class Clustering(object):
     def new_cluster_id(self):
         """Generate a brand new cluster id.
 
-        NOTE: This new id strictly increases after an undo + new action,
+        Note
+        ----
+
+        This new id strictly increases after an undo + new action,
         meaning that old cluster ids are *not* reused. This ensures that
         any cluster_id-based cache will always be valid even after undo
         operations (i.e. no need for explicit cache invalidation in this case).
@@ -309,7 +307,7 @@ class Clustering(object):
 
         cluster_ids : array-like
             List of clusters to merge.
-        to : integer or None
+        to : integer
             The id of the new cluster. By default, this is `new_cluster_id()`.
 
         Returns

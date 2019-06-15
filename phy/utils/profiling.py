@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 from timeit import default_timer
 
-from .config import _ensure_dir_exists
+from .config import ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def _enable_profiler(line_by_line=False):  # pragma: no cover
 def _profile(prof, statement, glob, loc):
     """Profile a Python statement."""
     dir = Path('.profile')
-    _ensure_dir_exists(dir)
+    ensure_dir_exists(dir)
     prof.runctx(statement, glob, loc)
     # Capture stdout.
     old_stdout = sys.stdout

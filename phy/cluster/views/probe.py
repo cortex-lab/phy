@@ -46,10 +46,13 @@ class ProbeView(ManualClusteringView):
     """This view displays the positions of all channels on the probe, highlighting channels
     where the selected clusters belong.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `positions`: an `(n_channels, 2)` array with the channel positions
-    - `best_channels`: a function `cluster_id => best_channel_ids`
+    positions : array-like
+        An `(n_channels, 2)` array with the channel positions
+    best_channels : function
+        Maps `cluster_id` to the list of the best_channel_ids.
 
     """
 
@@ -111,6 +114,7 @@ class ProbeView(ManualClusteringView):
         return np.array(clu_pos), np.array(clu_colors)
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         self.cluster_ids = cluster_ids
         if not cluster_ids:
             return

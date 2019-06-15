@@ -73,10 +73,25 @@ class AmplitudeHistogramView(HistogramView):
 #------------------------------------------------------------------------------
 
 class TemplateController(object):
-    """Controller for the Template GUI."""
+    """Controller for the Template GUI.
+
+    Constructor
+    -----------
+    dat_path : str or Path or list
+        Path to the raw data file(s)
+    config_dir : str or Path
+        Path to the configuration directory
+    model : Model
+        Model object, optional (it is automatically created otherwise)
+    plugins : list
+        List of plugins to manually activate, optional (the plugins are automatically loaded from
+        the user configuration directory).
+
+    """
 
     gui_name = 'TemplateGUI'
 
+    # Number of spikes to show in the views.
     n_spikes_waveforms = 100
     batch_size_waveforms = 10
     n_spikes_features = 2500
@@ -528,6 +543,7 @@ class TemplateController(object):
         return spike_times
 
     def create_trace_view(self):
+        """Create a trace view."""
         if self.model.traces is None:
             return
 
@@ -586,6 +602,7 @@ class TemplateController(object):
             sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration)
 
     def create_correlogram_view(self):
+        """Create a correlogram view."""
         m = self.model
         return CorrelogramView(
             correlograms=self.get_correlograms,
@@ -613,6 +630,7 @@ class TemplateController(object):
         return bunchs
 
     def create_amplitude_view(self):
+        """Create an amplitude view."""
         if self.model.amplitudes is None:
             return
         view = AmplitudeView(coords=self.get_amplitudes)
@@ -623,6 +641,7 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def create_probe_view(self):
+        """Create a probe view."""
         return ProbeView(
             positions=self.model.channel_positions,
             best_channels=self.get_best_channels,
@@ -632,6 +651,7 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def create_raster_view(self):
+        """Create a raster view."""
         view = RasterView(
             self.model.spike_times,
             self.supervisor.clustering.spike_clusters,
@@ -702,6 +722,7 @@ class TemplateController(object):
                 for cluster_id in cluster_ids}
 
     def create_template_view(self):
+        """Create a template view."""
         view = TemplateView(
             templates=self.get_templates,
             channel_ids=np.arange(self.model.n_channels),
@@ -806,16 +827,30 @@ class TemplateController(object):
             return view_cls(coords=coords)
         return _make
 
-    # GUI
+    # IPython View
     # -------------------------------------------------------------------------
 
     def create_ipython_view(self):
+        """Create an IPython View."""
         view = IPythonView()
         view.start_kernel()
         view.inject(controller=self, c=self, m=self.model, s=self.supervisor)
         return view
 
+    # GUI
+    # -------------------------------------------------------------------------
+
     def create_gui(self, default_views=None, **kwargs):
+        """Create the template GUI.
+
+        Constructor
+        -----------
+
+        default_views : list
+            List of views to add in the GUI, optional. By default, all views from the view
+            count are added.
+
+        """
         default_views = self.default_views if default_views is None else default_views
         gui = GUI(
             name=self.gui_name,

@@ -94,13 +94,23 @@ def _get_index(n_items, item_size, n):
     return index
 
 
-def _get_linear_x(n_signals, n_samples):
-    """Get a number of signals ranging from -1 to 1."""
+def get_linear_x(n_signals, n_samples):
+    """Get a vertical stack of arrays ranging from -1 to 1.
+
+    Return a `(n_signals, n_samples)` array.
+
+    """
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
 
 
 class BatchAccumulator(object):
-    """Accumulate data arrays for batch visuals."""
+    """Accumulate data arrays for batch visuals.
+
+    This class is used to simplify the creation of batch visuals, where different visual elements
+    of the same type are concatenated into a singual Visual instance, which significantly
+    improves the performance of OpenGL.
+
+    """
 
     def __init__(self):
         self.reset()
@@ -111,7 +121,28 @@ class BatchAccumulator(object):
         self.noconcat = ()
 
     def add(self, b, noconcat=(), n_items=None, n_vertices=None, **kwargs):
-        """Add data for a given batch item."""
+        """Add data for a given batch iteration.
+
+        Parameters
+        ----------
+
+        b : Bunch
+            Data to add to the current batch iteration.
+        noconcat : tuple
+            List of keys that should not be concatenated.
+        n_items : int
+            Number of visual items to add in this batch iteration.
+        n_vertices : int
+            Number of vertices added in this batch iteration.
+
+        Note
+        ----
+
+        `n_items` and `n_vertices` differ for special visuals, like `TextVisual` where each
+        item is a string, but is represented in OpenGL as a number of vertices (six times the
+        number of characters, as each character requires two triangles).
+
+        """
         b.update(kwargs)
         self.noconcat = noconcat
         assert n_items >= 0  # number of items for the current batch that is being added
@@ -155,7 +186,7 @@ class BatchAccumulator(object):
 
     @property
     def data(self):
-        """Return the concatenate data."""
+        """Return the concatenated data as a dictionary."""
         return Bunch({key: getattr(self, key) for key in self.items.keys()})
 
 

@@ -14,7 +14,7 @@ from pytest import fixture
 
 from phy.gui import GUI
 from ..plot import PlotCanvas, PlotCanvasMpl
-from ..utils import _get_linear_x
+from ..utils import get_linear_x
 from ..visuals import PlotVisual, TextVisual
 
 
@@ -90,7 +90,7 @@ def test_plot_stacked(qtbot, canvas):
     c = canvas
     c.set_layout('stacked', n_plots=3)
 
-    t = _get_linear_x(1, 1000).ravel()
+    t = get_linear_x(1, 1000).ravel()
     c[0].scatter(pos=np.random.rand(100, 2))
 
     c[1].hist(np.random.rand(5, 10), color=np.random.uniform(.4, .9, size=(5, 4)))
@@ -110,7 +110,7 @@ def test_plot_boxed(qtbot, canvas):
     b[:, 2] = b[:, 3] = np.linspace(-1. + 2. / 3., 1., n)
     c.set_layout('boxed', box_bounds=b)
 
-    t = _get_linear_x(1, 1000).ravel()
+    t = get_linear_x(1, 1000).ravel()
     c[0].scatter(pos=np.random.rand(100, 2))
     c[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
     c[2].hist(np.random.rand(5, 10),

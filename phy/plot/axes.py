@@ -23,7 +23,20 @@ from phy.gui.qt import is_high_dpi
 #------------------------------------------------------------------------------
 
 class AxisLocator(object):
-    """Determine the location of ticks in a view."""
+    """Determine the location of ticks in a view.
+
+    Constructor
+    -----------
+
+    nbinsx : int
+        Number of ticks on the x axis.
+    nbinsy : int
+        Number of ticks on the y axis.
+    data_bounds : 4-tuple
+        Initial coordinates of the viewport, as (xmin, ymin, xmax, ymax), in data coordinates.
+        These are the data coordinates of the lower left and upper right points of the window.
+
+    """
 
     _default_nbinsx = 24
     _default_nbinsy = 16
@@ -56,7 +69,16 @@ class AxisLocator(object):
         return out[:nx, 0], out[nx:, 1]
 
     def set_view_bounds(self, view_bounds=None):
-        """Set the view bounds in normalized device coordinates."""
+        """Set the view bounds in normalized device coordinates. Used when panning and zooming.
+
+        This method updates the following attributes:
+
+        * xticks : the position of the ticks on the x axis
+        * yticks : the position of the ticks on the y axis
+        * xtext : the text of the ticks on the x axis
+        * ytext : the text of the ticks on the y axis
+
+        """
         view_bounds = view_bounds or NDC
         x0, y0, x1, y1 = view_bounds
         dx = 2 * (x1 - x0)
@@ -113,7 +135,21 @@ def _quant_zoom(z):
 
 
 class Axes(object):
-    """Dynamic axes."""
+    """Dynamic axes that move along the camera when panning and zooming.
+
+    Constructor
+    -----------
+
+    data_bounds : 4-tuple
+        The data coordinates of the initial viewport (when there is no panning and zooming).
+    color : 4-tuple
+        Color of the grid.
+    show_x : boolean
+        Whether to show the vertical grid lines.
+    show_y : boolean
+        Whether to show the horizontal grid lines.
+
+    """
     default_color = (1, 1, 1, .25)
 
     def __init__(self, data_bounds=None, color=None, show_x=True, show_y=True):
@@ -125,7 +161,11 @@ class Axes(object):
         self._attached = None
 
     def reset_data_bounds(self, data_bounds, do_update=True):
-        """Reset the bounds of the view in data coordinates."""
+        """Reset the bounds of the view in data coordinates.
+
+        Used when the view is recreated from scratch.
+
+        """
         self.locator = AxisLocator(data_bounds=data_bounds)
         self.locator.set_view_bounds(NDC)
         if do_update:
@@ -148,7 +188,8 @@ class Axes(object):
             _fix_coordinate_in_visual(self.tyvisual, 'x')
 
     def update_visuals(self):
-        """Update the visuals."""
+        """Update the grid and text visuals after updating the axis locator."""
+
         # Get the text data.
         xtext, ytext = self.locator.xtext, self.locator.ytext
         # GPU data for the grid.
@@ -166,7 +207,12 @@ class Axes(object):
             self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1, 0))
 
     def attach(self, canvas):
-        """Add the axes to the canvas."""
+        """Add the axes to a canvas.
+
+        Add the grid and text visuals to the canvas, and attach to the pan and zoom events
+        raised by the canvas.
+
+        """
 
         # Only attach once to avoid binding lots of events.
         if self._attached:

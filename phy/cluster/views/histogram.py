@@ -23,11 +23,14 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class HistogramView(ManualClusteringView):
-    """This view displays a histogram for every selected cluster.
+    """This view displays a histogram for every selected cluster, along with a possible plot
+    and some text. To be overriden.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `cluster_stat`: a function `cluster_id => Bunch(histogram (1D array), plot (1D array), text)`
+    cluster_stat : function
+        Maps `cluster_id` to `Bunch(histogram (1D array), plot (1D array), text)`.
 
     """
 
@@ -116,6 +119,7 @@ class HistogramView(ManualClusteringView):
         )
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
         if not cluster_ids:
@@ -168,7 +172,9 @@ class HistogramView(ManualClusteringView):
         self.on_select(cluster_ids=self.cluster_ids)
 
     def increase(self):
+        """Increase the histogram range on the x avis."""
         self.set_x_max(self.x_max * 1.1)
 
     def decrease(self):
+        """Decrease the histogram range on the x avis."""
         self.set_x_max(self.x_max / 1.1)

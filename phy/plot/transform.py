@@ -158,11 +158,13 @@ class Translate(BaseTransform):
     """Translation transform."""
 
     def apply(self, arr, value=None):
+        """Apply a translation to a NumPy array."""
         assert isinstance(arr, np.ndarray)
         value = value if value is not None else self.value
         return arr + np.asarray(value)
 
     def glsl(self, var):
+        """Return a GLSL snippet that applies the translation to a given GLSL variable name."""
         assert var
         return '''
         // Translate transform.
@@ -170,6 +172,7 @@ class Translate(BaseTransform):
         '''.format(var=var, translate=self.value)
 
     def inverse(self):
+        """Return the inverse Translate instance."""
         if isinstance(self.value, str):
             return Translate('-' + self.value)
         else:
@@ -180,10 +183,12 @@ class Scale(BaseTransform):
     """Scaling transform."""
 
     def apply(self, arr, value=None):
+        """Apply a scaling to a NumPy array."""
         value = value if value is not None else self.value
         return arr * np.asarray(value)
 
     def glsl(self, var):
+        """Return a GLSL snippet that applies the scaling to a given GLSL variable name."""
         assert var
         return '''
         // Scale transform.
@@ -191,6 +196,7 @@ class Scale(BaseTransform):
         '''.format(var=var, scale=self.value)
 
     def inverse(self):
+        """Return the inverse Scale instance."""
         if isinstance(self.value, str):
             return Scale('1.0 / ' + self.value)
         else:
@@ -198,7 +204,17 @@ class Scale(BaseTransform):
 
 
 class Range(BaseTransform):
-    """Range transform from a source rectangle to a target rectangle."""
+    """Linear transform from a source rectangle to a target rectangle.
+
+    Constructor
+    -----------
+
+    from_bounds : 4-tuple
+        Bounds of the source rectangle.
+    to_bounds : 4-tuple
+        Bounds of the target rectangle.
+
+    """
 
     def __init__(self, from_bounds=None, to_bounds=None):
         super(Range, self).__init__()
@@ -206,13 +222,15 @@ class Range(BaseTransform):
         self.to_bounds = to_bounds if to_bounds is not None else NDC
 
     def apply(self, arr, from_bounds=None, to_bounds=None):
-        from_bounds = np.asarray(from_bounds if from_bounds is not None
-                                 else self.from_bounds, dtype=np.float64)
-        to_bounds = np.asarray(to_bounds if to_bounds is not None
-                               else self.to_bounds, dtype=np.float64)
+        """Apply the transform to a NumPy array."""
+        from_bounds = np.asarray(
+            from_bounds if from_bounds is not None else self.from_bounds, dtype=np.float64)
+        to_bounds = np.asarray(
+            to_bounds if to_bounds is not None else self.to_bounds, dtype=np.float64)
         return range_transform(from_bounds, to_bounds, arr)
 
     def glsl(self, var):
+        """Return a GLSL snippet that applies the transform to a given GLSL variable name."""
         assert var
 
         from_bounds = _glslify(self.from_bounds)
@@ -231,8 +249,8 @@ class Range(BaseTransform):
         '''.format(var=var, f=from_bounds, t=to_bounds)
 
     def inverse(self):
-        return Range(from_bounds=self.to_bounds,
-                     to_bounds=self.from_bounds)
+        """Return the inverse Range instance."""
+        return Range(from_bounds=self.to_bounds, to_bounds=self.from_bounds)
 
 
 class Clip(BaseTransform):
@@ -243,6 +261,7 @@ class Clip(BaseTransform):
         self.bounds = bounds or NDC
 
     def apply(self, arr, bounds=None):
+        """Apply the clipping to a NumPy array."""
         bounds = bounds if bounds is not None else self.bounds
         index = ((arr[:, 0] >= bounds[0]) &
                  (arr[:, 1] >= bounds[1]) &
@@ -251,6 +270,8 @@ class Clip(BaseTransform):
         return arr[index, ...]
 
     def glsl(self, var):
+        """Return a GLSL snippet that applies the clipping to a given GLSL variable name,
+        in the fragment shader."""
         assert var
         bounds = _glslify(self.bounds)
 
@@ -265,11 +286,22 @@ class Clip(BaseTransform):
         """.format(bounds=bounds, var=var)
 
     def inverse(self):
+        """Return the same instance (the inverse has no sense for a Clip transform)."""
         return self
 
 
 class Subplot(Range):
-    """Transforms to a subplot rectangle."""
+    """Transform to a grid subplot rectangle.
+
+    Constructor
+    -----------
+
+    shape : 2-tuple
+        Number of rows and columns in the grid.
+    index : 2-tuple
+        Row and column index of the subplot to transform into.
+
+    """
 
     def __init__(self, shape, index=None):
         super(Subplot, self).__init__()
@@ -280,8 +312,7 @@ class Subplot(Range):
             self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
         elif (isinstance(self.shape, str) and
                 isinstance(self.index, str)):
-            self.to_bounds = subplot_bounds_glsl(shape=self.shape,
-                                                 index=self.index)
+            self.to_bounds = subplot_bounds_glsl(shape=self.shape, index=self.index)
 
 
 #------------------------------------------------------------------------------

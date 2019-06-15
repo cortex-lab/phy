@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""Plugin system.
+"""Simple plugin system.
 
-Code from http://eli.thegreenplace.net/2012/08/07/fundamental-concepts-of-plugin-infrastructures  # noqa
+Code from http://eli.thegreenplace.net/2012/08/07/fundamental-concepts-of-plugin-infrastructures
 
 """
 
@@ -39,7 +39,11 @@ class IPluginRegistry(type):
 
 
 class IPlugin(metaclass=IPluginRegistry):
-    """Plugin base class."""
+    """All plugin classes should derive from this class.
+
+    Plugin classes should just implement a method `attach_to_controller(self, controller)`.
+
+    """
     pass
 
 
@@ -111,7 +115,22 @@ def discover_plugins(dirs):
 
 
 def attach_plugins(controller, plugins=None, config_dir=None):
-    """Attach specified or default plugins to a controller object."""
+    """Attach plugins to a controller object.
+
+    Attached plugins are those found in the user configuration file for the given gui_name or
+    class name of the Controller instance, plus those specified in the plugins keyword argument.
+
+    Parameters
+    ----------
+
+    controller : object
+        The controller object that will be passed to the `attach_to_controller()` plugins methods.
+    plugins : list
+        List of plugins to attach in addition to those found in the user configuration file.
+    config_dir : str
+        Path to the user configuration file. By default, the directory is `~/.phy/`.
+
+    """
 
     plugins = plugins or []
     config = load_master_config(config_dir=config_dir)

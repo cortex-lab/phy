@@ -17,7 +17,7 @@ import traceback
 from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils._misc import phy_config_dir
 from phy.gui import Actions
-from phy.gui.qt import AsyncCaller, screenshot, QThreadPool, Worker
+from phy.gui.qt import AsyncCaller, screenshot, thread_pool, Worker
 from phy.plot import PlotCanvas
 
 logger = logging.getLogger(__name__)
@@ -166,7 +166,7 @@ class ManualClusteringView(object):
             emit('is_busy', self, True)
             self.canvas.set_lazy(True)
             if _ENABLE_THREADING:
-                QThreadPool.globalInstance().start(worker)
+                thread_pool().start(worker)
             else:
                 worker.run()
 

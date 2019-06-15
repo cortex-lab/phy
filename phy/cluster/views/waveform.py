@@ -16,7 +16,7 @@ from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phylib.utils.color import selected_cluster_color
 from phylib.utils.geometry import _get_boxes, range_transform
-from phy.plot import _get_linear_x
+from phy.plot import get_linear_x
 from phy.plot.interact import Boxed
 from phy.plot.transform import NDC
 from phy.plot.visuals import PlotVisual, TextVisual, _min, _max
@@ -32,9 +32,7 @@ logger = logging.getLogger(__name__)
 def _get_box_bounds(bunchs, channel_ids):
     cp = {}
     for d in bunchs:
-        cp.update({cid: pos
-                   for cid, pos in zip(d.channel_ids,
-                                       d.channel_positions)})
+        cp.update({cid: pos for cid, pos in zip(d.channel_ids, d.channel_positions)})
     box_pos = np.stack([cp[cid] for cid in channel_ids])
     bounds = _get_boxes(box_pos, margin=Boxed.margin)
     return bounds
@@ -68,7 +66,23 @@ def _overlap_transform(t, offset=0, n=1, overlap=None):
 
 class WaveformView(ManualClusteringView):
     """This view shows the waveforms of the selected clusters, on relevant channels,
-    following the probe geometry."""
+    following the probe geometry.
+
+    Constructor
+    -----------
+
+    waveforms : function
+        Maps a cluster id to a Bunch with the following attributes:
+        * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
+        * `channel_ids` : the channel ids corresponding to the third dimension in `data
+        * `channel_positions` : a 2D array with the coordinates of the channels on the probe
+        * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
+        * `alpha` : the alpha transparency channel
+
+    channel_labels : array-like
+        Labels of the channels.
+
+    """
 
     _default_position = 'right'
     scaling_coeff = 1.1
@@ -166,7 +180,7 @@ class WaveformView(ManualClusteringView):
             assert masks.shape == (n_spikes_clu, n_channels)
 
             # Find the x coordinates.
-            t = _get_linear_x(n_spikes_clu * n_channels, n_samples)
+            t = get_linear_x(n_spikes_clu * n_channels, n_samples)
             t = _overlap_transform(t, offset=clu_offsets[i], n=n_clu, overlap=self.overlap)
             # Get the spike masks.
             m = masks
@@ -203,14 +217,14 @@ class WaveformView(ManualClusteringView):
         self.canvas.update_visual(self.waveform_visual)
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
         if not cluster_ids:
             return
 
         # Retrieve the waveform data.
-        bunchs = [self.waveforms(cluster_id)
-                  for cluster_id in cluster_ids]
+        bunchs = [self.waveforms(cluster_id) for cluster_id in cluster_ids]
         if bunchs[0].data is None:
             return
 

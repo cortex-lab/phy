@@ -14,7 +14,7 @@ import numpy as np
 from phylib.utils.color import _add_selected_clusters_colors
 from phylib.io.array import _index_of
 from phylib.utils import emit, Bunch
-from phy.plot import _get_linear_x
+from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual
 from .base import ManualClusteringView
 
@@ -29,15 +29,19 @@ class TemplateView(ManualClusteringView):
     """This view shows all template waveforms of all clusters in a large grid of shape
     `(n_channels, n_clusters)`.
 
-    Constructor:
+    Constructor
+    -----------
 
-    - `templates`: a function `cluster_ids => [Bunch(template, channel_ids)]` where `template` is
-      an `(n_samples, n_channels)` array, and `channel_ids` represents the channel ids of the
-      channels in the template array.
-
-    - `channel_ids`: the list of all channel ids
-    - `cluster_ids`: the list of all cluster ids
-    - `cluster_color_selector`: the object responsible for the color mapping
+    templates : function
+        Maps `cluster_ids` to a list of `[Bunch(template, channel_ids)]` where `template` is
+        an `(n_samples, n_channels)` array, and `channel_ids` specifies the channels of the
+        `template` array (sparse format).
+    channel_ids : array-like
+        The list of all channel ids.
+    cluster_ids : array-like
+        The list of all clusters to show initially.
+    cluster_color_selector : ClusterColorSelector
+        The object managing the color mapping.
 
     """
     _default_position = 'right'
@@ -103,7 +107,7 @@ class TemplateView(ManualClusteringView):
         assert nc == n_channels_loc
 
         # Find the x coordinates.
-        t = _get_linear_x(n_channels_loc, n_samples)
+        t = get_linear_x(n_channels_loc, n_samples)
 
         color = self.cluster_colors[cluster_rel]
         assert len(color) == 4
@@ -185,6 +189,7 @@ class TemplateView(ManualClusteringView):
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
         if not cluster_ids:
             return
         self.update_color(selected_clusters=cluster_ids)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Execution context that handles parallel processing and cacheing."""
+"""Execution context that handles parallel processing and caching."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -13,11 +13,8 @@ import os
 from pathlib import Path
 from pickle import dump, load
 
-from phylib.utils._misc import (
-    save_json, load_json,
-    load_pickle, save_pickle,
-    _fullname,)
-from .config import phy_config_dir, _ensure_dir_exists
+from phylib.utils._misc import save_json, load_json, load_pickle, save_pickle, _fullname
+from .config import phy_config_dir, ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +34,45 @@ def _cache_methods(obj, memcached, cached):  # pragma: no cover
 
 
 class Context(object):
-    """Handle function cacheing and parallel map with ipyparallel."""
+    """Handle function disk and memory caching with joblib.
+
+    Memcaching a function is used to save *in memory* the output of the function for all
+    passed inputs. Input should be hashable. NumPy arrays are supported. The contents of the
+    memcache in memory can be persisted to disk with `context.save_memcache()` and
+    `context.load_memcache()`.
+
+    Caching a function is used to save *on disk* the output of the function for all passed
+    inputs. Input should be hashable. NumPy arrays are supported. This is to be preferred
+    over memcache when the inputs or outputs are large, and when the computations are longer
+    than loading the result from disk.
+
+    Constructor
+    -----------
+
+    cache_dir : str
+        The directory in which the cache will be created.
+    verbose : int
+        The verbosity level passed to joblib Memory.
+
+    Examples
+    --------
+
+    ```python
+    @context.memcache
+    def my_function(x):
+        return x * x
+
+    @context.cache
+    def my_function(x):
+        return x * x
+    ```
+
+    """
+
+    """Maximum cache size, in bytes."""
     cache_limit = 2 * 1024 ** 3  # 2 GB
 
-    def __init__(self, cache_dir, ipy_view=None, verbose=0):
+    def __init__(self, cache_dir, verbose=0):
         self.verbose = verbose
         # Make sure the cache directory exists.
         self.cache_dir = Path(cache_dir).expanduser()
@@ -54,7 +86,6 @@ class Context(object):
             path.mkdir()
 
         self._set_memory(self.cache_dir)
-        self.ipy_view = ipy_view if ipy_view else None
         self._memcache = {}
 
     def _set_memory(self, cache_dir):
@@ -77,7 +108,7 @@ class Context(object):
     def cache(self, f):
         """Cache a function using the context's cache directory."""
         if self._memory is None:  # pragma: no cover
-            logger.debug("Joblib is not installed: skipping cacheing.")
+            logger.debug("Joblib is not installed: skipping caching.")
             return f
         assert f
         # NOTE: discard self in instance methods.
@@ -89,7 +120,7 @@ class Context(object):
         return disk_cached
 
     def load_memcache(self, name):
-        """Load the memcache from disk, if it exists."""
+        """Load the memcache from disk (pickle file), if it exists."""
         path = self.cache_dir / 'memcache' / (name + '.pkl')
         if path.exists():
             logger.debug("Load memcache for `%s`.", name)
@@ -101,7 +132,7 @@ class Context(object):
         return cache
 
     def save_memcache(self):
-        """Save the memcach to disk (pickle)."""
+        """Save the memcache to disk using pickle."""
         for name, cache in self._memcache.items():
             path = self.cache_dir / 'memcache' / (name + '.pkl')
             logger.debug("Save memcache for `%s`.", name)
@@ -133,10 +164,24 @@ class Context(object):
             return phy_config_dir() / (name + file_ext)
 
     def save(self, name, data, location='local', kind='json'):
-        """Save a dictionary in a JSON file within the cache directory."""
+        """Save a dictionary in a JSON/pickle file within the cache directory.
+
+        Parameters
+        ----------
+
+        name : str
+            The name of the object to save to disk.
+        data : dict
+            Any serializable dictionary that will be persisted to disk.
+        location : str
+            Can be `local` or `global`.
+        kind : str
+            Can be `json` or `pickle`.
+
+        """
         file_ext = '.json' if kind == 'json' else '.pkl'
         path = self._get_path(name, location, file_ext=file_ext)
-        _ensure_dir_exists(path.parent)
+        ensure_dir_exists(path.parent)
         logger.debug("Save data to `%s`.", path)
         if kind == 'json':
             save_json(path, data)
@@ -144,7 +189,17 @@ class Context(object):
             save_pickle(path, data)
 
     def load(self, name, location='local'):
-        """Load saved data from the cache directory."""
+        """Load a dictionary saved in the cache directory.
+
+        Parameters
+        ----------
+
+        name : str
+            The name of the object to save to disk.
+        location : str
+            Can be `local` or `global`.
+
+        """
         path = self._get_path(name, location, file_ext='.json')
         if path.exists():
             return load_json(path)

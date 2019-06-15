@@ -12,8 +12,8 @@ from phylib.utils.testing import captured_logging
 from ..qt import (
     QMessageBox, Qt, QWebEngineView, QTimer, _button_name_from_enum, _button_enum_from_name,
     prompt, screen_size, is_high_dpi, _wait_signal, require_qt, create_app, QApplication,
-    WebView, busy_cursor, AsyncCaller, QThreadPool, _wait, Worker, _block, screenshot,
-    Debouncer)
+    WebView, busy_cursor, AsyncCaller, _wait, Worker, _block, screenshot,
+    Debouncer, thread_pool)
 
 
 #------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ def test_screen_size(qtbot):
 
 
 def test_worker(qtbot):
-    pool = QThreadPool.globalInstance()
+    pool = thread_pool()
     _l = []
 
     def f():  # pragma: no cover
