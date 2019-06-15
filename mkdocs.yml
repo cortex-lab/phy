@@ -7,8 +7,9 @@ pages:
 - User guide:
   - Interactive visualization: 'visualization.md'
   - Manual clustering: 'clustering.md'
+  - Keyboard shortcuts and snippets: 'shortcuts.md'
 - Developer guide:
   - Customization: 'customization.md'
   - Plugin examples: 'plugins.md'
-- Keyboard shortcuts and snippets: 'shortcuts.md'
+  - API documentation: 'api.md'
 theme: readthedocs
