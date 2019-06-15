@@ -17,7 +17,7 @@ install:
   - conda info -a
   - conda install pyyaml
   - conda env create -f environment.yml
-  - conda activate phy2
+  - source activate phy2
   - pip install -r requirements-dev.txt
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
 before_script:

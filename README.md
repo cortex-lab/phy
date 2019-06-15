@@ -1,21 +1,33 @@
 # phy: interactive visualization and manual spike sorting of large-scale ephys data
 
-[![Build Status](https://img.shields.io/travis/cortex-lab/phy.svg)](https://travis-ci.org/cortex-lab/phy)
-[![codecov.io](https://img.shields.io/codecov/c/github/cortex-lab/phy.svg)](http://codecov.io/github/cortex-lab/phy?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/phy/badge/?version=latest)](https://readthedocs.org/projects/phy/?badge=latest)
-[![PyPI release](https://img.shields.io/pypi/v/phy.svg)](https://pypi.python.org/pypi/phy)
+[![Build Status](https://travis-ci.org/cortex-lab/phy.svg?branch=dev)](https://travis-ci.org/cortex-lab/phy)
+[![codecov.io](https://img.shields.io/codecov/c/github/cortex-lab/phy.svg)](http://codecov.io/github/cortex-lab/phy?branch=dev)
+[![Documentation Status](https://readthedocs.org/projects/phy/badge/?version=latest)](https://phy.readthedocs.io/en/latest/?badge=latest)
 [![GitHub release](https://img.shields.io/github/release/cortex-lab/phy.svg)](https://github.com/cortex-lab/phy/releases/latest)
-[![Join the chat at https://gitter.im/cortex-lab/phy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cortex-lab/phy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+<!-- [![PyPI release](https://img.shields.io/pypi/v/phy.svg)](https://pypi.python.org/pypi/phy) -->
 
 [**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites (mostly Neuropixels probes).
 
 [![phy 2.0a0 screenshot](https://user-images.githubusercontent.com/1942359/58665615-90f32200-8331-11e9-8403-9961c13b8f17.png)](https://user-images.githubusercontent.com/1942359/58665615-90f32200-8331-11e9-8403-9961c13b8f17.png)
 
+
 ## Links
 
-* [Documentation](http://phy.readthedocs.org/en/latest/)
+* [**Documentation**](http://phy.readthedocs.org/en/latest/)
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
 
+
+## Developer installation instructions
+
+Use these instructions if you're a developer who wants to contribute to phy. Assuming you have a scientific Python distribution like Anaconda with the most important dependencies installed (NumPy, SciPy, matplotlib, IPython, PyQt5...), do:
+
+```bash
+git clone -b dev https://github.com/cortex-lab/phy.git
+cd phy
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pip install -e .
+```
 
 ## Credits
 
