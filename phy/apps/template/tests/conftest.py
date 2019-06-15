@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 # Fixtures
 #------------------------------------------------------------------------------
 
-@fixture
-def template_controller(tempdir, template_model):
+def _template_controller(tempdir, model):
     import phy.apps.template.gui
     from phy.cluster.views import base
     from phy.gui.qt import Debouncer
@@ -38,9 +37,7 @@ def template_controller(tempdir, template_model):
 
     plugins = []
 
-    c = TemplateController(model=template_model,
-                           config_dir=tempdir,
-                           plugins=plugins)
+    c = TemplateController(model=model, config_dir=tempdir, plugins=plugins)
     yield c
 
     # NOTE: make sure all callback functions are unconnected at the end of the tests
@@ -50,3 +47,13 @@ def template_controller(tempdir, template_model):
     phy.apps.template.gui._prompt_save = prompt
     base._ENABLE_THREADING = True
     Debouncer.delay = delay
+
+
+@fixture
+def template_controller(tempdir, template_model):
+    yield from _template_controller(tempdir, template_model)
+
+
+@fixture
+def template_controller_full(tempdir, template_model_full):
+    yield from _template_controller(tempdir, template_model_full)

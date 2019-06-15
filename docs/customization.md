@@ -273,3 +273,14 @@ for ch in range(min(4, n_channels_loc)):
     axes[ch].set_title("channel %d" % channel_ids[ch])
 plt.show()
 ```
+
+### Launching the Template GUI
+
+Simply use the following script to launch the GUI from a Python script.
+
+```python
+from phy.apps.template import template_gui
+
+# Launch the GUI using the params.py file found in the current directory.
+template_gui('params.py')
+```

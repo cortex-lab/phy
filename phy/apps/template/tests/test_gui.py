@@ -43,15 +43,15 @@ def _wait_controller(qtbot, supervisor, gui):
     b.wait()
 
 
-def test_template_gui_0(qtbot, tempdir, template_controller):
-    controller = template_controller
+def test_template_gui_0(qtbot, tempdir, template_controller_full):
+    controller = template_controller_full
     gui = controller.create_gui()
     _wait_controller(qtbot, controller.supervisor, gui)
     gui.close()
 
 
-def test_template_gui_1(qtbot, tempdir, template_controller):
-    controller = template_controller
+def test_template_gui_1(qtbot, tempdir, template_controller_full):
+    controller = template_controller_full
     gui = controller.create_gui(
         default_views=('WaveformView', 'CorrelogramView', 'AmplitudeView'))
     s = controller.supervisor
@@ -118,8 +118,8 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     gui.close()
 
 
-def test_template_gui_views(qtbot, template_controller):
-    controller = template_controller
+def test_template_gui_views(qtbot, template_controller_full):
+    controller = template_controller_full
     gui = controller.create_gui()
     s = controller.supervisor
     _wait_controller(qtbot, controller.supervisor, gui)
@@ -204,18 +204,20 @@ def test_template_gui_2(qtbot, template_controller):
     gui.close()
 
 
-def test_template_gui_new_views(qtbot, template_controller):
+def test_template_gui_new_views(qtbot, template_controller_full):
     """Test adding new views once clusters are selected."""
-    gui = template_controller.create_gui(default_views=())
-    _wait_controller(qtbot, template_controller.supervisor, gui)
+    controller = template_controller_full
 
-    template_controller.supervisor.next_best()
-    template_controller.supervisor.block()
+    gui = controller.create_gui(default_views=())
+    _wait_controller(qtbot, controller.supervisor, gui)
 
-    template_controller.supervisor.next()
-    template_controller.supervisor.block()
+    controller.supervisor.next_best()
+    controller.supervisor.block()
 
-    for view_cls in template_controller.view_creator.keys():
+    controller.supervisor.next()
+    controller.supervisor.block()
+
+    for view_cls in controller.view_creator.keys():
         gui._create_and_add_view(view_cls)
         qtbot.wait(100)
 
