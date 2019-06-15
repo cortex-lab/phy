@@ -14,7 +14,7 @@ Main dependencies are NumPy, SciPy, PyQt5, pyopengl, joblib. The full list of de
 
 Minimal installation instructions (to be completed):
 
-1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/).
+1. Install [Anaconda](https://www.anaconda.com/distribution/#download-section).
 
 2. Download the [environment file](https://raw.githubusercontent.com/cortex-lab/phy/dev/environment.yml).
 
@@ -27,7 +27,9 @@ Minimal installation instructions (to be completed):
     Wait for the virtual environment to be created and the dependencies installed.
 
 4. Activate the virtual environment: `conda activate phy2`
+
 5. Run phy:
+
     ```
     cd path/to/my/spikesorting/output
     phy template-gui params.py
