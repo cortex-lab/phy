@@ -50,7 +50,12 @@ class MyPlugin(IPlugin):
         controller.n_spikes_correlograms = 100000
 
         # Number of "best" channels kept for displaying the waveforms.
-        controller.model.n_closest_channels = 16
+        controller.model.n_closest_channels = 12
+
+        # The best channels are selected among the N closest to the best (peak) channel if their
+        # mean amplitude is # greather than this fraction of the peak amplitude on the best channel.
+        # If zero, just the N closest channels are kept as the best channels.
+        controller.model.amplitude_threshold = 0
 ```
 
 *Note*: you need to manually delete the `.phy` subdirectory within your data directory when changing these parameters, otherwise errors will happen in the GUI.

@@ -77,6 +77,12 @@ In addition to this temporary color mapping, there is also a notion of global co
 
 Several colormaps are provided by phy (linear, divergent, categorical...). You can choose which cluster attribute to use for the color mapping. For example, you can use a cluster color depending on the depth, the number of spikes, the waveform amplitude, etc.
 
+To display all clusters like in the cluster view (unsorted clusters are white, noise/mua clusters are gray, good clusters are green, selected clusters are in bright colors), use the following parameters:
+    * Color field: group
+    * Colormap: cluster group
+    * Toggle categorical colormap
+
+
 #### Cluster table
 
 Default columns in the cluster view include the cluster id, best channel (channel with peak waveform amplitude), depth (mostly useful for Neuropixels probes), n_spikes. Click on a column to sort by the corresponding attribute. You can add custom columns (labels, see next page). Use the `:s` snippet to quickly sort by a given column.
