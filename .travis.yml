@@ -15,15 +15,11 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  # Create the environment.
   - conda install pyyaml
-  - conda env create python=$TRAVIS_PYTHON_VERSION
-  - source activate phy
-  # Dev requirements
-  - pip install -r requirements.txt
+  - conda env create -f environment.yml
+  - conda activate phy2
   - pip install -r requirements-dev.txt
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
-  - pip install -e .
 before_script:
   # see https://github.com/pytest-dev/pytest-qt/pull/207/files
     - export DISPLAY=:99.0

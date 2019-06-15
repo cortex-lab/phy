@@ -1,6 +1,6 @@
 # Release notes
 
-Upcoming version is phy 2.0. Note: most changes concern the template GUI.
+Current version is phy v2.0a1 (alpha 1). There may be further new features for v2.0.
 
 
 ## New views
@@ -22,13 +22,13 @@ Upcoming version is phy 2.0. Note: most changes concern the template GUI.
 * **Cluster view**:
     * Dynamically **filter** the list of clusters based on cluster metrics and labels (using JavaScript syntax)
     * Snippets to quickly **sort and filter** clusters
-    * New default column: template waveform amplitude
+    * New default columns: mean firing rate, and template waveform amplitude
     * The styling can be customized with CSS in a plugin (see plugin examples in the documentation)
 * **Correlogram view**:
-    * Show baseline firing rate and refractory period
+    * Show horizontal line for the baseline firing rate, and a customizable vertical line for the refractory period
 * **Waveform view**:
     * Change the number of waveforms directly from the GUI
-**Feature view**:
+* **Feature view**:
     * One can now change the specification of the subplots in a plugin
 * **All views**:
     * Add multiple views of the same type
@@ -40,21 +40,20 @@ Upcoming version is phy 2.0. Note: most changes concern the template GUI.
     * Change the number of "best" channels in the user configuration file
 * **Trace view**:
     * Auto-update by default
-* **Trace view, raster view, template view**: color mapping for clusters based on any cluster metrics or labels
+* **Trace view, raster view, template view**: customizable color mapping for clusters based on any cluster metrics or labels
 * Support multiple data files (virtually concatenated) in the template GUI
 
 
 ## Improvements
 
-* There is a new `cluster_info.tsv` is automatically saved, it contains all information from the cluster view.
-* Selection of "best" channels is now based on template waveform amplitude and probe geometry (this is the peak channel, plus all neighbor channels where the amplitude is higher than a fixed fraction of the peak channel template amplitude)
+* A new file `cluster_info.tsv` is automatically saved, it contains all information from the cluster view.
 * Minimal high-level data access API in the Template Model
 * Improved performance, avoid blocking the GUI when loading large amounts of data
 * Fix scaling issues in waveform view
 * More efficient probe view
-* Different colors for noise and MUA clusters in the cluster view
+* Slightly different gray colors for noise and MUA clusters in the cluster view
 * Menu reorganization
-* Bug fixes with cluster labeling
+* Bug fixes with cluster labels
 * Documentation rewritten from scratch, with many plugin and API examples
 
 

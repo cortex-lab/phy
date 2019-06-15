@@ -5,4 +5,3 @@ coverage
 coveralls
 responses
 pytest-cov
-nose

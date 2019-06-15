@@ -42,7 +42,7 @@ def _replace_docstring_header(paragraph):
     """Process NumPy-like function docstrings."""
     # Replace Markdown headers in docstrings with light headers in bold.
     paragraph = re.sub(_docstring_header_pattern, r'**\1**', paragraph)
-    paragraph = re.sub(_docstring_parameters_pattern, r'\n* `\1 : \2`\n', paragraph)
+    paragraph = re.sub(_docstring_parameters_pattern, r'\n* `\1 : \2` 　 ', paragraph)
     return paragraph
 
 

@@ -1,4 +1,4 @@
-name: phy
+name: phy2
 dependencies:
   - python
   - pip
@@ -11,8 +11,12 @@ dependencies:
   - pip:
     - colorcet
     - pyopengl
+    - qtconsole
     - requests
     - traitlets
     - tqdm
     - joblib
     - click
+    - mkdocs==1.0.4
+    - git+https://github.com/cortex-lab/phy.git@dev
+    - git+https://github.com/cortex-lab/phylib.git

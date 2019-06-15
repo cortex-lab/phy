@@ -559,8 +559,8 @@ class Supervisor(object):
     * Many manual clustering-related actions, snippets, shortcuts, etc.
     * Two HTML tables : `ClusterView` and `SimilarityView`.
 
-    Parameters
-    ----------
+    Constructor
+    -----------
 
     spike_clusters : array-like
         Spike-clusters assignments.
