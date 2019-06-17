@@ -41,7 +41,9 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
 * **Trace view**:
     * Auto-update by default
 * **Trace view, raster view, template view**: customizable color mapping for clusters based on any cluster metrics or labels
-* Support multiple data files (virtually concatenated) in the template GUI
+* **Template dataset**
+    * Support **multiple raw data files** (virtually concatenated)
+    * Support for **multiple channel shanks**: add a `channel_shanks.npy` file with shape `(n_channels,` ), with the shank integer index of every channel.
 
 
 ## Improvements

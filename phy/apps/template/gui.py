@@ -182,6 +182,8 @@ class TemplateController(object):
             'amplitude': self.get_cluster_amplitude,
             'firing_rate': self.get_mean_firing_rate,
         }
+        if self.model.channel_shanks is not None:
+            cluster_metrics['shank'] = self.get_channel_shank
         cluster_metrics.update(self.cluster_metrics)
         supervisor = Supervisor(
             spike_clusters=self.model.spike_clusters,
@@ -289,6 +291,12 @@ class TemplateController(object):
         """Return the best channel of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
         return self.model.get_template(template_id).best_channel
+
+    def get_channel_shank(self, cluster_id):
+        """Return the shank of a cluster's best channel, if the channel_shanks array is available.
+        """
+        best_channel_id = self.get_best_channel(cluster_id)
+        return int(self.model.channel_shanks[best_channel_id])
 
     def get_best_channels(self, cluster_id):
         """Return the best channels of a given cluster."""
