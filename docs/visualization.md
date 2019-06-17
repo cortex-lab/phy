@@ -78,9 +78,10 @@ In addition to this temporary color mapping, there is also a notion of global co
 Several colormaps are provided by phy (linear, divergent, categorical...). You can choose which cluster attribute to use for the color mapping. For example, you can use a cluster color depending on the depth, the number of spikes, the waveform amplitude, etc.
 
 To display all clusters like in the cluster view (unsorted clusters are white, noise/mua clusters are gray, good clusters are green, selected clusters are in bright colors), use the following parameters:
-    * Color field: group
-    * Colormap: cluster group
-    * Toggle categorical colormap
+
+* Color field: group
+* Colormap: cluster group
+* Toggle categorical colormap
 
 
 #### Cluster table
@@ -91,10 +92,10 @@ Default columns in the cluster view include the cluster id, best channel (channe
 
 Clusters found by spike sorting algorithms have different qualities. Some are genuine single units, others are mixtures of neurons, others are essentially made of artifacts. For historical reasons, the **cluster group** is one of:
 
-* 0: `noise` (dark grey)
-* 1: `mua` (multi-unit activity, light grey)
-* 2: `good` (green)
-* None: unsorted (white)
+* `0`: `noise` (dark grey)
+* `1`: `mua` (multi-unit activity, light grey)
+* `2`: `good` (green)
+* `None`: unsorted (white)
 
 Rows in the cluster view are shown in different colors according to the cluster group.
 
@@ -104,11 +105,10 @@ Rows in the cluster view are shown in different colors according to the cluster 
 
 You can filter the list of clusters shown in the cluster view, in the `filter` text box at the top of the cluster view. Type a boolean expression using the column names as variables, and press `Enter`. Press `Escape` to clear the filtering. You can also use the `:f` snippet. The syntax is Javascript. Here are a few examples:
 
-```
-group == 'good'
-n_spikes > 10000
-group != 'noise' && depth >= 1000
-```
+* `group == 'good'` : only show good clusters
+* `n_spikes > 10000` : only show clusters that have more than 10,000 spikes
+* `group != 'noise' && depth >= 1000` : only show non-noise clusters at a depth larger than 1000
+``
 
 ![image](https://user-images.githubusercontent.com/1942359/58951225-d8920780-8790-11e9-8b3c-a048f929875b.png)
 

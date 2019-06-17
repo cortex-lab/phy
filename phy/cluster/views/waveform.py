@@ -74,7 +74,7 @@ class WaveformView(ManualClusteringView):
     waveforms : function
         Maps a cluster id to a Bunch with the following attributes:
         * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
-        * `channel_ids` : the channel ids corresponding to the third dimension in `data
+        * `channel_ids` : the channel ids corresponding to the third dimension in `data`
         * `channel_positions` : a 2D array with the coordinates of the channels on the probe
         * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
         * `alpha` : the alpha transparency channel

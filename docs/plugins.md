@@ -53,7 +53,7 @@ class MyPlugin(IPlugin):
         controller.model.n_closest_channels = 12
 
         # The best channels are selected among the N closest to the best (peak) channel if their
-        # mean amplitude is # greather than this fraction of the peak amplitude on the best channel.
+        # mean amplitude is greater than this fraction of the peak amplitude on the best channel.
         # If zero, just the N closest channels are kept as the best channels.
         controller.model.amplitude_threshold = 0
 ```
@@ -108,7 +108,7 @@ from phy.cluster.views import HistogramView
 class FeatureHistogramView(HistogramView):
     n_bins = 100  # default number of bins
     x_max = .1  # maximum value on the x axis (maximum bin)
-    alias_char = 'fh'  # provide `fhn` (set number of bins) and `fhm` (set max bin) snippets
+    alias_char = 'fh'  # provide `:fhn` (set number of bins) and `:fhm` (set max bin) snippets
 
 
 class MyPlugin(IPlugin):
