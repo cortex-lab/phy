@@ -132,28 +132,28 @@ def _function_header(subpackage, func):
     return "{name}{args}".format(name=_full_name(subpackage, func), args=args)
 
 
-_FUNCTION_PATTERN = '\n**`%s`**\n\n%s\n\n---'
+_FUNCTION_PATTERN = '%s\n\n\n**`%s`**\n\n%s\n\n---'
 
 
 def _doc_function(subpackage, func):
-    return _FUNCTION_PATTERN % (_function_header(subpackage, func), _doc(func))
+    title = _full_name(subpackage, func)
+    return _FUNCTION_PATTERN % (title, _function_header(subpackage, func), _doc(func))
 
 
 def _doc_method(klass, func):
     """Generate the docstring of a method."""
     args = str(inspect.signature(func))
-    header = "{klass}.{name}{args}".format(
-        klass=klass.__name__, name=_name(func), args=args)
+    title = "{klass}.{name}".format(klass=klass.__name__, name=_name(func))
+    header = "{klass}.{name}{args}".format(klass=klass.__name__, name=_name(func), args=args)
     docstring = _doc(func)
-    return _FUNCTION_PATTERN % (header, docstring)
+    return _FUNCTION_PATTERN % (title, header, docstring)
 
 
 def _doc_property(klass, prop):
     """Generate the docstring of a property."""
-    header = "{klass}.{name}".format(
-        klass=klass.__name__, name=_name(prop))
+    header = "{klass}.{name}".format(klass=klass.__name__, name=_name(prop))
     docstring = _doc(prop)
-    return _FUNCTION_PATTERN % (header, docstring)
+    return _FUNCTION_PATTERN % (header, header, docstring)
 
 
 def _link(name, anchor=None):
@@ -177,7 +177,7 @@ def _generate_preamble(package, subpackages):
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
             yield '* ' + _link(
-                _full_name(subpackage, func), _anchor(_function_header(subpackage, func)))
+                _full_name(subpackage, func), _anchor(_full_name(subpackage, func)))
 
         # All public classes.
         for klass in _iter_classes(subpackage):
@@ -206,7 +206,7 @@ def _generate_paragraphs(package, subpackages):
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield _doc_function(subpackage, func)
+            yield '#### ' + _doc_function(subpackage, func)
 
         # All public classes.
         for klass in _iter_classes(subpackage):
@@ -217,13 +217,11 @@ def _generate_paragraphs(package, subpackages):
 
             yield "---"
 
-            # yield "#### Methods"
             for method in _iter_methods(klass, package):
-                yield _doc_method(klass, method)
+                yield '#### ' + _doc_method(klass, method)
 
-            # yield "#### Properties"
             for prop in _iter_properties(klass, package):
-                yield _doc_property(klass, prop)
+                yield '#### ' + _doc_property(klass, prop)
 
 
 def _print_paragraph(paragraph):

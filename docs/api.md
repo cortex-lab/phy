@@ -6,21 +6,21 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.utils](#phyutils)
 
-* [phy.utils.add_alpha](#phyutilsadd_alphac-alpha10)
-* [phy.utils.attach_plugins](#phyutilsattach_pluginscontroller-pluginsnone-config_dirnone)
-* [phy.utils.ensure_dir_exists](#phyutilsensure_dir_existspath)
-* [phy.utils.load_json](#phyutilsload_jsonpath)
-* [phy.utils.load_master_config](#phyutilsload_master_configconfig_dirnone)
-* [phy.utils.load_pickle](#phyutilsload_picklepath)
+* [phy.utils.add_alpha](#phyutilsadd_alpha)
+* [phy.utils.attach_plugins](#phyutilsattach_plugins)
+* [phy.utils.ensure_dir_exists](#phyutilsensure_dir_exists)
+* [phy.utils.load_json](#phyutilsload_json)
+* [phy.utils.load_master_config](#phyutilsload_master_config)
+* [phy.utils.load_pickle](#phyutilsload_pickle)
 * [phy.utils.phy_config_dir](#phyutilsphy_config_dir)
-* [phy.utils.read_python](#phyutilsread_pythonpath)
-* [phy.utils.read_text](#phyutilsread_textpath)
-* [phy.utils.read_tsv](#phyutilsread_tsvpath)
-* [phy.utils.save_json](#phyutilssave_jsonpath-data)
-* [phy.utils.save_pickle](#phyutilssave_picklepath-data)
-* [phy.utils.selected_cluster_color](#phyutilsselected_cluster_colori-alpha10)
-* [phy.utils.write_text](#phyutilswrite_textpath-contents)
-* [phy.utils.write_tsv](#phyutilswrite_tsvpath-data-first_fieldnone-exclude_fields-n_significant_figures4)
+* [phy.utils.read_python](#phyutilsread_python)
+* [phy.utils.read_text](#phyutilsread_text)
+* [phy.utils.read_tsv](#phyutilsread_tsv)
+* [phy.utils.save_json](#phyutilssave_json)
+* [phy.utils.save_pickle](#phyutilssave_pickle)
+* [phy.utils.selected_cluster_color](#phyutilsselected_cluster_color)
+* [phy.utils.write_text](#phyutilswrite_text)
+* [phy.utils.write_tsv](#phyutilswrite_tsv)
 * [phy.utils.Bunch](#phyutilsbunch)
 * [phy.utils.ClusterColorSelector](#phyutilsclustercolorselector)
 * [phy.utils.Context](#phyutilscontext)
@@ -31,14 +31,14 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 * [phy.gui.busy_cursor](#phyguibusy_cursor)
 * [phy.gui.create_app](#phyguicreate_app)
-* [phy.gui.input_dialog](#phyguiinput_dialogtitle-sentence-textnone)
+* [phy.gui.input_dialog](#phyguiinput_dialog)
 * [phy.gui.is_high_dpi](#phyguiis_high_dpi)
-* [phy.gui.message_box](#phyguimessage_boxmessage-titlemessage-levelnone)
-* [phy.gui.prompt](#phyguipromptmessage-buttonsyes-no-titlequestion)
-* [phy.gui.require_qt](#phyguirequire_qtfunc)
+* [phy.gui.message_box](#phyguimessage_box)
+* [phy.gui.prompt](#phyguiprompt)
+* [phy.gui.require_qt](#phyguirequire_qt)
 * [phy.gui.run_app](#phyguirun_app)
 * [phy.gui.screen_size](#phyguiscreen_size)
-* [phy.gui.screenshot](#phyguiscreenshotwidget-path)
+* [phy.gui.screenshot](#phyguiscreenshot)
 * [phy.gui.thread_pool](#phyguithread_pool)
 * [phy.gui.Actions](#phyguiactions)
 * [phy.gui.Debouncer](#phyguidebouncer)
@@ -54,7 +54,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.plot](#phyplot)
 
-* [phy.plot.get_linear_x](#phyplotget_linear_xn_signals-n_samples)
+* [phy.plot.get_linear_x](#phyplotget_linear_x)
 * [phy.plot.Axes](#phyplotaxes)
 * [phy.plot.AxisLocator](#phyplotaxislocator)
 * [phy.plot.BaseCanvas](#phyplotbasecanvas)
@@ -85,7 +85,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.cluster](#phycluster)
 
-* [phy.cluster.select_traces](#phyclusterselect_tracestraces-interval-sample_ratenone)
+* [phy.cluster.select_traces](#phyclusterselect_traces)
 * [phy.cluster.ClusterMeta](#phyclusterclustermeta)
 * [phy.cluster.ClusterView](#phyclusterclusterview)
 * [phy.cluster.Clustering](#phyclusterclustering)
@@ -106,8 +106,8 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.apps.template](#phyappstemplate)
 
-* [phy.apps.template.template_describe](#phyappstemplatetemplate_describeparams_path)
-* [phy.apps.template.template_gui](#phyappstemplatetemplate_guiparams_path)
+* [phy.apps.template.template_describe](#phyappstemplatetemplate_describe)
+* [phy.apps.template.template_gui](#phyappstemplatetemplate_gui)
 * [phy.apps.template.TemplateController](#phyappstemplatetemplatecontroller)
 * [phy.apps.template.TemplateModel](#phyappstemplatetemplatemodel)
 
@@ -120,6 +120,8 @@ Utilities: plugin system, event system, configuration system, profiling, debuggi
 basic read/write functions.
 
 ---
+
+#### phy.utils.add_alpha
 
 
 **`phy.utils.add_alpha(c, alpha=1.0)`**
@@ -134,6 +136,8 @@ Add an alpha channel to an RGB color.
 * `alpha : float` 　 
 
 ---
+
+#### phy.utils.attach_plugins
 
 
 **`phy.utils.attach_plugins(controller, plugins=None, config_dir=None)`**
@@ -157,6 +161,8 @@ class name of the Controller instance, plus those specified in the plugins keywo
 
 ---
 
+#### phy.utils.ensure_dir_exists
+
 
 **`phy.utils.ensure_dir_exists(path)`**
 
@@ -164,12 +170,16 @@ Ensure a directory exists, and create it otherwise.
 
 ---
 
+#### phy.utils.load_json
+
 
 **`phy.utils.load_json(path)`**
 
 Load a JSON file.
 
 ---
+
+#### phy.utils.load_master_config
 
 
 **`phy.utils.load_master_config(config_dir=None)`**
@@ -179,6 +189,8 @@ Load a master Config file from the user configuration file (by default, this is
 
 ---
 
+#### phy.utils.load_pickle
+
 
 **`phy.utils.load_pickle(path)`**
 
@@ -186,12 +198,16 @@ Load a pickle file using joblib.
 
 ---
 
+#### phy.utils.phy_config_dir
+
 
 **`phy.utils.phy_config_dir()`**
 
 Return the absolute path to the phy user directory. By default, `~/.phy/`.
 
 ---
+
+#### phy.utils.read_python
 
 
 **`phy.utils.read_python(path)`**
@@ -211,12 +227,16 @@ Read a Python file.
 
 ---
 
+#### phy.utils.read_text
+
 
 **`phy.utils.read_text(path)`**
 
 Read a text file.
 
 ---
+
+#### phy.utils.read_tsv
 
 
 **`phy.utils.read_tsv(path)`**
@@ -230,6 +250,8 @@ Read a CSV/TSV file.
 
 ---
 
+#### phy.utils.save_json
+
 
 **`phy.utils.save_json(path, data)`**
 
@@ -241,12 +263,16 @@ readability.
 
 ---
 
+#### phy.utils.save_pickle
+
 
 **`phy.utils.save_pickle(path, data)`**
 
 Save data to a pickle file using joblib.
 
 ---
+
+#### phy.utils.selected_cluster_color
 
 
 **`phy.utils.selected_cluster_color(i, alpha=1.0)`**
@@ -255,12 +281,16 @@ Return the color, as a 4-tuple, of the i-th selected cluster.
 
 ---
 
+#### phy.utils.write_text
+
 
 **`phy.utils.write_text(path, contents)`**
 
 Write a text file.
 
 ---
+
+#### phy.utils.write_tsv
 
 
 **`phy.utils.write_tsv(path, data, first_field=None, exclude_fields=(), n_significant_figures=4)`**
@@ -289,6 +319,8 @@ A subclass of dictionary with an additional dot syntax.
 
 ---
 
+#### Bunch.copy
+
 
 **`Bunch.copy(self)`**
 
@@ -302,12 +334,16 @@ Assign a color to clusters depending on cluster labels or metrics.
 
 ---
 
+#### ClusterColorSelector.get
+
 
 **`ClusterColorSelector.get(self, cluster_id, alpha=None)`**
 
 Return the RGBA color of a single cluster.
 
 ---
+
+#### ClusterColorSelector.get_colors
 
 
 **`ClusterColorSelector.get_colors(self, cluster_ids, alpha=1.0)`**
@@ -316,12 +352,16 @@ Return the RGBA colors of some clusters.
 
 ---
 
+#### ClusterColorSelector.get_values
+
 
 **`ClusterColorSelector.get_values(self, cluster_ids)`**
 
 Get the values of clusters for the selected color field..
 
 ---
+
+#### ClusterColorSelector.map
 
 
 **`ClusterColorSelector.map(self, values)`**
@@ -340,12 +380,16 @@ Convert values to colors using the selected colormap.
 
 ---
 
+#### ClusterColorSelector.set_cluster_ids
+
 
 **`ClusterColorSelector.set_cluster_ids(self, cluster_ids)`**
 
 Precompute the value range for all clusters.
 
 ---
+
+#### ClusterColorSelector.set_color_mapping
 
 
 **`ClusterColorSelector.set_color_mapping(self, color_field=None, colormap=None, categorical=None, logarithmic=None)`**
@@ -370,12 +414,16 @@ Set the field used to choose the cluster colors, and the associated colormap.
 
 ---
 
+#### ClusterColorSelector.set_state
+
 
 **`ClusterColorSelector.set_state(self, state)`**
 
 Set the colormap state.
 
 ---
+
+#### ClusterColorSelector.state
 
 
 **`ClusterColorSelector.state`**
@@ -422,12 +470,16 @@ def my_function(x):
 
 ---
 
+#### Context.cache
+
 
 **`Context.cache(self, f)`**
 
 Cache a function using the context's cache directory.
 
 ---
+
+#### Context.load
 
 
 **`Context.load(self, name, location='local')`**
@@ -445,6 +497,8 @@ Load a dictionary saved in the cache directory.
 
 ---
 
+#### Context.load_memcache
+
 
 **`Context.load_memcache(self, name)`**
 
@@ -452,12 +506,16 @@ Load the memcache from disk (pickle file), if it exists.
 
 ---
 
+#### Context.memcache
+
 
 **`Context.memcache(self, f)`**
 
 Cache a function in memory using an internal dictionary.
 
 ---
+
+#### Context.save
 
 
 **`Context.save(self, name, data, location='local', kind='json')`**
@@ -481,6 +539,8 @@ Save a dictionary in a JSON/pickle file within the cache directory.
 
 ---
 
+#### Context.save_memcache
+
 
 **`Context.save_memcache(self)`**
 
@@ -502,6 +562,8 @@ GUI routines.
 
 ---
 
+#### phy.gui.busy_cursor
+
 
 **`phy.gui.busy_cursor()`**
 
@@ -509,12 +571,16 @@ Context manager displaying a busy cursor during a long command.
 
 ---
 
+#### phy.gui.create_app
+
 
 **`phy.gui.create_app()`**
 
 Create a Qt application.
 
 ---
+
+#### phy.gui.input_dialog
 
 
 **`phy.gui.input_dialog(title, sentence, text=None)`**
@@ -535,6 +601,8 @@ Display a dialog with a text box.
 
 ---
 
+#### phy.gui.is_high_dpi
+
 
 **`phy.gui.is_high_dpi()`**
 
@@ -544,6 +612,8 @@ Note: currently, this only returns whether the screen width is greater than an a
 value chosen at 3000.
 
 ---
+
+#### phy.gui.message_box
 
 
 **`phy.gui.message_box(message, title='Message', level=None)`**
@@ -560,6 +630,8 @@ Display a message box.
     information, warning, or critical
 
 ---
+
+#### phy.gui.prompt
 
 
 **`phy.gui.prompt(message, buttons=('yes', 'no'), title='Question')`**
@@ -581,6 +653,8 @@ Display a dialog with several buttons to confirm or cancel an action.
 
 ---
 
+#### phy.gui.require_qt
+
 
 **`phy.gui.require_qt(func)`**
 
@@ -592,6 +666,8 @@ the case.
 
 ---
 
+#### phy.gui.run_app
+
 
 **`phy.gui.run_app()`**
 
@@ -599,12 +675,16 @@ Run the Qt application.
 
 ---
 
+#### phy.gui.screen_size
+
 
 **`phy.gui.screen_size()`**
 
 Return the screen size as a tuple (width, height).
 
 ---
+
+#### phy.gui.screenshot
 
 
 **`phy.gui.screenshot(widget, path)`**
@@ -621,6 +701,8 @@ Save a screenshot of a Qt widget to a PNG file.
     Path to the PNG file.
 
 ---
+
+#### phy.gui.thread_pool
 
 
 **`phy.gui.thread_pool()`**
@@ -664,6 +746,8 @@ This class attaches to a GUI and implements the following features:
     Map action names to keyboard shortcuts (regular strings).
 
 ---
+
+#### Actions.add
 
 
 **`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, prompt_default=None, show_shortcut=True)`**
@@ -718,12 +802,16 @@ Add an action with a keyboard shortcut.
 
 ---
 
+#### Actions.disable
+
 
 **`Actions.disable(self, name=None)`**
 
 Disable all actions, or only one if a name is passed.
 
 ---
+
+#### Actions.enable
 
 
 **`Actions.enable(self, name=None)`**
@@ -732,12 +820,16 @@ Enable all actions, or only one if a name is passed..
 
 ---
 
+#### Actions.get
+
 
 **`Actions.get(self, name)`**
 
 Get a QAction instance from its name.
 
 ---
+
+#### Actions.remove
 
 
 **`Actions.remove(self, name)`**
@@ -746,6 +838,8 @@ Remove an action.
 
 ---
 
+#### Actions.remove_all
+
 
 **`Actions.remove_all(self)`**
 
@@ -753,12 +847,16 @@ Remove all actions.
 
 ---
 
+#### Actions.run
+
 
 **`Actions.run(self, name, *args)`**
 
 Run an action as specified by its name.
 
 ---
+
+#### Actions.separator
 
 
 **`Actions.separator(self, menu=None)`**
@@ -773,12 +871,16 @@ Add a separator.
 
 ---
 
+#### Actions.show_shortcuts
+
 
 **`Actions.show_shortcuts(self)`**
 
 Display all shortcuts in the console.
 
 ---
+
+#### Actions.shortcuts
 
 
 **`Actions.shortcuts`**
@@ -818,6 +920,8 @@ d.trigger()  # show "hello world 0" and "hello world 9" after a delay
 
 ---
 
+#### Debouncer.submit
+
 
 **`Debouncer.submit(self, f, *args, key=None, **kwargs)`**
 
@@ -825,6 +929,8 @@ Submit a function call. Execute immediately if the delay since the last submissi
 is higher than the threshold, or wait until executing it otherwiser.
 
 ---
+
+#### Debouncer.trigger
 
 
 **`Debouncer.trigger(self)`**
@@ -875,6 +981,8 @@ close_view
 
 ---
 
+#### GUI.add_view
+
 
 **`GUI.add_view(self, view, position=None, closable=True, floatable=True, floating=None)`**
 
@@ -899,12 +1007,16 @@ Add a dock widget to the main window.
 
 ---
 
+#### GUI.closeEvent
+
 
 **`GUI.closeEvent(self, e)`**
 
 Qt slot when the window is closed.
 
 ---
+
+#### GUI.create_views
 
 
 **`GUI.create_views(self)`**
@@ -913,12 +1025,16 @@ Create and add as many views as specified in view_count.
 
 ---
 
+#### GUI.dialog
+
 
 **`GUI.dialog(self, message)`**
 
 Show a message in a dialog box.
 
 ---
+
+#### GUI.get_menu
 
 
 **`GUI.get_menu(self, name)`**
@@ -927,12 +1043,16 @@ Get or create a menu.
 
 ---
 
+#### GUI.get_submenu
+
 
 **`GUI.get_submenu(self, menu, name)`**
 
 Get or create a submenu.
 
 ---
+
+#### GUI.get_view
 
 
 **`GUI.get_view(self, cls, index=0)`**
@@ -942,12 +1062,16 @@ specify the view index (0 by default).
 
 ---
 
+#### GUI.list_views
+
 
 **`GUI.list_views(self, cls)`**
 
 Return the list of views deriving from a given class.
 
 ---
+
+#### GUI.lock_status
 
 
 **`GUI.lock_status(self)`**
@@ -956,12 +1080,16 @@ Lock the status bar.
 
 ---
 
+#### GUI.remove_menu
+
 
 **`GUI.remove_menu(self, name)`**
 
 Remove a menu.
 
 ---
+
+#### GUI.restore_geometry_state
 
 
 **`GUI.restore_geometry_state(self, gs)`**
@@ -974,6 +1102,8 @@ This function can be called in `on_show()`.
 
 ---
 
+#### GUI.save_geometry_state
+
 
 **`GUI.save_geometry_state(self)`**
 
@@ -983,12 +1113,16 @@ This function can be called in `on_close()`.
 
 ---
 
+#### GUI.set_default_actions
+
 
 **`GUI.set_default_actions(self)`**
 
 Create the default actions (file, views, help...).
 
 ---
+
+#### GUI.show
 
 
 **`GUI.show(self)`**
@@ -997,12 +1131,16 @@ Show the window.
 
 ---
 
+#### GUI.unlock_status
+
 
 **`GUI.unlock_status(self)`**
 
 Unlock the status bar.
 
 ---
+
+#### GUI.status_message
 
 
 **`GUI.status_message`**
@@ -1011,6 +1149,8 @@ The message in the status bar, can be set by the user.
 
 ---
 
+#### GUI.view_count
+
 
 **`GUI.view_count`**
 
@@ -1018,6 +1158,8 @@ Return the number of views of every type, as a dictionary mapping view class nam
 to an integer.
 
 ---
+
+#### GUI.views
 
 
 **`GUI.views`**
@@ -1036,12 +1178,16 @@ The default path is `~/.phy/GUIName/state.json`.
 
 ---
 
+#### GUIState.copy
+
 
 **`GUIState.copy(self)`**
 
 Return a new Bunch instance which is a copy of the current Bunch instance.
 
 ---
+
+#### GUIState.get_view_state
 
 
 **`GUIState.get_view_state(self, view)`**
@@ -1050,6 +1196,8 @@ Return the state of a view instance.
 
 ---
 
+#### GUIState.load
+
 
 **`GUIState.load(self)`**
 
@@ -1057,12 +1205,16 @@ Load the state from the JSON file in the config dir.
 
 ---
 
+#### GUIState.save
+
 
 **`GUIState.save(self)`**
 
 Save the state to the JSON files in the config dir (global) and local dir (if any).
 
 ---
+
+#### GUIState.update_view_state
 
 
 **`GUIState.update_view_state(self, view, state)`**
@@ -1084,12 +1236,16 @@ Build an HTML widget.
 
 ---
 
+#### HTMLBuilder.add_header
+
 
 **`HTMLBuilder.add_header(self, s)`**
 
 Add HTML headers.
 
 ---
+
+#### HTMLBuilder.add_script
 
 
 **`HTMLBuilder.add_script(self, s)`**
@@ -1098,12 +1254,16 @@ Add Javascript code.
 
 ---
 
+#### HTMLBuilder.add_script_src
+
 
 **`HTMLBuilder.add_script_src(self, filename)`**
 
 Add a link to a Javascript file.
 
 ---
+
+#### HTMLBuilder.add_style
 
 
 **`HTMLBuilder.add_style(self, s)`**
@@ -1112,12 +1272,16 @@ Add a CSS style.
 
 ---
 
+#### HTMLBuilder.add_style_src
+
 
 **`HTMLBuilder.add_style_src(self, filename)`**
 
 Add a link to a stylesheet URL.
 
 ---
+
+#### HTMLBuilder.set_body
 
 
 **`HTMLBuilder.set_body(self, body)`**
@@ -1126,12 +1290,16 @@ Set the HTML body of the widget.
 
 ---
 
+#### HTMLBuilder.set_body_src
+
 
 **`HTMLBuilder.set_body_src(self, filename)`**
 
 Set the path to an HTML file containing the body of the widget.
 
 ---
+
+#### HTMLBuilder.html
 
 
 **`HTMLBuilder.html`**
@@ -1159,12 +1327,16 @@ for unit tests.
 
 ---
 
+#### HTMLWidget.build
+
 
 **`HTMLWidget.build(self, callback=None)`**
 
 Rebuild the HTML code of the widget.
 
 ---
+
+#### HTMLWidget.eval_js
 
 
 **`HTMLWidget.eval_js(self, expr, callback=None)`**
@@ -1183,12 +1355,16 @@ Evaluate a Javascript expression.
 
 ---
 
+#### HTMLWidget.set_html
+
 
 **`HTMLWidget.set_html(self, html, callback=None)`**
 
 Set the HTML code.
 
 ---
+
+#### HTMLWidget.view_source
 
 
 **`HTMLWidget.view_source(self, callback=None)`**
@@ -1203,12 +1379,16 @@ A view with an IPython console living in the same Python process as the GUI.
 
 ---
 
+#### IPythonView.attach
+
 
 **`IPythonView.attach(self, gui, **kwargs)`**
 
 Add the view to the GUI, start the kernel, and inject the specified variables.
 
 ---
+
+#### IPythonView.inject
 
 
 **`IPythonView.inject(self, **kwargs)`**
@@ -1217,12 +1397,16 @@ Inject variables into the IPython namespace.
 
 ---
 
+#### IPythonView.start_kernel
+
 
 **`IPythonView.start_kernel(self)`**
 
 Start the IPython kernel.
 
 ---
+
+#### IPythonView.stop
 
 
 **`IPythonView.stop(self)`**
@@ -1265,12 +1449,16 @@ for every keystroke. These actions are removed when the snippet mode is disabled
 
 ---
 
+#### Snippets.is_mode_on
+
 
 **`Snippets.is_mode_on(self)`**
 
 Whether the snippet mode is enabled.
 
 ---
+
+#### Snippets.mode_off
 
 
 **`Snippets.mode_off(self)`**
@@ -1279,12 +1467,16 @@ Disable the snippet mode.
 
 ---
 
+#### Snippets.mode_on
+
 
 **`Snippets.mode_on(self)`**
 
 Enable the snippet mode.
 
 ---
+
+#### Snippets.run
 
 
 **`Snippets.run(self, snippet)`**
@@ -1294,6 +1486,8 @@ Execute a snippet command.
 May be overridden.
 
 ---
+
+#### Snippets.command
 
 
 **`Snippets.command`**
@@ -1312,12 +1506,16 @@ This Javascript class builds upon ListJS: https://listjs.com/
 
 ---
 
+#### Table.add
+
 
 **`Table.add(self, objects)`**
 
 Add objects object to the table.
 
 ---
+
+#### Table.build
 
 
 **`Table.build(self, callback=None)`**
@@ -1326,12 +1524,16 @@ Rebuild the HTML code of the widget.
 
 ---
 
+#### Table.change
+
 
 **`Table.change(self, objects)`**
 
 Change some objects.
 
 ---
+
+#### Table.eval_js
 
 
 **`Table.eval_js(self, expr, callback=None)`**
@@ -1360,12 +1562,16 @@ are transparently converted between Python and Javascript.
 
 ---
 
+#### Table.filter
+
 
 **`Table.filter(self, text='')`**
 
 Filter the view with a Javascript expression.
 
 ---
+
+#### Table.first
 
 
 **`Table.first(self, callback=None)`**
@@ -1374,12 +1580,16 @@ Select the first item.
 
 ---
 
+#### Table.get
+
 
 **`Table.get(self, id, callback=None)`**
 
 Get the object given its id.
 
 ---
+
+#### Table.get_current_sort
 
 
 **`Table.get_current_sort(self, callback=None)`**
@@ -1388,12 +1598,16 @@ Get the current sort as a tuple `(name, dir)`.
 
 ---
 
+#### Table.get_ids
+
 
 **`Table.get_ids(self, callback=None)`**
 
 Get the list of ids.
 
 ---
+
+#### Table.get_next_id
 
 
 **`Table.get_next_id(self, callback=None)`**
@@ -1402,12 +1616,16 @@ Get the next non-skipped row id.
 
 ---
 
+#### Table.get_previous_id
+
 
 **`Table.get_previous_id(self, callback=None)`**
 
 Get the previous non-skipped row id.
 
 ---
+
+#### Table.get_selected
 
 
 **`Table.get_selected(self, callback=None)`**
@@ -1416,12 +1634,16 @@ Get the currently selected rows.
 
 ---
 
+#### Table.next
+
 
 **`Table.next(self, callback=None)`**
 
 Select the next non-skipped row.
 
 ---
+
+#### Table.previous
 
 
 **`Table.previous(self, callback=None)`**
@@ -1430,12 +1652,16 @@ Select the previous non-skipped row.
 
 ---
 
+#### Table.remove
+
 
 **`Table.remove(self, ids)`**
 
 Remove some objects from their ids.
 
 ---
+
+#### Table.remove_all
 
 
 **`Table.remove_all(self)`**
@@ -1444,12 +1670,16 @@ Remove all rows in the table.
 
 ---
 
+#### Table.remove_all_and_add
+
 
 **`Table.remove_all_and_add(self, objects)`**
 
 Remove all rows in the table and add new objects.
 
 ---
+
+#### Table.select
 
 
 **`Table.select(self, ids, callback=None, **kwargs)`**
@@ -1462,12 +1692,16 @@ rows directly in the HTML view.
 
 ---
 
+#### Table.set_busy
+
 
 **`Table.set_busy(self, busy)`**
 
 Set the busy state of the GUI.
 
 ---
+
+#### Table.set_html
 
 
 **`Table.set_html(self, html, callback=None)`**
@@ -1476,12 +1710,16 @@ Set the HTML code.
 
 ---
 
+#### Table.sort_by
+
 
 **`Table.sort_by(self, name, sort_dir='asc')`**
 
 Sort by a given variable.
 
 ---
+
+#### Table.view_source
 
 
 **`Table.view_source(self, callback=None)`**
@@ -1505,6 +1743,8 @@ A task (just a Python function) running in the thread pool.
 
 ---
 
+#### Worker.run
+
 
 **`Worker.run(self)`**
 
@@ -1520,6 +1760,8 @@ Plotting module based on OpenGL.
 For advanced users!
 
 ---
+
+#### phy.plot.get_linear_x
 
 
 **`phy.plot.get_linear_x(n_signals, n_samples)`**
@@ -1551,6 +1793,8 @@ Dynamic axes that move along the camera when panning and zooming.
 
 ---
 
+#### Axes.attach
+
 
 **`Axes.attach(self, canvas)`**
 
@@ -1561,6 +1805,8 @@ raised by the canvas.
 
 ---
 
+#### Axes.reset_data_bounds
+
 
 **`Axes.reset_data_bounds(self, data_bounds, do_update=True)`**
 
@@ -1569,6 +1815,8 @@ Reset the bounds of the view in data coordinates.
 Used when the view is recreated from scratch.
 
 ---
+
+#### Axes.update_visuals
 
 
 **`Axes.update_visuals(self)`**
@@ -1596,12 +1844,16 @@ Determine the location of ticks in a view.
 
 ---
 
+#### AxisLocator.set_nbins
+
 
 **`AxisLocator.set_nbins(self, nbinsx=None, nbinsy=None)`**
 
 Change the number of bins on the x and y axes.
 
 ---
+
+#### AxisLocator.set_view_bounds
 
 
 **`AxisLocator.set_view_bounds(self, view_bounds=None)`**
@@ -1625,6 +1877,8 @@ The canvas represents an OpenGL-powered rectangular black window where one can a
 and attach interaction (pan/zoom, lasso) and layout (subplot) compaion objects.
 
 ---
+
+#### BaseCanvas.add_visual
 
 
 **`BaseCanvas.add_visual(self, visual, **kwargs)`**
@@ -1650,6 +1904,8 @@ We can't build the visual's program before, because we need the canvas' transfor
 
 ---
 
+#### BaseCanvas.attach_events
+
 
 **`BaseCanvas.attach_events(self, obj)`**
 
@@ -1658,12 +1914,16 @@ events are raised by the canvas. This is used for mouse and key interactions.
 
 ---
 
+#### BaseCanvas.clear
+
 
 **`BaseCanvas.clear(self)`**
 
 Remove all visuals except those marked `clearable=False`.
 
 ---
+
+#### BaseCanvas.emit
 
 
 **`BaseCanvas.emit(self, name, **kwargs)`**
@@ -1672,12 +1932,16 @@ Raise an internal event and call `on_xxx()` on attached objects.
 
 ---
 
+#### BaseCanvas.event
+
 
 **`BaseCanvas.event(self, e)`**
 
 Touch event.
 
 ---
+
+#### BaseCanvas.get_size
 
 
 **`BaseCanvas.get_size(self)`**
@@ -1686,12 +1950,16 @@ Return the window size in pixels.
 
 ---
 
+#### BaseCanvas.get_visual
+
 
 **`BaseCanvas.get_visual(self, key)`**
 
 Get a visual from its key.
 
 ---
+
+#### BaseCanvas.has_visual
 
 
 **`BaseCanvas.has_visual(self, visual)`**
@@ -1700,12 +1968,16 @@ Return whether a visual belongs to the canvas.
 
 ---
 
+#### BaseCanvas.initializeGL
+
 
 **`BaseCanvas.initializeGL(self)`**
 
 Create the scene.
 
 ---
+
+#### BaseCanvas.iter_update_queue
 
 
 **`BaseCanvas.iter_update_queue(self)`**
@@ -1714,12 +1986,16 @@ Iterate through all OpenGL program updates called in lazy mode.
 
 ---
 
+#### BaseCanvas.keyPressEvent
+
 
 **`BaseCanvas.keyPressEvent(self, e)`**
 
 Emit an internal `key_press` event.
 
 ---
+
+#### BaseCanvas.keyReleaseEvent
 
 
 **`BaseCanvas.keyReleaseEvent(self, e)`**
@@ -1728,12 +2004,16 @@ Emit an internal `key_release` event.
 
 ---
 
+#### BaseCanvas.mouseDoubleClickEvent
+
 
 **`BaseCanvas.mouseDoubleClickEvent(self, e)`**
 
 Emit an internal `mouse_double_click` event.
 
 ---
+
+#### BaseCanvas.mouseMoveEvent
 
 
 **`BaseCanvas.mouseMoveEvent(self, e)`**
@@ -1742,12 +2022,16 @@ Emit an internal `mouse_move` event.
 
 ---
 
+#### BaseCanvas.mousePressEvent
+
 
 **`BaseCanvas.mousePressEvent(self, e)`**
 
 Emit an internal `mouse_press` event.
 
 ---
+
+#### BaseCanvas.mouseReleaseEvent
 
 
 **`BaseCanvas.mouseReleaseEvent(self, e)`**
@@ -1756,12 +2040,16 @@ Emit an internal `mouse_release` or `mouse_click` event.
 
 ---
 
+#### BaseCanvas.on_next_paint
+
 
 **`BaseCanvas.on_next_paint(self, f)`**
 
 Register a function to be called at the next frame refresh (in paintGL()).
 
 ---
+
+#### BaseCanvas.paintGL
 
 
 **`BaseCanvas.paintGL(self)`**
@@ -1770,6 +2058,8 @@ Draw all visuals.
 
 ---
 
+#### BaseCanvas.remove
+
 
 **`BaseCanvas.remove(self, *visuals)`**
 
@@ -1777,12 +2067,16 @@ Remove some visuals objects from the canvas.
 
 ---
 
+#### BaseCanvas.resizeEvent
+
 
 **`BaseCanvas.resizeEvent(self, e)`**
 
 Emit a `resize(width, height)` event when resizing the window.
 
 ---
+
+#### BaseCanvas.set_lazy
 
 
 **`BaseCanvas.set_lazy(self, lazy)`**
@@ -1794,6 +2088,8 @@ Must be called *after* the visuals have been added, but *before* set_data().
 
 ---
 
+#### BaseCanvas.update
+
 
 **`BaseCanvas.update(self)`**
 
@@ -1801,12 +2097,16 @@ Update the OpenGL canvas.
 
 ---
 
+#### BaseCanvas.wheelEvent
+
 
 **`BaseCanvas.wheelEvent(self, e)`**
 
 Emit an internal `mouse_wheel` event.
 
 ---
+
+#### BaseCanvas.window_to_ndc
 
 
 **`BaseCanvas.window_to_ndc(self, mouse_pos)`**
@@ -1822,12 +2122,16 @@ Implement global transforms on a canvas, like subplots.
 
 ---
 
+#### BaseLayout.attach
+
 
 **`BaseLayout.attach(self, canvas)`**
 
 Attach this layout to a canvas.
 
 ---
+
+#### BaseLayout.box_map
 
 
 **`BaseLayout.box_map(self, mouse_pos)`**
@@ -1836,12 +2140,16 @@ Get the box and local NDC coordinates from mouse position.
 
 ---
 
+#### BaseLayout.get_closest_box
+
 
 **`BaseLayout.get_closest_box(self, ndc)`**
 
 Override to return the box closest to a given position in NDC.
 
 ---
+
+#### BaseLayout.imap
 
 
 **`BaseLayout.imap(self, arr, box=None)`**
@@ -1850,6 +2158,8 @@ Inverse transformation from NDC to data coordinates.
 
 ---
 
+#### BaseLayout.map
+
 
 **`BaseLayout.map(self, arr, box=None)`**
 
@@ -1857,12 +2167,16 @@ Direct transformation from data to NDC coordinates.
 
 ---
 
+#### BaseLayout.update
+
 
 **`BaseLayout.update(self)`**
 
 Update all visuals in the attached canvas.
 
 ---
+
+#### BaseLayout.update_visual
 
 
 **`BaseLayout.update_visual(self, visual)`**
@@ -1895,12 +2209,16 @@ set_data
 
 ---
 
+#### BaseVisual.add_batch_data
+
 
 **`BaseVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### BaseVisual.close
 
 
 **`BaseVisual.close(self)`**
@@ -1909,12 +2227,16 @@ Close the visual.
 
 ---
 
+#### BaseVisual.emit_visual_set_data
+
 
 **`BaseVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### BaseVisual.hide
 
 
 **`BaseVisual.hide(self)`**
@@ -1923,12 +2245,16 @@ Hide the visual.
 
 ---
 
+#### BaseVisual.on_draw
+
 
 **`BaseVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### BaseVisual.on_resize
 
 
 **`BaseVisual.on_resize(self, width, height)`**
@@ -1937,6 +2263,8 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### BaseVisual.reset_batch
+
 
 **`BaseVisual.reset_batch(self)`**
 
@@ -1944,12 +2272,16 @@ Reinitialize the batch.
 
 ---
 
+#### BaseVisual.set_box_index
+
 
 **`BaseVisual.set_box_index(self, box_index, data=None)`**
 
 Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
+
+#### BaseVisual.set_data
 
 
 **`BaseVisual.set_data(self)`**
@@ -1961,12 +2293,16 @@ when the visual is attached to the canvas.
 
 ---
 
+#### BaseVisual.set_primitive_type
+
 
 **`BaseVisual.set_primitive_type(self, primitive_type)`**
 
 Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
+
+#### BaseVisual.set_shader
 
 
 **`BaseVisual.set_shader(self, name)`**
@@ -1975,6 +2311,8 @@ Set the built-in vertex and fragment shader.
 
 ---
 
+#### BaseVisual.show
+
 
 **`BaseVisual.show(self)`**
 
@@ -1982,12 +2320,16 @@ Show the visual.
 
 ---
 
+#### BaseVisual.validate
+
 
 **`BaseVisual.validate(**kwargs)`**
 
 Make consistent the input data for the visual.
 
 ---
+
+#### BaseVisual.vertex_count
 
 
 **`BaseVisual.vertex_count(**kwargs)`**
@@ -2005,6 +2347,8 @@ of the same type are concatenated into a singual Visual instance, which signific
 improves the performance of OpenGL.
 
 ---
+
+#### BatchAccumulator.add
 
 
 **`BatchAccumulator.add(self, b, noconcat=(), n_items=None, n_vertices=None, **kwargs)`**
@@ -2034,12 +2378,16 @@ number of characters, as each character requires two triangles).
 
 ---
 
+#### BatchAccumulator.reset
+
 
 **`BatchAccumulator.reset(self)`**
 
 Reset the accumulator.
 
 ---
+
+#### BatchAccumulator.data
 
 
 **`BatchAccumulator.data`**
@@ -2088,12 +2436,16 @@ variable specified in `box_var`.
 
 ---
 
+#### Boxed.add_boxes
+
 
 **`Boxed.add_boxes(self, canvas)`**
 
 Show the boxes borders.
 
 ---
+
+#### Boxed.attach
 
 
 **`Boxed.attach(self, canvas)`**
@@ -2102,12 +2454,16 @@ Attach the boxed interact to a canvas.
 
 ---
 
+#### Boxed.box_map
+
 
 **`Boxed.box_map(self, mouse_pos)`**
 
 Get the box and local NDC coordinates from mouse position.
 
 ---
+
+#### Boxed.get_closest_box
 
 
 **`Boxed.get_closest_box(self, pos)`**
@@ -2116,12 +2472,16 @@ Get the box closest to some position.
 
 ---
 
+#### Boxed.imap
+
 
 **`Boxed.imap(self, arr, box=None)`**
 
 Apply the boxed inverse transformation to a position array.
 
 ---
+
+#### Boxed.map
 
 
 **`Boxed.map(self, arr, box=None)`**
@@ -2130,12 +2490,16 @@ Apply the boxed transformation to a position array.
 
 ---
 
+#### Boxed.update
+
 
 **`Boxed.update(self)`**
 
 Update all visuals in the attached canvas.
 
 ---
+
+#### Boxed.update_boxes
 
 
 **`Boxed.update_boxes(self, box_pos, box_size)`**
@@ -2144,12 +2508,16 @@ Set the box bounds from specified box positions and sizes.
 
 ---
 
+#### Boxed.update_visual
+
 
 **`Boxed.update_visual(self, visual)`**
 
 Update a visual.
 
 ---
+
+#### Boxed.box_bounds
 
 
 **`Boxed.box_bounds`**
@@ -2158,6 +2526,8 @@ Bounds of the boxes.
 
 ---
 
+#### Boxed.box_pos
+
 
 **`Boxed.box_pos`**
 
@@ -2165,12 +2535,16 @@ Position of the box centers.
 
 ---
 
+#### Boxed.box_size
+
 
 **`Boxed.box_size`**
 
 Sizes of the boxes.
 
 ---
+
+#### Boxed.n_boxes
 
 
 **`Boxed.n_boxes`**
@@ -2188,6 +2562,8 @@ This class provides methods to specify the snippets to insert, and the
 
 ---
 
+#### GLSLInserter.add_transform_chain
+
 
 **`GLSLInserter.add_transform_chain(self, tc)`**
 
@@ -2195,12 +2571,16 @@ Insert all GLSL snippets from a transform chain.
 
 ---
 
+#### GLSLInserter.insert_frag
+
 
 **`GLSLInserter.insert_frag(self, glsl, location=None, origin=None, index=None)`**
 
 Insert a GLSL snippet into the fragment shader. See `insert_vert()`.
 
 ---
+
+#### GLSLInserter.insert_into_shaders
 
 
 **`GLSLInserter.insert_into_shaders(self, vertex, fragment, exclude_origins=())`**
@@ -2227,6 +2607,8 @@ which is automatically detected, and the GLSL transformations are inserted there
 Snippets can contain `{{ var }}` placeholders for the transformed variable name.
 
 ---
+
+#### GLSLInserter.insert_vert
 
 
 **`GLSLInserter.insert_vert(self, glsl, location='transforms', origin=None, index=None)`**
@@ -2283,12 +2665,16 @@ variable specified in `box_var`.
 
 ---
 
+#### Grid.add_boxes
+
 
 **`Grid.add_boxes(self, canvas, shape=None)`**
 
 Show subplot boxes.
 
 ---
+
+#### Grid.attach
 
 
 **`Grid.attach(self, canvas)`**
@@ -2297,12 +2683,16 @@ Attach the grid to a canvas.
 
 ---
 
+#### Grid.box_map
+
 
 **`Grid.box_map(self, mouse_pos)`**
 
 Get the box and local NDC coordinates from mouse position.
 
 ---
+
+#### Grid.get_closest_box
 
 
 **`Grid.get_closest_box(self, pos)`**
@@ -2311,12 +2701,16 @@ Get the box index (i, j) closest to a given position in NDC coordinates.
 
 ---
 
+#### Grid.imap
+
 
 **`Grid.imap(self, arr, box=None)`**
 
 Apply the subplot inverse transformation to a position array.
 
 ---
+
+#### Grid.map
 
 
 **`Grid.map(self, arr, box=None)`**
@@ -2325,6 +2719,8 @@ Apply the subplot transformation to a position array.
 
 ---
 
+#### Grid.update
+
 
 **`Grid.update(self)`**
 
@@ -2332,12 +2728,16 @@ Update all visuals in the attached canvas.
 
 ---
 
+#### Grid.update_visual
+
 
 **`Grid.update_visual(self, visual)`**
 
 Update a visual.
 
 ---
+
+#### Grid.shape
 
 
 **`Grid.shape`**
@@ -2362,12 +2762,16 @@ A histogram visual.
 
 ---
 
+#### HistogramVisual.add_batch_data
+
 
 **`HistogramVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### HistogramVisual.close
 
 
 **`HistogramVisual.close(self)`**
@@ -2376,12 +2780,16 @@ Close the visual.
 
 ---
 
+#### HistogramVisual.emit_visual_set_data
+
 
 **`HistogramVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### HistogramVisual.hide
 
 
 **`HistogramVisual.hide(self)`**
@@ -2390,12 +2798,16 @@ Hide the visual.
 
 ---
 
+#### HistogramVisual.on_draw
+
 
 **`HistogramVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### HistogramVisual.on_resize
 
 
 **`HistogramVisual.on_resize(self, width, height)`**
@@ -2404,12 +2816,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### HistogramVisual.reset_batch
+
 
 **`HistogramVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### HistogramVisual.set_box_index
 
 
 **`HistogramVisual.set_box_index(self, box_index, data=None)`**
@@ -2418,12 +2834,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### HistogramVisual.set_data
+
 
 **`HistogramVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### HistogramVisual.set_primitive_type
 
 
 **`HistogramVisual.set_primitive_type(self, primitive_type)`**
@@ -2432,12 +2852,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### HistogramVisual.set_shader
+
 
 **`HistogramVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### HistogramVisual.show
 
 
 **`HistogramVisual.show(self)`**
@@ -2446,12 +2870,16 @@ Show the visual.
 
 ---
 
+#### HistogramVisual.validate
+
 
 **`HistogramVisual.validate(self, hist=None, color=None, ylim=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### HistogramVisual.vertex_count
 
 
 **`HistogramVisual.vertex_count(self, hist, **kwargs)`**
@@ -2470,12 +2898,16 @@ Display a 2D image.
 
 ---
 
+#### ImageVisual.add_batch_data
+
 
 **`ImageVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### ImageVisual.close
 
 
 **`ImageVisual.close(self)`**
@@ -2484,12 +2916,16 @@ Close the visual.
 
 ---
 
+#### ImageVisual.emit_visual_set_data
+
 
 **`ImageVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### ImageVisual.hide
 
 
 **`ImageVisual.hide(self)`**
@@ -2498,12 +2934,16 @@ Hide the visual.
 
 ---
 
+#### ImageVisual.on_draw
+
 
 **`ImageVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### ImageVisual.on_resize
 
 
 **`ImageVisual.on_resize(self, width, height)`**
@@ -2512,12 +2952,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### ImageVisual.reset_batch
+
 
 **`ImageVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### ImageVisual.set_box_index
 
 
 **`ImageVisual.set_box_index(self, box_index, data=None)`**
@@ -2526,12 +2970,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### ImageVisual.set_data
+
 
 **`ImageVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### ImageVisual.set_primitive_type
 
 
 **`ImageVisual.set_primitive_type(self, primitive_type)`**
@@ -2540,12 +2988,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### ImageVisual.set_shader
+
 
 **`ImageVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### ImageVisual.show
 
 
 **`ImageVisual.show(self)`**
@@ -2554,12 +3006,16 @@ Show the visual.
 
 ---
 
+#### ImageVisual.validate
+
 
 **`ImageVisual.validate(self, image=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### ImageVisual.vertex_count
 
 
 **`ImageVisual.vertex_count(self, image=None, **kwargs)`**
@@ -2575,12 +3031,16 @@ polygon.
 
 ---
 
+#### Lasso.add
+
 
 **`Lasso.add(self, pos)`**
 
 Add a point to the polygon.
 
 ---
+
+#### Lasso.attach
 
 
 **`Lasso.attach(self, canvas)`**
@@ -2589,12 +3049,16 @@ Attach the lasso to a canvas.
 
 ---
 
+#### Lasso.clear
+
 
 **`Lasso.clear(self)`**
 
 Reset the lasso.
 
 ---
+
+#### Lasso.create_lasso_visual
 
 
 **`Lasso.create_lasso_visual(self)`**
@@ -2603,12 +3067,16 @@ Create the lasso visual.
 
 ---
 
+#### Lasso.in_polygon
+
 
 **`Lasso.in_polygon(self, pos)`**
 
 Return which points belong to the polygon.
 
 ---
+
+#### Lasso.on_mouse_click
 
 
 **`Lasso.on_mouse_click(self, e)`**
@@ -2617,6 +3085,8 @@ Add a polygon point with ctrl+click.
 
 ---
 
+#### Lasso.update_lasso_visual
+
 
 **`Lasso.update_lasso_visual(self)`**
 
@@ -2624,12 +3094,16 @@ Update the lasso visual with the current polygon.
 
 ---
 
+#### Lasso.count
+
 
 **`Lasso.count`**
 
 Number of vertices in the polygon.
 
 ---
+
+#### Lasso.polygon
 
 
 **`Lasso.polygon`**
@@ -2652,12 +3126,16 @@ Line segments.
 
 ---
 
+#### LineVisual.add_batch_data
+
 
 **`LineVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### LineVisual.close
 
 
 **`LineVisual.close(self)`**
@@ -2666,12 +3144,16 @@ Close the visual.
 
 ---
 
+#### LineVisual.emit_visual_set_data
+
 
 **`LineVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### LineVisual.hide
 
 
 **`LineVisual.hide(self)`**
@@ -2680,12 +3162,16 @@ Hide the visual.
 
 ---
 
+#### LineVisual.on_draw
+
 
 **`LineVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### LineVisual.on_resize
 
 
 **`LineVisual.on_resize(self, width, height)`**
@@ -2694,12 +3180,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### LineVisual.reset_batch
+
 
 **`LineVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### LineVisual.set_box_index
 
 
 **`LineVisual.set_box_index(self, box_index, data=None)`**
@@ -2708,12 +3198,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### LineVisual.set_data
+
 
 **`LineVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### LineVisual.set_primitive_type
 
 
 **`LineVisual.set_primitive_type(self, primitive_type)`**
@@ -2722,12 +3216,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### LineVisual.set_shader
+
 
 **`LineVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### LineVisual.show
 
 
 **`LineVisual.show(self)`**
@@ -2736,12 +3234,16 @@ Show the visual.
 
 ---
 
+#### LineVisual.validate
+
 
 **`LineVisual.validate(self, pos=None, color=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### LineVisual.vertex_count
 
 
 **`LineVisual.vertex_count(self, pos=None, **kwargs)`**
@@ -2826,12 +3328,16 @@ canvas.show()
 
 ---
 
+#### PanZoom.attach
+
 
 **`PanZoom.attach(self, canvas)`**
 
 Attach this interact to a canvas.
 
 ---
+
+#### PanZoom.get_range
 
 
 **`PanZoom.get_range(self)`**
@@ -2840,12 +3346,16 @@ Return the bounds currently visible.
 
 ---
 
+#### PanZoom.imap
+
 
 **`PanZoom.imap(self, arr)`**
 
 Apply the current panzoom inverse transformation to a position array.
 
 ---
+
+#### PanZoom.map
 
 
 **`PanZoom.map(self, arr)`**
@@ -2854,12 +3364,16 @@ Apply the current panzoom transformation to a position array.
 
 ---
 
+#### PanZoom.on_key_press
+
 
 **`PanZoom.on_key_press(self, e)`**
 
 Pan and zoom with the keyboard.
 
 ---
+
+#### PanZoom.on_mouse_double_click
 
 
 **`PanZoom.on_mouse_double_click(self, e)`**
@@ -2868,12 +3382,16 @@ Reset the view by double clicking anywhere in the canvas.
 
 ---
 
+#### PanZoom.on_mouse_move
+
 
 **`PanZoom.on_mouse_move(self, e)`**
 
 Pan and zoom with the mouse.
 
 ---
+
+#### PanZoom.on_mouse_wheel
 
 
 **`PanZoom.on_mouse_wheel(self, e)`**
@@ -2882,12 +3400,16 @@ Zoom with the mouse wheel.
 
 ---
 
+#### PanZoom.on_resize
+
 
 **`PanZoom.on_resize(self, e)`**
 
 Resize event.
 
 ---
+
+#### PanZoom.pan_delta
 
 
 **`PanZoom.pan_delta(self, d)`**
@@ -2896,12 +3418,16 @@ Pan the view by a given amount.
 
 ---
 
+#### PanZoom.reset
+
 
 **`PanZoom.reset(self)`**
 
 Reset the view.
 
 ---
+
+#### PanZoom.set_constrain_bounds
 
 
 **`PanZoom.set_constrain_bounds(self, bounds)`**
@@ -2910,12 +3436,16 @@ Reset the view.
 
 ---
 
+#### PanZoom.set_pan_zoom
+
 
 **`PanZoom.set_pan_zoom(self, pan=None, zoom=None)`**
 
 Set at once the pan and zoom.
 
 ---
+
+#### PanZoom.set_range
 
 
 **`PanZoom.set_range(self, bounds, keep_aspect=False)`**
@@ -2924,12 +3454,16 @@ Zoom to fit a box.
 
 ---
 
+#### PanZoom.update
+
 
 **`PanZoom.update(self)`**
 
 Update all visuals in the attached canvas.
 
 ---
+
+#### PanZoom.update_visual
 
 
 **`PanZoom.update_visual(self, visual)`**
@@ -2938,12 +3472,16 @@ Update a visual with the current pan and zoom values.
 
 ---
 
+#### PanZoom.window_to_ndc
+
 
 **`PanZoom.window_to_ndc(self, pos)`**
 
 Return the mouse coordinates in NDC, taking panzoom into account.
 
 ---
+
+#### PanZoom.zoom_delta
 
 
 **`PanZoom.zoom_delta(self, d, p=(0.0, 0.0), c=1.0)`**
@@ -2952,12 +3490,16 @@ Zoom the view by a given amount.
 
 ---
 
+#### PanZoom.aspect
+
 
 **`PanZoom.aspect`**
 
 Aspect (width/height).
 
 ---
+
+#### PanZoom.pan
 
 
 **`PanZoom.pan`**
@@ -2966,12 +3508,16 @@ Pan translation.
 
 ---
 
+#### PanZoom.size
+
 
 **`PanZoom.size`**
 
 Window size of the canvas.
 
 ---
+
+#### PanZoom.xmax
 
 
 **`PanZoom.xmax`**
@@ -2980,12 +3526,16 @@ Maximum x allowed for pan.
 
 ---
 
+#### PanZoom.xmin
+
 
 **`PanZoom.xmin`**
 
 Minimum x allowed for pan.
 
 ---
+
+#### PanZoom.ymax
 
 
 **`PanZoom.ymax`**
@@ -2994,12 +3544,16 @@ Maximum y allowed for pan.
 
 ---
 
+#### PanZoom.ymin
+
 
 **`PanZoom.ymin`**
 
 Minimum y allowed for pan.
 
 ---
+
+#### PanZoom.zmax
 
 
 **`PanZoom.zmax`**
@@ -3008,12 +3562,16 @@ Maximal zoom level.
 
 ---
 
+#### PanZoom.zmin
+
 
 **`PanZoom.zmin`**
 
 Minimum zoom level.
 
 ---
+
+#### PanZoom.zoom
 
 
 **`PanZoom.zoom`**
@@ -3027,6 +3585,8 @@ Zoom level.
 Plotting canvas that supports different layouts, subplots, lasso, axes, panzoom.
 
 ---
+
+#### PlotCanvas.add_visual
 
 
 **`PlotCanvas.add_visual(self, visual, *args, **kwargs)`**
@@ -3050,6 +3610,8 @@ Add a visual and possibly set some data directly.
 
 ---
 
+#### PlotCanvas.attach_events
+
 
 **`PlotCanvas.attach_events(self, obj)`**
 
@@ -3058,12 +3620,16 @@ events are raised by the canvas. This is used for mouse and key interactions.
 
 ---
 
+#### PlotCanvas.clear
+
 
 **`PlotCanvas.clear(self)`**
 
 Remove all visuals except those marked `clearable=False`.
 
 ---
+
+#### PlotCanvas.emit
 
 
 **`PlotCanvas.emit(self, name, **kwargs)`**
@@ -3072,12 +3638,16 @@ Raise an internal event and call `on_xxx()` on attached objects.
 
 ---
 
+#### PlotCanvas.enable_axes
+
 
 **`PlotCanvas.enable_axes(self, data_bounds=None, show_x=True, show_y=True)`**
 
 Show axes in the canvas.
 
 ---
+
+#### PlotCanvas.enable_lasso
 
 
 **`PlotCanvas.enable_lasso(self)`**
@@ -3086,12 +3656,16 @@ Enable lasso in the canvas.
 
 ---
 
+#### PlotCanvas.enable_panzoom
+
 
 **`PlotCanvas.enable_panzoom(self)`**
 
 Enable pan zoom in the canvas.
 
 ---
+
+#### PlotCanvas.event
 
 
 **`PlotCanvas.event(self, e)`**
@@ -3100,12 +3674,16 @@ Touch event.
 
 ---
 
+#### PlotCanvas.get_size
+
 
 **`PlotCanvas.get_size(self)`**
 
 Return the window size in pixels.
 
 ---
+
+#### PlotCanvas.get_visual
 
 
 **`PlotCanvas.get_visual(self, key)`**
@@ -3114,12 +3692,16 @@ Get a visual from its key.
 
 ---
 
+#### PlotCanvas.has_visual
+
 
 **`PlotCanvas.has_visual(self, visual)`**
 
 Return whether a visual belongs to the canvas.
 
 ---
+
+#### PlotCanvas.hist
 
 
 **`PlotCanvas.hist(self, *args, **kwargs)`**
@@ -3128,12 +3710,16 @@ Add a standalone (no batch) histogram plot.
 
 ---
 
+#### PlotCanvas.initializeGL
+
 
 **`PlotCanvas.initializeGL(self)`**
 
 Create the scene.
 
 ---
+
+#### PlotCanvas.iter_update_queue
 
 
 **`PlotCanvas.iter_update_queue(self)`**
@@ -3142,12 +3728,16 @@ Iterate through all OpenGL program updates called in lazy mode.
 
 ---
 
+#### PlotCanvas.keyPressEvent
+
 
 **`PlotCanvas.keyPressEvent(self, e)`**
 
 Emit an internal `key_press` event.
 
 ---
+
+#### PlotCanvas.keyReleaseEvent
 
 
 **`PlotCanvas.keyReleaseEvent(self, e)`**
@@ -3156,12 +3746,16 @@ Emit an internal `key_release` event.
 
 ---
 
+#### PlotCanvas.lines
+
 
 **`PlotCanvas.lines(self, *args, **kwargs)`**
 
 Add a standalone (no batch) line plot.
 
 ---
+
+#### PlotCanvas.mouseDoubleClickEvent
 
 
 **`PlotCanvas.mouseDoubleClickEvent(self, e)`**
@@ -3170,12 +3764,16 @@ Emit an internal `mouse_double_click` event.
 
 ---
 
+#### PlotCanvas.mouseMoveEvent
+
 
 **`PlotCanvas.mouseMoveEvent(self, e)`**
 
 Emit an internal `mouse_move` event.
 
 ---
+
+#### PlotCanvas.mousePressEvent
 
 
 **`PlotCanvas.mousePressEvent(self, e)`**
@@ -3184,12 +3782,16 @@ Emit an internal `mouse_press` event.
 
 ---
 
+#### PlotCanvas.mouseReleaseEvent
+
 
 **`PlotCanvas.mouseReleaseEvent(self, e)`**
 
 Emit an internal `mouse_release` or `mouse_click` event.
 
 ---
+
+#### PlotCanvas.on_next_paint
 
 
 **`PlotCanvas.on_next_paint(self, f)`**
@@ -3198,12 +3800,16 @@ Register a function to be called at the next frame refresh (in paintGL()).
 
 ---
 
+#### PlotCanvas.paintGL
+
 
 **`PlotCanvas.paintGL(self)`**
 
 Draw all visuals.
 
 ---
+
+#### PlotCanvas.plot
 
 
 **`PlotCanvas.plot(self, *args, **kwargs)`**
@@ -3212,12 +3818,16 @@ Add a standalone (no batch) plot.
 
 ---
 
+#### PlotCanvas.polygon
+
 
 **`PlotCanvas.polygon(self, *args, **kwargs)`**
 
 Add a standalone (no batch) polygon plot.
 
 ---
+
+#### PlotCanvas.remove
 
 
 **`PlotCanvas.remove(self, *visuals)`**
@@ -3226,12 +3836,16 @@ Remove some visuals objects from the canvas.
 
 ---
 
+#### PlotCanvas.resizeEvent
+
 
 **`PlotCanvas.resizeEvent(self, e)`**
 
 Emit a `resize(width, height)` event when resizing the window.
 
 ---
+
+#### PlotCanvas.scatter
 
 
 **`PlotCanvas.scatter(self, *args, **kwargs)`**
@@ -3240,12 +3854,16 @@ Add a standalone (no batch) scatter plot.
 
 ---
 
+#### PlotCanvas.set_layout
+
 
 **`PlotCanvas.set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_bounds=None, box_pos=None, box_size=None, has_clip=None)`**
 
 Set the plot layout: grid, boxed, stacked, or None.
 
 ---
+
+#### PlotCanvas.set_lazy
 
 
 **`PlotCanvas.set_lazy(self, lazy)`**
@@ -3257,12 +3875,16 @@ Must be called *after* the visuals have been added, but *before* set_data().
 
 ---
 
+#### PlotCanvas.text
+
 
 **`PlotCanvas.text(self, *args, **kwargs)`**
 
 Add a standalone (no batch) text plot.
 
 ---
+
+#### PlotCanvas.update
 
 
 **`PlotCanvas.update(self)`**
@@ -3271,12 +3893,16 @@ Update the OpenGL canvas.
 
 ---
 
+#### PlotCanvas.update_visual
+
 
 **`PlotCanvas.update_visual(self, visual, *args, **kwargs)`**
 
 Set the data of a visual, standalone or at the end of a batch.
 
 ---
+
+#### PlotCanvas.uplot
 
 
 **`PlotCanvas.uplot(self, *args, **kwargs)`**
@@ -3285,12 +3911,16 @@ Add a standalone (no batch) uniform plot.
 
 ---
 
+#### PlotCanvas.uscatter
+
 
 **`PlotCanvas.uscatter(self, *args, **kwargs)`**
 
 Add a standalone (no batch) uniform scatter plot.
 
 ---
+
+#### PlotCanvas.wheelEvent
 
 
 **`PlotCanvas.wheelEvent(self, e)`**
@@ -3299,6 +3929,8 @@ Emit an internal `mouse_wheel` event.
 
 ---
 
+#### PlotCanvas.window_to_ndc
+
 
 **`PlotCanvas.window_to_ndc(self, mouse_pos)`**
 
@@ -3306,6 +3938,8 @@ Convert a mouse position in pixels into normalized device coordinates, taking in
 account pan and zoom.
 
 ---
+
+#### PlotCanvas.canvas
 
 
 **`PlotCanvas.canvas`**
@@ -3333,12 +3967,16 @@ Plot visual, with multiple line plots of various sizes and colors.
 
 ---
 
+#### PlotVisual.add_batch_data
+
 
 **`PlotVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### PlotVisual.close
 
 
 **`PlotVisual.close(self)`**
@@ -3347,12 +3985,16 @@ Close the visual.
 
 ---
 
+#### PlotVisual.emit_visual_set_data
+
 
 **`PlotVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### PlotVisual.hide
 
 
 **`PlotVisual.hide(self)`**
@@ -3361,12 +4003,16 @@ Hide the visual.
 
 ---
 
+#### PlotVisual.on_draw
+
 
 **`PlotVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### PlotVisual.on_resize
 
 
 **`PlotVisual.on_resize(self, width, height)`**
@@ -3375,12 +4021,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### PlotVisual.reset_batch
+
 
 **`PlotVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### PlotVisual.set_box_index
 
 
 **`PlotVisual.set_box_index(self, box_index, data=None)`**
@@ -3389,12 +4039,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### PlotVisual.set_color
+
 
 **`PlotVisual.set_color(self, color)`**
 
 Update the visual's color.
 
 ---
+
+#### PlotVisual.set_data
 
 
 **`PlotVisual.set_data(self, *args, **kwargs)`**
@@ -3403,12 +4057,16 @@ Update the visual data.
 
 ---
 
+#### PlotVisual.set_primitive_type
+
 
 **`PlotVisual.set_primitive_type(self, primitive_type)`**
 
 Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
+
+#### PlotVisual.set_shader
 
 
 **`PlotVisual.set_shader(self, name)`**
@@ -3417,6 +4075,8 @@ Set the built-in vertex and fragment shader.
 
 ---
 
+#### PlotVisual.show
+
 
 **`PlotVisual.show(self)`**
 
@@ -3424,12 +4084,16 @@ Show the visual.
 
 ---
 
+#### PlotVisual.validate
+
 
 **`PlotVisual.validate(self, x=None, y=None, color=None, depth=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### PlotVisual.vertex_count
 
 
 **`PlotVisual.vertex_count(self, y=None, **kwargs)`**
@@ -3450,12 +4114,16 @@ Polygon.
 
 ---
 
+#### PolygonVisual.add_batch_data
+
 
 **`PolygonVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### PolygonVisual.close
 
 
 **`PolygonVisual.close(self)`**
@@ -3464,12 +4132,16 @@ Close the visual.
 
 ---
 
+#### PolygonVisual.emit_visual_set_data
+
 
 **`PolygonVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### PolygonVisual.hide
 
 
 **`PolygonVisual.hide(self)`**
@@ -3478,12 +4150,16 @@ Hide the visual.
 
 ---
 
+#### PolygonVisual.on_draw
+
 
 **`PolygonVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### PolygonVisual.on_resize
 
 
 **`PolygonVisual.on_resize(self, width, height)`**
@@ -3492,12 +4168,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### PolygonVisual.reset_batch
+
 
 **`PolygonVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### PolygonVisual.set_box_index
 
 
 **`PolygonVisual.set_box_index(self, box_index, data=None)`**
@@ -3506,12 +4186,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### PolygonVisual.set_data
+
 
 **`PolygonVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### PolygonVisual.set_primitive_type
 
 
 **`PolygonVisual.set_primitive_type(self, primitive_type)`**
@@ -3520,12 +4204,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### PolygonVisual.set_shader
+
 
 **`PolygonVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### PolygonVisual.show
 
 
 **`PolygonVisual.show(self)`**
@@ -3534,12 +4222,16 @@ Show the visual.
 
 ---
 
+#### PolygonVisual.validate
+
 
 **`PolygonVisual.validate(self, pos=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### PolygonVisual.vertex_count
 
 
 **`PolygonVisual.vertex_count(self, pos=None, **kwargs)`**
@@ -3563,6 +4255,8 @@ Linear transform from a source rectangle to a target rectangle.
 
 ---
 
+#### Range.apply
+
 
 **`Range.apply(self, arr, from_bounds=None, to_bounds=None)`**
 
@@ -3570,12 +4264,16 @@ Apply the transform to a NumPy array.
 
 ---
 
+#### Range.glsl
+
 
 **`Range.glsl(self, var)`**
 
 Return a GLSL snippet that applies the transform to a given GLSL variable name.
 
 ---
+
+#### Range.inverse
 
 
 **`Range.inverse(self)`**
@@ -3590,6 +4288,8 @@ Scaling transform.
 
 ---
 
+#### Scale.apply
+
 
 **`Scale.apply(self, arr, value=None)`**
 
@@ -3597,12 +4297,16 @@ Apply a scaling to a NumPy array.
 
 ---
 
+#### Scale.glsl
+
 
 **`Scale.glsl(self, var)`**
 
 Return a GLSL snippet that applies the scaling to a given GLSL variable name.
 
 ---
+
+#### Scale.inverse
 
 
 **`Scale.inverse(self)`**
@@ -3642,12 +4346,16 @@ Scatter visual, displaying a fixed marker at various positions, colors, and mark
 
 ---
 
+#### ScatterVisual.add_batch_data
+
 
 **`ScatterVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### ScatterVisual.close
 
 
 **`ScatterVisual.close(self)`**
@@ -3656,12 +4364,16 @@ Close the visual.
 
 ---
 
+#### ScatterVisual.emit_visual_set_data
+
 
 **`ScatterVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### ScatterVisual.hide
 
 
 **`ScatterVisual.hide(self)`**
@@ -3670,12 +4382,16 @@ Hide the visual.
 
 ---
 
+#### ScatterVisual.on_draw
+
 
 **`ScatterVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### ScatterVisual.on_resize
 
 
 **`ScatterVisual.on_resize(self, width, height)`**
@@ -3684,12 +4400,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### ScatterVisual.reset_batch
+
 
 **`ScatterVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### ScatterVisual.set_box_index
 
 
 **`ScatterVisual.set_box_index(self, box_index, data=None)`**
@@ -3698,12 +4418,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### ScatterVisual.set_color
+
 
 **`ScatterVisual.set_color(self, color)`**
 
 Change the color of the markers.
 
 ---
+
+#### ScatterVisual.set_data
 
 
 **`ScatterVisual.set_data(self, *args, **kwargs)`**
@@ -3712,12 +4436,16 @@ Update the visual data.
 
 ---
 
+#### ScatterVisual.set_marker_size
+
 
 **`ScatterVisual.set_marker_size(self, marker_size)`**
 
 Change the size of the markers.
 
 ---
+
+#### ScatterVisual.set_primitive_type
 
 
 **`ScatterVisual.set_primitive_type(self, primitive_type)`**
@@ -3726,12 +4454,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### ScatterVisual.set_shader
+
 
 **`ScatterVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### ScatterVisual.show
 
 
 **`ScatterVisual.show(self)`**
@@ -3740,12 +4472,16 @@ Show the visual.
 
 ---
 
+#### ScatterVisual.validate
+
 
 **`ScatterVisual.validate(self, x=None, y=None, pos=None, color=None, size=None, depth=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### ScatterVisual.vertex_count
 
 
 **`ScatterVisual.vertex_count(self, x=None, y=None, pos=None, **kwargs)`**
@@ -3769,6 +4505,8 @@ Transform to a grid subplot rectangle.
 
 ---
 
+#### Subplot.apply
+
 
 **`Subplot.apply(self, arr, from_bounds=None, to_bounds=None)`**
 
@@ -3776,12 +4514,16 @@ Apply the transform to a NumPy array.
 
 ---
 
+#### Subplot.glsl
+
 
 **`Subplot.glsl(self, var)`**
 
 Return a GLSL snippet that applies the transform to a given GLSL variable name.
 
 ---
+
+#### Subplot.inverse
 
 
 **`Subplot.inverse(self)`**
@@ -3826,12 +4568,16 @@ Display strings at multiple locations.
 
 ---
 
+#### TextVisual.add_batch_data
+
 
 **`TextVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### TextVisual.close
 
 
 **`TextVisual.close(self)`**
@@ -3840,12 +4586,16 @@ Close the visual.
 
 ---
 
+#### TextVisual.emit_visual_set_data
+
 
 **`TextVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### TextVisual.hide
 
 
 **`TextVisual.hide(self)`**
@@ -3854,12 +4604,16 @@ Hide the visual.
 
 ---
 
+#### TextVisual.on_draw
+
 
 **`TextVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### TextVisual.on_resize
 
 
 **`TextVisual.on_resize(self, width, height)`**
@@ -3868,12 +4622,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### TextVisual.reset_batch
+
 
 **`TextVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### TextVisual.set_box_index
 
 
 **`TextVisual.set_box_index(self, box_index, data=None)`**
@@ -3882,12 +4640,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### TextVisual.set_data
+
 
 **`TextVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### TextVisual.set_primitive_type
 
 
 **`TextVisual.set_primitive_type(self, primitive_type)`**
@@ -3896,12 +4658,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### TextVisual.set_shader
+
 
 **`TextVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### TextVisual.show
 
 
 **`TextVisual.show(self)`**
@@ -3910,12 +4676,16 @@ Show the visual.
 
 ---
 
+#### TextVisual.validate
+
 
 **`TextVisual.validate(self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### TextVisual.vertex_count
 
 
 **`TextVisual.vertex_count(self, **kwargs)`**
@@ -3930,12 +4700,16 @@ A linear sequence of transforms that happen on the CPU and GPU.
 
 ---
 
+#### TransformChain.add_on_cpu
+
 
 **`TransformChain.add_on_cpu(self, transforms, origin=None)`**
 
 Add some transforms on the CPU.
 
 ---
+
+#### TransformChain.add_on_gpu
 
 
 **`TransformChain.add_on_gpu(self, transforms, origin=None)`**
@@ -3944,12 +4718,16 @@ Add some transforms on the GPU.
 
 ---
 
+#### TransformChain.apply
+
 
 **`TransformChain.apply(self, arr)`**
 
 Apply all CPU transforms on an array.
 
 ---
+
+#### TransformChain.get
 
 
 **`TransformChain.get(self, class_name)`**
@@ -3958,6 +4736,8 @@ Get a transform in the chain from its name.
 
 ---
 
+#### TransformChain.inverse
+
 
 **`TransformChain.inverse(self)`**
 
@@ -3965,12 +4745,16 @@ Return the inverse chain of transforms.
 
 ---
 
+#### TransformChain.cpu_transforms
+
 
 **`TransformChain.cpu_transforms`**
 
 List of CPU transforms.
 
 ---
+
+#### TransformChain.gpu_transforms
 
 
 **`TransformChain.gpu_transforms`**
@@ -3985,6 +4769,8 @@ Translation transform.
 
 ---
 
+#### Translate.apply
+
 
 **`Translate.apply(self, arr, value=None)`**
 
@@ -3992,12 +4778,16 @@ Apply a translation to a NumPy array.
 
 ---
 
+#### Translate.glsl
+
 
 **`Translate.glsl(self, var)`**
 
 Return a GLSL snippet that applies the translation to a given GLSL variable name.
 
 ---
+
+#### Translate.inverse
 
 
 **`Translate.inverse(self)`**
@@ -4031,12 +4821,16 @@ A plot visual with a uniform color.
 
 ---
 
+#### UniformPlotVisual.add_batch_data
+
 
 **`UniformPlotVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### UniformPlotVisual.close
 
 
 **`UniformPlotVisual.close(self)`**
@@ -4045,12 +4839,16 @@ Close the visual.
 
 ---
 
+#### UniformPlotVisual.emit_visual_set_data
+
 
 **`UniformPlotVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### UniformPlotVisual.hide
 
 
 **`UniformPlotVisual.hide(self)`**
@@ -4059,12 +4857,16 @@ Hide the visual.
 
 ---
 
+#### UniformPlotVisual.on_draw
+
 
 **`UniformPlotVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### UniformPlotVisual.on_resize
 
 
 **`UniformPlotVisual.on_resize(self, width, height)`**
@@ -4073,12 +4875,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### UniformPlotVisual.reset_batch
+
 
 **`UniformPlotVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### UniformPlotVisual.set_box_index
 
 
 **`UniformPlotVisual.set_box_index(self, box_index, data=None)`**
@@ -4087,12 +4893,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### UniformPlotVisual.set_data
+
 
 **`UniformPlotVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### UniformPlotVisual.set_primitive_type
 
 
 **`UniformPlotVisual.set_primitive_type(self, primitive_type)`**
@@ -4101,12 +4911,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### UniformPlotVisual.set_shader
+
 
 **`UniformPlotVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### UniformPlotVisual.show
 
 
 **`UniformPlotVisual.show(self)`**
@@ -4115,12 +4929,16 @@ Show the visual.
 
 ---
 
+#### UniformPlotVisual.validate
+
 
 **`UniformPlotVisual.validate(self, x=None, y=None, masks=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### UniformPlotVisual.vertex_count
 
 
 **`UniformPlotVisual.vertex_count(self, y=None, **kwargs)`**
@@ -4158,12 +4976,16 @@ Scatter visual with a fixed marker color and size.
 
 ---
 
+#### UniformScatterVisual.add_batch_data
+
 
 **`UniformScatterVisual.add_batch_data(self, **kwargs)`**
 
 Prepare data to be added later with `PlotCanvas.add_visual()`.
 
 ---
+
+#### UniformScatterVisual.close
 
 
 **`UniformScatterVisual.close(self)`**
@@ -4172,12 +4994,16 @@ Close the visual.
 
 ---
 
+#### UniformScatterVisual.emit_visual_set_data
+
 
 **`UniformScatterVisual.emit_visual_set_data(self)`**
 
 Emit canvas.visual_set_data event after data has been set in the visual.
 
 ---
+
+#### UniformScatterVisual.hide
 
 
 **`UniformScatterVisual.hide(self)`**
@@ -4186,12 +5012,16 @@ Hide the visual.
 
 ---
 
+#### UniformScatterVisual.on_draw
+
 
 **`UniformScatterVisual.on_draw(self)`**
 
 Draw the visual.
 
 ---
+
+#### UniformScatterVisual.on_resize
 
 
 **`UniformScatterVisual.on_resize(self, width, height)`**
@@ -4200,12 +5030,16 @@ Update the window size in the OpenGL program.
 
 ---
 
+#### UniformScatterVisual.reset_batch
+
 
 **`UniformScatterVisual.reset_batch(self)`**
 
 Reinitialize the batch.
 
 ---
+
+#### UniformScatterVisual.set_box_index
 
 
 **`UniformScatterVisual.set_box_index(self, box_index, data=None)`**
@@ -4214,12 +5048,16 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 
 ---
 
+#### UniformScatterVisual.set_data
+
 
 **`UniformScatterVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
 
 ---
+
+#### UniformScatterVisual.set_primitive_type
 
 
 **`UniformScatterVisual.set_primitive_type(self, primitive_type)`**
@@ -4228,12 +5066,16 @@ Set the primitive type (points, lines, line_strip, line_fan, triangles).
 
 ---
 
+#### UniformScatterVisual.set_shader
+
 
 **`UniformScatterVisual.set_shader(self, name)`**
 
 Set the built-in vertex and fragment shader.
 
 ---
+
+#### UniformScatterVisual.show
 
 
 **`UniformScatterVisual.show(self)`**
@@ -4242,12 +5084,16 @@ Show the visual.
 
 ---
 
+#### UniformScatterVisual.validate
+
 
 **`UniformScatterVisual.validate(self, x=None, y=None, pos=None, masks=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
 ---
+
+#### UniformScatterVisual.vertex_count
 
 
 **`UniformScatterVisual.vertex_count(self, x=None, y=None, pos=None, **kwargs)`**
@@ -4262,6 +5108,8 @@ Manual clustering facilities.
 
 ---
 
+#### phy.cluster.select_traces
+
 
 **`phy.cluster.select_traces(traces, interval, sample_rate=None)`**
 
@@ -4275,12 +5123,16 @@ Handle cluster metadata changes.
 
 ---
 
+#### ClusterMeta.add_field
+
 
 **`ClusterMeta.add_field(self, name, default_value=None)`**
 
 Add a field with an optional default value.
 
 ---
+
+#### ClusterMeta.from_dict
 
 
 **`ClusterMeta.from_dict(self, dic)`**
@@ -4289,12 +5141,16 @@ Import data from a `{cluster_id: {field: value}}` dictionary.
 
 ---
 
+#### ClusterMeta.get
+
 
 **`ClusterMeta.get(self, field, cluster)`**
 
 Retrieve the value of one cluster for a given field.
 
 ---
+
+#### ClusterMeta.redo
 
 
 **`ClusterMeta.redo(self)`**
@@ -4307,6 +5163,8 @@ Redo the next metadata change.
 * `up : UpdateInfo instance` 　 
 
 ---
+
+#### ClusterMeta.set
 
 
 **`ClusterMeta.set(self, field, clusters, value, add_to_stack=True)`**
@@ -4335,6 +5193,8 @@ Set the value of one of several clusters.
 
 ---
 
+#### ClusterMeta.set_from_descendants
+
 
 **`ClusterMeta.set_from_descendants(self, descendants, largest_old_cluster=None)`**
 
@@ -4351,12 +5211,16 @@ Update metadata of some clusters given the metadata of their ascendants.
 
 ---
 
+#### ClusterMeta.to_dict
+
 
 **`ClusterMeta.to_dict(self, field)`**
 
 Export data to a `{cluster_id: value}` dictionary, for a particular field.
 
 ---
+
+#### ClusterMeta.undo
 
 
 **`ClusterMeta.undo(self)`**
@@ -4369,6 +5233,8 @@ Undo the last metadata change.
 * `up : UpdateInfo instance` 　 
 
 ---
+
+#### ClusterMeta.fields
 
 
 **`ClusterMeta.fields`**
@@ -4398,12 +5264,16 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
 
 ---
 
+#### ClusterView.add
+
 
 **`ClusterView.add(self, objects)`**
 
 Add objects object to the table.
 
 ---
+
+#### ClusterView.build
 
 
 **`ClusterView.build(self, callback=None)`**
@@ -4412,12 +5282,16 @@ Rebuild the HTML code of the widget.
 
 ---
 
+#### ClusterView.change
+
 
 **`ClusterView.change(self, objects)`**
 
 Change some objects.
 
 ---
+
+#### ClusterView.eval_js
 
 
 **`ClusterView.eval_js(self, expr, callback=None)`**
@@ -4446,12 +5320,16 @@ are transparently converted between Python and Javascript.
 
 ---
 
+#### ClusterView.filter
+
 
 **`ClusterView.filter(self, text='')`**
 
 Filter the view with a Javascript expression.
 
 ---
+
+#### ClusterView.first
 
 
 **`ClusterView.first(self, callback=None)`**
@@ -4460,12 +5338,16 @@ Select the first item.
 
 ---
 
+#### ClusterView.get
+
 
 **`ClusterView.get(self, id, callback=None)`**
 
 Get the object given its id.
 
 ---
+
+#### ClusterView.get_current_sort
 
 
 **`ClusterView.get_current_sort(self, callback=None)`**
@@ -4474,12 +5356,16 @@ Get the current sort as a tuple `(name, dir)`.
 
 ---
 
+#### ClusterView.get_ids
+
 
 **`ClusterView.get_ids(self, callback=None)`**
 
 Get the list of ids.
 
 ---
+
+#### ClusterView.get_next_id
 
 
 **`ClusterView.get_next_id(self, callback=None)`**
@@ -4488,12 +5374,16 @@ Get the next non-skipped row id.
 
 ---
 
+#### ClusterView.get_previous_id
+
 
 **`ClusterView.get_previous_id(self, callback=None)`**
 
 Get the previous non-skipped row id.
 
 ---
+
+#### ClusterView.get_selected
 
 
 **`ClusterView.get_selected(self, callback=None)`**
@@ -4502,12 +5392,16 @@ Get the currently selected rows.
 
 ---
 
+#### ClusterView.get_state
+
 
 **`ClusterView.get_state(self, callback=None)`**
 
 Return the cluster view state, with the current sort.
 
 ---
+
+#### ClusterView.next
 
 
 **`ClusterView.next(self, callback=None)`**
@@ -4516,12 +5410,16 @@ Select the next non-skipped row.
 
 ---
 
+#### ClusterView.previous
+
 
 **`ClusterView.previous(self, callback=None)`**
 
 Select the previous non-skipped row.
 
 ---
+
+#### ClusterView.remove
 
 
 **`ClusterView.remove(self, ids)`**
@@ -4530,6 +5428,8 @@ Remove some objects from their ids.
 
 ---
 
+#### ClusterView.remove_all
+
 
 **`ClusterView.remove_all(self)`**
 
@@ -4537,12 +5437,16 @@ Remove all rows in the table.
 
 ---
 
+#### ClusterView.remove_all_and_add
+
 
 **`ClusterView.remove_all_and_add(self, objects)`**
 
 Remove all rows in the table and add new objects.
 
 ---
+
+#### ClusterView.select
 
 
 **`ClusterView.select(self, ids, callback=None, **kwargs)`**
@@ -4555,12 +5459,16 @@ rows directly in the HTML view.
 
 ---
 
+#### ClusterView.set_busy
+
 
 **`ClusterView.set_busy(self, busy)`**
 
 Set the busy state of the GUI.
 
 ---
+
+#### ClusterView.set_html
 
 
 **`ClusterView.set_html(self, html, callback=None)`**
@@ -4569,6 +5477,8 @@ Set the HTML code.
 
 ---
 
+#### ClusterView.set_state
+
 
 **`ClusterView.set_state(self, state)`**
 
@@ -4576,12 +5486,16 @@ Set the cluster view state, with a specified sort.
 
 ---
 
+#### ClusterView.sort_by
+
 
 **`ClusterView.sort_by(self, name, sort_dir='asc')`**
 
 Sort by a given variable.
 
 ---
+
+#### ClusterView.view_source
 
 
 **`ClusterView.view_source(self, callback=None)`**
@@ -4634,6 +5548,8 @@ different classes know about clustering changes.
 
 ---
 
+#### Clustering.assign
+
 
 **`Clustering.assign(self, spike_ids, spike_clusters_rel=0)`**
 
@@ -4680,6 +5596,8 @@ is logically much simpler, and faster to execute.
 
 ---
 
+#### Clustering.merge
+
 
 **`Clustering.merge(self, cluster_ids, to=None)`**
 
@@ -4701,6 +5619,8 @@ Merge several clusters to a new cluster.
 
 ---
 
+#### Clustering.new_cluster_id
+
 
 **`Clustering.new_cluster_id(self)`**
 
@@ -4715,6 +5635,8 @@ operations (i.e. no need for explicit cache invalidation in this case).
 
 ---
 
+#### Clustering.redo
+
 
 **`Clustering.redo(self)`**
 
@@ -4727,6 +5649,8 @@ Redo the last cluster assignment operation.
 
 ---
 
+#### Clustering.reset
+
 
 **`Clustering.reset(self)`**
 
@@ -4736,12 +5660,16 @@ All changes are lost.
 
 ---
 
+#### Clustering.spikes_in_clusters
+
 
 **`Clustering.spikes_in_clusters(self, clusters)`**
 
 Return the array of spike ids belonging to a list of clusters.
 
 ---
+
+#### Clustering.split
 
 
 **`Clustering.split(self, spike_ids, spike_clusters_rel=0)`**
@@ -4772,6 +5700,8 @@ of the spike_ids parameter.
 
 ---
 
+#### Clustering.undo
+
 
 **`Clustering.undo(self)`**
 
@@ -4784,12 +5714,16 @@ Undo the last cluster assignment operation.
 
 ---
 
+#### Clustering.cluster_ids
+
 
 **`Clustering.cluster_ids`**
 
 Ordered list of ids of all non-empty clusters.
 
 ---
+
+#### Clustering.n_clusters
 
 
 **`Clustering.n_clusters`**
@@ -4798,12 +5732,16 @@ Total number of clusters.
 
 ---
 
+#### Clustering.n_spikes
+
 
 **`Clustering.n_spikes`**
 
 Number of spikes.
 
 ---
+
+#### Clustering.spike_clusters
 
 
 **`Clustering.spike_clusters`**
@@ -4812,12 +5750,16 @@ A n_spikes-long vector containing the cluster ids of all spikes.
 
 ---
 
+#### Clustering.spike_ids
+
 
 **`Clustering.spike_ids`**
 
 Array of all spike ids.
 
 ---
+
+#### Clustering.spikes_per_cluster
 
 
 **`Clustering.spikes_per_cluster`**
@@ -4843,12 +5785,16 @@ of cluster pairs.
 
 ---
 
+#### CorrelogramView.attach
+
 
 **`CorrelogramView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### CorrelogramView.close
 
 
 **`CorrelogramView.close(self)`**
@@ -4857,12 +5803,16 @@ Close the underlying canvas.
 
 ---
 
+#### CorrelogramView.decrease
+
 
 **`CorrelogramView.decrease(self)`**
 
 Decrease the window size.
 
 ---
+
+#### CorrelogramView.increase
 
 
 **`CorrelogramView.increase(self)`**
@@ -4871,12 +5821,16 @@ Increase the window size.
 
 ---
 
+#### CorrelogramView.on_mouse_wheel
+
 
 **`CorrelogramView.on_mouse_wheel(self, e)`**
 
 Change the scaling with the wheel.
 
 ---
+
+#### CorrelogramView.on_select
 
 
 **`CorrelogramView.on_select(self, cluster_ids=(), **kwargs)`**
@@ -4885,6 +5839,8 @@ Show the correlograms of the selected clusters.
 
 ---
 
+#### CorrelogramView.screenshot
+
 
 **`CorrelogramView.screenshot(self, dir=None)`**
 
@@ -4892,6 +5848,8 @@ Save a PNG screenshot of the view into a given directory. By default, the screen
 are saved in `~/.phy/screenshots/`.
 
 ---
+
+#### CorrelogramView.set_bin
 
 
 **`CorrelogramView.set_bin(self, bin_size)`**
@@ -4902,12 +5860,16 @@ Example: `1`
 
 ---
 
+#### CorrelogramView.set_refractory_period
+
 
 **`CorrelogramView.set_refractory_period(self, value)`**
 
 Set the refractory period (in milliseconds).
 
 ---
+
+#### CorrelogramView.set_state
 
 
 **`CorrelogramView.set_state(self, state)`**
@@ -4920,12 +5882,16 @@ May be overriden.
 
 ---
 
+#### CorrelogramView.set_status
+
 
 **`CorrelogramView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### CorrelogramView.set_window
 
 
 **`CorrelogramView.set_window(self, window_size)`**
@@ -4936,12 +5902,16 @@ Example: `100`
 
 ---
 
+#### CorrelogramView.show
+
 
 **`CorrelogramView.show(self)`**
 
 Show the underlying canvas.
 
 ---
+
+#### CorrelogramView.toggle_auto_update
 
 
 **`CorrelogramView.toggle_auto_update(self, checked)`**
@@ -4950,12 +5920,16 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### CorrelogramView.toggle_normalization
+
 
 **`CorrelogramView.toggle_normalization(self, checked)`**
 
 Change the normalization of the correlograms.
 
 ---
+
+#### CorrelogramView.state
 
 
 **`CorrelogramView.state`**
@@ -4987,12 +5961,16 @@ component features. This view keeps track of which channels are currently shown.
 
 ---
 
+#### FeatureView.attach
+
 
 **`FeatureView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### FeatureView.clear_channels
 
 
 **`FeatureView.clear_channels(self)`**
@@ -5001,12 +5979,16 @@ Reset the current channels.
 
 ---
 
+#### FeatureView.close
+
 
 **`FeatureView.close(self)`**
 
 Close the underlying canvas.
 
 ---
+
+#### FeatureView.decrease
 
 
 **`FeatureView.decrease(self)`**
@@ -5015,12 +5997,16 @@ Decrease the scaling of the features.
 
 ---
 
+#### FeatureView.decrease_marker
+
 
 **`FeatureView.decrease_marker(self)`**
 
 Decrease the marker size.
 
 ---
+
+#### FeatureView.increase
 
 
 **`FeatureView.increase(self)`**
@@ -5029,12 +6015,16 @@ Increase the scaling of the features.
 
 ---
 
+#### FeatureView.increase_marker
+
 
 **`FeatureView.increase_marker(self)`**
 
 Increase the marker size.
 
 ---
+
+#### FeatureView.on_channel_click
 
 
 **`FeatureView.on_channel_click(self, sender=None, channel_id=None, key=None, button=None)`**
@@ -5044,12 +6034,16 @@ relevant subplots.
 
 ---
 
+#### FeatureView.on_mouse_wheel
+
 
 **`FeatureView.on_mouse_wheel(self, e)`**
 
 Change the scaling with the wheel.
 
 ---
+
+#### FeatureView.on_request_split
 
 
 **`FeatureView.on_request_split(self, sender=None)`**
@@ -5058,12 +6052,16 @@ Return the spikes enclosed by the lasso.
 
 ---
 
+#### FeatureView.on_select
+
 
 **`FeatureView.on_select(self, cluster_ids=(), **kwargs)`**
 
 Update the view with the selected clusters.
 
 ---
+
+#### FeatureView.screenshot
 
 
 **`FeatureView.screenshot(self, dir=None)`**
@@ -5073,12 +6071,16 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### FeatureView.set_grid_dim
+
 
 **`FeatureView.set_grid_dim(self, grid_dim)`**
 
 Change the grid dim dynamically.
 
 ---
+
+#### FeatureView.set_state
 
 
 **`FeatureView.set_state(self, state)`**
@@ -5091,12 +6093,16 @@ May be overriden.
 
 ---
 
+#### FeatureView.set_status
+
 
 **`FeatureView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### FeatureView.show
 
 
 **`FeatureView.show(self)`**
@@ -5105,12 +6111,16 @@ Show the underlying canvas.
 
 ---
 
+#### FeatureView.toggle_auto_update
+
 
 **`FeatureView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### FeatureView.toggle_automatic_channel_selection
 
 
 **`FeatureView.toggle_automatic_channel_selection(self, checked)`**
@@ -5119,6 +6129,8 @@ Toggle the automatic selection of channels when the cluster selection changes.
 
 ---
 
+#### FeatureView.marker_size
+
 
 **`FeatureView.marker_size`**
 
@@ -5126,12 +6138,16 @@ Size of the spike markers, in pixels.
 
 ---
 
+#### FeatureView.scaling
+
 
 **`FeatureView.scaling`**
 
 Scaling of the features.
 
 ---
+
+#### FeatureView.state
 
 
 **`FeatureView.state`**
@@ -5154,12 +6170,16 @@ and some text. To be overriden.
 
 ---
 
+#### HistogramView.attach
+
 
 **`HistogramView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### HistogramView.close
 
 
 **`HistogramView.close(self)`**
@@ -5168,12 +6188,16 @@ Close the underlying canvas.
 
 ---
 
+#### HistogramView.decrease
+
 
 **`HistogramView.decrease(self)`**
 
 Decrease the histogram range on the x avis.
 
 ---
+
+#### HistogramView.increase
 
 
 **`HistogramView.increase(self)`**
@@ -5182,6 +6206,8 @@ Increase the histogram range on the x avis.
 
 ---
 
+#### HistogramView.on_mouse_wheel
+
 
 **`HistogramView.on_mouse_wheel(self, e)`**
 
@@ -5189,12 +6215,16 @@ Change the scaling with the wheel.
 
 ---
 
+#### HistogramView.on_select
+
 
 **`HistogramView.on_select(self, cluster_ids=(), **kwargs)`**
 
 Update the view with the selected clusters.
 
 ---
+
+#### HistogramView.screenshot
 
 
 **`HistogramView.screenshot(self, dir=None)`**
@@ -5204,12 +6234,16 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### HistogramView.set_n_bins
+
 
 **`HistogramView.set_n_bins(self, n_bins)`**
 
 Set the number of bins in the histogram.
 
 ---
+
+#### HistogramView.set_state
 
 
 **`HistogramView.set_state(self, state)`**
@@ -5222,12 +6256,16 @@ May be overriden.
 
 ---
 
+#### HistogramView.set_status
+
 
 **`HistogramView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### HistogramView.set_x_max
 
 
 **`HistogramView.set_x_max(self, x_max)`**
@@ -5236,6 +6274,8 @@ Set the maximum value on the x axis for the histogram.
 
 ---
 
+#### HistogramView.show
+
 
 **`HistogramView.show(self)`**
 
@@ -5243,12 +6283,16 @@ Show the underlying canvas.
 
 ---
 
+#### HistogramView.toggle_auto_update
+
 
 **`HistogramView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### HistogramView.state
 
 
 **`HistogramView.state`**
@@ -5274,6 +6318,8 @@ Typical property objects:
 
 ---
 
+#### ManualClusteringView.attach
+
 
 **`ManualClusteringView.attach(self, gui)`**
 
@@ -5289,12 +6335,16 @@ Perform the following:
 
 ---
 
+#### ManualClusteringView.close
+
 
 **`ManualClusteringView.close(self)`**
 
 Close the underlying canvas.
 
 ---
+
+#### ManualClusteringView.on_mouse_wheel
 
 
 **`ManualClusteringView.on_mouse_wheel(self, e)`**
@@ -5303,12 +6353,16 @@ Change the scaling with the wheel.
 
 ---
 
+#### ManualClusteringView.on_select
+
 
 **`ManualClusteringView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Callback functions when clusters are selected. To be overriden.
 
 ---
+
+#### ManualClusteringView.screenshot
 
 
 **`ManualClusteringView.screenshot(self, dir=None)`**
@@ -5317,6 +6371,8 @@ Save a PNG screenshot of the view into a given directory. By default, the screen
 are saved in `~/.phy/screenshots/`.
 
 ---
+
+#### ManualClusteringView.set_state
 
 
 **`ManualClusteringView.set_state(self, state)`**
@@ -5329,12 +6385,16 @@ May be overriden.
 
 ---
 
+#### ManualClusteringView.set_status
+
 
 **`ManualClusteringView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### ManualClusteringView.show
 
 
 **`ManualClusteringView.show(self)`**
@@ -5343,12 +6403,16 @@ Show the underlying canvas.
 
 ---
 
+#### ManualClusteringView.toggle_auto_update
+
 
 **`ManualClusteringView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### ManualClusteringView.state
 
 
 **`ManualClusteringView.state`**
@@ -5374,6 +6438,8 @@ where the selected clusters belong.
 
 ---
 
+#### ProbeView.attach
+
 
 **`ProbeView.attach(self, gui)`**
 
@@ -5389,12 +6455,16 @@ Perform the following:
 
 ---
 
+#### ProbeView.close
+
 
 **`ProbeView.close(self)`**
 
 Close the underlying canvas.
 
 ---
+
+#### ProbeView.on_mouse_wheel
 
 
 **`ProbeView.on_mouse_wheel(self, e)`**
@@ -5403,12 +6473,16 @@ Change the scaling with the wheel.
 
 ---
 
+#### ProbeView.on_select
+
 
 **`ProbeView.on_select(self, cluster_ids=(), **kwargs)`**
 
 Update the view with the selected clusters.
 
 ---
+
+#### ProbeView.screenshot
 
 
 **`ProbeView.screenshot(self, dir=None)`**
@@ -5417,6 +6491,8 @@ Save a PNG screenshot of the view into a given directory. By default, the screen
 are saved in `~/.phy/screenshots/`.
 
 ---
+
+#### ProbeView.set_state
 
 
 **`ProbeView.set_state(self, state)`**
@@ -5429,12 +6505,16 @@ May be overriden.
 
 ---
 
+#### ProbeView.set_status
+
 
 **`ProbeView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### ProbeView.show
 
 
 **`ProbeView.show(self)`**
@@ -5443,12 +6523,16 @@ Show the underlying canvas.
 
 ---
 
+#### ProbeView.toggle_auto_update
+
 
 **`ProbeView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### ProbeView.state
 
 
 **`ProbeView.state`**
@@ -5479,12 +6563,16 @@ This view shows a raster plot of all clusters.
 
 ---
 
+#### RasterView.attach
+
 
 **`RasterView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### RasterView.close
 
 
 **`RasterView.close(self)`**
@@ -5493,12 +6581,16 @@ Close the underlying canvas.
 
 ---
 
+#### RasterView.decrease
+
 
 **`RasterView.decrease(self)`**
 
 Decrease the marker size.
 
 ---
+
+#### RasterView.increase
 
 
 **`RasterView.increase(self)`**
@@ -5507,12 +6599,16 @@ Increase the marker size.
 
 ---
 
+#### RasterView.on_mouse_click
+
 
 **`RasterView.on_mouse_click(self, e)`**
 
 Select a cluster by clicking in the raster plot.
 
 ---
+
+#### RasterView.on_mouse_wheel
 
 
 **`RasterView.on_mouse_wheel(self, e)`**
@@ -5521,6 +6617,8 @@ Change the scaling with the wheel.
 
 ---
 
+#### RasterView.on_select
+
 
 **`RasterView.on_select(self, cluster_ids=(), **kwargs)`**
 
@@ -5528,12 +6626,16 @@ Update the view with the selected clusters.
 
 ---
 
+#### RasterView.plot
+
 
 **`RasterView.plot(self)`**
 
 Make the raster plot.
 
 ---
+
+#### RasterView.screenshot
 
 
 **`RasterView.screenshot(self, dir=None)`**
@@ -5543,6 +6645,8 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### RasterView.set_cluster_ids
+
 
 **`RasterView.set_cluster_ids(self, cluster_ids)`**
 
@@ -5550,12 +6654,16 @@ Set the shown clusters, which can be filtered and in any order (from top to bott
 
 ---
 
+#### RasterView.set_spike_clusters
+
 
 **`RasterView.set_spike_clusters(self, spike_clusters)`**
 
 Set the spike clusters for all spikes.
 
 ---
+
+#### RasterView.set_state
 
 
 **`RasterView.set_state(self, state)`**
@@ -5568,12 +6676,16 @@ May be overriden.
 
 ---
 
+#### RasterView.set_status
+
 
 **`RasterView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### RasterView.show
 
 
 **`RasterView.show(self)`**
@@ -5582,12 +6694,16 @@ Show the underlying canvas.
 
 ---
 
+#### RasterView.toggle_auto_update
+
 
 **`RasterView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### RasterView.update_cluster_sort
 
 
 **`RasterView.update_cluster_sort(self, cluster_ids)`**
@@ -5596,12 +6712,16 @@ Update the order of all clusters.
 
 ---
 
+#### RasterView.update_color
+
 
 **`RasterView.update_color(self, selected_clusters=None)`**
 
 Update the color of the spikes, depending on the selected clustersd.
 
 ---
+
+#### RasterView.data_bounds
 
 
 **`RasterView.data_bounds`**
@@ -5610,12 +6730,16 @@ Bounds of the raster plot view.
 
 ---
 
+#### RasterView.marker_size
+
 
 **`RasterView.marker_size`**
 
 Size of the spike markers, in pixels.
 
 ---
+
+#### RasterView.state
 
 
 **`RasterView.state`**
@@ -5637,6 +6761,8 @@ This view displays a scatter plot for all selected clusters.
 
 ---
 
+#### ScatterView.attach
+
 
 **`ScatterView.attach(self, gui)`**
 
@@ -5652,12 +6778,16 @@ Perform the following:
 
 ---
 
+#### ScatterView.close
+
 
 **`ScatterView.close(self)`**
 
 Close the underlying canvas.
 
 ---
+
+#### ScatterView.decrease
 
 
 **`ScatterView.decrease(self)`**
@@ -5666,12 +6796,16 @@ Decrease the marker size.
 
 ---
 
+#### ScatterView.increase
+
 
 **`ScatterView.increase(self)`**
 
 Increase the marker size.
 
 ---
+
+#### ScatterView.on_mouse_wheel
 
 
 **`ScatterView.on_mouse_wheel(self, e)`**
@@ -5680,12 +6814,16 @@ Change the scaling with the wheel.
 
 ---
 
+#### ScatterView.on_request_split
+
 
 **`ScatterView.on_request_split(self, sender=None)`**
 
 Return the spikes enclosed by the lasso.
 
 ---
+
+#### ScatterView.on_select
 
 
 **`ScatterView.on_select(self, cluster_ids=(), **kwargs)`**
@@ -5694,6 +6832,8 @@ Update the view with the selected clusters.
 
 ---
 
+#### ScatterView.screenshot
+
 
 **`ScatterView.screenshot(self, dir=None)`**
 
@@ -5701,6 +6841,8 @@ Save a PNG screenshot of the view into a given directory. By default, the screen
 are saved in `~/.phy/screenshots/`.
 
 ---
+
+#### ScatterView.set_state
 
 
 **`ScatterView.set_state(self, state)`**
@@ -5713,12 +6855,16 @@ May be overriden.
 
 ---
 
+#### ScatterView.set_status
+
 
 **`ScatterView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### ScatterView.show
 
 
 **`ScatterView.show(self)`**
@@ -5727,6 +6873,8 @@ Show the underlying canvas.
 
 ---
 
+#### ScatterView.toggle_auto_update
+
 
 **`ScatterView.toggle_auto_update(self, checked)`**
 
@@ -5734,12 +6882,16 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### ScatterView.marker_size
+
 
 **`ScatterView.marker_size`**
 
 Size of the spike markers, in pixels.
 
 ---
+
+#### ScatterView.state
 
 
 **`ScatterView.state`**
@@ -5763,12 +6915,16 @@ in the cluster view.
 
 ---
 
+#### SimilarityView.add
+
 
 **`SimilarityView.add(self, objects)`**
 
 Add objects object to the table.
 
 ---
+
+#### SimilarityView.build
 
 
 **`SimilarityView.build(self, callback=None)`**
@@ -5777,12 +6933,16 @@ Rebuild the HTML code of the widget.
 
 ---
 
+#### SimilarityView.change
+
 
 **`SimilarityView.change(self, objects)`**
 
 Change some objects.
 
 ---
+
+#### SimilarityView.eval_js
 
 
 **`SimilarityView.eval_js(self, expr, callback=None)`**
@@ -5811,12 +6971,16 @@ are transparently converted between Python and Javascript.
 
 ---
 
+#### SimilarityView.filter
+
 
 **`SimilarityView.filter(self, text='')`**
 
 Filter the view with a Javascript expression.
 
 ---
+
+#### SimilarityView.first
 
 
 **`SimilarityView.first(self, callback=None)`**
@@ -5825,12 +6989,16 @@ Select the first item.
 
 ---
 
+#### SimilarityView.get
+
 
 **`SimilarityView.get(self, id, callback=None)`**
 
 Get the object given its id.
 
 ---
+
+#### SimilarityView.get_current_sort
 
 
 **`SimilarityView.get_current_sort(self, callback=None)`**
@@ -5839,12 +7007,16 @@ Get the current sort as a tuple `(name, dir)`.
 
 ---
 
+#### SimilarityView.get_ids
+
 
 **`SimilarityView.get_ids(self, callback=None)`**
 
 Get the list of ids.
 
 ---
+
+#### SimilarityView.get_next_id
 
 
 **`SimilarityView.get_next_id(self, callback=None)`**
@@ -5853,12 +7025,16 @@ Get the next non-skipped row id.
 
 ---
 
+#### SimilarityView.get_previous_id
+
 
 **`SimilarityView.get_previous_id(self, callback=None)`**
 
 Get the previous non-skipped row id.
 
 ---
+
+#### SimilarityView.get_selected
 
 
 **`SimilarityView.get_selected(self, callback=None)`**
@@ -5867,12 +7043,16 @@ Get the currently selected rows.
 
 ---
 
+#### SimilarityView.get_state
+
 
 **`SimilarityView.get_state(self, callback=None)`**
 
 Return the cluster view state, with the current sort.
 
 ---
+
+#### SimilarityView.next
 
 
 **`SimilarityView.next(self, callback=None)`**
@@ -5881,12 +7061,16 @@ Select the next non-skipped row.
 
 ---
 
+#### SimilarityView.previous
+
 
 **`SimilarityView.previous(self, callback=None)`**
 
 Select the previous non-skipped row.
 
 ---
+
+#### SimilarityView.remove
 
 
 **`SimilarityView.remove(self, ids)`**
@@ -5895,12 +7079,16 @@ Remove some objects from their ids.
 
 ---
 
+#### SimilarityView.remove_all
+
 
 **`SimilarityView.remove_all(self)`**
 
 Remove all rows in the table.
 
 ---
+
+#### SimilarityView.remove_all_and_add
 
 
 **`SimilarityView.remove_all_and_add(self, objects)`**
@@ -5909,12 +7097,16 @@ Remove all rows in the table and add new objects.
 
 ---
 
+#### SimilarityView.reset
+
 
 **`SimilarityView.reset(self, cluster_ids)`**
 
 Recreate the similarity view, given the selected clusters in the cluster view.
 
 ---
+
+#### SimilarityView.select
 
 
 **`SimilarityView.select(self, ids, callback=None, **kwargs)`**
@@ -5927,6 +7119,8 @@ rows directly in the HTML view.
 
 ---
 
+#### SimilarityView.set_busy
+
 
 **`SimilarityView.set_busy(self, busy)`**
 
@@ -5934,12 +7128,16 @@ Set the busy state of the GUI.
 
 ---
 
+#### SimilarityView.set_html
+
 
 **`SimilarityView.set_html(self, html, callback=None)`**
 
 Set the HTML code.
 
 ---
+
+#### SimilarityView.set_selected_index_offset
 
 
 **`SimilarityView.set_selected_index_offset(self, n)`**
@@ -5949,6 +7147,8 @@ view.
 
 ---
 
+#### SimilarityView.set_state
+
 
 **`SimilarityView.set_state(self, state)`**
 
@@ -5956,12 +7156,16 @@ Set the cluster view state, with a specified sort.
 
 ---
 
+#### SimilarityView.sort_by
+
 
 **`SimilarityView.sort_by(self, name, sort_dir='asc')`**
 
 Sort by a given variable.
 
 ---
+
+#### SimilarityView.view_source
 
 
 **`SimilarityView.view_source(self, callback=None)`**
@@ -6027,12 +7231,16 @@ When this component is attached to a GUI, the following events are emitted:
 
 ---
 
+#### Supervisor.attach
+
 
 **`Supervisor.attach(self, gui)`**
 
 Attach to the GUI.
 
 ---
+
+#### Supervisor.block
 
 
 **`Supervisor.block(self)`**
@@ -6043,6 +7251,8 @@ Only used in the automated testing suite.
 
 ---
 
+#### Supervisor.change_color_field
+
 
 **`Supervisor.change_color_field(self, color_field)`**
 
@@ -6051,12 +7261,16 @@ colormap).
 
 ---
 
+#### Supervisor.change_colormap
+
 
 **`Supervisor.change_colormap(self, colormap)`**
 
 Change the colormap.
 
 ---
+
+#### Supervisor.filter
 
 
 **`Supervisor.filter(self, text)`**
@@ -6065,12 +7279,16 @@ Filter the clusters using a Javascript expression on the column names.
 
 ---
 
+#### Supervisor.get_labels
+
 
 **`Supervisor.get_labels(self, field)`**
 
 Return the labels of all clusters, for a given label name.
 
 ---
+
+#### Supervisor.is_dirty
 
 
 **`Supervisor.is_dirty(self)`**
@@ -6079,12 +7297,16 @@ Return whether there are any pending changes.
 
 ---
 
+#### Supervisor.label
+
 
 **`Supervisor.label(self, name, value, cluster_ids=None)`**
 
 Assign a label to some clusters.
 
 ---
+
+#### Supervisor.merge
 
 
 **`Supervisor.merge(self, cluster_ids=None, to=None)`**
@@ -6093,12 +7315,16 @@ Merge the selected clusters.
 
 ---
 
+#### Supervisor.move
+
 
 **`Supervisor.move(self, group, which)`**
 
 Assign a cluster group to some clusters.
 
 ---
+
+#### Supervisor.n_spikes
 
 
 **`Supervisor.n_spikes(self, cluster_id)`**
@@ -6107,12 +7333,16 @@ Number of spikes in a given cluster.
 
 ---
 
+#### Supervisor.next
+
 
 **`Supervisor.next(self, callback=None)`**
 
 Select the next cluster in the similarity view.
 
 ---
+
+#### Supervisor.next_best
 
 
 **`Supervisor.next_best(self, callback=None)`**
@@ -6121,12 +7351,16 @@ Select the next best cluster in the cluster view.
 
 ---
 
+#### Supervisor.previous
+
 
 **`Supervisor.previous(self, callback=None)`**
 
 Select the previous cluster in the similarity view.
 
 ---
+
+#### Supervisor.previous_best
 
 
 **`Supervisor.previous_best(self, callback=None)`**
@@ -6135,6 +7369,8 @@ Select the previous best cluster in the cluster view.
 
 ---
 
+#### Supervisor.redo
+
 
 **`Supervisor.redo(self)`**
 
@@ -6142,12 +7378,16 @@ Undo the last undone action.
 
 ---
 
+#### Supervisor.reset_wizard
+
 
 **`Supervisor.reset_wizard(self, callback=None)`**
 
 Reset the wizard.
 
 ---
+
+#### Supervisor.save
 
 
 **`Supervisor.save(self)`**
@@ -6159,12 +7399,16 @@ It is up to the caller to react to this event and save the data to disk.
 
 ---
 
+#### Supervisor.select
+
 
 **`Supervisor.select(self, *cluster_ids, callback=None)`**
 
 Select a list of clusters.
 
 ---
+
+#### Supervisor.sort
 
 
 **`Supervisor.sort(self, column, sort_dir='desc')`**
@@ -6173,12 +7417,16 @@ Sort the cluster view by a given column, in a given order (asc or desc).
 
 ---
 
+#### Supervisor.split
+
 
 **`Supervisor.split(self, spike_ids=None, spike_clusters_rel=0)`**
 
 Make a new cluster out of the specified spikes.
 
 ---
+
+#### Supervisor.toggle_categorical_colormap
 
 
 **`Supervisor.toggle_categorical_colormap(self, checked)`**
@@ -6187,12 +7435,16 @@ Use a categorical or continuous colormap.
 
 ---
 
+#### Supervisor.toggle_logarithmic_colormap
+
 
 **`Supervisor.toggle_logarithmic_colormap(self, checked)`**
 
 Use a logarithmic transform or not for the colormap.
 
 ---
+
+#### Supervisor.undo
 
 
 **`Supervisor.undo(self)`**
@@ -6201,12 +7453,16 @@ Undo the last action.
 
 ---
 
+#### Supervisor.cluster_info
+
 
 **`Supervisor.cluster_info`**
 
 The cluster view table as a list of per-cluster dictionaries.
 
 ---
+
+#### Supervisor.fields
 
 
 **`Supervisor.fields`**
@@ -6215,12 +7471,16 @@ List of all cluster label names.
 
 ---
 
+#### Supervisor.selected
+
 
 **`Supervisor.selected`**
 
 Selected clusters in the cluster and similarity views.
 
 ---
+
+#### Supervisor.selected_clusters
 
 
 **`Supervisor.selected_clusters`**
@@ -6229,12 +7489,16 @@ Selected clusters in the cluster view only.
 
 ---
 
+#### Supervisor.selected_similar
+
 
 **`Supervisor.selected_similar`**
 
 Selected clusters in the similarity view only.
 
 ---
+
+#### Supervisor.state
 
 
 **`Supervisor.state`**
@@ -6267,12 +7531,16 @@ This view shows all template waveforms of all clusters in a large grid of shape
 
 ---
 
+#### TemplateView.attach
+
 
 **`TemplateView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### TemplateView.close
 
 
 **`TemplateView.close(self)`**
@@ -6281,12 +7549,16 @@ Close the underlying canvas.
 
 ---
 
+#### TemplateView.decrease
+
 
 **`TemplateView.decrease(self)`**
 
 Decrease the scaling of the template waveforms.
 
 ---
+
+#### TemplateView.increase
 
 
 **`TemplateView.increase(self)`**
@@ -6295,12 +7567,16 @@ Increase the scaling of the template waveforms.
 
 ---
 
+#### TemplateView.on_mouse_click
+
 
 **`TemplateView.on_mouse_click(self, e)`**
 
 Select a cluster by clicking on its template waveform.
 
 ---
+
+#### TemplateView.on_mouse_wheel
 
 
 **`TemplateView.on_mouse_wheel(self, e)`**
@@ -6309,6 +7585,8 @@ Change the scaling with the wheel.
 
 ---
 
+#### TemplateView.on_select
+
 
 **`TemplateView.on_select(self, cluster_ids=(), **kwargs)`**
 
@@ -6316,12 +7594,16 @@ Update the view with the selected clusters.
 
 ---
 
+#### TemplateView.plot
+
 
 **`TemplateView.plot(self)`**
 
 Make the template plot.
 
 ---
+
+#### TemplateView.screenshot
 
 
 **`TemplateView.screenshot(self, dir=None)`**
@@ -6331,12 +7613,16 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### TemplateView.set_cluster_ids
+
 
 **`TemplateView.set_cluster_ids(self, cluster_ids)`**
 
 
 
 ---
+
+#### TemplateView.set_state
 
 
 **`TemplateView.set_state(self, state)`**
@@ -6349,12 +7635,16 @@ May be overriden.
 
 ---
 
+#### TemplateView.set_status
+
 
 **`TemplateView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### TemplateView.show
 
 
 **`TemplateView.show(self)`**
@@ -6363,12 +7653,16 @@ Show the underlying canvas.
 
 ---
 
+#### TemplateView.toggle_auto_update
+
 
 **`TemplateView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### TemplateView.update_cluster_sort
 
 
 **`TemplateView.update_cluster_sort(self, cluster_ids)`**
@@ -6377,6 +7671,8 @@ Update the order of the clusters.
 
 ---
 
+#### TemplateView.update_color
+
 
 **`TemplateView.update_color(self, selected_clusters=None)`**
 
@@ -6384,12 +7680,16 @@ Update the color of the clusters, taking the selected clusters into account.
 
 ---
 
+#### TemplateView.scaling
+
 
 **`TemplateView.scaling`**
 
 Scaling of the template waveforms.
 
 ---
+
+#### TemplateView.state
 
 
 **`TemplateView.state`**
@@ -6432,12 +7732,16 @@ This view shows the raw traces along with spike waveforms.
 
 ---
 
+#### TraceView.attach
+
 
 **`TraceView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### TraceView.close
 
 
 **`TraceView.close(self)`**
@@ -6446,12 +7750,16 @@ Close the underlying canvas.
 
 ---
 
+#### TraceView.decrease
+
 
 **`TraceView.decrease(self)`**
 
 Decrease the scaling of the traces.
 
 ---
+
+#### TraceView.go_left
 
 
 **`TraceView.go_left(self)`**
@@ -6460,12 +7768,16 @@ Go to left.
 
 ---
 
+#### TraceView.go_right
+
 
 **`TraceView.go_right(self)`**
 
 Go to right.
 
 ---
+
+#### TraceView.go_to
 
 
 **`TraceView.go_to(self, time)`**
@@ -6474,12 +7786,16 @@ Go to a specific time (in seconds).
 
 ---
 
+#### TraceView.go_to_next_spike
+
 
 **`TraceView.go_to_next_spike(self)`**
 
 Jump to the next spike from the first selected cluster.
 
 ---
+
+#### TraceView.go_to_previous_spike
 
 
 **`TraceView.go_to_previous_spike(self)`**
@@ -6488,12 +7804,16 @@ Jump to the previous spike from the first selected cluster.
 
 ---
 
+#### TraceView.increase
+
 
 **`TraceView.increase(self)`**
 
 Increase the scaling of the traces.
 
 ---
+
+#### TraceView.narrow
 
 
 **`TraceView.narrow(self)`**
@@ -6502,12 +7822,16 @@ Decrease the interval size.
 
 ---
 
+#### TraceView.on_mouse_click
+
 
 **`TraceView.on_mouse_click(self, e)`**
 
 Select a cluster by clicking on a spike.
 
 ---
+
+#### TraceView.on_mouse_wheel
 
 
 **`TraceView.on_mouse_wheel(self, e)`**
@@ -6516,12 +7840,16 @@ Change the scaling with the wheel.
 
 ---
 
+#### TraceView.on_select
+
 
 **`TraceView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Update the view with the selected clusters.
 
 ---
+
+#### TraceView.screenshot
 
 
 **`TraceView.screenshot(self, dir=None)`**
@@ -6531,12 +7859,16 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### TraceView.set_interval
+
 
 **`TraceView.set_interval(self, interval=None, change_status=True)`**
 
 Display the traces and spikes in a given interval.
 
 ---
+
+#### TraceView.set_state
 
 
 **`TraceView.set_state(self, state)`**
@@ -6549,12 +7881,16 @@ May be overriden.
 
 ---
 
+#### TraceView.set_status
+
 
 **`TraceView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### TraceView.shift
 
 
 **`TraceView.shift(self, delay)`**
@@ -6563,12 +7899,16 @@ Shift the interval by a given delay (in seconds).
 
 ---
 
+#### TraceView.show
+
 
 **`TraceView.show(self)`**
 
 Show the underlying canvas.
 
 ---
+
+#### TraceView.toggle_auto_update
 
 
 **`TraceView.toggle_auto_update(self, checked)`**
@@ -6577,12 +7917,16 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### TraceView.toggle_highlighted_spikes
+
 
 **`TraceView.toggle_highlighted_spikes(self, checked)`**
 
 Toggle between showing all spikes or selected spikes.
 
 ---
+
+#### TraceView.toggle_show_labels
 
 
 **`TraceView.toggle_show_labels(self, checked)`**
@@ -6591,12 +7935,16 @@ Toggle the display of the channel ids.
 
 ---
 
+#### TraceView.widen
+
 
 **`TraceView.widen(self)`**
 
 Increase the interval size.
 
 ---
+
+#### TraceView.half_duration
 
 
 **`TraceView.half_duration`**
@@ -6605,12 +7953,16 @@ Half of the duration of the current interval.
 
 ---
 
+#### TraceView.interval
+
 
 **`TraceView.interval`**
 
 Interval as `(tmin, tmax)`.
 
 ---
+
+#### TraceView.origin
 
 
 **`TraceView.origin`**
@@ -6620,12 +7972,16 @@ bottom to top (`bottom`).
 
 ---
 
+#### TraceView.scaling
+
 
 **`TraceView.scaling`**
 
 Scaling of the traces.
 
 ---
+
+#### TraceView.stacked
 
 
 **`TraceView.stacked`**
@@ -6634,6 +7990,8 @@ Scaling of the traces.
 
 ---
 
+#### TraceView.state
+
 
 **`TraceView.state`**
 
@@ -6641,6 +7999,8 @@ View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
 
 ---
+
+#### TraceView.time
 
 
 **`TraceView.time`**
@@ -6689,6 +8049,8 @@ action. It is passed to event callbacks that react to these changes. Derive from
 
 ---
 
+#### UpdateInfo.copy
+
 
 **`UpdateInfo.copy(self)`**
 
@@ -6718,12 +8080,16 @@ following the probe geometry.
 
 ---
 
+#### WaveformView.attach
+
 
 **`WaveformView.attach(self, gui)`**
 
 Attach the view to the GUI.
 
 ---
+
+#### WaveformView.close
 
 
 **`WaveformView.close(self)`**
@@ -6732,12 +8098,16 @@ Close the underlying canvas.
 
 ---
 
+#### WaveformView.decrease
+
 
 **`WaveformView.decrease(self)`**
 
 Decrease the vertical scaling of the waveforms.
 
 ---
+
+#### WaveformView.extend_horizontally
 
 
 **`WaveformView.extend_horizontally(self)`**
@@ -6746,12 +8116,16 @@ Increase the horizontal scaling of the probe.
 
 ---
 
+#### WaveformView.extend_vertically
+
 
 **`WaveformView.extend_vertically(self)`**
 
 Increase the vertical scaling of the waveforms.
 
 ---
+
+#### WaveformView.increase
 
 
 **`WaveformView.increase(self)`**
@@ -6760,12 +8134,16 @@ Increase the vertical scaling of the waveforms.
 
 ---
 
+#### WaveformView.narrow
+
 
 **`WaveformView.narrow(self)`**
 
 Decrease the horizontal scaling of the waveforms.
 
 ---
+
+#### WaveformView.on_mouse_click
 
 
 **`WaveformView.on_mouse_click(self, e)`**
@@ -6774,12 +8152,16 @@ Select a channel by clicking on a box in the waveform view.
 
 ---
 
+#### WaveformView.on_mouse_wheel
+
 
 **`WaveformView.on_mouse_wheel(self, e)`**
 
 Change the scaling with the wheel.
 
 ---
+
+#### WaveformView.on_select
 
 
 **`WaveformView.on_select(self, cluster_ids=(), **kwargs)`**
@@ -6788,6 +8170,8 @@ Update the view with the selected clusters.
 
 ---
 
+#### WaveformView.screenshot
+
 
 **`WaveformView.screenshot(self, dir=None)`**
 
@@ -6795,6 +8179,8 @@ Save a PNG screenshot of the view into a given directory. By default, the screen
 are saved in `~/.phy/screenshots/`.
 
 ---
+
+#### WaveformView.set_state
 
 
 **`WaveformView.set_state(self, state)`**
@@ -6807,12 +8193,16 @@ May be overriden.
 
 ---
 
+#### WaveformView.set_status
+
 
 **`WaveformView.set_status(self, message=None)`**
 
 Set the status bar message in the GUI.
 
 ---
+
+#### WaveformView.show
 
 
 **`WaveformView.show(self)`**
@@ -6821,12 +8211,16 @@ Show the underlying canvas.
 
 ---
 
+#### WaveformView.shrink_horizontally
+
 
 **`WaveformView.shrink_horizontally(self)`**
 
 Decrease the horizontal scaling of the waveforms.
 
 ---
+
+#### WaveformView.shrink_vertically
 
 
 **`WaveformView.shrink_vertically(self)`**
@@ -6835,12 +8229,16 @@ Decrease the vertical scaling of the waveforms.
 
 ---
 
+#### WaveformView.toggle_auto_update
+
 
 **`WaveformView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
 
 ---
+
+#### WaveformView.toggle_show_labels
 
 
 **`WaveformView.toggle_show_labels(self, checked)`**
@@ -6849,12 +8247,16 @@ Whether to show the channel ids or not.
 
 ---
 
+#### WaveformView.toggle_waveform_overlap
+
 
 **`WaveformView.toggle_waveform_overlap(self, checked)`**
 
 Toggle the overlap of the waveforms.
 
 ---
+
+#### WaveformView.widen
 
 
 **`WaveformView.widen(self)`**
@@ -6863,12 +8265,16 @@ Increase the horizontal scaling of the waveforms.
 
 ---
 
+#### WaveformView.box_scaling
+
 
 **`WaveformView.box_scaling`**
 
 Scaling of the channel boxes.
 
 ---
+
+#### WaveformView.boxed
 
 
 **`WaveformView.boxed`**
@@ -6877,6 +8283,8 @@ Layout instance.
 
 ---
 
+#### WaveformView.overlap
+
 
 **`WaveformView.overlap`**
 
@@ -6884,12 +8292,16 @@ Whether to overlap the waveforms belonging to different clusters.
 
 ---
 
+#### WaveformView.probe_scaling
+
 
 **`WaveformView.probe_scaling`**
 
 Scaling of the entire probe.
 
 ---
+
+#### WaveformView.state
 
 
 **`WaveformView.state`**
@@ -6905,12 +8317,16 @@ Template GUI.
 
 ---
 
+#### phy.apps.template.template_describe
+
 
 **`phy.apps.template.template_describe(params_path)`**
 
 Describe a template dataset.
 
 ---
+
+#### phy.apps.template.template_gui
 
 
 **`phy.apps.template.template_gui(params_path)`**
@@ -6940,12 +8356,16 @@ Controller for the Template GUI.
 
 ---
 
+#### TemplateController.create_amplitude_view
+
 
 **`TemplateController.create_amplitude_view(self)`**
 
 Create an amplitude view.
 
 ---
+
+#### TemplateController.create_correlogram_view
 
 
 **`TemplateController.create_correlogram_view(self)`**
@@ -6954,12 +8374,16 @@ Create a correlogram view.
 
 ---
 
+#### TemplateController.create_feature_view
+
 
 **`TemplateController.create_feature_view(self)`**
 
 
 
 ---
+
+#### TemplateController.create_gui
 
 
 **`TemplateController.create_gui(self, default_views=None, **kwargs)`**
@@ -6975,12 +8399,16 @@ Create the template GUI.
 
 ---
 
+#### TemplateController.create_ipython_view
+
 
 **`TemplateController.create_ipython_view(self)`**
 
 Create an IPython View.
 
 ---
+
+#### TemplateController.create_probe_view
 
 
 **`TemplateController.create_probe_view(self)`**
@@ -6989,12 +8417,16 @@ Create a probe view.
 
 ---
 
+#### TemplateController.create_raster_view
+
 
 **`TemplateController.create_raster_view(self)`**
 
 Create a raster view.
 
 ---
+
+#### TemplateController.create_template_feature_view
 
 
 **`TemplateController.create_template_feature_view(self)`**
@@ -7003,12 +8435,16 @@ Create a raster view.
 
 ---
 
+#### TemplateController.create_template_view
+
 
 **`TemplateController.create_template_view(self)`**
 
 Create a template view.
 
 ---
+
+#### TemplateController.create_trace_view
 
 
 **`TemplateController.create_trace_view(self)`**
@@ -7017,12 +8453,16 @@ Create a trace view.
 
 ---
 
+#### TemplateController.create_waveform_view
+
 
 **`TemplateController.create_waveform_view(self)`**
 
 
 
 ---
+
+#### TemplateController.get_amplitude_histogram
 
 
 **`TemplateController.get_amplitude_histogram(self, cluster_id)`**
@@ -7031,12 +8471,16 @@ Return the spike amplitude data of a cluster.
 
 ---
 
+#### TemplateController.get_amplitudes
+
 
 **`TemplateController.get_amplitudes(self, cluster_ids, load_all=False)`**
 
 Get the spike amplitudes for a set of clusters.
 
 ---
+
+#### TemplateController.get_best_channel
 
 
 **`TemplateController.get_best_channel(self, cluster_id)`**
@@ -7045,12 +8489,16 @@ Return the best channel of a given cluster.
 
 ---
 
+#### TemplateController.get_best_channels
+
 
 **`TemplateController.get_best_channels(self, cluster_id)`**
 
 Return the best channels of a given cluster.
 
 ---
+
+#### TemplateController.get_cluster_amplitude
 
 
 **`TemplateController.get_cluster_amplitude(self, cluster_id)`**
@@ -7059,12 +8507,16 @@ Get the template waveform amplitude of a cluster.
 
 ---
 
+#### TemplateController.get_correlograms
+
 
 **`TemplateController.get_correlograms(self, cluster_ids, bin_size, window_size)`**
 
 Return the cross- and auto-correlograms of a set of clusters.
 
 ---
+
+#### TemplateController.get_correlograms_rate
 
 
 **`TemplateController.get_correlograms_rate(self, cluster_ids, bin_size)`**
@@ -7073,12 +8525,16 @@ Return the baseline firing rate of the cross- and auto-correlograms of clusters.
 
 ---
 
+#### TemplateController.get_features
+
 
 **`TemplateController.get_features(self, cluster_id=None, channel_ids=None, load_all=None)`**
 
 Return the features of a given cluster on specified channels.
 
 ---
+
+#### TemplateController.get_firing_rate
 
 
 **`TemplateController.get_firing_rate(self, cluster_id)`**
@@ -7087,12 +8543,16 @@ Return the firing rate data of a cluster.
 
 ---
 
+#### TemplateController.get_isi
+
 
 **`TemplateController.get_isi(self, cluster_id)`**
 
 Return the ISI data of a cluster.
 
 ---
+
+#### TemplateController.get_mean_firing_rate
 
 
 **`TemplateController.get_mean_firing_rate(self, cluster_id)`**
@@ -7101,12 +8561,16 @@ Return the mean firing rate of a cluster.
 
 ---
 
+#### TemplateController.get_mean_waveforms
+
 
 **`TemplateController.get_mean_waveforms(self, cluster_id)`**
 
 Get the mean waveform of a cluster on its best channels.
 
 ---
+
+#### TemplateController.get_probe_depth
 
 
 **`TemplateController.get_probe_depth(self, cluster_id)`**
@@ -7115,12 +8579,16 @@ Return the depth of a cluster.
 
 ---
 
+#### TemplateController.get_spike_ids
+
 
 **`TemplateController.get_spike_ids(self, cluster_id=None, load_all=None)`**
 
 Return some or all spikes belonging to a given cluster.
 
 ---
+
+#### TemplateController.get_spike_times
 
 
 **`TemplateController.get_spike_times(self, cluster_id=None, load_all=None)`**
@@ -7129,12 +8597,16 @@ Return the times of some or all spikes belonging to a given cluster.
 
 ---
 
+#### TemplateController.get_template_counts
+
 
 **`TemplateController.get_template_counts(self, cluster_id)`**
 
 Return a histogram of the number of spikes in each template for a given cluster.
 
 ---
+
+#### TemplateController.get_template_features
 
 
 **`TemplateController.get_template_features(self, cluster_ids, load_all=None)`**
@@ -7143,12 +8615,16 @@ Get the template features of a pair of clusters.
 
 ---
 
+#### TemplateController.get_template_for_cluster
+
 
 **`TemplateController.get_template_for_cluster(self, cluster_id)`**
 
 Return the largest template associated to a cluster.
 
 ---
+
+#### TemplateController.get_template_waveforms
 
 
 **`TemplateController.get_template_waveforms(self, cluster_id)`**
@@ -7157,12 +8633,16 @@ Return the waveforms of the templates corresponding to a cluster.
 
 ---
 
+#### TemplateController.get_templates
+
 
 **`TemplateController.get_templates(self, cluster_ids)`**
 
 Get the template waveforms of a set of clusters.
 
 ---
+
+#### TemplateController.get_traces
 
 
 **`TemplateController.get_traces(self, interval, show_all_spikes=False)`**
@@ -7171,12 +8651,16 @@ Get traces and spike waveforms.
 
 ---
 
+#### TemplateController.get_waveforms
+
 
 **`TemplateController.get_waveforms(self, cluster_id)`**
 
 Return a selection of waveforms for a cluster.
 
 ---
+
+#### TemplateController.similarity
 
 
 **`TemplateController.similarity(self, cluster_id)`**
@@ -7219,12 +8703,16 @@ Object holding all data of a KiloSort/phy dataset.
 
 ---
 
+#### TemplateModel.describe
+
 
 **`TemplateModel.describe(self)`**
 
 Display basic information about the dataset.
 
 ---
+
+#### TemplateModel.get_cluster_channels
 
 
 **`TemplateModel.get_cluster_channels(self, cluster_id)`**
@@ -7233,12 +8721,16 @@ Return the most relevant channels of a cluster.
 
 ---
 
+#### TemplateModel.get_cluster_spike_waveforms
+
 
 **`TemplateModel.get_cluster_spike_waveforms(self, cluster_id)`**
 
 Return all spike waveforms of a cluster, on the most relevant channels.
 
 ---
+
+#### TemplateModel.get_cluster_spikes
 
 
 **`TemplateModel.get_cluster_spikes(self, cluster_id)`**
@@ -7247,12 +8739,16 @@ Return the spike ids that belong to a given template.
 
 ---
 
+#### TemplateModel.get_features
+
 
 **`TemplateModel.get_features(self, spike_ids, channel_ids)`**
 
 Return sparse features for given spikes.
 
 ---
+
+#### TemplateModel.get_metadata
 
 
 **`TemplateModel.get_metadata(self, name)`**
@@ -7262,12 +8758,16 @@ field.
 
 ---
 
+#### TemplateModel.get_template
+
 
 **`TemplateModel.get_template(self, template_id, channel_ids=None)`**
 
 Get data about a template.
 
 ---
+
+#### TemplateModel.get_template_channels
 
 
 **`TemplateModel.get_template_channels(self, template_id)`**
@@ -7276,12 +8776,16 @@ Return the most relevant channels of a template.
 
 ---
 
+#### TemplateModel.get_template_features
+
 
 **`TemplateModel.get_template_features(self, spike_ids)`**
 
 Return sparse template features for given spikes.
 
 ---
+
+#### TemplateModel.get_template_spike_waveforms
 
 
 **`TemplateModel.get_template_spike_waveforms(self, template_id)`**
@@ -7290,12 +8794,16 @@ Return all spike waveforms of a template, on the most relevant channels.
 
 ---
 
+#### TemplateModel.get_template_spikes
+
 
 **`TemplateModel.get_template_spikes(self, template_id)`**
 
 Return the spike ids that belong to a given template.
 
 ---
+
+#### TemplateModel.get_template_waveforms
 
 
 **`TemplateModel.get_template_waveforms(self, template_id)`**
@@ -7304,6 +8812,8 @@ Return the waveforms of a template on the most relevant channels.
 
 ---
 
+#### TemplateModel.get_waveforms
+
 
 **`TemplateModel.get_waveforms(self, spike_ids, channel_ids)`**
 
@@ -7311,12 +8821,16 @@ Return spike waveforms on specified channels.
 
 ---
 
+#### TemplateModel.save_mean_waveforms
+
 
 **`TemplateModel.save_mean_waveforms(self, mean_waveforms)`**
 
 Save the mean waveforms as a single array.
 
 ---
+
+#### TemplateModel.save_metadata
 
 
 **`TemplateModel.save_metadata(self, name, values)`**
@@ -7326,12 +8840,16 @@ a TSV file.
 
 ---
 
+#### TemplateModel.save_spike_clusters
+
 
 **`TemplateModel.save_spike_clusters(self, spike_clusters)`**
 
 Save the spike clusters.
 
 ---
+
+#### TemplateModel.metadata_fields
 
 
 **`TemplateModel.metadata_fields`**
