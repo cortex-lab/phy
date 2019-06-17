@@ -162,14 +162,15 @@ class CorrelogramView(ManualClusteringView):
         )
 
         # Display the firing rate in every subplot.
-        for i, j in self._iter_subplots(n):
-            self.label_visual.add_batch_data(
-                pos=[n_bins, fr[i, j]],
-                text='%.2f' % (fr[i, j]),
-                anchor=(-1, 0),
-                box_index=(i, j),
-                data_bounds=(0, 0, n_bins, ylims.get((i, j), None)),
-            )
+        if fr is not None:
+            for i, j in self._iter_subplots(n):
+                self.label_visual.add_batch_data(
+                    pos=[n_bins, fr[i, j]],
+                    text='%.2f' % (fr[i, j]),
+                    anchor=(-1, 0),
+                    box_index=(i, j),
+                    data_bounds=(0, 0, n_bins, ylims.get((i, j), None)),
+                )
 
         self.canvas.update_visual(self.label_visual)
 
@@ -197,6 +198,8 @@ class CorrelogramView(ManualClusteringView):
         if self.firing_rate:
             fr = self.firing_rate(cluster_ids, self.bin_size)
             self._plot_firing_rate(fr, ylims=ylims, n_bins=ccg.shape[2])
+        else:  # pragma: no cover
+            fr = None
 
         self._plot_labels(cluster_ids, fr=fr, ylims=ylims, n_bins=ccg.shape[2])
 
