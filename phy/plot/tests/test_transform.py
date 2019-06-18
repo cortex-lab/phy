@@ -160,8 +160,8 @@ def test_scale_glsl():
 
 
 def test_rotate_glsl():
-    assert 'pos = vec2(-pos.y, pos.x)' in Rotate('cw').glsl('pos')
-    assert 'pos = -vec2(-pos.y, pos.x)' in Rotate('ccw').glsl('pos')
+    assert 'pos = vec2(-pos.y, pos.x)' in Rotate('ccw').glsl('pos')
+    assert 'pos = -vec2(-pos.y, pos.x)' in Rotate('cw').glsl('pos')
 
 
 def test_range_glsl():
