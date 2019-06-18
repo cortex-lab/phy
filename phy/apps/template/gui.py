@@ -909,7 +909,7 @@ class TemplateController(object):
             n = self.n_spikes_amplitudes if not load_all else None
             bunchs = []
             for cluster_id in cluster_ids:
-                spike_ids = self.get_spike_ids(cluster_id=cluster_id, n=n)
+                spike_ids = self.get_spike_ids(cluster_id, n=n)
                 if arr.ndim == 1:
                     x = self.model.spike_times[spike_ids]
                     y = arr[spike_ids]

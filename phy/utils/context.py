@@ -145,13 +145,13 @@ class Context(object):
         cache = self.load_memcache(name)
 
         @wraps(f)
-        def memcached(*args):
+        def memcached(*args, **kwargs):
             """Cache the function in memory."""
             # The arguments need to be hashable. Much faster than using hash().
             h = args
             out = cache.get(h, None)
             if out is None:
-                out = f(*args)
+                out = f(*args, **kwargs)
                 cache[h] = out
             return out
         return memcached
