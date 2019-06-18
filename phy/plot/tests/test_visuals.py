@@ -14,7 +14,7 @@ import numpy as np
 from ..visuals import (
     ScatterVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual, TextVisual,
     ImageVisual, UniformPlotVisual, UniformScatterVisual)
-from ..transform import NDC
+from ..transform import NDC, Rotate
 from phylib.utils.color import _random_color
 
 
@@ -216,6 +216,13 @@ def test_histogram_2(qtbot, canvas_pz):
 
     _test_visual(
         qtbot, canvas_pz, HistogramVisual(), hist=hist, color=c, ylim=2 * np.ones(n_hists))
+
+
+def test_histogram_3(qtbot, canvas_pz):
+    hist = np.random.rand(1, 100)
+    visual = HistogramVisual()
+    visual.transforms.add_on_gpu(Rotate())
+    _test_visual(qtbot, canvas_pz, visual, hist=hist)
 
 
 #------------------------------------------------------------------------------

@@ -249,7 +249,7 @@ class Rotate(BaseTransform):
         """Return a GLSL snippet that applies the rotation to a given GLSL variable name."""
         assert var
         assert self.value in ('cw', 'ccw')
-        m = '-' if self.value == 'ccw' else ''
+        m = '' if self.value == 'ccw' else '-'
         return '''
         {var} = {m}vec2(-{var}.y, {var}.x);  // Rotation transform.
         '''.format(var=var, m=m)
