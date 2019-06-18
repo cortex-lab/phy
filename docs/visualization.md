@@ -59,10 +59,6 @@ The **Cluster view** shows the list of all clusters in your dataset.
 
 ![Cluster view](https://user-images.githubusercontent.com/1942359/58951131-a97b9600-8790-11e9-9765-8b380522417e.png)
 
-#### Definition
-
-A **cluster** is a set of spikes, supposed to correspond to a single neuron. A cluster is identified by a unique integer, the **cluster id**. The cluster id is unique: when the cluster changes (i.e. spikes are removed or added), the cluster id changes.
-
 #### Cluster selection
 
 You can click on one cluster to select it. Select multiple clusters by keeping **Control** or **Shift** pressed. Selected clusters are shown in the different graphical views (detailled below). Clustering actions (merge, split, move, label...) operate on selected clusters.
@@ -257,7 +253,7 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 ### Amplitude view
 
-This view shows the amplitude of a selection of spikes belonging to the selected clusters. The spike amplitudes are stored in `amplitudes.npy`.
+This view shows the amplitude of a selection of spikes belonging to the selected clusters. The amplitudes are stored in `amplitudes.npy`.
 
 The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
 

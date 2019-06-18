@@ -5,6 +5,7 @@ pages:
   - Release notes: 'release.md'
   - Installation: 'installation.md'
 - User guide:
+  - Terminology: 'terminology.md'
   - Interactive visualization: 'visualization.md'
   - Manual clustering: 'clustering.md'
   - Keyboard shortcuts and snippets: 'shortcuts.md'
