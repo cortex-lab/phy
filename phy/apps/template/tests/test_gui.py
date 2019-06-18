@@ -322,5 +322,5 @@ def test_template_amplitude(template_controller):
     controller = template_controller
     s = controller.supervisor
     b = s.merge([31, 51])
-    amp = controller.get_cluster_amplitude(b.added[0])
+    amp = controller.get_template_amplitude(b.added[0])
     assert amp > 0

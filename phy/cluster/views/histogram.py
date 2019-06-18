@@ -30,7 +30,7 @@ class HistogramView(ManualClusteringView):
     -----------
 
     cluster_stat : function
-        Maps `cluster_id` to `Bunch(histogram (1D array), plot (1D array), text)`.
+        Maps `cluster_id` to `Bunch(data (1D array), plot (1D array), text)`.
 
     """
 
@@ -158,6 +158,9 @@ class HistogramView(ManualClusteringView):
         self.actions.add(
             self.set_x_max, alias=self.alias_char + 'm',
             prompt=True, prompt_default=lambda: self.x_max)
+
+    # Histogram parameters
+    # -------------------------------------------------------------------------
 
     def set_n_bins(self, n_bins):
         """Set the number of bins in the histogram."""
