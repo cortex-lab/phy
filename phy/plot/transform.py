@@ -155,7 +155,14 @@ class BaseTransform(object):
 
 
 class Translate(BaseTransform):
-    """Translation transform."""
+    """Translation transform.
+
+    Constructor
+    -----------
+    value : 2-tuple
+        Coordinates of the translation.
+
+    """
 
     def apply(self, arr, value=None):
         """Apply a translation to a NumPy array."""
@@ -180,7 +187,14 @@ class Translate(BaseTransform):
 
 
 class Scale(BaseTransform):
-    """Scaling transform."""
+    """Scaling transform.
+
+    Constructor
+    -----------
+    value : 2-tuple
+        Coordinates of the scaling.
+
+    """
 
     def apply(self, arr, value=None):
         """Apply a scaling to a NumPy array."""
@@ -201,6 +215,52 @@ class Scale(BaseTransform):
             return Scale('1.0 / ' + self.value)
         else:
             return Scale(_inverse(self.value))
+
+
+class Rotate(BaseTransform):
+    """Rotation transform, either +90° CW (default) or +90° CCW.
+
+    Constructor
+    -----------
+    value : str
+        Either `cw` (default) or `ccw`.
+
+    """
+    def __init__(self, value=None):
+        value = value or 'cw'
+        assert value in ('cw', 'ccw')
+        super(Rotate, self).__init__(value=value)
+
+    def apply(self, arr, value=None):
+        """Apply a rotation to a NumPy array."""
+        assert isinstance(arr, np.ndarray)
+        value = value if value is not None else self.value
+        value = value or 'cw'  # clockwise is the default
+        assert value in ('cw', 'ccw')
+        assert arr.ndim == 2
+        assert arr.shape[1] == 2
+        x, y = arr.T
+        if value == 'ccw':
+            return np.c_[-y, x]
+        else:
+            return np.c_[y, -x]
+
+    def glsl(self, var):
+        """Return a GLSL snippet that applies the rotation to a given GLSL variable name."""
+        assert var
+        assert self.value in ('cw', 'ccw')
+        m = '-' if self.value == 'ccw' else ''
+        return '''
+        {var} = {m}vec2(-{var}.y, {var}.x);  // Rotation transform.
+        '''.format(var=var, m=m)
+
+    def inverse(self):
+        """Return the inverse Rotate instance."""
+        assert self.value in ('cw', 'ccw')
+        if self.value == 'ccw':
+            return Rotate('cw')
+        else:
+            return Rotate('ccw')
 
 
 class Range(BaseTransform):

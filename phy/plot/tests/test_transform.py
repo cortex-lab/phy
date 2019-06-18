@@ -14,10 +14,9 @@ from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
-from ..transform import (_glslify, pixels_to_ndc, _normalize,
-                         Translate, Scale, Range, Clip, Subplot,
-                         TransformChain,
-                         )
+from ..transform import (
+    _glslify, pixels_to_ndc, _normalize, Translate, Scale, Rotate, Range, Clip, Subplot,
+    TransformChain)
 
 
 #------------------------------------------------------------------------------
@@ -93,6 +92,12 @@ def test_scale_cpu():
     _check(Scale(np.array([[-1, 2]])).inverse(), [-3, 8], [[3, 4]])
 
 
+def test_rotate_cpu():
+    _check(Rotate(), [1, 0], [[0, -1]])
+    _check(Rotate('ccw'), [0, 1], [[-1, 0]])
+    _check(Rotate().inverse(), [1, 1], [[-1, 1]])
+
+
 def test_range_cpu():
     _check(Range([0, 0, 1, 1], [-1, -1, 1, 1]), [-1, -1], [[-3, -3]])
     _check(Range([0, 0, 1, 1], [-1, -1, 1, 1]), [0, 0], [[-1, -1]])
@@ -152,6 +157,11 @@ def test_translate_glsl():
 def test_scale_glsl():
     assert 'x = x * u_scale' in Scale('u_scale').glsl('x')
     assert 'x = x * 1.0 / u_scale' in Scale('u_scale').inverse().glsl('x')
+
+
+def test_rotate_glsl():
+    assert 'pos = vec2(-pos.y, pos.x)' in Rotate('cw').glsl('pos')
+    assert 'pos = -vec2(-pos.y, pos.x)' in Rotate('ccw').glsl('pos')
 
 
 def test_range_glsl():

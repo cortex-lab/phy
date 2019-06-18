@@ -55,6 +55,8 @@ A lightweight **event system** is implemented in phy. You will likely have to us
 
 Objects in the program may emit **events**. An event has a name and optional parameters. Other objects may subscribe to events by **registering callbacks**. A callback is a function that is called when an event is raised.
 
+Events are raised globally. Every object in the Python process may subscribe a callback function to any event.
+
 
 ### Registering a callback
 
@@ -104,6 +106,7 @@ You can also filter senders directly in the callback function. For example, here
 def on_myevent(sender, arg):
     if not isinstance(sender, AcceptableSender):
         return
+    # Now, process the event as we're sure the sender derives from the AcceptableSender class.
 ```
 
 
