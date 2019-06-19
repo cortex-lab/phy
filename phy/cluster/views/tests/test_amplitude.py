@@ -55,11 +55,16 @@ def test_amplitude_view_2(qtbot, gui):
     v = AmplitudeView(
         amplitudes={
             'amp1': lambda cluster_ids, load_all=False: [Bunch(
-                amp=15 + np.random.randn(n), spike_ids=np.arange(n)) for c in cluster_ids],
+                amp=15 + np.random.randn(n),
+                spike_ids=np.arange(n),
+                spike_times=artificial_spike_samples(n) / 20000.
+            ) for c in cluster_ids],
             'amp2': lambda cluster_ids, load_all=False: [Bunch(
-                amp=10 + np.random.randn(n), spike_ids=np.arange(n)) for c in cluster_ids],
-        },
-        spike_times=artificial_spike_samples(n) / 20000.)
+                amp=10 + np.random.randn(n),
+                spike_ids=np.arange(n),
+                spike_times=artificial_spike_samples(n) / 20000.
+            ) for c in cluster_ids],
+        })
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)

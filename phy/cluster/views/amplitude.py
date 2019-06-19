@@ -56,7 +56,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         'next_amplitude_type': 'a',
     }
 
-    def __init__(self, amplitudes=None, amplitude_name=None, spike_times=None, duration=None):
+    def __init__(self, amplitudes=None, amplitude_name=None, duration=None):
         super(AmplitudeView, self).__init__()
         # Save the marker size in the global and local view's config.
 
@@ -72,9 +72,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.amplitude_name = amplitude_name or self.amplitude_names[0]
         assert self.amplitude_name in amplitudes
 
-        self.spike_times = _as_array(spike_times)
-        assert spike_times is not None
-        self.duration = duration or (spike_times[-1] if len(spike_times) else 1.)
+        self.duration = duration or 1
 
         # Histogram visual.
         self.hist_visual = HistogramVisual()
@@ -102,7 +100,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # Add a pos attribute in bunchs in addition to x and y.
         for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
             spike_ids = _as_array(bunch.spike_ids)
-            spike_times = self.spike_times[spike_ids]
+            spike_times = bunch.spike_times
             amplitudes = _as_array(bunch.amp)
             assert spike_ids.shape == spike_times.shape == amplitudes.shape
             bunch.pos = np.c_[spike_times, amplitudes]
