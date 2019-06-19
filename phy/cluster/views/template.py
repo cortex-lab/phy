@@ -13,19 +13,20 @@ import numpy as np
 
 from phylib.utils.color import _add_selected_clusters_colors
 from phylib.io.array import _index_of
-from phylib.utils import emit, Bunch
+from phylib.utils import emit
+
 from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual
-from .base import ManualClusteringView
+from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
-# Waveform view
+# Template view
 # -----------------------------------------------------------------------------
 
-class TemplateView(ManualClusteringView):
+class TemplateView(ManualClusteringView, ScalingMixin):
     """This view shows all template waveforms of all clusters in a large grid of shape
     `(n_channels, n_clusters)`.
 
@@ -46,8 +47,7 @@ class TemplateView(ManualClusteringView):
     """
     _default_position = 'right'
     cluster_ids = ()
-    _scaling = 1.
-    _scaling_increment = 1.1
+    scaling = 1.
 
     default_shortcuts = {
         'increase': 'ctrl+alt++',
@@ -57,8 +57,6 @@ class TemplateView(ManualClusteringView):
     def __init__(self, templates=None, channel_ids=None, cluster_ids=None,
                  cluster_color_selector=None):
         super(TemplateView, self).__init__()
-        self.state_attrs += ('scaling',)
-        self.local_state_attrs += ('scaling',)
 
         self.cluster_color_selector = cluster_color_selector
         # Full list of channels.
@@ -78,29 +76,21 @@ class TemplateView(ManualClusteringView):
     # Internal plot functions
     # -------------------------------------------------------------------------
 
+    def _iter_clusters(self):
+        """Iterate through all clusters. Yield a tuple (cluster_rel, cluster_idx, cluster_id)."""
+        for i, (cluster_idx, cluster_id) in enumerate(
+                zip(self.cluster_idxs, self.cluster_ids)):
+            yield i, cluster_idx, cluster_id
+
     def _get_data_bounds(self, bunchs):
-        m = np.median([b.template.min() for b in bunchs.values()])
-        M = np.median([b.template.max() for b in bunchs.values()])
+        m = np.median([b.template.min() for b in bunchs])
+        M = np.median([b.template.max() for b in bunchs])
         return [-1, m, +1, M]
 
-    def _get_batch_data(self, bunch, cluster_id, cluster_rel, cluster_idx):
-        """Get the data for a single call to add_batch_data().
-
-        Parameters
-        ----------
-        bunch : Bunch
-        cluster_id : int
-            The cluster unique identifier.
-        cluster_rel : int
-            The cluster relative index (among sorted cluster ids).
-        cluster_idx : int
-            The cluster position in self.cluster_ids. Equal to cluster_rel if self.cluster_ids
-            is sorted.
-
-        """
-        d = bunch
-        wave = d.template  # shape: (n_samples, n_channels)
-        channel_ids_loc = d.channel_ids
+    def _plot_cluster(self, bunch):
+        """Plot one cluster."""
+        wave = bunch.template  # shape: (n_samples, n_channels)
+        channel_ids_loc = bunch.channel_ids
         n_channels_loc = len(channel_ids_loc)
 
         n_samples, nc = wave.shape
@@ -109,33 +99,35 @@ class TemplateView(ManualClusteringView):
         # Find the x coordinates.
         t = get_linear_x(n_channels_loc, n_samples)
 
-        color = self.cluster_colors[cluster_rel]
+        color = self.cluster_colors[bunch.cluster_rel]
         assert len(color) == 4
 
         # Generate the box index (channel_idx, cluster_idx) per vertex.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
         box_index = np.repeat(box_index, n_samples)
         box_index = np.c_[
-            box_index.reshape((-1, 1)), cluster_idx * np.ones((n_samples * n_channels_loc, 1))]
+            box_index.reshape((-1, 1)),
+            bunch.cluster_rel * np.ones((n_samples * n_channels_loc, 1))]
         assert box_index.shape == (n_channels_loc * n_samples, 2)
         assert box_index.size == wave.size * 2
-        self._cluster_box_index[cluster_id] = box_index
+        self._cluster_box_index[bunch.cluster_id] = box_index
 
         # Generate the waveform array.
-        wave = wave.T * (self._scaling or 1.)
+        wave = wave.T * (self.scaling or 1.)
 
-        return Bunch(x=t, y=wave, color=color, box_index=box_index)
+        self.visual.add_batch_data(
+            x=t, y=wave, color=color, box_index=box_index, data_bounds=self.data_bounds)
 
-    def _plot_templates(self, bunchs, data_bounds=None):
-        if not bunchs:
-            return
-        self.visual.reset_batch()
-        # Go through all clusters, ordered by cluster id.
-        for cluster_rel, cluster_idx in enumerate(self.cluster_idxs):
-            cluster_id = self.cluster_ids[cluster_idx]
-            data = self._get_batch_data(bunchs[cluster_id], cluster_id, cluster_rel, cluster_idx)
-            self.visual.add_batch_data(**data, data_bounds=data_bounds)
-        self.canvas.update_visual(self.visual)
+    def get_clusters_data(self, load_all=None):
+        bunchs = self.templates(self.cluster_ids)
+        out = []
+        for cluster_rel, cluster_idx, cluster_id in self._iter_clusters():
+            b = bunchs[cluster_id]
+            b.cluster_rel = cluster_rel
+            b.cluster_idx = cluster_idx
+            b.cluster_id = cluster_id
+            out.append(b)
+        return out
 
     # Main methods
     # -------------------------------------------------------------------------
@@ -198,13 +190,19 @@ class TemplateView(ManualClusteringView):
         """Make the template plot."""
 
         # Retrieve the waveform data.
-        bunchs = self.templates(self.cluster_ids)
+        bunchs = self.get_clusters_data()
+        if not bunchs:
+            return
         n_clusters = len(self.cluster_ids)
         self.canvas.grid.shape = (self.n_channels, n_clusters)
 
-        data_bounds = self._get_data_bounds(bunchs)
-        self._plot_templates(bunchs, data_bounds=data_bounds)
-        self.canvas.axes.reset_data_bounds((0, 0, n_clusters, self.n_channels), do_update=True)
+        self.visual.reset_batch()
+        # Go through all clusters, ordered by cluster id.
+        self.data_bounds = self._get_data_bounds(bunchs)
+        for bunch in bunchs:
+            self._plot_cluster(bunch)
+        self.canvas.update_visual(self.visual)
+        self.canvas.axes.reset_data_bounds((0, 0, n_clusters, self.n_channels))
         self.canvas.update()
 
     def on_mouse_click(self, e):
@@ -216,32 +214,3 @@ class TemplateView(ManualClusteringView):
             cluster_id = self.cluster_ids[cluster_idx]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
             emit('cluster_click', self, cluster_id, button=b)
-
-    def attach(self, gui):
-        """Attach the view to the GUI."""
-        super(TemplateView, self).attach(gui)
-        self.actions.add(self.increase)
-        self.actions.add(self.decrease)
-        self.actions.separator()
-
-    # Template scaling
-    # -------------------------------------------------------------------------
-
-    @property
-    def scaling(self):
-        """Scaling of the template waveforms."""
-        return self._scaling or 1.
-
-    @scaling.setter
-    def scaling(self, value):
-        self._scaling = value
-
-    def increase(self):
-        """Increase the scaling of the template waveforms."""
-        self.scaling *= self._scaling_increment
-        self.plot()
-
-    def decrease(self):
-        """Decrease the scaling of the template waveforms."""
-        self.scaling /= self._scaling_increment
-        self.plot()

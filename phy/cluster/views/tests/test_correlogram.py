@@ -11,6 +11,7 @@ import numpy as np
 from phylib.io.mock import artificial_correlograms
 
 from ..correlogram import CorrelogramView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -53,5 +54,4 @@ def test_correlogram_view(qtbot, gui):
 
     v.set_state(v.state)
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

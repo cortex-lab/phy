@@ -14,11 +14,14 @@ from pathlib import Path
 import sys
 import traceback
 
+import numpy as np
+
 from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils._misc import phy_config_dir
+from phylib.utils.geometry import range_transform
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, screenshot, thread_pool, Worker
-from phy.plot import PlotCanvas
+from phy.plot import PlotCanvas, NDC, extend_bounds
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,15 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 _ENABLE_THREADING = True
+
+
+def _get_bunch_bounds(bunch):
+    """Return the data bounds of a bunch."""
+    if 'data_bounds' in bunch and bunch.data_bounds is not None:
+        return bunch.data_bounds
+    xmin, ymin = bunch.pos.min(axis=0)
+    xmax, ymax = bunch.pos.max(axis=0)
+    return (xmin, ymin, xmax, ymax)
 
 
 class ManualClusteringView(object):
@@ -74,9 +86,54 @@ class ManualClusteringView(object):
         # can override on_mouse_click() and so on.
         self.canvas.attach_events(self)
 
+    # -------------------------------------------------------------------------
+    # Internal methods
+    # -------------------------------------------------------------------------
+
+    def _get_data_bounds(self, bunchs):
+        """Compute the data bounds."""
+        # Return the extended data_bounds if they
+        return extend_bounds([_get_bunch_bounds(bunch) for bunch in bunchs])
+
+    def get_clusters_data(self, load_all=None):
+        """Return a list of Bunch instances, with attributes pos and spike_ids.
+
+        To override.
+
+        """
+        return
+
+    def _plot_cluster(self, bunch):
+        """Plot one cluster.
+
+        To override.
+
+        """
+        pass
+
+    def _update_axes(self):
+        """Update the axes."""
+        self.canvas.axes.reset_data_bounds(self.data_bounds)
+
+    def plot(self, **kwargs):  # pragma: no cover
+        """Update the view with the current cluster selection."""
+        bunchs = self.get_clusters_data()
+        self.data_bounds = self._get_data_bounds(bunchs)
+        for bunch in bunchs:
+            self._plot_cluster(bunch)
+        self._update_axes()
+        self.canvas.update()
+
+    # -------------------------------------------------------------------------
+    # Main public methods
+    # -------------------------------------------------------------------------
+
     def on_select(self, cluster_ids=None, **kwargs):
         """Callback functions when clusters are selected. To be overriden."""
-        pass
+        self.cluster_ids = cluster_ids
+        if not cluster_ids:
+            return
+        self.plot(**kwargs)
 
     def attach(self, gui):
         """Attach the view to the GUI.
@@ -198,13 +255,9 @@ class ManualClusteringView(object):
         def _set_floating():
             self.dock_widget.setFloating(False)
 
-    def on_mouse_wheel(self, e):  # pragma: no cover
-        """Change the scaling with the wheel."""
-        if hasattr(self, 'increase') and hasattr(self, 'decrease') and e.modifiers == ('Control',):
-            if e.delta > 0:
-                self.increase()
-            else:
-                self.decrease()
+    # -------------------------------------------------------------------------
+    # Misc public methods
+    # -------------------------------------------------------------------------
 
     def toggle_auto_update(self, checked):
         """When on, the view is automatically updated when the cluster selection changes."""
@@ -253,3 +306,102 @@ class ManualClusteringView(object):
         """Close the underlying canvas."""
         self.canvas.close()
         gc.collect()
+
+
+# -----------------------------------------------------------------------------
+# Mixins for manual clustering views
+# -----------------------------------------------------------------------------
+
+class ScalingMixin(object):
+    """Implement increase, decrease actions, as well as control+wheel shortcut.
+
+    The scaling parameter, which depends on each view, should be set in `self._scaling_param_name`.
+
+    """
+    _scaling_param_increment = 1.1
+    _scaling_param_min = .01
+    _scaling_param_name = 'scaling'
+
+    def attach(self, gui):
+        super(ScalingMixin, self).attach(gui)
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
+        self.actions.separator()
+
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Change the scaling with the wheel."""
+        if e.modifiers == ('Control',):
+            if e.delta > 0:
+                self.increase()
+            else:
+                self.decrease()
+
+    def increase(self):
+        """Increase the scaling parameter."""
+        value = getattr(self, self._scaling_param_name)
+        setattr(self, self._scaling_param_name, value * self._scaling_param_increment)
+
+    def decrease(self):
+        """Decrease the scaling parameter."""
+        value = getattr(self, self._scaling_param_name)
+        setattr(self, self._scaling_param_name, max(
+            self._scaling_param_min, value / self._scaling_param_increment))
+
+
+class MarkerSizeMixin(ScalingMixin):
+    _marker_size = 5.
+    _scaling_param_name = 'marker_size'
+
+    def __init__(self, *args, **kwargs):
+        super(MarkerSizeMixin, self).__init__(*args, **kwargs)
+        self.state_attrs += ('marker_size',)
+        self.local_state_attrs += ('marker_size',)
+
+    # Marker size
+    # -------------------------------------------------------------------------
+
+    @property
+    def marker_size(self):
+        """Size of the spike markers, in pixels."""
+        return self._marker_size
+
+    @marker_size.setter
+    def marker_size(self, val):
+        assert val > 0
+        self._marker_size = val
+        self.visual.set_marker_size(val)
+        self.canvas.update()
+
+
+class LassoMixin(object):
+    def on_request_split(self, sender=None):
+        """Return the spikes enclosed by the lasso."""
+        if (self.canvas.lasso.count < 3 or not len(self.cluster_ids)):  # pragma: no cover
+            return np.array([], dtype=np.int64)
+
+        # Get all points from all clusters.
+        pos = []
+        spike_ids = []
+
+        # each item is a Bunch with attribute `pos` et `spike_ids`
+        bunchs = self.get_clusters_data(load_all=True)
+        if bunchs is None:
+            return
+        assert len(bunchs) == len(self.cluster_ids)
+        for cluster_id, bunch in zip(self.cluster_ids, bunchs):
+            # Load all spikes.
+            points = np.c_[bunch.pos]
+            pos.append(points)
+            spike_ids.append(bunch.spike_ids)
+        pos = np.vstack(pos)
+        pos = range_transform(self.data_bounds, NDC, pos)
+        spike_ids = np.concatenate(spike_ids)
+
+        # Find lassoed spikes.
+        ind = self.canvas.lasso.in_polygon(pos)
+        self.canvas.lasso.clear()
+        return np.unique(spike_ids[ind])
+
+    def attach(self, gui):
+        super(LassoMixin, self).attach(gui)
+        connect(self.on_request_split)

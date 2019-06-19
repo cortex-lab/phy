@@ -15,6 +15,7 @@ from phylib.utils.geometry import staggered_positions
 from phy.plot.tests import mouse_click, key_press, key_release
 
 from ..waveform import WaveformView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -94,5 +95,4 @@ def test_waveform_view(qtbot, tempdir, gui):
 
     v.set_state(v.state)
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

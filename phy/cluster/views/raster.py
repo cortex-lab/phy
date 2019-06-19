@@ -15,7 +15,7 @@ from phylib.io.array import _unique, _index_of
 from phylib.utils import emit
 from phylib.utils.color import _add_selected_clusters_colors
 
-from .base import ManualClusteringView
+from .base import ManualClusteringView, MarkerSizeMixin
 from phy.plot import NDC
 from phy.plot.visuals import ScatterVisual
 
@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
-# Scatter view
+# Raster view
 # -----------------------------------------------------------------------------
 
-class RasterView(ManualClusteringView):
+class RasterView(MarkerSizeMixin, ManualClusteringView):
     """This view shows a raster plot of all clusters.
 
     Constructor
@@ -44,8 +44,6 @@ class RasterView(ManualClusteringView):
     """
 
     _default_position = 'right'
-    _marker_size = 5
-    _marker_size_increment = 1.1
 
     default_shortcuts = {
         'increase': 'ctrl+shift++',
@@ -63,9 +61,6 @@ class RasterView(ManualClusteringView):
         self.cluster_color_selector = cluster_color_selector
 
         super(RasterView, self).__init__()
-        # Save the marker size in the global and local view's config.
-        self.state_attrs += ('marker_size',)
-        self.local_state_attrs += ('marker_size',)
 
         self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
         self.canvas.constrain_bounds = NDC
@@ -121,8 +116,7 @@ class RasterView(ManualClusteringView):
     # Main methods
     # -------------------------------------------------------------------------
 
-    @property
-    def data_bounds(self):
+    def _get_data_bounds(self):
         """Bounds of the raster plot view."""
         return (0, 0, self.duration, self.n_clusters)
 
@@ -149,13 +143,14 @@ class RasterView(ManualClusteringView):
         color = self._get_color(box_index)
         assert x.shape == y.shape == box_index.shape
         assert color.shape[0] == len(box_index)
+        self.data_bounds = self._get_data_bounds()
 
         self.visual.set_data(
             x=x, y=y, color=color, size=self.marker_size,
             data_bounds=(0, 0, self.duration, 1))
         self.visual.set_box_index(box_index)
         self.canvas.stacked.n_boxes = self.n_clusters
-        self.canvas.axes.reset_data_bounds(self.data_bounds, do_update=True)
+        self._update_axes()
         self.canvas.update()
 
     def on_select(self, cluster_ids=(), **kwargs):
@@ -167,6 +162,7 @@ class RasterView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(RasterView, self).attach(gui)
+
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
         self.actions.separator()
@@ -180,26 +176,3 @@ class RasterView(ManualClusteringView):
             cluster_id = self.cluster_ids[cluster_idx]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
             emit('cluster_click', self, cluster_id, button=b)
-
-    # Marker size
-    # -------------------------------------------------------------------------
-
-    @property
-    def marker_size(self):
-        """Size of the spike markers, in pixels."""
-        return self._marker_size
-
-    @marker_size.setter
-    def marker_size(self, val):
-        assert val > 0
-        self._marker_size = val
-        self.visual.set_marker_size(val)
-        self.canvas.update()
-
-    def increase(self):
-        """Increase the marker size."""
-        self.marker_size *= self._marker_size_increment
-
-    def decrease(self):
-        """Decrease the marker size."""
-        self.marker_size = max(.1, self.marker_size / self._marker_size_increment)

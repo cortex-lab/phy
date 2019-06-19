@@ -10,6 +10,7 @@ from phylib.utils.geometry import staggered_positions
 from phylib.utils import emit
 
 from ..probe import ProbeView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -22,9 +23,7 @@ def test_probe_view(qtbot, gui):
     positions = staggered_positions(n)
     best_channels = lambda cluster_id: range(1, 9, 2)
 
-    v = ProbeView(positions=positions,
-                  best_channels=best_channels,
-                  )
+    v = ProbeView(positions=positions, best_channels=best_channels)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -37,5 +36,4 @@ def test_probe_view(qtbot, gui):
     v.on_select(cluster_ids=[0, 2, 3])
     emit('select', Supervisor(), cluster_ids=[0, 2])
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

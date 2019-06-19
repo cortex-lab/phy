@@ -10,6 +10,7 @@ import numpy as np
 
 from phylib.utils import Bunch
 from ..histogram import HistogramView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -29,7 +30,7 @@ def test_histogram_view_0(qtbot, gui):
     v.attach(gui)
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
-    v.on_select(cluster_ids=[2, 3, 5])
+    # v.on_select(cluster_ids=[2, 3, 5])
 
     v.set_n_bins(200)
     assert v.n_bins == 200
@@ -40,5 +41,4 @@ def test_histogram_view_0(qtbot, gui):
     v.increase()
     v.decrease()
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

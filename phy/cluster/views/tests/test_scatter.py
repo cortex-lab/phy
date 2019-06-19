@@ -11,6 +11,7 @@ import numpy as np
 from phylib.utils import Bunch
 from phy.plot.tests import mouse_click
 from ..scatter import ScatterView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -29,7 +30,7 @@ def test_scatter_view_0(qtbot, gui):
     v.increase()
     v.decrease()
 
-    v.close()
+    _stop_and_close(qtbot, v)
 
 
 def test_scatter_view_1(qtbot, gui):
@@ -42,7 +43,7 @@ def test_scatter_view_1(qtbot, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
     v.on_select(cluster_ids=[0])
-    v.close()
+    _stop_and_close(qtbot, v)
 
 
 def test_scatter_view_2(qtbot, gui):
@@ -80,5 +81,4 @@ def test_scatter_view_2(qtbot, gui):
     spike_ids = v.on_request_split()
     assert len(spike_ids) > 0
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

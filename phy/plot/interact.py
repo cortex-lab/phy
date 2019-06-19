@@ -472,7 +472,8 @@ class Lasso(object):
                     pos = self.canvas.window_to_ndc(e.pos)
                 # Force the active box to be the box of the first click, not the box of the
                 # current click.
-                layout.active_box = self.box
+                if layout:
+                    layout.active_box = self.box
                 self.add(pos)  # call update_lasso_visual
             else:
                 self.clear()

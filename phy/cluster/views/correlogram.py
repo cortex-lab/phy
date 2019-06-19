@@ -13,8 +13,9 @@ import numpy as np
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
-from phylib.utils.color import _spike_colors
-from .base import ManualClusteringView
+from phylib.utils import Bunch
+from phylib.utils.color import selected_cluster_color
+from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Correlogram view
 # -----------------------------------------------------------------------------
 
-class CorrelogramView(ManualClusteringView):
+class CorrelogramView(ScalingMixin, ManualClusteringView):
     """A view showing the autocorrelogram of the selected clusters, and all cross-correlograms
     of cluster pairs.
 
@@ -91,63 +92,80 @@ class CorrelogramView(ManualClusteringView):
         self.label_visual = TextVisual(color=(1., 1., 1., 1.))
         self.canvas.add_visual(self.label_visual)
 
+    # -------------------------------------------------------------------------
+    # Internal methods
+    # -------------------------------------------------------------------------
+
     def _iter_subplots(self, n_clusters):
         for i in range(n_clusters):
             for j in range(n_clusters):
                 yield i, j
 
-    def _plot_correlograms(self, ccg, ylims=None):
-        ylims = ylims or {}
-        n_clusters = ccg.shape[0]
-        colors = _spike_colors(np.arange(n_clusters), alpha=1.)
-        self.correlogram_visual.reset_batch()
-        for i, j in self._iter_subplots(n_clusters):
-            hist = ccg[i, j, :]
-            color = colors[i] if i == j else np.ones(4)
-            ylim = ylims.get((i, j), None)
-            self.correlogram_visual.add_batch_data(
-                hist=hist, color=color, ylim=ylim, box_index=(i, j))
-        # Call set_data() after creating the batch.
-        self.canvas.update_visual(self.correlogram_visual)
+    def get_clusters_data(self, load_all=None):
+        ccg = self.correlograms(self.cluster_ids, self.bin_size, self.window_size)
+        fr = self.firing_rate(self.cluster_ids, self.bin_size) if self.firing_rate else None
+        assert ccg.ndim == 3
+        n_bins = ccg.shape[2]
+        bunchs = []
+        m = ccg.max()
+        for i, j in self._iter_subplots(len(self.cluster_ids)):
+            b = Bunch()
+            b.correlogram = ccg[i, j, :]
+            if not self.uniform_normalization:
+                # Normalization row per row.
+                m = ccg[i, :, :].max()
+            b.firing_rate = fr[i, j] if fr is not None else None
+            b.data_bounds = (0, 0, n_bins, m)
+            b.pair_index = i, j
+            b.color = selected_cluster_color(i, 1) if i == j else (1, 1, 1, 1)
+            bunchs.append(b)
+        return bunchs
 
-    def _plot_firing_rate(self, fr, ylims=None, n_bins=None):
-        assert n_bins > 0
-        color = (.25, .25, .25, 1.)
-        ylims = ylims or {}
-        self.line_visual.reset_batch()
-        # Refractory period line coordinates.
+    def _plot_pair(self, bunch):
+        # Plot the histogram.
+        self.correlogram_visual.add_batch_data(
+            hist=bunch.correlogram, color=bunch.color,
+            ylim=bunch.data_bounds[3], box_index=bunch.pair_index)
+
+        # Plot the firing rate.
+        gray = (.25, .25, .25, 1.)
+        if bunch.firing_rate is not None:
+            # Line.
+            pos = np.array([[0, bunch.firing_rate, bunch.data_bounds[2], bunch.firing_rate]])
+            self.line_visual.add_batch_data(
+                pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index)
+            # Text.
+            self.label_visual.add_batch_data(
+                pos=[bunch.data_bounds[2], bunch.firing_rate],
+                text='%.2f' % bunch.firing_rate,
+                anchor=(-1, 0),
+                box_index=bunch.pair_index,
+                data_bounds=bunch.data_bounds,
+            )
+
+        # Refractory period.
         xrp0 = round((self.window_size * .5 - self.refractory_period) / self.bin_size)
         xrp1 = round((self.window_size * .5 + self.refractory_period) / self.bin_size) + 1
-        for i, j in self._iter_subplots(len(fr)):
-            ylim = ylims.get((i, j), None)
-            db = (0, 0, n_bins, ylim)
-            f = fr[i, j]
-            pos = np.array([[0, f, n_bins, f]])
-            # Firing rate.
-            self.line_visual.add_batch_data(
-                pos=pos, color=color, data_bounds=db, box_index=(i, j))
-            # Refractory period.
-            pos = np.array([[xrp0, 0, xrp0, ylim], [xrp1, 0, xrp1, ylim]])
-            self.line_visual.add_batch_data(
-                pos=pos, color=color, data_bounds=db, box_index=(i, j))
-        self.canvas.update_visual(self.line_visual)
+        ylim = bunch.data_bounds[3]
+        pos = np.array([[xrp0, 0, xrp0, ylim], [xrp1, 0, xrp1, ylim]])
+        self.line_visual.add_batch_data(
+            pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index)
 
-    def _plot_labels(self, cluster_ids, fr=None, ylims=None, n_bins=None):
-        n = len(cluster_ids)
-        self.label_visual.reset_batch()
+    def _plot_labels(self):
+        n = len(self.cluster_ids)
 
         # Display the cluster ids in the subplots.
         for k in range(n):
             self.label_visual.add_batch_data(
                 pos=[-1, 0],
-                text=str(cluster_ids[k]),
+                text=str(self.cluster_ids[k]),
                 anchor=[1, 0],
                 data_bounds=None,
                 box_index=(k, 0),
             )
             self.label_visual.add_batch_data(
                 pos=[0, -1],
-                text=str(cluster_ids[k]),
+                text=str(self.cluster_ids[k]),
                 anchor=[0, 1],
                 data_bounds=None,
                 box_index=(n - 1, k),
@@ -161,58 +179,42 @@ class CorrelogramView(ManualClusteringView):
             box_index=(n - 1, n - 1),
         )
 
-        # Display the firing rate in every subplot.
-        if fr is not None:
-            for i, j in self._iter_subplots(n):
-                self.label_visual.add_batch_data(
-                    pos=[n_bins, fr[i, j]],
-                    text='%.2f' % (fr[i, j]),
-                    anchor=(-1, 0),
-                    box_index=(i, j),
-                    data_bounds=(0, 0, n_bins, ylims.get((i, j), None)),
-                )
+    def plot(self):
+        """Update the view with the current cluster selection."""
+        self.canvas.grid.shape = (len(self.cluster_ids), len(self.cluster_ids))
 
+        bunchs = self.get_clusters_data()
+
+        self.correlogram_visual.reset_batch()
+        self.line_visual.reset_batch()
+        self.label_visual.reset_batch()
+
+        for bunch in bunchs:
+            self._plot_pair(bunch)
+        self._plot_labels()
+
+        self.canvas.update_visual(self.correlogram_visual)
+        self.canvas.update_visual(self.line_visual)
         self.canvas.update_visual(self.label_visual)
 
-    def on_select(self, cluster_ids=(), **kwargs):
-        """Show the correlograms of the selected clusters."""
-        self.cluster_ids = cluster_ids
-        n_clusters = len(cluster_ids)
-        if not cluster_ids:
-            return
+        self.canvas.update()
 
-        ccg = self.correlograms(
-            cluster_ids, self.bin_size, self.window_size)
-
-        # CCG normalization.
-        if self.uniform_normalization:
-            M = ccg.max()
-            ylims = {(i, j): M for i, j in self._iter_subplots(n_clusters)}
-        else:
-            ylims = {(i, j): ccg[i, j, :].max() for i, j in self._iter_subplots(n_clusters)}
-
-        self.canvas.grid.shape = (n_clusters, n_clusters)
-        self._plot_correlograms(ccg, ylims=ylims)
-
-        # Show firing rate as horizontal lines.
-        if self.firing_rate:
-            fr = self.firing_rate(cluster_ids, self.bin_size)
-            self._plot_firing_rate(fr, ylims=ylims, n_bins=ccg.shape[2])
-        else:  # pragma: no cover
-            fr = None
-
-        self._plot_labels(cluster_ids, fr=fr, ylims=ylims, n_bins=ccg.shape[2])
+    # -------------------------------------------------------------------------
+    # Public methods
+    # -------------------------------------------------------------------------
 
     def toggle_normalization(self, checked):
         """Change the normalization of the correlograms."""
         self.uniform_normalization = checked
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.plot()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
+
         self.actions.add(self.toggle_normalization, shortcut='n', checkable=True)
         self.actions.separator()
+
         self.actions.add(
             self.set_bin, alias='cb', prompt=True,
             prompt_default=lambda: self.bin_size * 1000)
@@ -222,6 +224,11 @@ class CorrelogramView(ManualClusteringView):
         self.actions.add(
             self.set_refractory_period, alias='cr', prompt=True,
             prompt_default=lambda: self.refractory_period * 1000)
+        self.actions.separator()
+
+    # -------------------------------------------------------------------------
+    # Methods for changing the parameters
+    # -------------------------------------------------------------------------
 
     def _set_bin_window(self, bin_size=None, window_size=None):
         """Set the bin and window sizes (in seconds)."""
@@ -239,7 +246,7 @@ class CorrelogramView(ManualClusteringView):
     def set_refractory_period(self, value):
         """Set the refractory period (in milliseconds)."""
         self.refractory_period = np.clip(value, .1, 100) * 1e-3
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.plot()
 
     def set_bin(self, bin_size):
         """Set the correlogram bin size (in milliseconds).
@@ -248,7 +255,7 @@ class CorrelogramView(ManualClusteringView):
 
         """
         self._set_bin_window(bin_size=bin_size * 1e-3)
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.plot()
 
     def set_window(self, window_size):
         """Set the correlogram window size (in milliseconds).
@@ -257,7 +264,7 @@ class CorrelogramView(ManualClusteringView):
 
         """
         self._set_bin_window(window_size=window_size * 1e-3)
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.plot()
 
     def increase(self):
         """Increase the window size."""

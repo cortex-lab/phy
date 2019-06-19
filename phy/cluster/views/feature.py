@@ -16,7 +16,7 @@ from phylib.utils import Bunch, connect
 from phylib.utils.color import selected_cluster_color
 from phy.plot.transform import Range
 from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
-from .base import ManualClusteringView
+from .base import ManualClusteringView, MarkerSizeMixin
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def _uniq(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-class FeatureView(ManualClusteringView):
+class FeatureView(MarkerSizeMixin, ManualClusteringView):
     """This view displays a 4x4 subplot matrix with different projections of the principal
     component features. This view keeps track of which channels are currently shown.
 
@@ -92,20 +92,13 @@ class FeatureView(ManualClusteringView):
     # Whether to disable automatic selection of channels.
     fixed_channels = False
 
-    _marker_size = 5.
-    _marker_size_increment = 1.1
-
     default_shortcuts = {
-        'increase': 'ctrl++',
-        'decrease': 'ctrl+-',
         'toggle_automatic_channel_selection': 'c',
     }
 
     def __init__(self, features=None, attributes=None):
         super(FeatureView, self).__init__()
-        self.state_attrs += ('scaling', 'marker_size', 'fixed_channels')
-        self.local_state_attrs += ('scaling',)
-        self._scaling = None
+        self.state_attrs += ('fixed_channels',)
 
         assert features
         self.features = features
@@ -123,8 +116,8 @@ class FeatureView(ManualClusteringView):
         # where each array is a `(n_spikes,)` array.
         self.attributes = attributes or {}
 
-        self.point_visual = ScatterVisual()
-        self.canvas.add_visual(self.point_visual)
+        self.visual = ScatterVisual()
+        self.canvas.add_visual(self.visual)
 
         self.label_visual = TextVisual()
         self.canvas.add_visual(self.label_visual)
@@ -192,8 +185,7 @@ class FeatureView(ManualClusteringView):
             assert vmin is not None
             assert vmax is not None
             return vmin, vmax
-        # PC dimensions: use the common scaling.
-        return (-1. / self.scaling, +1. / self.scaling)
+        return bunch.data.min(), bunch.data.max()
 
     def _plot_points(self, bunch, clu_idx=None):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
@@ -207,11 +199,13 @@ class FeatureView(ManualClusteringView):
             assert px.data.shape == py.data.shape
             xmin, xmax = self._get_axis_bounds(dim_x, px)
             ymin, ymax = self._get_axis_bounds(dim_y, py)
+            assert xmin <= xmax
+            assert ymin <= ymax
             data_bounds = (xmin, ymin, xmax, ymax)
             masks = _get_masks_max(px, py)
             # Prepare the batch visual with all subplots
             # for the selected cluster.
-            self.point_visual.add_batch_data(
+            self.visual.add_batch_data(
                 x=px.data, y=py.data,
                 color=_get_point_color(clu_idx),
                 # Reduced marker size for background features
@@ -257,29 +251,14 @@ class FeatureView(ManualClusteringView):
     def clear_channels(self):
         """Reset the current channels."""
         self.channel_ids = None
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.plot()
 
-    def on_select(self, cluster_ids=(), **kwargs):
-        """Update the view with the selected clusters."""
-        self.cluster_ids = cluster_ids
-        if not cluster_ids:
-            return
-
-        # Determine whether the channels should be fixed or not.
-        added = kwargs.get('up', {}).get('added', None)
-        # Fix the channels if the view updates after a cluster event
-        # and there are new clusters.
-        fixed_channels = (
-            self.fixed_channels or
-            kwargs.get('fixed_channels', None) or
-            added is not None)
-
+    def get_clusters_data(self, fixed_channels=None, load_all=None):
         # Get the feature data.
         # Specify the channel ids if these are fixed, otherwise
         # choose the first cluster's best channels.
         c = self.channel_ids if fixed_channels else None
-        bunchs = [self.features(cluster_id, channel_ids=c)
-                  for cluster_id in cluster_ids]
+        bunchs = [self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids]
 
         # Choose the channels based on the first selected cluster.
         channel_ids = list(bunchs[0].channel_ids)
@@ -300,6 +279,21 @@ class FeatureView(ManualClusteringView):
             self.channel_ids = channel_ids
         assert len(self.channel_ids)
 
+        return bunchs
+
+    def plot(self, **kwargs):
+        """Update the view with the selected clusters."""
+
+        # Determine whether the channels should be fixed or not.
+        added = kwargs.get('up', {}).get('added', None)
+        # Fix the channels if the view updates after a cluster event
+        # and there are new clusters.
+        fixed_channels = (
+            self.fixed_channels or kwargs.get('fixed_channels', None) or added is not None)
+
+        # Get the clusters data.
+        bunchs = self.get_clusters_data(fixed_channels=fixed_channels)
+
         # Get the background data.
         background = self.features(channel_ids=self.channel_ids)
 
@@ -310,14 +304,8 @@ class FeatureView(ManualClusteringView):
         # of the associated channels. The channels corresponding to each
         # column are given in bunch.channel_ids in the same order.
 
-        # Find the initial scaling.
-        if self._scaling in (None, np.inf):
-            m = np.median(np.abs(background.data))
-            m = m if m > 1e-9 else 1.
-            self._scaling = .1 / m
-
         # Plot points.
-        self.point_visual.reset_batch()
+        self.visual.reset_batch()
         self.label_visual.reset_batch()
 
         self._plot_points(background)  # background spikes
@@ -327,24 +315,19 @@ class FeatureView(ManualClusteringView):
             self._plot_points(bunch, clu_idx=clu_idx)
 
         # Upload the data on the GPU.
-        self.canvas.update_visual(self.point_visual)
+        self.canvas.update_visual(self.visual)
         self.canvas.update_visual(self.label_visual)
         self.canvas.update()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(FeatureView, self).attach(gui)
+
         self.actions.add(
             self.toggle_automatic_channel_selection,
             checked=not self.fixed_channels, checkable=True)
-        self.actions.separator()
         self.actions.add(self.clear_channels)
         self.actions.separator()
-        self.actions.add(self.increase)
-        self.actions.add(self.decrease)
-        self.actions.separator()
-        self.actions.add(self.increase_marker)
-        self.actions.add(self.decrease_marker)
 
         connect(self.on_channel_click)
         connect(self.on_request_split)
@@ -356,7 +339,7 @@ class FeatureView(ManualClusteringView):
         if channels is None:
             return
         if len(channels) == 1:
-            self.on_select(cluster_ids=self.cluster_ids)
+            self.plot()
             return
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
@@ -376,10 +359,9 @@ class FeatureView(ManualClusteringView):
         assert channels[0] != channels[1]
         # Remove duplicate channels.
         self.channel_ids = _uniq(channels)
-        logger.debug(
-            "Choose channels %d and %d in feature view.", *channels[:2])
+        logger.debug("Choose channels %d and %d in feature view.", *channels[:2])
         # Fix the channels temporarily.
-        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
+        self.plot(fixed_channels=True)
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
@@ -389,7 +371,7 @@ class FeatureView(ManualClusteringView):
         assert len(self.channel_ids)
 
         # Get the dimensions of the lassoed subplot.
-        i, j = self.canvas.lasso.box
+        i, j = self.canvas.layout.active_box
         dim = self.grid_dim[i][j]
         dim_x, dim_y = dim.split(',')
 
@@ -423,56 +405,3 @@ class FeatureView(ManualClusteringView):
     def toggle_automatic_channel_selection(self, checked):
         """Toggle the automatic selection of channels when the cluster selection changes."""
         self.fixed_channels = not checked
-
-    # Feature scaling
-    # -------------------------------------------------------------------------
-
-    @property
-    def scaling(self):
-        """Scaling of the features."""
-        return self._scaling or 1.
-
-    @scaling.setter
-    def scaling(self, value):
-        self._scaling = value
-
-    def increase(self):
-        """Increase the scaling of the features."""
-        self.scaling *= 1.2
-        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
-
-    def decrease(self):
-        """Decrease the scaling of the features."""
-        self.scaling /= 1.2
-        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
-
-    # Marker size
-    # -------------------------------------------------------------------------
-
-    @property
-    def marker_size(self):
-        """Size of the spike markers, in pixels."""
-        return self._marker_size
-
-    @marker_size.setter
-    def marker_size(self, val):
-        assert val > 0
-        self._marker_size = val
-        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
-
-    def increase_marker(self):
-        """Increase the marker size."""
-        self.marker_size *= self._marker_size_increment
-
-    def decrease_marker(self):
-        """Decrease the marker size."""
-        self.marker_size = max(.1, self.marker_size / self._marker_size_increment)
-
-    def on_mouse_wheel(self, e):  # pragma: no cover
-        """Change the scaling with the wheel."""
-        super(FeatureView, self).on_mouse_wheel(e)
-        if e.modifiers == ('Shift',):
-            if e.delta > 0:
-                self.increase_marker()
-            else:
-                self.decrease_marker()

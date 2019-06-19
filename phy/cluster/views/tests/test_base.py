@@ -11,6 +11,7 @@ import numpy as np
 from phylib.utils import emit
 from phylib.utils.color import selected_cluster_color
 from ..base import ManualClusteringView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -18,8 +19,8 @@ from ..base import ManualClusteringView
 #------------------------------------------------------------------------------
 
 class MyView(ManualClusteringView):
-    def on_select(self, cluster_ids, **kwargs):
-        for i in range(len(cluster_ids)):
+    def plot(self, **kwargs):
+        for i in range(len(self.cluster_ids)):
             self.canvas.scatter(pos=.25 * np.random.randn(100, 2), color=selected_cluster_color(i))
 
 
@@ -40,8 +41,7 @@ def test_manual_clustering_view_1(qtbot, tempdir):
     assert str(path).startswith(str(tempdir))
     assert path.exists()
 
-    # qtbot.stop()
-    v.canvas.close()
+    _stop_and_close(qtbot, v)
 
 
 def test_manual_clustering_view_2(qtbot, gui):

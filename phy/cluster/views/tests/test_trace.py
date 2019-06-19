@@ -15,6 +15,7 @@ from phylib.utils.color import ClusterColorSelector
 from phy.plot.tests import mouse_click
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -177,5 +178,4 @@ def test_trace_view_1(qtbot, tempdir, gui):
 
     assert len(_clicked[0]) == 3
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

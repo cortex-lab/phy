@@ -14,6 +14,7 @@ from phylib.io.mock import artificial_spike_clusters, artificial_spike_samples
 
 from phy.plot.tests import mouse_click
 from ..raster import RasterView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -56,8 +57,7 @@ def test_raster_0(qtbot, gui):
 
     assert _clicked == [(1, 'Left')]
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)
 
 
 def test_raster_1(qtbot, gui):
@@ -90,5 +90,4 @@ def test_raster_1(qtbot, gui):
     v.set_cluster_ids(np.arange(0, nc, 2))
     v.plot()
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)

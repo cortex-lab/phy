@@ -12,8 +12,9 @@ from phylib.io.mock import artificial_waveforms
 from phylib.utils import Bunch, connect
 from phylib.utils.color import ClusterColorSelector
 
-from ..template import TemplateView
 from phy.plot.tests import mouse_click
+from ..template import TemplateView
+from . import _stop_and_close
 
 
 #------------------------------------------------------------------------------
@@ -69,5 +70,4 @@ def test_template_view(qtbot, tempdir, gui):
     v.increase()
     v.decrease()
 
-    # qtbot.stop()
-    v.close()
+    _stop_and_close(qtbot, v)
