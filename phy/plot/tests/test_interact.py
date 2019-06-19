@@ -119,6 +119,9 @@ def test_grid_2(qtbot, canvas):
     grid.shape = (5, 2)
     assert grid.shape == (5, 2)
 
+    grid.scaling = (.5, 2)
+    assert grid.scaling == (.5, 2)
+
     # qtbot.stop()
 
 
@@ -145,6 +148,9 @@ def test_boxed_1(qtbot, canvas):
 
     boxed.update_boxes(boxed.box_pos, boxed.box_size)
     ac(boxed.box_bounds, b * .9)
+
+    boxed.scaling = (.5, 2)
+    assert boxed.scaling == (.5, 2)
 
     # qtbot.stop()
 

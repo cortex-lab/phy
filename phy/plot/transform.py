@@ -207,6 +207,8 @@ class Scale(BaseTransform):
     def apply(self, arr, value=None):
         """Apply a scaling to a NumPy array."""
         value = value if value is not None else self.value
+        if isinstance(value, str):
+            value = 1
         return arr * np.asarray(value)
 
     def glsl(self, var):

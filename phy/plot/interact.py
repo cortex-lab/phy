@@ -48,6 +48,7 @@ class Grid(BaseLayout):
     margin = .075
     n_dims = 2
     active_box = (0, 0)
+    _scaling = (1., 1.)
 
     def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None, has_clip=True):
         super(Grid, self).__init__(box_var=box_var)
@@ -56,10 +57,11 @@ class Grid(BaseLayout):
         ms = 1 - self.margin
         mc = 1 - self.margin
         _transforms = [
-            Scale((ms, ms)), Clip([-mc, -mc, +mc, +mc]), Subplot(self.shape_var, self.box_var)]
+            Scale('u_grid_scaling'), Scale((ms, ms)), Clip([-mc, -mc, +mc, +mc]),
+            Subplot(self.shape_var, self.box_var)]
         if has_clip is False:
             # Remove the Clip transform.
-            del _transforms[1]
+            del _transforms[2]
         self._transforms = _transforms
         self.transforms = TransformChain()
         self.transforms.add_on_gpu(_transforms, origin=self)
@@ -72,6 +74,7 @@ class Grid(BaseLayout):
             """
             attribute vec2 {};
             uniform vec2 {};
+            uniform vec2 u_grid_scaling;
             """.format(self.box_var, self.shape_var),
             'header', origin=self)
 
@@ -133,6 +136,7 @@ class Grid(BaseLayout):
         super(Grid, self).update_visual(visual)
         if self.shape_var in visual.program:
             visual.program[self.shape_var] = self._shape
+            visual.program['u_grid_scaling'] = self._scaling
 
     @property
     def shape(self):
@@ -142,6 +146,16 @@ class Grid(BaseLayout):
     @shape.setter
     def shape(self, value):
         self._shape = value
+        self.update()
+
+    @property
+    def scaling(self):
+        """Return the grid scaling."""
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
         self.update()
 
 
@@ -188,6 +202,7 @@ class Boxed(BaseLayout):
     margin = .1
     n_dims = 1
     active_box = 0
+    _scaling = (1, 1)
 
     def __init__(
             self, box_bounds=None, box_pos=None, box_size=None, box_var=None,
@@ -209,7 +224,8 @@ class Boxed(BaseLayout):
         assert self._box_bounds.shape[1] == 4
 
         self.transforms = TransformChain()
-        self.transforms.add_on_gpu([Range(NDC, 'box_bounds')], origin=self)
+        self.transforms.add_on_gpu([
+            Scale('u_box_scaling'), Range(NDC, 'box_bounds')], origin=self)
 
     def attach(self, canvas):
         """Attach the boxed interact to a canvas."""
@@ -220,12 +236,11 @@ class Boxed(BaseLayout):
             attribute float {};
             uniform sampler2D u_box_bounds;
             uniform float n_boxes;
+            uniform vec2 u_box_scaling;
             """.format(self.box_var), 'header', origin=self)
         canvas.inserter.insert_vert("""
             // Fetch the box bounds for the current box (`box_var`).
-            vec4 box_bounds = fetch_texture({},
-                                            u_box_bounds,
-                                            n_boxes);
+            vec4 box_bounds = fetch_texture({}, u_box_bounds, n_boxes);
             box_bounds = (2 * box_bounds - 1);  // See hack in Python.
             """.format(self.box_var), 'before_transforms', origin=self)
 
@@ -249,6 +264,7 @@ class Boxed(BaseLayout):
         if 'u_box_bounds' in visual.program:
             visual.program['u_box_bounds'] = box_bounds
             visual.program['n_boxes'] = self.n_boxes
+            visual.program['u_box_scaling'] = self._scaling
 
     def add_boxes(self, canvas):
         """Show the boxes borders."""
@@ -331,6 +347,19 @@ class Boxed(BaseLayout):
         self.box_bounds = _get_boxes(
             box_pos, size=box_size, margin=self.margin,
             keep_aspect_ratio=self.keep_aspect_ratio)
+
+    # Scaling
+    #--------------------------------------------------------------------------
+
+    @property
+    def scaling(self):
+        """Return the grid scaling."""
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
+        self.update()
 
 
 class Stacked(Boxed):
