@@ -330,3 +330,12 @@ def test_text_2(qtbot, canvas_pz):
     if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
         qtbot.stop()
     c.close()
+
+
+def test_text_3(qtbot, canvas_pz):
+    text = '0123456789'
+    text = [text] * 10
+
+    _test_visual(
+        qtbot, canvas_pz, TextVisual(color=(1, 1, 0, 1)), pos=[(0, 0)] * 10, text=text,
+        anchor=[(1, 1 - i) for i in range(5)] + [(-i, 1) for i in range(5)])
