@@ -16,7 +16,7 @@ import os.path as op
 
 from .base import BaseVisual, GLSLInserter, BaseCanvas, BaseLayout
 from .plot import PlotCanvas
-from .transform import Translate, Scale, Range, Subplot, NDC, TransformChain
+from .transform import Translate, Scale, Range, Subplot, NDC, TransformChain, extend_bounds
 from .panzoom import PanZoom
 from .axes import AxisLocator, Axes
 from .utils import get_linear_x, BatchAccumulator

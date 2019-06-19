@@ -15,8 +15,8 @@ from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
 from ..transform import (
-    _glslify, pixels_to_ndc, _normalize, Translate, Scale, Rotate, Range, Clip, Subplot,
-    TransformChain)
+    _glslify, pixels_to_ndc, _normalize, extend_bounds,
+    Translate, Scale, Rotate, Range, Clip, Subplot, TransformChain)
 
 
 #------------------------------------------------------------------------------
@@ -65,6 +65,10 @@ def test_normalize():
     arr = np.linspace(0., 10., 10)
     ac(_normalize(arr, m, M), np.linspace(-1., 1., 10))
     ac(_normalize(arr, m, m), arr)
+
+
+def test_extend_bounds():
+    assert extend_bounds([(0, 0, 1, 1), (-1, -2, 3, 4)]) == (-1, -2, 3, 4)
 
 
 #------------------------------------------------------------------------------

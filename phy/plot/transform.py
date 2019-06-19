@@ -112,6 +112,14 @@ def subplot_bounds_glsl(shape=None, index=None):
     return 'vec4(\n{x0}, \n{y0}, \n{x1}, \n{y1})'.format(x0=x0, y0=y0, x1=x1, y1=y1)
 
 
+def extend_bounds(bounds_list):
+    """Return a single data bounds 4-tuple from a list of data bounds."""
+    bounds = np.array(bounds_list)
+    xmins, ymins = bounds[:, :2].min(axis=0)
+    xmaxs, ymaxs = bounds[:, 2:].max(axis=0)
+    return xmins.min(), ymins.min(), xmaxs.max(), ymaxs.max()
+
+
 def pixels_to_ndc(pos, size=None):
     """Convert from pixels to normalized device coordinates (in [-1, 1])."""
     pos = np.asarray(pos, dtype=np.float64)
