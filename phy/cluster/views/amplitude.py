@@ -33,7 +33,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     -----------
 
     amplitudes : function
-        Maps `cluster_ids` to a list `[Bunch(amp, spike_ids), ...]` for each cluster.
+        Maps `cluster_ids` to a list `[Bunch(amplitudes, spike_ids), ...]` for each cluster.
         Use `cluster_id=None` for background amplitudes.
 
     """
@@ -90,7 +90,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
-        M = max(bunch.amp.max() for bunch in bunchs) if bunchs else 1.
+        M = max(bunch.amplitudes.max() for bunch in bunchs) if bunchs else 1.
         return (0, 0, self.duration, M)
 
     def get_clusters_data(self, load_all=None):
@@ -100,8 +100,8 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # Add a pos attribute in bunchs in addition to x and y.
         for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
             spike_ids = _as_array(bunch.spike_ids)
-            spike_times = bunch.spike_times
-            amplitudes = _as_array(bunch.amp)
+            spike_times = _as_array(bunch.spike_times)
+            amplitudes = _as_array(bunch.amplitudes)
             assert spike_ids.shape == spike_times.shape == amplitudes.shape
             bunch.pos = np.c_[spike_times, amplitudes]
             assert bunch.pos.ndim == 2
@@ -115,7 +115,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # We do this after get_clusters_data because we need x_max.
         for bunch in bunchs:
             bunch.histogram = _compute_histogram(
-                bunch.amp, x_max=self.data_bounds[-1], n_bins=self.n_bins)
+                bunch.amplitudes, x_max=self.data_bounds[-1], n_bins=self.n_bins)
         return bunchs
 
     def _plot_cluster(self, bunch):

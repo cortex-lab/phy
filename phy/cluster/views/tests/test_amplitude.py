@@ -23,7 +23,6 @@ from . import _stop_and_close
 def test_amplitude_view_0(qtbot, gui):
     v = AmplitudeView(
         amplitudes=lambda cluster_ids, load_all=False: None,
-        spike_times=[],
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
@@ -40,8 +39,7 @@ def test_amplitude_view_1(qtbot, gui):
     x = np.zeros(1)
     v = AmplitudeView(
         amplitudes=lambda cluster_ids, load_all=False: [
-            Bunch(amp=x, spike_ids=[0])],
-        spike_times=[0],
+            Bunch(amplitudes=x, spike_ids=[0], spike_times=[0])],
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
@@ -55,12 +53,12 @@ def test_amplitude_view_2(qtbot, gui):
     v = AmplitudeView(
         amplitudes={
             'amp1': lambda cluster_ids, load_all=False: [Bunch(
-                amp=15 + np.random.randn(n),
+                amplitudes=15 + np.random.randn(n),
                 spike_ids=np.arange(n),
                 spike_times=artificial_spike_samples(n) / 20000.
             ) for c in cluster_ids],
             'amp2': lambda cluster_ids, load_all=False: [Bunch(
-                amp=10 + np.random.randn(n),
+                amplitudes=10 + np.random.randn(n),
                 spike_ids=np.arange(n),
                 spike_times=artificial_spike_samples(n) / 20000.
             ) for c in cluster_ids],
