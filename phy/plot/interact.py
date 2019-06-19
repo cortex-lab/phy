@@ -460,9 +460,19 @@ class Lasso(object):
             if e.button == 'Left':
                 layout = getattr(self.canvas, 'layout', None)
                 if hasattr(layout, 'box_map'):
-                    self.box, pos = layout.box_map(e.pos)
+                    box, pos = layout.box_map(e.pos)
+                    # Only update the box for the first click, so that the box containing
+                    # the lasso is determined by the first click only.
+                    if self.box is None:
+                        self.box = box
+                    # Avoid clicks outside the active box (box of the first click).
+                    if box != self.box:
+                        return
                 else:  # pragma: no cover
                     pos = self.canvas.window_to_ndc(e.pos)
+                # Force the active box to be the box of the first click, not the box of the
+                # current click.
+                layout.active_box = self.box
                 self.add(pos)  # call update_lasso_visual
             else:
                 self.clear()
