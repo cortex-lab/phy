@@ -175,8 +175,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.waveform_visual = PlotVisual()
         self.canvas.add_visual(self.waveform_visual)
 
-        self.label_visual = TextVisual()
-        self.canvas.add_visual(self.label_visual)
+        self.text_visual = TextVisual()
+        self.canvas.add_visual(self.text_visual)
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
@@ -245,18 +245,18 @@ class TraceView(ScalingMixin, ManualClusteringView):
         )
 
     def _plot_labels(self, traces):
-        self.label_visual.reset_batch()
+        self.text_visual.reset_batch()
         for ch in range(self.n_channels):
             bi = self._permute_channels(ch)
             ch_label = '%d' % ch
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[self.data_bounds[0], traces[0, ch]],
                 text=ch_label,
                 anchor=[+1., 0],
                 data_bounds=self.data_bounds,
                 box_index=bi,
             )
-        self.canvas.update_visual(self.label_visual)
+        self.canvas.update_visual(self.text_visual)
 
     # Public methods
     # -------------------------------------------------------------------------

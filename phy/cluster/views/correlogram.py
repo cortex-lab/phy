@@ -89,8 +89,8 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.line_visual = LineVisual()
         self.canvas.add_visual(self.line_visual)
 
-        self.label_visual = TextVisual(color=(1., 1., 1., 1.))
-        self.canvas.add_visual(self.label_visual)
+        self.text_visual = TextVisual(color=(1., 1., 1., 1.))
+        self.canvas.add_visual(self.text_visual)
 
     # -------------------------------------------------------------------------
     # Internal methods
@@ -135,7 +135,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             self.line_visual.add_batch_data(
                 pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index)
             # Text.
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[bunch.data_bounds[2], bunch.firing_rate],
                 text='%.2f' % bunch.firing_rate,
                 anchor=(-1, 0),
@@ -156,14 +156,14 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
         # Display the cluster ids in the subplots.
         for k in range(n):
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[-1, 0],
                 text=str(self.cluster_ids[k]),
                 anchor=[1, 0],
                 data_bounds=None,
                 box_index=(k, 0),
             )
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[0, -1],
                 text=str(self.cluster_ids[k]),
                 anchor=[0, 1],
@@ -172,7 +172,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             )
 
         # Display the window size in the bottom right subplot.
-        self.label_visual.add_batch_data(
+        self.text_visual.add_batch_data(
             pos=[1, -1],
             anchor=[-1, 1],
             text='%.1f ms' % (1000 * .5 * self.window_size),
@@ -187,7 +187,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
         self.correlogram_visual.reset_batch()
         self.line_visual.reset_batch()
-        self.label_visual.reset_batch()
+        self.text_visual.reset_batch()
 
         for bunch in bunchs:
             self._plot_pair(bunch)
@@ -195,7 +195,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
         self.canvas.update_visual(self.correlogram_visual)
         self.canvas.update_visual(self.line_visual)
-        self.canvas.update_visual(self.label_visual)
+        self.canvas.update_visual(self.text_visual)
 
         self.canvas.update()
 

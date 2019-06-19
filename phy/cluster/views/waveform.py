@@ -130,8 +130,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
 
-        self.label_visual = TextVisual()
-        self.canvas.add_visual(self.label_visual)
+        self.text_visual = TextVisual()
+        self.canvas.add_visual(self.text_visual)
 
         self.waveform_visual = PlotVisual()
         self.canvas.add_visual(self.waveform_visual)
@@ -209,16 +209,16 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Add channel labels.
         if not self.do_show_labels:
             return
-        self.label_visual.reset_batch()
+        self.text_visual.reset_batch()
         for i, ch in enumerate(channel_ids):
             label = self.channel_labels[i] if self.channel_labels is not None else ch
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[-1, 0],
                 text=str(label),
                 anchor=[-2, 0],
                 box_index=i,
             )
-        self.canvas.update_visual(self.label_visual)
+        self.canvas.update_visual(self.text_visual)
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""

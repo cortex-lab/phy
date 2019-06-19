@@ -120,8 +120,8 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
 
-        self.label_visual = TextVisual()
-        self.canvas.add_visual(self.label_visual)
+        self.text_visual = TextVisual()
+        self.canvas.add_visual(self.text_visual)
 
         self.line_visual = LineVisual()
         self.canvas.add_visual(self.line_visual)
@@ -221,13 +221,13 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             label_x = self._get_axis_label(dim_x)
             label_y = self._get_axis_label(dim_y)
             # Add labels.
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[.8, .9],
                 text=label_y,
                 data_bounds=None,
                 box_index=(i, j),
             )
-            self.label_visual.add_batch_data(
+            self.text_visual.add_batch_data(
                 pos=[0, -.9],
                 text=label_x,
                 data_bounds=None,
@@ -313,7 +313,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
         # Plot points.
         self.visual.reset_batch()
-        self.label_visual.reset_batch()
+        self.text_visual.reset_batch()
 
         self._plot_points(background)  # background spikes
 
@@ -323,7 +323,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
         # Upload the data on the GPU.
         self.canvas.update_visual(self.visual)
-        self.canvas.update_visual(self.label_visual)
+        self.canvas.update_visual(self.text_visual)
         self.canvas.update()
 
     def attach(self, gui):
