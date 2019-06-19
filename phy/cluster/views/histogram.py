@@ -22,6 +22,15 @@ logger = logging.getLogger(__name__)
 # Histogram view
 # -----------------------------------------------------------------------------
 
+def _compute_histogram(data, x_max=None, n_bins=None):
+    """Compute the histogram of an array."""
+    bins = np.linspace(0., x_max, n_bins)
+    histogram, _ = np.histogram(data, bins=bins)
+    # Normalize by the integral of the histogram.
+    hist_sum = histogram.sum() * bins[1]
+    return histogram / (hist_sum or 1.)
+
+
 class HistogramView(ScalingMixin, ManualClusteringView):
     """This view displays a histogram for every selected cluster, along with a possible plot
     and some text. To be overriden.
@@ -107,12 +116,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             assert self.x_max > 0
 
             # Compute the histogram.
-            bins = np.linspace(0., self.x_max, self.n_bins)
-            histogram, _ = np.histogram(bunch.data, bins=bins)
-
-            # Normalize by the integral of the histogram.
-            hist_sum = histogram.sum() * bins[1]
-            bunch.histogram = histogram / (hist_sum or 1.)
+            bunch.histogram = _compute_histogram(bunch.data, x_max=self.x_max, n_bins=self.n_bins)
             bunch.ylim = bunch.histogram.max()
 
             bunch.color = selected_cluster_color(i)

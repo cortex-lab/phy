@@ -11,10 +11,13 @@ import logging
 
 import numpy as np
 
-from phylib.utils.color import selected_cluster_color
+from phylib.utils.color import selected_cluster_color, add_alpha
 from phylib.utils._types import _as_array
+
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
-from phy.plot.visuals import ScatterVisual, TextVisual
+from .histogram import _compute_histogram
+from phy.plot.transform import Rotate, Range, NDC
+from phy.plot.visuals import ScatterVisual, TextVisual, HistogramVisual
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,19 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     """
 
     _default_position = 'right'
+
+    # Alpha channel of the markers in the scatter plot.
+    marker_alpha = 1.
+
+    # Number of bins in the histogram.
+    n_bins = 100
+
+    # Alpha channel of the histogram in the background.
+    histogram_alpha = .5
+
+    # Size of the histogram, between 0 and 1.
+    histogram_scale = .25
+
     default_shortcuts = {
         'next_amplitude_type': 'a',
     }
@@ -59,9 +75,17 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         assert spike_times is not None
         self.duration = duration or (spike_times[-1] if len(spike_times) else 1.)
 
+        # Histogram visual.
+        self.hist_visual = HistogramVisual()
+        self.hist_visual.transforms.add_on_gpu([
+            Range(NDC, (-1, -1, 1, -1 + 2 * self.histogram_scale)), Rotate('ccw')])
+        self.canvas.add_visual(self.hist_visual)
+
+        # Scatter plot.
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
 
+        # Amplitude name.
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
 
@@ -81,12 +105,25 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             assert spike_ids.shape == spike_times.shape == amplitudes.shape
             bunch.pos = np.c_[spike_times, amplitudes]
             assert bunch.pos.ndim == 2
-            bunch.color = selected_cluster_color(i, .75)
+            bunch.color = selected_cluster_color(i, self.marker_alpha)
+        return bunchs
+
+    def _add_histograms(self, bunchs):
+        # We do this after get_clusters_data because we need x_max.
+        for bunch in bunchs:
+            bunch.histogram = _compute_histogram(
+                bunch.amp, x_max=self.data_bounds[-1], n_bins=self.n_bins)
         return bunchs
 
     def _plot_cluster(self, bunch):
         """Make the scatter plot."""
         ms = self._marker_size
+
+        # Histogram in the background.
+        self.hist_visual.add_batch_data(
+            hist=bunch.histogram,
+            color=add_alpha(bunch.color, self.histogram_alpha))
+
         # Scatter plot.
         self.visual.add_batch_data(
             pos=bunch.pos, color=bunch.color, size=ms, data_bounds=self.data_bounds)
@@ -99,13 +136,16 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         """Update the view with the current cluster selection."""
         bunchs = self.get_clusters_data()
         self.data_bounds = self._get_data_bounds(bunchs)
+        bunchs = self._add_histograms(bunchs)
 
         self.visual.reset_batch()
+        self.hist_visual.reset_batch()
         self.text_visual.reset_batch()
         for bunch in bunchs:
             self._plot_cluster(bunch)
         self._plot_amplitude_name()
         self.canvas.update_visual(self.visual)
+        self.canvas.update_visual(self.hist_visual)
         self.canvas.update_visual(self.text_visual)
 
         self._update_axes()
