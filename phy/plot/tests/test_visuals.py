@@ -338,4 +338,4 @@ def test_text_3(qtbot, canvas_pz):
 
     _test_visual(
         qtbot, canvas_pz, TextVisual(color=(1, 1, 0, 1)), pos=[(0, 0)] * 10, text=text,
-        anchor=[(1, 1 - i) for i in range(5)] + [(-i, 1) for i in range(5)])
+        anchor=[(1, -1 - 2 * i) for i in range(5)] + [(-1 - 2 * i, 1) for i in range(5)])

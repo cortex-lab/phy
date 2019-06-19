@@ -367,7 +367,8 @@ class Stacked(Boxed):
 
     @n_boxes.setter
     def n_boxes(self, n_boxes):
-        self.box_bounds = self.get_box_bounds(n_boxes)
+        if n_boxes >= 1:
+            self.box_bounds = self.get_box_bounds(n_boxes)
 
     def get_box_bounds(self, n_boxes):
         """Return the box bounds for a given number of stacked boxes."""

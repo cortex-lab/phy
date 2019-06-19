@@ -35,7 +35,7 @@ void main() {
     float x = (a_glyph_index + dx) * w;  // relative x position of the vertex
     float y = dy * h;  // relative y position of the vertex
     float xmax = a_lengths * w;  // relative x position of the vertex of the last char
-    vec2 origin = vec2(xmax, h) * (a_anchor - .5);
+    vec2 origin = .5 * vec2(xmax, h) * (a_anchor - 1);
     gl_Position.xy = gl_Position.xy + origin + vec2(x, y);
 
     // Index in the texture
