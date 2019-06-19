@@ -320,7 +320,6 @@ class ScalingMixin(object):
     """
     _scaling_param_increment = 1.1
     _scaling_param_min = .01
-    _scaling_param_name = 'scaling'
 
     def attach(self, gui):
         super(ScalingMixin, self).attach(gui)
@@ -336,21 +335,28 @@ class ScalingMixin(object):
             else:
                 self.decrease()
 
+    def _get_scaling_value(self):  # pragma: no cover
+        """Return the scaling parameter. May be overriden."""
+        return self.scaling
+
+    def _set_scaling_value(self, value):  # pragma: no cover
+        """Set the scaling parameter. May be overriden."""
+        self.scaling = value
+
     def increase(self):
         """Increase the scaling parameter."""
-        value = getattr(self, self._scaling_param_name)
-        setattr(self, self._scaling_param_name, value * self._scaling_param_increment)
+        value = self._get_scaling_value()
+        self._set_scaling_value(value * self._scaling_param_increment)
 
     def decrease(self):
         """Decrease the scaling parameter."""
-        value = getattr(self, self._scaling_param_name)
-        setattr(self, self._scaling_param_name, max(
+        value = self._get_scaling_value()
+        self._set_scaling_value(max(
             self._scaling_param_min, value / self._scaling_param_increment))
 
 
 class MarkerSizeMixin(ScalingMixin):
     _marker_size = 5.
-    _scaling_param_name = 'marker_size'
 
     def __init__(self, *args, **kwargs):
         super(MarkerSizeMixin, self).__init__(*args, **kwargs)
@@ -359,6 +365,12 @@ class MarkerSizeMixin(ScalingMixin):
 
     # Marker size
     # -------------------------------------------------------------------------
+
+    def _get_scaling_value(self):
+        return self.marker_size
+
+    def _set_scaling_value(self, value):
+        self.marker_size = value
 
     @property
     def marker_size(self):

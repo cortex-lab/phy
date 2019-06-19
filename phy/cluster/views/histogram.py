@@ -42,8 +42,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     # Maximum value on the x axis (determines the range of the histogram)
     # If None, then `data.max()` is used.
-    _x_max = None
-    _scaling_param_name = 'x_max'
+    x_max = None
 
     # The snippet to update this view are `hn` to change the number of bins, and `hm` to
     # change the maximum value on the x axis. The character `h` can be customized by child classes.
@@ -93,7 +92,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         text = text.splitlines()
         n = len(text)
         self.text_visual.add_batch_data(
-            text=text, pos=[(-1, .8)] * n, anchor=[(1, -1 - i) for i in range(n)],
+            text=text, pos=[(-1, .8)] * n, anchor=[(1, -1 - 2 * i) for i in range(n)],
             box_index=bunch.index,
         )
 
@@ -103,9 +102,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             bunch = self.cluster_stat(cluster_id)
 
             # Update self.x_max if it was not set before.
-            self._x_max = self.x_max or bunch.get('x_max', None) or bunch.data.max()
-            assert self._x_max is not None
-            assert self._x_max > 0
+            self.x_max = self.x_max or bunch.get('x_max', None) or bunch.data.max()
+            assert self.x_max is not None
+            assert self.x_max > 0
 
             # Compute the histogram.
             bins = np.linspace(0., self.x_max, self.n_bins)
@@ -124,7 +123,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def _get_data_bounds(self, bunchs):
         # Get the axes data bounds (the last subplot's extended n_cluster times on the y axis).
-        ylim = max(bunch.ylim for bunch in bunchs)
+        ylim = max(bunch.ylim for bunch in bunchs) if bunchs else 1
         return (0, 0, self.x_max, ylim * len(self.cluster_ids))
 
     def plot(self, **kwargs):
@@ -161,6 +160,12 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     # Histogram parameters
     # -------------------------------------------------------------------------
 
+    def _get_scaling_value(self):
+        return self.x_max
+
+    def _set_scaling_value(self, value):
+        self.set_x_max(value)
+
     def set_n_bins(self, n_bins):
         """Set the number of bins in the histogram."""
         self.n_bins = n_bins
@@ -169,14 +174,6 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def set_x_max(self, x_max):
         """Set the maximum value on the x axis for the histogram."""
-        self._x_max = x_max
+        self.x_max = x_max
         logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.plot()
-
-    @property
-    def x_max(self):
-        return self._x_max
-
-    @x_max.setter
-    def x_max(self, value):
-        self.set_x_max(value)

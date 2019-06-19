@@ -85,7 +85,6 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     """
 
     _default_position = 'right'
-    _scaling_param_name = '_box_scaling_y'
     cluster_ids = ()
 
     default_shortcuts = {
@@ -320,15 +319,6 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self._box_scaling = np.array(value)
         self._update_boxes()
 
-    @property
-    def _box_scaling_y(self):
-        return self._box_scaling[1]
-
-    @_box_scaling_y.setter
-    def _box_scaling_y(self, value):
-        self._box_scaling[1] = value
-        self._update_boxes()
-
     def widen(self):
         """Increase the horizontal scaling of the waveforms."""
         self._box_scaling[0] *= self._scaling_param_increment
@@ -337,6 +327,13 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def narrow(self):
         """Decrease the horizontal scaling of the waveforms."""
         self._box_scaling[0] /= self._scaling_param_increment
+        self._update_boxes()
+
+    def _get_scaling_value(self):
+        return self.box_scaling[1]
+
+    def _set_scaling_value(self, value):
+        self.box_scaling[1] = value
         self._update_boxes()
 
     # Probe scaling

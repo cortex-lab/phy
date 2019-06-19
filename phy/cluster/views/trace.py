@@ -157,7 +157,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
             self._channel_perm = np.argsort(self._channel_perm)
 
         # Box and probe scaling.
-        self._scaling = 1.
+        self.scaling = 1.
         self._origin = None
 
         # Initialize the view.
@@ -462,14 +462,13 @@ class TraceView(ScalingMixin, ManualClusteringView):
     # Scaling
     # -------------------------------------------------------------------------
 
-    @property
-    def scaling(self):
-        """Scaling of the traces."""
-        return self._scaling
+    def _get_scaling_value(self):
+        """Return the scaling parameter. May be overriden."""
+        return self.scaling
 
-    @scaling.setter
-    def scaling(self, value):
-        self._scaling = value
+    def _set_scaling_value(self, value):
+        """Set the scaling parameter. May be overriden."""
+        self.scaling = value
         self._update_boxes()
 
     def _update_boxes(self):

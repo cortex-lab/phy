@@ -102,6 +102,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
         assert features
         self.features = features
+        self._lim = 1
 
         self.grid_dim = _get_default_grid()
         self.n_rows, self.n_cols = np.array(self.grid_dim).shape
@@ -185,7 +186,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             assert vmin is not None
             assert vmax is not None
             return vmin, vmax
-        return bunch.data.min(), bunch.data.max()
+        return (-self._lim, +self._lim)
 
     def _plot_points(self, bunch, clu_idx=None):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
@@ -209,7 +210,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
                 x=px.data, y=py.data,
                 color=_get_point_color(clu_idx),
                 # Reduced marker size for background features
-                size=self._marker_size if clu_idx is not None else .5 * self._marker_size,
+                size=self._marker_size,
                 masks=_get_point_masks(clu_idx=clu_idx, masks=masks),
                 data_bounds=data_bounds,
                 box_index=(i, j),
@@ -281,6 +282,11 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
         return bunchs
 
+    def _get_lim(self, bunchs):
+        m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
+        M = max(abs(m), abs(M))
+        return M
+
     def plot(self, **kwargs):
         """Update the view with the selected clusters."""
 
@@ -293,6 +299,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
         # Get the clusters data.
         bunchs = self.get_clusters_data(fixed_channels=fixed_channels)
+        self._lim = self._get_lim(bunchs)
 
         # Get the background data.
         background = self.features(channel_ids=self.channel_ids)

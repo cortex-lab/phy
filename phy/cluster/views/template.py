@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Template view
 # -----------------------------------------------------------------------------
 
-class TemplateView(ManualClusteringView, ScalingMixin):
+class TemplateView(ScalingMixin, ManualClusteringView):
     """This view shows all template waveforms of all clusters in a large grid of shape
     `(n_channels, n_clusters)`.
 
@@ -62,7 +62,8 @@ class TemplateView(ManualClusteringView, ScalingMixin):
         # Full list of channels.
         self.channel_ids = channel_ids
         # Full list of clusters.
-        self.set_cluster_ids(cluster_ids)
+        if cluster_ids is not None:
+            self.set_cluster_ids(cluster_ids)
         # Total number of channels.
         self.n_channels = len(channel_ids)
         self.canvas.set_layout('grid', box_bounds=[[-1, -1, +1, +1]], has_clip=False)
@@ -77,10 +78,20 @@ class TemplateView(ManualClusteringView, ScalingMixin):
     # -------------------------------------------------------------------------
 
     def _iter_clusters(self):
-        """Iterate through all clusters. Yield a tuple (cluster_rel, cluster_idx, cluster_id)."""
-        for i, (cluster_idx, cluster_id) in enumerate(
-                zip(self.cluster_idxs, self.cluster_ids)):
-            yield i, cluster_idx, cluster_id
+        """Iterate through all clusters in their natural order (increasing cluster id).
+
+        Yield a tuple (cluster_rel, cluster_idx, cluster_id).
+
+        cluster_rel : int
+            Range from 0 to n_clusters - 1.
+        cluster_idx : int
+            The position of the current cluster in `self.cluster_ids`
+        cluster_id : int
+            The cluster id.
+
+        """
+        for i in range(len(self.cluster_ids)):
+            yield i, self.cluster_idxs[i], self.cluster_ids_sorted[i]
 
     def _get_data_bounds(self, bunchs):
         m = np.median([b.template.min() for b in bunchs])
@@ -107,7 +118,7 @@ class TemplateView(ManualClusteringView, ScalingMixin):
         box_index = np.repeat(box_index, n_samples)
         box_index = np.c_[
             box_index.reshape((-1, 1)),
-            bunch.cluster_rel * np.ones((n_samples * n_channels_loc, 1))]
+            bunch.cluster_idx * np.ones((n_samples * n_channels_loc, 1))]
         assert box_index.shape == (n_channels_loc * n_samples, 2)
         assert box_index.size == wave.size * 2
         self._cluster_box_index[bunch.cluster_id] = box_index
@@ -128,6 +139,13 @@ class TemplateView(ManualClusteringView, ScalingMixin):
             b.cluster_id = cluster_id
             out.append(b)
         return out
+
+    def _get_scaling_value(self):
+        return self.scaling
+
+    def _set_scaling_value(self, value):
+        self.scaling = value
+        self.plot()
 
     # Main methods
     # -------------------------------------------------------------------------
@@ -180,12 +198,6 @@ class TemplateView(ManualClusteringView, ScalingMixin):
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
 
-    def on_select(self, cluster_ids=(), **kwargs):
-        """Update the view with the selected clusters."""
-        if not cluster_ids:
-            return
-        self.update_color(selected_clusters=cluster_ids)
-
     def plot(self):
         """Make the template plot."""
 
@@ -205,12 +217,18 @@ class TemplateView(ManualClusteringView, ScalingMixin):
         self.canvas.axes.reset_data_bounds((0, 0, n_clusters, self.n_channels))
         self.canvas.update()
 
+    def on_select(self, cluster_ids=(), **kwargs):
+        """Update the view with the selected clusters."""
+        if not cluster_ids:
+            return
+        self.update_color(selected_clusters=cluster_ids)
+
     def on_mouse_click(self, e):
         """Select a cluster by clicking on its template waveform."""
         b = e.button
         if 'Control' in e.modifiers:
             # Get mouse position in NDC.
-            (channel_idx, cluster_idx), _ = self.canvas.grid.box_map(e.pos)
-            cluster_id = self.cluster_ids[cluster_idx]
+            (channel_idx, cluster_rel), _ = self.canvas.grid.box_map(e.pos)
+            cluster_id = self.cluster_ids[cluster_rel]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
             emit('cluster_click', self, cluster_id, button=b)
