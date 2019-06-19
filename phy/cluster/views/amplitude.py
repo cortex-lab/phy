@@ -14,7 +14,7 @@ import numpy as np
 from phylib.utils.color import selected_cluster_color
 from phylib.utils._types import _as_array
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
-from phy.plot.visuals import ScatterVisual
+from phy.plot.visuals import ScatterVisual, TextVisual
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
 
+        self.text_visual = TextVisual()
+        self.canvas.add_visual(self.text_visual)
+
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
         M = max(bunch.amp.max() for bunch in bunchs) if bunchs else 1.
@@ -82,9 +85,15 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         return bunchs
 
     def _plot_cluster(self, bunch):
+        """Make the scatter plot."""
         ms = self._marker_size
+        # Scatter plot.
         self.visual.add_batch_data(
             pos=bunch.pos, color=bunch.color, size=ms, data_bounds=self.data_bounds)
+
+    def _plot_amplitude_name(self):
+        """Show the amplitude name."""
+        self.text_visual.add_batch_data(pos=[1, 1], anchor=[-1, -1], text=self.amplitude_name)
 
     def plot(self):
         """Update the view with the current cluster selection."""
@@ -92,10 +101,12 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.data_bounds = self._get_data_bounds(bunchs)
 
         self.visual.reset_batch()
+        self.text_visual.reset_batch()
         for bunch in bunchs:
             self._plot_cluster(bunch)
+        self._plot_amplitude_name()
         self.canvas.update_visual(self.visual)
-        self.visual.show()
+        self.canvas.update_visual(self.text_visual)
 
         self._update_axes()
         self.canvas.update()
