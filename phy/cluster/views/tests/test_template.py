@@ -69,5 +69,6 @@ def test_template_view(qtbot, tempdir, gui):
 
     v.increase()
     v.decrease()
+    v.scaling = v.scaling
 
     _stop_and_close(qtbot, v)

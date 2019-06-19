@@ -313,11 +313,7 @@ class ManualClusteringView(object):
 # -----------------------------------------------------------------------------
 
 class ScalingMixin(object):
-    """Implement increase, decrease actions, as well as control+wheel shortcut.
-
-    The scaling parameter, which depends on each view, should be set in `self._scaling_param_name`.
-
-    """
+    """Implement increase, decrease actions, as well as control+wheel shortcut."""
     _scaling_param_increment = 1.1
     _scaling_param_min = .01
 

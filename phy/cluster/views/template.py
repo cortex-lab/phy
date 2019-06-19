@@ -47,7 +47,7 @@ class TemplateView(ScalingMixin, ManualClusteringView):
     """
     _default_position = 'right'
     cluster_ids = ()
-    scaling = 1.
+    _scaling = 1.
 
     default_shortcuts = {
         'increase': 'ctrl+alt++',
@@ -57,6 +57,8 @@ class TemplateView(ScalingMixin, ManualClusteringView):
     def __init__(self, templates=None, channel_ids=None, cluster_ids=None,
                  cluster_color_selector=None):
         super(TemplateView, self).__init__()
+        self.state_attrs += ('scaling',)
+        self.local_state_attrs += ('scaling',)
 
         self.cluster_color_selector = cluster_color_selector
         # Full list of channels.
@@ -123,11 +125,8 @@ class TemplateView(ScalingMixin, ManualClusteringView):
         assert box_index.size == wave.size * 2
         self._cluster_box_index[bunch.cluster_id] = box_index
 
-        # Generate the waveform array.
-        wave = wave.T * (self.scaling or 1.)
-
         self.visual.add_batch_data(
-            x=t, y=wave, color=color, box_index=box_index, data_bounds=self.data_bounds)
+            x=t, y=wave.T, color=color, box_index=box_index, data_bounds=self.data_bounds)
 
     def get_clusters_data(self, load_all=None):
         bunchs = self.templates(self.cluster_ids)
@@ -140,12 +139,22 @@ class TemplateView(ScalingMixin, ManualClusteringView):
             out.append(b)
         return out
 
-    def _get_scaling_value(self):
-        return self.scaling
-
     def _set_scaling_value(self, value):
-        self.scaling = value
-        self.plot()
+        self._scaling = value
+        self._apply_scaling()
+
+    def _apply_scaling(self):
+        sx, sy = self.canvas.layout.scaling
+        self.canvas.layout.scaling = (sx, self._scaling)
+
+    @property
+    def scaling(self):
+        """Return the grid scaling."""
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
 
     # Main methods
     # -------------------------------------------------------------------------
@@ -214,6 +223,7 @@ class TemplateView(ScalingMixin, ManualClusteringView):
         for bunch in bunchs:
             self._plot_cluster(bunch)
         self.canvas.update_visual(self.visual)
+        self._apply_scaling()
         self.canvas.axes.reset_data_bounds((0, 0, n_clusters, self.n_channels))
         self.canvas.update()
 

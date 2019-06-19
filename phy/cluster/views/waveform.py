@@ -301,12 +301,15 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def _update_boxes(self):
         self.canvas.boxed.update_boxes(
-            self.box_pos * self.probe_scaling, self.box_size * self.box_scaling)
+            self.box_pos * self.probe_scaling, self.box_size)
 
     @property
     def boxed(self):
         """Layout instance."""
         return self.canvas.boxed
+
+    def _apply_box_scaling(self):
+        self.canvas.layout.scaling = self._box_scaling
 
     @property
     def box_scaling(self):
@@ -317,17 +320,17 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def box_scaling(self, value):
         assert len(value) == 2
         self._box_scaling = np.array(value)
-        self._update_boxes()
+        self._apply_box_scaling()
 
     def widen(self):
         """Increase the horizontal scaling of the waveforms."""
         self._box_scaling[0] *= self._scaling_param_increment
-        self._update_boxes()
+        self._apply_box_scaling()
 
     def narrow(self):
         """Decrease the horizontal scaling of the waveforms."""
         self._box_scaling[0] /= self._scaling_param_increment
-        self._update_boxes()
+        self._apply_box_scaling()
 
     def _get_scaling_value(self):
         return self.box_scaling[1]
