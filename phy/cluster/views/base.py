@@ -395,7 +395,6 @@ class LassoMixin(object):
         bunchs = self.get_clusters_data(load_all=True)
         if bunchs is None:
             return
-        assert len(bunchs) == len(self.cluster_ids)
         for cluster_id, bunch in zip(self.cluster_ids, bunchs):
             # Load all spikes.
             points = np.c_[bunch.pos]

@@ -34,6 +34,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     amplitudes : function
         Maps `cluster_ids` to a list `[Bunch(amp, spike_ids), ...]` for each cluster.
+        Use `cluster_id=None` for background amplitudes.
 
     """
 
@@ -96,16 +97,20 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def get_clusters_data(self, load_all=None):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
-        bunchs = self.amplitudes[self.amplitude_name](self.cluster_ids, load_all=load_all) or ()
+        cluster_ids = self.cluster_ids + [None]  # add the background
+        bunchs = self.amplitudes[self.amplitude_name](cluster_ids, load_all=load_all) or ()
         # Add a pos attribute in bunchs in addition to x and y.
-        for i, bunch in enumerate(bunchs):
+        for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
             spike_ids = _as_array(bunch.spike_ids)
             spike_times = self.spike_times[spike_ids]
             amplitudes = _as_array(bunch.amp)
             assert spike_ids.shape == spike_times.shape == amplitudes.shape
             bunch.pos = np.c_[spike_times, amplitudes]
             assert bunch.pos.ndim == 2
-            bunch.color = selected_cluster_color(i, self.marker_alpha)
+            bunch.color = (
+                selected_cluster_color(i, self.marker_alpha)
+                # Background amplitude color.
+                if cluster_id is not None else (.5, .5, .5, .5))
         return bunchs
 
     def _add_histograms(self, bunchs):
