@@ -72,6 +72,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.amplitude_name = amplitude_name or self.amplitude_names[0]
         assert self.amplitude_name in amplitudes
 
+        self.cluster_ids = ()
         self.duration = duration or 1
 
         # Histogram visual.
@@ -90,7 +91,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
-        M = max(bunch.amplitudes.max() for bunch in bunchs) if bunchs else 1.
+        M = max(np.quantile(bunch.amplitudes, .99) for bunch in bunchs) if bunchs else 1.
         return (0, 0, self.duration, M)
 
     def get_clusters_data(self, load_all=None):
@@ -115,7 +116,8 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # We do this after get_clusters_data because we need x_max.
         for bunch in bunchs:
             bunch.histogram = _compute_histogram(
-                bunch.amplitudes, x_max=self.data_bounds[-1], n_bins=self.n_bins)
+                bunch.amplitudes, x_max=self.data_bounds[-1], n_bins=self.n_bins,
+                normalize=False)
         return bunchs
 
     def _plot_cluster(self, bunch):
@@ -125,6 +127,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # Histogram in the background.
         self.hist_visual.add_batch_data(
             hist=bunch.histogram,
+            ylim=self._ylim,
             color=add_alpha(bunch.color, self.histogram_alpha))
 
         # Scatter plot.
@@ -140,6 +143,8 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         bunchs = self.get_clusters_data()
         self.data_bounds = self._get_data_bounds(bunchs)
         bunchs = self._add_histograms(bunchs)
+        # Use the same scale for all histograms.
+        self._ylim = max(bunch.histogram.max() for bunch in bunchs)
 
         self.visual.reset_batch()
         self.hist_visual.reset_batch()
@@ -165,4 +170,3 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         n = len(self.amplitude_names)
         self.amplitude_name = self.amplitude_names[(i + 1) % n]
         logger.debug("Switch to amplitude type %s.", self.amplitude_name)
-        self.plot()
