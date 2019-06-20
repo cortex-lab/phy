@@ -288,12 +288,12 @@ def _as_list(arr):
 
 def _min(arr):
     """Minimum of an array, return 0 on empty arrays."""
-    return arr.min() if len(arr) else 0
+    return arr.min() if arr is not None and len(arr) > 0 else 0
 
 
 def _max(arr):
-    """Minimum of an array, return 1 on empty arrays."""
-    return arr.max() if len(arr) else 1.
+    """Maximum of an array, return 1 on empty arrays."""
+    return arr.max() if arr is not None and len(arr) > 0 else 1
 
 
 class PlotVisual(BaseVisual):
