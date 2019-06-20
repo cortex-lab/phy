@@ -16,7 +16,6 @@ from phylib.utils import emit
 from phylib.utils.color import _add_selected_clusters_colors
 
 from .base import ManualClusteringView, MarkerSizeMixin
-from phy.plot import NDC
 from phy.plot.visuals import ScatterVisual
 
 logger = logging.getLogger(__name__)
