@@ -11,7 +11,7 @@ import pytest
 
 from phylib.io.array import _spikes_per_cluster
 from phylib.io.mock import artificial_features, artificial_spike_clusters
-from phylib.utils import Bunch
+from phylib.utils import Bunch, connect
 from phy.plot.tests import mouse_click
 
 from ..feature import FeatureView, _get_default_grid
@@ -69,6 +69,22 @@ def test_feature_view(qtbot, gui, n_channels):
     v.on_channel_click(channel_id=3, button='Right', key=2)
     v.clear_channels()
     v.toggle_automatic_channel_selection(True)
+
+    # Test feature selection with Alt+click.
+    _l = []
+
+    @connect(sender=v)
+    def on_feature_click(sender, dim=None, channel_id=None, pc=None):
+        _l.append((dim, channel_id, pc))
+
+    for i, j, dim_x, dim_y in v._iter_subplots():
+        for k, button in enumerate(('Left', 'Right')):
+            # Click on the center of every subplot.
+            w, h = v.canvas.get_size()
+            w, h = w / 4, h / 4
+            x, y = w / 2, h / 2
+            mouse_click(qtbot, v.canvas, (x + j * w, y + i * h), button=button, modifiers=('Alt',))
+            assert _l[-1][0] == v.grid_dim[i][j].split(',')[k]
 
     # Split without selection.
     spike_ids = v.on_request_split()

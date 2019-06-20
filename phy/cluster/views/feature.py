@@ -12,7 +12,7 @@ import re
 
 import numpy as np
 
-from phylib.utils import Bunch, connect
+from phylib.utils import Bunch, connect, emit
 from phylib.utils.color import selected_cluster_color
 from phy.plot.transform import Range
 from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
@@ -104,7 +104,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         self.features = features
         self._lim = 1
 
-        self.grid_dim = _get_default_grid()
+        self.grid_dim = _get_default_grid()  # 2D array where every item a string like `0A,1B`
         self.n_rows, self.n_cols = np.array(self.grid_dim).shape
         self.canvas.set_layout('grid', shape=(self.n_rows, self.n_cols))
         self.canvas.enable_lasso()
@@ -127,7 +127,17 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         self.canvas.add_visual(self.line_visual)
 
     def set_grid_dim(self, grid_dim):
-        """Change the grid dim dynamically."""
+        """Change the grid dim dynamically.
+
+        Parameters
+        ----------
+        grid_dim : array-like (2D)
+            `grid_dim[row, col]` is a string with two values separated by a comma. Each value
+            is the relative channel id (0, 1, 2...) followed by the PC (A, B, C...). For example,
+            `grid_dim[row, col] = 0B,1A`. Each value can also be an attribute name, for example
+            `time`. For example, `grid_dim[row, col] = time,2C`.
+
+        """
         self.grid_dim = grid_dim
         self.n_rows, self.n_cols = np.array(grid_dim).shape
         self.canvas.grid.shape = (self.n_rows, self.n_cols)
@@ -151,6 +161,17 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         else:
             return dim
 
+    def _get_channel_and_pc(self, dim):
+        """Return the channel_id and PC of a dim."""
+        assert dim not in self.attributes  # This is called only on PC data.
+        s = 'ABCDEFGHIJ'
+        # Channel relative index, typically just 0 or 1.
+        c_rel = int(dim[:-1])
+        # Get the channel_id from the currently-selected channels.
+        channel_id = self.channel_ids[c_rel % len(self.channel_ids)]
+        pc = s.index(dim[-1])
+        return channel_id, pc
+
     def _get_axis_data(self, bunch, dim, cluster_id=None, load_all=None):
         """Extract the points from the data on a given dimension.
 
@@ -161,22 +182,15 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         if dim in self.attributes:
             return self.attributes[dim](cluster_id, load_all=load_all)
         masks = bunch.get('masks', None)
-        assert dim not in self.attributes  # This is called only on PC data.
-        s = 'ABCDEFGHIJ'
-        # Channel relative index, typically just 0 or 1.
-        c_rel = int(dim[:-1])
-        # Get the channel_id from the currently-selected channels.
-        channel_id = self.channel_ids[c_rel % len(self.channel_ids)]
+        channel_id, pc = self._get_channel_and_pc(dim)
         # Skip the plot if the channel id is not displayed.
         if channel_id not in bunch.channel_ids:  # pragma: no cover
             return Bunch(data=np.zeros((bunch.data.shape[0],)))
         # Get the column index of the current channel in data.
         c = list(bunch.channel_ids).index(channel_id)
-        # Principal component: A=0, B=1, etc.
-        d = s.index(dim[-1])
         if masks is not None:
             masks = masks[:, c]
-        return Bunch(data=bunch.data[:, c, d], masks=masks)
+        return Bunch(data=bunch.data[:, c, pc], masks=masks)
 
     def _get_axis_bounds(self, dim, bunch):
         """Return the min/max of an axis."""
@@ -246,6 +260,11 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             )
         self.canvas.update_visual(self.line_visual)
 
+    def _get_lim(self, bunchs):
+        m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
+        M = max(abs(m), abs(M))
+        return M
+
     # Public methods
     # -------------------------------------------------------------------------
 
@@ -281,11 +300,6 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         assert len(self.channel_ids)
 
         return bunchs
-
-    def _get_lim(self, bunchs):
-        m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
-        M = max(abs(m), abs(M))
-        return M
 
     def plot(self, **kwargs):
         """Update the view with the selected clusters."""
@@ -339,6 +353,13 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         connect(self.on_channel_click)
         connect(self.on_request_split)
 
+    def toggle_automatic_channel_selection(self, checked):
+        """Toggle the automatic selection of channels when the cluster selection changes."""
+        self.fixed_channels = not checked
+
+    # Dimension selection
+    # -------------------------------------------------------------------------
+
     def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
         """Respond to the click on a channel from another view, and update the
         relevant subplots."""
@@ -370,10 +391,26 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         # Fix the channels temporarily.
         self.plot(fixed_channels=True)
 
+    def on_mouse_click(self, e):
+        """Select a feature dimension by clicking on a box in the feature view."""
+        b = e.button
+        if 'Alt' in e.modifiers:
+            # Get mouse position in NDC.
+            (i, j), _ = self.canvas.grid.box_map(e.pos)
+            dim = self.grid_dim[i][j]
+            dim_x, dim_y = dim.split(',')
+            dim = dim_x if b == 'Left' else dim_y
+            if dim not in self.attributes:
+                channel_id, pc = self._get_channel_and_pc(dim)
+                logger.debug("Click on feature dim %s, channel %s, PC %s.", dim, channel_id, pc)
+            else:
+                channel_id = pc = None
+                logger.debug("Click on feature dim %s.", dim)
+            emit('feature_click', self, dim=dim, channel_id=channel_id, pc=pc)
+
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
-        if (self.canvas.lasso.count < 3 or
-                not len(self.cluster_ids)):  # pragma: no cover
+        if (self.canvas.lasso.count < 3 or not len(self.cluster_ids)):  # pragma: no cover
             return np.array([], dtype=np.int64)
         assert len(self.channel_ids)
 
@@ -408,7 +445,3 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         ind = self.canvas.lasso.in_polygon(pos)
         self.canvas.lasso.clear()
         return np.unique(spike_ids[ind])
-
-    def toggle_automatic_channel_selection(self, checked):
-        """Toggle the automatic selection of channels when the cluster selection changes."""
-        self.fixed_channels = not checked

@@ -144,7 +144,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.data_bounds = self._get_data_bounds(bunchs)
         bunchs = self._add_histograms(bunchs)
         # Use the same scale for all histograms.
-        self._ylim = max(bunch.histogram.max() for bunch in bunchs)
+        self._ylim = max(bunch.histogram.max() for bunch in bunchs) if bunchs else 1.
 
         self.visual.reset_batch()
         self.hist_visual.reset_batch()
