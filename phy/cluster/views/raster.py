@@ -63,7 +63,6 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
         super(RasterView, self).__init__()
 
         self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
-        self.canvas.constrain_bounds = NDC
         self.canvas.enable_axes()
 
         self.visual = ScatterVisual(marker='vbar')
@@ -147,7 +146,7 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
 
         self.visual.set_data(
             x=x, y=y, color=color, size=self.marker_size,
-            data_bounds=(0, 0, self.duration, 1))
+            data_bounds=(0, -1, self.duration, 1))
         self.visual.set_box_index(box_index)
         self.canvas.stacked.n_boxes = self.n_clusters
         self._update_axes()
