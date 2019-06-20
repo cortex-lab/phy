@@ -21,12 +21,8 @@ from phylib.io.array import Selector
 from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils.color import ClusterColorSelector
 from phy.cluster.supervisor import Supervisor
-from phy.cluster.views import (WaveformView,
-                               FeatureView,
-                               TraceView,
-                               CorrelogramView,
-                               select_traces,
-                               )
+from phy.cluster.views import (
+    WaveformView, FeatureView, TraceView, CorrelogramView, select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
 from phy.utils.context import Context, _cache_methods

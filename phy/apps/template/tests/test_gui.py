@@ -14,7 +14,8 @@ from phylib.utils import connect, emit
 import phy.cluster.views as cv
 from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press, mouse_click
-from ..gui import TemplateController, template_describe, AmplitudeView, TemplateFeatureView
+from ..gui import (
+    TemplateController, template_describe, AmplitudeView, TemplateFeatureView, FeatureView)
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,10 @@ def test_template_gui_1(qtbot, tempdir, template_controller_full):
         default_views=('WaveformView', 'CorrelogramView', 'AmplitudeView'))
     s = controller.supervisor
     _wait_controller(qtbot, controller.supervisor, gui)
+
+    controller.selection.cluster_ids
+    controller.selection.colormap
+    controller.selection.color_field
 
     s.select_actions.next()
     s.block()
@@ -99,7 +104,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller_full):
     # Create a new controller and a new GUI with the same data.
     params = read_python(tempdir / 'params.py')
     params['dat_path'] = controller.model.dat_path
-    controller = TemplateController(config_dir=tempdir, **params)
+    controller = TemplateController(config_dir=tempdir, clear_cache=True, **params)
 
     gui = controller.create_gui()
     s = controller.supervisor
@@ -204,6 +209,29 @@ def test_template_gui_2(qtbot, template_controller):
     gui.close()
 
 
+def test_template_gui_undo_stack(qtbot, template_controller):
+    controller = template_controller
+    gui = controller.create_gui()
+    s = controller.supervisor
+    _wait_controller(qtbot, controller.supervisor, gui)
+
+    s.select_actions.next()
+    s.block()
+
+    s.select_actions.next()
+    s.block()
+
+    s.actions.merge()
+    s.block()
+
+    for _ in range(5):
+        s.actions.undo()
+        s.block()
+
+        s.actions.redo()
+        s.block()
+
+
 def test_template_gui_new_views(qtbot, template_controller_full):
     """Test adding new views once clusters are selected."""
     controller = template_controller_full
@@ -256,7 +284,7 @@ def test_template_gui_sim(qtbot, template_controller):
     gui.close()
 
 
-def test_template_gui_split_amplitude(qtbot, tempdir, template_controller):
+def test_template_gui_amplitude(qtbot, tempdir, template_controller):
     gui = template_controller.create_gui()
     s = template_controller.supervisor
     _wait_controller(qtbot, s, gui)
@@ -266,11 +294,36 @@ def test_template_gui_split_amplitude(qtbot, tempdir, template_controller):
 
     av = gui.list_views(AmplitudeView)[0]
 
-    a, b = 10, 1000
-    mouse_click(qtbot, av.canvas, (a, a), modifiers=('Control',))
-    mouse_click(qtbot, av.canvas, (a, b), modifiers=('Control',))
-    mouse_click(qtbot, av.canvas, (b, b), modifiers=('Control',))
-    mouse_click(qtbot, av.canvas, (b, a), modifiers=('Control',))
+    cl = 63
+    template_controller.get_template_amplitude(cl)
+    template_controller.get_amplitudes(cl)
+    template_controller.get_spike_raw_amplitudes(cl)
+    template_controller.get_spike_template_amplitudes(cl)
+    template_controller.get_mean_spike_template_amplitudes(cl)
+    template_controller.get_mean_spike_raw_amplitudes(cl)
+
+    for _ in range(3):
+        av.next_amplitude_type()
+        s.select_actions.next()
+        s.block()
+
+    av.amplitude_name = 'feature'
+    s.select_actions.next()
+    s.block()
+
+    # Select feature in feature view.
+    fv = gui.list_views(FeatureView)[0]
+    w, h = fv.canvas.get_size()
+    w, h = w / 4, h / 4
+    x, y = w / 2, h / 2
+    mouse_click(qtbot, fv.canvas, (x, y), button='Left', modifiers=('Alt',))
+    qtbot.wait(50)
+
+    # Split.
+    mouse_click(qtbot, av.canvas, (0, 0), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (w, 0), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (w, h), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (0, h), modifiers=('Control',))
 
     n = max(s.clustering.cluster_ids)
 
@@ -278,7 +331,7 @@ def test_template_gui_split_amplitude(qtbot, tempdir, template_controller):
     s.block()
 
     # Split one cluster => Two new clusters should be selected after the split.
-    assert s.selected_clusters == [n + 1, n + 2]
+    assert s.selected_clusters[:2] == [n + 1, n + 2]
 
     # qtbot.stop()
     gui.close()
@@ -301,11 +354,11 @@ def test_template_gui_split_template_feature(qtbot, tempdir, template_controller
         return
     tfv = tfv[0]
 
-    a, b = 0, 1000
-    mouse_click(qtbot, tfv.canvas, (a, a), modifiers=('Control',))
-    mouse_click(qtbot, tfv.canvas, (a, b), modifiers=('Control',))
-    mouse_click(qtbot, tfv.canvas, (b, b), modifiers=('Control',))
-    mouse_click(qtbot, tfv.canvas, (b, a), modifiers=('Control',))
+    w, h = tfv.canvas.get_size()
+    mouse_click(qtbot, tfv.canvas, (1, 1), modifiers=('Control',))
+    mouse_click(qtbot, tfv.canvas, (w - 1, 1), modifiers=('Control',))
+    mouse_click(qtbot, tfv.canvas, (w - 1, h - 1), modifiers=('Control',))
+    mouse_click(qtbot, tfv.canvas, (1, h - 1), modifiers=('Control',))
 
     n = max(s.clustering.cluster_ids)
 
@@ -316,11 +369,3 @@ def test_template_gui_split_template_feature(qtbot, tempdir, template_controller
 
     # qtbot.stop()
     gui.close()
-
-
-def test_template_amplitude(template_controller):
-    controller = template_controller
-    s = controller.supervisor
-    b = s.merge([31, 51])
-    amp = controller.get_template_amplitude(b.added[0])
-    assert amp > 0

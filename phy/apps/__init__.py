@@ -114,8 +114,11 @@ def phycli(ctx):
 
 @phycli.command('template-gui')  # pragma: no cover
 @click.argument('params-path', type=click.Path(exists=True))
+@click.option(
+    '--clear-cache/--no-clear-cache', default=False,
+    help="Clear the .phy cache in the data directory.")
 @click.pass_context
-def cli_template_gui(ctx, params_path):
+def cli_template_gui(ctx, params_path, clear_cache=None):
     """Launch the template GUI on a params.py file."""
     from .template.gui import template_gui
     prof = __builtins__.get('profile', None)
@@ -123,7 +126,7 @@ def cli_template_gui(ctx, params_path):
         if prof:
             from phy.utils.profiling import _profile
             return _profile(prof, 'template_gui(params_path)', globals(), locals())
-        template_gui(params_path)
+        template_gui(params_path, clear_cache=clear_cache)
 
 
 @phycli.command('template-describe')

@@ -12,6 +12,7 @@ import logging
 from operator import itemgetter
 import os
 from pathlib import Path
+import shutil
 
 import numpy as np
 
@@ -64,6 +65,24 @@ class FiringRateView(HistogramView):
 # Template Controller
 #------------------------------------------------------------------------------
 
+class Selection(Bunch):
+    def __init__(self, controller):
+        super(Selection, self).__init__()
+        self.controller = controller
+
+    @property
+    def cluster_ids(self):
+        return self.controller.supervisor.selected
+
+    @property
+    def colormap(self):
+        return self.controller.supervisor.color_selector.state.colormap
+
+    @property
+    def color_field(self):
+        return self.controller.supervisor.color_selector.state.color_field
+
+
 class TemplateController(object):
     """Controller for the Template GUI.
 
@@ -105,7 +124,6 @@ class TemplateController(object):
         'get_best_channels',
         'get_channel_shank',
         'get_probe_depth',
-        'get_spike_ids',
         'get_template_amplitude',
         'get_mean_spike_template_amplitudes',
         'get_mean_spike_raw_amplitudes',
@@ -115,8 +133,7 @@ class TemplateController(object):
         'get_amplitudes',
         'get_spike_raw_amplitudes',
         'get_spike_template_amplitudes',
-
-        '_amplitude_getter',
+        '_get_spike_amplitudes',
         '_get_waveforms_with_n_spikes',
         '_get_template_waveforms',
         '_get_features',
@@ -132,12 +149,17 @@ class TemplateController(object):
         'AmplitudeView', 'RasterView', 'TemplateView', 'ISIView', 'FiringRateView'
     )
 
-    def __init__(self, dat_path=None, config_dir=None, model=None, **kwargs):
+    def __init__(self, dat_path=None, config_dir=None, model=None, clear_cache=None, **kwargs):
         self.model = TemplateModel(dat_path, **kwargs) if not model else model
         self.cache_dir = self.model.dir_path / '.phy'
+        # Clear the cache if needed.
+        if clear_cache:
+            logger.warn("Deleting the cache directory %s.", self.cache_dir)
+            shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
         self._async_caller = AsyncCaller()
+        self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
         # mapping name => function {cluster_id: value}, to update in plugins
         self.cluster_metrics = {}
         self.view_creator = {
@@ -211,7 +233,7 @@ class TemplateController(object):
 
         @connect(sender=supervisor)
         def on_attach_gui(sender):
-            @supervisor.actions.add(shortcut='shift+ctrl+k')
+            @supervisor.actions.add(shortcut='shift+ctrl+k', set_busy=True)
             def split_init(cluster_ids=None):
                 """Split a cluster according to the original templates."""
                 if cluster_ids is None:
@@ -326,10 +348,6 @@ class TemplateController(object):
         k = max(1, ns // n) if n is not None else 1
         return np.arange(0, ns, k)
 
-    def get_background_spike_times(self, n=None):
-        """Return the spike times of background spikes."""
-        return self.model.spike_times[self.get_background_spike_ids(n=n)]
-
     # Amplitudes
     # -------------------------------------------------------------------------
 
@@ -340,16 +358,15 @@ class TemplateController(object):
         return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
 
     def _get_amplitude_spike_ids(self, cluster_id, load_all=False):
+        """Return the spike ids for the amplitude view."""
         n = self.n_spikes_amplitudes if not load_all else None
         return self.get_spike_ids(cluster_id, n=n)
 
-    def _get_spike_amplitudes(self, spike_ids, name=None, channel_ids=None):
+    def _get_spike_amplitudes(
+            self, spike_ids, name=None, channel_ids=None, channel_id=None, pc=None):
+        """Return the requested type of amplitude, for the selected spikes."""
         if name is None:
             return self.model.amplitudes[spike_ids]
-        elif name == 'raw':
-            waveforms = self.model.get_waveforms(spike_ids, channel_ids)
-            assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
-            return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
         elif name == 'template':
             amplitudes = self.model.amplitudes[spike_ids]
             # Spike-template assignments.
@@ -364,6 +381,16 @@ class TemplateController(object):
             assert spike_templates_rel.shape == amplitudes.shape
             # Multiply that by the spike amplitude.
             return template_amplitudes[spike_templates_rel] * amplitudes
+        elif name == 'feature':
+            # Return the features for the specified channel and PC.
+            channel_id = channel_id if channel_id is not None else channel_ids[0]
+            features = self._get_spike_features(spike_ids, [channel_id]).data
+            return features[:, 0, pc or 0]
+        elif name == 'raw':
+            # WARNING: extracting raw waveforms is long!
+            waveforms = self.model.get_waveforms(spike_ids, channel_ids)
+            assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
+            return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
 
     def get_amplitudes(self, cluster_id, load_all=False):
         """Return the spike amplitudes found in `amplitudes.npy`, for a given cluster."""
@@ -393,13 +420,18 @@ class TemplateController(object):
     # -------------------------------------------------------------------------
 
     def _amplitude_getter(self, cluster_ids, name=None, load_all=False):
-        """`method` is `get_spike_raw_amplitudes` or `get_spike_template_amplitudes`."""
+        """Return the data requested by the amplitude view, wich depends on the
+        type of amplitude."""
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
+        if name == 'raw' and n is not None:
+            # HACK: currently extracting waveforms is very slow, we should probably save
+            # a spike_waveforms.npy and spike_waveforms_ind.npy arrays.
+            n //= 5
         # Find the first cluster, used to determine the best channels.
         first_cluster = next(cluster_id for cluster_id in cluster_ids if cluster_id is not None)
         channel_ids = self.get_best_channels(first_cluster)
-        channel_id = self.get_best_channel(first_cluster)
+        channel_id = channel_ids[0]
         # All clusters appearing on the first cluster's peak channel.
         other_clusters = self.get_clusters_on_channel(channel_id)
         for cluster_id in cluster_ids:
@@ -410,7 +442,12 @@ class TemplateController(object):
                 # Background spikes.
                 spike_ids = self.selector.select_spikes(other_clusters, n)
             spike_times = self.model.spike_times[spike_ids]
-            amplitudes = self._get_spike_amplitudes(spike_ids, name=name, channel_ids=channel_ids)
+            # Retrieve the feature PC selected in the feature view.
+            # This is only used when name == 'feature'
+            channel_id = self.selection.get('feature_channel_id', None)
+            pc = self.selection.get('feature_pc', None)
+            amplitudes = self._get_spike_amplitudes(
+                spike_ids, name=name, channel_ids=channel_ids, channel_id=channel_id, pc=pc)
             out.append(Bunch(
                 amplitudes=amplitudes,
                 spike_ids=spike_ids,
@@ -419,15 +456,30 @@ class TemplateController(object):
         return out
 
     def create_amplitude_view(self):
+        """Create the amplitude view."""
         amplitudes_dict = {
-            'spike_raw': partial(self._amplitude_getter, name='raw'),
-            'spike_template': partial(self._amplitude_getter, name='template'),
+            'template': partial(self._amplitude_getter, name='template'),
+            'feature': partial(self._amplitude_getter, name='feature'),
+            'raw': partial(self._amplitude_getter, name='raw'),
         }
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitude_name=None,  # TODO: GUI state
             duration=self.model.duration,
         )
+
+        @connect
+        def on_selected_feature_changed(sender):
+            view.amplitude_name = 'feature'
+            view.plot()
+
+        @connect(sender=self.supervisor)
+        def on_select(sender, cluster_ids, update_views=True):
+            # Update the feature amplitude view when the cluster selection changes,
+            # because the best channels change as well.
+            if update_views and view.amplitude_name == 'feature':
+                view.plot()
+
         return view
 
     # Waveforms
@@ -635,13 +687,7 @@ class TemplateController(object):
             spike_ids=spike_ids,
             lim=(0., self.model.duration))
 
-    def _get_features(self, cluster_id=None, channel_ids=None, load_all=False):
-        """Return the features of a given cluster on specified channels."""
-        spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
-        # Use the best channels only if a cluster is specified and
-        # channels are not specified.
-        if cluster_id is not None and channel_ids is None:
-            channel_ids = self.get_best_channels(cluster_id)
+    def _get_spike_features(self, spike_ids, channel_ids):
         data = self.model.get_features(spike_ids, channel_ids)
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         # Remove rows with at least one nan value.
@@ -653,13 +699,31 @@ class TemplateController(object):
         assert np.isnan(data).sum() == 0
         return Bunch(data=data, spike_ids=spike_ids, channel_ids=channel_ids)
 
+    def _get_features(self, cluster_id=None, channel_ids=None, load_all=False):
+        """Return the features of a given cluster on specified channels."""
+        spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
+        # Use the best channels only if a cluster is specified and
+        # channels are not specified.
+        if cluster_id is not None and channel_ids is None:
+            channel_ids = self.get_best_channels(cluster_id)
+        return self._get_spike_features(spike_ids, channel_ids)
+
     def create_feature_view(self):
         if self.model.features is None:
             return
-        return FeatureView(
+        view = FeatureView(
             features=self._get_features,
             attributes={'time': self._get_feature_view_spike_times}
         )
+
+        @connect(sender=view)
+        def on_feature_click(sender, dim=None, channel_id=None, pc=None):
+            # Update the Selection object with the channel id and PC clicked in the feature view.
+            self.selection.feature_channel_id = channel_id
+            self.selection.feature_pc = pc
+            emit('selected_feature_changed', view)
+
+        return view
 
     # Template features
     # -------------------------------------------------------------------------
@@ -686,16 +750,9 @@ class TemplateController(object):
         x1 = np.average(t1, weights=n0, axis=1)
         y1 = np.average(t1, weights=n1, axis=1)
 
-        data_bounds = (
-            min(x0.min(), x1.min()),
-            min(y0.min(), y1.min()),
-            max(x0.max(), x1.max()),
-            max(y0.max(), y1.max()),
-        )
-
         return [
-            Bunch(x=x0, y=y0, spike_ids=s0, data_bounds=data_bounds),
-            Bunch(x=x1, y=y1, spike_ids=s1, data_bounds=data_bounds),
+            Bunch(x=x0, y=y0, spike_ids=s0),
+            Bunch(x=x1, y=y1, spike_ids=s1),
         ]
 
     def create_template_feature_view(self):
@@ -746,13 +803,14 @@ class TemplateController(object):
             return
 
         m = self.model
-        v = TraceView(traces=self._get_traces,
-                      spike_times=self._trace_spike_times,
-                      n_channels=m.n_channels,
-                      sample_rate=m.sample_rate,
-                      duration=m.duration,
-                      channel_vertical_order=m.channel_vertical_order,
-                      )
+        v = TraceView(
+            traces=self._get_traces,
+            spike_times=self._trace_spike_times,
+            n_channels=m.n_channels,
+            sample_rate=m.sample_rate,
+            duration=m.duration,
+            channel_vertical_order=m.channel_vertical_order,
+        )
 
         # Update the get_traces() function with show_all_spikes.
         def _get_traces(interval):
@@ -760,6 +818,10 @@ class TemplateController(object):
         v.traces = _get_traces
 
         @connect(sender=v)
+        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+            self.selection['spike_ids'] = [spike_id]
+
+        @connect(sender=v)  # noqa
         def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
@@ -1007,13 +1069,13 @@ class TemplateController(object):
 # Template commands
 #------------------------------------------------------------------------------
 
-def template_gui(params_path):  # pragma: no cover
+def template_gui(params_path, clear_cache=None):  # pragma: no cover
     """Launch the Template GUI."""
     # Create a `phy.log` log file with DEBUG level.
     _add_log_file(Path(params_path).parent / 'phy.log')
 
     create_app()
-    controller = TemplateController(**get_template_params(params_path))
+    controller = TemplateController(**get_template_params(params_path), clear_cache=clear_cache)
     gui = controller.create_gui()
     gui.show()
     run_app()
