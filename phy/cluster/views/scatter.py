@@ -55,7 +55,8 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
         bunchs = self.coords(self.cluster_ids, load_all=load_all) or ()
         # Add a pos attribute in bunchs in addition to x and y.
-        for i, bunch in enumerate(bunchs):
+        for i, (cluster_id, bunch) in enumerate(zip(self.cluster_ids, bunchs)):
+            bunch.cluster_id = cluster_id
             assert bunch.x.ndim == 1
             assert bunch.x.shape == bunch.y.shape
             bunch.pos = np.c_[bunch.x, bunch.y]

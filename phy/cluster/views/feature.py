@@ -279,6 +279,8 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         # choose the first cluster's best channels.
         c = self.channel_ids if fixed_channels else None
         bunchs = [self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids]
+        for cluster_id, bunch in zip(self.cluster_ids, bunchs):
+            bunch.cluster_id = cluster_id
 
         # Choose the channels based on the first selected cluster.
         channel_ids = list(bunchs[0].channel_ids)
