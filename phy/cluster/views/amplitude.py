@@ -58,7 +58,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def __init__(self, amplitudes=None, amplitude_name=None, duration=None):
         super(AmplitudeView, self).__init__()
-        # Save the marker size in the global and local view's config.
+        self.state_attrs += ('amplitude_name',)
 
         self.canvas.enable_axes()
         self.canvas.enable_lasso()
@@ -98,7 +98,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def get_clusters_data(self, load_all=None):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
-        cluster_ids = [None] + self.cluster_ids   # add the background
+        if not len(self.cluster_ids):
+            return
+        cluster_ids = [None] + list(self.cluster_ids)  # add the background
         bunchs = self.amplitudes[self.amplitude_name](cluster_ids, load_all=load_all) or ()
         # Add a pos attribute in bunchs in addition to x and y.
         for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
@@ -147,6 +149,8 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def plot(self):
         """Update the view with the current cluster selection."""
         bunchs = self.get_clusters_data()
+        if not bunchs:
+            return
         self.data_bounds = self._get_data_bounds(bunchs)
         bunchs = self._add_histograms(bunchs)
         # Use the same scale for all histograms.
