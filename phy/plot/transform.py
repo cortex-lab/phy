@@ -117,7 +117,13 @@ def extend_bounds(bounds_list):
     bounds = np.array(bounds_list)
     xmins, ymins = bounds[:, :2].min(axis=0)
     xmaxs, ymaxs = bounds[:, 2:].max(axis=0)
-    return xmins.min(), ymins.min(), xmaxs.max(), ymaxs.max()
+    xmin, ymin, xmax, ymax = xmins.min(), ymins.min(), xmaxs.max(), ymaxs.max()
+    # Avoid degenerate bounds.
+    if xmin == xmax:
+        xmin, xmax = -1, 1
+    if ymin == ymax:
+        ymin, ymax = -1, 1
+    return (xmin, ymin, xmax, ymax)
 
 
 def pixels_to_ndc(pos, size=None):
