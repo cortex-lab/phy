@@ -158,7 +158,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def _plot_cluster(self, bunch):
         wave = bunch.data
-        if not wave.size:
+        if wave is None or not wave.size:
             return
         channel_ids_loc = bunch.channel_ids
 

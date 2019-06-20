@@ -136,7 +136,6 @@ class TaskLogger(object):
 
     def _after_merge(self, task, output):
         """Tasks that should follow a merge."""
-        sender, name, args, kwargs = task
         merged, to = output.deleted, output.added[0]
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
         # Update views after cluster_view.select event only if there is no similar clusters.
@@ -151,7 +150,6 @@ class TaskLogger(object):
 
     def _after_split(self, task, output):
         """Tasks that should follow a split."""
-        sender, name, args, kwargs = task
         self.enqueue(self.cluster_view, 'select', output.added)
 
     def _get_clusters(self, which):
@@ -166,7 +164,6 @@ class TaskLogger(object):
 
     def _after_move(self, task, output):
         """Tasks that should follow a move."""
-        sender, name, args, kwargs = task
         which = output.metadata_changed
         moved = set(self._get_clusters(which))
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
