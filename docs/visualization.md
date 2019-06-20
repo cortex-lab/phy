@@ -138,7 +138,10 @@ Interactivity in all graphical views:
 * **Pan**: left-click and drag
 * **Zoom**: right-click and drag, mouse wheel
 * **Reset pan and zoom**: double-click
-* **Increase or decrease scaling**: control+wheel (only in some views)
+* **Increase or decrease scaling**: control+wheel (only in some views).
+    * Scatter plots: change the marker size
+    * Histograms: change the range on the x axis
+    * Waveform, template, trace views: change the y scaling
 
 
 ### Waveform view
@@ -264,15 +267,27 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 ### Amplitude view
 
-This view shows the amplitude of a selection of spikes belonging to the selected clusters. The amplitudes are stored in `amplitudes.npy`.
+This view shows the amplitude of a selection of spikes belonging to the selected clusters, along with vertical histograms on the right.
+
+You can toggle between different types of amplitudes by pressing `a`:
+
+* `template`: the template amplitudes (stored in `amplitudes.npy`, multiplied by the template waveform maximum amplitude on the peak channel)
+* `raw`: the raw spike waveform maximum amplitude on the peak channel (at the moment, extracted on the fly from the raw data file, so this is slow).
+* `feature`: the spike amplitude on a specific dimension, by default the first PC component on the peak channel. The dimension can be changed from the feature view with `alt+left click` (x axis) and `alt+right click` (y axis).
 
 The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
 
-![image](https://user-images.githubusercontent.com/1942359/58951635-e98f4880-8791-11e9-8a80-7e25d04a0fb4.png)
+*Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
+
+This view supports splitting like in the feature view.
+
+![image](https://user-images.githubusercontent.com/1942359/59875055-13568b00-93a0-11e9-923e-b069d3d78130.png)
+
 
 #### Keyboard shortcuts and snippets
 
 ```
+- next_amplitude_type                      a
 - change marker size                       ctrl+wheel
 ```
 
