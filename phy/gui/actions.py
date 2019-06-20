@@ -8,13 +8,13 @@
 # -----------------------------------------------------------------------------
 
 import inspect
-from functools import partial
+from functools import partial, wraps
 import logging
 import re
 import sys
 import traceback
 
-from .qt import QKeySequence, QAction, require_qt, input_dialog
+from .qt import QKeySequence, QAction, require_qt, input_dialog, busy_cursor
 from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ def _expected_args(f):
 @require_qt
 def _create_qaction(
         gui, name, callback, shortcut, docstring=None, prompt_default=None, show_shortcut=True,
-        checkable=False, checked=False, prompt=False, n_args=None, alias=''):
+        checkable=False, checked=False, prompt=False, n_args=None, alias='', set_busy=False):
     # Create the QAction instance.
     name = name[0].upper() + name[1:].replace('_', ' ')
     action = QAction(name, gui)
@@ -169,6 +169,7 @@ def _create_qaction(
     # Number of expected arguments.
     n_args = n_args or len(_expected_args(callback))
 
+    @wraps(callback)
     def wrapped(is_checked, *args):
         if checkable:
             args = (is_checked,) + args
@@ -182,7 +183,9 @@ def _create_qaction(
                 "Invalid function arguments: expecting %d but got %d", n_args, len(args))
             return
         try:
-            return callback(*args)
+            # Set a busy cursor if set_busy is True.
+            with busy_cursor(set_busy):
+                return callback(*args)
         except Exception:  # pragma: no cover
             logger.warning("Error when executing action %s.", name)
             logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
@@ -240,7 +243,7 @@ class Actions(object):
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
-            prompt_default=None, show_shortcut=True):
+            set_busy=False, prompt_default=None, show_shortcut=True):
         """Add an action with a keyboard shortcut.
 
         Parameters
@@ -259,6 +262,8 @@ class Actions(object):
             write arguments to the callback function.
         n_args : int
             If prompt is True, specify the number of expected arguments.
+        set_busy : boolean
+            Whether to use a busy cursor while performing the action.
         prompt_default : str
             The default text in the input text box, if prompt is True.
         docstring : str
@@ -283,7 +288,7 @@ class Actions(object):
             return partial(
                 self.add, name=name, shortcut=shortcut, prompt=prompt, n_args=n_args,
                 alias=alias, menu=menu, submenu=submenu, checkable=checkable, checked=checked,
-                prompt_default=prompt_default)
+                set_busy=set_busy, prompt_default=prompt_default)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -303,7 +308,7 @@ class Actions(object):
         # Create and register the action.
         action = _create_qaction(
             self.gui, name, callback, shortcut, docstring=docstring, prompt=prompt,
-            n_args=n_args, alias=alias, checkable=checkable, checked=checked,
+            n_args=n_args, alias=alias, checkable=checkable, checked=checked, set_busy=set_busy,
             prompt_default=prompt_default, show_shortcut=show_shortcut)
         action_obj = Bunch(
             qaction=action, name=name, alias=alias, checkable=checkable,

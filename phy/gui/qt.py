@@ -276,11 +276,14 @@ def set_busy(busy):
 
 
 @contextmanager
-def busy_cursor():
+def busy_cursor(activate=True):
     """Context manager displaying a busy cursor during a long command."""
-    set_busy(True)
-    yield
-    set_busy(False)
+    if not activate:
+        yield
+    else:
+        set_busy(True)
+        yield
+        set_busy(False)
 
 
 def screenshot(widget, path):
