@@ -127,6 +127,7 @@ class TemplateController(object):
         'get_template_amplitude',
         'get_mean_spike_template_amplitudes',
         'get_mean_spike_raw_amplitudes',
+        '_get_template_waveforms',
     )
     # Methods that are cached on disk for performance.
     _cached = (
@@ -135,7 +136,6 @@ class TemplateController(object):
         'get_spike_template_amplitudes',
         '_get_spike_amplitudes',
         '_get_waveforms_with_n_spikes',
-        '_get_template_waveforms',
         '_get_features',
         '_get_feature_view_spike_times',
         '_get_template_features',
@@ -146,7 +146,7 @@ class TemplateController(object):
     # Views to load by default.
     _default_views = (
         'WaveformView', 'TraceView', 'FeatureView', 'TemplateFeatureView', 'CorrelogramView',
-        'AmplitudeView', 'RasterView', 'TemplateView', 'ISIView', 'FiringRateView'
+        'AmplitudeView', 'ISIView', 'FiringRateView'
     )
 
     def __init__(self, dat_path=None, config_dir=None, model=None, clear_cache=None, **kwargs):
@@ -622,7 +622,7 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
-            if up.added:
+            if view.auto_update and up.added:
                 view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
                 view.plot()
 
@@ -897,7 +897,7 @@ class TemplateController(object):
 
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
-            if up.added:
+            if view.auto_update and up.added:
                 view.set_spike_clusters(self.supervisor.clustering.spike_clusters)
                 view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
                 view.plot()

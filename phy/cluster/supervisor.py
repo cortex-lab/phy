@@ -194,7 +194,8 @@ class TaskLogger(object):
     def _select_state(self, state):
         """Enqueue select actions when a state (selected clusters and similar clusters) is set."""
         cluster_ids, next_cluster, similar, next_similar = state
-        self.enqueue(self.cluster_view, 'select', cluster_ids)
+        self.enqueue(
+            self.cluster_view, 'select', cluster_ids, update_views=False if similar else True)
         if similar:
             self.enqueue(self.similarity_view, 'select', similar)
 
