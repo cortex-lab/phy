@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 # Histogram view
 # -----------------------------------------------------------------------------
 
-def _compute_histogram(data, x_max=None, n_bins=None, normalize=True):
+def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True):
     """Compute the histogram of an array."""
-    bins = np.linspace(0., x_max, n_bins)
+    bins = np.linspace(x_min, x_max, n_bins)
     histogram, _ = np.histogram(data, bins=bins)
     if not normalize:
         return histogram

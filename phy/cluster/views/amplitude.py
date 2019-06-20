@@ -91,12 +91,14 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
+        m = min(np.min(bunch.amplitudes) for bunch in bunchs) if bunchs else 0.
+        m = min(0, m)  # ensure ymin <= 0
         M = max(np.max(bunch.amplitudes) for bunch in bunchs) if bunchs else 1.
-        return (0, 0, self.duration, M)
+        return (0, m, self.duration, M)
 
     def get_clusters_data(self, load_all=None):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
-        cluster_ids = self.cluster_ids + [None]  # add the background
+        cluster_ids = [None] + self.cluster_ids   # add the background
         bunchs = self.amplitudes[self.amplitude_name](cluster_ids, load_all=load_all) or ()
         # Add a pos attribute in bunchs in addition to x and y.
         for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
@@ -104,10 +106,11 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             spike_times = _as_array(bunch.spike_times)
             amplitudes = _as_array(bunch.amplitudes)
             assert spike_ids.shape == spike_times.shape == amplitudes.shape
+            # Ensure that bunch.pos exists, as it used by the LassoMixin.
             bunch.pos = np.c_[spike_times, amplitudes]
             assert bunch.pos.ndim == 2
             bunch.color = (
-                selected_cluster_color(i, self.marker_alpha)
+                selected_cluster_color(i - 1, self.marker_alpha)
                 # Background amplitude color.
                 if cluster_id is not None else (.5, .5, .5, .5))
         return bunchs
@@ -116,7 +119,10 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # We do this after get_clusters_data because we need x_max.
         for bunch in bunchs:
             bunch.histogram = _compute_histogram(
-                bunch.amplitudes, x_max=self.data_bounds[-1], n_bins=self.n_bins,
+                bunch.amplitudes,
+                x_min=self.data_bounds[1],
+                x_max=self.data_bounds[3],
+                n_bins=self.n_bins,
                 normalize=False)
         return bunchs
 
@@ -170,3 +176,4 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         n = len(self.amplitude_names)
         self.amplitude_name = self.amplitude_names[(i + 1) % n]
         logger.debug("Switch to amplitude type %s.", self.amplitude_name)
+        self.plot()
