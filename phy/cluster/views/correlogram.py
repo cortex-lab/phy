@@ -179,7 +179,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             box_index=(n - 1, n - 1),
         )
 
-    def plot(self):
+    def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
         self.canvas.grid.shape = (len(self.cluster_ids), len(self.cluster_ids))
 

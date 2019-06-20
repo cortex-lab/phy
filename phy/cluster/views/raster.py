@@ -133,7 +133,7 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
         self.visual.set_color(color)
         self.canvas.update()
 
-    def plot(self):
+    def plot(self, **kwargs):
         """Make the raster plot."""
         if not len(self.spike_clusters):
             return

@@ -141,7 +141,7 @@ def test_task_merge(tl):
     tl.enqueue(tl.supervisor, 'merge', [0, 100], 1000)
     tl.process()
 
-    assert tl.last_state() == ([1000], 1001, [101], 102)
+    assert tl.last_state() == ([1000], 1001, None, None)
 
     tl.enqueue(tl.supervisor, 'undo')
     tl.process()
@@ -149,7 +149,7 @@ def test_task_merge(tl):
 
     tl.enqueue(tl.supervisor, 'redo')
     tl.process()
-    assert tl.last_state() == ([1000], 1001, [101], 102)
+    assert tl.last_state() == ([1000], 1001, None, None)
 
 
 def test_task_split(tl):
@@ -433,7 +433,7 @@ def test_supervisor_merge_1(qtbot, supervisor):
     supervisor.actions.merge()
     supervisor.block()
 
-    _assert_selected(supervisor, [31, 11])
+    _assert_selected(supervisor, [31])
 
     supervisor.actions.undo()
     supervisor.block()
@@ -442,7 +442,7 @@ def test_supervisor_merge_1(qtbot, supervisor):
     supervisor.actions.redo()
     supervisor.block()
     supervisor.task_logger.show_history()
-    _assert_selected(supervisor, [31, 11])
+    _assert_selected(supervisor, [31])
 
     assert supervisor.is_dirty()
 

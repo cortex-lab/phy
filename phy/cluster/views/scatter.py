@@ -64,7 +64,7 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             bunch.color = selected_cluster_color(i, .75)
         return bunchs
 
-    def plot(self):
+    def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
         bunchs = self.get_clusters_data()
         # Hide the visual if there is no data.

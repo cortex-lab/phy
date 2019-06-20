@@ -85,12 +85,12 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     descendants = list(set(zip(old_spike_clusters, new_spike_clusters)))
     update_info = UpdateInfo(
         description='assign',
-        spike_ids=spike_ids,
-        spike_clusters=new_spike_clusters,
+        spike_ids=list(spike_ids),
+        spike_clusters=list(new_spike_clusters),
         added=list(new_clusters),
         deleted=list(old_clusters),
         descendants=descendants,
-        largest_old_cluster=largest_old_cluster,
+        largest_old_cluster=int(largest_old_cluster),
     )
     return update_info
 
@@ -282,7 +282,7 @@ class Clustering(object):
         largest_old_cluster = np.bincount(self.spike_clusters[spike_ids]).argmax()
         up = UpdateInfo(
             description='merge',
-            spike_ids=spike_ids,
+            spike_ids=list(spike_ids),
             added=[to],
             deleted=list(cluster_ids),
             descendants=descendants,

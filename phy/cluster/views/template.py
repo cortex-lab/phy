@@ -207,7 +207,7 @@ class TemplateView(ScalingMixin, ManualClusteringView):
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
 
-    def plot(self):
+    def plot(self, **kwargs):
         """Make the template plot."""
 
         # Retrieve the waveform data.

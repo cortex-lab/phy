@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 from copy import deepcopy
 import logging
 
@@ -91,6 +93,9 @@ class UpdateInfo(Bunch):
         )
         d.update(kwargs)
         super(UpdateInfo, self).__init__(d)
+        # NOTE: we have to ensure we only use native types and not NumPy arrays so that
+        # the history stack works correctly.
+        assert all(not isinstance(v, np.ndarray) for v in self.values())
 
     def __repr__(self):
         desc = self.description

@@ -146,7 +146,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         """Show the amplitude name."""
         self.text_visual.add_batch_data(pos=[1, 1], anchor=[-1, -1], text=self.amplitude_name)
 
-    def plot(self):
+    def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
         bunchs = self.get_clusters_data()
         if not bunchs:

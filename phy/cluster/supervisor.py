@@ -60,13 +60,11 @@ def _ensure_all_ints(l):
 
 class TaskLogger(object):
     """Internal object that gandles all clustering actions and the automatic actions that
-    should follow as part of the "wizard".
+    should follow as part of the "wizard"."""
 
-    For example, merging two clusters in the cluster view and similarity view should
-    automatically lead to the merged cluster being selected in the cluster view, and the
-    next similar cluster selected in the similarity view.
+    # Whether to auto select next clusters after a merge.
+    auto_select_after_action = False
 
-    """
     def __init__(self, cluster_view=None, similarity_view=None, supervisor=None):
         self.cluster_view = cluster_view
         self.similarity_view = similarity_view
@@ -144,12 +142,12 @@ class TaskLogger(object):
         # Update views after cluster_view.select event only if there is no similar clusters.
         # Otherwise, this is only the similarity_view that will raise the select event leading
         # to view updates.
-        self.enqueue(self.cluster_view, 'select', [to], update_views=similar is None)
-        if similar is None:
-            return
-        if set(merged).intersection(similar) and next_similar is not None:
-            similar = [next_similar]
-        self.enqueue(self.similarity_view, 'select', similar)
+        do_select_new = self.auto_select_after_action and similar is not None
+        self.enqueue(self.cluster_view, 'select', [to], update_views=not do_select_new)
+        if do_select_new:  # pragma: no cover
+            if set(merged).intersection(similar) and next_similar is not None:
+                similar = [next_similar]
+            self.enqueue(self.similarity_view, 'select', similar)
 
     def _after_split(self, task, output):
         """Tasks that should follow a split."""
@@ -813,7 +811,7 @@ class Supervisor(object):
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
         # event, but instead after the second similarity_view.select event.
-        if kwargs.get('update_views', True):
+        if kwargs.pop('update_views', True):
             emit('select', self, self.selected, **kwargs)
 
     def _similar_selected(self, sender, obj):
