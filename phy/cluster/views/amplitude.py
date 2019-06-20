@@ -177,7 +177,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(AmplitudeView, self).attach(gui)
-        self.actions.add(self.next_amplitude_type)
+        self.actions.add(self.next_amplitude_type, set_busy=True)
 
     def next_amplitude_type(self):
         """Switch to the next amplitude type."""

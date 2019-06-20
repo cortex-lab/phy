@@ -445,13 +445,13 @@ class ActionCreator(object):
 
     def _create_edit_actions(self, state):
         w = 'edit'
-        self.add(w, 'undo')
-        self.add(w, 'redo')
+        self.add(w, 'undo', set_busy=True)
+        self.add(w, 'redo', set_busy=True)
         self.edit_actions.separator()
 
         # Clustering.
-        self.add(w, 'merge', alias='g')
-        self.add(w, 'split', alias='k')
+        self.add(w, 'merge', alias='g', set_busy=True)
+        self.add(w, 'split', alias='k', set_busy=True)
         self.edit_actions.separator()
 
         # Move.
