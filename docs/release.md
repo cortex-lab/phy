@@ -24,6 +24,10 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Snippets to quickly **sort and filter** clusters
     * New default columns: mean firing rate, and template waveform amplitude
     * The styling can be customized with CSS in a plugin (see plugin examples in the documentation)
+* **Amplitude view**:
+    * Show histogram of amplitudes overlayed with the amplitudes
+    * Support for multiple types of amplitudes (template waveform amplitude, raw waveform amplitude, feature amplitude)
+    * Splitting is supported
 * **Correlogram view**:
     * Show horizontal line for the baseline firing rate, and a customizable vertical line for the refractory period
 * **Waveform view**:

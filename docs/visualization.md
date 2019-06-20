@@ -18,6 +18,17 @@ To open the GUI on a given dataset, you need to use the command-line from the di
 
 Type `phy template-gui params.py` in the directory that contains the `params.py` file.
 
+```
+Usage: phy template-gui [OPTIONS] PARAMS_PATH
+
+  Launch the template GUI on a params.py file.
+
+Options:
+  --clear-cache / --no-clear-cache
+                                  Clear the .phy cache in the data directory.
+  --help                          Show this message and exit.
+```
+
 The dataset is made of a set of `.npy` files (`spike_times.npy`, `spike_clusters.npy`, and so on). There are also `.tsv` files for cluster-dependent data.
 
 The `cluster_info.tsv` is automatically saved along with your data. It contains all information from the cluster view.
