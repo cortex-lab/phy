@@ -1,6 +1,7 @@
 git+https://github.com/cortex-lab/phylib
 colorcet
 pyopengl
+PyQtWebEngine
 requests
 traitlets
 qtconsole

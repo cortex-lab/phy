@@ -10,8 +10,7 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
 * **Cluster statistics views** (histograms):
     * ISI
     * Instantaneous firing rate
-    * Template amplitude histogram
-    * Write your own
+    * Write your own as a plugin
 * **Spike attributes views**: a scatter view is automatically created for every `spike_somename.npy` containing 1D or 2D values per spike
 * **IPython view**
 
@@ -44,7 +43,8 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Change the number of "best" channels in the user configuration file
 * **Trace view**:
     * Auto-update by default
-* **Trace view, raster view, template view**: customizable color mapping for clusters based on any cluster metrics or labels
+* **Trace view, raster view, template view**:
+    * Customizable color mapping for clusters based on any cluster metrics or labels
 * **Template dataset**
     * Support **multiple raw data files** (virtually concatenated)
     * Support for **multiple channel shanks**: add a `channel_shanks.npy` file with shape `(n_channels,` ), with the shank integer index of every channel.
@@ -60,7 +60,8 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
 * Slightly different gray colors for noise and MUA clusters in the cluster view
 * Menu reorganization
 * Bug fixes with cluster labels
-* Documentation rewritten from scratch, with many plugin and API examples
+* New `plugins/` folder in the repository, with many plugin examples
+* Documentation rewritten from scratch, with many examples
 
 
 ## Internal changes

@@ -301,8 +301,6 @@ class ExampleCustomSplitPlugin(IPlugin):
 
 In this example, we show how to save the best channel of all clusters in a TSV file.
 
-![image](https://user-images.githubusercontent.com/1942359/59463165-a1bd9080-8e25-11e9-9260-8065197fd56b.png)
-
 ```python
 # import from plugins/cluster_metadata.py
 """Show how to save the best channel of every cluster in a cluster_channel.tsv file when saving.
