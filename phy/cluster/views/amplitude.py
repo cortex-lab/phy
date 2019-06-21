@@ -94,7 +94,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
-        if not bunchs:
+        if not bunchs:  # pragma: no cover
             return (0, 0, self.duration, 1)
         m = min(np.quantile(bunch.amplitudes, 1 - self.quantile) for bunch in bunchs)
         m = min(0, m)  # ensure ymin <= 0
