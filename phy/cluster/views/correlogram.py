@@ -55,8 +55,13 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     uniform_normalization = False
 
     default_shortcuts = {
-        'go_left': 'alt+left',
-        'go_right': 'alt+right',
+        'change_window_size': 'ctrl+wheel',
+    }
+
+    default_snippets = {
+        'set_bin': 'cb',
+        'set_window': 'cw',
+        'set_refractory_period': 'cr',
     }
 
     def __init__(self, correlograms=None, firing_rate=None, sample_rate=None):
@@ -216,13 +221,11 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.actions.separator()
 
         self.actions.add(
-            self.set_bin, alias='cb', prompt=True,
-            prompt_default=lambda: self.bin_size * 1000)
+            self.set_bin, prompt=True, prompt_default=lambda: self.bin_size * 1000)
         self.actions.add(
-            self.set_window, alias='cw', prompt=True,
-            prompt_default=lambda: self.window_size * 1000)
+            self.set_window, prompt=True, prompt_default=lambda: self.window_size * 1000)
         self.actions.add(
-            self.set_refractory_period, alias='cr', prompt=True,
+            self.set_refractory_period, prompt=True,
             prompt_default=lambda: self.refractory_period * 1000)
         self.actions.separator()
 

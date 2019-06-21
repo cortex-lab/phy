@@ -50,8 +50,10 @@ class TemplateView(ScalingMixin, ManualClusteringView):
     _scaling = 1.
 
     default_shortcuts = {
-        'increase': 'ctrl+alt++',
+        'change_template_size': 'ctrl+wheel',
         'decrease': 'ctrl+alt+-',
+        'increase': 'ctrl+alt++',
+        'select_cluster': 'ctrl+click',
     }
 
     def __init__(self, templates=None, channel_ids=None, cluster_ids=None,

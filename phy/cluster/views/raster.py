@@ -45,8 +45,10 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
     _default_position = 'right'
 
     default_shortcuts = {
-        'increase': 'ctrl+shift++',
+        'change_marker_size': 'ctrl+wheel',
         'decrease': 'ctrl+shift+-',
+        'increase': 'ctrl+shift++',
+        'select_cluster': 'ctrl+click',
     }
 
     def __init__(self, spike_times, spike_clusters, cluster_ids=None, cluster_color_selector=None):

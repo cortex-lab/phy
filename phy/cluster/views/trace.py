@@ -113,17 +113,23 @@ class TraceView(ScalingMixin, ManualClusteringView):
     scaling_coeff_x = 1.25
     default_trace_color = (.75, .75, .75, 1.)
     default_shortcuts = {
+        'change_trace_size': 'ctrl+wheel',
+        'decrease': 'alt+down',
+        'increase': 'alt+up',
         'go_left': 'alt+left',
         'go_right': 'alt+right',
         'go_to': 'alt+t',
-        'decrease': 'alt+down',
-        'increase': 'alt+up',
-        'toggle_show_labels': 'alt+l',
-        'widen': 'alt+-',
-        'narrow': 'alt++',
         'go_to_next_spike': 'alt+pgdown',
         'go_to_previous_spike': 'alt+pgup',
+        'narrow': 'alt++',
+        'select_spike': 'ctrl+click',
         'toggle_highlighted_spikes': 'alt+s',
+        'toggle_show_labels': 'alt+l',
+        'widen': 'alt+-',
+    }
+    default_snippets = {
+        'go_to': 'tg',
+        'shift': 'ts',
     }
 
     def __init__(
@@ -349,10 +355,10 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.actions.separator()
 
         self.actions.add(
-            self.go_to, alias='tg', prompt=True, prompt_default=lambda: str(self.time))
+            self.go_to, prompt=True, prompt_default=lambda: str(self.time))
         self.actions.separator()
 
-        self.actions.add(self.shift, alias='ts', prompt=True)
+        self.actions.add(self.shift, prompt=True)
         self.actions.add(self.go_right)
         self.actions.add(self.go_left)
         self.actions.separator()

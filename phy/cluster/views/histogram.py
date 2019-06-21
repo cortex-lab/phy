@@ -22,9 +22,11 @@ logger = logging.getLogger(__name__)
 # Histogram view
 # -----------------------------------------------------------------------------
 
-def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True):
+def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, ignore_zeros=False):
     """Compute the histogram of an array."""
     bins = np.linspace(x_min, x_max, n_bins)
+    if ignore_zeros:
+        data = data[data != 0]
     histogram, _ = np.histogram(data, bins=bins)
     if not normalize:
         return histogram
@@ -64,6 +66,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     alias_char = 'h'
 
     default_shortcuts = {
+        'change_window_size': 'ctrl+wheel'
     }
 
     def __init__(self, cluster_stat=None):

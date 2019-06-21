@@ -226,12 +226,17 @@ class Actions(object):
         Name of the GUI submenu that will contain the actions.
     default_shortcuts : dict
         Map action names to keyboard shortcuts (regular strings).
+    default_snippets : dict
+        Map action names to snippets (regular strings).
 
     """
-    def __init__(self, gui, name=None, menu=None, submenu=None, default_shortcuts=None):
+    def __init__(
+            self, gui, name=None, menu=None, submenu=None,
+            default_shortcuts=None, default_snippets=None):
         self._actions_dict = {}
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
+        self._default_snippets = default_snippets or {}
         self.name = name
         self.menu = menu
         self.submenu = submenu
@@ -293,7 +298,7 @@ class Actions(object):
 
         # Get the name from the callback function if needed.
         name = name or callback.__name__
-        alias = alias or _alias(name)
+        alias = alias or self._default_snippets.get(name, _alias(name))
         name = name.replace('&', '')
         shortcut = shortcut or self._default_shortcuts.get(name, None)
 

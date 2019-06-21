@@ -413,6 +413,15 @@ class ActionCreator(object):
         'redo': ('ctrl+shift+z', 'ctrl+y'),
     }
 
+    default_snippets = {
+        'merge': 'g',
+        'split': 'k',
+        'label': 'l',
+        'select': 'c',
+        'filter': 'f',
+        'sort': 's',
+    }
+
     def __init__(self, supervisor=None):
         self.supervisor = supervisor
 
@@ -432,12 +441,14 @@ class ActionCreator(object):
     def attach(self, gui):
         """Attach the GUI and create the menus."""
         # Create the menus.
+        ds = self.default_shortcuts
+        dsp = self.default_snippets
         self.edit_actions = Actions(
-            gui, menu='&Edit', default_shortcuts=self.default_shortcuts)
+            gui, menu='&Edit', default_shortcuts=ds, default_snippets=dsp)
         self.select_actions = Actions(
-            gui, menu='Sele&ct', default_shortcuts=self.default_shortcuts)
+            gui, menu='Sele&ct', default_shortcuts=ds, default_snippets=dsp)
         self.view_actions = Actions(
-            gui, menu='&View', default_shortcuts=self.default_shortcuts)
+            gui, menu='&View', default_shortcuts=ds, default_snippets=dsp)
 
         # Create the actions.
         self._create_edit_actions(gui.state)
@@ -451,8 +462,8 @@ class ActionCreator(object):
         self.edit_actions.separator()
 
         # Clustering.
-        self.add(w, 'merge', alias='g', set_busy=True)
-        self.add(w, 'split', alias='k', set_busy=True)
+        self.add(w, 'merge', set_busy=True)
+        self.add(w, 'split', set_busy=True)
         self.edit_actions.separator()
 
         # Move.
@@ -467,19 +478,19 @@ class ActionCreator(object):
         self.edit_actions.separator()
 
         # Label.
-        self.add(w, 'label', alias='l', prompt=True, n_args=2)
+        self.add(w, 'label', prompt=True, n_args=2)
         self.edit_actions.separator()
 
     def _create_select_actions(self, state):
         w = 'select'
 
         # Selection.
-        self.add(w, 'select', alias='c', prompt=True, n_args=1)
+        self.add(w, 'select', prompt=True, n_args=1)
         self.select_actions.separator()
 
         # Sort and filter
-        self.add(w, 'filter', alias='f', prompt=True, n_args=1)
-        self.add(w, 'sort', alias='s', prompt=True, n_args=1)
+        self.add(w, 'filter', prompt=True, n_args=1)
+        self.add(w, 'sort', prompt=True, n_args=1)
 
         # Sort by:
         for column in getattr(self.supervisor, 'columns', ()):

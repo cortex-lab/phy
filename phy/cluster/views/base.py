@@ -56,8 +56,8 @@ class ManualClusteringView(object):
     - `self.local_state_attrs`: like above, but for the local GUI state (dataset-dependent).
 
     """
-    default_shortcuts = {
-    }
+    default_shortcuts = {}
+    default_snippets = {}
     auto_update = True  # automatically update the view when the cluster selection changes
     _default_position = None
     plot_canvas_class = PlotCanvas
@@ -158,7 +158,8 @@ class ManualClusteringView(object):
         self.set_state(gui.state.get_view_state(self))
 
         self.actions = Actions(
-            gui, name=self.name, menu='&View', submenu=self.name, default_shortcuts=shortcuts)
+            gui, name=self.name, menu='&View', submenu=self.name,
+            default_shortcuts=shortcuts, default_snippets=self.default_snippets)
 
         # Freeze and unfreeze the view when selecting clusters.
         self.actions.add(

@@ -96,12 +96,16 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         'narrow': 'ctrl+left',
         'increase': 'ctrl+up',
         'decrease': 'ctrl+down',
+        'change_box_size': 'ctrl+wheel',
 
         # Probe scaling.
         'extend_horizontally': 'shift+right',
         'shrink_horizontally': 'shift+left',
         'extend_vertically': 'shift+up',
         'shrink_vertically': 'shift+down',
+    }
+    default_snippets = {
+        'change_n_spikes_waveforms': 'wn',
     }
 
     def __init__(self, waveforms=None, channel_labels=None):

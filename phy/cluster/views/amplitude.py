@@ -56,7 +56,10 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     histogram_scale = .25
 
     default_shortcuts = {
+        'change_marker_size': 'ctrl+wheel',
         'next_amplitude_type': 'a',
+        'select_x_dim': 'alt+left click',
+        'select_y_dim': 'alt+right click',
     }
 
     def __init__(self, amplitudes=None, amplitude_name=None, duration=None):
@@ -135,7 +138,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
                 x_min=self.data_bounds[1],
                 x_max=self.data_bounds[3],
                 n_bins=self.n_bins,
-                normalize=False)
+                normalize=False,
+                ignore_zeros=True,
+            )
         return bunchs
 
     def _plot_cluster(self, bunch):

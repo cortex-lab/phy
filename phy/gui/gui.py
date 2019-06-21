@@ -75,11 +75,12 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
         options = options | QDockWidget.DockWidgetFloatable
 
     dock_widget.setFeatures(options)
-    dock_widget.setAllowedAreas(Qt.LeftDockWidgetArea |
-                                Qt.RightDockWidgetArea |
-                                Qt.TopDockWidgetArea |
-                                Qt.BottomDockWidgetArea
-                                )
+    dock_widget.setAllowedAreas(
+        Qt.LeftDockWidgetArea |
+        Qt.RightDockWidgetArea |
+        Qt.TopDockWidgetArea |
+        Qt.BottomDockWidgetArea
+    )
 
     return dock_widget
 
@@ -138,6 +139,15 @@ class GUI(QMainWindow):
     close_view
 
     """
+
+    default_shortcuts = {
+        'enable_snippet_mode': ':',
+        'save': 'ctrl+s',
+        'about': '?',
+        'show_all_shortcuts': 'h',
+        'exit': 'ctrl+q',
+    }
+
     def __init__(
             self, position=None, size=None, name=None, subtitle=None, view_creator=None,
             view_count=None, default_views=None, config_dir=None, **kwargs):
@@ -168,11 +178,12 @@ class GUI(QMainWindow):
 
         # Mapping {name: menuBar}.
         self._menus = {}
-        self.file_actions = Actions(self, name='File', menu='&File')
-        self.edit_actions = Actions(self, name='Edit', menu='&Edit')
-        self.select_actions = Actions(self, name='Select', menu='Sele&ct')
-        self.view_actions = Actions(self, name='View', menu='&View')
-        self.help_actions = Actions(self, name='Help', menu='&Help')
+        ds = self.default_shortcuts
+        self.file_actions = Actions(self, name='File', menu='&File', default_shortcuts=ds)
+        self.edit_actions = Actions(self, name='Edit', menu='&Edit', default_shortcuts=ds)
+        self.select_actions = Actions(self, name='Select', menu='Sele&ct', default_shortcuts=ds)
+        self.view_actions = Actions(self, name='View', menu='&View', default_shortcuts=ds)
+        self.help_actions = Actions(self, name='Help', menu='&Help', default_shortcuts=ds)
 
         # Views,
         self._views = []
@@ -227,11 +238,11 @@ class GUI(QMainWindow):
         """Create the default actions (file, views, help...)."""
 
         # File menu.
-        @self.file_actions.add(shortcut='ctrl+s')
+        @self.file_actions.add
         def save():
             emit('request_save', self)
 
-        @self.file_actions.add(shortcut='ctrl+q')
+        @self.file_actions.add
         def exit():
             """Close the GUI."""
             self.close()

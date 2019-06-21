@@ -35,6 +35,10 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     _default_position = 'right'
 
+    default_shortcuts = {
+        'change_marker_size': 'ctrl+wheel',
+    }
+
     def __init__(self, coords=None):
         super(ScatterView, self).__init__()
         # Save the marker size in the global and local view's config.
