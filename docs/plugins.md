@@ -254,7 +254,7 @@ In this example, we show how to write a custom split action, where one can split
 # import from plugins/custom_split.py
 """Show how to write a custom split action."""
 
-from sklearn.cluster import KMeans  # We use the scikit-learn package.
+from sklearn.cluster import KMeans
 from phy import IPlugin, connect
 
 
@@ -476,7 +476,7 @@ class ExampleMatplotlibViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_feature_density_view():
             """A function that creates and returns a view."""
-            return FeatureDensityView(features=controller.get_features)
+            return FeatureDensityView(features=controller._get_features)
 
         controller.view_creator['FeatureDensityView'] = create_feature_density_view
 

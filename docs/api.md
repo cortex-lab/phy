@@ -54,6 +54,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.plot](#phyplot)
 
+* [phy.plot.extend_bounds](#phyplotextend_bounds)
 * [phy.plot.get_linear_x](#phyplotget_linear_x)
 * [phy.plot.Axes](#phyplotaxes)
 * [phy.plot.AxisLocator](#phyplotaxislocator)
@@ -86,6 +87,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 ### [phy.cluster](#phycluster)
 
 * [phy.cluster.select_traces](#phyclusterselect_traces)
+* [phy.cluster.AmplitudeView](#phyclusteramplitudeview)
 * [phy.cluster.ClusterMeta](#phyclusterclustermeta)
 * [phy.cluster.ClusterView](#phyclusterclusterview)
 * [phy.cluster.Clustering](#phyclusterclustering)
@@ -565,7 +567,7 @@ GUI routines.
 #### phy.gui.busy_cursor
 
 
-**`phy.gui.busy_cursor()`**
+**`phy.gui.busy_cursor(activate=True)`**
 
 Context manager displaying a busy cursor during a long command.
 
@@ -750,7 +752,7 @@ This class attaches to a GUI and implements the following features:
 #### Actions.add
 
 
-**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, prompt_default=None, show_shortcut=True)`**
+**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True)`**
 
 Add an action with a keyboard shortcut.
 
@@ -775,6 +777,9 @@ Add an action with a keyboard shortcut.
 
 * `n_args : int` 　 
     If prompt is True, specify the number of expected arguments.
+
+* `set_busy : boolean` 　 
+    Whether to use a busy cursor while performing the action.
 
 * `prompt_default : str` 　 
     The default text in the input text box, if prompt is True.
@@ -1761,6 +1766,15 @@ For advanced users!
 
 ---
 
+#### phy.plot.extend_bounds
+
+
+**`phy.plot.extend_bounds(bounds_list)`**
+
+Return a single data bounds 4-tuple from a list of data bounds.
+
+---
+
 #### phy.plot.get_linear_x
 
 
@@ -2553,6 +2567,15 @@ Total number of boxes.
 
 ---
 
+#### Boxed.scaling
+
+
+**`Boxed.scaling`**
+
+Return the grid scaling.
+
+---
+
 ### phy.plot.GLSLInserter
 
 Object used to insert GLSL snippets into shader code.
@@ -2734,6 +2757,15 @@ Update all visuals in the attached canvas.
 **`Grid.update_visual(self, visual)`**
 
 Update a visual.
+
+---
+
+#### Grid.scaling
+
+
+**`Grid.scaling`**
+
+Return the grid scaling.
 
 ---
 
@@ -4286,6 +4318,11 @@ Return the inverse Range instance.
 
 Scaling transform.
 
+**Constructor**
+
+* `value : 2-tuple` 　 
+    Coordinates of the scaling.
+
 ---
 
 #### Scale.apply
@@ -4767,6 +4804,11 @@ List of GPU transforms.
 
 Translation transform.
 
+**Constructor**
+
+* `value : 2-tuple` 　 
+    Coordinates of the translation.
+
 ---
 
 #### Translate.apply
@@ -5114,6 +5156,178 @@ Manual clustering facilities.
 **`phy.cluster.select_traces(traces, interval, sample_rate=None)`**
 
 Load traces in an interval (in seconds).
+
+---
+
+### phy.cluster.AmplitudeView
+
+This view displays an amplitude plot for all selected clusters.
+
+**Constructor**
+
+
+* `amplitudes : function` 　 
+    Maps `cluster_ids` to a list `[Bunch(amplitudes, spike_ids), ...]` for each cluster.
+    Use `cluster_id=None` for background amplitudes.
+
+---
+
+#### AmplitudeView.attach
+
+
+**`AmplitudeView.attach(self, gui)`**
+
+Attach the view to the GUI.
+
+---
+
+#### AmplitudeView.close
+
+
+**`AmplitudeView.close(self)`**
+
+Close the underlying canvas.
+
+---
+
+#### AmplitudeView.decrease
+
+
+**`AmplitudeView.decrease(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### AmplitudeView.get_clusters_data
+
+
+**`AmplitudeView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+---
+
+#### AmplitudeView.increase
+
+
+**`AmplitudeView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### AmplitudeView.next_amplitude_type
+
+
+**`AmplitudeView.next_amplitude_type(self)`**
+
+Switch to the next amplitude type.
+
+---
+
+#### AmplitudeView.on_mouse_wheel
+
+
+**`AmplitudeView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### AmplitudeView.on_request_split
+
+
+**`AmplitudeView.on_request_split(self, sender=None)`**
+
+Return the spikes enclosed by the lasso.
+
+---
+
+#### AmplitudeView.on_select
+
+
+**`AmplitudeView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### AmplitudeView.plot
+
+
+**`AmplitudeView.plot(self, **kwargs)`**
+
+Update the view with the current cluster selection.
+
+---
+
+#### AmplitudeView.screenshot
+
+
+**`AmplitudeView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### AmplitudeView.set_state
+
+
+**`AmplitudeView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### AmplitudeView.set_status
+
+
+**`AmplitudeView.set_status(self, message=None)`**
+
+Set the status bar message in the GUI.
+
+---
+
+#### AmplitudeView.show
+
+
+**`AmplitudeView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### AmplitudeView.toggle_auto_update
+
+
+**`AmplitudeView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### AmplitudeView.marker_size
+
+
+**`AmplitudeView.marker_size`**
+
+Size of the spike markers, in pixels.
+
+---
+
+#### AmplitudeView.state
+
+
+**`AmplitudeView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
 
 ---
 
@@ -5812,6 +6026,17 @@ Decrease the window size.
 
 ---
 
+#### CorrelogramView.get_clusters_data
+
+
+**`CorrelogramView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
 #### CorrelogramView.increase
 
 
@@ -5833,9 +6058,18 @@ Change the scaling with the wheel.
 #### CorrelogramView.on_select
 
 
-**`CorrelogramView.on_select(self, cluster_ids=(), **kwargs)`**
+**`CorrelogramView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Show the correlograms of the selected clusters.
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### CorrelogramView.plot
+
+
+**`CorrelogramView.plot(self, **kwargs)`**
+
+Update the view with the current cluster selection.
 
 ---
 
@@ -5993,16 +6227,18 @@ Close the underlying canvas.
 
 **`FeatureView.decrease(self)`**
 
-Decrease the scaling of the features.
+Decrease the scaling parameter.
 
 ---
 
-#### FeatureView.decrease_marker
+#### FeatureView.get_clusters_data
 
 
-**`FeatureView.decrease_marker(self)`**
+**`FeatureView.get_clusters_data(self, fixed_channels=None, load_all=None)`**
 
-Decrease the marker size.
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -6011,16 +6247,7 @@ Decrease the marker size.
 
 **`FeatureView.increase(self)`**
 
-Increase the scaling of the features.
-
----
-
-#### FeatureView.increase_marker
-
-
-**`FeatureView.increase_marker(self)`**
-
-Increase the marker size.
+Increase the scaling parameter.
 
 ---
 
@@ -6031,6 +6258,15 @@ Increase the marker size.
 
 Respond to the click on a channel from another view, and update the
 relevant subplots.
+
+---
+
+#### FeatureView.on_mouse_click
+
+
+**`FeatureView.on_mouse_click(self, e)`**
+
+Select a feature dimension by clicking on a box in the feature view.
 
 ---
 
@@ -6055,7 +6291,16 @@ Return the spikes enclosed by the lasso.
 #### FeatureView.on_select
 
 
-**`FeatureView.on_select(self, cluster_ids=(), **kwargs)`**
+**`FeatureView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### FeatureView.plot
+
+
+**`FeatureView.plot(self, **kwargs)`**
 
 Update the view with the selected clusters.
 
@@ -6077,6 +6322,14 @@ are saved in `~/.phy/screenshots/`.
 **`FeatureView.set_grid_dim(self, grid_dim)`**
 
 Change the grid dim dynamically.
+
+**Parameters**
+
+* `grid_dim : array-like (2D)` 　 
+    `grid_dim[row, col]` is a string with two values separated by a comma. Each value
+    is the relative channel id (0, 1, 2...) followed by the PC (A, B, C...). For example,
+    `grid_dim[row, col] = 0B,1A`. Each value can also be an attribute name, for example
+    `time`. For example, `grid_dim[row, col] = time,2C`.
 
 ---
 
@@ -6138,15 +6391,6 @@ Size of the spike markers, in pixels.
 
 ---
 
-#### FeatureView.scaling
-
-
-**`FeatureView.scaling`**
-
-Scaling of the features.
-
----
-
 #### FeatureView.state
 
 
@@ -6166,7 +6410,7 @@ and some text. To be overriden.
 
 
 * `cluster_stat : function` 　 
-    Maps `cluster_id` to `Bunch(histogram (1D array), plot (1D array), text)`.
+    Maps `cluster_id` to `Bunch(data (1D array), plot (1D array), text)`.
 
 ---
 
@@ -6193,7 +6437,18 @@ Close the underlying canvas.
 
 **`HistogramView.decrease(self)`**
 
-Decrease the histogram range on the x avis.
+Decrease the scaling parameter.
+
+---
+
+#### HistogramView.get_clusters_data
+
+
+**`HistogramView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -6202,7 +6457,7 @@ Decrease the histogram range on the x avis.
 
 **`HistogramView.increase(self)`**
 
-Increase the histogram range on the x avis.
+Increase the scaling parameter.
 
 ---
 
@@ -6218,7 +6473,16 @@ Change the scaling with the wheel.
 #### HistogramView.on_select
 
 
-**`HistogramView.on_select(self, cluster_ids=(), **kwargs)`**
+**`HistogramView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### HistogramView.plot
+
+
+**`HistogramView.plot(self, **kwargs)`**
 
 Update the view with the selected clusters.
 
@@ -6344,12 +6608,14 @@ Close the underlying canvas.
 
 ---
 
-#### ManualClusteringView.on_mouse_wheel
+#### ManualClusteringView.get_clusters_data
 
 
-**`ManualClusteringView.on_mouse_wheel(self, e)`**
+**`ManualClusteringView.get_clusters_data(self, load_all=None)`**
 
-Change the scaling with the wheel.
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -6359,6 +6625,15 @@ Change the scaling with the wheel.
 **`ManualClusteringView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### ManualClusteringView.plot
+
+
+**`ManualClusteringView.plot(self, **kwargs)`**
+
+Update the view with the current cluster selection.
 
 ---
 
@@ -6464,12 +6739,14 @@ Close the underlying canvas.
 
 ---
 
-#### ProbeView.on_mouse_wheel
+#### ProbeView.get_clusters_data
 
 
-**`ProbeView.on_mouse_wheel(self, e)`**
+**`ProbeView.get_clusters_data(self, load_all=None)`**
 
-Change the scaling with the wheel.
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -6479,6 +6756,15 @@ Change the scaling with the wheel.
 **`ProbeView.on_select(self, cluster_ids=(), **kwargs)`**
 
 Update the view with the selected clusters.
+
+---
+
+#### ProbeView.plot
+
+
+**`ProbeView.plot(self, **kwargs)`**
+
+Update the view with the current cluster selection.
 
 ---
 
@@ -6586,7 +6872,18 @@ Close the underlying canvas.
 
 **`RasterView.decrease(self)`**
 
-Decrease the marker size.
+Decrease the scaling parameter.
+
+---
+
+#### RasterView.get_clusters_data
+
+
+**`RasterView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -6595,7 +6892,7 @@ Decrease the marker size.
 
 **`RasterView.increase(self)`**
 
-Increase the marker size.
+Increase the scaling parameter.
 
 ---
 
@@ -6629,7 +6926,7 @@ Update the view with the selected clusters.
 #### RasterView.plot
 
 
-**`RasterView.plot(self)`**
+**`RasterView.plot(self, **kwargs)`**
 
 Make the raster plot.
 
@@ -6721,15 +7018,6 @@ Update the color of the spikes, depending on the selected clustersd.
 
 ---
 
-#### RasterView.data_bounds
-
-
-**`RasterView.data_bounds`**
-
-Bounds of the raster plot view.
-
----
-
 #### RasterView.marker_size
 
 
@@ -6757,7 +7045,7 @@ This view displays a scatter plot for all selected clusters.
 
 
 * `coords : function` 　 
-    Maps `cluster_ids` to a list `[Bunch(x, y), ...]` for each cluster.
+    Maps `cluster_ids` to a list `[Bunch(x, y, spike_ids, data_bounds), ...]` for each cluster.
 
 ---
 
@@ -6766,15 +7054,7 @@ This view displays a scatter plot for all selected clusters.
 
 **`ScatterView.attach(self, gui)`**
 
-Attach the view to the GUI.
 
-Perform the following:
-
-- Add the view to the GUI.
-- Update the view's attribute from the GUI state
-- Add the default view actions (auto_update, screenshot)
-- Bind the on_select() method to the select event raised by the supervisor.
-  This runs on a background thread not to block the GUI thread.
 
 ---
 
@@ -6792,7 +7072,16 @@ Close the underlying canvas.
 
 **`ScatterView.decrease(self)`**
 
-Decrease the marker size.
+Decrease the scaling parameter.
+
+---
+
+#### ScatterView.get_clusters_data
+
+
+**`ScatterView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
 
 ---
 
@@ -6801,7 +7090,7 @@ Decrease the marker size.
 
 **`ScatterView.increase(self)`**
 
-Increase the marker size.
+Increase the scaling parameter.
 
 ---
 
@@ -6826,9 +7115,18 @@ Return the spikes enclosed by the lasso.
 #### ScatterView.on_select
 
 
-**`ScatterView.on_select(self, cluster_ids=(), **kwargs)`**
+**`ScatterView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Update the view with the selected clusters.
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### ScatterView.plot
+
+
+**`ScatterView.plot(self, **kwargs)`**
+
+Update the view with the current cluster selection.
 
 ---
 
@@ -7536,7 +7834,7 @@ This view shows all template waveforms of all clusters in a large grid of shape
 
 **`TemplateView.attach(self, gui)`**
 
-Attach the view to the GUI.
+
 
 ---
 
@@ -7554,7 +7852,18 @@ Close the underlying canvas.
 
 **`TemplateView.decrease(self)`**
 
-Decrease the scaling of the template waveforms.
+Decrease the scaling parameter.
+
+---
+
+#### TemplateView.get_clusters_data
+
+
+**`TemplateView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -7563,7 +7872,7 @@ Decrease the scaling of the template waveforms.
 
 **`TemplateView.increase(self)`**
 
-Increase the scaling of the template waveforms.
+Increase the scaling parameter.
 
 ---
 
@@ -7597,7 +7906,7 @@ Update the view with the selected clusters.
 #### TemplateView.plot
 
 
-**`TemplateView.plot(self)`**
+**`TemplateView.plot(self, **kwargs)`**
 
 Make the template plot.
 
@@ -7685,7 +7994,7 @@ Update the color of the clusters, taking the selected clusters into account.
 
 **`TemplateView.scaling`**
 
-Scaling of the template waveforms.
+Return the grid scaling.
 
 ---
 
@@ -7755,7 +8064,18 @@ Close the underlying canvas.
 
 **`TraceView.decrease(self)`**
 
-Decrease the scaling of the traces.
+Decrease the scaling parameter.
+
+---
+
+#### TraceView.get_clusters_data
+
+
+**`TraceView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
 
 ---
 
@@ -7809,7 +8129,7 @@ Jump to the previous spike from the first selected cluster.
 
 **`TraceView.increase(self)`**
 
-Increase the scaling of the traces.
+Increase the scaling parameter.
 
 ---
 
@@ -7845,7 +8165,16 @@ Change the scaling with the wheel.
 
 **`TraceView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Update the view with the selected clusters.
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### TraceView.plot
+
+
+**`TraceView.plot(self, **kwargs)`**
+
+Plot the waveforms.
 
 ---
 
@@ -7972,15 +8301,6 @@ bottom to top (`bottom`).
 
 ---
 
-#### TraceView.scaling
-
-
-**`TraceView.scaling`**
-
-Scaling of the traces.
-
----
-
 #### TraceView.stacked
 
 
@@ -8069,7 +8389,7 @@ following the probe geometry.
 * `waveforms : function` 　 
     Maps a cluster id to a Bunch with the following attributes:
     * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
-    * `channel_ids` : the channel ids corresponding to the third dimension in `data
+    * `channel_ids` : the channel ids corresponding to the third dimension in `data`
     * `channel_positions` : a 2D array with the coordinates of the channels on the probe
     * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
     * `alpha` : the alpha transparency channel
@@ -8103,7 +8423,7 @@ Close the underlying canvas.
 
 **`WaveformView.decrease(self)`**
 
-Decrease the vertical scaling of the waveforms.
+Decrease the scaling parameter.
 
 ---
 
@@ -8125,12 +8445,23 @@ Increase the vertical scaling of the waveforms.
 
 ---
 
+#### WaveformView.get_clusters_data
+
+
+**`WaveformView.get_clusters_data(self)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
 #### WaveformView.increase
 
 
 **`WaveformView.increase(self)`**
 
-Increase the vertical scaling of the waveforms.
+Increase the scaling parameter.
 
 ---
 
@@ -8164,9 +8495,18 @@ Change the scaling with the wheel.
 #### WaveformView.on_select
 
 
-**`WaveformView.on_select(self, cluster_ids=(), **kwargs)`**
+**`WaveformView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Update the view with the selected clusters.
+Callback functions when clusters are selected. To be overriden.
+
+---
+
+#### WaveformView.plot
+
+
+**`WaveformView.plot(self, **kwargs)`**
+
+Update the view with the current cluster selection.
 
 ---
 
@@ -8329,7 +8669,7 @@ Describe a template dataset.
 #### phy.apps.template.template_gui
 
 
-**`phy.apps.template.template_gui(params_path)`**
+**`phy.apps.template.template_gui(params_path, clear_cache=None)`**
 
 Launch the Template GUI.
 
@@ -8361,7 +8701,7 @@ Controller for the Template GUI.
 
 **`TemplateController.create_amplitude_view(self)`**
 
-Create an amplitude view.
+Create the amplitude view.
 
 ---
 
@@ -8462,21 +8802,21 @@ Create a trace view.
 
 ---
 
-#### TemplateController.get_amplitude_histogram
-
-
-**`TemplateController.get_amplitude_histogram(self, cluster_id)`**
-
-Return the spike amplitude data of a cluster.
-
----
-
 #### TemplateController.get_amplitudes
 
 
-**`TemplateController.get_amplitudes(self, cluster_ids, load_all=False)`**
+**`TemplateController.get_amplitudes(self, cluster_id, load_all=False)`**
 
-Get the spike amplitudes for a set of clusters.
+Return the spike amplitudes found in `amplitudes.npy`, for a given cluster.
+
+---
+
+#### TemplateController.get_background_spike_ids
+
+
+**`TemplateController.get_background_spike_ids(self, n=None)`**
+
+Return regularly spaced spikes.
 
 ---
 
@@ -8498,57 +8838,21 @@ Return the best channels of a given cluster.
 
 ---
 
-#### TemplateController.get_cluster_amplitude
+#### TemplateController.get_channel_shank
 
 
-**`TemplateController.get_cluster_amplitude(self, cluster_id)`**
+**`TemplateController.get_channel_shank(self, cluster_id)`**
 
-Get the template waveform amplitude of a cluster.
-
----
-
-#### TemplateController.get_correlograms
-
-
-**`TemplateController.get_correlograms(self, cluster_ids, bin_size, window_size)`**
-
-Return the cross- and auto-correlograms of a set of clusters.
+Return the shank of a cluster's best channel, if the channel_shanks array is available.
 
 ---
 
-#### TemplateController.get_correlograms_rate
+#### TemplateController.get_clusters_on_channel
 
 
-**`TemplateController.get_correlograms_rate(self, cluster_ids, bin_size)`**
+**`TemplateController.get_clusters_on_channel(self, channel_id)`**
 
-Return the baseline firing rate of the cross- and auto-correlograms of clusters.
-
----
-
-#### TemplateController.get_features
-
-
-**`TemplateController.get_features(self, cluster_id=None, channel_ids=None, load_all=None)`**
-
-Return the features of a given cluster on specified channels.
-
----
-
-#### TemplateController.get_firing_rate
-
-
-**`TemplateController.get_firing_rate(self, cluster_id)`**
-
-Return the firing rate data of a cluster.
-
----
-
-#### TemplateController.get_isi
-
-
-**`TemplateController.get_isi(self, cluster_id)`**
-
-Return the ISI data of a cluster.
+Return all clusters which have the specified channel among their best channels.
 
 ---
 
@@ -8561,12 +8865,21 @@ Return the mean firing rate of a cluster.
 
 ---
 
-#### TemplateController.get_mean_waveforms
+#### TemplateController.get_mean_spike_raw_amplitudes
 
 
-**`TemplateController.get_mean_waveforms(self, cluster_id)`**
+**`TemplateController.get_mean_spike_raw_amplitudes(self, cluster_id)`**
 
-Get the mean waveform of a cluster on its best channels.
+Return the average of the spike raw amplitudes.
+
+---
+
+#### TemplateController.get_mean_spike_template_amplitudes
+
+
+**`TemplateController.get_mean_spike_template_amplitudes(self, cluster_id)`**
+
+Return the average of the spike template amplitudes.
 
 ---
 
@@ -8582,18 +8895,45 @@ Return the depth of a cluster.
 #### TemplateController.get_spike_ids
 
 
-**`TemplateController.get_spike_ids(self, cluster_id=None, load_all=None)`**
+**`TemplateController.get_spike_ids(self, cluster_id, n=None)`**
 
-Return some or all spikes belonging to a given cluster.
+Return part or all of spike ids belonging to a given cluster.
+
+---
+
+#### TemplateController.get_spike_raw_amplitudes
+
+
+**`TemplateController.get_spike_raw_amplitudes(self, cluster_id, load_all=False)`**
+
+Return the maximum amplitude of the raw waveforms across all channels.
+
+---
+
+#### TemplateController.get_spike_template_amplitudes
+
+
+**`TemplateController.get_spike_template_amplitudes(self, cluster_id, load_all=False)`**
+
+Return the template amplitudes multiplied by the spike's amplitude.
 
 ---
 
 #### TemplateController.get_spike_times
 
 
-**`TemplateController.get_spike_times(self, cluster_id=None, load_all=None)`**
+**`TemplateController.get_spike_times(self, cluster_id, n=None)`**
 
-Return the times of some or all spikes belonging to a given cluster.
+Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`.
+
+---
+
+#### TemplateController.get_template_amplitude
+
+
+**`TemplateController.get_template_amplitude(self, template_id)`**
+
+Return the maximum amplitude of a template's waveforms across all channels.
 
 ---
 
@@ -8606,57 +8946,12 @@ Return a histogram of the number of spikes in each template for a given cluster.
 
 ---
 
-#### TemplateController.get_template_features
-
-
-**`TemplateController.get_template_features(self, cluster_ids, load_all=None)`**
-
-Get the template features of a pair of clusters.
-
----
-
 #### TemplateController.get_template_for_cluster
 
 
 **`TemplateController.get_template_for_cluster(self, cluster_id)`**
 
 Return the largest template associated to a cluster.
-
----
-
-#### TemplateController.get_template_waveforms
-
-
-**`TemplateController.get_template_waveforms(self, cluster_id)`**
-
-Return the waveforms of the templates corresponding to a cluster.
-
----
-
-#### TemplateController.get_templates
-
-
-**`TemplateController.get_templates(self, cluster_ids)`**
-
-Get the template waveforms of a set of clusters.
-
----
-
-#### TemplateController.get_traces
-
-
-**`TemplateController.get_traces(self, interval, show_all_spikes=False)`**
-
-Get traces and spike waveforms.
-
----
-
-#### TemplateController.get_waveforms
-
-
-**`TemplateController.get_waveforms(self, cluster_id)`**
-
-Return a selection of waveforms for a cluster.
 
 ---
 
@@ -8815,7 +9110,7 @@ Return the waveforms of a template on the most relevant channels.
 #### TemplateModel.get_waveforms
 
 
-**`TemplateModel.get_waveforms(self, spike_ids, channel_ids)`**
+**`TemplateModel.get_waveforms(self, spike_ids, channel_ids=None)`**
 
 Return spike waveforms on specified channels.
 
