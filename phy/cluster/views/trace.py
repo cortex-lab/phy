@@ -132,6 +132,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         self.do_show_labels = True
         self.show_all_spikes = False
+        self._scaling = 1.
 
         self.get_spike_times = spike_times
 
@@ -157,13 +158,12 @@ class TraceView(ScalingMixin, ManualClusteringView):
             self._channel_perm = np.argsort(self._channel_perm)
 
         # Box and probe scaling.
-        self.scaling = 1.
         self._origin = None
 
         # Initialize the view.
         super(TraceView, self).__init__()
-        self.state_attrs += ('origin', 'interval', 'do_show_labels', 'show_all_spikes')
-        self.local_state_attrs += ('interval',)
+        self.state_attrs += ('origin', 'interval', 'scaling', 'do_show_labels', 'show_all_spikes')
+        self.local_state_attrs += ('interval', 'scaling',)
 
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
@@ -181,7 +181,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
         self.box_size = np.array(self.canvas.stacked.box_size)
-        self._update_boxes()
 
         # Initial interval.
         self._interval = None
@@ -315,6 +314,13 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         self.plot()
 
+    def on_select(self, cluster_ids=None, **kwargs):
+        self.cluster_ids = cluster_ids
+        if not cluster_ids:
+            return
+        # Make sure we call again self.traces() when the cluster selection changes.
+        self.set_interval()
+
     def plot(self, **kwargs):
         """Plot the waveforms."""
         waveforms = self.waveforms
@@ -342,10 +348,11 @@ class TraceView(ScalingMixin, ManualClusteringView):
             self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes)
         self.actions.separator()
 
-        self.actions.add(self.go_to, alias='tg')
+        self.actions.add(
+            self.go_to, alias='tg', prompt=True, prompt_default=lambda: str(self.time))
         self.actions.separator()
 
-        self.actions.add(self.shift, alias='ts')
+        self.actions.add(self.shift, alias='ts', prompt=True)
         self.actions.add(self.go_right)
         self.actions.add(self.go_left)
         self.actions.separator()
@@ -372,7 +379,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
     @origin.setter
     def origin(self, value):
         self._origin = value
-        self._update_boxes()
 
     # Navigation
     # -------------------------------------------------------------------------
@@ -462,17 +468,24 @@ class TraceView(ScalingMixin, ManualClusteringView):
     # Scaling
     # -------------------------------------------------------------------------
 
+    def _apply_scaling(self):
+        self.canvas.layout.scaling = (self.canvas.layout.scaling[0], self._scaling)
+
+    @property
+    def scaling(self):
+        """Scaling of the channel boxes."""
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
+        self._apply_scaling()
+
     def _get_scaling_value(self):
-        """Return the scaling parameter. May be overriden."""
         return self.scaling
 
     def _set_scaling_value(self, value):
-        """Set the scaling parameter. May be overriden."""
         self.scaling = value
-        self._update_boxes()
-
-    def _update_boxes(self):
-        self.canvas.stacked.box_size = self.box_size * self.scaling
 
     # Spike selection
     # -------------------------------------------------------------------------

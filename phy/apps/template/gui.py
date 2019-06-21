@@ -779,7 +779,6 @@ class TemplateController(object):
         """Get traces and spike waveforms."""
         k = self.model.n_samples_templates
         m = self.model
-
         traces_interval = select_traces(m.traces, interval, sample_rate=m.sample_rate)
         # Reorder vertically.
         out = Bunch(data=traces_interval)
