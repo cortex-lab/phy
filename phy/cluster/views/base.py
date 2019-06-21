@@ -208,11 +208,12 @@ class ManualClusteringView(object):
             def finished():
                 # When the task has finished in the thread pool, we recover all program
                 # updates of the view, and we execute them on the GPU.
-                self.canvas.set_lazy(False)
-                # We go through all collected OpenGL updates.
-                for program, name, data in self.canvas.iter_update_queue():
-                    # We update data buffers in OpenGL programs.
-                    program[name] = data
+                if isinstance(self.canvas, PlotCanvas):
+                    self.canvas.set_lazy(False)
+                    # We go through all collected OpenGL updates.
+                    for program, name, data in self.canvas.iter_update_queue():
+                        # We update data buffers in OpenGL programs.
+                        program[name] = data
                 # Finally, we update the canvas.
                 self.canvas.update()
                 emit('is_busy', self, False)
@@ -221,10 +222,12 @@ class ManualClusteringView(object):
             # starting to record all OpenGL calls instead of executing them immediately.
             # This is what we call the "lazy" mode.
             emit('is_busy', self, True)
-            self.canvas.set_lazy(True)
             if _ENABLE_THREADING:
+                # This is only for OpenGL views.
+                self.canvas.set_lazy(True)
                 thread_pool().start(worker)
             else:
+                # This is for OpenGL views, without threading.
                 worker.run()
 
         # Update the GUI status message when the `self.set_status()` method

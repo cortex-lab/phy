@@ -325,6 +325,9 @@ class PlotCanvasMpl(object):
     def attach_events(self, view):
         pass
 
+    def set_lazy(self, lazy):
+        pass
+
     @property
     def ax(self):
         if len(self._current_box_index) == 1:

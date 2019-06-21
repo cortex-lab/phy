@@ -170,6 +170,9 @@ def _block(until_true, timeout=None):
                           int(timeout * 1000))
     if not until_true():
         logger.error("Timeout in _block().")
+        # NOTE: make sure we remove any busy cursor.
+        app.restoreOverrideCursor()
+        app.restoreOverrideCursor()
         raise RuntimeError("Timeout in _block().")
 
 
