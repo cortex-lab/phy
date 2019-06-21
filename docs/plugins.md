@@ -427,6 +427,8 @@ Most built-in views in phy are based on OpenGL instead of matplotlib, for perfor
 
 In this example, we show how to create a custom view based on matplotlib. Specifically, we show a 2D histogram of spike features.
 
+*Note*: once the plugin is activated, you need to explicitly open a new view with `View > New view > FeatureDensityView`.
+
 ![image](https://user-images.githubusercontent.com/1942359/58970988-ccbb3b00-87ba-11e9-93e9-c900d76a54f2.png)
 
 ```python

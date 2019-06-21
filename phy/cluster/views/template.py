@@ -170,6 +170,8 @@ class TemplateView(ScalingMixin, ManualClusteringView):
 
     def update_cluster_sort(self, cluster_ids):
         """Update the order of the clusters."""
+        if not self._cluster_box_index:  # pragma: no cover
+            return self.plot()
         # Only the order of the cluster_ids is supposed to change here.
         # We just have to update box_index instead of replotting everything.
         assert len(cluster_ids) == len(self.cluster_ids)
