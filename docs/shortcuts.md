@@ -71,10 +71,6 @@ Keyboard shortcuts for TemplateGUI - Clustering
 - toggle_categorical_colormap              - (:toggle_categorical_colormap)
 - undo                                     ctrl+z
 
-Keyboard shortcuts for TemplateGUI - AmplitudeHistogramView
-- set_n_bins                               - (:an)
-- set_x_max                                - (:am)
-
 Keyboard shortcuts for TemplateGUI - AmplitudeView
 
 Keyboard shortcuts for TemplateGUI - CorrelogramView

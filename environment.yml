@@ -14,7 +14,6 @@ dependencies:
     - qtconsole
     - requests
     - traitlets
-    - PyQtWebEngine
     - tqdm
     - joblib
     - click

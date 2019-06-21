@@ -158,7 +158,8 @@ You can show: spike waveforms, mean spike waveforms, or template waveforms (`tog
 
 #### Keyboard shortcuts and snippets
 
-```
+```text
+# shortcuts WaveformView
 - decrease                                 ctrl+down
 - extend_horizontally                      shift+right
 - extend_vertically                        shift+up
@@ -189,9 +190,9 @@ The default subplot organization of the feature view is (x and y for each of the
 
 ```
 time,0A 1A,0A   0B,0A   1B,0A
-        time,1A 0B,1A   1B,1A
-                time,0B 1B,0B
-                        time,1B
+0A,1A   time,1A 0B,1A   1B,1A
+0A,0B   1A,0B   time,0B 1B,0B
+0A,1B   1A,1B   0B,1B   time,1B
 ```
 
 The documentation provides a plugin example showing how to customize the subplot organization.
@@ -305,18 +306,12 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 
 * Inter-spike intervals (computed using all spikes for the selected clusters)
 * Instantenous firing-rate (computed using all spikes for the selected clusters)
-* Template amplitude (computed using the same subset of spikes as in the amplitude view)
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 
 #### Keyboard shortcuts and snippets
 
 ```
-Keyboard shortcuts for TemplateGUI - AmplitudeHistogramView
-- set_n_bins                               - (:an)
-- set_x_max                                - (:am)
-- change window size                       ctrl+wheel
-
 Keyboard shortcuts for TemplateGUI - FiringRateView
 - set_n_bins                               - (:fn)
 - set_x_max                                - (:fm)

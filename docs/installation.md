@@ -36,3 +36,5 @@ Minimal installation instructions (to be completed):
     cd path/to/my/spikesorting/output
     phy template-gui params.py
     ```
+
+*Note*: on some systems, if you have import errors related to Qt, you may need to do `pip install PyQtWebEngine`.
