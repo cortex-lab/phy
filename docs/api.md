@@ -747,6 +747,9 @@ This class attaches to a GUI and implements the following features:
 * `default_shortcuts : dict` 　 
     Map action names to keyboard shortcuts (regular strings).
 
+* `default_snippets : dict` 　 
+    Map action names to snippets (regular strings).
+
 ---
 
 #### Actions.add
@@ -6538,6 +6541,15 @@ Set the maximum value on the x axis for the histogram.
 
 ---
 
+#### HistogramView.set_x_min
+
+
+**`HistogramView.set_x_min(self, x_min)`**
+
+Set the minimum value on the x axis for the histogram.
+
+---
+
 #### HistogramView.show
 
 
@@ -8298,6 +8310,15 @@ Interval as `(tmin, tmax)`.
 
 Whether to show the channels from top to bottom (`top` option, the default), or from
 bottom to top (`bottom`).
+
+---
+
+#### TraceView.scaling
+
+
+**`TraceView.scaling`**
+
+Scaling of the channel boxes.
 
 ---
 

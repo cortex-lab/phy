@@ -159,7 +159,9 @@ You can show: spike waveforms, mean spike waveforms, or template waveforms (`tog
 #### Keyboard shortcuts and snippets
 
 ```text
-# shortcuts WaveformView
+Keyboard shortcuts for WaveformView
+
+- change_box_size                          ctrl+wheel
 - decrease                                 ctrl+down
 - extend_horizontally                      shift+right
 - extend_vertically                        shift+up
@@ -167,12 +169,10 @@ You can show: spike waveforms, mean spike waveforms, or template waveforms (`tog
 - narrow                                   ctrl+left
 - shrink_horizontally                      shift+left
 - shrink_vertically                        shift+down
-- toggle_mean_waveforms                    m
 - toggle_show_labels                       ctrl+l
-- toggle_templates                         w
 - toggle_waveform_overlap                  o
 - widen                                    ctrl+right
-- change waveform scaling                  ctrl+wheel
+
 ```
 
 
@@ -200,13 +200,14 @@ The documentation provides a plugin example showing how to customize the subplot
 
 #### Keyboard shortcuts and snippets
 
-```
-- clear_channels                           - (:clear_channels)
-- decrease                                 ctrl+-
-- increase                                 ctrl++
+```text
+Keyboard shortcuts for FeatureView
+
+- add_lasso_point                          ctrl+click
+- change_marker_size                       ctrl+wheel
+- stop_lasso                               ctrl+right click
 - toggle_automatic_channel_selection       c
-- change feature scaling                   ctrl+wheel
-- change marker size                       shift+wheel
+
 ```
 
 
@@ -215,6 +216,16 @@ The documentation provides a plugin example showing how to customize the subplot
 This view is only active when exactly two clusters are selected. It shows the `template_features.npy` file, which is created by KiloSort.
 
 ![image](https://user-images.githubusercontent.com/1942359/58952660-9ff42d00-8794-11e9-88ff-a31394ee9cea.png)
+
+
+#### Keyboard shortcuts and snippets
+
+```text
+Keyboard shortcuts for ScatterView
+
+- change_marker_size                       ctrl+wheel
+
+```
 
 
 
@@ -232,12 +243,11 @@ The parameter `controller.n_spikes_correlograms=100000`, by default, specifies t
 
 #### Keyboard shortcuts and snippets
 
-```
-- set_bin                                  - (:cb)
-- set_refractory_period                    - (:cr)
-- set_window                               - (:cw)
-- toggle_normalization                     n
-- increase window                          ctrl+wheel
+```text
+Keyboard shortcuts for CorrelogramView
+
+- change_window_size                       ctrl+wheel
+
 ```
 
 
@@ -249,7 +259,10 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 #### Keyboard shortcuts and snippets
 
-```
+```text
+Keyboard shortcuts for TraceView
+
+- change_trace_size                        ctrl+wheel
 - decrease                                 alt+down
 - go_left                                  alt+left
 - go_right                                 alt+right
@@ -258,11 +271,11 @@ This view shows the raw data traces across all channels, with spikes from the se
 - go_to_previous_spike                     alt+pgup
 - increase                                 alt+up
 - narrow                                   alt++
-- shift                                    - (:ts)
+- select_spike                             ctrl+click
 - toggle_highlighted_spikes                alt+s
 - toggle_show_labels                       alt+l
 - widen                                    alt+-
-- change trace scaling                     ctrl+wheel
+
 ```
 
 
@@ -294,9 +307,14 @@ Extra spikes beyond those of the selected clusters are shown in gray. These spik
 
 #### Keyboard shortcuts and snippets
 
-```
+```text
+Keyboard shortcuts for AmplitudeView
+
+- change_marker_size                       ctrl+wheel
 - next_amplitude_type                      a
-- change marker size                       ctrl+wheel
+- select_x_dim                             alt+left click
+- select_y_dim                             alt+right click
+
 ```
 
 
@@ -311,16 +329,11 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 
 #### Keyboard shortcuts and snippets
 
-```
-Keyboard shortcuts for TemplateGUI - FiringRateView
-- set_n_bins                               - (:fn)
-- set_x_max                                - (:fm)
-- change window size                       ctrl+wheel
+```text
+Keyboard shortcuts for HistogramView
 
-Keyboard shortcuts for TemplateGUI - ISIView
-- set_n_bins                               - (:in)
-- set_x_max                                - (:im)
-- change window size                       ctrl+wheel
+- change_window_size                       ctrl+wheel
+
 ```
 
 
@@ -334,10 +347,14 @@ Select a cluster with **Control+click**.
 
 #### Keyboard shortcuts and snippets
 
-```
+```text
+Keyboard shortcuts for RasterView
+
+- change_marker_size                       ctrl+wheel
 - decrease                                 ctrl+shift+-
 - increase                                 ctrl+shift++
-- change marker size                       ctrl+wheel
+- select_cluster                           ctrl+click
+
 ```
 
 
@@ -351,10 +368,14 @@ Select a cluster with **Control+click**.
 
 #### Keyboard shortcuts and snippets
 
-```
+```text
+Keyboard shortcuts for TemplateView
+
+- change_template_size                     ctrl+wheel
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
-- change template scaling                  ctrl+wheel
+- select_cluster                           ctrl+click
+
 ```
 
 
@@ -373,8 +394,11 @@ You can split clusters by drawing polygons in the spike attribute views, as in t
 
 #### Keyboard shortcuts and snippets
 
-```
-- change marker size                       ctrl+wheel
+```text
+Keyboard shortcuts for ScatterView
+
+- change_marker_size                       ctrl+wheel
+
 ```
 
 
