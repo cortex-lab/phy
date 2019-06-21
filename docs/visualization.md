@@ -269,20 +269,27 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 This view shows the amplitude of a selection of spikes belonging to the selected clusters, along with vertical histograms on the right.
 
+![image](https://user-images.githubusercontent.com/1942359/59875055-13568b00-93a0-11e9-923e-b069d3d78130.png)
+
+#### Different types of amplitudes
+
 You can toggle between different types of amplitudes by pressing `a`:
 
 * `template`: the template amplitudes (stored in `amplitudes.npy`, multiplied by the template waveform maximum amplitude on the peak channel)
 * `raw`: the raw spike waveform maximum amplitude on the peak channel (at the moment, extracted on the fly from the raw data file, so this is slow).
 * `feature`: the spike amplitude on a specific dimension, by default the first PC component on the peak channel. The dimension can be changed from the feature view with `alt+left click` (x axis) and `alt+right click` (y axis).
 
+#### Number of spikes.
+
 The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
 
 *Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
 
-This view supports splitting like in the feature view.
+This view supports splitting like in the feature view. When splitting, all spikes (and not just displayed spikes) are loaded before computing the spikes that belong to the lasso polygon.
 
-![image](https://user-images.githubusercontent.com/1942359/59875055-13568b00-93a0-11e9-923e-b069d3d78130.png)
+#### Background spikes
 
+Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel.
 
 #### Keyboard shortcuts and snippets
 

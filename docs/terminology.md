@@ -38,6 +38,8 @@ Every template has a unique identifier, `template_id`, ranging from `0` to `n_te
 
 The spike-template assignments are saved in `spike_templates.npy`. This 1D array has `n_spikes` elements, it gives the template id of every spike.
 
+A template's **"best channels"** correspond to the channels where the template waveform has been detected. The "best channel" (or peak channel) is the channel with the maximum template waveform amplitude.
+
 
 ## Cluster
 
