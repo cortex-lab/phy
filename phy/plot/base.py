@@ -455,7 +455,10 @@ class LazyProgram(gloo.Program):
             self._update_queue[:] = ((n, d) for (n, d) in self._update_queue if n != name)
             self._update_queue.append((name, data))
         else:
-            super(LazyProgram, self).__setitem__(name, data)
+            try:
+                super(LazyProgram, self).__setitem__(name, data)
+            except IndexError:
+                pass
 
 
 class BaseCanvas(QOpenGLWindow):

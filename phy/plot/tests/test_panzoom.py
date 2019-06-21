@@ -304,3 +304,18 @@ def test_panzoom_resize(qtbot, canvas_pz, panzoom):
 
     c.resize(400, 600)
     assert tuple(pz._canvas_aspect) not in ((0, 0), (1, 1), (1, 0), (0, 1))
+
+
+def test_panzoom_excluded(qtbot, canvas_pz):
+    c = canvas_pz
+    visual = MyTestVisual()
+    c.add_visual(visual, exclude_origins=(c.panzoom,))
+    visual.set_data()
+
+    c.show()
+    qtbot.waitForWindowShown(c)
+
+    mouse_drag(qtbot, c, (100, 0), (200, 0))
+
+    # qtbot.stop()
+    c.close()

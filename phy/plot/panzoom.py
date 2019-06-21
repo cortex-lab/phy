@@ -558,8 +558,12 @@ class PanZoom(object):
     def update_visual(self, visual):
         """Update a visual with the current pan and zoom values."""
         if hasattr(visual, 'program'):
-            visual.program[self.pan_var_name] = self._pan
-            visual.program[self.zoom_var_name] = self._zoom_aspect()
+            try:
+                visual.program[self.pan_var_name] = self._pan
+                visual.program[self.zoom_var_name] = self._zoom_aspect()
+            except IndexError:  # pragma: no cover
+                # Visuals that are excluded from panzoom interact.
+                pass
 
     def update(self):
         """Update all visuals in the attached canvas."""
