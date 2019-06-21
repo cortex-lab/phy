@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Import plugin code from `plugins/` files into the Markdown documentation file `plugins.md`."""
 
 import ast
