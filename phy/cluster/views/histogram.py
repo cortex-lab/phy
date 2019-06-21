@@ -54,6 +54,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     # Maximum value on the x axis (determines the range of the histogram)
     # If None, then `data.max()` is used.
     x_max = None
+    x_min = None
 
     # The snippet to update this view are `hn` to change the number of bins, and `hm` to
     # change the maximum value on the x axis. The character `h` can be customized by child classes.
@@ -64,8 +65,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def __init__(self, cluster_stat=None):
         super(HistogramView, self).__init__()
-        self.state_attrs += ('n_bins', 'x_max')
-        self.local_state_attrs += ('n_bins', 'x_max')
+        self.state_attrs += ('n_bins', 'x_max', 'x_min')
+        self.local_state_attrs += ('n_bins', 'x_max', 'x_min')
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 
@@ -92,7 +93,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         # Plot.
         plot = bunch.get('plot', None)
         if plot is not None:
-            x = np.linspace(0., self.x_max, len(plot))
+            x = np.linspace(self.x_min, self.x_max, len(plot))
             self.plot_visual.add_batch_data(
                 x=x, y=plot, color=(1, 1, 1, 1), data_bounds=self.data_bounds,
                 box_index=bunch.index,
@@ -113,12 +114,13 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             bunch = self.cluster_stat(cluster_id)
 
             # Update self.x_max if it was not set before.
+            self.x_min = self.x_min or bunch.get('x_min', None) or bunch.data.min()
             self.x_max = self.x_max or bunch.get('x_max', None) or bunch.data.max()
             assert self.x_max is not None
-            assert self.x_max > 0
 
             # Compute the histogram.
-            bunch.histogram = _compute_histogram(bunch.data, x_max=self.x_max, n_bins=self.n_bins)
+            bunch.histogram = _compute_histogram(
+                bunch.data, x_min=self.x_min, x_max=self.x_max, n_bins=self.n_bins)
             bunch.ylim = bunch.histogram.max()
 
             bunch.color = selected_cluster_color(i)
@@ -130,7 +132,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     def _get_data_bounds(self, bunchs):
         # Get the axes data bounds (the last subplot's extended n_cluster times on the y axis).
         ylim = max(bunch.ylim for bunch in bunchs) if bunchs else 1
-        return (0, 0, self.x_max, ylim * len(self.cluster_ids))
+        return (self.x_min, 0, self.x_max, ylim * len(self.cluster_ids))
 
     def plot(self, **kwargs):
         """Update the view with the selected clusters."""
@@ -159,7 +161,10 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             self.set_n_bins, alias=self.alias_char + 'n',
             prompt=True, prompt_default=lambda: self.n_bins)
         self.actions.add(
-            self.set_x_max, alias=self.alias_char + 'm',
+            self.set_x_min, alias=self.alias_char + 'min',
+            prompt=True, prompt_default=lambda: self.x_min)
+        self.actions.add(
+            self.set_x_max, alias=self.alias_char + 'max',
             prompt=True, prompt_default=lambda: self.x_max)
         self.actions.separator()
 
@@ -178,8 +183,20 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         logger.debug("Change number of bins to %d for %s.", n_bins, self.__class__.__name__)
         self.plot()
 
+    def set_x_min(self, x_min):
+        """Set the maximum value on the x axis for the histogram."""
+        if x_min >= self.x_max:
+            logger.warning("Could not set a x_min lower than x_max=%.3f.", self.x_max)
+            return
+        self.x_min = x_min
+        logger.debug("Change x min to %s for %s.", x_min, self.__class__.__name__)
+        self.plot()
+
     def set_x_max(self, x_max):
         """Set the maximum value on the x axis for the histogram."""
+        if x_max <= self.x_min:
+            logger.warning("Could not set a x_max higher than x_min=%.3f.", self.x_min)
+            return
         self.x_max = x_max
         logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.plot()

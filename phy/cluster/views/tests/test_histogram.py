@@ -35,7 +35,14 @@ def test_histogram_view_0(qtbot, gui):
     v.set_n_bins(200)
     assert v.n_bins == 200
 
+    v.set_x_min(-2)
+    assert v.x_min == -2
+    v.set_x_min(10)  # should fail
+    assert v.x_min == -2
+
     v.set_x_max(5)
+    assert v.x_max == 5
+    v.set_x_max(-10)  # should fail
     assert v.x_max == 5
 
     v.increase()
