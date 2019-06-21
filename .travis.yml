@@ -17,6 +17,7 @@ install:
   - conda info -a
   - conda install pyyaml numpy matplotlib scipy h5py pyqt cython
   - pip install -r requirements.txt
+  - pip uninstall PyQtWebEngine
   - pip install -r requirements-dev.txt
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
   - pip install -e .
