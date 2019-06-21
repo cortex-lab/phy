@@ -51,10 +51,13 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     # Number of bins in the histogram.
     n_bins = 100
 
+    # Minimum value on the x axis (determines the range of the histogram)
+    # If None, then `data.min()` is used.
+    x_min = None
+
     # Maximum value on the x axis (determines the range of the histogram)
     # If None, then `data.max()` is used.
     x_max = None
-    x_min = None
 
     # The snippet to update this view are `hn` to change the number of bins, and `hm` to
     # change the maximum value on the x axis. The character `h` can be customized by child classes.
@@ -65,8 +68,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def __init__(self, cluster_stat=None):
         super(HistogramView, self).__init__()
-        self.state_attrs += ('n_bins', 'x_max', 'x_min')
-        self.local_state_attrs += ('n_bins', 'x_max', 'x_min')
+        self.state_attrs += ('n_bins', 'x_min', 'x_max')
+        self.local_state_attrs += ('n_bins', 'x_min', 'x_max')
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 
@@ -184,7 +187,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         self.plot()
 
     def set_x_min(self, x_min):
-        """Set the maximum value on the x axis for the histogram."""
+        """Set the minimum value on the x axis for the histogram."""
         if x_min >= self.x_max:
             logger.warning("Could not set a x_min lower than x_max=%.3f.", self.x_max)
             return

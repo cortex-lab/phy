@@ -49,6 +49,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     # Alpha channel of the histogram in the background.
     histogram_alpha = .5
 
+    # Quantile used for scaling of the amplitudes (less than 1 to avoid outliers).
+    quantile = .99
+
     # Size of the histogram, between 0 and 1.
     histogram_scale = .25
 
@@ -87,13 +90,15 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
         # Amplitude name.
         self.text_visual = TextVisual()
-        self.canvas.add_visual(self.text_visual)
+        self.canvas.add_visual(self.text_visual, exclude_origins=(self.canvas.panzoom,))
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
-        m = min(np.min(bunch.amplitudes) for bunch in bunchs) if bunchs else 0.
+        if not bunchs:
+            return (0, 0, self.duration, 1)
+        m = min(np.quantile(bunch.amplitudes, 1 - self.quantile) for bunch in bunchs)
         m = min(0, m)  # ensure ymin <= 0
-        M = max(np.max(bunch.amplitudes) for bunch in bunchs) if bunchs else 1.
+        M = max(np.quantile(bunch.amplitudes, self.quantile) for bunch in bunchs)
         return (0, m, self.duration, M)
 
     def get_clusters_data(self, load_all=None):
@@ -149,7 +154,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def _plot_amplitude_name(self):
         """Show the amplitude name."""
-        self.text_visual.add_batch_data(pos=[1, 1], anchor=[-1, -1], text=self.amplitude_name)
+        self.text_visual.add_batch_data(pos=[0, 1], anchor=[0, -1], text=self.amplitude_name)
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
