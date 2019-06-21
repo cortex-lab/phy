@@ -4,10 +4,14 @@ In this section, we give a few examples of plugins.
 
 ## Hello world
 
-Here is how to write a useless plugin that displays a message every time there's a new cluster assignment:
+Here is how to write a simple plugin that displays a message every time there's a new cluster assignment:
 
 ```python
+# import from plugins/hello.py
+"""Hello world plugin."""
+
 from phy import IPlugin, connect
+
 
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
@@ -21,6 +25,7 @@ class MyPlugin(IPlugin):
             def on_cluster(sender, up):
                 """This is called every time a cluster assignment or cluster group/label changes."""
                 print("Clusters update: %s" % up)
+
 ```
 
 This displays the following in the console, for example:
@@ -37,16 +42,20 @@ Clusters update: <metadata_neurontype [81, 82] => interneuron>
 You can customize the maximum number of spikes in the different views as follows (the example below shows the default values):
 
 ```python
-from phy import IPlugin, connect
+# import from plugins/n_spikes_views.py
+"""Show how to change the number of displayed spikes in each view."""
+
+from phy import IPlugin
+
 
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
         """Feel free to keep below just the values you need to change."""
-        controller.n_spikes_waveforms = 100
+        controller.n_spikes_waveforms = 250
         controller.batch_size_waveforms = 10
         controller.n_spikes_features = 2500
-        controller.n_spikes_features_background = 1000
-        controller.n_spikes_amplitudes = 5000
+        controller.n_spikes_features_background = 2500
+        controller.n_spikes_amplitudes = 2500
         controller.n_spikes_correlograms = 100000
 
         # Number of "best" channels kept for displaying the waveforms.
@@ -56,6 +65,7 @@ class MyPlugin(IPlugin):
         # mean amplitude is greater than this fraction of the peak amplitude on the best channel.
         # If zero, just the N closest channels are kept as the best channels.
         controller.model.amplitude_threshold = 0
+
 ```
 
 *Note*: you need to manually delete the `.phy` subdirectory within your data directory when changing these parameters, otherwise errors will happen in the GUI.
@@ -76,6 +86,7 @@ For example, here is a custom cluster metrics that shows the mean inter-spike in
 ![image](https://user-images.githubusercontent.com/1942359/59463223-cf0a3e80-8e25-11e9-990f-e3e2dc9418a0.png)
 
 ```python
+# import from plugins/cluster_metrics.py
 import numpy as np
 from phy import IPlugin, connect
 
@@ -91,6 +102,7 @@ class MyPlugin(IPlugin):
 
         # Use this dictionary to define custom cluster metrics.
         controller.cluster_metrics['meanisi'] = meanisi
+
 ```
 
 
@@ -101,6 +113,7 @@ The ISI view, firing rate view, and amplitude histogram view all share the same 
 In the following example, we define a custom cluster statistics views using the PC features.
 
 ```python
+# import from plugins/cluster_stats.py
 from phy import IPlugin, Bunch
 from phy.cluster.views import HistogramView
 
@@ -145,8 +158,12 @@ In this example, we change the text color of "good" clusters in the cluster view
 ![image](https://user-images.githubusercontent.com/1942359/59463245-dd585a80-8e25-11e9-9fe3-56aa4c3733c7.png)
 
 ```python
+# import from plugins/cluster_view_styling.py
+"""Show how to customize the styling of the cluster view with CSS."""
+
 from phy import IPlugin
 from phy.cluster.supervisor import ClusterView
+
 
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
@@ -162,6 +179,7 @@ class MyPlugin(IPlugin):
             }
 
         """
+
 ```
 
 
@@ -172,7 +190,18 @@ In this example, we create a new action in the file menu, with keyboard shortcut
 ![image](https://user-images.githubusercontent.com/1942359/59464230-2b6e5d80-8e28-11e9-804d-b94a57920f32.png)
 
 ```python
+# import from plugins/action_status_bar.py
+"""Show how to create new actionis in the GUI.
+
+The first action just displays a message in the status bar.
+
+The second action selects the first N clusters, where N is a parameter that is entered by
+the user in a prompt dialog.
+
+"""
+
 from phy import IPlugin, connect
+
 
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
@@ -222,12 +251,21 @@ In this example, we show how to save the best channel of all clusters in a TSV f
 ![image](https://user-images.githubusercontent.com/1942359/59463165-a1bd9080-8e25-11e9-9260-8065197fd56b.png)
 
 ```python
+# import from plugins/cluster_metadata.py
+"""Show how to save the best channel of every cluster in a cluster_channel.tsv file when saving.
+
+Note: this information is also automatically stored in `cluster_info.tsv` natively in phy,
+along with all values found in the GUI cluster view.
+
+"""
+
 import logging
 
 from phy import IPlugin, connect
 from phylib.io.model import save_metadata
 
 logger = logging.getLogger('phy')
+
 
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
@@ -264,6 +302,7 @@ class MyPlugin(IPlugin):
                 # Save the metadata file.
                 save_metadata(filename, field_name, metadata)
                 logger.info("Saved %s.", filename)
+
 ```
 
 
@@ -272,9 +311,13 @@ class MyPlugin(IPlugin):
 In this example, we show how to inject variables into the IPython console namespace. Specifically, we inject the first waveform view with the variable name `wv`.
 
 ```python
+# import from plugins/ipython_view.py
+"""Show how to injet specific Python variables in the IPython view."""
+
 from phy import IPlugin, connect
 from phy.cluster.views import WaveformView
 from phy.gui.widgets import IPythonView
+
 
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
@@ -285,6 +328,7 @@ class MyPlugin(IPlugin):
 
                 # We inject the first WaveformView of the GUI to the IPython console.
                 view.inject(wv=gui.get_view(WaveformView))
+
 ```
 
 
@@ -295,9 +339,13 @@ In this example, we show how to customize the subplots in the feature view.
 ![image](https://user-images.githubusercontent.com/1942359/59465531-6625c500-8e2b-11e9-8442-c00530878959.png)
 
 ```python
+# import from plugins/feature_view_custom_grid.py
+"""Show how to customize the subplot grid specifiction in the feature view."""
+
 import re
 from phy import IPlugin, connect
 from phy.cluster.views import FeatureView
+
 
 def my_grid():
     """In the grid specification, 0 corresponds to the best channel, 1
@@ -309,6 +357,7 @@ def my_grid():
     """.strip()
     return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
 
+
 class MyPlugin(IPlugin):
     def attach_to_controller(self, controller):
 
@@ -317,6 +366,7 @@ class MyPlugin(IPlugin):
             if isinstance(view, FeatureView):
                 # We change the specification of the subplots here.
                 view.set_grid_dim(my_grid())
+
 ```
 
 
@@ -329,9 +379,13 @@ In this example, we show how to create a custom view based on matplotlib. Specif
 ![image](https://user-images.githubusercontent.com/1942359/58970988-ccbb3b00-87ba-11e9-93e9-c900d76a54f2.png)
 
 ```python
+# import from plugins/matplotlib_view.py
+"""Show how to create a custom matplotlib view in the GUI."""
+
 from phy import IPlugin
 from phy.cluster.views import ManualClusteringView  # Base class for phy views
 from phy.plot.plot import PlotCanvasMpl  # matplotlib canvas
+
 
 class FeatureDensityView(ManualClusteringView):
     plot_canvas_class = PlotCanvasMpl  # use matplotlib instead of OpenGL (the default)
@@ -396,6 +450,7 @@ In this example, we simply display the template waveform on the peak channel of 
 ### Code
 
 ```python
+# import from plugins/opengl_view.py
 import numpy as np
 
 from phylib.utils.color import selected_cluster_color
