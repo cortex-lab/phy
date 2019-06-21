@@ -655,23 +655,34 @@ class TemplateController(object):
         def on_color_mapping_changed(sender):
             view.update_color(self.supervisor.selected_clusters)
 
-        @connect
-        def on_close_view(sender, view_):
-            if view_ == view:
-                unconnect(on_table_filter)
-                unconnect(on_table_sort)
-                unconnect(on_color_mapping_changed)
-
-        # Initial sort.
-        @connect(sender=self.supervisor.cluster_view)
-        def on_ready(sender):
+        def init():
+            # Initial sort.
             @self.supervisor.cluster_view.get_ids
             def init_cluster_ids(cluster_ids):
-                assert cluster_ids is not None
+                if cluster_ids is None:
+                    return
                 view.set_cluster_ids(cluster_ids)
                 @self._async_caller.set
                 def _update_plot():
                     view.plot()
+
+        @connect
+        def on_add_view(sender, view):
+            init()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            init()
+
+        @connect
+        def on_close_view(sender, view_):
+            if view_ == view:
+                unconnect(on_cluster)
+                unconnect(on_cluster_click)
+                unconnect(on_table_sort)
+                unconnect(on_table_filter)
+                unconnect(on_color_mapping_changed)
+                unconnect(on_add_view)
 
         return view
 
@@ -931,21 +942,32 @@ class TemplateController(object):
         def on_color_mapping_changed(sender):
             view.update_color(self.supervisor.selected_clusters)
 
+        def init():
+            # Initial sort.
+            @self.supervisor.cluster_view.get_ids
+            def init_cluster_ids(cluster_ids):
+                if cluster_ids is None:
+                    return
+                view.set_cluster_ids(cluster_ids)
+                view.plot()
+
+        @connect
+        def on_add_view(sender, view):
+            init()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            init()
+
         @connect
         def on_close_view(sender, view_):
             if view_ == view:
+                unconnect(on_cluster)
+                unconnect(on_cluster_click)
                 unconnect(on_table_sort)
                 unconnect(on_table_filter)
                 unconnect(on_color_mapping_changed)
-
-        # Initial sort.
-        @connect(sender=self.supervisor.cluster_view)
-        def on_ready(sender):
-            @self.supervisor.cluster_view.get_ids
-            def init_cluster_ids(cluster_ids):
-                assert cluster_ids is not None
-                view.set_cluster_ids(cluster_ids)
-                view.plot()
+                unconnect(on_add_view)
 
         return view
 
