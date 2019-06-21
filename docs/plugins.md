@@ -13,7 +13,7 @@ Here is how to write a simple plugin that displays a message every time there's 
 from phy import IPlugin, connect
 
 
-class MyPlugin(IPlugin):
+class ExampleHelloPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect(sender=controller)
         def on_gui_ready(sender, gui):
@@ -48,7 +48,7 @@ You can customize the maximum number of spikes in the different views as follows
 from phy import IPlugin
 
 
-class MyPlugin(IPlugin):
+class ExampleNspikesViewsPlugin(IPlugin):
     def attach_to_controller(self, controller):
         """Feel free to keep below just the values you need to change."""
         controller.n_spikes_waveforms = 250
@@ -165,7 +165,7 @@ from phy import IPlugin
 from phy.cluster.supervisor import ClusterView
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterViewStylingPlugin(IPlugin):
     def attach_to_controller(self, controller):
         # We add a custom CSS style to the ClusterView.
         ClusterView._styles += """
@@ -203,7 +203,7 @@ the user in a prompt dialog.
 from phy import IPlugin, connect
 
 
-class MyPlugin(IPlugin):
+class ExampleActionPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
@@ -240,6 +240,59 @@ class MyPlugin(IPlugin):
 
                     # We select the first n_clusters clusters.
                     controller.supervisor.select(cluster_ids[:n_clusters])
+
+```
+
+
+## Creating a custom split action
+
+In this example, we show how to write a custom split action, where one can split a cluster in two based on the template amplitudes, using the K-means algorithm.
+
+![image](https://user-images.githubusercontent.com/1942359/59920302-65dc8980-942a-11e9-8414-2976fa59fa82.png)
+
+```python
+# import from plugins/custom_split.py
+"""Show how to write a custom split action."""
+
+from sklearn.cluster import KMeans  # We use the scikit-learn package.
+from phy import IPlugin, connect
+
+
+def k_means(x):
+    """Cluster an array into two subclusters, using the K-means algorithm."""
+    return KMeans(n_clusters=2).fit_predict(x)
+
+
+class ExampleCustomSplitPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        @connect
+        def on_gui_ready(sender, gui):
+            @gui.edit_actions.add(shortcut='s')
+            def custom_split():
+                """Split using the K-means clustering algorithm on the template amplitudes
+                of the first cluster."""
+
+                # Selected clusters across the cluster view and similarity view.
+                cluster_ids = controller.supervisor.selected
+
+                # Get the amplitudes, using the same controller method as what the amplitude view
+                # is using.
+                # Note that we need load_all=True to load all spikes from the selected clusters,
+                # instead of just the selection of them chosen for display.
+                bunchs = controller._amplitude_getter(cluster_ids, name='template', load_all=True)
+
+                # We get the spike ids and the corresponding spike template amplitudes.
+                # NOTE: in this example, we only consider the first selected cluster.
+                spike_ids = bunchs[0].spike_ids
+                y = bunchs[0].amplitudes
+
+                # We perform the clustering algorithm, which returns an integer for each
+                # subcluster.
+                labels = k_means(y.reshape((-1, 1)))
+                assert spike_ids.shape == labels.shape
+
+                # We split according to the labels.
+                controller.supervisor.actions.split(spike_ids, labels)
 
 ```
 
@@ -306,7 +359,7 @@ class MyPlugin(IPlugin):
 ```
 
 
-## Inject custom variables in the IPythonView
+## Injecting custom variables in the IPythonView
 
 In this example, we show how to inject variables into the IPython console namespace. Specifically, we inject the first waveform view with the variable name `wv`.
 
@@ -319,7 +372,7 @@ from phy.cluster.views import WaveformView
 from phy.gui.widgets import IPythonView
 
 
-class MyPlugin(IPlugin):
+class ExampleIPythonViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_add_view(gui, view):
@@ -332,7 +385,7 @@ class MyPlugin(IPlugin):
 ```
 
 
-## Customize the feature view
+## Customizing the feature view
 
 In this example, we show how to customize the subplots in the feature view.
 
@@ -358,7 +411,7 @@ def my_grid():
     return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
 
 
-class MyPlugin(IPlugin):
+class ExampleCustomFeatureViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
 
         @connect
@@ -419,7 +472,7 @@ class FeatureDensityView(ManualClusteringView):
         self.canvas.update()
 
 
-class MyPlugin(IPlugin):
+class ExampleMatplotlibViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_feature_density_view():
             """A function that creates and returns a view."""

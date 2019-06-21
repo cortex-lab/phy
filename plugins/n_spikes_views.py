@@ -3,7 +3,7 @@
 from phy import IPlugin
 
 
-class MyPlugin(IPlugin):
+class ExampleNspikesViewsPlugin(IPlugin):
     def attach_to_controller(self, controller):
         """Feel free to keep below just the values you need to change."""
         controller.n_spikes_waveforms = 250

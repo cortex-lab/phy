@@ -40,7 +40,7 @@ for m in pattern.finditer(plugins_doc):
 
 print("DIFF\n----\n")
 a, b = plugins_doc0.splitlines(), plugins_doc.splitlines()
-pprint([li for li in difflib.ndiff(a, b) if li[0] != ' '])
+pprint('\n'.join([li for li in difflib.ndiff(a, b) if li[0] != ' ']))
 
 plugins_file.write_text(plugins_doc)
 print("Updated doc.")

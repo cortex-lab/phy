@@ -10,7 +10,7 @@ class FeatureHistogramView(HistogramView):
     alias_char = 'fh'  # provide `:fhn` (set number of bins) and `:fhm` (set max bin) snippets
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterStatsPlugin(IPlugin):
     def attach_to_controller(self, controller):
 
         def feature_histogram(cluster_id):

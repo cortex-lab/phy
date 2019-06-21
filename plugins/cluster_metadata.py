@@ -13,7 +13,7 @@ from phylib.io.model import save_metadata
 logger = logging.getLogger('phy')
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterMetadataPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):

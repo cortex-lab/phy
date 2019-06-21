@@ -10,7 +10,7 @@ the user in a prompt dialog.
 from phy import IPlugin, connect
 
 
-class MyPlugin(IPlugin):
+class ExampleActionPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):

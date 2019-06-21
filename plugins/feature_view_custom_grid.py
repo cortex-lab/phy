@@ -16,7 +16,7 @@ def my_grid():
     return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
 
 
-class MyPlugin(IPlugin):
+class ExampleCustomFeatureViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
 
         @connect

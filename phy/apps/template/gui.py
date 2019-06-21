@@ -421,7 +421,19 @@ class TemplateController(object):
 
     def _amplitude_getter(self, cluster_ids, name=None, load_all=False):
         """Return the data requested by the amplitude view, wich depends on the
-        type of amplitude."""
+        type of amplitude.
+
+        Parameters
+        ----------
+        cluster_ids : list
+            List of clusters.
+        name : str
+            Can be either `template`, `feature`, or `raw`.
+        load_all : boolean
+            Whether to load all spikes from the requested clusters, or a subselection just
+            for display.
+
+        """
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
         if name == 'raw' and n is not None:

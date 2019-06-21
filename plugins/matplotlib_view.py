@@ -37,7 +37,7 @@ class FeatureDensityView(ManualClusteringView):
         self.canvas.update()
 
 
-class MyPlugin(IPlugin):
+class ExampleMatplotlibViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_feature_density_view():
             """A function that creates and returns a view."""

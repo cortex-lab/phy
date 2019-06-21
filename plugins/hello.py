@@ -3,7 +3,7 @@
 from phy import IPlugin, connect
 
 
-class MyPlugin(IPlugin):
+class ExampleHelloPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect(sender=controller)
         def on_gui_ready(sender, gui):

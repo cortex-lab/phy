@@ -4,7 +4,7 @@ from phy import IPlugin
 from phy.cluster.supervisor import ClusterView
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterViewStylingPlugin(IPlugin):
     def attach_to_controller(self, controller):
         # We add a custom CSS style to the ClusterView.
         ClusterView._styles += """

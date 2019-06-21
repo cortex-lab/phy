@@ -195,7 +195,7 @@ class MyView(ManualClusteringView):
         self.canvas.update()
 
 
-class MyPlugin(IPlugin):
+class ExampleOpenGLViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_my_view():
             return MyView(templates=controller.get_templates)

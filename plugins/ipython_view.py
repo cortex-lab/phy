@@ -5,7 +5,7 @@ from phy.cluster.views import WaveformView
 from phy.gui.widgets import IPythonView
 
 
-class MyPlugin(IPlugin):
+class ExampleIPythonViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_add_view(gui, view):

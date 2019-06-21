@@ -4,7 +4,7 @@ import numpy as np
 from phy import IPlugin
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterMetricsPlugin(IPlugin):
     def attach_to_controller(self, controller):
         """Note that this function is called at initialization time, *before* the supervisor is
         created. The `controller.cluster_metrics` items are then passed to the supervisor when
