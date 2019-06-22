@@ -386,7 +386,7 @@ class KwikController(object):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
             # Update the trace view.
-            v.on_select([cluster_id])
+            v.on_select(cluster_ids=[cluster_id])
 
         return v
 

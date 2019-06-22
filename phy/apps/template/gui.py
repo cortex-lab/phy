@@ -158,7 +158,7 @@ class TemplateController(object):
             shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
-        self._async_caller = AsyncCaller()
+        self._async_callers = {}
         self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
         # mapping name => function {cluster_id: value}, to update in plugins
         self.cluster_metrics = {}
@@ -603,8 +603,114 @@ class TemplateController(object):
 
         return v
 
-    # Template view
+    # Template and raster views
     # -------------------------------------------------------------------------
+
+    def _attach_global_view(self, view):
+        """Attach a view deriving from BaseGlobalView.
+
+        Make the view react to select, cluster, sort, filter events, color mapping, and make
+        sure the view is populated at GUI startup, and when the view is added later.
+
+        """
+
+        # Async caller to avoid blocking cluster view loading when updating the view.
+        # NOTE: it needs to be set as a property so as not to be garbage collected, leading
+        # to Qt C++ segfaults.
+        self._async_callers[view] = ac = AsyncCaller(delay=0)
+
+        def resort(is_async=True, up=None):
+            """Replot the view."""
+
+            # Since we use the cluster ids in the order they appear in the cluster view, we
+            # need to make sure that the cluster view is fully loaded.
+            if not self.supervisor.cluster_view.is_ready():
+                return
+
+            def _update_plot():
+                # The call to all_cluster_ids blocks until the cluster view JavaScript returns
+                # the cluster ids.
+                view.set_cluster_ids(self.supervisor.all_cluster_ids)
+                # Replot the view entirely.
+                view.plot()
+                print("END CLUSTER", up)
+            if is_async:
+                ac.set(_update_plot)
+            else:
+                # NOTE: we need to disable async after a clustering action, so that
+                # the view needs to be properly updated *before* the newly created clusters
+                # are selected.
+                _update_plot()
+
+        @connect(sender=view)
+        def on_cluster_click(sender, cluster_id, key=None, button=None):
+            """Select a cluster by clicking on it."""
+            self.supervisor.select([cluster_id])
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_sort(sender, cluster_ids):
+            """Update the order of the clusters when the sort is changed in the cluster view."""
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
+                return
+            view.update_cluster_sort(cluster_ids)
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_filter(sender, cluster_ids):
+            """Update the order of the clusters when a filtering is applied on the cluster view."""
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
+                return
+            view.set_cluster_ids(cluster_ids)
+            view.plot()
+
+        @connect(sender=self.supervisor)
+        def on_color_mapping_changed(sender):
+            """Update the cluster colors when the color mapping is updated."""
+            view.update_color(self.supervisor.selected_clusters)
+
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            """Update the view after a clustering action."""
+            if up.added:
+                view.set_spike_clusters(self.supervisor.clustering.spike_clusters)
+                if view.auto_update:
+                    resort(is_async=False, up=up)
+
+        @connect
+        def on_select(sender, cluster_ids, **kwargs):
+            """Update the color of selected clusters."""
+            # Decide whether the view should react to the select event or not.
+            if not view.auto_update:
+                return
+            if sender.__class__.__name__ != 'Supervisor':
+                return
+            assert isinstance(cluster_ids, list)
+            if not cluster_ids:
+                return
+            view.update_color(selected_clusters=cluster_ids)
+
+        @connect
+        def on_add_view(sender, view_):
+            """Populate the view when it is added to the GUI."""
+            if view_ == view:
+                # Plot the view when adding it to the existing GUI.
+                resort()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            """Populate the view at startup, as soon as the cluster view has been loaded."""
+            resort()
+
+        @connect
+        def on_close_view(sender, view_):
+            """Unconnect all events when closing the view."""
+            if view_ == view:
+                unconnect(on_cluster_click)
+                unconnect(on_table_sort)
+                unconnect(on_table_filter)
+                unconnect(on_color_mapping_changed)
+                unconnect(on_cluster)
+                unconnect(on_add_view)
+                unconnect(on_ready)
 
     def _get_all_templates(self, cluster_ids):
         """Get the template waveforms of a set of clusters."""
@@ -627,66 +733,8 @@ class TemplateController(object):
             channel_ids=np.arange(self.model.n_channels),
             cluster_color_selector=self.color_selector,
         )
-
-        def resort():
-            # Initial sort.
-            @self.supervisor.cluster_view.get_ids
-            def init_cluster_ids(cluster_ids):
-                if cluster_ids is None:
-                    return
-                view.set_cluster_ids(cluster_ids)
-                @self._async_caller.set
-                def _update_plot():
-                    view.plot()
-
-        @connect(sender=view)
-        def on_cluster_click(sender, cluster_id, key=None, button=None):
-            self.supervisor.select([cluster_id])
-
-        @connect(sender=self.supervisor)
-        def on_cluster(sender, up):
-            if view.auto_update and up.added:
-                resort()
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_table_sort(sender, cluster_ids):
-            if not view.auto_update:
-                return
-            view.update_cluster_sort(cluster_ids)
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_table_filter(sender, cluster_ids):
-            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
-                return
-            view.set_cluster_ids(cluster_ids)
-            view.plot()
-
-        @connect(sender=self.supervisor)
-        def on_color_mapping_changed(sender):
-            view.update_color(self.supervisor.selected_clusters)
-
-        @connect
-        def on_add_view(sender, view):
-            resort()
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_ready(sender):
-            resort()
-
-        @connect
-        def on_close_view(sender, view_):
-            if view_ == view:
-                unconnect(on_cluster)
-                unconnect(on_cluster_click)
-                unconnect(on_table_sort)
-                unconnect(on_table_filter)
-                unconnect(on_color_mapping_changed)
-                unconnect(on_add_view)
-
+        self._attach_global_view(view)
         return view
-
-    # Raster view
-    # -------------------------------------------------------------------------
 
     def create_raster_view(self):
         """Create a raster view."""
@@ -695,62 +743,7 @@ class TemplateController(object):
             self.supervisor.clustering.spike_clusters,
             cluster_color_selector=self.color_selector,
         )
-
-        def resort():
-            # Initial sort.
-            @self.supervisor.cluster_view.get_ids
-            def init_cluster_ids(cluster_ids):
-                if cluster_ids is None:
-                    return
-                view.set_cluster_ids(cluster_ids)
-                view.plot()
-
-        @connect(sender=view)
-        def on_cluster_click(sender, cluster_id, key=None, button=None):
-            self.supervisor.select([cluster_id])
-
-        @connect(sender=self.supervisor)
-        def on_cluster(sender, up):
-            if view.auto_update and up.added:
-                view.set_spike_clusters(self.supervisor.clustering.spike_clusters)
-                resort()
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_table_sort(sender, cluster_ids):
-            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
-                return
-            # OPTIM: do not need to replot everything, but just to change the ordering)
-            view.update_cluster_sort(cluster_ids)
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_table_filter(sender, cluster_ids):
-            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
-                return
-            view.set_cluster_ids(cluster_ids)
-            view.plot()
-
-        @connect(sender=self.supervisor)
-        def on_color_mapping_changed(sender):
-            view.update_color(self.supervisor.selected_clusters)
-
-        @connect
-        def on_add_view(sender, view):
-            resort()
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_ready(sender):
-            resort()
-
-        @connect
-        def on_close_view(sender, view_):
-            if view_ == view:
-                unconnect(on_cluster)
-                unconnect(on_cluster_click)
-                unconnect(on_table_sort)
-                unconnect(on_table_filter)
-                unconnect(on_color_mapping_changed)
-                unconnect(on_add_view)
-
+        self._attach_global_view(view)
         return view
 
     # Features
@@ -915,7 +908,7 @@ class TemplateController(object):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
             # Update the trace view.
-            v.on_select([cluster_id])
+            v.on_select(cluster_ids=[cluster_id])
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):

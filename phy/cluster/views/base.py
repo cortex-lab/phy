@@ -366,6 +366,9 @@ class BaseGlobalView(object):
     def set_cluster_ids(self, cluster_ids):
         pass
 
+    def set_spike_clusters(self, spike_clusters):
+        pass
+
     def update_cluster_sort(self, cluster_ids):
         pass
 
