@@ -222,6 +222,9 @@ def test_table_0(qtbot, table):
 
 
 def test_table_1(qtbot, table):
+
+    assert table.is_ready()
+
     table.select([1, 2])
     _assert(table.get_selected, [1, 2])
 

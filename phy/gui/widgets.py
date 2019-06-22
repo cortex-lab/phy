@@ -339,6 +339,8 @@ class Table(HTMLWidget):
 
     """
 
+    _ready = False
+
     def __init__(
             self, *args, columns=None, value_names=None, data=None, sort=None, title='',
             debounce_events=()):
@@ -429,6 +431,15 @@ class Table(HTMLWidget):
         self.build(lambda html: emit('ready', self))
 
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
+        connect(event='ready', sender=self, func=lambda *args: self._set_ready())
+
+    def _set_ready(self):
+        """Set the widget as ready."""
+        self._ready = True
+
+    def is_ready(self):
+        """Whether the widget has been fully loaded."""
+        return self._ready
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
