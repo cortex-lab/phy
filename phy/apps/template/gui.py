@@ -633,7 +633,6 @@ class TemplateController(object):
                 view.set_cluster_ids(self.supervisor.all_cluster_ids)
                 # Replot the view entirely.
                 view.plot()
-                print("END CLUSTER", up)
             if is_async:
                 ac.set(_update_plot)
             else:
