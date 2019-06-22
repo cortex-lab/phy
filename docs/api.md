@@ -1642,6 +1642,15 @@ Get the currently selected rows.
 
 ---
 
+#### Table.is_ready
+
+
+**`Table.is_ready(self)`**
+
+Whether the widget has been fully loaded.
+
+---
+
 #### Table.next
 
 
@@ -5229,6 +5238,21 @@ Switch to the next amplitude type.
 
 ---
 
+#### AmplitudeView.on_cluster
+
+
+**`AmplitudeView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### AmplitudeView.on_mouse_wheel
 
 
@@ -5252,7 +5276,7 @@ Return the spikes enclosed by the lasso.
 
 **`AmplitudeView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -5615,6 +5639,15 @@ Get the currently selected rows.
 **`ClusterView.get_state(self, callback=None)`**
 
 Return the cluster view state, with the current sort.
+
+---
+
+#### ClusterView.is_ready
+
+
+**`ClusterView.is_ready(self)`**
+
+Whether the widget has been fully loaded.
 
 ---
 
@@ -6049,6 +6082,21 @@ Increase the window size.
 
 ---
 
+#### CorrelogramView.on_cluster
+
+
+**`CorrelogramView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### CorrelogramView.on_mouse_wheel
 
 
@@ -6063,7 +6111,7 @@ Change the scaling with the wheel.
 
 **`CorrelogramView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -6264,6 +6312,21 @@ relevant subplots.
 
 ---
 
+#### FeatureView.on_cluster
+
+
+**`FeatureView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### FeatureView.on_mouse_click
 
 
@@ -6296,7 +6359,7 @@ Return the spikes enclosed by the lasso.
 
 **`FeatureView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -6464,6 +6527,21 @@ Increase the scaling parameter.
 
 ---
 
+#### HistogramView.on_cluster
+
+
+**`HistogramView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### HistogramView.on_mouse_wheel
 
 
@@ -6478,7 +6556,7 @@ Change the scaling with the wheel.
 
 **`HistogramView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -6631,12 +6709,27 @@ To override.
 
 ---
 
+#### ManualClusteringView.on_cluster
+
+
+**`ManualClusteringView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### ManualClusteringView.on_select
 
 
 **`ManualClusteringView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -6759,6 +6852,21 @@ Close the underlying canvas.
 Return a list of Bunch instances, with attributes pos and spike_ids.
 
 To override.
+
+---
+
+#### ProbeView.on_cluster
+
+
+**`ProbeView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
 
 ---
 
@@ -6908,6 +7016,21 @@ Increase the scaling parameter.
 
 ---
 
+#### RasterView.on_cluster
+
+
+**`RasterView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### RasterView.on_mouse_click
 
 
@@ -6929,9 +7052,9 @@ Change the scaling with the wheel.
 #### RasterView.on_select
 
 
-**`RasterView.on_select(self, cluster_ids=(), **kwargs)`**
+**`RasterView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
 
-Update the view with the selected clusters.
+
 
 ---
 
@@ -7106,6 +7229,21 @@ Increase the scaling parameter.
 
 ---
 
+#### ScatterView.on_cluster
+
+
+**`ScatterView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### ScatterView.on_mouse_wheel
 
 
@@ -7129,7 +7267,7 @@ Return the spikes enclosed by the lasso.
 
 **`ScatterView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -7359,6 +7497,15 @@ Get the currently selected rows.
 **`SimilarityView.get_state(self, callback=None)`**
 
 Return the cluster view state, with the current sort.
+
+---
+
+#### SimilarityView.is_ready
+
+
+**`SimilarityView.is_ready(self)`**
+
+Whether the widget has been fully loaded.
 
 ---
 
@@ -7763,6 +7910,15 @@ Undo the last action.
 
 ---
 
+#### Supervisor.all_cluster_ids
+
+
+**`Supervisor.all_cluster_ids`**
+
+The sorted list of cluster ids as they are currently shown in the cluster view.
+
+---
+
 #### Supervisor.cluster_info
 
 
@@ -7873,9 +8029,7 @@ Decrease the scaling parameter.
 
 **`TemplateView.get_clusters_data(self, load_all=None)`**
 
-Return a list of Bunch instances, with attributes pos and spike_ids.
-
-To override.
+Return all templates data.
 
 ---
 
@@ -7885,6 +8039,21 @@ To override.
 **`TemplateView.increase(self)`**
 
 Increase the scaling parameter.
+
+---
+
+#### TemplateView.on_cluster
+
+
+**`TemplateView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
 
 ---
 
@@ -7909,9 +8078,9 @@ Change the scaling with the wheel.
 #### TemplateView.on_select
 
 
-**`TemplateView.on_select(self, cluster_ids=(), **kwargs)`**
+**`TemplateView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
 
-Update the view with the selected clusters.
+
 
 ---
 
@@ -7938,6 +8107,15 @@ are saved in `~/.phy/screenshots/`.
 
 
 **`TemplateView.set_cluster_ids(self, cluster_ids)`**
+
+Update the cluster ids when their identity or order has changed.
+
+---
+
+#### TemplateView.set_spike_clusters
+
+
+**`TemplateView.set_spike_clusters(self, spike_clusters)`**
 
 
 
@@ -8154,6 +8332,21 @@ Decrease the interval size.
 
 ---
 
+#### TraceView.on_cluster
+
+
+**`TraceView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### TraceView.on_mouse_click
 
 
@@ -8177,7 +8370,7 @@ Change the scaling with the wheel.
 
 **`TraceView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -8246,6 +8439,15 @@ Shift the interval by a given delay (in seconds).
 **`TraceView.show(self)`**
 
 Show the underlying canvas.
+
+---
+
+#### TraceView.switch_origin
+
+
+**`TraceView.switch_origin(self)`**
+
+Switch between top and bottom origin for the channels.
 
 ---
 
@@ -8495,6 +8697,21 @@ Decrease the horizontal scaling of the waveforms.
 
 ---
 
+#### WaveformView.on_cluster
+
+
+**`WaveformView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
 #### WaveformView.on_mouse_click
 
 
@@ -8518,7 +8735,7 @@ Change the scaling with the wheel.
 
 **`WaveformView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback functions when clusters are selected. To be overriden.
+Callback function when clusters are selected. May be overriden.
 
 ---
 

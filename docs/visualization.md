@@ -272,6 +272,7 @@ Keyboard shortcuts for TraceView
 - increase                                 alt+up
 - narrow                                   alt++
 - select_spike                             ctrl+click
+- switch_origin                            alt+o
 - toggle_highlighted_spikes                alt+s
 - toggle_show_labels                       alt+l
 - widen                                    alt+-

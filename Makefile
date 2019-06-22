@@ -17,11 +17,8 @@ lint:
 test: lint
 	py.test -vv --cov-report term-missing --cov=phy phy
 
-coverage:
-	coverage --html
-
-apidoc:
-	python tools/api.py
+doc:
+	python tools/api.py && python tools/extract_shortcuts.py && python tools/plugins_doc.py
 
 build:
 	python setup.py sdist --formats=zip
