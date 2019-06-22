@@ -212,6 +212,10 @@ def test_stacked_1(qtbot, canvas):
     _create_visual(qtbot, canvas, stacked, box_index)
     stacked.update_boxes(stacked.box_pos, stacked.box_size)
 
+    assert stacked.origin == 'top'
+    stacked.origin = 'bottom'
+    assert stacked.origin == 'bottom'
+
     # qtbot.stop()
 
 

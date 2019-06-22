@@ -385,7 +385,7 @@ class Stacked(Boxed):
     margin = 0
 
     def __init__(self, n_boxes, box_var=None, origin=None):
-        self.origin = origin
+        self._origin = origin
         b = self.get_box_bounds(n_boxes)
         super(Stacked, self).__init__(b, box_var=box_var, keep_aspect_ratio=False)
 
@@ -413,10 +413,21 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        origin = self.origin or 'top'
+        origin = self._origin or 'top'
         if origin == 'top':
             b = b[::-1, :]
         return b
+
+    @property
+    def origin(self):
+        """Whether to show the channels from top to bottom (`top` option, the default), or from
+        bottom to top (`bottom`)."""
+        return self._origin
+
+    @origin.setter
+    def origin(self, value):
+        self._origin = value
+        self.box_bounds = self.get_box_bounds(self.n_boxes)
 
 
 #------------------------------------------------------------------------------
