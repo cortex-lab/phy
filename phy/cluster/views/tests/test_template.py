@@ -35,6 +35,10 @@ def test_template_view(qtbot, tempdir, gui):
 
     cluster_color_selector = ClusterColorSelector(cluster_ids=cluster_ids)
 
+    class Supervisor(object):
+        pass
+    s = Supervisor()
+
     v = TemplateView(
         templates=get_templates, channel_ids=channel_ids, cluster_ids=cluster_ids,
         cluster_color_selector=cluster_color_selector)
@@ -44,8 +48,8 @@ def test_template_view(qtbot, tempdir, gui):
 
     v.update_color()  # should call .plot() instead as update_color() is for subsequent updates
 
-    v.on_select([])
-    v.on_select([0])
+    v.on_select(cluster_ids=[], sender=s)
+    v.on_select(cluster_ids=[0], sender=s)
 
     v.update_cluster_sort(cluster_ids[::-1])
 

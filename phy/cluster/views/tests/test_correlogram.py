@@ -34,7 +34,7 @@ def test_correlogram_view(qtbot, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
-    v.on_select([])
+    v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])

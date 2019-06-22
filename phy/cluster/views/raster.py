@@ -11,11 +11,11 @@ import logging
 
 import numpy as np
 
-from phylib.io.array import _unique, _index_of
+from phylib.io.array import _index_of
 from phylib.utils import emit
 from phylib.utils.color import _add_selected_clusters_colors
 
-from .base import ManualClusteringView, MarkerSizeMixin
+from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin
 from phy.plot.visuals import ScatterVisual
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Raster view
 # -----------------------------------------------------------------------------
 
-class RasterView(MarkerSizeMixin, ManualClusteringView):
+class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
     """This view shows a raster plot of all clusters.
 
     Constructor
@@ -55,10 +55,11 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
         self.spike_times = spike_times
         self.n_spikes = len(spike_times)
         self.duration = spike_times[-1] * 1.01
+        self.n_clusters = 1
 
         assert len(spike_clusters) == self.n_spikes
         self.set_spike_clusters(spike_clusters)
-        self.set_cluster_ids(cluster_ids if cluster_ids is not None else _unique(spike_clusters))
+        self.set_cluster_ids(cluster_ids if cluster_ids is not None else None)
         self.cluster_color_selector = cluster_color_selector
 
         super(RasterView, self).__init__()
@@ -78,12 +79,12 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
 
     def set_cluster_ids(self, cluster_ids):
         """Set the shown clusters, which can be filtered and in any order (from top to bottom)."""
-        if len(cluster_ids) == 0:
+        if cluster_ids is None or not len(cluster_ids):
             return
-        self.cluster_ids = cluster_ids
-        self.n_clusters = len(self.cluster_ids)
+        self.all_cluster_ids = cluster_ids
+        self.n_clusters = len(self.all_cluster_ids)
         # Only keep spikes that belong to the selected clusters.
-        self.spike_ids = np.isin(self.spike_clusters, self.cluster_ids)
+        self.spike_ids = np.isin(self.spike_clusters, self.all_cluster_ids)
 
     # Internal plotting functions
     # -------------------------------------------------------------------------
@@ -102,15 +103,15 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
         cl = self.spike_clusters[self.spike_ids]
         # Sanity check.
         # assert np.all(np.in1d(cl, self.cluster_ids))
-        return _index_of(cl, self.cluster_ids)
+        return _index_of(cl, self.all_cluster_ids)
 
     def _get_color(self, box_index, selected_clusters=None):
         """Return, for every spike, its color, based on its box index."""
-        cluster_colors = self.cluster_color_selector.get_colors(self.cluster_ids, alpha=.75)
+        cluster_colors = self.cluster_color_selector.get_colors(self.all_cluster_ids, alpha=.75)
         # Selected cluster colors.
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
-                selected_clusters, self.cluster_ids, cluster_colors)
+                selected_clusters, self.all_cluster_ids, cluster_colors)
         return cluster_colors[box_index, :]
 
     # Main methods
@@ -122,7 +123,7 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
 
     def update_cluster_sort(self, cluster_ids):
         """Update the order of all clusters."""
-        self.cluster_ids = cluster_ids
+        self.all_cluster_ids = cluster_ids
         self.visual.set_box_index(self._get_box_index())
         self.canvas.update()
 
@@ -153,12 +154,6 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
         self._update_axes()
         self.canvas.update()
 
-    def on_select(self, cluster_ids=(), **kwargs):
-        """Update the view with the selected clusters."""
-        if not cluster_ids:
-            return
-        self.update_color(selected_clusters=cluster_ids)
-
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(RasterView, self).attach(gui)
@@ -173,6 +168,6 @@ class RasterView(MarkerSizeMixin, ManualClusteringView):
         if 'Control' in e.modifiers:
             # Get mouse position in NDC.
             cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
-            cluster_id = self.cluster_ids[cluster_idx]
+            cluster_id = self.all_cluster_ids[cluster_idx]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
             emit('cluster_click', self, cluster_id, button=b)

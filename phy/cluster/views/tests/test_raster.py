@@ -33,13 +33,19 @@ def test_raster_0(qtbot, gui):
         cluster_metrics=cluster_metrics,
         cluster_ids=cluster_ids)
 
+    class Supervisor(object):
+        pass
+    s = Supervisor()
+
     v = RasterView(spike_times, spike_clusters, cluster_color_selector=c)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
+
+    v.set_cluster_ids(cluster_ids)
     v.plot()
 
-    v.on_select([2])
+    v.on_select(cluster_ids=[2], sender=s)
     c.set_color_mapping('quality', 'categorical')
     v.plot()
 
@@ -74,13 +80,18 @@ def test_raster_1(qtbot, gui):
         cluster_metrics=cluster_metrics,
         cluster_ids=cluster_ids)
 
+    class Supervisor(object):
+        pass
+    s = Supervisor()
+
     v = RasterView(spike_times, spike_clusters, cluster_color_selector=c)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
+    v.set_cluster_ids(cluster_ids)
     v.plot()
-    v.on_select([0])
+    v.on_select(cluster_ids=[0], sender=s)
 
     v.update_cluster_sort(np.arange(nc))
 

@@ -129,11 +129,22 @@ class ManualClusteringView(object):
     # -------------------------------------------------------------------------
 
     def on_select(self, cluster_ids=None, **kwargs):
-        """Callback functions when clusters are selected. To be overriden."""
+        """Callback function when clusters are selected. May be overriden."""
         self.cluster_ids = cluster_ids
         if not cluster_ids:
             return
         self.plot(**kwargs)
+
+    def on_cluster(self, up):
+        """Callback function when a clustering action occurs. May be overriden.
+
+        Note: this method is called *before* on_select() so as to give a chance to the view
+        to update itself before the selection of the new clusters.
+
+        This method is mostly only useful to views that show all clusters and not just the
+        selected clusters (template view, raster view).
+
+        """
 
     def attach(self, gui):
         """Attach the view to the GUI.
@@ -315,6 +326,65 @@ class ManualClusteringView(object):
 # -----------------------------------------------------------------------------
 # Mixins for manual clustering views
 # -----------------------------------------------------------------------------
+
+class BaseGlobalView(object):
+    """A view that shows all clusters instead of the selected clusters.
+
+    This view shows the clusters in the same order as in the cluster view. It reacts to sorting
+    and filtering events.
+
+    The `get_cluster_data()` method (to be overriden) must return a list of Bunch instances
+    with each cluster's data, but also the attributes `cluster_rel`, `cluster_idx`, `cluster_id`.
+
+    """
+
+    # All cluster ids, in the order they are shown in the cluster view.
+    all_cluster_ids = None
+
+    # Like all_cluster_ids, but sorted by increasing it. Internal data is stored in this order.
+    sorted_cluster_ids = None
+
+    # For every cluster (sorted by increasing cluster id), its index in all_cluster_ids.
+    cluster_idxs = None
+
+    def _iter_clusters(self):
+        """Iterate through all clusters in their natural order (increasing cluster id).
+
+        Yield a tuple (cluster_rel, cluster_idx, cluster_id).
+
+        cluster_rel : int
+            Range from 0 to n_clusters - 1.
+        cluster_idx : int
+            The position of the current cluster in `self.cluster_ids`
+        cluster_id : int
+            The cluster id.
+
+        """
+        for i in range(len(self.all_cluster_ids)):
+            yield i, self.cluster_idxs[i], self.sorted_cluster_ids[i]
+
+    def set_cluster_ids(self, cluster_ids):
+        pass
+
+    def update_cluster_sort(self, cluster_ids):
+        pass
+
+    def update_color(self, selected_clusters=None):
+        pass
+
+    def on_select(self, sender=None, cluster_ids=(), **kwargs):
+        # Decide whether the view should react to the select event or not.
+        # TODO: check if that works, otherwise make a specific @connect for this method
+        # instead of relying on the BaseManualClustering callback.
+        if not self.auto_update:
+            return
+        if sender.__class__.__name__ != 'Supervisor':
+            return
+        assert isinstance(cluster_ids, list)
+        if not cluster_ids:
+            return
+        self.update_color(selected_clusters=cluster_ids)
+
 
 class ScalingMixin(object):
     """Implement increase, decrease actions, as well as control+wheel shortcut."""
