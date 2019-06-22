@@ -61,7 +61,7 @@ The GUI is made of several parts:
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
-Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `F1` to see the list of keyboard shortcuts and snippets.
+Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `F1` to see the list of Keyboard shortcuts.
 
 
 ### Cluster view
@@ -156,7 +156,7 @@ You can select a channel with **Control+click** (this impacts the feature view).
 
 You can show: spike waveforms, mean spike waveforms, or template waveforms (`toggle_mean_waveforms` and `toggle_templates` actions).
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for WaveformView
@@ -188,7 +188,7 @@ The parameter `controller.n_spikes_features=2500`, by default, specifies the max
 
 The default subplot organization of the feature view is (x and y for each of the 4x4 subplots, 0 refers to first selected channel, 1 refers to second select channel):
 
-```
+```text
 time,0A 1A,0A   0B,0A   1B,0A
 0A,1A   time,1A 0B,1A   1B,1A
 0A,0B   1A,0B   time,0B 1B,0B
@@ -198,7 +198,7 @@ time,0A 1A,0A   0B,0A   1B,0A
 The documentation provides a plugin example showing how to customize the subplot organization.
 
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for FeatureView
@@ -218,7 +218,7 @@ This view is only active when exactly two clusters are selected. It shows the `t
 ![image](https://user-images.githubusercontent.com/1942359/58952660-9ff42d00-8794-11e9-88ff-a31394ee9cea.png)
 
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for ScatterView
@@ -241,7 +241,7 @@ The parameter `controller.n_spikes_correlograms=100000`, by default, specifies t
 
 ![image](https://user-images.githubusercontent.com/1942359/58951508-9c12db80-8791-11e9-8cac-a6ca1ba7da9d.png)
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for CorrelogramView
@@ -257,7 +257,7 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 ![image](https://user-images.githubusercontent.com/1942359/58951569-bf3d8b00-8791-11e9-969b-9327a4f58811.png)
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for TraceView
@@ -305,7 +305,7 @@ This view supports splitting like in the feature view. When splitting, all spike
 
 Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel.
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for AmplitudeView
@@ -327,7 +327,7 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for HistogramView
@@ -345,7 +345,7 @@ This view shows a raster plot of *all* clusters. The order of the rows depends o
 
 Select a cluster with **Control+click**.
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for RasterView
@@ -366,7 +366,7 @@ This view shows all templates. The position of the templates depends on the sort
 
 Select a cluster with **Control+click**.
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for TemplateView
@@ -392,7 +392,7 @@ In the following screenshot, a `spike_hello.npy` array containing `sin(spike_tim
 
 You can split clusters by drawing polygons in the spike attribute views, as in the feature, amplitude, and template feature views.
 
-#### Keyboard shortcuts and snippets
+#### Keyboard shortcuts
 
 ```text
 Keyboard shortcuts for ScatterView

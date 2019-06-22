@@ -226,6 +226,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
+        if not self.cluster_ids:
+            return
         bunchs = self.get_clusters_data()
 
         # All channel ids appearing in all selected clusters.
@@ -294,7 +296,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     @overlap.setter
     def overlap(self, value):
         self._overlap = value
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.plot()
 
     def toggle_waveform_overlap(self, checked):
         """Toggle the overlap of the waveforms."""
@@ -383,7 +385,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def toggle_show_labels(self, checked):
         """Whether to show the channel ids or not."""
         self.do_show_labels = checked
-        self.on_select(cluster_ids=self.cluster_ids)
+        self.text_visual.show() if checked else self.text_visual.hide()
+        self.canvas.update()
 
     def on_mouse_click(self, e):
         """Select a channel by clicking on a box in the waveform view."""
