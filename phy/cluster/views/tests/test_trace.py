@@ -161,7 +161,8 @@ def test_trace_view_1(qtbot, tempdir, gui):
     ac(v.stacked.box_size, bs, atol=.05)
     qtbot.wait(1)
 
-    v.origin = 'top'
+    v.origin = 'bottom'
+    v.switch_origin()
     assert v.origin == 'top'
     qtbot.wait(1)
 

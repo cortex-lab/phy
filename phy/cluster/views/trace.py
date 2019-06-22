@@ -30,7 +30,7 @@ def select_traces(traces, interval, sample_rate=None):
     i, j = round(sample_rate * start), round(sample_rate * end)
     i, j = int(i), int(j)
     traces = traces[i:j, :]
-    # traces = traces - np.mean(traces, axis=0)
+    traces = traces - np.median(traces, axis=0)
     return traces
 
 
@@ -123,6 +123,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         'go_to_previous_spike': 'alt+pgup',
         'narrow': 'alt++',
         'select_spike': 'ctrl+click',
+        'switch_origin': 'alt+o',
         'toggle_highlighted_spikes': 'alt+s',
         'toggle_show_labels': 'alt+l',
         'widen': 'alt+-',
@@ -352,6 +353,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(
             self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes)
+        self.actions.add(self.switch_origin)
         self.actions.separator()
 
         self.actions.add(
@@ -385,6 +387,12 @@ class TraceView(ScalingMixin, ManualClusteringView):
     @origin.setter
     def origin(self, value):
         self._origin = value
+        if self.canvas.layout:
+            self.canvas.layout.origin = value
+
+    def switch_origin(self):
+        """Switch between top and bottom origin for the channels."""
+        self.origin = 'top' if self._origin == 'bottom' else 'bottom'
 
     # Navigation
     # -------------------------------------------------------------------------
