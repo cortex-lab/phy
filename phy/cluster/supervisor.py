@@ -907,6 +907,14 @@ class Supervisor(object):
         return [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
     @property
+    def all_cluster_ids(self):
+        """The sorted list of cluster ids as they are currently shown in the cluster view."""
+        b = Barrier()
+        self.cluster_view.get_ids(callback=b(1))
+        b.wait()
+        return b.result(1)[0][0]
+
+    @property
     def state(self):
         """GUI state, with the cluster view and similarity view states."""
         b = Barrier()

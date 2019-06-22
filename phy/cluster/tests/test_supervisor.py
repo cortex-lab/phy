@@ -545,6 +545,9 @@ def test_supervisor_state(tempdir, qtbot, gui, supervisor):
     cv.set_state({'current_sort': ('n_spikes', 'desc')})
     assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
 
+    cv.sort_by('id', 'desc')
+    assert supervisor.all_cluster_ids == [30, 20, 11, 10, 2, 1, 0]
+
 
 def test_supervisor_label(supervisor):
 
