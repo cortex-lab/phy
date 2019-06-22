@@ -628,6 +628,17 @@ class TemplateController(object):
             cluster_color_selector=self.color_selector,
         )
 
+        def resort():
+            # Initial sort.
+            @self.supervisor.cluster_view.get_ids
+            def init_cluster_ids(cluster_ids):
+                if cluster_ids is None:
+                    return
+                view.set_cluster_ids(cluster_ids)
+                @self._async_caller.set
+                def _update_plot():
+                    view.plot()
+
         @connect(sender=view)
         def on_cluster_click(sender, cluster_id, key=None, button=None):
             self.supervisor.select([cluster_id])
@@ -635,8 +646,7 @@ class TemplateController(object):
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
             if view.auto_update and up.added:
-                view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
-                view.plot()
+                resort()
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
@@ -655,24 +665,81 @@ class TemplateController(object):
         def on_color_mapping_changed(sender):
             view.update_color(self.supervisor.selected_clusters)
 
-        def init():
+        @connect
+        def on_add_view(sender, view):
+            resort()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            resort()
+
+        @connect
+        def on_close_view(sender, view_):
+            if view_ == view:
+                unconnect(on_cluster)
+                unconnect(on_cluster_click)
+                unconnect(on_table_sort)
+                unconnect(on_table_filter)
+                unconnect(on_color_mapping_changed)
+                unconnect(on_add_view)
+
+        return view
+
+    # Raster view
+    # -------------------------------------------------------------------------
+
+    def create_raster_view(self):
+        """Create a raster view."""
+        view = RasterView(
+            self.model.spike_times,
+            self.supervisor.clustering.spike_clusters,
+            cluster_color_selector=self.color_selector,
+        )
+
+        def resort():
             # Initial sort.
             @self.supervisor.cluster_view.get_ids
             def init_cluster_ids(cluster_ids):
                 if cluster_ids is None:
                     return
                 view.set_cluster_ids(cluster_ids)
-                @self._async_caller.set
-                def _update_plot():
-                    view.plot()
+                view.plot()
+
+        @connect(sender=view)
+        def on_cluster_click(sender, cluster_id, key=None, button=None):
+            self.supervisor.select([cluster_id])
+
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            if view.auto_update and up.added:
+                view.set_spike_clusters(self.supervisor.clustering.spike_clusters)
+                resort()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_sort(sender, cluster_ids):
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
+                return
+            # OPTIM: do not need to replot everything, but just to change the ordering)
+            view.update_cluster_sort(cluster_ids)
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_filter(sender, cluster_ids):
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
+                return
+            view.set_cluster_ids(cluster_ids)
+            view.plot()
+
+        @connect(sender=self.supervisor)
+        def on_color_mapping_changed(sender):
+            view.update_color(self.supervisor.selected_clusters)
 
         @connect
         def on_add_view(sender, view):
-            init()
+            resort()
 
         @connect(sender=self.supervisor.cluster_view)
         def on_ready(sender):
-            init()
+            resort()
 
         @connect
         def on_close_view(sender, view_):
@@ -901,75 +968,6 @@ class TemplateController(object):
             positions=self.model.channel_positions,
             best_channels=self.get_best_channels,
         )
-
-    # Raster view
-    # -------------------------------------------------------------------------
-
-    def create_raster_view(self):
-        """Create a raster view."""
-        view = RasterView(
-            self.model.spike_times,
-            self.supervisor.clustering.spike_clusters,
-            cluster_color_selector=self.color_selector,
-        )
-
-        @connect(sender=view)
-        def on_cluster_click(sender, cluster_id, key=None, button=None):
-            self.supervisor.select([cluster_id])
-
-        @connect(sender=self.supervisor)
-        def on_cluster(sender, up):
-            if view.auto_update and up.added:
-                view.set_spike_clusters(self.supervisor.clustering.spike_clusters)
-                view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
-                view.plot()
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_table_sort(sender, cluster_ids):
-            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
-                return
-            # OPTIM: do not need to replot everything, but just to change the ordering)
-            view.update_cluster_sort(cluster_ids)
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_table_filter(sender, cluster_ids):
-            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
-                return
-            view.set_cluster_ids(cluster_ids)
-            view.plot()
-
-        @connect(sender=self.supervisor)
-        def on_color_mapping_changed(sender):
-            view.update_color(self.supervisor.selected_clusters)
-
-        def init():
-            # Initial sort.
-            @self.supervisor.cluster_view.get_ids
-            def init_cluster_ids(cluster_ids):
-                if cluster_ids is None:
-                    return
-                view.set_cluster_ids(cluster_ids)
-                view.plot()
-
-        @connect
-        def on_add_view(sender, view):
-            init()
-
-        @connect(sender=self.supervisor.cluster_view)
-        def on_ready(sender):
-            init()
-
-        @connect
-        def on_close_view(sender, view_):
-            if view_ == view:
-                unconnect(on_cluster)
-                unconnect(on_cluster_click)
-                unconnect(on_table_sort)
-                unconnect(on_table_filter)
-                unconnect(on_color_mapping_changed)
-                unconnect(on_add_view)
-
-        return view
 
     # Histogram views
     # -------------------------------------------------------------------------
