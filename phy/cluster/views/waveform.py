@@ -201,13 +201,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
 
         self.waveform_visual.add_batch_data(
-            x=t,
-            y=wave,
-            color=bunch.color,
-            masks=m,
-            box_index=box_index,
-            data_bounds=self.data_bounds,
-        )
+            x=t, y=wave, color=bunch.color, masks=m, box_index=box_index,
+            data_bounds=self.data_bounds)
 
     def _plot_labels(self, channel_ids, n_clusters, channel_labels=None):
         # Add channel labels.

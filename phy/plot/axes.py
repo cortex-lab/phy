@@ -11,7 +11,7 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 
-from .transform import NDC, Range
+from .transform import NDC, Range, _fix_coordinate_in_visual
 from .visuals import LineVisual, TextVisual
 from phylib import connect
 from phylib.utils._types import _is_integer
@@ -104,13 +104,6 @@ class AxisLocator(object):
 #------------------------------------------------------------------------------
 # Axes visual
 #------------------------------------------------------------------------------
-
-def _fix_coordinate_in_visual(visual, coord):
-    """Insert GLSL code to fix the position on the x or y coordinate."""
-    assert coord in ('x', 'y')
-    visual.inserter.insert_vert(
-        'gl_Position.{coord} = pos_orig.{coord};'.format(coord=coord),
-        'after_transforms')
 
 
 def _set_line_data(xticks, yticks):

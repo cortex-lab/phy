@@ -13,7 +13,7 @@ import numpy as np
 
 from phylib.utils import Bunch, emit
 from phylib.utils.color import selected_cluster_color
-from phy.plot.transform import NDC, Range
+from phy.plot.transform import NDC, Range, _fix_coordinate_in_visual
 from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual
 from .base import ManualClusteringView, ScalingMixin
 
@@ -183,6 +183,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.canvas.add_visual(self.waveform_visual)
 
         self.text_visual = TextVisual()
+        _fix_coordinate_in_visual(self.text_visual, 'x')
         self.canvas.add_visual(self.text_visual)
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
@@ -256,7 +257,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
             bi = self._permute_channels(ch)
             ch_label = '%d' % ch
             self.text_visual.add_batch_data(
-                pos=[self.data_bounds[0], traces[0, ch]],
+                pos=[self.data_bounds[0], 0],
                 text=ch_label,
                 anchor=[+1., 0],
                 data_bounds=self.data_bounds,

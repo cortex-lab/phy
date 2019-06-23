@@ -85,6 +85,14 @@ def _normalize(arr, m, M):
     return arr
 
 
+def _fix_coordinate_in_visual(visual, coord):
+    """Insert GLSL code to fix the position on the x or y coordinate."""
+    assert coord in ('x', 'y')
+    visual.inserter.insert_vert(
+        'gl_Position.{coord} = pos_orig.{coord};'.format(coord=coord),
+        'after_transforms')
+
+
 def subplot_bounds(shape=None, index=None):
     """Get the data bounds of a subplot."""
     i, j = index
