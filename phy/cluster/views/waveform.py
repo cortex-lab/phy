@@ -71,13 +71,20 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     Constructor
     -----------
 
-    waveforms : function
-        Maps a cluster id to a Bunch with the following attributes:
+    waveforms : dict of functions
+        Every function maps a cluster id to a Bunch with the following attributes:
+
         * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
         * `channel_ids` : the channel ids corresponding to the third dimension in `data`
         * `channel_positions` : a 2D array with the coordinates of the channels on the probe
         * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
         * `alpha` : the alpha transparency channel
+
+        The keys of the dictionary are called **waveform types**. The `next_waveforms_type`
+        action cycles through all available waveform types.
+
+    waveform_type : str
+        Default key of the waveforms dictionary to plot initially.
 
     channel_labels : array-like
         Labels of the channels.
@@ -90,6 +97,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_show_labels': 'ctrl+l',
+        'next_waveforms_type': 'w',
+        'toggle_mean_waveforms': 'm',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -108,7 +117,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         'change_n_spikes_waveforms': 'wn',
     }
 
-    def __init__(self, waveforms=None, channel_labels=None):
+    def __init__(self, waveforms=None, waveforms_type=None, channel_labels=None):
         self._overlap = False
         self.do_show_labels = True
         self.channel_ids = None
@@ -117,7 +126,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Initialize the view.
         super(WaveformView, self).__init__()
-        self.state_attrs += ('box_scaling', 'probe_scaling', 'overlap', 'do_show_labels')
+        self.state_attrs += (
+            'waveforms_type', 'box_scaling', 'probe_scaling', 'overlap', 'do_show_labels')
         self.local_state_attrs += ('box_scaling', 'probe_scaling')
 
         # Box and probe scaling.
@@ -131,8 +141,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()
 
-        # Data: functions cluster_id => waveforms.
+        # Ensure waveforms is a dictionary, even if there is a single waveforms type.
+        waveforms = waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
+        assert waveforms
         self.waveforms = waveforms
+        self.waveforms_types = list(waveforms.keys())
+        # Current waveforms type.
+        self.waveforms_type = waveforms_type or self.waveforms_types[0]
+        assert self.waveforms_type in waveforms
 
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
@@ -149,7 +165,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         return [-1, m, +1, M]
 
     def get_clusters_data(self):
-        bunchs = [self.waveforms(cluster_id) for cluster_id in self.cluster_ids]
+        bunchs = [
+            self.waveforms[self.waveforms_type](cluster_id) for cluster_id in self.cluster_ids]
         clu_offsets = _get_clu_offsets(bunchs)
         n_clu = max(clu_offsets) + 1
         # Offset depending on the overlap.
@@ -264,6 +281,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         self.actions.add(self.toggle_waveform_overlap, checkable=True, checked=self.overlap)
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
+        self.actions.add(self.next_waveforms_type)
+        self.actions.add(self.toggle_mean_waveforms, checkable=True)
         self.actions.separator()
 
         # Box scaling.
@@ -394,3 +413,17 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             channel_id = self.channel_ids[channel_idx]
             logger.debug("Click on channel %d with key %s and button %s.", channel_id, key, b)
             emit('channel_click', self, channel_id=channel_id, key=key, button=b)
+
+    def next_waveforms_type(self):
+        """Switch to the next waveforms type."""
+        i = self.waveforms_types.index(self.waveforms_type)
+        n = len(self.waveforms_types)
+        self.waveforms_type = self.waveforms_types[(i + 1) % n]
+        logger.debug("Switch to waveforms type %s.", self.waveforms_type)
+        self.plot()
+
+    def toggle_mean_waveforms(self, checked):
+        """Switch to the `mean_waveforms` type, if it is available."""
+        if 'mean_waveforms' in self.waveforms_types:
+            self.waveforms_type = 'mean_waveforms'
+            self.plot()

@@ -34,7 +34,7 @@ def test_waveform_view(qtbot, tempdir, gui):
             waveform_duration=1000,
             channel_positions=staggered_positions(nc))
 
-    v = WaveformView(waveforms=get_waveforms)
+    v = WaveformView(waveforms={'waveforms': get_waveforms, 'mean_waveforms': get_waveforms})
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -49,6 +49,9 @@ def test_waveform_view(qtbot, tempdir, gui):
 
     v.toggle_show_labels(False)
     v.toggle_show_labels(True)
+
+    v.next_waveforms_type()
+    v.toggle_mean_waveforms(True)
 
     # Box scaling.
     bs = v.boxed.box_size
