@@ -2,6 +2,41 @@
 
 In this section, we give a few examples of plugins.
 
+## How to upgrade plugins from phy 1.0
+
+Here are some things to know if you want to upgrade plugins to the latest v2.0 version of phy.
+
+1. The event system has changed slightly. Replace:
+
+```python
+# DON'T USE. This was for phy 1.x, it does not work in phy 2.x
+@myobject.connect
+def on_event(arg):
+    pass
+```
+
+by
+
+```python
+# USE THIS in phy 2.x.
+from phy import connect
+
+# 1. You can filter the events by sender. Here, this function is only called when the event
+# is sent by `myobject`. If you don't add the `sender=` option, the function will be called
+# for all events of that type sent by any object.
+@connect(sender=myobject)
+def on_eventname(sender, arg):
+    # 2. The first positional parameter is always `sender` in event callbacks. It is mandatory.
+    pass
+```
+
+2. Some controller methods have been renamed. See the [API documentation](api.md) for more details.
+
+3. Make sure the deprecated package `phycontrib` is not loaded anywhere in your pluginsn which could lead to conflicts. You should even make sure it is not installed in your phy2 environment.
+
+4. Look at the plugin examples. They are good starting points to port your plugins. For example, there are example plugins for changing the number of spikes in the views, implementing custom recluster actions, adding custom matplotlib views, using custom cluster metrics and statistics, etc.
+
+
 ## Hello world
 
 Here is how to write a simple plugin that displays a message every time there's a new cluster assignment:

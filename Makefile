@@ -15,7 +15,7 @@ lint:
 	flake8 phy
 
 test: lint
-	py.test --cov-report term-missing --cov=phy phy
+	py.test -vv --cov-report term-missing --cov=phy phy
 
 doc:
 	python tools/api.py && python tools/extract_shortcuts.py && python tools/plugins_doc.py
