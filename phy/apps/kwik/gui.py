@@ -216,10 +216,10 @@ class KwikController(object):
     # -------------------------------------------------------------------------
 
     def _get_masks(self, cluster_id):
-        spike_ids = self.selector.select_spikes([cluster_id],
-                                                self.n_spikes_waveforms,
-                                                self.batch_size_waveforms,
-                                                )
+        spike_ids = self.selector.select_spikes(
+            [cluster_id], self.n_spikes_waveforms, self.batch_size_waveforms)
+        if self.model.all_masks is None:
+            return np.ones((self.n_spikes_waveforms, self.model.n_channels))
         return self.model.all_masks[spike_ids]
 
     def _get_mean_masks(self, cluster_id):
@@ -318,6 +318,8 @@ class KwikController(object):
                      )
 
     def create_feature_view(self):
+        if self.model.all_features is None:
+            return
         return FeatureView(
             features=self._get_features,
             attributes={'time': self._get_spike_times}
@@ -367,14 +369,13 @@ class KwikController(object):
         return spike_times
 
     def create_trace_view(self):
+        if self.model.traces is None:
+            return
         m = self.model
-        v = TraceView(traces=self._get_traces,
-                      spike_times=self._trace_spike_times,
-                      n_channels=m.n_channels,
-                      sample_rate=m.sample_rate,
-                      duration=m.duration,
-                      channel_vertical_order=self.channel_vertical_order,
-                      )
+        v = TraceView(
+            traces=self._get_traces, spike_times=self._trace_spike_times, n_channels=m.n_channels,
+            sample_rate=m.sample_rate, duration=m.duration,
+            channel_vertical_order=self.channel_vertical_order)
 
         # Update the get_traces() function with show_all_spikes.
         def get_traces(interval):
