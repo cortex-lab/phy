@@ -52,6 +52,7 @@ def test_waveform_view(qtbot, tempdir, gui):
 
     v.next_waveforms_type()
     v.toggle_mean_waveforms(True)
+    v.toggle_mean_waveforms(False)
 
     # Box scaling.
     bs = v.boxed.box_size

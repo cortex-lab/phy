@@ -173,8 +173,6 @@ class TemplateController(object):
             'RasterView': self.create_raster_view,
             'TemplateView': self.create_template_view,
             'IPythonView': self.create_ipython_view,
-
-            # Cluster statistics
             'ISIView': self._make_histogram_view(ISIView, self._get_isi),
             'FiringRateView': self._make_histogram_view(FiringRateView, self._get_firing_rate),
         }
@@ -546,51 +544,16 @@ class TemplateController(object):
             masks=masks, alpha=1.)
 
     def create_waveform_view(self):
-        f = (self._get_waveforms if self.model.traces is not None
-             else self._get_template_waveforms)
-        v = WaveformView(waveforms=f)
-        v.shortcuts['toggle_templates'] = 'w'
-        v.shortcuts['toggle_mean_waveforms'] = 'm'
-
-        v.state_attrs += ('show_what',)
-        funs = {
+        v = WaveformView({
             'waveforms': self._get_waveforms,
-            'templates': self._get_template_waveforms,
             'mean_waveforms': self._get_mean_waveforms,
-        }
+            'templates': self._get_template_waveforms,
+        })
 
         # Add extra actions.
         @connect(sender=v)
         def on_view_actions_created(sender):
             # NOTE: this callback function is called in WaveformView.attach().
-
-            # Initialize show_what if it was not set in the GUI state.
-            if not hasattr(v, 'show_what'):  # pragma: no cover
-                v.show_what = 'waveforms'
-            # Set the waveforms function.
-            v.waveforms = funs[v.show_what]
-
-            @v.actions.add(checkable=True, checked=v.show_what == 'templates')
-            def toggle_templates(checked):
-                """Show templates instead of spike waveforms."""
-                # Both checkboxes are mutually exclusive.
-                if checked:
-                    v.actions.get('toggle_mean_waveforms').setChecked(False)
-                v.show_what = 'templates' if checked else 'waveforms'
-                if v.show_what == 'waveforms' and self.model.traces is None:
-                    return
-                v.waveforms = funs[v.show_what]
-                v.on_select(cluster_ids=v.cluster_ids)
-
-            @v.actions.add(checkable=True, checked=v.show_what == 'mean_waveforms')
-            def toggle_mean_waveforms(checked):
-                """Show mean waveforms instead of spike waveforms."""
-                # Both checkboxes are mutually exclusive.
-                if checked:
-                    v.actions.get('toggle_templates').setChecked(False)
-                v.show_what = 'mean_waveforms' if checked else 'waveforms'
-                v.waveforms = funs[v.show_what]
-                v.on_select(cluster_ids=v.cluster_ids)
 
             @v.actions.add(
                 alias='wn', prompt=True, prompt_default=lambda: str(self.n_spikes_waveforms))

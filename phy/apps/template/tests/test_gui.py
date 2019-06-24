@@ -149,8 +149,8 @@ def test_template_gui_views(qtbot, template_controller_full):
     wv = gui.list_views(cv.WaveformView)
     if wv:
         wv = wv[0]
-        wv.actions.toggle_templates(True)
         wv.actions.toggle_mean_waveforms(True)
+        wv.actions.next_waveforms_type()
         wv.actions.change_n_spikes_waveforms(200)
 
     tv = gui.list_views(cv.TraceView)

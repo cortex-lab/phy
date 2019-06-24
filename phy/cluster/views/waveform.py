@@ -81,7 +81,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         * `alpha` : the alpha transparency channel
 
         The keys of the dictionary are called **waveform types**. The `next_waveforms_type`
-        action cycles through all available waveform types.
+        action cycles through all available waveform types. The key `waveforms` is mandatory.
 
     waveform_type : str
         Default key of the waveforms dictionary to plot initially.
@@ -149,6 +149,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Current waveforms type.
         self.waveforms_type = waveforms_type or self.waveforms_types[0]
         assert self.waveforms_type in waveforms
+        assert 'waveforms' in waveforms
 
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
@@ -424,6 +425,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def toggle_mean_waveforms(self, checked):
         """Switch to the `mean_waveforms` type, if it is available."""
-        if 'mean_waveforms' in self.waveforms_types:
+        if self.waveforms_type == 'mean_waveforms':
+            self.waveforms_type = 'waveforms'
+            self.plot()
+        elif 'mean_waveforms' in self.waveforms_types:
             self.waveforms_type = 'mean_waveforms'
             self.plot()
