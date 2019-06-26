@@ -120,7 +120,7 @@ class WaveformMixin(object):
         # WARNING: extracting raw waveforms is long!
         waveforms = self.model.get_waveforms(spike_ids, channel_ids)
         if waveforms is None:
-            return np.zeros(0)
+            return
         assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
         return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
 
@@ -201,12 +201,16 @@ class FeatureMixin(object):
     def get_spike_feature_amplitudes(
             self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs):
         """Return the features for the specified channel and PC."""
+        if self.model.features is None:
+            return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
         features = self._get_spike_features(spike_ids, [channel_id]).data
         return features[:, 0, pc or 0]
 
     def create_amplitude_view(self):
         view = super(FeatureMixin, self).create_amplitude_view()
+        if self.model.features is None:
+            return view
 
         @connect
         def on_selected_feature_changed(sender):
@@ -330,6 +334,14 @@ class TemplateMixin(object):
         spike_ids = self.supervisor.clustering.spikes_per_cluster[cluster_id]
         st = self.model.spike_templates[spike_ids]
         return np.bincount(st, minlength=self.model.n_templates)
+
+    def get_template_for_cluster(self, cluster_id):
+        """Return the largest template associated to a cluster."""
+        spike_ids = self.supervisor.clustering.spikes_per_cluster[cluster_id]
+        st = self.model.spike_templates[spike_ids]
+        template_ids, counts = np.unique(st, return_counts=True)
+        ind = np.argmax(counts)
+        return template_ids[ind]
 
     def get_template_amplitude(self, template_id):
         """Return the maximum amplitude of a template's waveforms across all channels."""
@@ -492,7 +504,7 @@ class TraceMixin(object):
 #------------------------------------------------------------------------------
 
 class BaseController(object):
-    """Controller for the Template GUI.
+    """Base controller for manual clustering GUI.
 
     Constructor
     -----------
@@ -528,8 +540,8 @@ class BaseController(object):
     channel_positions : array-like
         A `(n_channels, 2)` array with the x, y coordinates of the electrode sites,
         in any unit (e.g. μm).
-    channel_shanks : dict
-        Map channel ids to shank ids. Optional.
+    channel_shanks : array-like
+        A `(n_channels,)` array with the shank index of every channel.
     channel_vertical_order = array-like
         Permutation of the channels for display in the trace view. The shape is `(n_channels,)`.
     duration : float
@@ -657,10 +669,10 @@ class BaseController(object):
         self._cache_methods()
 
         # Set up the Supervisor instance, responsible for the clustering process.
-        self.supervisor = self._set_supervisor()
+        self._set_supervisor()
 
         # Set up the Selector instance, responsible for selecting the spikes for display.
-        self.selector = self._set_selector()
+        self._set_selector()
 
     # Internal initialization methods
     # -------------------------------------------------------------------------
@@ -745,13 +757,13 @@ class BaseController(object):
         # to the model's saving functions.
         connect(self.on_save_clustering, sender=supervisor)
 
-        return supervisor
+        self.supervisor = supervisor
 
     def _set_selector(self):
         """Set the Selector instance."""
         def spikes_per_cluster(cluster_id):
             return self.supervisor.clustering.spikes_per_cluster.get(cluster_id, [0])
-        return Selector(spikes_per_cluster)
+        self.selector = Selector(spikes_per_cluster)
 
     def _cache_methods(self):
         """Cache methods as specified in `self._memcached` and `self._cached`."""
@@ -914,7 +926,7 @@ class BaseController(object):
         """Return the shank of a cluster's best channel, if the channel_shanks array is available.
         """
         best_channel_id = self.get_best_channel(cluster_id)
-        return int(self.model.channel_shanks.get(best_channel_id, 0))
+        return self.model.channel_shanks[best_channel_id]
 
     def get_probe_depth(self, cluster_id):
         """Return the depth of a cluster."""
@@ -1025,6 +1037,8 @@ class BaseController(object):
             pc = self.selection.get('feature_pc', None)
             amplitudes = f(
                 spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc)
+            if amplitudes is None:
+                continue
             out.append(Bunch(
                 amplitudes=amplitudes,
                 spike_ids=spike_ids,

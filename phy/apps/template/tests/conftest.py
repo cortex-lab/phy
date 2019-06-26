@@ -9,10 +9,11 @@
 import logging
 
 from pytest import fixture
-
+from phy.gui.qt import Debouncer
+from phy.gui.widgets import Barrier
 
 from phylib.io.tests.conftest import *  # noqa
-from phylib.utils.event import reset
+from phylib.utils import connect, reset
 from ..gui import TemplateController
 
 logger = logging.getLogger(__name__)
@@ -22,38 +23,36 @@ logger = logging.getLogger(__name__)
 # Fixtures
 #------------------------------------------------------------------------------
 
-def _template_controller(tempdir, model):
-    import phy.apps.template.gui
-    from phy.cluster.views import base
-    from phy.gui.qt import Debouncer
 
-    # Disable threading in the tests for better coverage.
-    base._ENABLE_THREADING = False
-    delay = Debouncer.delay
+def _controller(qtbot, tempdir, model):
     Debouncer.delay = 1
-    # HACK: mock _prompt_save to avoid GUI block in test when closing
-    prompt = phy.apps.template.gui._prompt_save
-    phy.apps.template.gui._prompt_save = lambda: None
 
-    plugins = []
+    controller = TemplateController(
+        dir_path=model.dir_path, config_dir=tempdir / 'config', model=model,
+        clear_cache=True, enable_threading=False)
+    gui = controller.create_gui(do_prompt_save=False)
 
-    c = TemplateController(model=model, config_dir=tempdir, plugins=plugins)
-    yield c
+    b = Barrier()
+    connect(b('cluster_view'), event='ready', sender=controller.supervisor.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=controller.supervisor.similarity_view)
+    gui.show()
+    qtbot.addWidget(gui)
+    qtbot.waitForWindowShown(gui)
+    b.wait()
+
+    yield controller, gui
+    gui.close()
 
     # NOTE: make sure all callback functions are unconnected at the end of the tests
     # to avoid side-effects and spurious dependencies between tests.
     reset()
 
-    phy.apps.template.gui._prompt_save = prompt
-    base._ENABLE_THREADING = True
-    Debouncer.delay = delay
+
+@fixture
+def template_controller(qtbot, tempdir, template_model):
+    yield from _controller(qtbot, tempdir, template_model)
 
 
 @fixture
-def template_controller(tempdir, template_model):
-    yield from _template_controller(tempdir, template_model)
-
-
-@fixture
-def template_controller_full(tempdir, template_model_full):
-    yield from _template_controller(tempdir, template_model_full)
+def template_controller_full(qtbot, tempdir, template_model_full):
+    yield from _controller(qtbot, tempdir, template_model_full)

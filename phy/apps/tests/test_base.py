@@ -39,7 +39,7 @@ class MyModel(object):
     n_samples_waveforms = 100
     channel_vertical_order = None
     channel_positions = np.random.normal(size=(n_channels, 2))
-    channel_shanks = {cl: 0 for cl in range(n_channels)}
+    channel_shanks = np.zeros(n_channels, dtype=np.int32)
     features = artificial_features(n_spikes, n_channels, n_pcs)
     metadata = {'group': {3: 'noise', 4: 'mua', 5: 'good'}}
     sample_rate = 10000

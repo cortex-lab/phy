@@ -735,11 +735,12 @@ class Supervisor(object):
 
     def _get_similar_clusters(self, sender, cluster_id):
         """Return the clusters similar to a given cluster."""
-        sim = self.similarity(cluster_id)
+        sim = self.similarity(cluster_id) or []
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
-        data = [dict(similarity='%.3f' % s, **self._get_cluster_info(c))
-                for c, s in sim if c in clusters_set]
+        data = [
+            dict(similarity='%.3f' % s, **self._get_cluster_info(c))
+            for c, s in sim if c in clusters_set]
         return data
 
     def _get_cluster_info(self, cluster_id, exclude=()):
@@ -965,7 +966,8 @@ class Supervisor(object):
             # in the cluster view, and update the color selector accordingly.
             @self.cluster_view.get_ids
             def _update(cluster_ids):
-                self.color_selector.set_cluster_ids(cluster_ids)
+                if cluster_ids is not None:
+                    self.color_selector.set_cluster_ids(cluster_ids)
 
         # Call supervisor.save() when the save/ctrl+s action is triggered in the GUI.
         @connect(sender=gui)

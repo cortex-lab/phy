@@ -10,9 +10,8 @@ import logging
 
 from phylib.utils._misc import read_python
 from phylib.utils.testing import captured_output
-from phylib.utils import connect, emit
+from phylib.utils import emit
 import phy.cluster.views as cv
-from phy.gui.widgets import Barrier
 from phy.plot.tests import key_press, mouse_click
 from ..gui import (
     TemplateController, template_describe, AmplitudeView, TemplateFeatureView, FeatureView)
@@ -24,39 +23,20 @@ logger = logging.getLogger(__name__)
 # Tests
 #------------------------------------------------------------------------------
 
-def test_template_controller(template_controller):
-    assert template_controller
-
-
 def test_template_describe(qtbot, template_path):
     with captured_output() as (stdout, stderr):
         template_describe(template_path)
     assert '314' in stdout.getvalue()
 
 
-def _wait_controller(qtbot, supervisor, gui):
-    b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=supervisor.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=supervisor.similarity_view)
-    gui.show()
-    qtbot.addWidget(gui)
-    qtbot.waitForWindowShown(gui)
-    b.wait()
-
-
 def test_template_gui_0(qtbot, tempdir, template_controller_full):
-    controller = template_controller_full
-    gui = controller.create_gui()
-    _wait_controller(qtbot, controller.supervisor, gui)
-    gui.close()
+    controller, gui = template_controller_full
 
 
 def test_template_gui_1(qtbot, tempdir, template_controller_full):
-    controller = template_controller_full
-    gui = controller.create_gui(
-        default_views=('WaveformView', 'CorrelogramView', 'AmplitudeView'))
+    controller, gui = template_controller_full
+    # default_views=('WaveformView', 'CorrelogramView', 'AmplitudeView'))
     s = controller.supervisor
-    _wait_controller(qtbot, controller.supervisor, gui)
 
     controller.selection.cluster_ids
     controller.selection.colormap
@@ -104,11 +84,12 @@ def test_template_gui_1(qtbot, tempdir, template_controller_full):
     # Create a new controller and a new GUI with the same data.
     params = read_python(tempdir / 'params.py')
     params['dat_path'] = controller.model.dat_path
-    controller = TemplateController(config_dir=tempdir, clear_cache=True, **params)
+    controller = TemplateController(
+        config_dir=tempdir, clear_cache=True, dir_path=controller.model.dir_path, **params)
 
     gui = controller.create_gui()
     s = controller.supervisor
-    _wait_controller(qtbot, s, gui)
+    qtbot.wait(1000)
 
     # Check that the data has been updated.
     assert s.get_labels('some_field')[clu - 1] is None
@@ -124,10 +105,8 @@ def test_template_gui_1(qtbot, tempdir, template_controller_full):
 
 
 def test_template_gui_views(qtbot, template_controller_full):
-    controller = template_controller_full
-    gui = controller.create_gui()
+    controller, gui = template_controller_full
     s = controller.supervisor
-    _wait_controller(qtbot, controller.supervisor, gui)
 
     s.select_actions.next()
     s.block()
@@ -184,12 +163,9 @@ def test_template_gui_views(qtbot, template_controller_full):
         tmpv.dock_widget.close()
         qtbot.wait(50)
 
-    gui.close()
-
 
 def test_template_gui_2(qtbot, template_controller):
-    gui = template_controller.create_gui()
-    _wait_controller(qtbot, template_controller.supervisor, gui)
+    controller, gui = template_controller
 
     gui._create_and_add_view(cv.WaveformView)
     gui._create_and_add_view(cv.ProbeView)
@@ -206,14 +182,10 @@ def test_template_gui_2(qtbot, template_controller):
     key_press(qtbot, gui, 'Enter')
     key_press(qtbot, gui, 'S', modifiers=('Control',))
 
-    gui.close()
-
 
 def test_template_gui_undo_stack(qtbot, template_controller):
-    controller = template_controller
-    gui = controller.create_gui()
+    controller, gui = template_controller
     s = controller.supervisor
-    _wait_controller(qtbot, controller.supervisor, gui)
 
     s.select_actions.next()
     s.block()
@@ -234,10 +206,7 @@ def test_template_gui_undo_stack(qtbot, template_controller):
 
 def test_template_gui_new_views(qtbot, template_controller_full):
     """Test adding new views once clusters are selected."""
-    controller = template_controller_full
-
-    gui = controller.create_gui(default_views=())
-    _wait_controller(qtbot, controller.supervisor, gui)
+    controller, gui = template_controller_full
 
     controller.supervisor.next_best()
     controller.supervisor.block()
@@ -247,14 +216,13 @@ def test_template_gui_new_views(qtbot, template_controller_full):
 
     for view_cls in controller.view_creator.keys():
         gui._create_and_add_view(view_cls)
-        qtbot.wait(100)
+        qtbot.wait(200)
 
 
 def test_template_gui_sim(qtbot, template_controller):
     """Ensure that the similarity is refreshed when clusters change."""
-    gui = template_controller.create_gui()
-    s = template_controller.supervisor
-    _wait_controller(qtbot, s, gui)
+    controller, gui = template_controller
+    s = controller.supervisor
 
     s.cluster_view.sort_by('id', 'desc')
     s.select_actions.next()
@@ -281,13 +249,10 @@ def test_template_gui_sim(qtbot, template_controller):
     s.block()
     assert s.selected == [cl - 1, cl + 1]
 
-    gui.close()
-
 
 def test_template_gui_amplitude(qtbot, tempdir, template_controller):
-    gui = template_controller.create_gui()
-    s = template_controller.supervisor
-    _wait_controller(qtbot, s, gui)
+    controller, gui = template_controller
+    s = controller.supervisor
 
     s.select_actions.next()
     s.block()
@@ -295,12 +260,10 @@ def test_template_gui_amplitude(qtbot, tempdir, template_controller):
     av = gui.list_views(AmplitudeView)[0]
 
     cl = 63
-    template_controller.get_template_amplitude(cl)
-    template_controller.get_amplitudes(cl)
-    template_controller.get_spike_raw_amplitudes(cl)
-    template_controller.get_spike_template_amplitudes(cl)
-    template_controller.get_mean_spike_template_amplitudes(cl)
-    template_controller.get_mean_spike_raw_amplitudes(cl)
+    controller.get_template_amplitude(cl)
+    controller.get_amplitudes(cl)
+    controller.get_mean_spike_template_amplitudes(cl)
+    controller.get_mean_spike_raw_amplitudes(cl)
 
     for _ in range(3):
         av.next_amplitude_type()
@@ -333,14 +296,10 @@ def test_template_gui_amplitude(qtbot, tempdir, template_controller):
     # Split one cluster => Two new clusters should be selected after the split.
     assert s.selected_clusters[:2] == [n + 1, n + 2]
 
-    # qtbot.stop()
-    gui.close()
-
 
 def test_template_gui_split_template_feature(qtbot, tempdir, template_controller):
-    gui = template_controller.create_gui()
-    s = template_controller.supervisor
-    _wait_controller(qtbot, s, gui)
+    controller, gui = template_controller
+    s = controller.supervisor
 
     s.select_actions.next()
     s.block()
@@ -366,6 +325,3 @@ def test_template_gui_split_template_feature(qtbot, tempdir, template_controller
     s.block()
 
     assert s.selected_clusters == [n + 1]
-
-    # qtbot.stop()
-    gui.close()

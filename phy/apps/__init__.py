@@ -177,9 +177,8 @@ def cli_kwik_describe(ctx, path, channel_group=0, clustering='main'):
 def cli_alf_convert(ctx, params_path, out_dir):
     """Describe a template file."""
     from phylib.io.alf import EphysAlfCreator
-    from phylib.io.model import TemplateModel
-    from phylib.utils._misc import read_python
+    from phylib.io.model import load_model
 
-    model = TemplateModel(**read_python(params_path))
+    model = load_model(params_path)
     c = EphysAlfCreator(model)
     c.convert(out_dir)
