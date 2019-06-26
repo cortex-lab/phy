@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, ignore_zeros=False):
     """Compute the histogram of an array."""
+    assert x_min <= x_max
     bins = np.linspace(x_min, x_max, n_bins)
     if ignore_zeros:
         data = data[data != 0]
@@ -118,11 +119,15 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         bunchs = []
         for i, cluster_id in enumerate(self.cluster_ids):
             bunch = self.cluster_stat(cluster_id)
-
+            bmin, bmax = bunch.data.min(), bunch.data.max()
             # Update self.x_max if it was not set before.
-            self.x_min = self.x_min or bunch.get('x_min', None) or bunch.data.min()
-            self.x_max = self.x_max or bunch.get('x_max', None) or bunch.data.max()
+            self.x_min = self.x_min or bunch.get('x_min', None) or bmin
+            self.x_min = max(self.x_min, bmin)
+            self.x_max = self.x_max or bunch.get('x_max', None) or bmax
+            self.x_max = min(self.x_max, bmax)
+            assert self.x_min is not None
             assert self.x_max is not None
+            assert self.x_min <= self.x_max
 
             # Compute the histogram.
             bunch.histogram = _compute_histogram(
