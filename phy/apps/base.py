@@ -317,11 +317,14 @@ class TemplateMixin(object):
     _cached = (
         'get_amplitudes',
         'get_spike_template_amplitudes',
-        '_get_template_waveforms',
     )
 
     _memcached = (
+        '_get_template_waveforms',
         'get_mean_spike_template_amplitudes',
+        'get_template_counts',
+        'get_template_for_cluster',
+        'get_template_amplitude',
     )
 
     def get_amplitudes(self, cluster_id, load_all=False):
@@ -612,6 +615,7 @@ class BaseController(object):
         'get_best_channels',
         'get_channel_shank',
         'get_probe_depth',
+        'peak_channel_similarity',
     )
     # Methods that are cached on disk for performance.
     _cached = (

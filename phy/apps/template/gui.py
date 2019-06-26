@@ -75,11 +75,6 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 
             self.color_selector = supervisor.color_selector
 
-    def get_best_channel(self, cluster_id):
-        """Return the best channel of a given cluster."""
-        template_id = self.get_template_for_cluster(cluster_id)
-        return self.model.get_template(template_id).best_channel
-
     def get_best_channels(self, cluster_id):
         """Return the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
