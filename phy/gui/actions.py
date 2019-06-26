@@ -157,24 +157,25 @@ def _expected_args(f):
 
 
 @require_qt
-def _create_qaction(
-        gui, name, callback, shortcut, docstring=None, prompt_default=None, show_shortcut=True,
-        checkable=False, checked=False, prompt=False, n_args=None, alias='', set_busy=False):
+def _create_qaction(gui, **kwargs):
     # Create the QAction instance.
+    name = kwargs.get('name', '')
     name = name[0].upper() + name[1:].replace('_', ' ')
     action = QAction(name, gui)
 
     # Show an input dialog if there are args.
+    callback = kwargs.get('callback', None)
     title = getattr(callback, '__name__', 'action')
     # Number of expected arguments.
-    n_args = n_args or len(_expected_args(callback))
+    n_args = kwargs.get('n_args', None) or len(_expected_args(callback))
 
     @wraps(callback)
     def wrapped(is_checked, *args):
-        if checkable:
+        if kwargs.get('checkable', None):
             args = (is_checked,) + args
-        if prompt:
-            args += _prompt_args(title, docstring, default=prompt_default) or ()
+        if kwargs.get('prompt', None):
+            args += _prompt_args(
+                title, docstring, default=kwargs.get('prompt_default', None)) or ()
             if not args:  # pragma: no cover
                 logger.debug("User cancelled input prompt, aborting.")
                 return
@@ -184,24 +185,24 @@ def _create_qaction(
             return
         try:
             # Set a busy cursor if set_busy is True.
-            with busy_cursor(set_busy):
+            with busy_cursor(kwargs.get('set_busy', None)):
                 return callback(*args)
         except Exception:  # pragma: no cover
             logger.warning("Error when executing action %s.", name)
             logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
     action.triggered.connect(wrapped)
-    sequence = _get_qkeysequence(shortcut)
+    sequence = _get_qkeysequence(kwargs.get('shortcut', None))
     if not isinstance(sequence, (tuple, list)):
         sequence = [sequence]
     action.setShortcuts(sequence)
-    assert docstring
-    docstring = re.sub(r'\s+', ' ', docstring)
-    docstring += ' (alias: {})'.format(alias)
-    action.setStatusTip(docstring)
-    action.setWhatsThis(docstring)
-    action.setCheckable(checkable)
-    action.setChecked(checked)
+    assert kwargs.get('docstring', None)
+    docstring = re.sub(r'\s+', ' ', kwargs.get('docstring', None))
+    docstring += ' (alias: {})'.format(kwargs.get('alias', None))
+    action.setStatusTip(kwargs.get('docstring', None))
+    action.setWhatsThis(kwargs.get('docstring', None))
+    action.setCheckable(kwargs.get('checkable', None))
+    action.setChecked(kwargs.get('checked', None))
     return action
 
 
@@ -288,12 +289,13 @@ class Actions(object):
             Whether to show the shortcut in the Help action that displays all GUI shortcuts.
 
         """
+        param_names = sorted(inspect.signature(Actions.add).parameters)
+        l = locals()
+        kwargs = {param_name: l[param_name] for param_name in param_names if param_name != 'self'}
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
-            return partial(
-                self.add, name=name, shortcut=shortcut, prompt=prompt, n_args=n_args,
-                alias=alias, menu=menu, submenu=submenu, checkable=checkable, checked=checked,
-                set_busy=set_busy, prompt_default=prompt_default)
+            kwargs.pop('callback', None)
+            return partial(self.add, **kwargs)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -311,14 +313,9 @@ class Actions(object):
         docstring = re.sub(r'[ \t\r\f\v]{2,}', ' ', docstring.strip())
 
         # Create and register the action.
-        action = _create_qaction(
-            self.gui, name, callback, shortcut, docstring=docstring, prompt=prompt,
-            n_args=n_args, alias=alias, checkable=checkable, checked=checked, set_busy=set_busy,
-            prompt_default=prompt_default, show_shortcut=show_shortcut)
-        action_obj = Bunch(
-            qaction=action, name=name, alias=alias, checkable=checkable,
-            show_shortcut=show_shortcut, checked=checked, shortcut=shortcut, callback=callback,
-            menu=menu)
+        kwargs.update(name=name, alias=alias, shortcut=shortcut, docstring=docstring)
+        action = _create_qaction(self.gui, **kwargs)
+        action_obj = Bunch(qaction=action, **kwargs)
         if verbose and not name.startswith('_'):
             logger.log(5, "Add action `%s` (%s).", name, _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
@@ -557,15 +554,12 @@ class Snippets(object):
                     shortcut='shift+' + char,
                     callback=_make_func(char.upper()))
 
-        self.actions.add(name='_snippet_backspace',
-                         shortcut='backspace',
-                         callback=self._backspace)
-        self.actions.add(name='_snippet_activate',
-                         shortcut=('enter', 'return'),
-                         callback=self._enter)
-        self.actions.add(name='_snippet_disable',
-                         shortcut='escape',
-                         callback=self.mode_off)
+        self.actions.add(
+            name='_snippet_backspace', shortcut='backspace', callback=self._backspace)
+        self.actions.add(
+            name='_snippet_activate', shortcut=('enter', 'return'), callback=self._enter)
+        self.actions.add(
+            name='_snippet_disable', shortcut='escape', callback=self.mode_off)
 
     def run(self, snippet):
         """Execute a snippet command.
