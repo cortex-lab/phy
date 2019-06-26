@@ -129,6 +129,8 @@ class GUI(QMainWindow):
         List of view names to create by default (overriden by `view_count` if not empty).
     config_dir : str or Path
         User configuration directory used to load/save the GUI state
+    enable_threading : boolean
+        Whether to enable threading in views or not (used in `ManualClusteringView`).
 
     Events
     ------
@@ -150,9 +152,10 @@ class GUI(QMainWindow):
 
     def __init__(
             self, position=None, size=None, name=None, subtitle=None, view_creator=None,
-            view_count=None, default_views=None, config_dir=None, **kwargs):
+            view_count=None, default_views=None, config_dir=None, enable_threading=True, **kwargs):
         # HACK to ensure that closeEvent is called only twice (seems like a
         # Qt bug).
+        self._enable_threading = enable_threading
         self._closed = False
         if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
