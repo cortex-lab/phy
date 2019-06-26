@@ -117,7 +117,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         'change_n_spikes_waveforms': 'wn',
     }
 
-    def __init__(self, waveforms=None, waveforms_type=None, channel_labels=None):
+    def __init__(self, waveforms=None, waveforms_type=None, channel_labels=None, **kwargs):
         self._overlap = False
         self.do_show_labels = True
         self.channel_ids = None
@@ -125,7 +125,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.filtered_tags = ()
 
         # Initialize the view.
-        super(WaveformView, self).__init__()
+        super(WaveformView, self).__init__(**kwargs)
         self.state_attrs += (
             'waveforms_type', 'box_scaling', 'probe_scaling', 'overlap', 'do_show_labels')
         self.local_state_attrs += ('box_scaling', 'probe_scaling')
@@ -245,11 +245,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
-        box_bounds = _get_box_bounds(bunchs, channel_ids)
         self.channel_ids = channel_ids
 
         # Update the box bounds as a function of the selected channels.
-        self.canvas.boxed.box_bounds = box_bounds
+        if channel_ids:
+            self.canvas.boxed.box_bounds = _get_box_bounds(bunchs, channel_ids)
         self.box_pos = np.array(self.canvas.boxed.box_pos)
         self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()

@@ -39,8 +39,8 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         'change_marker_size': 'ctrl+wheel',
     }
 
-    def __init__(self, coords=None):
-        super(ScatterView, self).__init__()
+    def __init__(self, coords=None, **kwargs):
+        super(ScatterView, self).__init__(**kwargs)
         # Save the marker size in the global and local view's config.
 
         self.canvas.enable_axes()

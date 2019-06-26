@@ -99,8 +99,8 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         'toggle_automatic_channel_selection': 'c',
     }
 
-    def __init__(self, features=None, attributes=None):
-        super(FeatureView, self).__init__()
+    def __init__(self, features=None, attributes=None, **kwargs):
+        super(FeatureView, self).__init__(**kwargs)
         self.state_attrs += ('fixed_channels',)
 
         assert features

@@ -64,8 +64,8 @@ class ProbeView(ManualClusteringView):
     # Marker size of channels with selected clusters.
     selected_marker_size = 15
 
-    def __init__(self, positions=None, best_channels=None):
-        super(ProbeView, self).__init__()
+    def __init__(self, positions=None, best_channels=None, **kwargs):
+        super(ProbeView, self).__init__(**kwargs)
 
         # Normalize positions.
         assert positions.ndim == 2

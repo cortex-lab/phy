@@ -82,13 +82,14 @@ def test_trace_view_1(qtbot, tempdir, gui):
     def get_spike_times():
         return st
 
-    v = TraceView(traces=get_traces,
-                  spike_times=get_spike_times,
-                  n_channels=nc,
-                  sample_rate=sr,
-                  duration=duration,
-                  channel_vertical_order=np.arange(nc)[::-1],
-                  )
+    v = TraceView(
+        traces=get_traces,
+        spike_times=get_spike_times,
+        n_channels=nc,
+        sample_rate=sr,
+        duration=duration,
+        channel_vertical_order=np.arange(nc)[::-1],
+    )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)

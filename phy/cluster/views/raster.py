@@ -51,7 +51,9 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         'select_cluster': 'ctrl+click',
     }
 
-    def __init__(self, spike_times, spike_clusters, cluster_ids=None, cluster_color_selector=None):
+    def __init__(
+            self, spike_times, spike_clusters, cluster_ids=None, cluster_color_selector=None,
+            **kwargs):
         self.spike_times = spike_times
         self.n_spikes = len(spike_times)
         self.duration = spike_times[-1] * 1.01
@@ -62,7 +64,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.set_cluster_ids(cluster_ids if cluster_ids is not None else None)
         self.cluster_color_selector = cluster_color_selector
 
-        super(RasterView, self).__init__()
+        super(RasterView, self).__init__(**kwargs)
 
         self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
         self.canvas.enable_axes()

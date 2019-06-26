@@ -64,8 +64,8 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         'set_refractory_period': 'cr',
     }
 
-    def __init__(self, correlograms=None, firing_rate=None, sample_rate=None):
-        super(CorrelogramView, self).__init__()
+    def __init__(self, correlograms=None, firing_rate=None, sample_rate=None, **kwargs):
+        super(CorrelogramView, self).__init__(**kwargs)
         self.state_attrs += (
             'bin_size', 'window_size', 'refractory_period', 'uniform_normalization')
         self.local_state_attrs += (

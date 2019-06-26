@@ -135,7 +135,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
     def __init__(
             self, traces=None, sample_rate=None, spike_times=None, duration=None, n_channels=None,
-            channel_vertical_order=None):
+            channel_vertical_order=None, **kwargs):
 
         self.do_show_labels = True
         self.show_all_spikes = False
@@ -159,16 +159,16 @@ class TraceView(ScalingMixin, ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
-        assert (channel_vertical_order is None or channel_vertical_order.shape == (n_channels,))
-        self._channel_perm = channel_vertical_order
-        if self._channel_perm is not None:
-            self._channel_perm = np.argsort(self._channel_perm)
+        self._channel_perm = (
+            np.arange(n_channels) if channel_vertical_order is None else channel_vertical_order)
+        assert self._channel_perm.shape == (n_channels,)
+        self._channel_perm = np.argsort(self._channel_perm)
 
         # Box and probe scaling.
         self._origin = None
 
         # Initialize the view.
-        super(TraceView, self).__init__()
+        super(TraceView, self).__init__(**kwargs)
         self.state_attrs += ('origin', 'interval', 'scaling', 'do_show_labels', 'show_all_spikes')
         self.local_state_attrs += ('interval', 'scaling',)
 
@@ -202,8 +202,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
     def _permute_channels(self, x, inv=False):
         cp = self._channel_perm
-        cp = np.argsort(cp) if inv and cp is not None else cp
-        return cp[x] if cp is not None else x
+        cp = np.argsort(cp)
+        return cp[x]
 
     # Internal methods
     # -------------------------------------------------------------------------

@@ -56,8 +56,9 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
     }
 
     def __init__(
-            self, templates=None, channel_ids=None, cluster_ids=None, cluster_color_selector=None):
-        super(TemplateView, self).__init__()
+            self, templates=None, channel_ids=None, cluster_ids=None, cluster_color_selector=None,
+            **kwargs):
+        super(TemplateView, self).__init__(**kwargs)
         self.state_attrs += ('scaling',)
         self.local_state_attrs += ('scaling',)
 

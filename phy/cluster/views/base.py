@@ -71,6 +71,9 @@ class ManualClusteringView(object):
         # Message to show in the status bar.
         self.status = None
 
+        # Whether to enable threading. Disabled in tests.
+        self._enable_threading = kwargs.get('enable_threading', True)
+
         # List of attributes to save in the GUI view state.
         self.state_attrs = ('auto_update',)
 
@@ -234,7 +237,7 @@ class ManualClusteringView(object):
             # starting to record all OpenGL calls instead of executing them immediately.
             # This is what we call the "lazy" mode.
             emit('is_busy', self, True)
-            if _ENABLE_THREADING:
+            if getattr(gui, '_enable_threading', True):
                 # This is only for OpenGL views.
                 self.canvas.set_lazy(True)
                 thread_pool().start(worker)
