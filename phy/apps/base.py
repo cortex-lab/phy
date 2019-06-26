@@ -88,12 +88,14 @@ class FiringRateView(HistogramView):
 #------------------------------------------------------------------------------
 
 class WaveformMixin(object):
-    n_spikes_waveforms = 250
+    n_spikes_waveforms = 100
     batch_size_waveforms = 10
 
     _state_params = (
         'n_spikes_waveforms', 'batch_size_waveforms',
     )
+
+    _default_views = ('WaveformView',)
 
     # Map an amplitude type to a method name.
     _amplitude_functions = (
@@ -151,6 +153,10 @@ class WaveformMixin(object):
         b['alpha'] = 1.
         return b
 
+    def _set_view_creator(self):
+        super(WaveformMixin, self)._set_view_creator()
+        self.view_creator['WaveformView'] = self.create_waveform_view
+
     def create_waveform_view(self):
         waveform_functions = _concatenate_parents_attributes(
             self.__class__, '_waveform_functions')
@@ -175,10 +181,6 @@ class WaveformMixin(object):
 
         return v
 
-    def _set_view_creator(self):
-        super(WaveformMixin, self)._set_view_creator()
-        self.view_creator['WaveformView'] = self.create_waveform_view
-
 
 class FeatureMixin(object):
     n_spikes_features = 2500
@@ -187,6 +189,8 @@ class FeatureMixin(object):
     _state_params = (
         'n_spikes_features', 'n_spikes_features_background',
     )
+
+    _default_views = ('FeatureView',)
 
     _amplitude_functions = (
         ('feature', 'get_spike_feature_amplitudes'),
@@ -306,6 +310,9 @@ class TemplateMixin(object):
         channel ids of the template.
 
     """
+
+    _default_views = ('TemplateView',)
+
     _amplitude_functions = (
         ('template', 'get_spike_template_amplitudes'),
     )
@@ -412,6 +419,10 @@ class TemplateMixin(object):
                 template=bunchs[cluster_id].data[0, ...] * mean_amp[cluster_id],
                 channel_ids=bunchs[cluster_id].channel_ids)
             for cluster_id in cluster_ids}
+
+    def _set_view_creator(self):
+        super(TemplateMixin, self)._set_view_creator()
+        self.view_creator['TemplateView'] = self.create_template_view
 
     def create_template_view(self):
         """Create a template view."""
@@ -625,8 +636,7 @@ class BaseController(object):
 
     # Views to load by default.
     _default_views = (
-        'WaveformView', 'TraceView', 'FeatureView', 'CorrelogramView', 'AmplitudeView',
-        'ISIView', 'FiringRateView'
+        'CorrelogramView', 'AmplitudeView', 'ISIView', 'FiringRateView'
     )
 
     def __init__(
@@ -657,7 +667,7 @@ class BaseController(object):
         # Set the default similarity functions. Other similarity functions can be added by plugins.
         self._set_similarity_functions()
 
-        self.default_views = list(self._default_views)
+        self.default_views = _concatenate_parents_attributes(self.__class__, '_default_views')
         self._async_callers = {}
         self.config_dir = config_dir
         self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.

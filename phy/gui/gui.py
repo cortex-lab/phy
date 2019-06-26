@@ -326,7 +326,7 @@ class GUI(QMainWindow):
         return dict(vc)
 
     def list_views(self, cls):
-        """Return the list of views deriving from a given class."""
+        """Return the list of views which are instances of a given class."""
         return [view for view in self._views if view.__class__ == cls]
 
     def get_view(self, cls, index=0):
@@ -356,6 +356,7 @@ class GUI(QMainWindow):
 
     def _create_and_add_view(self, view_name):
         """Create a view and add it to the GUI."""
+        assert isinstance(view_name, str)
         fn = self.view_creator.get(view_name, None)
         if fn is None:
             return

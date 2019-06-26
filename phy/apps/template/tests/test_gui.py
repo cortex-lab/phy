@@ -14,7 +14,7 @@ from phylib.utils import emit
 import phy.cluster.views as cv
 from phy.plot.tests import key_press, mouse_click
 from ..gui import (
-    TemplateController, template_describe, AmplitudeView, TemplateFeatureView, FeatureView)
+    TemplateController, template_describe, TemplateFeatureView)
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,12 @@ def test_template_gui_views(qtbot, template_controller_full):
     controller, gui = template_controller_full
     s = controller.supervisor
 
+    gui._create_and_add_view('RasterView')
+    qtbot.wait(250)
+
+    gui._create_and_add_view('TraceView')
+    qtbot.wait(250)
+
     s.select_actions.next()
     s.block()
 
@@ -167,8 +173,8 @@ def test_template_gui_views(qtbot, template_controller_full):
 def test_template_gui_2(qtbot, template_controller):
     controller, gui = template_controller
 
-    gui._create_and_add_view(cv.WaveformView)
-    gui._create_and_add_view(cv.ProbeView)
+    gui._create_and_add_view('WaveformView')
+    gui._create_and_add_view('ProbeView')
 
     key_press(qtbot, gui, 'Down')
     key_press(qtbot, gui, 'Down')
@@ -204,9 +210,9 @@ def test_template_gui_undo_stack(qtbot, template_controller):
         s.block()
 
 
-def test_template_gui_new_views(qtbot, template_controller_full):
+def test_template_gui_new_views(qtbot, template_controller_empty_gui):
     """Test adding new views once clusters are selected."""
-    controller, gui = template_controller_full
+    controller, gui = template_controller_empty_gui
 
     controller.supervisor.next_best()
     controller.supervisor.block()
@@ -257,7 +263,7 @@ def test_template_gui_amplitude(qtbot, tempdir, template_controller):
     s.select_actions.next()
     s.block()
 
-    av = gui.list_views(AmplitudeView)[0]
+    av = gui.list_views(cv.AmplitudeView)[0]
 
     cl = 63
     controller.get_template_amplitude(cl)
@@ -275,7 +281,7 @@ def test_template_gui_amplitude(qtbot, tempdir, template_controller):
     s.block()
 
     # Select feature in feature view.
-    fv = gui.list_views(FeatureView)[0]
+    fv = gui.list_views(cv.FeatureView)[0]
     w, h = fv.canvas.get_size()
     w, h = w / 4, h / 4
     x, y = w / 2, h / 2
@@ -283,10 +289,13 @@ def test_template_gui_amplitude(qtbot, tempdir, template_controller):
     qtbot.wait(50)
 
     # Split.
-    mouse_click(qtbot, av.canvas, (0, 0), modifiers=('Control',))
-    mouse_click(qtbot, av.canvas, (w, 0), modifiers=('Control',))
+    w, h = fv.canvas.get_size()
+    w -= 1
+    h -= 1
+    mouse_click(qtbot, av.canvas, (1, 1), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (w, 1), modifiers=('Control',))
     mouse_click(qtbot, av.canvas, (w, h), modifiers=('Control',))
-    mouse_click(qtbot, av.canvas, (0, h), modifiers=('Control',))
+    mouse_click(qtbot, av.canvas, (1, h), modifiers=('Control',))
 
     n = max(s.clustering.cluster_ids)
 

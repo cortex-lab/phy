@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 
-def _controller(qtbot, tempdir, model):
+def _controller(qtbot, tempdir, model, default_views=None):
     Debouncer.delay = 1
 
     controller = TemplateController(
         dir_path=model.dir_path, config_dir=tempdir / 'config', model=model,
         clear_cache=True, enable_threading=False)
-    gui = controller.create_gui(do_prompt_save=False)
+    gui = controller.create_gui(default_views=default_views, do_prompt_save=False)
 
     b = Barrier()
     connect(b('cluster_view'), event='ready', sender=controller.supervisor.cluster_view)
@@ -56,3 +56,8 @@ def template_controller(qtbot, tempdir, template_model):
 @fixture
 def template_controller_full(qtbot, tempdir, template_model_full):
     yield from _controller(qtbot, tempdir, template_model_full)
+
+
+@fixture
+def template_controller_empty_gui(qtbot, tempdir, template_model_full):
+    yield from _controller(qtbot, tempdir, template_model_full, default_views=())

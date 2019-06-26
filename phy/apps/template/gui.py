@@ -55,6 +55,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     """
 
     gui_name = 'TemplateGUI'
+    _default_views = ('TemplateFeatureView',)
 
     def _create_model(self, dir_path=None, **kwargs):
         return TemplateModel(dir_path=dir_path, **kwargs)
