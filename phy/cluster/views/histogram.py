@@ -119,12 +119,15 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         bunchs = []
         for i, cluster_id in enumerate(self.cluster_ids):
             bunch = self.cluster_stat(cluster_id)
+            if not bunch.data.size:
+                continue
             bmin, bmax = bunch.data.min(), bunch.data.max()
             # Update self.x_max if it was not set before.
             self.x_min = self.x_min or bunch.get('x_min', None) or bmin
             self.x_min = max(self.x_min, bmin)
             self.x_max = self.x_max or bunch.get('x_max', None) or bmax
             self.x_max = min(self.x_max, bmax)
+            self.x_min = min(self.x_min, self.x_max)
             assert self.x_min is not None
             assert self.x_max is not None
             assert self.x_min <= self.x_max
