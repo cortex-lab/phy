@@ -980,6 +980,9 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
 * `config_dir : str or Path` 　 
     User configuration directory used to load/save the GUI state
 
+* `enable_threading : boolean` 　 
+    Whether to enable threading in views or not (used in `ManualClusteringView`).
+
 **Events**
 
 close
@@ -1021,6 +1024,15 @@ Add a dock widget to the main window.
 **`GUI.closeEvent(self, e)`**
 
 Qt slot when the window is closed.
+
+---
+
+#### GUI.create_and_add_view
+
+
+**`GUI.create_and_add_view(self, view_name)`**
+
+Create a view and add it to the GUI.
 
 ---
 
@@ -1075,7 +1087,7 @@ specify the view index (0 by default).
 
 **`GUI.list_views(self, cls)`**
 
-Return the list of views deriving from a given class.
+Return the list of views which are instances of a given class.
 
 ---
 
@@ -7679,8 +7691,6 @@ When this component is attached to a GUI, the following events are emitted:
     When the Supervisor instance is attached to the GUI.
 * `request_split()`
     When the user requests to split (typically, a lasso has been drawn before).
-* `error(msg)`
-    When an error is raised.
 * `color_mapping_changed()`
     When the color mapping changed.
 * `save_clustering(spike_clusters, cluster_groups, *cluster_labels)`
@@ -8609,13 +8619,21 @@ following the probe geometry.
 **Constructor**
 
 
-* `waveforms : function` 　 
-    Maps a cluster id to a Bunch with the following attributes:
+* `waveforms : dict of functions` 　 
+    Every function maps a cluster id to a Bunch with the following attributes:
+
     * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
     * `channel_ids` : the channel ids corresponding to the third dimension in `data`
     * `channel_positions` : a 2D array with the coordinates of the channels on the probe
     * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
     * `alpha` : the alpha transparency channel
+
+    The keys of the dictionary are called **waveform types**. The `next_waveforms_type`
+    action cycles through all available waveform types. The key `waveforms` is mandatory.
+
+
+* `waveform_type : str` 　 
+    Default key of the waveforms dictionary to plot initially.
 
 
 * `channel_labels : array-like` 　 
@@ -8694,6 +8712,15 @@ Increase the scaling parameter.
 **`WaveformView.narrow(self)`**
 
 Decrease the horizontal scaling of the waveforms.
+
+---
+
+#### WaveformView.next_waveforms_type
+
+
+**`WaveformView.next_waveforms_type(self)`**
+
+Switch to the next waveforms type.
 
 ---
 
@@ -8816,6 +8843,15 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### WaveformView.toggle_mean_waveforms
+
+
+**`WaveformView.toggle_mean_waveforms(self, checked)`**
+
+Switch to the `mean_waveforms` type, if it is available.
+
+---
+
 #### WaveformView.toggle_show_labels
 
 
@@ -8919,8 +8955,8 @@ Controller for the Template GUI.
 
 **Constructor**
 
-* `dat_path : str or Path or list` 　 
-    Path to the raw data file(s)
+* `dir_path : str or Path` 　 
+    Path to the data directory
 
 * `config_dir : str or Path` 　 
     Path to the configuration directory
@@ -8932,6 +8968,12 @@ Controller for the Template GUI.
     List of plugins to manually activate, optional (the plugins are automatically loaded from
     the user configuration directory).
 
+* `clear_cache : boolean` 　 
+    Whether to clear the cache on startup.
+
+* `enable_threading : boolean` 　 
+    Whether to enable threading in the views when selecting clusters.
+
 ---
 
 #### TemplateController.create_amplitude_view
@@ -8939,7 +8981,7 @@ Controller for the Template GUI.
 
 **`TemplateController.create_amplitude_view(self)`**
 
-Create the amplitude view.
+
 
 ---
 
@@ -8966,7 +9008,7 @@ Create a correlogram view.
 
 **`TemplateController.create_gui(self, default_views=None, **kwargs)`**
 
-Create the template GUI.
+Create the GUI.
 
 **Constructor**
 
@@ -9063,7 +9105,8 @@ Return regularly spaced spikes.
 
 **`TemplateController.get_best_channel(self, cluster_id)`**
 
-Return the best channel of a given cluster.
+Return the best channel of a given cluster. This is the first channel returned
+by `get_best_channels()`.
 
 ---
 
@@ -9130,6 +9173,15 @@ Return the depth of a cluster.
 
 ---
 
+#### TemplateController.get_spike_feature_amplitudes
+
+
+**`TemplateController.get_spike_feature_amplitudes(self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs)`**
+
+Return the features for the specified channel and PC.
+
+---
+
 #### TemplateController.get_spike_ids
 
 
@@ -9142,7 +9194,7 @@ Return part or all of spike ids belonging to a given cluster.
 #### TemplateController.get_spike_raw_amplitudes
 
 
-**`TemplateController.get_spike_raw_amplitudes(self, cluster_id, load_all=False)`**
+**`TemplateController.get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs)`**
 
 Return the maximum amplitude of the raw waveforms across all channels.
 
@@ -9151,7 +9203,7 @@ Return the maximum amplitude of the raw waveforms across all channels.
 #### TemplateController.get_spike_template_amplitudes
 
 
-**`TemplateController.get_spike_template_amplitudes(self, cluster_id, load_all=False)`**
+**`TemplateController.get_spike_template_amplitudes(self, spike_ids, **kwargs)`**
 
 Return the template amplitudes multiplied by the spike's amplitude.
 
@@ -9193,10 +9245,39 @@ Return the largest template associated to a cluster.
 
 ---
 
-#### TemplateController.similarity
+#### TemplateController.on_save_clustering
 
 
-**`TemplateController.similarity(self, cluster_id)`**
+**`TemplateController.on_save_clustering(self, sender, spike_clusters, groups, *labels)`**
+
+Save the modified data.
+
+---
+
+#### TemplateController.peak_channel_similarity
+
+
+**`TemplateController.peak_channel_similarity(self, cluster_id)`**
+
+Return the list of similar clusters to a given cluster, just on the basis of the
+peak channel.
+
+**Parameters**
+
+* `cluster_id : int` 　 
+
+**Returns**
+
+* `similarities : list` 　 
+    List of tuples `(other_cluster_id, similarity_value)` sorted by decreasing
+    similarity value.
+
+---
+
+#### TemplateController.template_similarity
+
+
+**`TemplateController.template_similarity(self, cluster_id)`**
 
 Return the list of similar clusters to a given cluster.
 
@@ -9209,11 +9290,11 @@ Object holding all data of a KiloSort/phy dataset.
 **Constructor**
 
 
-* `dat_path : str, Path, or list` 　 
-    Path to the raw data files.
-
 * `dir_path : str or Path` 　 
     Path to the dataset directory
+
+* `dat_path : str, Path, or list` 　 
+    Path to the raw data files.
 
 * `dtype : NumPy dtype` 　 
     Data type of the raw data file
@@ -9278,16 +9359,6 @@ Return the spike ids that belong to a given template.
 **`TemplateModel.get_features(self, spike_ids, channel_ids)`**
 
 Return sparse features for given spikes.
-
----
-
-#### TemplateModel.get_metadata
-
-
-**`TemplateModel.get_metadata(self, name)`**
-
-Return a dictionary {cluster_id: value} for a cluster metadata
-field.
 
 ---
 
@@ -9379,15 +9450,6 @@ a TSV file.
 **`TemplateModel.save_spike_clusters(self, spike_clusters)`**
 
 Save the spike clusters.
-
----
-
-#### TemplateModel.metadata_fields
-
-
-**`TemplateModel.metadata_fields`**
-
-List of metadata fields.
 
 ---
 

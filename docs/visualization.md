@@ -167,8 +167,10 @@ Keyboard shortcuts for WaveformView
 - extend_vertically                        shift+up
 - increase                                 ctrl+up
 - narrow                                   ctrl+left
+- next_waveforms_type                      w
 - shrink_horizontally                      shift+left
 - shrink_vertically                        shift+down
+- toggle_mean_waveforms                    m
 - toggle_show_labels                       ctrl+l
 - toggle_waveform_overlap                  o
 - widen                                    ctrl+right
