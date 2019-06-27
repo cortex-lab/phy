@@ -474,7 +474,7 @@ class Debouncer(object):
     """
 
     _log_level = 5
-    delay = 350
+    delay = 500
 
     def __init__(self, delay=None):
         self.delay = delay or self.delay  # minimum delay between job executions, in ms.

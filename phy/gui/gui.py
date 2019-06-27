@@ -161,9 +161,8 @@ class GUI(QMainWindow):
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
         QMetaObject.connectSlotsByName(self)
-        self.setDockOptions(QMainWindow.AllowTabbedDocks |
-                            QMainWindow.AllowNestedDocks
-                            )
+        self.setDockOptions(
+            QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
         self.setAnimated(False)
 
         logger.debug("Creating GUI.")
@@ -198,6 +197,7 @@ class GUI(QMainWindow):
         self.state = GUIState(state_path, default_state_path=default_state_path, **kwargs)
 
         # View creator: dictionary {view_class: function_that_adds_view}
+        self.default_views = default_views or ()
         self.view_creator = view_creator or {}
         # View count: take the requested one, or the GUI state one.
         self._requested_view_count = (
@@ -253,7 +253,7 @@ class GUI(QMainWindow):
         # Add "Add view" action.
         for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
-                partial(self._create_and_add_view, view_name),
+                partial(self.create_and_add_view, view_name),
                 submenu='&New view',
                 name='Add %s' % view_name,
                 docstring="Add %s" % view_name,
@@ -354,7 +354,7 @@ class GUI(QMainWindow):
         view.name = name
         return name
 
-    def _create_and_add_view(self, view_name):
+    def create_and_add_view(self, view_name):
         """Create a view and add it to the GUI."""
         assert isinstance(view_name, str)
         fn = self.view_creator.get(view_name, None)
@@ -376,13 +376,19 @@ class GUI(QMainWindow):
     def create_views(self):
         """Create and add as many views as specified in view_count."""
         self.view_actions.separator()
-        req_view_count = self._requested_view_count.items()
-        for view_name, n_views in req_view_count:
+        # Keep the order of self.default_views.
+        view_names = [vn for vn in self.default_views if vn in self._requested_view_count]
+        # We add the views in the requested view count, but not in the default views.
+        view_names.extend([
+            vn for vn in self._requested_view_count.keys() if vn not in self.default_views])
+        # We add the view in the order they appear in the default views.
+        for view_name in view_names:
+            n_views = self._requested_view_count[view_name]
             if n_views <= 0:
                 continue
             assert n_views >= 1
             for i in range(n_views):
-                self._create_and_add_view(view_name)
+                self.create_and_add_view(view_name)
 
     def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
         """Add a dock widget to the main window.
