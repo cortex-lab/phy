@@ -470,11 +470,12 @@ class ActionCreator(object):
         self.add(w, 'move', prompt=True, n_args=2)
         for which in ('best', 'similar', 'all'):
             for group in ('noise', 'mua', 'good', 'unsorted'):
-                self.add(w, 'move_%s_to_%s' % (which, group),
-                         method_name='move',
-                         method_args=(group, which),
-                         submenu='Move to %s' % which,
-                         docstring='Move %s to %s.' % (which, group))
+                self.add(
+                    w, 'move_%s_to_%s' % (which, group),
+                    method_name='move',
+                    method_args=(group, which),
+                    submenu='Move to %s' % which,
+                    docstring='Move %s to %s.' % (which, group))
         self.edit_actions.separator()
 
         # Label.
@@ -599,8 +600,6 @@ class Supervisor(object):
         When the Supervisor instance is attached to the GUI.
     * `request_split()`
         When the user requests to split (typically, a lasso has been drawn before).
-    * `error(msg)`
-        When an error is raised.
     * `color_mapping_changed()`
         When the color mapping changed.
     * `save_clustering(spike_clusters, cluster_groups, *cluster_labels)`
@@ -1032,10 +1031,8 @@ class Supervisor(object):
             assert spike_ids.dtype == np.int64
             assert spike_ids.ndim == 1
         if len(spike_ids) == 0:
-            msg = ("You first need to select spikes in the feature "
-                   "view with a few Ctrl+Click around the spikes "
-                   "that you want to split.")
-            emit('error', self, msg)
+            logger.warning(
+                """No spikes selected, cannot split.""")
             return
         out = self.clustering.split(
             spike_ids, spike_clusters_rel=spike_clusters_rel)

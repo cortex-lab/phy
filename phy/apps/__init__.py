@@ -147,12 +147,16 @@ def cli_template_describe(ctx, params_path):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--channel-group', type=int)
 @click.option('--clustering', type=str)
+@click.option(
+    '--clear-cache/--no-clear-cache', default=False,
+    help="Clear the .phy cache in the data directory.")
 @click.pass_context
-def cli_kwik_gui(ctx, path, channel_group=None, clustering=None):
+def cli_kwik_gui(ctx, path, channel_group=None, clustering=None, clear_cache=None):
     """Launch the Kwik GUI on a Kwik file."""
     from .kwik.gui import kwik_gui
     with capture_exceptions():
-        kwik_gui(path, channel_group=channel_group, clustering=clustering)
+        assert path
+        kwik_gui(path, channel_group=channel_group, clustering=clustering, clear_cache=clear_cache)
 
 
 @phycli.command('kwik-describe')
@@ -163,6 +167,7 @@ def cli_kwik_gui(ctx, path, channel_group=None, clustering=None):
 def cli_kwik_describe(ctx, path, channel_group=0, clustering='main'):
     """Describe a Kwik file."""
     from .kwik.gui import kwik_describe
+    assert path
     kwik_describe(path, channel_group=channel_group, clustering=clustering)
 
 

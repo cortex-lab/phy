@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Testing the Base controller."""
+"""Integration tests for the GUIs."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,25 +9,33 @@
 from itertools import cycle, islice
 import logging
 import os
+from pathlib import Path
+import unittest
 
 import numpy as np
-from pytest import fixture
+from pytestqt.plugin import QtBot
 
-from phylib.utils import connect, Bunch, reset
+from phylib.conftest import TemporaryDirectory_
 from phylib.io.mock import (
     artificial_features, artificial_traces, artificial_spike_clusters, artificial_spike_samples,
     artificial_waveforms
 )
-from phy.cluster.views import WaveformView
-from phy.gui.qt import Debouncer
+
+from phylib.utils import connect, Bunch, reset, emit
+
+from phy.cluster.views import (
+    WaveformView, FeatureView, AmplitudeView, TraceView, TemplateView,
+)
+from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
+from phy.plot.tests import mouse_click
 from ..base import BaseController, WaveformMixin, FeatureMixin, TraceMixin, TemplateMixin
 
 logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
-# Fixtures
+# Mock models and controller classes
 #------------------------------------------------------------------------------
 
 class MyModel(object):
@@ -75,6 +83,7 @@ class MyModel(object):
 
 class MyController(BaseController):
     """Default controller."""
+
     def get_best_channels(self, cluster_id):
         return self.model._get_some_channels(cluster_id, 5)
 
@@ -104,93 +113,362 @@ class MyControllerFull(TemplateMixin, WaveformMixin, FeatureMixin, TraceMixin, M
     pass
 
 
-def _controller(qtbot, tempdir, cls):
-    Debouncer.delay = 1
-
+def _mock_controller(tempdir, cls):
     model = MyModel()
-    controller = cls(
+    return cls(
         dir_path=tempdir, config_dir=tempdir / 'config', model=model,
         clear_cache=True, enable_threading=False)
-    gui = controller.create_gui(do_prompt_save=False)
-
-    b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=controller.supervisor.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=controller.supervisor.similarity_view)
-    gui.show()
-    qtbot.addWidget(gui)
-    qtbot.waitForWindowShown(gui)
-    b.wait()
-
-    yield controller, gui
-    gui.close()
-
-    # NOTE: make sure all callback functions are unconnected at the end of the tests
-    # to avoid side-effects and spurious dependencies between tests.
-    reset()
-
-
-@fixture(params=[
-    MyController,
-    MyControllerW,
-    MyControllerF,
-    MyControllerT,
-    MyControllerTmp,
-    MyControllerFull,
-])
-def controller(request, qtbot, tempdir):
-    yield from _controller(qtbot, tempdir, request.param)
-
-
-@fixture
-def controller_full(qtbot, tempdir):
-    yield from _controller(qtbot, tempdir, MyControllerFull)
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Base classes
 #------------------------------------------------------------------------------
 
-def test_base_gui_0(qtbot, tempdir, controller):
-    controller, gui = controller
-    s = controller.supervisor
+class BaseControllerTests(object):
 
-    delay = 50
+    # Methods to override
+    #--------------------------------------------------------------------------
 
-    # Select and view actions.
-    for actions in (s.select_actions, s.view_actions):
-        for name, action_obj in actions._actions_dict.items():
-            if not action_obj.prompt:
-                logger.info(name)
-                action_obj.qaction.trigger()
-                qtbot.wait(delay)
+    @classmethod
+    def get_controller(cls, tempdir):
+        raise NotImplementedError()
 
-    # Merge action.
-    s.select_actions.next()
-    s.block()
+    # Convenient properties
+    #--------------------------------------------------------------------------
 
-    s.actions.merge()
-    s.block()
+    @property
+    def qtbot(self):
+        return self.__class__._qtbot
 
-    # Succession of undo and redo.
-    for _ in range(3):
+    @property
+    def controller(self):
+        return self.__class__._controller
+
+    @property
+    def supervisor(self):
+        return self.controller.supervisor
+
+    @property
+    def cluster_view(self):
+        return self.controller.supervisor.cluster_view
+
+    @property
+    def similarity_view(self):
+        return self.controller.supervisor.similarity_view
+
+    @property
+    def cluster_ids(self):
+        return self.controller.supervisor.clustering.cluster_ids
+
+    @property
+    def gui(self):
+        return self.__class__._gui
+
+    @property
+    def selected(self):
+        return self.controller.supervisor.selected
+
+    @property
+    def amplitude_view(self):
+        return self.gui.list_views(AmplitudeView)[0]
+
+    # Convenient methods
+    #--------------------------------------------------------------------------
+
+    def stop(self):
+        create_app().exec_()
+        self.gui.close()
+
+    def next(self):
+        s = self.controller.supervisor
+        s.select_actions.next()
+        s.block()
+
+    def next_best(self):
+        s = self.controller.supervisor
+        s.select_actions.next_best()
+        s.block()
+
+    def label(self, name, value):
+        s = self.controller.supervisor
+        s.actions.label(name, value)
+        s.block()
+
+    def merge(self):
+        s = self.controller.supervisor
+        s.actions.merge()
+        s.block()
+
+    def split(self):
+        s = self.controller.supervisor
+        s.actions.split()
+        s.block()
+
+    def undo(self):
+        s = self.controller.supervisor
         s.actions.undo()
         s.block()
 
+    def redo(self):
+        s = self.controller.supervisor
         s.actions.redo()
         s.block()
 
-    qtbot.wait(delay)
+    def move(self, w):
+        s = self.controller.supervisor
+        getattr(s.actions, 'move_%s' % w)()
+        s.block()
 
-    if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
-        qtbot.stop()
+    def lasso(self, view, scale=1.):
+        w, h = view.canvas.get_size()
+        w *= scale
+        h *= scale
+        mouse_click(self.qtbot, view.canvas, (1, 1), modifiers=('Control',))
+        mouse_click(self.qtbot, view.canvas, (w - 1, 1), modifiers=('Control',))
+        mouse_click(self.qtbot, view.canvas, (w - 1, h - 1), modifiers=('Control',))
+        mouse_click(self.qtbot, view.canvas, (1, h - 1), modifiers=('Control',))
+
+    # Fixtures
+    #--------------------------------------------------------------------------
+
+    @classmethod
+    def setUpClass(cls):
+        cls._qtbot = QtBot(create_app())
+        cls._tempdir_ = TemporaryDirectory_()
+        cls._tempdir = Path(cls._tempdir_.__enter__())
+
+        Debouncer.delay = 1
+
+        controller = cls.get_controller(cls._tempdir)
+        cls._gui = controller.create_gui(do_prompt_save=False)
+        cls._controller = controller
+
+        b = Barrier()
+        connect(b('cluster_view'), event='ready', sender=controller.supervisor.cluster_view)
+        connect(b('similarity_view'), event='ready', sender=controller.supervisor.similarity_view)
+        cls._gui.show()
+        # cls._qtbot.addWidget(cls._gui)
+        cls._qtbot.waitForWindowShown(cls._gui)
+        b.wait()
+
+    @classmethod
+    def tearDownClass(cls):
+
+        if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+            cls._qtbot.stop()
+        cls._gui.close()
+        cls._gui.deleteLater()
+
+        cls._tempdir_.__exit__(None, None, None)
+
+        # NOTE: make sure all callback functions are unconnected at the end of the tests
+        # to avoid side-effects and spurious dependencies between tests.
+        reset()
+
+    # Common test methods
+    #--------------------------------------------------------------------------
+
+    def test_common_1(self):
+        """Select one cluster."""
+        self.next_best()
+        self.assertEqual(len(self.selected), 1)
+
+    def test_common_2(self):
+        """Select one similar cluster."""
+        self.next()
+        self.assertEqual(len(self.selected), 2)
+
+    def test_common_3(self):
+        """Select another similar cluster."""
+        self.next()
+        self.assertEqual(len(self.selected), 2)
+
+    def test_common_4(self):
+        """Merge the selected clusters."""
+        self.merge()
+        self.assertEqual(len(self.selected), 1)
+
+    def test_common_5(self):
+        """Select a similar cluster."""
+        self.next()
+        self.assertEqual(len(self.selected), 2)
+
+    def test_common_6(self):
+        """Undo/redo the merge several times."""
+        for _ in range(3):
+            self.undo()
+            self.assertEqual(len(self.selected), 2)
+
+            self.redo()
+            self.assertEqual(len(self.selected), 2)
+
+    def test_common_7(self):
+        """Move action."""
+        self.move('similar_to_noise')
+        self.assertEqual(len(self.selected), 2)
+
+    def test_common_8(self):
+        """Move action."""
+        self.move('best_to_good')
+        self.assertEqual(len(self.selected), 1)
+
+    def test_common_9(self):
+        """Label action."""
+        self.next()
+        self.label('new_label', 3)
 
 
-def test_base_gui_1(qtbot, tempdir, controller_full):
-    controller, gui = controller_full
+class GlobalViewsTests(object):
+    def test_global_sort_1(self):
+        cv = self.supervisor.cluster_view
+        emit('table_sort', cv, self.cluster_ids[::-1])
 
-    for view_name in ('IPythonView', 'ProbeView', 'RasterView', 'TemplateView'):
-        gui._create_and_add_view(view_name)
-        qtbot.wait(50)
+    def test_global_filter_1(self):
+        cv = self.supervisor.cluster_view
+        emit('table_filter', cv, self.cluster_ids[::2])
 
-    # Close a view
-    gui.get_view(WaveformView).close()
+    def test_global_colormap_1(self):
+        self.supervisor.view_actions.colormap_rainbow()
+        self.supervisor.toggle_categorical_colormap(False)
+
+
+#------------------------------------------------------------------------------
+# Mock test cases
+#------------------------------------------------------------------------------
+
+class MockControllerTests(BaseControllerTests, GlobalViewsTests, unittest.TestCase):
+    """Empty mock controller."""
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _mock_controller(tempdir, MyController)
+
+    def test_create_ipython_view(self):
+        self.gui.create_and_add_view('IPythonView')
+
+    def test_create_raster_view(self):
+        view = self.gui.create_and_add_view('RasterView')
+        mouse_click(self.qtbot, view.canvas, (10, 10), modifiers=('Control',))
+
+
+class MockControllerWTests(BaseControllerTests, unittest.TestCase):
+    """Mock controller with waveforms."""
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _mock_controller(tempdir, MyControllerW)
+
+    @property
+    def waveform_view(self):
+        return self.gui.list_views(WaveformView)[0]
+
+    def test_waveform_view(self):
+        self.waveform_view.actions.toggle_mean_waveforms(True)
+        self.waveform_view.actions.next_waveforms_type()
+        self.waveform_view.actions.change_n_spikes_waveforms(200)
+
+
+class MockControllerFTests(BaseControllerTests, unittest.TestCase):
+    """Mock controller with features."""
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _mock_controller(tempdir, MyControllerF)
+
+    @property
+    def feature_view(self):
+        return self.gui.list_views(FeatureView)[0]
+
+    @property
+    def amplitude_view(self):
+        return self.gui.list_views(AmplitudeView)[0]
+
+    def test_feature_view_split(self):
+        self.next()
+        n = max(self.cluster_ids)
+        self.lasso(self.feature_view, .25)
+        self.split()
+        # Split one cluster => Two new clusters should be selected after the split.
+        assert self.selected[:2] == [n + 1, n + 2]
+
+    def test_select_feature(self):
+        self.next()
+
+        fv = self.feature_view
+        # Select feature in feature view.
+        w, h = fv.canvas.get_size()
+        w, h = w / 4, h / 4
+        x, y = w / 2, h / 2
+        mouse_click(self.qtbot, fv.canvas, (x, y), button='Right', modifiers=('Alt',))
+
+
+class MockControllerTTests(BaseControllerTests, unittest.TestCase):
+    """Mock controller with traces."""
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _mock_controller(tempdir, MyControllerT)
+
+    @property
+    def trace_view(self):
+        return self.gui.list_views(TraceView)[0]
+
+    def test_trace_view(self):
+        self.trace_view.actions.go_to_next_spike()
+        self.trace_view.actions.go_to_previous_spike()
+        self.trace_view.actions.toggle_highlighted_spikes(True)
+        mouse_click(self.qtbot, self.trace_view.canvas, (100, 100), modifiers=('Control',))
+
+
+class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
+    """Mock controller with templates."""
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _mock_controller(tempdir, MyControllerTmp)
+
+    @property
+    def template_view(self):
+        return self.gui.list_views(TemplateView)[0]
+
+    def test_template_view_select(self):
+        mouse_click(self.qtbot, self.template_view.canvas, (100, 100), modifiers=('Control',))
+
+    def test_split_template_amplitude(self):
+        self.next()
+        self.amplitude_view.amplitude_name = 'template'
+        self.amplitude_view.plot()
+        self.lasso(self.amplitude_view)
+        self.split()
+
+
+class MockControllerFullTests(BaseControllerTests, unittest.TestCase):
+    """Mock controller with all views."""
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _mock_controller(tempdir, MyControllerFull)
+
+    def test_z1_close_all_views(self):
+        self.next()
+
+        for view in self.gui.views:
+            view.dock_widget.close()
+            self.qtbot.wait(200)
+
+    def test_z2_open_all_views(self):
+        for view_cls in self.controller.view_creator.keys():
+            self.gui.create_and_add_view(view_cls)
+            self.qtbot.wait(200)
+
+    def test_z3_select(self):
+        self.next()
+        self.next()
+
+    def test_z4_open_new_views(self):
+        for view_cls in self.controller.view_creator.keys():
+            self.gui.create_and_add_view(view_cls)
+            self.qtbot.wait(200)
+
+    def test_z5_select(self):
+        self.next_best()
+        self.next()

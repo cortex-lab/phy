@@ -8,27 +8,19 @@
 #------------------------------------------------------------------------------
 
 import logging
-from operator import itemgetter
 from pathlib import Path
 import shutil
 from tempfile import TemporaryDirectory
 
 import numpy as np
 
-from phylib.stats import correlograms
 from phylib.stats.clusters import get_waveform_amplitude
-from phylib.io.array import Selector
-from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils.color import ClusterColorSelector
-from phy.cluster.supervisor import Supervisor
-from phy.cluster.views import (
-    WaveformView, FeatureView, TraceView, CorrelogramView, select_traces)
-from phy.cluster.views.trace import _iter_spike_waveforms
-from phy.gui import create_app, run_app, GUI
-from phy.utils.context import Context, _cache_methods
-from phy.utils.plugin import attach_plugins
-from .. import _add_log_file
+from phylib.utils import Bunch, connect
 
+from phy.utils.context import Context
+from phy.gui import create_app, run_app
+from ..base import WaveformMixin, FeatureMixin, TraceMixin, BaseController
+from phy.cluster.supervisor import Supervisor
 
 logger = logging.getLogger(__name__)
 
@@ -45,98 +37,114 @@ except ImportError:  # pragma: no cover
 
 def _backup(path):
     """Backup a file."""
+    assert path.exists()
     path_backup = str(path) + '.bak'
     if not Path(path_backup).exists():
         logger.info("Backup `%s`.", path_backup)
         shutil.copy(path, path_backup)
 
 
-def _get_distance_max(pos):
-    return np.sqrt(np.sum(pos.max(axis=0) - pos.min(axis=0)) ** 2)
+class KwikModelGUI(KwikModel):
+    @property
+    def features(self):
+        return self.all_features
+
+    def get_features(self, spike_ids, channel_ids):
+        return self.all_features[spike_ids][:, channel_ids, :]
 
 
-class KwikController(object):
-    """Controller for the Kwik GUI."""
+class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
+    """Controller for the Kwik GUI.
+
+    Constructor
+    -----------
+    kwik_path : str or Path
+        Path to the kwik file
+    channel_group : int
+        The default channel group to load
+    clustering : str
+        The default clustering to load
+    config_dir : str or Path
+        Path to the configuration directory
+    model : Model
+        Model object, optional (it is automatically created otherwise)
+    plugins : list
+        List of plugins to manually activate, optional (the plugins are automatically loaded from
+        the user configuration directory).
+    clear_cache : boolean
+        Whether to clear the cache on startup.
+    enable_threading : boolean
+        Whether to enable threading in the views when selecting clusters.
+
+    """
 
     gui_name = 'KwikGUI'
 
-    n_spikes_waveforms = 100
-    batch_size_waveforms = 10
+    # Classes to load by default, in that order. The view refresh follows the same order
+    # when the cluster selection changes.
+    default_views = (
+        'CorrelogramView',
+        'ISIView',
+        'WaveformView',
+        'FeatureView',
+        'AmplitudeView',
+        'FiringRateView',
+        'TraceView',
+    )
 
-    n_spikes_features = 10000
-    n_spikes_amplitudes = 10000
-
-    n_spikes_close_clusters = 100
-    n_closest_channels = 16
-
-    def __init__(self, kwik_path, config_dir=None, **kwargs):
+    def __init__(self, kwik_path=None, channel_group=None, clustering=None, **kwargs):
+        assert kwik_path
         kwik_path = Path(kwik_path)
-        _backup(kwik_path)
-        self.model = KwikModel(str(kwik_path), **kwargs)
-        m = self.model
-        self.channel_vertical_order = np.argsort(m.channel_positions[:, 1])
-        self.distance_max = _get_distance_max(self.model.channel_positions)
-        self.cache_dir = kwik_path.parent / '.phy'
-        cg = kwargs.get('channel_group', None)
-        if cg is not None:
-            self.cache_dir = self.cache_dir / str(cg)
-        self.context = Context(self.cache_dir)
-        self.config_dir = config_dir
-        self.view_creator = {
-            'WaveformView': self.create_waveform_view,
-            'TraceView': self.create_trace_view,
-            'FeatureView': self.create_feature_view,
-            'CorrelogramView': self.create_correlogram_view,
-        }
-
-        self._set_cache()
-        self.supervisor = self._set_supervisor()
-        self.selector = self._set_selector()
-        self.color_selector = ClusterColorSelector(
-            cluster_meta=self.supervisor.cluster_meta,
-            cluster_metrics=self.supervisor.cluster_metrics,
-            cluster_ids=self.supervisor.clustering.cluster_ids,
-        )
-
-        attach_plugins(self, plugins=kwargs.get('plugins', None),
-                       config_dir=config_dir)
+        dir_path = kwik_path.parent
+        self.channel_group = channel_group
+        self.clustering = clustering
+        super(KwikController, self).__init__(kwik_path=kwik_path, dir_path=dir_path, **kwargs)
 
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _set_cache(self):
-        memcached = ('get_best_channels',
-                     'get_probe_depth',
-                     '_get_mean_masks',
-                     '_get_mean_waveforms',
-                     )
-        cached = ('_get_waveforms',
-                  '_get_features',
-                  '_get_masks',
-                  )
-        _cache_methods(self, memcached, cached)
+    def _set_cache(self, clear_cache=None):
+        """Set up the cache, clear it if required, and create the Context instance."""
+        self.cache_dir = self.dir_path / '.phy'
+        if self.channel_group is not None:
+            self.cache_dir = self.cache_dir / str(self.channel_group)
+        if clear_cache:
+            logger.warn("Deleting the cache directory %s.", self.cache_dir)
+            shutil.rmtree(self.cache_dir, ignore_errors=True)
+        self.context = Context(self.cache_dir)
+
+    def _create_model(self, **kwargs):
+        kwik_path = kwargs.get('kwik_path')
+        _backup(kwik_path)
+        kwargs = {k: v for k, v in kwargs.items() if k in ('clustering', 'channel_group')}
+        return KwikModelGUI(str(kwik_path), **kwargs)
 
     def _set_supervisor(self):
+        """Create the Supervisor instance."""
         # Load the new cluster id.
-        new_cluster_id = self.context.load('new_cluster_id'). \
-            get('new_cluster_id', None)
+        new_cluster_id = self.context.load('new_cluster_id').get('new_cluster_id', None)
+
+        # Cluster groups.
         cluster_groups = self.model.cluster_groups
-        cluster_metrics = {
-            'channel': self.get_best_channel,
-            'depth': self.get_probe_depth,
-        }
-        supervisor = Supervisor(self.model.spike_clusters,
-                                similarity=self.similarity,
-                                cluster_groups=cluster_groups,
-                                cluster_metrics=cluster_metrics,
-                                new_cluster_id=new_cluster_id,
-                                context=self.context,
-                                )
+
+        # Create the Supervisor instance.
+        supervisor = Supervisor(
+            spike_clusters=self.model.spike_clusters,
+            cluster_groups=cluster_groups,
+            cluster_metrics=self.cluster_metrics,
+            similarity=self.similarity_functions[self.similarity],
+            new_cluster_id=new_cluster_id,
+            context=self.context,
+        )
+
+        # Connect the `save_clustering` event raised by the supervisor when saving
+        # to the model's saving functions.
+        connect(self.on_save_clustering, sender=supervisor)
 
         @connect(sender=supervisor)
         def on_attach_gui(sender):
-            @supervisor.actions.add
-            def recluster():
+            @supervisor.actions.add(shortcut='shift+ctrl+k', set_busy=True)
+            def recluster(cluster_ids=None):
                 """Relaunch KlustaKwik on the selected clusters."""
                 # Selected clusters.
                 cluster_ids = supervisor.selected
@@ -154,66 +162,9 @@ class KwikController(object):
                     )
                 self.supervisor.split(spike_ids, spike_clusters)
 
-        # Save.
-        @connect(sender=supervisor)
-        def on_save_clustering(sender, spike_clusters, groups, *labels):
-            """Save the modified data."""
-            groups = {c: g.title() for c, g in groups.items()}
-            self.model.save(spike_clusters, groups)
+            self.color_selector = supervisor.color_selector
 
-        return supervisor
-
-    def _set_selector(self):
-        def spikes_per_cluster(cluster_id):
-            return self.supervisor.clustering.spikes_per_cluster[cluster_id]
-        return Selector(spikes_per_cluster)
-
-    # Model methods
-    # -------------------------------------------------------------------------
-
-    def get_best_channel(self, cluster_id):
-        """Get the best channel of a given cluster."""
-        return self.get_best_channels(cluster_id)[0]
-
-    def get_best_channels(self, cluster_id):
-        """Get the best channels of a given cluster."""
-        mm = self._get_mean_masks(cluster_id)
-        channel_ids = np.argsort(mm)[::-1]
-        ind = mm[channel_ids] > .1
-        if np.sum(ind) > 0:
-            channel_ids = channel_ids[ind]
-        else:  # pragma: no cover
-            channel_ids = channel_ids[:4]
-        return channel_ids
-
-    def get_cluster_position(self, cluster_id):
-        """Get the position of a cluster on the probe."""
-        channel_id = self.get_best_channel(cluster_id)
-        return self.model.channel_positions[channel_id]
-
-    def get_probe_depth(self, cluster_id):
-        """Get the depth of a cluster on the probe."""
-        return self.get_cluster_position(cluster_id)[1]
-
-    def similarity(self, cluster_id):
-        """Return the list of similar clusters to a given cluster."""
-
-        pos_i = self.get_cluster_position(cluster_id)
-        assert len(pos_i) == 2
-
-        def _sim_ij(cj):
-            """Distance between channel position of clusters i and j."""
-            pos_j = self.get_cluster_position(cj)
-            assert len(pos_j) == 2
-            d = np.sqrt(np.sum((pos_j - pos_i) ** 2))
-            return self.distance_max - d
-
-        out = [(cj, _sim_ij(cj))
-               for cj in self.supervisor.clustering.cluster_ids]
-        return sorted(out, key=itemgetter(1), reverse=True)
-
-    # Waveforms
-    # -------------------------------------------------------------------------
+        self.supervisor = supervisor
 
     def _get_masks(self, cluster_id):
         spike_ids = self.selector.select_spikes(
@@ -228,10 +179,8 @@ class KwikController(object):
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         pos = self.model.channel_positions
-        spike_ids = self.selector.select_spikes([cluster_id],
-                                                self.n_spikes_waveforms,
-                                                self.batch_size_waveforms,
-                                                )
+        spike_ids = self.selector.select_spikes(
+            [cluster_id], self.n_spikes_waveforms, self.batch_size_waveforms)
         data = self.model.all_waveforms[spike_ids]
         mm = self._get_mean_masks(cluster_id)
         mw = np.mean(data, axis=0)
@@ -239,11 +188,12 @@ class KwikController(object):
         masks = self._get_masks(cluster_id)
         # Find the best channels.
         channel_ids = np.argsort(amp)[::-1]
-        return Bunch(data=data[..., channel_ids],
-                     channel_ids=channel_ids,
-                     channel_positions=pos[channel_ids],
-                     masks=masks[:, channel_ids],
-                     )
+        return Bunch(
+            data=data[..., channel_ids],
+            channel_ids=channel_ids,
+            channel_positions=pos[channel_ids],
+            masks=masks[:, channel_ids],
+        )
 
     def _get_mean_waveforms(self, cluster_id):
         b = self._get_waveforms(cluster_id).copy()
@@ -252,208 +202,37 @@ class KwikController(object):
         b['alpha'] = 1.
         return b
 
-    def create_waveform_view(self):
-        f = self._get_waveforms
-        v = WaveformView(waveforms=f)
-        v.shortcuts['toggle_mean_waveforms'] = 'm'
-
-        v.state_attrs += ('show_what',)
-        funs = {
-            'waveforms': self._get_waveforms,
-            'mean_waveforms': self._get_mean_waveforms,
-        }
-
-        # Add extra actions.
-        @connect(sender=v)
-        def on_view_actions_created(sender):
-            # NOTE: this callback function is called in WaveformView.attach().
-
-            # Initialize show_what if it was not set in the GUI state.
-            if not hasattr(v, 'show_what'):
-                v.show_what = 'waveforms'  # pragma: no cover
-            # Set the waveforms function.
-            v.waveforms = funs[v.show_what]
-
-            @v.actions.add(checkable=True, checked=v.show_what == 'mean_waveforms')
-            def toggle_mean_waveforms(checked):
-                v.show_what = 'mean_waveforms' if checked else 'waveforms'
-                v.waveforms = funs[v.show_what]
-                v.on_select(cluster_ids=v.cluster_ids)
-
-            v.actions.separator()
-
-        return v
-
-    # Features
+    # Public methods
     # -------------------------------------------------------------------------
 
-    def _get_spike_ids(self, cluster_id=None, load_all=None):
-        nsf = self.n_spikes_features
-        if cluster_id is None:
-            # Background points.
-            ns = self.model.n_spikes
-            return np.arange(0, ns, max(1, ns // nsf))
-        else:
-            # Load all spikes from the cluster if load_all is True.
-            n = nsf if not load_all else None
-            return self.selector.select_spikes([cluster_id], n)
+    def get_best_channels(self, cluster_id):
+        """Get the best channels of a given cluster."""
+        mm = self._get_mean_masks(cluster_id)
+        channel_ids = np.argsort(mm)[::-1]
+        ind = mm[channel_ids] > .1
+        if np.sum(ind) > 0:
+            channel_ids = channel_ids[ind]
+        else:  # pragma: no cover
+            channel_ids = channel_ids[:4]
+        return channel_ids
 
-    def _get_spike_times(self, cluster_id=None, load_all=None):
-        spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
-        return Bunch(data=self.model.spike_times[spike_ids],
-                     lim=(0., self.model.duration))
-
-    def _get_features(self, cluster_id=None, channel_ids=None, load_all=None):
-        spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
-        # Use the best channels only if a cluster is specified and
-        # channels are not specified.
-        if cluster_id is not None and channel_ids is None:
-            channel_ids = self.get_best_channels(cluster_id)
-        f = self.model.all_features[spike_ids][:, channel_ids]
-        m = self.model.all_masks[spike_ids][:, channel_ids]
-        return Bunch(data=f,
-                     masks=m,
-                     spike_ids=spike_ids,
-                     channel_ids=channel_ids,
-                     )
-
-    def create_feature_view(self):
-        if self.model.all_features is None:
-            return
-        return FeatureView(
-            features=self._get_features,
-            attributes={'time': self._get_spike_times}
-        )
-
-    # Traces
-    # -------------------------------------------------------------------------
-
-    def _get_traces(self, interval, show_all_spikes=False):
-        """Get traces and spike waveforms."""
-        ns = self.model.n_samples_waveforms
-        m = self.model
-        c = self.channel_vertical_order
-
-        traces_interval = select_traces(m.traces, interval,
-                                        sample_rate=m.sample_rate)
-        # Reorder vertically.
-        traces_interval = traces_interval[:, c]
-
-        def gbc(cluster_id):
-            ch = self.get_best_channels(cluster_id)
-            return ch
-
-        out = Bunch(data=traces_interval)
-        out.waveforms = []
-        for b in _iter_spike_waveforms(interval=interval,
-                                       traces_interval=traces_interval,
-                                       model=self.model,
-                                       supervisor=self.supervisor,
-                                       color_selector=self.color_selector,
-                                       n_samples_waveforms=ns,
-                                       get_best_channels=gbc,
-                                       show_all_spikes=show_all_spikes,
-                                       ):
-            b.channel_labels = m.channel_order[b.channel_ids]
-            out.waveforms.append(b)
-        return out
-
-    def _trace_spike_times(self):
-        m = self.model
-        cluster_ids = self.supervisor.selected
-        if len(cluster_ids) == 0:
-            return
-        spc = self.supervisor.clustering.spikes_per_cluster
-        spike_ids = spc[cluster_ids[0]]
-        spike_times = m.spike_times[spike_ids]
-        return spike_times
-
-    def create_trace_view(self):
-        if self.model.traces is None:
-            return
-        m = self.model
-        v = TraceView(
-            traces=self._get_traces, spike_times=self._trace_spike_times, n_channels=m.n_channels,
-            sample_rate=m.sample_rate, duration=m.duration,
-            channel_vertical_order=self.channel_vertical_order)
-
-        # Update the get_traces() function with show_all_spikes.
-        def get_traces(interval):
-            return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
-        v.traces = get_traces
-
-        @connect(sender=v)
-        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
-            # Select the corresponding cluster.
-            self.supervisor.select([cluster_id])
-            # Update the trace view.
-            v.on_select(cluster_ids=[cluster_id])
-
-        return v
-
-    # Correlograms
-    # -------------------------------------------------------------------------
-
-    def _get_correlograms(self, cluster_ids, bin_size, window_size):
-        spike_ids = self.selector.select_spikes(cluster_ids, 100000)
-        st = self.model.spike_times[spike_ids]
-        sc = self.supervisor.clustering.spike_clusters[spike_ids]
-        return correlograms(st,
-                            sc,
-                            sample_rate=self.model.sample_rate,
-                            cluster_ids=cluster_ids,
-                            bin_size=bin_size,
-                            window_size=window_size,
-                            )
-
-    def create_correlogram_view(self):
-        m = self.model
-        return CorrelogramView(
-            correlograms=self._get_correlograms,
-            sample_rate=m.sample_rate,
-        )
-
-    # GUI
-    # -------------------------------------------------------------------------
-
-    def create_gui(self, **kwargs):
-        """Create the Kwik GUI."""
-        gui = GUI(name=self.gui_name,
-                  subtitle=self.model.kwik_path,
-                  config_dir=self.config_dir,
-                  default_state_path=Path(__file__).parent / 'static/state.json',
-                  view_creator=self.view_creator,
-                  view_count={view_name: 1 for view_name in self.view_creator.keys()},
-                  **kwargs)
-        gui.set_default_actions()
-        self.supervisor.attach(gui)
-
-        gui.create_views()
-
-        # Save the memcache when closing the GUI.
-        @connect(sender=gui)
-        def on_close(e=None):
-            self.context.save_memcache()
-            # Unconnect all events GUI and supervisor.
-            unconnect(gui, self.supervisor, *gui.views)
-
-        emit('gui_ready', self, gui)
-
-        return gui
+    def on_save_clustering(self, sender, spike_clusters, groups, *labels):
+        """Save the modified data."""
+        groups = {c: g.title() for c, g in groups.items()}
+        self.model.save(spike_clusters, groups)
+        self._save_cluster_info()
 
 
 #------------------------------------------------------------------------------
 # Kwik commands
 #------------------------------------------------------------------------------
 
-def kwik_gui(path, channel_group=None, clustering=None):  # pragma: no cover
+def kwik_gui(path, channel_group=None, clustering=None, clear_cache=None):  # pragma: no cover
     """Launch the Kwik GUI."""
-    # Create a `phy.log` log file with 0 level.
-    _add_log_file(Path(path).parent / 'phy.log')
-
+    assert path
     create_app()
     controller = KwikController(
-        path, channel_group=channel_group, clustering=clustering)
+        path, channel_group=channel_group, clustering=clustering, clear_cache=clear_cache)
     gui = controller.create_gui()
     gui.show()
     run_app()
@@ -462,4 +241,5 @@ def kwik_gui(path, channel_group=None, clustering=None):  # pragma: no cover
 
 def kwik_describe(path, channel_group=None, clustering=None):
     """Describe a template dataset."""
+    assert path
     KwikModel(path, channel_group=channel_group, clustering=clustering).describe()

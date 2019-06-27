@@ -51,11 +51,34 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     plugins : list
         List of plugins to manually activate, optional (the plugins are automatically loaded from
         the user configuration directory).
+    clear_cache : boolean
+        Whether to clear the cache on startup.
+    enable_threading : boolean
+        Whether to enable threading in the views when selecting clusters.
 
     """
 
     gui_name = 'TemplateGUI'
-    _default_views = ('TemplateFeatureView',)
+
+    # Specific views implemented in this class.
+    _new_views = ('TemplateFeatureView',)
+
+    # Classes to load by default, in that order. The view refresh follows the same order
+    # when the cluster selection changes.
+    default_views = (
+        'WaveformView',
+        'CorrelogramView',
+        'ISIView',
+        'FeatureView',
+        'AmplitudeView',
+        'FiringRateView',
+        'TraceView',
+        'ProbeView',
+        'TemplateFeatureView',
+    )
+
+    # Internal methods
+    # -------------------------------------------------------------------------
 
     def _create_model(self, dir_path=None, **kwargs):
         return TemplateModel(dir_path=dir_path, **kwargs)
@@ -76,40 +99,10 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 
             self.color_selector = supervisor.color_selector
 
-    def get_best_channels(self, cluster_id):
-        """Return the best channels of a given cluster."""
-        template_id = self.get_template_for_cluster(cluster_id)
-        return self.model.get_template(template_id).channel_ids
-
     def _set_similarity_functions(self):
         super(TemplateController, self)._set_similarity_functions()
         self.similarity_functions['template'] = self.template_similarity
         self.similarity = 'template'
-
-    def template_similarity(self, cluster_id):
-        """Return the list of similar clusters to a given cluster."""
-        # Templates of the cluster.
-        temp_i = np.nonzero(self.get_template_counts(cluster_id))[0]
-        # The similarity of the cluster with each template.
-        sims = np.max(self.model.similar_templates[temp_i, :], axis=0)
-
-        def _sim_ij(cj):
-            # Templates of the cluster.
-            if cj < self.model.n_templates:
-                return float(sims[cj])
-            temp_j = np.nonzero(self.get_template_counts(cj))[0]
-            return float(np.max(sims[temp_j]))
-
-        out = [(cj, _sim_ij(cj))
-               for cj in self.supervisor.clustering.cluster_ids]
-        # NOTE: hard-limit to 100 for performance reasons.
-        return sorted(out, key=itemgetter(1), reverse=True)[:100]
-
-    def get_template_amplitude(self, template_id):
-        """Return the maximum amplitude of a template's waveforms across all channels."""
-        waveforms = self.model.get_template_waveforms(template_id)
-        assert waveforms.ndim == 2  # shape: (n_samples, n_channels)
-        return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
 
     def _get_template_features(self, cluster_ids, load_all=False):
         """Get the template features of a pair of clusters."""
@@ -138,14 +131,47 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
             Bunch(x=x1, y=y1, spike_ids=s1),
         ]
 
+    def _set_view_creator(self):
+        super(TemplateController, self)._set_view_creator()
+        self.view_creator['TemplateFeatureView'] = self.create_template_feature_view
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    def get_best_channels(self, cluster_id):
+        """Return the best channels of a given cluster."""
+        template_id = self.get_template_for_cluster(cluster_id)
+        return self.model.get_template(template_id).channel_ids
+
+    def template_similarity(self, cluster_id):
+        """Return the list of similar clusters to a given cluster."""
+        # Templates of the cluster.
+        temp_i = np.nonzero(self.get_template_counts(cluster_id))[0]
+        # The similarity of the cluster with each template.
+        sims = np.max(self.model.similar_templates[temp_i, :], axis=0)
+
+        def _sim_ij(cj):
+            # Templates of the cluster.
+            if cj < self.model.n_templates:
+                return float(sims[cj])
+            temp_j = np.nonzero(self.get_template_counts(cj))[0]
+            return float(np.max(sims[temp_j]))
+
+        out = [(cj, _sim_ij(cj))
+               for cj in self.supervisor.clustering.cluster_ids]
+        # NOTE: hard-limit to 100 for performance reasons.
+        return sorted(out, key=itemgetter(1), reverse=True)[:100]
+
+    def get_template_amplitude(self, template_id):
+        """Return the maximum amplitude of a template's waveforms across all channels."""
+        waveforms = self.model.get_template_waveforms(template_id)
+        assert waveforms.ndim == 2  # shape: (n_samples, n_channels)
+        return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
+
     def create_template_feature_view(self):
         if self.model.template_features is None:
             return
         return TemplateFeatureView(coords=self._get_template_features)
-
-    def _set_view_creator(self):
-        super(TemplateController, self)._set_view_creator()
-        self.view_creator['TemplateFeatureView'] = self.create_template_feature_view
 
 
 #------------------------------------------------------------------------------

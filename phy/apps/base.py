@@ -95,7 +95,7 @@ class WaveformMixin(object):
         'n_spikes_waveforms', 'batch_size_waveforms',
     )
 
-    _default_views = ('WaveformView',)
+    _new_views = ('WaveformView',)
 
     # Map an amplitude type to a method name.
     _amplitude_functions = (
@@ -190,7 +190,7 @@ class FeatureMixin(object):
         'n_spikes_features', 'n_spikes_features_background',
     )
 
-    _default_views = ('FeatureView',)
+    _new_views = ('FeatureView',)
 
     _amplitude_functions = (
         ('feature', 'get_spike_feature_amplitudes'),
@@ -209,6 +209,7 @@ class FeatureMixin(object):
             return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
         features = self._get_spike_features(spike_ids, [channel_id]).data
+        logger.log(5, "Show channel %s and PC %s in amplitude view.", channel_id, pc)
         return features[:, 0, pc or 0]
 
     def create_amplitude_view(self):
@@ -311,7 +312,7 @@ class TemplateMixin(object):
 
     """
 
-    _default_views = ('TemplateView',)
+    _new_views = ('TemplateView',)
 
     _amplitude_functions = (
         ('template', 'get_spike_template_amplitudes'),
@@ -436,6 +437,9 @@ class TemplateMixin(object):
 
 
 class TraceMixin(object):
+
+    _new_views = ('TraceView',)
+
     def _get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
         k = self.model.n_samples_waveforms
@@ -531,6 +535,10 @@ class BaseController(object):
     plugins : list
         List of plugins to manually activate, optional (the plugins are automatically loaded from
         the user configuration directory).
+    clear_cache : boolean
+        Whether to clear the cache on startup.
+    enable_threading : boolean
+        Whether to enable threading in the views when selecting clusters.
 
     Methods to override
     -------------------
@@ -635,8 +643,8 @@ class BaseController(object):
     )
 
     # Views to load by default.
-    _default_views = (
-        'CorrelogramView', 'AmplitudeView', 'ISIView', 'FiringRateView'
+    _new_views = (
+        'CorrelogramView', 'AmplitudeView', 'ISIView', 'FiringRateView', 'ProbeView',
     )
 
     def __init__(
@@ -667,7 +675,10 @@ class BaseController(object):
         # Set the default similarity functions. Other similarity functions can be added by plugins.
         self._set_similarity_functions()
 
-        self.default_views = _concatenate_parents_attributes(self.__class__, '_default_views')
+        # The controller.default_views can be set by the child class, otherwise it is computed
+        # by concatenating all parents _new_views.
+        if getattr(self, 'default_views', None) is None:
+            self.default_views = _concatenate_parents_attributes(self.__class__, '_new_views')
         self._async_callers = {}
         self.config_dir = config_dir
         self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
@@ -711,15 +722,15 @@ class BaseController(object):
         """
         self.view_creator = {
             'CorrelogramView': self.create_correlogram_view,
+            'ISIView': self._make_histogram_view(ISIView, self._get_isi),
+            'FiringRateView': self._make_histogram_view(FiringRateView, self._get_firing_rate),
             'AmplitudeView': self.create_amplitude_view,
             'ProbeView': self.create_probe_view,
             'RasterView': self.create_raster_view,
             'IPythonView': self.create_ipython_view,
-            'ISIView': self._make_histogram_view(ISIView, self._get_isi),
-            'FiringRateView': self._make_histogram_view(FiringRateView, self._get_firing_rate),
         }
         # Spike attributes.
-        for name, arr in self.model.spike_attributes.items():
+        for name, arr in getattr(self.model, 'spike_attributes', {}).items():
             view_name = 'Spike%sView' % name.title()
             self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
 
@@ -974,7 +985,7 @@ class BaseController(object):
         ch = self.get_best_channel(cluster_id)
         return [
             (other, 1.) for other in self.supervisor.clustering.cluster_ids
-            if self.get_best_channel(other) == ch]
+            if ch in self.get_best_channels(other)]
 
     # Public spike methods
     # -------------------------------------------------------------------------
@@ -1082,6 +1093,7 @@ class BaseController(object):
         view = RasterView(
             self.model.spike_times,
             self.supervisor.clustering.spike_clusters,
+            cluster_ids=self.supervisor.clustering.cluster_ids,
             cluster_color_selector=self.supervisor.color_selector,
         )
         self._attach_global_view(view)
