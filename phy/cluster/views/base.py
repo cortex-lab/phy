@@ -485,6 +485,9 @@ class LassoMixin(object):
             points = np.c_[bunch.pos]
             pos.append(points)
             spike_ids.append(bunch.spike_ids)
+        if not pos:  # pragma: no cover
+            logger.warning("Empty lasso.")
+            return np.array([])
         pos = np.vstack(pos)
         pos = range_transform(self.data_bounds, NDC, pos)
         spike_ids = np.concatenate(spike_ids)

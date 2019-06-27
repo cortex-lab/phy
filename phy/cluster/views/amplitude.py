@@ -104,32 +104,6 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         M = max(np.quantile(bunch.amplitudes, self.quantile) for bunch in bunchs)
         return (0, m, self.duration, M)
 
-    def get_clusters_data(self, load_all=None):
-        """Return a list of Bunch instances, with attributes pos and spike_ids."""
-        if not len(self.cluster_ids):
-            return
-        cluster_ids = list(self.cluster_ids)
-        # Don't need the background when splitting.
-        if not load_all:
-            # Add None cluster which means background spikes.
-            cluster_ids = [None] + cluster_ids
-        bunchs = self.amplitudes[self.amplitude_name](cluster_ids, load_all=load_all) or ()
-        # Add a pos attribute in bunchs in addition to x and y.
-        for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
-            spike_ids = _as_array(bunch.spike_ids)
-            spike_times = _as_array(bunch.spike_times)
-            amplitudes = _as_array(bunch.amplitudes)
-            assert spike_ids.shape == spike_times.shape == amplitudes.shape
-            # Ensure that bunch.pos exists, as it used by the LassoMixin.
-            bunch.pos = np.c_[spike_times, amplitudes]
-            assert bunch.pos.ndim == 2
-            bunch.cluster_id = cluster_id
-            bunch.color = (
-                selected_cluster_color(i - 1, self.marker_alpha)
-                # Background amplitude color.
-                if cluster_id is not None else (.5, .5, .5, .5))
-        return bunchs
-
     def _add_histograms(self, bunchs):
         # We do this after get_clusters_data because we need x_max.
         for bunch in bunchs:
@@ -160,6 +134,32 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def _plot_amplitude_name(self):
         """Show the amplitude name."""
         self.text_visual.add_batch_data(pos=[0, 1], anchor=[0, -1], text=self.amplitude_name)
+
+    def get_clusters_data(self, load_all=None):
+        """Return a list of Bunch instances, with attributes pos and spike_ids."""
+        if not len(self.cluster_ids):
+            return
+        cluster_ids = list(self.cluster_ids)
+        # Don't need the background when splitting.
+        if not load_all:
+            # Add None cluster which means background spikes.
+            cluster_ids = [None] + cluster_ids
+        bunchs = self.amplitudes[self.amplitude_name](cluster_ids, load_all=load_all) or ()
+        # Add a pos attribute in bunchs in addition to x and y.
+        for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
+            spike_ids = _as_array(bunch.spike_ids)
+            spike_times = _as_array(bunch.spike_times)
+            amplitudes = _as_array(bunch.amplitudes)
+            assert spike_ids.shape == spike_times.shape == amplitudes.shape
+            # Ensure that bunch.pos exists, as it used by the LassoMixin.
+            bunch.pos = np.c_[spike_times, amplitudes]
+            assert bunch.pos.ndim == 2
+            bunch.cluster_id = cluster_id
+            bunch.color = (
+                selected_cluster_color(i - 1, self.marker_alpha)
+                # Background amplitude color.
+                if cluster_id is not None else (.5, .5, .5, .5))
+        return bunchs
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""

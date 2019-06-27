@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
 import numpy as np
 
 from phylib.io.array import _in_polygon
@@ -16,6 +17,8 @@ from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC, TransformChain
 from .utils import _get_texture
 from .visuals import LineVisual, PolygonVisual
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -447,6 +450,7 @@ class Lasso(object):
         """Add a point to the polygon."""
         x, y = pos.flat if isinstance(pos, np.ndarray) else pos
         self._points.append((x, y))
+        logger.debug("Lasso has %d points.", len(self._points))
         self.update_lasso_visual()
 
     @property

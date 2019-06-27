@@ -166,6 +166,8 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
     def _get_channel_and_pc(self, dim):
         """Return the channel_id and PC of a dim."""
+        if self.channel_ids is None:
+            return
         assert dim not in self.attributes  # This is called only on PC data.
         s = 'ABCDEFGHIJ'
         # Channel relative index, typically just 0 or 1.
@@ -406,7 +408,10 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             dim_x, dim_y = dim.split(',')
             dim = dim_x if b == 'Left' else dim_y
             if dim not in self.attributes:
-                channel_id, pc = self._get_channel_and_pc(dim)
+                channel_pc = self._get_channel_and_pc(dim)
+                if channel_pc is None:
+                    return
+                channel_id, pc = channel_pc
                 logger.debug("Click on feature dim %s, channel %s, PC %s.", dim, channel_id, pc)
             else:
                 channel_id = pc = None
