@@ -13,9 +13,10 @@ import numpy as np
 
 from phylib.io.model import load_model
 from phylib.io.tests.conftest import _make_dataset
+from phylib.utils import read_python
 from phylib.utils.testing import captured_output
 
-from phy.apps.tests.test_base import BaseControllerTests
+from phy.apps.tests.test_base import BaseControllerTests, GlobalViewsTests
 from ..gui import (
     template_describe, TemplateController, TemplateFeatureView)
 
@@ -26,29 +27,31 @@ logger = logging.getLogger(__name__)
 # Tests
 #------------------------------------------------------------------------------
 
-def _template_controller(tempdir, model):
+def _template_controller(tempdir, dir_path):
+    kwargs = read_python(dir_path / 'params.py')
     return TemplateController(
-        dir_path=model.dir_path, config_dir=tempdir / 'config', model=model,
-        clear_cache=True, enable_threading=False)
+        dir_path=dir_path, config_dir=tempdir / 'config',
+        clear_cache=True, enable_threading=False, **kwargs)
 
 
-def test_template_describe(qtbot, template_path):
+def test_template_describe(qtbot, tempdir):
+    model = load_model(_make_dataset(tempdir, param='dense', has_spike_attributes=False))
     with captured_output() as (stdout, stderr):
-        template_describe(template_path)
+        template_describe(model.dir_path / 'params.py')
     assert '314' in stdout.getvalue()
 
 
-class TemplateControllerTests(BaseControllerTests):
+class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
+    """Base template controller tests."""
     @classmethod
-    def _create_dataset(cls, tempdir):
+    def _create_dataset(cls, tempdir):  # pragma: no cover
         """To be overriden in child classes."""
-        return _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+        raise NotImplementedError()
 
     @classmethod
     def get_controller(cls, tempdir):
         cls._dataset = cls._create_dataset(tempdir)
-        model = load_model(cls._dataset)
-        return _template_controller(tempdir, model)
+        return _template_controller(tempdir, cls._dataset.parent)
 
     @property
     def template_feature_view(self):
@@ -70,6 +73,14 @@ class TemplateControllerTests(BaseControllerTests):
     def test_template_split_init(self):
         self.supervisor.actions.split_init()
 
+    def test_spike_attribute_views(self):
+        """Open all available spike attribute views."""
+        view_names = [
+            name for name in self.controller.view_creator.keys() if name.startswith('Spike')]
+        for name in view_names:
+            self.gui.create_and_add_view(name)
+            self.qtbot.wait(250)
+
 
 class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
     """Template controller with a dense dataset."""
@@ -77,6 +88,12 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
     @classmethod
     def _create_dataset(cls, tempdir):
         return _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+
+    def test_amplitude_view(self):
+        """Change the amplitude type in the amplitude view."""
+        self.next()
+        for _ in range(3):
+            self.amplitude_view.next_amplitude_type()
 
     def test_z1_close_reopen(self):
         cluster_ids = self.cluster_ids
@@ -87,10 +104,9 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
 
         # Close the GUI.
         self.__class__._close_gui()
-        # Reload the model of the same dataset.
-        model = load_model(self.__class__._dataset)
         # Recreate the controller on the model.
-        self.__class__._controller = _template_controller(self.__class__._tempdir, model)
+        self.__class__._controller = _template_controller(
+            self.__class__._tempdir, self.__class__._dataset.parent)
         self.__class__._create_gui()
 
         # Check that the data has been saved.
@@ -99,7 +115,7 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
 
         # Check the label.
         for cl, val in self.model.metadata[self.__class__._label_name].items():
-            assert val == self.__class__._label_value
+            self.assertEqual(val, self.__class__._label_value)
 
 
 class TemplateControllerSparseTests(TemplateControllerTests, unittest.TestCase):

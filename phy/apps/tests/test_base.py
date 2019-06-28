@@ -66,7 +66,8 @@ class MyModel(object):
         return artificial_features(len(spike_ids), len(channel_ids), self.n_pcs)
 
     def get_waveforms(self, spike_ids, channel_ids):
-        return artificial_waveforms(len(spike_ids), self.n_samples_waveforms, len(channel_ids))
+        n_channels = len(channel_ids) if channel_ids else self.n_channels
+        return artificial_waveforms(len(spike_ids), self.n_samples_waveforms, n_channels)
 
     def get_template(self, template_id):
         nc = self.n_channels // 2
@@ -179,7 +180,8 @@ class BaseControllerTests(object):
     # Convenient methods
     #--------------------------------------------------------------------------
 
-    def stop(self):
+    def stop(self):  # pragma: no cover
+        """Used for debugging."""
         create_app().exec_()
         self.gui.close()
 
@@ -335,6 +337,12 @@ class BaseControllerTests(object):
     def test_common_10(self):
         self.supervisor.save()
 
+    def test_common_11(self):
+        s = self.controller.selection
+        self.assertEqual(s.cluster_ids, self.selected)
+        self.assertTrue(s.colormap is not None)
+        self.assertTrue(s.color_field is not None)
+
 
 class GlobalViewsTests(object):
     def test_global_sort_1(self):
@@ -346,7 +354,9 @@ class GlobalViewsTests(object):
         emit('table_filter', cv, self.cluster_ids[::2])
 
     def test_global_colormap_1(self):
+        self.next()
         self.supervisor.view_actions.colormap_rainbow()
+        self.supervisor.view_actions.colormap_linear()
         self.supervisor.toggle_categorical_colormap(False)
 
 
@@ -385,6 +395,10 @@ class MockControllerWTests(BaseControllerTests, unittest.TestCase):
         self.waveform_view.actions.next_waveforms_type()
         self.waveform_view.actions.change_n_spikes_waveforms(200)
 
+    def test_mean_amplitudes(self):
+        self.next()
+        self.assertTrue(self.controller.get_mean_spike_raw_amplitudes(self.selected[0]) >= 0)
+
 
 class MockControllerFTests(BaseControllerTests, unittest.TestCase):
     """Mock controller with features."""
@@ -397,17 +411,13 @@ class MockControllerFTests(BaseControllerTests, unittest.TestCase):
     def feature_view(self):
         return self.gui.list_views(FeatureView)[0]
 
-    @property
-    def amplitude_view(self):
-        return self.gui.list_views(AmplitudeView)[0]
-
     def test_feature_view_split(self):
         self.next()
         n = max(self.cluster_ids)
         self.lasso(self.feature_view, .25)
         self.split()
         # Split one cluster => Two new clusters should be selected after the split.
-        assert self.selected[:2] == [n + 1, n + 2]
+        self.assertEqual(self.selected[:2], [n + 1, n + 2])
 
     def test_select_feature(self):
         self.next()
@@ -420,7 +430,7 @@ class MockControllerFTests(BaseControllerTests, unittest.TestCase):
         mouse_click(self.qtbot, fv.canvas, (x, y), button='Right', modifiers=('Alt',))
 
 
-class MockControllerTTests(BaseControllerTests, unittest.TestCase):
+class MockControllerTTests(GlobalViewsTests, BaseControllerTests, unittest.TestCase):
     """Mock controller with traces."""
 
     @classmethod
@@ -451,6 +461,10 @@ class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
 
     def test_template_view_select(self):
         mouse_click(self.qtbot, self.template_view.canvas, (100, 100), modifiers=('Control',))
+
+    def test_mean_amplitudes(self):
+        self.next()
+        self.assertTrue(self.controller.get_mean_spike_template_amplitudes(self.selected[0]) >= 0)
 
     def test_split_template_amplitude(self):
         self.next()

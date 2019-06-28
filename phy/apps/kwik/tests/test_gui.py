@@ -7,38 +7,55 @@
 #------------------------------------------------------------------------------
 
 import logging
+from pathlib import Path
 import shutil
 import unittest
 
 from phylib.io.datasets import download_test_file
+from phylib.utils.testing import captured_output
 
 from phy.apps.tests.test_base import BaseControllerTests
 from phy.plot.tests import key_press
-from ..gui import KwikController
+from ..gui import KwikController, kwik_describe
+from phy.cluster.views import WaveformView
 
 logger = logging.getLogger(__name__)
 
 
-def _kwik_controller(tempdir):
-    # Download the dataset.
-    paths = list(map(
-        download_test_file,
-        ('kwik/hybrid_10sec.kwik', 'kwik/hybrid_10sec.kwx', 'kwik/hybrid_10sec.dat')))
-    # Copy the dataset to a temporary directory.
+def _kwik_controller(tempdir, kwik_only=False):
+    paths = ['kwik/hybrid_10sec.kwik']
+    if not kwik_only:
+        paths += ['kwik/hybrid_10sec.kwx', 'kwik/hybrid_10sec.dat']
     for path in paths:
-        shutil.copy(path, tempdir / path.name)
-    kwik_path = tempdir / paths[0].name
-    return KwikController(kwik_path, channel_group=0)
+        loc_path = Path(download_test_file(path))
+        # Copy the dataset to a temporary directory.
+        shutil.copy(loc_path, tempdir / loc_path.name)
+    kwik_path = tempdir / 'hybrid_10sec.kwik'
+    return KwikController(kwik_path, channel_group=0, clear_cache=True, enable_threading=False)
+
+
+def test_kwik_describe(qtbot, tempdir):
+    temp_path = download_test_file('kwik/hybrid_10sec.kwik')
+    kwik_path = tempdir / temp_path.name
+    shutil.copy(temp_path, kwik_path)
+    with captured_output() as (stdout, stderr):
+        kwik_describe(str(kwik_path))
+    assert stdout.getvalue()
 
 
 class KwikControllerTests(BaseControllerTests, unittest.TestCase):
     """Kwik controller."""
+
+    def key(self, key, modifiers=(), delay=550):
+        key_press(self.qtbot, self.gui, key, delay=delay, modifiers=modifiers)
+
     @classmethod
     def get_controller(cls, tempdir):
         return _kwik_controller(tempdir)
 
-    def key(self, key, modifiers=(), delay=550):
-        key_press(self.qtbot, self.gui, key, delay=delay, modifiers=modifiers)
+    @property
+    def waveform_view(self):
+        return self.gui.list_views(WaveformView)[0]
 
     def test_kwik_snippets(self):
         self.key('Down')
@@ -54,3 +71,18 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
         for char in 'RECLUSTER':
             self.key(char, delay=10)
         self.key('Enter')
+
+    def test_kwik_waveform_view(self):
+        self.next()
+        for _ in range(3):
+            print("HELLO")
+            self.waveform_view.next_waveforms_type()
+            self.qtbot.wait(250)
+
+
+class KwikControllerNKwikOnlyTests(BaseControllerTests, unittest.TestCase):
+    """Kwik controller with just the kwik file."""
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        return _kwik_controller(tempdir, kwik_only=True)
