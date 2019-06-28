@@ -124,9 +124,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             bmin, bmax = bunch.data.min(), bunch.data.max()
             # Update self.x_max if it was not set before.
             self.x_min = self.x_min or bunch.get('x_min', None) or bmin
-            self.x_min = max(self.x_min, bmin)
             self.x_max = self.x_max or bunch.get('x_max', None) or bmax
-            self.x_max = min(self.x_max, bmax)
             self.x_min = min(self.x_min, self.x_max)
             assert self.x_min is not None
             assert self.x_max is not None
@@ -199,8 +197,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def set_x_min(self, x_min):
         """Set the minimum value on the x axis for the histogram."""
-        if x_min >= self.x_max:
-            logger.warning("Could not set a x_min lower than x_max=%.3f.", self.x_max)
+        x_min = min(x_min, self.x_max)
+        if x_min == self.x_max:
             return
         self.x_min = x_min
         logger.debug("Change x min to %s for %s.", x_min, self.__class__.__name__)
@@ -208,8 +206,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def set_x_max(self, x_max):
         """Set the maximum value on the x axis for the histogram."""
-        if x_max <= self.x_min:
-            logger.warning("Could not set a x_max higher than x_min=%.3f.", self.x_min)
+        x_max = max(x_max, self.x_min)
+        if x_max == self.x_min:
             return
         self.x_max = x_max
         logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
