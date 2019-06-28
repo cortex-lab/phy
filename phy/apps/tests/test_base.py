@@ -21,7 +21,7 @@ from phylib.io.mock import (
     artificial_waveforms
 )
 
-from phylib.utils import connect, Bunch, reset, emit
+from phylib.utils import connect, unconnect, Bunch, reset, emit
 
 from phy.cluster.views import (
     WaveformView, FeatureView, AmplitudeView, TraceView, TemplateView,
@@ -145,20 +145,24 @@ class BaseControllerTests(object):
         return self.__class__._controller
 
     @property
+    def model(self):
+        return self.__class__._controller.model
+
+    @property
     def supervisor(self):
         return self.controller.supervisor
 
     @property
     def cluster_view(self):
-        return self.controller.supervisor.cluster_view
+        return self.supervisor.cluster_view
 
     @property
     def similarity_view(self):
-        return self.controller.supervisor.similarity_view
+        return self.supervisor.similarity_view
 
     @property
     def cluster_ids(self):
-        return self.controller.supervisor.clustering.cluster_ids
+        return self.supervisor.clustering.cluster_ids
 
     @property
     def gui(self):
@@ -166,7 +170,7 @@ class BaseControllerTests(object):
 
     @property
     def selected(self):
-        return self.controller.supervisor.selected
+        return self.supervisor.selected
 
     @property
     def amplitude_view(self):
@@ -180,42 +184,42 @@ class BaseControllerTests(object):
         self.gui.close()
 
     def next(self):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.select_actions.next()
         s.block()
 
     def next_best(self):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.select_actions.next_best()
         s.block()
 
     def label(self, name, value):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.actions.label(name, value)
         s.block()
 
     def merge(self):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.actions.merge()
         s.block()
 
     def split(self):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.actions.split()
         s.block()
 
     def undo(self):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.actions.undo()
         s.block()
 
     def redo(self):
-        s = self.controller.supervisor
+        s = self.supervisor
         s.actions.redo()
         s.block()
 
     def move(self, w):
-        s = self.controller.supervisor
+        s = self.supervisor
         getattr(s.actions, 'move_%s' % w)()
         s.block()
 
@@ -233,33 +237,36 @@ class BaseControllerTests(object):
 
     @classmethod
     def setUpClass(cls):
+        Debouncer.delay = 1
         cls._qtbot = QtBot(create_app())
         cls._tempdir_ = TemporaryDirectory_()
         cls._tempdir = Path(cls._tempdir_.__enter__())
+        cls._controller = cls.get_controller(cls._tempdir)
+        cls._create_gui()
 
-        Debouncer.delay = 1
+    @classmethod
+    def tearDownClass(cls):
+        if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+            cls._qtbot.stop()
+        cls._close_gui()
+        cls._tempdir_.__exit__(None, None, None)
 
-        controller = cls.get_controller(cls._tempdir)
-        cls._gui = controller.create_gui(do_prompt_save=False)
-        cls._controller = controller
-
+    @classmethod
+    def _create_gui(cls):
+        cls._gui = cls._controller.create_gui(do_prompt_save=False)
+        s = cls._controller.supervisor
         b = Barrier()
-        connect(b('cluster_view'), event='ready', sender=controller.supervisor.cluster_view)
-        connect(b('similarity_view'), event='ready', sender=controller.supervisor.similarity_view)
+        connect(b('cluster_view'), event='ready', sender=s.cluster_view)
+        connect(b('similarity_view'), event='ready', sender=s.similarity_view)
         cls._gui.show()
         # cls._qtbot.addWidget(cls._gui)
         cls._qtbot.waitForWindowShown(cls._gui)
         b.wait()
 
     @classmethod
-    def tearDownClass(cls):
-
-        if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
-            cls._qtbot.stop()
+    def _close_gui(cls):
         cls._gui.close()
         cls._gui.deleteLater()
-
-        cls._tempdir_.__exit__(None, None, None)
 
         # NOTE: make sure all callback functions are unconnected at the end of the tests
         # to avoid side-effects and spurious dependencies between tests.
@@ -268,32 +275,32 @@ class BaseControllerTests(object):
     # Common test methods
     #--------------------------------------------------------------------------
 
-    def test_common_1(self):
+    def test_common_01(self):
         """Select one cluster."""
         self.next_best()
         self.assertEqual(len(self.selected), 1)
 
-    def test_common_2(self):
+    def test_common_02(self):
         """Select one similar cluster."""
         self.next()
         self.assertEqual(len(self.selected), 2)
 
-    def test_common_3(self):
+    def test_common_03(self):
         """Select another similar cluster."""
         self.next()
         self.assertEqual(len(self.selected), 2)
 
-    def test_common_4(self):
+    def test_common_04(self):
         """Merge the selected clusters."""
         self.merge()
         self.assertEqual(len(self.selected), 1)
 
-    def test_common_5(self):
+    def test_common_05(self):
         """Select a similar cluster."""
         self.next()
         self.assertEqual(len(self.selected), 2)
 
-    def test_common_6(self):
+    def test_common_06(self):
         """Undo/redo the merge several times."""
         for _ in range(3):
             self.undo()
@@ -302,20 +309,31 @@ class BaseControllerTests(object):
             self.redo()
             self.assertEqual(len(self.selected), 2)
 
-    def test_common_7(self):
+    def test_common_07(self):
         """Move action."""
         self.move('similar_to_noise')
         self.assertEqual(len(self.selected), 2)
 
-    def test_common_8(self):
+    def test_common_08(self):
         """Move action."""
         self.move('best_to_good')
         self.assertEqual(len(self.selected), 1)
 
-    def test_common_9(self):
+    def test_common_09(self):
         """Label action."""
         self.next()
+
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            cls = self.__class__
+            cls._label_name, cls._label_value = 'new_label', up.metadata_value
+
         self.label('new_label', 3)
+
+        unconnect(on_cluster)
+
+    def test_common_10(self):
+        self.supervisor.save()
 
 
 class GlobalViewsTests(object):

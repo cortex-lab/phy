@@ -13,6 +13,7 @@ import unittest
 from phylib.io.datasets import download_test_file
 
 from phy.apps.tests.test_base import BaseControllerTests
+from phy.plot.tests import key_press
 from ..gui import KwikController
 
 logger = logging.getLogger(__name__)
@@ -35,3 +36,21 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
     @classmethod
     def get_controller(cls, tempdir):
         return _kwik_controller(tempdir)
+
+    def key(self, key, modifiers=(), delay=550):
+        key_press(self.qtbot, self.gui, key, delay=delay, modifiers=modifiers)
+
+    def test_kwik_snippets(self):
+        self.key('Down')
+        self.key('Space')
+        self.key('G')
+        self.key('Space')
+        self.key('G', modifiers=('Alt',))
+        self.key('Z')
+        self.key('N', modifiers=('Alt',))
+        self.key('Space')
+        # Recluster.
+        self.key('Colon', delay=10)
+        for char in 'RECLUSTER':
+            self.key(char, delay=10)
+        self.key('Enter')

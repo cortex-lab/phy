@@ -721,7 +721,7 @@ class Supervisor(object):
         easier cache consistency."""
         new_cluster_id = self.clustering.new_cluster_id()
         if self.context:
-            logger.debug("Save the new cluster id: %d.", new_cluster_id)
+            logger.log(5, "Save the new cluster id: %d.", new_cluster_id)
             self.context.save('new_cluster_id', dict(new_cluster_id=new_cluster_id))
 
     def _save_gui_state(self, gui):

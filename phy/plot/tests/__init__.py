@@ -28,9 +28,9 @@ def _modifiers_flag(modifiers):
     return out
 
 
-def key_press(qtbot, c, key, modifiers=()):
+def key_press(qtbot, c, key, modifiers=(), delay=50):
     qtbot.keyPress(c, getattr(Qt, 'Key_' + key), _modifiers_flag(modifiers))
-    _wait(50)
+    _wait(delay)
 
 
 def key_release(qtbot, c, key, modifiers=()):

@@ -9,6 +9,8 @@
 import logging
 import unittest
 
+import numpy as np
+
 from phylib.io.model import load_model
 from phylib.io.tests.conftest import _make_dataset
 from phylib.utils.testing import captured_output
@@ -37,6 +39,17 @@ def test_template_describe(qtbot, template_path):
 
 
 class TemplateControllerTests(BaseControllerTests):
+    @classmethod
+    def _create_dataset(cls, tempdir):
+        """To be overriden in child classes."""
+        return _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+
+    @classmethod
+    def get_controller(cls, tempdir):
+        cls._dataset = cls._create_dataset(tempdir)
+        model = load_model(cls._dataset)
+        return _template_controller(tempdir, model)
+
     @property
     def template_feature_view(self):
         return self.gui.list_views(TemplateFeatureView)[0]
@@ -60,26 +73,49 @@ class TemplateControllerTests(BaseControllerTests):
 
 class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
     """Template controller with a dense dataset."""
+
     @classmethod
-    def get_controller(cls, tempdir):
-        model = load_model(_make_dataset(tempdir))
-        return _template_controller(tempdir, model)
+    def _create_dataset(cls, tempdir):
+        return _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+
+    def test_z1_close_reopen(self):
+        cluster_ids = self.cluster_ids
+        spike_clusters = self.supervisor.clustering.spike_clusters
+
+        # Save.
+        self.supervisor.save()
+
+        # Close the GUI.
+        self.__class__._close_gui()
+        # Reload the model of the same dataset.
+        model = load_model(self.__class__._dataset)
+        # Recreate the controller on the model.
+        self.__class__._controller = _template_controller(self.__class__._tempdir, model)
+        self.__class__._create_gui()
+
+        # Check that the data has been saved.
+        self.assertTrue(np.all(self.cluster_ids == cluster_ids))
+        self.assertTrue(np.all(self.supervisor.clustering.spike_clusters == spike_clusters))
+
+        # Check the label.
+        for cl, val in self.model.metadata[self.__class__._label_name].items():
+            assert val == self.__class__._label_value
 
 
 class TemplateControllerSparseTests(TemplateControllerTests, unittest.TestCase):
     """Template controller with a sparse dataset."""
+
     @classmethod
-    def get_controller(cls, tempdir):
-        model = load_model(_make_dataset(tempdir))
-        return _template_controller(tempdir, model)
+    def _create_dataset(cls, tempdir):
+        return _make_dataset(tempdir, param='sparse')
 
 
 class TemplateControllerMiscTests(TemplateControllerTests, unittest.TestCase):
     """Template controller with a misc model."""
+
     @classmethod
-    def get_controller(cls, tempdir):
-        model = load_model(_make_dataset(tempdir))
-        return _template_controller(tempdir, model)
+    def _create_dataset(cls, tempdir):
+        return _make_dataset(tempdir, param='misc')
 
     def test_a1_template_similarity(self):
         self.cluster_view.sort_by('id', 'desc')
@@ -101,3 +137,7 @@ class TemplateControllerMiscTests(TemplateControllerTests, unittest.TestCase):
         self.next_best()
         self.next()
         self.assertEqual(self.selected, [cl - 1, cl + 1])
+
+    def test_template_feature_view_split(self):
+        # NOTE; the misc dataset has no template_features.
+        return
