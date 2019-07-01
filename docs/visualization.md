@@ -241,6 +241,8 @@ The baseline firing rate is shown. You can also display horizontal lines for the
 
 The parameter `controller.n_spikes_correlograms=100000`, by default, specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
 
+*Note*: the central peak is artificially removed to avoid artifacts. Decrease the bin size (e.g. to 0.1 ms) if you need to visualize fine temporal structure.
+
 ![image](https://user-images.githubusercontent.com/1942359/58951508-9c12db80-8791-11e9-8cac-a6ca1ba7da9d.png)
 
 #### Keyboard shortcuts
