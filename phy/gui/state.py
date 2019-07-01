@@ -138,7 +138,7 @@ class GUIState(Bunch):
             shutil.copy(self._default_state_path, self._path)
             logger.info("Copied %s to %s.", self._default_state_path, self._path)
         else:
-            logger.debug(
+            logger.warning(
                 "Could not copy non-existing default state file %s.", self._default_state_path)
 
     def load(self):

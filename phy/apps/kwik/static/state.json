@@ -1,70 +1,83 @@
 {
+  "AmplitudeView": {
+    "amplitude_name": "feature",
+    "auto_update": true,
+    "marker_size": 5.0
+  },
   "ClusterView": {
     "current_sort": [
-      "n_spikes",
-      "desc"
+      "n_spikes", "desc"
     ]
   },
   "CorrelogramView": {
     "auto_update": true,
     "bin_size": 0.001,
+    "refractory_period": 0.002,
     "uniform_normalization": false,
     "window_size": 0.05
   },
   "FeatureView": {
     "auto_update": true,
     "fixed_channels": false,
-    "scaling": 0.0003937371740721254
+    "marker_size": 5.0
+  },
+  "FiringRateView": {
+    "auto_update": true,
+    "n_bins": 200
+  },
+  "ISIView": {
+    "auto_update": true,
+    "n_bins": 50,
+    "x_max": 0.05,
+    "x_min": 0
+  },
+  "ProbeView": {
+    "auto_update": true
   },
   "TraceView": {
-    "auto_update": false,
+    "auto_update": true,
     "do_show_labels": true,
-    "interval": [
-      5.77845,
-      5.86035
-    ],
     "origin": null,
-    "scaling": 6.115909044841463,
-    "show_all_spikes": true
-  },
-  "TraceView (1)": {
-    "auto_update": false,
-    "do_show_labels": true,
-    "interval": [
-      4.875,
-      5.125
-    ],
-    "origin": null,
-    "scaling": 1.0,
+    "scaling": 1,
     "show_all_spikes": false
   },
   "WaveformView": {
     "auto_update": true,
     "box_scaling": [
-      207.96505671840671,
-      52.04890192270895
+      1, 1
     ],
     "do_show_labels": true,
     "overlap": false,
     "probe_scaling": [
-      142.04293198443187,
-      49.785181124993684
+      1, 1
     ],
-    "show_what": "waveforms"
+    "waveforms_type": "waveforms"
+  },
+  "batch_size_waveforms": 10,
+  "color_selector": {
+    "categorical": true,
+    "color_field": "cluster",
+    "colormap": "categorical",
+    "logarithmic": false
   },
   "geometry_state": {
     "geometry": {
-      "__qbytearray__": "QWRuUXl3QUNBQUFBQUFBQUFBQUFBQUFBRHY4QUFBaHZBQUFIaFFBQUJFUUFBQTcvQUFBSVJnQUFBQUFBQkFBQUR3QT0="
+      "__qbytearray__": "QWRuUXl3QUNBQUFBQUFBQUFBQUFJQUFBRHY4QUFBaEdBQUFBQUFBQUFDQUFBQTcvQUFBSVJnQUFBQUFBQUFBQUR3QT0="
     },
     "state": {
-      "__qbytearray__": "QUFBQS93QUFBQUQ5QUFBQUFnQUFBQUFBQUFkNkFBQUlLdndCQUFBQUF2d0FBQUFBQUFBRFBnQUFBRlFBLy8vLy9BSUFBQUFEK3dBQUFCWUFRd0JzQUhVQWN3QjBBR1VBY2dCV0FHa0FaUUIzQVFBQUFDTUFBQU80QUFBQUlnRC8vLy83QUFBQUhBQlRBR2tBYlFCcEFHd0FZUUJ5QUdrQWRBQjVBRllBYVFCbEFIY0JBQUFENXdBQUFpNEFBQUFpQVAvLy8vc0FBQUFlQUVNQWJ3QnlBSElBWlFCc0FHOEFad0J5QUdFQWJRQldBR2tBWlFCM0FRQUFCaUVBQUFJc0FBQUFJZ0QvLy8vN0FBQUFFZ0JVQUhJQVlRQmpBR1VBVmdCcEFHVUFkd0VBQUFOS0FBQUVNQUFBQUZRQS8vLy9BQUFBQVFBQUIzb0FBQWdxL0FFQUFBQUMrd0FBQUJnQVZ3QmhBSFlBWlFCbUFHOEFjZ0J0QUZZQWFRQmxBSGNCQUFBSGhnQUFBN2NBQUFCVUFQLy8vL3NBQUFBV0FFWUFaUUJoQUhRQWRRQnlBR1VBVmdCcEFHVUFkd0VBQUF0SkFBQUR0d0FBQUZRQS8vLy9BQUFBQUFBQUNDb0FBQUFFQUFBQUJBQUFBQWdBQUFBSS9BQUFBQUE9"
+      "__qbytearray__": "QUFBQS93QUFBQUQ5QUFBQUFnQUFBQUFBQUFaWkFBQUg0ZndCQUFBQUFmd0FBQUFBQUFBR1dRQUFBUDBBLy8vLy9BSUFBQUFDL0FBQUFDTUFBQVpWQUFBQVVBRC8vLy84QVFBQUFBTDhBQUFBQUFBQUF4SUFBQUEvQVAvLy8vd0NBQUFBQXZzQUFBQVdBRU1BYkFCMUFITUFkQUJsQUhJQVZnQnBBR1VBZHdFQUFBQWpBQUFFRUFBQUFDSUEvLy8vK3dBQUFCd0FVd0JwQUcwQWFRQnNBR0VBY2dCcEFIUUFlUUJXQUdrQVpRQjNBUUFBQkQ4QUFBSTVBQUFBSWdELy8vLzdBQUFBR0FCWEFHRUFkZ0JsQUdZQWJ3QnlBRzBBVmdCcEFHVUFkd0VBQUFNZUFBQURPd0FBQUZRQS8vLy8vQUFBQm9RQUFBR0FBQUFBV1FELy8vLzhBUUFBQUFMN0FBQUFIZ0JEQUc4QWNnQnlBR1VBYkFCdkFHY0FjZ0JoQUcwQVZnQnBBR1VBZHdFQUFBQUFBQUFEbVFBQUFGUUEvLy8vL0FBQUE2VUFBQUswQUFBQW5RRC8vLy82QUFBQUFBSUFBQUFDK3dBQUFBNEFTUUJUQUVrQVZnQnBBR1VBZHdFQUFBQUEvLy8vL3dBQUFDSUEvLy8vK3dBQUFCd0FSZ0JwQUhJQWFRQnVBR2NBVWdCaEFIUUFaUUJXQUdrQVpRQjNBUUFBQm9RQUFBR0FBQUFBSWdELy8vOEFBQUFCQUFBSW13QUFCK0g4QVFBQUFBUDhBQUFHWlFBQUJINEFBQUNkQVAvLy8vd0NBQUFBQXZ3QUFBQWpBQUFFdlFBQUFGa0JBQUEyK2dBQUFBQUNBQUFBQXZzQUFBQVdBRVlBWlFCaEFIUUFkUUJ5QUdVQVZnQnBBR1VBZHdFQUFBQlJBQUFIc3dBQUFDSUEvLy8vK3dBQUFDWUFWQUJsQUcwQWNBQnNBR0VBZEFCbEFFWUFaUUJoQUhRQWRRQnlBR1VBVmdCcEFHVUFkd0VBQUFBQS8vLy8vd0FBQUNJQS8vLy8rd0FBQUJvQVFRQnRBSEFBYkFCcEFIUUFkUUJrQUdVQVZnQnBBR1VBZHdFQUFBVHNBQUFER0FBQUFDSUEvLy8vK3dBQUFCSUFWQUJ5QUdFQVl3QmxBRllBYVFCbEFIY0JBQUFLN3dBQUE1d0FBQUJVQVAvLy8vc0FBQUFTQUZBQWNnQnZBR0lBWlFCV0FHa0FaUUIzQVFBQURwY0FBQUJwQUFBQVZBRC8vLzhBQUFBQUFBQUg0UUFBQUFRQUFBQUVBQUFBQ0FBQUFBajhBQUFBQUE9PQ=="
     }
   },
+  "n_spikes_waveforms": 100,
   "view_count": {
+    "AmplitudeView": 1,
     "ClusterView": 1,
-    "SimilarityView": 1,
     "CorrelogramView": 1,
     "FeatureView": 1,
+    "FiringRateView": 1,
+    "ISIView": 1,
+    "ProbeView": 1,
+    "SimilarityView": 1,
     "TraceView": 1,
     "WaveformView": 1
   }

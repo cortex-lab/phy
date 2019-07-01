@@ -30,9 +30,6 @@ logger = logging.getLogger(__name__)
 # Manual clustering view
 # -----------------------------------------------------------------------------
 
-_ENABLE_THREADING = True
-
-
 def _get_bunch_bounds(bunch):
     """Return the data bounds of a bunch."""
     if 'data_bounds' in bunch and bunch.data_bounds is not None:
