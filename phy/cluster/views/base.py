@@ -439,6 +439,7 @@ class ScalingMixin(object):
 
 class MarkerSizeMixin(ScalingMixin):
     _marker_size = 5.
+    _scaling_default = 5.
 
     def __init__(self, *args, **kwargs):
         super(MarkerSizeMixin, self).__init__(*args, **kwargs)

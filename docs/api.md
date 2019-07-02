@@ -5304,6 +5304,15 @@ Update the view with the current cluster selection.
 
 ---
 
+#### AmplitudeView.reset_scaling
+
+
+**`AmplitudeView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
 #### AmplitudeView.screenshot
 
 
@@ -6139,6 +6148,15 @@ Update the view with the current cluster selection.
 
 ---
 
+#### CorrelogramView.reset_scaling
+
+
+**`CorrelogramView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
 #### CorrelogramView.screenshot
 
 
@@ -6387,6 +6405,15 @@ Update the view with the selected clusters.
 
 ---
 
+#### FeatureView.reset_scaling
+
+
+**`FeatureView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
 #### FeatureView.screenshot
 
 
@@ -6581,6 +6608,15 @@ Callback function when clusters are selected. May be overriden.
 **`HistogramView.plot(self, **kwargs)`**
 
 Update the view with the selected clusters.
+
+---
+
+#### HistogramView.reset_scaling
+
+
+**`HistogramView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
 
 ---
 
@@ -7082,6 +7118,15 @@ Make the raster plot.
 
 ---
 
+#### RasterView.reset_scaling
+
+
+**`RasterView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
 #### RasterView.screenshot
 
 
@@ -7292,6 +7337,15 @@ Callback function when clusters are selected. May be overriden.
 **`ScatterView.plot(self, **kwargs)`**
 
 Update the view with the current cluster selection.
+
+---
+
+#### ScatterView.reset_scaling
+
+
+**`ScatterView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
 
 ---
 
@@ -8106,6 +8160,15 @@ Make the template plot.
 
 ---
 
+#### TemplateView.reset_scaling
+
+
+**`TemplateView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
 #### TemplateView.screenshot
 
 
@@ -8393,6 +8456,15 @@ Callback function when clusters are selected. May be overriden.
 **`TraceView.plot(self, **kwargs)`**
 
 Plot the waveforms.
+
+---
+
+#### TraceView.reset_scaling
+
+
+**`TraceView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
 
 ---
 
@@ -8775,6 +8847,15 @@ Callback function when clusters are selected. May be overriden.
 **`WaveformView.plot(self, **kwargs)`**
 
 Update the view with the current cluster selection.
+
+---
+
+#### WaveformView.reset_scaling
+
+
+**`WaveformView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
 
 ---
 

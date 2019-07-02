@@ -122,10 +122,13 @@ For example, here is a custom cluster metrics that shows the mean inter-spike in
 
 ```python
 # import from plugins/cluster_metrics.py
-import numpy as np
-from phy import IPlugin, connect
+"""Show how to add a custom cluster metrics."""
 
-class MyPlugin(IPlugin):
+import numpy as np
+from phy import IPlugin
+
+
+class ExampleClusterMetricsPlugin(IPlugin):
     def attach_to_controller(self, controller):
         """Note that this function is called at initialization time, *before* the supervisor is
         created. The `controller.cluster_metrics` items are then passed to the supervisor when
@@ -136,7 +139,10 @@ class MyPlugin(IPlugin):
             return np.diff(t).mean()
 
         # Use this dictionary to define custom cluster metrics.
-        controller.cluster_metrics['meanisi'] = meanisi
+        # We memcache the function so that cluster metrics are only computed once and saved
+        # within the session, and also between sessions (the memcached values are also saved
+        # on disk).
+        controller.cluster_metrics['meanisi'] = controller.context.memcache(meanisi)
 
 ```
 
@@ -149,6 +155,8 @@ In the following example, we define a custom cluster statistics views using the 
 
 ```python
 # import from plugins/cluster_stats.py
+"""Show how to add a custom cluster histogram view showing cluster statistics."""
+
 from phy import IPlugin, Bunch
 from phy.cluster.views import HistogramView
 
@@ -159,7 +167,7 @@ class FeatureHistogramView(HistogramView):
     alias_char = 'fh'  # provide `:fhn` (set number of bins) and `:fhm` (set max bin) snippets
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterStatsPlugin(IPlugin):
     def attach_to_controller(self, controller):
 
         def feature_histogram(cluster_id):
@@ -353,7 +361,7 @@ from phylib.io.model import save_metadata
 logger = logging.getLogger('phy')
 
 
-class MyPlugin(IPlugin):
+class ExampleClusterMetadataPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
@@ -539,6 +547,8 @@ In this example, we simply display the template waveform on the peak channel of 
 
 ```python
 # import from plugins/opengl_view.py
+"""Show how to write a custom OpenGL view. This is for advanced users only."""
+
 import numpy as np
 
 from phylib.utils.color import selected_cluster_color
@@ -734,7 +744,7 @@ class MyView(ManualClusteringView):
         self.canvas.update()
 
 
-class MyPlugin(IPlugin):
+class ExampleOpenGLViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_my_view():
             return MyView(templates=controller.get_templates)

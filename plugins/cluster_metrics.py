@@ -15,4 +15,7 @@ class ExampleClusterMetricsPlugin(IPlugin):
             return np.diff(t).mean()
 
         # Use this dictionary to define custom cluster metrics.
-        controller.cluster_metrics['meanisi'] = meanisi
+        # We memcache the function so that cluster metrics are only computed once and saved
+        # within the session, and also between sessions (the memcached values are also saved
+        # on disk).
+        controller.cluster_metrics['meanisi'] = controller.context.memcache(meanisi)

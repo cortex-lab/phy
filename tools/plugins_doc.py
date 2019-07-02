@@ -22,7 +22,7 @@ root_dir = Path(__file__).parent.parent
 plugins_doc = plugins_file.read_text()
 plugins_doc0 = plugins_doc
 
-pattern = re.compile(r'```\w+\n# import from ([^\n]+)\n([^`]+)\n```')
+pattern = re.compile(r'```\w+\n# import from ([^\n]+)\n(.+?(?=\n```))', re.DOTALL)
 
 for m in reversed(list(pattern.finditer(plugins_doc))):
     filename = root_dir / m.group(1)
