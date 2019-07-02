@@ -795,7 +795,7 @@ class BaseController(object):
         # Environment variable that can be used to disable the cache.
         if not os.environ.get('PHY_DISABLE_CACHE', False):
             memcached = _concatenate_parents_attributes(self.__class__, '_memcached')
-            cached = _concatenate_parents_attributes(self.__class__, 'cached')
+            cached = _concatenate_parents_attributes(self.__class__, '_cached')
             _cache_methods(self, memcached, cached)
 
     # Internal view methods
