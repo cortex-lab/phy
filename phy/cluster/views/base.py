@@ -292,7 +292,8 @@ class ManualClusteringView(object):
     def state(self):
         """View state, a Bunch instance automatically persisted in the GUI state when the
         GUI is closed. To be overriden."""
-        return Bunch({key: getattr(self, key, None) for key in self.state_attrs})
+        attrs = set(self.state_attrs + self.local_state_attrs)
+        return Bunch({key: getattr(self, key, None) for key in attrs})
 
     def set_state(self, state):
         """Set the view state.
