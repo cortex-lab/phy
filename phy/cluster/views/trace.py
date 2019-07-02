@@ -111,7 +111,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.25
-    default_trace_color = (.75, .75, .75, 1.)
+    default_trace_color = (.5, .5, .5, 1)
     default_shortcuts = {
         'change_trace_size': 'ctrl+wheel',
         'decrease': 'alt+down',
@@ -225,10 +225,10 @@ class TraceView(ScalingMixin, ManualClusteringView):
         assert traces.shape == (n_ch, n_samples)
         assert box_index.shape == (n_ch, n_samples)
 
+        self.trace_visual.color = color
         self.canvas.update_visual(
             self.trace_visual,
             t, traces,
-            color=color,
             data_bounds=self.data_bounds,
             box_index=box_index.ravel(),
         )
