@@ -4019,6 +4019,9 @@ Plot visual, with multiple line plots of various sizes and colors.
 
 * `depth : array-like (1D)` 　 
 
+* `masks : array-like (1D)` 　 
+    Similar to an alpha channel, but for color saturation instead of transparency.
+
 * `data_bounds : array-like (2D, shape[1] == 4)` 　 
 
 ---
@@ -4143,7 +4146,7 @@ Show the visual.
 #### PlotVisual.validate
 
 
-**`PlotVisual.validate(self, x=None, y=None, color=None, depth=None, data_bounds=None, **kwargs)`**
+**`PlotVisual.validate(self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
