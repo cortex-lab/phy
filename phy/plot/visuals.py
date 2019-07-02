@@ -306,6 +306,8 @@ class PlotVisual(BaseVisual):
     y : array-like (1D), or list of 1D arrays, for different plots
     color : array-like (2D, shape[-1] == 4)
     depth : array-like (1D)
+    masks : array-like (1D)
+        Similar to an alpha channel, but for color saturation instead of transparency.
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
@@ -322,7 +324,8 @@ class PlotVisual(BaseVisual):
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    def validate(self, x=None, y=None, color=None, depth=None, data_bounds=None, **kwargs):
+    def validate(
+            self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
@@ -352,6 +355,11 @@ class PlotVisual(BaseVisual):
                            )
         assert color.shape == (n_signals, 4)
 
+        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        # The mask is clu_idx + fractional mask
+        masks *= .99999
+        assert masks.shape == (n_signals, 1)
+
         depth = _get_array(depth, (n_signals, 1), 0)
         assert depth.shape == (n_signals, 1)
 
@@ -361,7 +369,7 @@ class PlotVisual(BaseVisual):
             assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(
-            x=x, y=y, color=color, depth=depth, data_bounds=data_bounds,
+            x=x, y=y, color=color, depth=depth, data_bounds=data_bounds, masks=masks,
             _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
     def set_color(self, color):
@@ -413,11 +421,18 @@ class PlotVisual(BaseVisual):
             self.data_range.from_bounds = data_bounds
             pos = self.transforms.apply(pos)
 
+        # Masks.
+        masks = np.repeat(data.masks, n_samples, axis=0)
+        assert masks.shape == (n, 1)
+
         # Position and depth.
         depth = np.repeat(data.depth, n_samples, axis=0)
+
         self.program['a_position'] = np.c_[pos, depth].astype(np.float32)
         self.program['a_color'] = color.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
+        self.program['a_mask'] = masks.astype(np.float32)
+        self.program['u_mask_max'] = _max(masks)
 
         self.emit_visual_set_data()
         return data
@@ -474,6 +489,8 @@ class UniformPlotVisual(BaseVisual):
         n_signals = len(x)
 
         masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        # The mask is clu_idx + fractional mask
+        masks *= .99999
         assert masks.shape == (n_signals, 1)
 
         if isinstance(data_bounds, str) and data_bounds == 'auto':

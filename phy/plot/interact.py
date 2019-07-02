@@ -205,7 +205,7 @@ class Boxed(BaseLayout):
     margin = .1
     n_dims = 1
     active_box = 0
-    _scaling = (1, 1)
+    _scaling = (1., 1.)
 
     def __init__(
             self, box_bounds=None, box_pos=None, box_size=None, box_var=None,
