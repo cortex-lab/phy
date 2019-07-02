@@ -1238,9 +1238,10 @@ class BaseController(object):
             if isinstance(view, ManualClusteringView):
                 view.on_select(cluster_ids=self.supervisor.selected_clusters)
 
-        # Save the memcache when closing the GUI.
+        # Prompt save.
         @connect(sender=gui)
         def on_close(sender):
+            unconnect(on_add_view)
             # Show save prompt if an action was done.
             do_prompt_save = kwargs.get('do_prompt_save', True)
             if do_prompt_save and self.supervisor.is_dirty():  # pragma: no cover
@@ -1251,8 +1252,10 @@ class BaseController(object):
                     # Prevent closing of the GUI by returning False.
                     return False
                 # Otherwise (r is 'close') we do nothing and close as usual.
-            unconnect(on_add_view)
 
+        # Save the memcache when closing the GUI.
+        @connect(sender=gui)  # noqa
+        def on_close(sender):
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.
             gui.state._local_keys = set().union(
@@ -1261,7 +1264,6 @@ class BaseController(object):
             # Update the controller params in the GUI state.
             for param in self._state_params:
                 gui.state[param] = getattr(self, param, None)
-
             self.context.save_memcache()
 
         emit('gui_ready', self, gui)
