@@ -58,6 +58,7 @@ def test_waveform_view(qtbot, tempdir, gui):
     bs = v.boxed.box_size
     v.increase()
     v.decrease()
+    v.reset_scaling()
     ac(v.boxed.box_size, bs)
 
     bs = v.boxed.box_size

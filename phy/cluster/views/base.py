@@ -391,14 +391,18 @@ class BaseGlobalView(object):
 
 
 class ScalingMixin(object):
-    """Implement increase, decrease actions, as well as control+wheel shortcut."""
+    """Provide features to change the scaling.
+
+    Implement increase, decrease, reset actions, as well as control+wheel shortcut."""
     _scaling_param_increment = 1.1
     _scaling_param_min = .01
+    _scaling_default = 1.0
 
     def attach(self, gui):
         super(ScalingMixin, self).attach(gui)
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.add(self.reset_scaling)
         self.actions.separator()
 
     def on_mouse_wheel(self, e):  # pragma: no cover
@@ -427,6 +431,10 @@ class ScalingMixin(object):
         value = self._get_scaling_value()
         self._set_scaling_value(max(
             self._scaling_param_min, value / self._scaling_param_increment))
+
+    def reset_scaling(self):
+        """Reset the scaling to the default value."""
+        self._set_scaling_value(self._scaling_default)
 
 
 class MarkerSizeMixin(ScalingMixin):
