@@ -145,6 +145,8 @@ Snippets for CorrelogramView
 - set_window (ms)                          :cw
 
 Snippets for TraceView
+- go_to                                    :tg
+- shift                                    :ts
 
 Snippets for FiringRateView
 - set n bins                               :frn
