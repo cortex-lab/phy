@@ -209,6 +209,7 @@ class FeatureMixin(object):
             return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
         features = self._get_spike_features(spike_ids, [channel_id]).data
+        assert features.shape[0] == len(spike_ids)
         logger.log(5, "Show channel %s and PC %s in amplitude view.", channel_id, pc)
         return features[:, 0, pc or 0]
 
@@ -255,11 +256,8 @@ class FeatureMixin(object):
     def _get_spike_features(self, spike_ids, channel_ids):
         data = self.model.get_features(spike_ids, channel_ids)
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
-        # Remove rows with at least one nan value.
-        nan = np.unique(np.nonzero(np.isnan(data))[0])
-        nonnan = np.setdiff1d(np.arange(len(spike_ids)), nan)
-        data = data[nonnan, ...]
-        spike_ids = spike_ids[nonnan]
+        # Replace NaN values by zeros.
+        data[np.isnan(data)] = 0
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         assert np.isnan(data).sum() == 0
         return Bunch(data=data, spike_ids=spike_ids, channel_ids=channel_ids)
@@ -1064,6 +1062,7 @@ class BaseController(object):
                 spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc)
             if amplitudes is None:
                 continue
+            assert amplitudes.shape == spike_ids.shape == spike_times.shape
             out.append(Bunch(
                 amplitudes=amplitudes,
                 spike_ids=spike_ids,
