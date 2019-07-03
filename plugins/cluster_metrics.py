@@ -12,7 +12,7 @@ class ExampleClusterMetricsPlugin(IPlugin):
 
         def meanisi(cluster_id):
             t = controller.get_spike_times(cluster_id).data
-            return np.diff(t).mean()
+            return np.diff(t).mean() if len(t) >= 2 else 0
 
         # Use this dictionary to define custom cluster metrics.
         # We memcache the function so that cluster metrics are only computed once and saved

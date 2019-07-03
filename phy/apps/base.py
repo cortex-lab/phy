@@ -685,7 +685,10 @@ class BaseController(object):
         # can register callbacks to events raised during setup.
         # For example, 'request_cluster_metrics' to specify custom metrics
         # in the cluster and similarity views.
-        attach_plugins(self, plugins=kwargs.get('plugins', None), config_dir=config_dir)
+        self.attached_plugins = attach_plugins(
+            self, config_dir=config_dir,
+            plugins=kwargs.get('plugins', None), dirs=kwargs.get('plugin_dirs', None),
+        )
 
         # Cache the methods specified in self._memcached and self._cached. All method names
         # are concatenated from the object's class parents and mixins.
@@ -1196,6 +1199,18 @@ class BaseController(object):
 
     # GUI
     # -------------------------------------------------------------------------
+
+    def at_least_one_view(self, view_name):
+        """Add a view of a given type if there is not already one.
+
+        To be called before creating a GUI.
+
+        """
+        @connect(sender=self)
+        def on_gui_ready(sender, gui):
+            # Add a view automatically.
+            if gui.view_count.get(view_name, 0) == 0:
+                gui.create_and_add_view(view_name)
 
     def create_gui(self, default_views=None, **kwargs):
         """Create the GUI.

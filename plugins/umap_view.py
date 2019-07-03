@@ -20,7 +20,6 @@ class WaveformUMAPPlugin(IPlugin):
         def coords(cluster_ids):
             """Must return a Bunch object with pos, spike_ids, spike_clusters."""
             # We select 200 spikes from the selected clusters, using a batch size of 50 spikes.
-
             # WARNING: lasso and split will work but will *only split the shown subselection* of
             # spikes. You should use the `load_all` keyword argument to `coords()` to load all
             # spikes before computing the spikes inside the lasso, however (1) this could be
@@ -29,7 +28,6 @@ class WaveformUMAPPlugin(IPlugin):
             # A warning is displayed when trying to split on a view that does not accept the
             # `load_all` keyword argument, because it means that all relevant spikes (even not
             # shown ones) are not going to be split.
-
             spike_ids = controller.selector.select_spikes(cluster_ids, 200, 50)
             # We get the cluster ids corresponding to the chosen spikes.
             spike_clusters = controller.supervisor.clustering.spike_clusters[spike_ids]
@@ -51,3 +49,6 @@ class WaveformUMAPPlugin(IPlugin):
         # Maps a view name to a function that returns a view
         # when called with no argument.
         controller.view_creator['WaveformUMAPView'] = create_view
+
+        # Open a view if there is not already one.
+        controller.at_least_one_view('WaveformUMAPView')

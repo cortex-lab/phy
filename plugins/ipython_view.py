@@ -7,10 +7,13 @@ from phy.gui.widgets import IPythonView
 
 class ExampleIPythonViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
+
         @connect
         def on_add_view(gui, view):
             # This is called whenever a new view is added to the GUI.
             if isinstance(view, IPythonView):
-
                 # We inject the first WaveformView of the GUI to the IPython console.
                 view.inject(wv=gui.get_view(WaveformView))
+
+        # Open an IPython view if there is not already one.
+        controller.at_least_one_view('IPythonView')

@@ -9,7 +9,7 @@ from phy.cluster.views import ManualClusteringView
 from phy.plot.visuals import PlotVisual
 
 
-class MyView(ManualClusteringView):
+class MyOpenGLView(ManualClusteringView):
     """All OpenGL views derive from ManualClusteringView."""
 
     def __init__(self, templates=None):
@@ -19,7 +19,7 @@ class MyView(ManualClusteringView):
         the data as NumPy arrays. Many such functions are defined in the TemplateController.
         """
 
-        super(MyView, self).__init__()
+        super(MyOpenGLView, self).__init__()
 
         """
         The View instance contains a special `canvas` object which is a `̀PlotCanvas` instance.
@@ -108,7 +108,7 @@ class MyView(ManualClusteringView):
         """
         We obtain the template data.
         """
-        bunchs = self.templates(cluster_ids)
+        bunchs = {cluster_id: self.templates(cluster_id).data for cluster_id in cluster_ids}
 
         """
         For performance reasons, it is best to use as few visuals as possible. In this example,
@@ -198,6 +198,9 @@ class MyView(ManualClusteringView):
 class ExampleOpenGLViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_my_view():
-            return MyView(templates=controller.get_templates)
+            return MyOpenGLView(templates=controller._get_template_waveforms)
 
-        controller.view_creator['MyView'] = create_my_view
+        controller.view_creator['MyOpenGLView'] = create_my_view
+
+        # Open a view if there is not already one.
+        controller.at_least_one_view('MyOpenGLView')

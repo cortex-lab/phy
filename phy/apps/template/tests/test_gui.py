@@ -7,13 +7,14 @@
 #------------------------------------------------------------------------------
 
 import logging
+from pathlib import Path
+import re
 import unittest
 
 import numpy as np
 
-from phylib.io.model import load_model
+from phylib.io.model import load_model, get_template_params
 from phylib.io.tests.conftest import _make_dataset
-from phylib.utils import read_python
 from phylib.utils.testing import captured_output
 
 from phy.apps.tests.test_base import BaseControllerTests, GlobalViewsTests
@@ -27,10 +28,10 @@ logger = logging.getLogger(__name__)
 # Tests
 #------------------------------------------------------------------------------
 
-def _template_controller(tempdir, dir_path):
-    kwargs = read_python(dir_path / 'params.py')
+def _template_controller(tempdir, dir_path, **kwargs):
+    kwargs.update(get_template_params(dir_path / 'params.py'))
     return TemplateController(
-        dir_path=dir_path, config_dir=tempdir / 'config',
+        config_dir=tempdir / 'config', plugin_dirs=[plugins_dir()],
         clear_cache=True, enable_threading=False, **kwargs)
 
 
@@ -157,3 +158,46 @@ class TemplateControllerMiscTests(TemplateControllerTests, unittest.TestCase):
     def test_template_feature_view_split(self):
         # NOTE; the misc dataset has no template_features.
         return
+
+
+#------------------------------------------------------------------------------
+# Test plugins
+#------------------------------------------------------------------------------
+
+def plugins_dir():
+    """Path to the directory with the builtin plugins."""
+    return (Path(__file__).parent / '../../../../plugins').resolve()
+
+
+def plugin_paths():
+    """Iterate over the plugin files."""
+    assert plugins_dir().exists()
+    yield from sorted(plugins_dir().glob('*.py'))
+
+
+def plugin_names():
+    """Iterate over the builtin plugin names."""
+    pattern = re.compile(r'class (\w+)\(IPlugin\)\:')
+    for plugin_path in plugin_paths():
+        yield pattern.search(Path(plugin_path).read_text()).group(1)
+
+
+def _make_plugin_test_case(plugin_name):
+    """Generate a special test class with a plugin attached to the controller."""
+
+    class TemplateControllerPluginTests(TemplateControllerDenseTests):
+        @classmethod
+        def get_controller(cls, tempdir):
+            cls._dataset = cls._create_dataset(tempdir)
+            return _template_controller(tempdir, cls._dataset.parent, plugins=[plugin_name])
+
+        def test_a1_plugin_attached(self):
+            """Check that the plugin has been attached."""
+            self.assertTrue(plugin_name in self.controller.attached_plugins)
+
+    return TemplateControllerPluginTests
+
+
+# Dynamically define test classes for each builtin plugin.
+for plugin_name in plugin_names():
+    globals()['TemplateController%sTests' % plugin_name] = _make_plugin_test_case(plugin_name)

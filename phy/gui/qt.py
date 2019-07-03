@@ -14,8 +14,6 @@ import sys
 from timeit import default_timer
 import traceback
 
-from phylib.utils.testing import _in_travis
-
 logger = logging.getLogger(__name__)
 
 
@@ -157,12 +155,15 @@ def _wait_signal(signal, timeout=None):
     loop.exec_()
 
 
+_DEFAULT_TIMEOUT = 5  # in seconds
+
+
 def _block(until_true, timeout=None):
     """Block until the given function returns True. There is a timeout of a couple of seconds."""
     if until_true():
         return
     t0 = default_timer()
-    timeout = timeout or (2 if not _in_travis() else 5)
+    timeout = timeout or _DEFAULT_TIMEOUT
 
     while not until_true() and (default_timer() - t0 < timeout):
         app = QApplication.instance()

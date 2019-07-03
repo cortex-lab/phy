@@ -53,12 +53,15 @@ class ExampleSimilarityPlugin(IPlugin):
             mw = controller._get_mean_waveforms(cluster_id)
             mean_waveforms, channel_ids = mw.data, mw.channel_ids
 
+            assert mean_waveforms is not None
+
             out = []
             # We go through all clusters except the currently selected one.
             for cl in controller.supervisor.clustering.cluster_ids:
                 if cl == cluster_id:
                     continue
                 mw = controller._get_mean_waveforms(cl)
+                assert mw is not None
                 # We compute the dot product between the current cluster and the other cluster.
                 d = _dot_product(mean_waveforms, channel_ids, mw.data, mw.channel_ids)
                 out.append((cl, d))  # convert from distance to similarity with a minus sign

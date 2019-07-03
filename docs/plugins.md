@@ -150,7 +150,7 @@ class ExampleClusterMetricsPlugin(IPlugin):
 
         def meanisi(cluster_id):
             t = controller.get_spike_times(cluster_id).data
-            return np.diff(t).mean()
+            return np.diff(t).mean() if len(t) >= 2 else 0
 
         # Use this dictionary to define custom cluster metrics.
         # We memcache the function so that cluster metrics are only computed once and saved
@@ -226,12 +226,15 @@ class ExampleSimilarityPlugin(IPlugin):
             mw = controller._get_mean_waveforms(cluster_id)
             mean_waveforms, channel_ids = mw.data, mw.channel_ids
 
+            assert mean_waveforms is not None
+
             out = []
             # We go through all clusters except the currently selected one.
             for cl in controller.supervisor.clustering.cluster_ids:
                 if cl == cluster_id:
                     continue
                 mw = controller._get_mean_waveforms(cl)
+                assert mw is not None
                 # We compute the dot product between the current cluster and the other cluster.
                 d = _dot_product(mean_waveforms, channel_ids, mw.data, mw.channel_ids)
                 out.append((cl, d))  # convert from distance to similarity with a minus sign
@@ -517,13 +520,16 @@ from phy.gui.widgets import IPythonView
 
 class ExampleIPythonViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
+
         @connect
         def on_add_view(gui, view):
             # This is called whenever a new view is added to the GUI.
             if isinstance(view, IPythonView):
-
                 # We inject the first WaveformView of the GUI to the IPython console.
                 view.inject(wv=gui.get_view(WaveformView))
+
+        # Open an IPython view if there is not already one.
+        controller.at_least_one_view('IPythonView')
 
 ```
 
@@ -600,7 +606,6 @@ class WaveformUMAPPlugin(IPlugin):
         def coords(cluster_ids):
             """Must return a Bunch object with pos, spike_ids, spike_clusters."""
             # We select 200 spikes from the selected clusters, using a batch size of 50 spikes.
-
             # WARNING: lasso and split will work but will *only split the shown subselection* of
             # spikes. You should use the `load_all` keyword argument to `coords()` to load all
             # spikes before computing the spikes inside the lasso, however (1) this could be
@@ -609,7 +614,6 @@ class WaveformUMAPPlugin(IPlugin):
             # A warning is displayed when trying to split on a view that does not accept the
             # `load_all` keyword argument, because it means that all relevant spikes (even not
             # shown ones) are not going to be split.
-
             spike_ids = controller.selector.select_spikes(cluster_ids, 200, 50)
             # We get the cluster ids corresponding to the chosen spikes.
             spike_clusters = controller.supervisor.clustering.spike_clusters[spike_ids]
@@ -631,6 +635,9 @@ class WaveformUMAPPlugin(IPlugin):
         # Maps a view name to a function that returns a view
         # when called with no argument.
         controller.view_creator['WaveformUMAPView'] = create_view
+
+        # Open a view if there is not already one.
+        controller.at_least_one_view('WaveformUMAPView')
 
 ```
 
@@ -729,7 +736,7 @@ from phy.cluster.views import ManualClusteringView
 from phy.plot.visuals import PlotVisual
 
 
-class MyView(ManualClusteringView):
+class MyOpenGLView(ManualClusteringView):
     """All OpenGL views derive from ManualClusteringView."""
 
     def __init__(self, templates=None):
@@ -739,7 +746,7 @@ class MyView(ManualClusteringView):
         the data as NumPy arrays. Many such functions are defined in the TemplateController.
         """
 
-        super(MyView, self).__init__()
+        super(MyOpenGLView, self).__init__()
 
         """
         The View instance contains a special `canvas` object which is a `̀PlotCanvas` instance.
@@ -828,7 +835,7 @@ class MyView(ManualClusteringView):
         """
         We obtain the template data.
         """
-        bunchs = self.templates(cluster_ids)
+        bunchs = {cluster_id: self.templates(cluster_id).data for cluster_id in cluster_ids}
 
         """
         For performance reasons, it is best to use as few visuals as possible. In this example,
@@ -918,8 +925,11 @@ class MyView(ManualClusteringView):
 class ExampleOpenGLViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def create_my_view():
-            return MyView(templates=controller.get_templates)
+            return MyOpenGLView(templates=controller._get_template_waveforms)
 
-        controller.view_creator['MyView'] = create_my_view
+        controller.view_creator['MyOpenGLView'] = create_my_view
+
+        # Open a view if there is not already one.
+        controller.at_least_one_view('MyOpenGLView')
 
 ```

@@ -177,7 +177,7 @@ class BaseControllerTests(object):
     def amplitude_view(self):
         return self.gui.list_views(AmplitudeView)[0]
 
-    # Convenient methods
+    # Convenience methods
     #--------------------------------------------------------------------------
 
     def stop(self):  # pragma: no cover

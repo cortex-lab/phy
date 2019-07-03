@@ -114,7 +114,7 @@ def discover_plugins(dirs):
     return IPluginRegistry.plugins
 
 
-def attach_plugins(controller, plugins=None, config_dir=None):
+def attach_plugins(controller, plugins=None, config_dir=None, dirs=None):
     """Attach plugins to a controller object.
 
     Attached plugins are those found in the user configuration file for the given gui_name or
@@ -125,8 +125,8 @@ def attach_plugins(controller, plugins=None, config_dir=None):
 
     controller : object
         The controller object that will be passed to the `attach_to_controller()` plugins methods.
-    plugins : list
-        List of plugins to attach in addition to those found in the user configuration file.
+    plugins : list of str
+        List of plugin names to attach in addition to those found in the user configuration file.
     config_dir : str
         Path to the user configuration file. By default, the directory is `~/.phy/`.
 
@@ -137,12 +137,13 @@ def attach_plugins(controller, plugins=None, config_dir=None):
     name = getattr(controller, 'gui_name', None) or controller.__class__.__name__
     c = config.get(name)
     # Discover plugin files in the plugin directories, as specified in the phy config file.
-    dirs = config.get('Plugins', {}).get('dirs', [])
+    dirs = (dirs or []) + config.get('Plugins', {}).get('dirs', [])
     discover_plugins(dirs)
     default_plugins = c.plugins if c else []
     if len(default_plugins):
         plugins = default_plugins + plugins
     logger.debug("Loading %d plugins.", len(plugins))
+    attached = []
     for plugin in plugins:
         try:
             p = get_plugin(plugin)()
@@ -151,8 +152,9 @@ def attach_plugins(controller, plugins=None, config_dir=None):
             continue
         try:
             p.attach_to_controller(controller)
+            attached.append(plugin)
             logger.debug("Attached plugin %s.", plugin)
         except Exception as e:  # pragma: no cover
             logger.warning(
-                "An error occurred when attaching plugin %s: %s.",
-                plugin, e)
+                "An error occurred when attaching plugin %s: %s.", plugin, e)
+    return attached

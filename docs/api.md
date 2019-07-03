@@ -145,7 +145,7 @@ Add an alpha channel to an RGB color.
 #### phy.utils.attach_plugins
 
 
-**`phy.utils.attach_plugins(controller, plugins=None, config_dir=None)`**
+**`phy.utils.attach_plugins(controller, plugins=None, config_dir=None, dirs=None)`**
 
 Attach plugins to a controller object.
 
@@ -158,8 +158,8 @@ class name of the Controller instance, plus those specified in the plugins keywo
 * `controller : object` 　 
     The controller object that will be passed to the `attach_to_controller()` plugins methods.
 
-* `plugins : list` 　 
-    List of plugins to attach in addition to those found in the user configuration file.
+* `plugins : list of str` 　 
+    List of plugin names to attach in addition to those found in the user configuration file.
 
 * `config_dir : str` 　 
     Path to the user configuration file. By default, the directory is `~/.phy/`.
@@ -9128,6 +9128,17 @@ Controller for the Template GUI.
 
 * `enable_threading : boolean` 　 
     Whether to enable threading in the views when selecting clusters.
+
+---
+
+#### TemplateController.at_least_one_view
+
+
+**`TemplateController.at_least_one_view(self, view_name)`**
+
+Add a view of a given type if there is not already one.
+
+To be called before creating a GUI.
 
 ---
 
