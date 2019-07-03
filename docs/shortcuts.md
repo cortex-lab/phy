@@ -125,6 +125,9 @@ To cancel, press Escape to leave the snippet mode.
 ```text
 All snippets
 
+Snippets for Selection
+- select                                   :c
+
 Snippets for Clustering
 - filter                                   :f
 - label                                    :l

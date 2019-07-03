@@ -5,6 +5,7 @@ from phy.cluster.views import HistogramView
 
 
 class FeatureHistogramView(HistogramView):
+    """Every view corresponds to a unique view class, so we need to subclass HistogramView."""
     n_bins = 100  # default number of bins
     x_max = .1  # maximum value on the x axis (maximum bin)
     alias_char = 'fh'  # provide `:fhn` (set number of bins) and `:fhm` (set max bin) snippets

@@ -74,6 +74,8 @@ The **Cluster view** shows the list of all clusters in your dataset.
 
 You can click on one cluster to select it. Select multiple clusters by keeping **Control** or **Shift** pressed. Selected clusters are shown in the different graphical views (detailled below). Clustering actions (merge, split, move, label...) operate on selected clusters.
 
+Select quickly one or several cluster(s) by using **snippets**: for example, type `:c 47 49` to select clusters 47 and 49. See [the list of keyboard shortcuts and snippets](shortcuts.md) for more details.
+
 ![image](https://user-images.githubusercontent.com/1942359/58951169-bac4a280-8790-11e9-8e7b-5fa5410de152.png)
 
 ##### Colormaps
