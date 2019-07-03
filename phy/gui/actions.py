@@ -412,7 +412,7 @@ class Actions(object):
             if not action.shortcut and not action.alias:
                 continue
             # Only show alias for actions with no shortcut.
-            alias_str = ' (:%s)' % action.alias if not action.shortcut else ''
+            alias_str = ' (:%s)' % action.alias if action.alias != name else ''
             shortcut = action.shortcut or '-'
             shortcut = shortcut if isinstance(action.shortcut, str) else ', '.join(shortcut)
             out[name] = '%s%s' % (shortcut, alias_str)

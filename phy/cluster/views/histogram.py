@@ -73,7 +73,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     def __init__(self, cluster_stat=None):
         super(HistogramView, self).__init__()
         self.state_attrs += ('n_bins', 'x_min', 'x_max')
-        self.local_state_attrs += ('n_bins', 'x_min', 'x_max')
+        self.local_state_attrs += ()
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 

@@ -169,7 +169,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         # Initialize the view.
         super(TraceView, self).__init__(**kwargs)
-        self.state_attrs += ('origin', 'interval', 'scaling', 'do_show_labels', 'show_all_spikes')
+        self.state_attrs += ('origin', 'do_show_labels', 'show_all_spikes')
         self.local_state_attrs += ('interval', 'scaling',)
 
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
@@ -320,6 +320,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
             if self.do_show_labels:
                 self._plot_labels(traces.data)
 
+        # Plot the waveforms.
         self.plot()
 
     def on_select(self, cluster_ids=None, **kwargs):
@@ -333,16 +334,16 @@ class TraceView(ScalingMixin, ManualClusteringView):
         """Plot the waveforms."""
         waveforms = self.waveforms
         assert isinstance(waveforms, list)
-        if not waveforms:  # pragma: no cover
+        if waveforms:
+            self.waveform_visual.show()
+            self.waveform_visual.reset_batch()
+            for w in waveforms:
+                self._plot_spike(w)
+                self._waveform_times.append(
+                    (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
+            self.canvas.update_visual(self.waveform_visual)
+        else:  # pragma: no cover
             self.waveform_visual.hide()
-            return
-        self.waveform_visual.show()
-        self.waveform_visual.reset_batch()
-        for w in waveforms:
-            self._plot_spike(w)
-            self._waveform_times.append(
-                (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
-        self.canvas.update_visual(self.waveform_visual)
 
         self._update_axes()
         self.canvas.update()

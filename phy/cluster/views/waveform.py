@@ -126,8 +126,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Initialize the view.
         super(WaveformView, self).__init__(**kwargs)
-        self.state_attrs += (
-            'waveforms_type', 'overlap', 'do_show_labels')
+        self.state_attrs += ('waveforms_type', 'overlap', 'do_show_labels')
         self.local_state_attrs += ('box_scaling', 'probe_scaling')
 
         # Box and probe scaling.

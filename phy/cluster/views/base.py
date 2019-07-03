@@ -444,7 +444,7 @@ class MarkerSizeMixin(ScalingMixin):
     def __init__(self, *args, **kwargs):
         super(MarkerSizeMixin, self).__init__(*args, **kwargs)
         self.state_attrs += ('marker_size',)
-        self.local_state_attrs += ('marker_size',)
+        self.local_state_attrs += ()
 
     # Marker size
     # -------------------------------------------------------------------------
