@@ -485,9 +485,8 @@ class LassoMixin(object):
         for bunch in bunchs:
             # Skip background points.
             # NOTE: we need to make sure that the bunch has a cluster_id key.
-            if bunch.cluster_id is None:
+            if 'cluster_id' in bunch and bunch.cluster_id is None:
                 continue
-            assert bunch.cluster_id >= 0
             # Load all spikes.
             points = np.c_[bunch.pos]
             pos.append(points)
