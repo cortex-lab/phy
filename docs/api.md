@@ -1196,6 +1196,34 @@ to the GUI and views. Derive from `Bunch`, which itself derives from `dict`.
 The GUI state is automatically loaded from the user configuration directory.
 The default path is `~/.phy/GUIName/state.json`.
 
+The global GUI state is common to all instances of the GUI.
+The local GUI state is specific to an instance of the GUI, for example a given dataset.
+
+**Constructor**
+
+
+* `path : str or Path` 　 
+    The path to the JSON file containing the global GUI state.
+
+* `local_path : str or Path` 　 
+    The path to the JSON file containing the local GUI state.
+
+* `default_state_path : str or Path` 　 
+    The path to the default JSON file provided in the library.
+
+* `local_keys : list` 　 
+    A list of strings `key1.key2` of the elements of the GUI state that should only be saved
+    in the local state, and not the global state.
+
+---
+
+#### GUIState.add_local_keys
+
+
+**`GUIState.add_local_keys(self, keys)`**
+
+Add local keys.
+
 ---
 
 #### GUIState.copy
@@ -5657,15 +5685,6 @@ Get the currently selected rows.
 
 ---
 
-#### ClusterView.get_state
-
-
-**`ClusterView.get_state(self, callback=None)`**
-
-Return the cluster view state, with the current sort.
-
----
-
 #### ClusterView.is_ready
 
 
@@ -5775,6 +5794,15 @@ Sort by a given variable.
 **`ClusterView.view_source(self, callback=None)`**
 
 View the HTML source of the widget.
+
+---
+
+#### ClusterView.state
+
+
+**`ClusterView.state`**
+
+Return the cluster view state, with the current sort and selection.
 
 ---
 
@@ -7560,15 +7588,6 @@ Get the currently selected rows.
 
 ---
 
-#### SimilarityView.get_state
-
-
-**`SimilarityView.get_state(self, callback=None)`**
-
-Return the cluster view state, with the current sort.
-
----
-
 #### SimilarityView.is_ready
 
 
@@ -7697,6 +7716,15 @@ Sort by a given variable.
 **`SimilarityView.view_source(self, callback=None)`**
 
 View the HTML source of the widget.
+
+---
+
+#### SimilarityView.state
+
+
+**`SimilarityView.state`**
+
+Return the cluster view state, with the current sort and selection.
 
 ---
 

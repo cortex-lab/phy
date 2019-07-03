@@ -1255,10 +1255,13 @@ class BaseController(object):
         # Save the memcache when closing the GUI.
         @connect(sender=gui)  # noqa
         def on_close(sender):
+
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.
-            gui.state._local_keys = set().union(
-                *(getattr(view, 'local_state_attrs', ()) for view in gui.views))
+            for view in gui.views:
+                local_keys = getattr(view, 'local_state_attrs', [])
+                local_keys = ['%s.%s' % (view.name, key) for key in local_keys]
+                gui.state.add_local_keys(local_keys)
 
             # Update the controller params in the GUI state.
             for param in self._state_params:
