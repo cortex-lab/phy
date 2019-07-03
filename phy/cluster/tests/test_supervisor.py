@@ -215,10 +215,12 @@ def test_cluster_view_1(qtbot, gui, data):
     _wait_until_table_ready(qtbot, cv)
 
     cv.sort_by('n_spikes', 'asc')
-    _assert(cv.get_state, {'current_sort': ('n_spikes', 'asc')})
+    cv.select([1])
+    qtbot.wait(10)
+    assert cv.state == {'current_sort': ('n_spikes', 'asc'), 'selected': [1]}
 
-    cv.set_state({'current_sort': ('id', 'desc')})
-    _assert(cv.get_state, {'current_sort': ('id', 'desc')})
+    cv.set_state({'current_sort': ('id', 'desc'), 'selected': [2]})
+    assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
 
 def test_similarity_view_1(qtbot, gui, data):
@@ -536,8 +538,11 @@ def test_supervisor_split_2(gui, similarity):
 
 def test_supervisor_state(tempdir, qtbot, gui, supervisor):
 
+    supervisor.select(1)
+
     cv = supervisor.cluster_view
     assert supervisor.state.cluster_view.current_sort == ('id', 'desc')
+    assert supervisor.state.cluster_view.selected == [1]
 
     cv.sort_by('id')
     assert supervisor.state.cluster_view.current_sort == ('id', 'asc')

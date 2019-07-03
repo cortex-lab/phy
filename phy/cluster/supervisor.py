@@ -324,15 +324,31 @@ class ClusterView(Table):
     def _set_styles(self):
         self.builder.add_style(self._styles)
 
-    def get_state(self, callback=None):
-        """Return the cluster view state, with the current sort."""
-        self.get_current_sort(lambda sort: callback({'current_sort': tuple(sort or (None, None))}))
+    @property
+    def state(self):
+        """Return the cluster view state, with the current sort and selection."""
+
+        b = Barrier()
+        self.get_current_sort(b('current_sort'))
+        self.get_selected(b('selected'))
+        b.wait()
+
+        current_sort = tuple(b.result('current_sort')[0][0] or (None, None))
+        selected = b.result('selected')[0][0]
+
+        return {
+            'current_sort': current_sort,
+            'selected': selected,
+        }
 
     def set_state(self, state):
         """Set the cluster view state, with a specified sort."""
         sort_by, sort_dir = state.get('current_sort', (None, None))
         if sort_by:
             self.sort_by(sort_by, sort_dir)
+        selected = state.get('selected', [])
+        if selected:
+            self.select(selected)
 
 
 class SimilarityView(ClusterView):
@@ -726,11 +742,7 @@ class Supervisor(object):
 
     def _save_gui_state(self, gui):
         """Save the GUI state with the cluster view and similarity view."""
-        b = Barrier()
-        self.cluster_view.get_state(b(1))
-        b.wait()
-        state = b.result(1)[0][0]
-        gui.state.update_view_state(self.cluster_view, state)
+        gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
 
     def _get_similar_clusters(self, sender, cluster_id):
         """Return the clusters similar to a given cluster."""
@@ -917,16 +929,16 @@ class Supervisor(object):
     @property
     def state(self):
         """GUI state, with the cluster view and similarity view states."""
-        b = Barrier()
-        self.cluster_view.get_state(b(1))
-        self.similarity_view.get_state(b(2))
-        b.wait()
-        sc = b.result(1)[0][0]
-        ss = b.result(2)[0][0]
+        sc = self.cluster_view.state
+        ss = self.similarity_view.state
         return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
 
     def attach(self, gui):
         """Attach to the GUI."""
+
+        # Make sure the selected field in cluster and similarity views are saved in the local
+        # supervisor state, as this information is dataset-dependent.
+        gui.state.add_local_keys(['ClusterView.selected'])
 
         # Create the cluster view and similarity view.
         self._create_views(
@@ -987,6 +999,13 @@ class Supervisor(object):
         def on_close(e):
             gui.state['color_selector'] = self.color_selector.state
             unconnect(on_is_busy)
+
+        @connect(sender=self.cluster_view)
+        def on_ready(sender):
+            """Select the clusters from the cluster view state."""
+            selected = gui.state.get('ClusterView', {}).get('selected', [])
+            if selected:  # pragma: no cover
+                self.cluster_view.select(selected)
 
     @property
     def selected_clusters(self):

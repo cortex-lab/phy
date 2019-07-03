@@ -86,7 +86,6 @@ def _get_local_data(d, local_keys):
     of the form `ViewName.field_name`."""
     out = Bunch()
     for key in local_keys:
-        print(d, key)
         key1, key2 = key.split('.')
         val = d.get(key1, {}).get(key2, None)
         # Discard None values
@@ -185,7 +184,8 @@ class GUIState(Bunch):
                 "Could not copy non-existing default state file %s.", self._default_state_path)
 
     def add_local_keys(self, keys):
-        self._local_keys.extend(keys)
+        """Add local keys."""
+        self._local_keys.extend([k for k in keys if k not in self._local_keys])
 
     def load(self):
         """Load the state from the JSON file in the config dir."""
