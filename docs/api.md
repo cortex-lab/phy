@@ -108,6 +108,9 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.apps.template](#phyappstemplate)
 
+* [phy.apps.template.from_sparse](#phyappstemplatefrom_sparse)
+* [phy.apps.template.get_template_params](#phyappstemplateget_template_params)
+* [phy.apps.template.load_model](#phyappstemplateload_model)
 * [phy.apps.template.template_describe](#phyappstemplatetemplate_describe)
 * [phy.apps.template.template_gui](#phyappstemplatetemplate_gui)
 * [phy.apps.template.TemplateController](#phyappstemplatetemplatecontroller)
@@ -9040,6 +9043,46 @@ GUI is closed. To be overriden.
 ## phy.apps.template
 
 Template GUI.
+
+---
+
+#### phy.apps.template.from_sparse
+
+
+**`phy.apps.template.from_sparse(data, cols, channel_ids)`**
+
+Convert a sparse structure into a dense one.
+
+**Parameters**
+
+
+* `data : array-like` 　 
+    A (n_spikes, n_channels_loc, ...) array with the data.
+
+* `cols : array-like` 　 
+    A (n_spikes, n_channels_loc) array with the channel indices of
+    every row in data.
+
+* `channel_ids : array-like` 　 
+    List of requested channel ids (columns).
+
+---
+
+#### phy.apps.template.get_template_params
+
+
+**`phy.apps.template.get_template_params(params_path)`**
+
+Get a dictionary of parameters from a `params.py` file.
+
+---
+
+#### phy.apps.template.load_model
+
+
+**`phy.apps.template.load_model(params_path)`**
+
+Return a TemplateModel instance from a path to a `params.py` file.
 
 ---
 

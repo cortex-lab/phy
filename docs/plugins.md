@@ -2,7 +2,9 @@
 
 In this section, we give a few examples of plugins.
 
-## How to upgrade plugins from phy 1.0
+## Getting started
+
+### How to upgrade plugins from phy 1.0
 
 Here are some things to know if you want to upgrade plugins to the latest v2.0 version of phy.
 
@@ -35,6 +37,18 @@ def on_eventname(sender, arg):
 3. Make sure the deprecated package `phycontrib` is not loaded anywhere in your pluginsn which could lead to conflicts. You should even make sure it is not installed in your phy2 environment.
 
 4. Look at the plugin examples. They are good starting points to port your plugins. For example, there are example plugins for changing the number of spikes in the views, implementing custom recluster actions, adding custom matplotlib views, using custom cluster metrics and statistics, etc.
+
+
+### How to use the plugins
+
+1. Clone the phy repository :  `git clone https://github.com/cortex-lab/phy`
+2. Edit `~/.phy/phy_config.py`, specify the plugins directory and the plugin names to load:
+
+```python
+c = get_config()
+c.Plugins.dirs = ['/path/to/phy/plugins']  # local path to the `plugins` subdirectory in the phy repo
+c.TemplateGUI.plugins = ['ExampleSimilarityPlugin']  # list of plugin names ti load in the TemplateGUI
+```
 
 
 ## Hello world
@@ -143,6 +157,93 @@ class ExampleClusterMetricsPlugin(IPlugin):
         # within the session, and also between sessions (the memcached values are also saved
         # on disk).
         controller.cluster_metrics['meanisi'] = controller.context.memcache(meanisi)
+
+```
+
+
+## Writing a custom cluster similarity metrics
+
+The similarity metrics measures the similarity between two clusters. It is used to get, in the similarity view, the list of clusters most similar to the clusters currently selected in the cluster view.
+
+In the following example, we define a custom cluster similarity metrics based on a dot product between the mean waveforms.
+
+![image](https://user-images.githubusercontent.com/1942359/60594697-d0d07d80-9da5-11e9-929f-d76433e444d2.png)
+
+```python
+# import from plugins/custom_similarity.py
+"""Show how to add a custom similarity measure."""
+
+from operator import itemgetter
+import numpy as np
+
+from phy import IPlugin
+from phy.apps.template import from_sparse
+
+
+def _dot_product(mw1, c1, mw2, c2):
+    """Compute the L2 dot product between the mean waveforms of two clusters, given in sparse
+    format."""
+
+    mw1 = mw1[0, ...]  # first dimension has only 1 element.
+    mw2 = mw2[0, ...]
+    assert mw1.ndim == 2  # (n_samples, n_channels_loc_1)
+    assert mw2.ndim == 2  # (n_samples, n_channels_loc_2)
+
+    # We normalize the waveforms.
+    mw1 /= np.sqrt(np.sum(mw1 ** 2))
+    mw2 /= np.sqrt(np.sum(mw2 ** 2))
+
+    # We find the union of the channel ids for both clusters so that we can convert from sparse
+    # to dense format.
+    channel_ids = np.union1d(c1, c2)
+
+    # We directly return 0 if the channels of the two clusters are disjoint.
+    if not len(np.intersect1d(c1, c2)):
+        return 0
+
+    # We tile the channels so as to use `from_sparse()`.
+    c1 = np.tile(c1, (mw1.shape[0], 1))
+    c2 = np.tile(c2, (mw2.shape[0], 1))
+
+    # We convert from sparse to dense format in order to compute the distance.
+    mw1 = from_sparse(mw1, c1, channel_ids)  # (n_samples, n_channel_locs_common)
+    mw2 = from_sparse(mw2, c2, channel_ids)  # (n_samples, n_channel_locs_common)
+
+    # We compute the dot product.
+    return np.sum(mw1 * mw2)
+
+
+class ExampleSimilarityPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+
+        # We cache this function in memory and on disk.
+        @controller.context.memcache
+        def mean_waveform_similarity(cluster_id):
+            """This function returns a list of pairs `(other_cluster_id, similarity)` sorted
+            by decreasing similarity."""
+
+            # We get the cluster's mean waveforms.
+            mw = controller._get_mean_waveforms(cluster_id)
+            mean_waveforms, channel_ids = mw.data, mw.channel_ids
+
+            out = []
+            # We go through all clusters except the currently selected one.
+            for cl in controller.supervisor.clustering.cluster_ids:
+                if cl == cluster_id:
+                    continue
+                mw = controller._get_mean_waveforms(cl)
+                # We compute the dot product between the current cluster and the other cluster.
+                d = _dot_product(mean_waveforms, channel_ids, mw.data, mw.channel_ids)
+                out.append((cl, d))  # convert from distance to similarity with a minus sign
+
+            # We return the similar clusters by decreasing similarity.
+            return sorted(out, key=itemgetter(1), reverse=True)
+
+        # We add the similarity function.
+        controller.similarity_functions['mean_waveform'] = mean_waveform_similarity
+
+        # We set the similarity function to the newly-defined one.
+        controller.similarity = 'mean_waveform'
 
 ```
 
