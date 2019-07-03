@@ -1,11 +1,11 @@
 """Show how to write a custom split action."""
 
-from sklearn.cluster import KMeans
 from phy import IPlugin, connect
 
 
 def k_means(x):
     """Cluster an array into two subclusters, using the K-means algorithm."""
+    from sklearn.cluster import KMeans
     return KMeans(n_clusters=2).fit_predict(x)
 
 

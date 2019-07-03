@@ -402,12 +402,12 @@ In this example, we show how to write a custom split action, where one can split
 # import from plugins/custom_split.py
 """Show how to write a custom split action."""
 
-from sklearn.cluster import KMeans
 from phy import IPlugin, connect
 
 
 def k_means(x):
     """Cluster an array into two subclusters, using the K-means algorithm."""
+    from sklearn.cluster import KMeans
     return KMeans(n_clusters=2).fit_predict(x)
 
 
@@ -588,11 +588,11 @@ In this example, we show how to display a dimension reduction of the spike wavef
 
 from phy import IPlugin, Bunch
 from phy.cluster.views import ScatterView
-from umap import UMAP
 
 
 def umap(x):
     """Perform the dimension reduction of the array x."""
+    from umap import UMAP
     return UMAP().fit_transform(x)
 
 

@@ -2,11 +2,11 @@
 
 from phy import IPlugin, Bunch
 from phy.cluster.views import ScatterView
-from umap import UMAP
 
 
 def umap(x):
     """Perform the dimension reduction of the array x."""
+    from umap import UMAP
     return UMAP().fit_transform(x)
 
 
