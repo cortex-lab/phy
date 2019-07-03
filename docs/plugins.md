@@ -636,9 +636,6 @@ class WaveformUMAPPlugin(IPlugin):
         # when called with no argument.
         controller.view_creator['WaveformUMAPView'] = create_view
 
-        # Open a view if there is not already one.
-        controller.at_least_one_view('WaveformUMAPView')
-
 ```
 
 
