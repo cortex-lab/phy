@@ -199,8 +199,8 @@ def _create_qaction(gui, **kwargs):
     assert kwargs.get('docstring', None)
     docstring = re.sub(r'\s+', ' ', kwargs.get('docstring', None))
     docstring += ' (alias: {})'.format(kwargs.get('alias', None))
-    action.setStatusTip(kwargs.get('docstring', None))
-    action.setWhatsThis(kwargs.get('docstring', None))
+    action.setStatusTip(docstring)
+    action.setWhatsThis(docstring)
     action.setCheckable(kwargs.get('checkable', None))
     action.setChecked(kwargs.get('checked', None))
     return action
