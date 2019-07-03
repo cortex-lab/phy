@@ -10,7 +10,7 @@ import logging
 import os
 import shutil
 
-from ..state import GUIState, _gui_state_path, _get_default_state_path, _filter_nested_dict
+from ..state import GUIState, _gui_state_path, _get_default_state_path
 from phylib.utils import Bunch, load_json, save_json
 
 logger = logging.getLogger(__name__)
@@ -50,63 +50,41 @@ def test_gui_state_view_1(tempdir):
     assert state.MyView0.hello == 'world'
 
 
-def test_filter_nested_dict():
-    def _assert(d0, d1=None, search_terms=None):
-        d1 = d1 if d1 is not None else d0
-        assert _filter_nested_dict(d0, search_terms=search_terms) == d1
-    _assert({})
-    _assert({'a': 1})
-
-    _assert({'a': 1}, {}, search_terms=('b',))
-    _assert({'a': 1}, search_terms=('a',))
-
-    data = {'a': {'b': 2, 'c': {'d': 4, 'e': 5}}}
-    _assert(data)
-    _assert(data, {}, search_terms=('f',))
-    # Keep the entire dictionary.
-    _assert(data, search_terms=('a',))
-    _assert(data, {'a': {'b': 2}}, search_terms=('b',))
-    _assert(data, {'a': {'c': {'d': 4, 'e': 5}}}, search_terms=('c',))
-    _assert(data, {'a': {'c': {'d': 4}}}, search_terms=('d',))
-    _assert(data, {'a': {'c': {'d': 4, 'e': 5}}}, search_terms=('d', 'e'))
-    _assert(data, {'a': {'b': 2, 'c': {'e': 5}}}, search_terms=('b', 'e'))
-
-
 def test_gui_state_view_2(tempdir):
     global_path = tempdir / 'global/state.json'
     local_path = tempdir / 'local/state.json'
-    data = {'a': {'b': 2, 'c': {'d': 4, 'e': 5}}}
+    data = {'a': {'b': 2, 'c': 3}}
 
     # Keep the entire dictionary with 'a' key.
-    state = GUIState(global_path, local_path=local_path, local_keys=('a',))
+    state = GUIState(global_path, local_path=local_path, local_keys=('a.d',))
     state.update(data)
     state.save()
 
     # Local and global files are identical.
-    assert load_json(global_path) == load_json(local_path)
+    assert load_json(global_path) == data
+    assert load_json(local_path) == {}
 
-    state = GUIState(global_path, local_path=local_path, local_keys=('a',))
+    state = GUIState(global_path, local_path=local_path, local_keys=('a.d',))
     assert state == data
 
 
 def test_gui_state_view_3(tempdir):
     global_path = tempdir / 'global/state.json'
     local_path = tempdir / 'local/state.json'
-    data = {'a': {'b': 2, 'c': {'d': 4, 'e': 5}}}
+    data = {'a': {'b': 2, 'c': 3}}
 
-    state = GUIState(global_path, local_path=local_path, local_keys=('b',))
+    state = GUIState(global_path, local_path=local_path)
+    state.add_local_keys(['a.b'])
     state.update(data)
     state.save()
 
-    # Global file is not affected by local state.
-    assert load_json(global_path) == state
+    assert load_json(global_path) == {'a': {'c': 3}}
     # Only kept key 'b'.
     assert load_json(local_path) == {'a': {'b': 2}}
     # Update the JSON
     save_json(local_path, {'a': {'b': 3}})
 
-    state = GUIState(global_path, local_path=local_path, local_keys=('b',))
-    data_1 = data.copy()
-    data_1['a']['b'] = 3
+    state = GUIState(global_path, local_path=local_path, local_keys=('a.b',))
+    data_1 = {'a': {'b': 3, 'c': 3}}
     assert state == data_1
     assert state._local_data == {'a': {'b': 3}}

@@ -11,6 +11,7 @@ try:  # pragma: no cover
     from collections.abc import Mapping  # noqa
 except ImportError:  # pragma: no cover
     from collections import Mapping  # noqa
+from copy import deepcopy
 import inspect
 import json
 import logging
@@ -61,9 +62,6 @@ def _filter_nested_dict(value, key=None, search_terms=None):
     if not isinstance(value, Mapping):
         return value if keep(key) else None
     else:
-        if key and keep(key):
-            # Keep the entire dictionary if the key is to be kept.
-            return value
         dupe_node = {}
         for key, val in value.items():
             cur_node = _filter_nested_dict(val, key=key, search_terms=search_terms)
@@ -83,6 +81,35 @@ def _recursive_update(d, u):
     return d
 
 
+def _get_local_data(d, local_keys):
+    """Return the Bunch of local data from a full GUI state, and a list of local keys
+    of the form `ViewName.field_name`."""
+    out = Bunch()
+    for key in local_keys:
+        print(d, key)
+        key1, key2 = key.split('.')
+        val = d.get(key1, {}).get(key2, None)
+        # Discard None values
+        if val is None:
+            continue
+        if key1 not in out:
+            out[key1] = Bunch()
+        out[key1][key2] = val
+    return out
+
+
+def _get_global_data(d, local_keys):
+    """Remove the local keys from the GUI state."""
+    # d = deepcopy(_filter_nested_dict(d))  # remove private fields
+    d = deepcopy(_filter_nested_dict(d))
+    for key in local_keys:
+        key1, key2 = key.split('.')
+        # Remove that key.
+        if key1 in d:
+            d[key1].pop(key2, None)
+    return d
+
+
 class GUIState(Bunch):
     """Represent the state of the GUI: positions of the views and all parameters associated
     to the GUI and views. Derive from `Bunch`, which itself derives from `dict`.
@@ -90,20 +117,36 @@ class GUIState(Bunch):
     The GUI state is automatically loaded from the user configuration directory.
     The default path is `~/.phy/GUIName/state.json`.
 
+    The global GUI state is common to all instances of the GUI.
+    The local GUI state is specific to an instance of the GUI, for example a given dataset.
+
+    Constructor
+    -----------
+
+    path : str or Path
+        The path to the JSON file containing the global GUI state.
+    local_path : str or Path
+        The path to the JSON file containing the local GUI state.
+    default_state_path : str or Path
+        The path to the default JSON file provided in the library.
+    local_keys : list
+        A list of strings `key1.key2` of the elements of the GUI state that should only be saved
+        in the local state, and not the global state.
+
     """
-    def __init__(self, path, local_path=None, default_state_path=None, local_keys=None, **kwargs):
+    def __init__(
+            self, path=None, local_path=None, default_state_path=None, local_keys=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
-        self._path = Path(path)
-        ensure_dir_exists(str(self._path.parent))
+        self._path = Path(path) if path else None
+        if self._path:
+            ensure_dir_exists(str(self._path.parent))
 
         self._local_path = Path(local_path) if local_path else None
-        self._local_keys = local_keys or ()
+        self._local_keys = local_keys or []  # A list of strings with full paths key1.key2
         if self._local_path:
             ensure_dir_exists(str(self._local_path.parent))
 
-        if not default_state_path:
-            logger.warning("The default state path %s does not exist.", default_state_path)
-        else:
+        if default_state_path:
             default_state_path = Path(default_state_path)
         self._default_state_path = default_state_path
 
@@ -137,13 +180,18 @@ class GUIState(Bunch):
                 "The GUI state file `%s` doesn't exist, creating a default one...", self._path)
             shutil.copy(self._default_state_path, self._path)
             logger.info("Copied %s to %s.", self._default_state_path, self._path)
-        else:
+        elif self._default_state_path:  # pragma: no cover
             logger.warning(
                 "Could not copy non-existing default state file %s.", self._default_state_path)
+
+    def add_local_keys(self, keys):
+        self._local_keys.extend(keys)
 
     def load(self):
         """Load the state from the JSON file in the config dir."""
         # Make the self._path exists, by copying the default state if necessary.
+        if not self._path:
+            return
         if not self._path.exists():
             self._copy_default_state()
         if not self._path.exists():
@@ -157,13 +205,13 @@ class GUIState(Bunch):
     @property
     def _global_data(self):
         """Select non-private fields in the GUI state."""
-        return {k: v for k, v in self.items() if not k.startswith('_')}
+        return _get_global_data(self, self._local_keys)
 
     @property
     def _local_data(self):
         """Select fields for the local GUI state."""
         # Select only keys included in self._local_keys.
-        return _filter_nested_dict(self, search_terms=self._local_keys)
+        return _get_local_data(self, self._local_keys)
 
     def _save_global(self):
         """Save the entire GUIState to the global file."""
@@ -192,4 +240,4 @@ class GUIState(Bunch):
 
     def __eq__(self, other):
         """Equality with other dictionary: compare with global data."""
-        return other == self._global_data
+        return _filter_nested_dict(other) == _filter_nested_dict(self)
