@@ -109,16 +109,30 @@ def phycli(ctx):
 
 
 #------------------------------------------------------------------------------
+# GUI command wrapper
+#------------------------------------------------------------------------------
+
+
+def _gui_command(f):
+    """Command options for GUI commands."""
+    f = click.option(
+        '--clear-cache/--no-clear-cache', default=False,
+        help="Clear the .phy cache in the data directory.")(f)
+    f = click.option(
+        '--clear-config/--no-clear-config', default=False,
+        help="Clear the GUI configuration in `~/.phy/` and in `.phy`.")(f)
+    return f
+
+
+#------------------------------------------------------------------------------
 # Template GUI
 #------------------------------------------------------------------------------
 
 @phycli.command('template-gui')  # pragma: no cover
 @click.argument('params-path', type=click.Path(exists=True))
-@click.option(
-    '--clear-cache/--no-clear-cache', default=False,
-    help="Clear the .phy cache in the data directory.")
+@_gui_command
 @click.pass_context
-def cli_template_gui(ctx, params_path, clear_cache=None):
+def cli_template_gui(ctx, params_path, **kwargs):
     """Launch the template GUI on a params.py file."""
     from .template.gui import template_gui
     prof = __builtins__.get('profile', None)
@@ -126,7 +140,7 @@ def cli_template_gui(ctx, params_path, clear_cache=None):
         if prof:
             from phy.utils.profiling import _profile
             return _profile(prof, 'template_gui(params_path)', globals(), locals())
-        template_gui(params_path, clear_cache=clear_cache)
+        template_gui(params_path, **kwargs)
 
 
 @phycli.command('template-describe')
@@ -147,16 +161,14 @@ def cli_template_describe(ctx, params_path):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--channel-group', type=int)
 @click.option('--clustering', type=str)
-@click.option(
-    '--clear-cache/--no-clear-cache', default=False,
-    help="Clear the .phy cache in the data directory.")
+@_gui_command
 @click.pass_context
-def cli_kwik_gui(ctx, path, channel_group=None, clustering=None, clear_cache=None):
+def cli_kwik_gui(ctx, path, channel_group=None, clustering=None, **kwargs):
     """Launch the Kwik GUI on a Kwik file."""
     from .kwik.gui import kwik_gui
     with capture_exceptions():
         assert path
-        kwik_gui(path, channel_group=channel_group, clustering=clustering, clear_cache=clear_cache)
+        kwik_gui(path, channel_group=channel_group, clustering=clustering, **kwargs)
 
 
 @phycli.command('kwik-describe')

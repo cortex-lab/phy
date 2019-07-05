@@ -227,12 +227,12 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
 # Kwik commands
 #------------------------------------------------------------------------------
 
-def kwik_gui(path, channel_group=None, clustering=None, clear_cache=None):  # pragma: no cover
+def kwik_gui(path, channel_group=None, clustering=None, **kwargs):  # pragma: no cover
     """Launch the Kwik GUI."""
     assert path
     create_app()
     controller = KwikController(
-        path, channel_group=channel_group, clustering=clustering, clear_cache=clear_cache)
+        path, channel_group=channel_group, clustering=clustering, **kwargs)
     gui = controller.create_gui()
     gui.show()
     run_app()

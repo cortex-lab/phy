@@ -178,13 +178,13 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 # Template commands
 #------------------------------------------------------------------------------
 
-def template_gui(params_path, clear_cache=None):  # pragma: no cover
+def template_gui(params_path, **kwargs):  # pragma: no cover
     """Launch the Template GUI."""
     # Create a `phy.log` log file with DEBUG level.
     _add_log_file(Path(params_path).parent / 'phy.log')
 
     create_app()
-    controller = TemplateController(**get_template_params(params_path), clear_cache=clear_cache)
+    controller = TemplateController(**get_template_params(params_path), **kwargs)
     gui = controller.create_gui()
     gui.show()
     run_app()

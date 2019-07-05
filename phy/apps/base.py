@@ -31,6 +31,7 @@ from . import _add_log_file
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
 from phy.gui.qt import AsyncCaller
+from phy.gui.state import _gui_state_path
 from phy.gui.widgets import IPythonView
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
@@ -535,6 +536,8 @@ class BaseController(object):
         the user configuration directory).
     clear_cache : boolean
         Whether to clear the cache on startup.
+    clear_config : boolean
+        Whether to clear the GUI user configuration file on startup.
     enable_threading : boolean
         Whether to enable threading in the views when selecting clusters.
 
@@ -646,7 +649,8 @@ class BaseController(object):
     )
 
     def __init__(
-            self, dir_path=None, config_dir=None, model=None, clear_cache=None,
+            self, dir_path=None, config_dir=None, model=None,
+            clear_cache=None, clear_config=None,
             enable_threading=True, **kwargs):
 
         self._enable_threading = enable_threading
@@ -679,6 +683,11 @@ class BaseController(object):
             self.default_views = _concatenate_parents_attributes(self.__class__, '_new_views')
         self._async_callers = {}
         self.config_dir = config_dir
+
+        # Clear the configuration file if needed.
+        if clear_config:
+            self._clear_config()
+
         self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
 
         # Attach plugins before setting up the supervisor, so that plugins
@@ -706,6 +715,17 @@ class BaseController(object):
     def _create_model(self, dir_path=None, **kwargs):
         """Create a model using the constructor parameters. To be overriden."""
         return
+
+    def _clear_config(self):
+        """Clear the global and local configuration file of the GUI."""
+        state_path = _gui_state_path(self.gui_name, config_dir=self.config_dir)
+        if state_path.exists():
+            logger.warning("Deleting %s.", state_path)
+            state_path.unlink()
+        local_path = self.cache_dir / 'state.json'
+        if local_path.exists():
+            local_path.unlink()
+            logger.warning("Deleting %s.", local_path)
 
     def _set_cache(self, clear_cache=None):
         """Set up the cache, clear it if required, and create the Context instance."""
