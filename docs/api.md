@@ -1739,6 +1739,15 @@ Remove all rows in the table and add new objects.
 
 ---
 
+#### Table.scroll_to
+
+
+**`Table.scroll_to(self, id)`**
+
+Scroll until a given row is visible.
+
+---
+
 #### Table.select
 
 
@@ -5742,6 +5751,15 @@ Remove all rows in the table and add new objects.
 
 ---
 
+#### ClusterView.scroll_to
+
+
+**`ClusterView.scroll_to(self, id)`**
+
+Scroll until a given row is visible.
+
+---
+
 #### ClusterView.select
 
 
@@ -7654,6 +7672,15 @@ Recreate the similarity view, given the selected clusters in the cluster view.
 
 ---
 
+#### SimilarityView.scroll_to
+
+
+**`SimilarityView.scroll_to(self, id)`**
+
+Scroll until a given row is visible.
+
+---
+
 #### SimilarityView.select
 
 
@@ -9098,7 +9125,7 @@ Describe a template dataset.
 #### phy.apps.template.template_gui
 
 
-**`phy.apps.template.template_gui(params_path, clear_cache=None)`**
+**`phy.apps.template.template_gui(params_path, **kwargs)`**
 
 Launch the Template GUI.
 
