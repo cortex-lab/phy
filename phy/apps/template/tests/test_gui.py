@@ -32,7 +32,7 @@ def _template_controller(tempdir, dir_path, **kwargs):
     kwargs.update(get_template_params(dir_path / 'params.py'))
     return TemplateController(
         config_dir=tempdir / 'config', plugin_dirs=[plugins_dir()],
-        clear_cache=True, enable_threading=False, **kwargs)
+        clear_cache=True, clear_config=True, enable_threading=False, **kwargs)
 
 
 def test_template_describe(qtbot, tempdir):

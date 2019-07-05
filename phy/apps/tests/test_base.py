@@ -118,7 +118,7 @@ def _mock_controller(tempdir, cls):
     model = MyModel()
     return cls(
         dir_path=tempdir, config_dir=tempdir / 'config', model=model,
-        clear_cache=True, clear_config=True, enable_threading=False)
+        clear_cache=True, enable_threading=False)
 
 
 #------------------------------------------------------------------------------
