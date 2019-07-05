@@ -24,9 +24,13 @@ Usage: phy template-gui [OPTIONS] PARAMS_PATH
   Launch the template GUI on a params.py file.
 
 Options:
+  --clear-config / --no-clear-config
+                                  Clear the GUI configuration in `~/.phy/` and
+                                  in `.phy`.
   --clear-cache / --no-clear-cache
                                   Clear the .phy cache in the data directory.
   --help                          Show this message and exit.
+
 ```
 
 The dataset is made of a set of `.npy` files (`spike_times.npy`, `spike_clusters.npy`, and so on). There are also `.tsv` files for cluster-dependent data.
