@@ -487,6 +487,10 @@ class Table(HTMLWidget):
         assert all(_is_integer(_) for _ in ids)
         self.eval_js('table.select({}, {});'.format(dumps(ids), dumps(kwargs)), callback=callback)
 
+    def scroll_to(self, id):
+        """Scroll until a given row is visible."""
+        self.eval_js('table._scrollTo({});'.format(id))
+
     def set_busy(self, busy):
         """Set the busy state of the GUI."""
         self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
