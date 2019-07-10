@@ -21,7 +21,28 @@ from . import _stop_and_close
 # Test template view
 #------------------------------------------------------------------------------
 
-def test_template_view(qtbot, tempdir, gui):
+def test_template_view_0(qtbot, tempdir, gui):
+    n_samples = 50
+    n_clusters = 10
+    channel_ids = np.arange(n_clusters + 2)
+
+    def get_templates(cluster_ids):
+        return {i: Bunch(
+            template=artificial_waveforms(1, n_samples, 2)[0, ...],
+            channel_ids=np.arange(i, i + 2),
+        ) for i in cluster_ids}
+
+    v = TemplateView(templates=get_templates, channel_ids=channel_ids)
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
+
+    v.plot()
+
+    _stop_and_close(qtbot, v)
+
+
+def test_template_view_1(qtbot, tempdir, gui):
     n_samples = 50
     n_clusters = 10
     channel_ids = np.arange(n_clusters + 2)

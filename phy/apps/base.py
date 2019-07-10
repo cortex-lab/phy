@@ -408,8 +408,6 @@ class TemplateMixin(object):
 
     def _get_all_templates(self, cluster_ids):
         """Get the template waveforms of a set of clusters."""
-        if cluster_ids is None or not len(cluster_ids):  # pragma: no cover
-            return {}
         bunchs = {
             cluster_id: self._get_template_waveforms(cluster_id)
             for cluster_id in cluster_ids}

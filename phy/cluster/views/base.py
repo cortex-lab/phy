@@ -340,13 +340,13 @@ class BaseGlobalView(object):
     """
 
     # All cluster ids, in the order they are shown in the cluster view.
-    all_cluster_ids = None
+    all_cluster_ids = ()
 
     # Like all_cluster_ids, but sorted by increasing it. Internal data is stored in this order.
-    sorted_cluster_ids = None
+    sorted_cluster_ids = ()
 
     # For every cluster (sorted by increasing cluster id), its index in all_cluster_ids.
-    cluster_idxs = None
+    cluster_idxs = ()
 
     def _iter_clusters(self):
         """Iterate through all clusters in their natural order (increasing cluster id).
