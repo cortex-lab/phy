@@ -842,6 +842,7 @@ class TextVisual(BaseVisual):
         self.program['u_color'] = self.color
 
         self.program['u_tex'] = tex[::-1, :]
+        self.program['u_tex_size'] = tex.shape[:2]
 
         self.emit_visual_set_data()
         return data

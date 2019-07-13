@@ -5,6 +5,7 @@ https://github.com/Chlumsky/msdfgen
 
 uniform sampler2D u_tex;
 uniform vec4 u_color;
+uniform vec2 u_tex_size;
 varying vec2 v_tex_coords;
 
 
@@ -19,7 +20,7 @@ float contour(float d, float w) {
 
 
 float get_alpha(vec2 uv) {
-    vec2 msdfUnit = 4.0 / vec2(textureSize(u_tex, 0));
+    vec2 msdfUnit = 4.0 / u_tex_size;
     vec3 sample = texture2D(u_tex, uv).rgb;
     float sigDist = median(sample.r, sample.g, sample.b) - 0.5;
     sigDist *= dot(msdfUnit, 0.5 / fwidth(uv));
