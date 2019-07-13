@@ -51,3 +51,5 @@ docs/_build
 *.code-workspace
 msdfgen
 *.sh
+tools/*.png
+tools/*.ttf

@@ -674,6 +674,8 @@ class TextVisual(BaseVisual):
     -----------
 
     color : 4-tuple
+    font_size : float
+        The font size, in points (8 by default).
 
     Parameters
     ----------

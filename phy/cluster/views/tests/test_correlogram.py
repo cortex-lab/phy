@@ -40,6 +40,8 @@ def test_correlogram_view(qtbot, gui):
     v.on_select(cluster_ids=[0, 2])
 
     v.toggle_normalization(True)
+    v.toggle_labels(False)
+    v.toggle_labels(True)
 
     v.set_bin(1)
     v.set_window(100)

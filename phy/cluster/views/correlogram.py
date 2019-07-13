@@ -14,7 +14,7 @@ import numpy as np
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
 from phylib.utils import Bunch
-from phylib.utils.color import selected_cluster_color
+from phylib.utils.color import selected_cluster_color, _override_hsv, add_alpha
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,9 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             b.firing_rate = fr[i, j] if fr is not None else None
             b.data_bounds = (0, 0, n_bins, m)
             b.pair_index = i, j
-            b.color = selected_cluster_color(i, 1) if i == j else (1, 1, 1, 1)
+            b.color = selected_cluster_color(i, 1)
+            if i != j:
+                b.color = add_alpha(_override_hsv(b.color[:3], s=.1, v=1))
             bunchs.append(b)
         return bunchs
 
@@ -211,11 +213,20 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.uniform_normalization = checked
         self.plot()
 
+    def toggle_labels(self, checked):
+        """Show or hide all labels."""
+        if checked:
+            self.text_visual.show()
+        else:
+            self.text_visual.hide()
+        self.canvas.update()
+
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
 
         self.actions.add(self.toggle_normalization, shortcut='n', checkable=True)
+        self.actions.add(self.toggle_labels, checkable=True, checked=True)
         self.actions.separator()
 
         self.actions.add(
