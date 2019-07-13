@@ -85,7 +85,7 @@ class Shader(GLObject):
         'samplerCube': gl.GL_SAMPLER_CUBE,
     }
 
-    def __init__(self, target, code, version="120"):
+    def __init__(self, target, code, version="130"):
         """
         Initialize the shader.
         """
@@ -338,7 +338,7 @@ class Shader(GLObject):
 class VertexShader(Shader):
     """ Vertex shader class """
 
-    def __init__(self, code=None, version="120"):
+    def __init__(self, code=None, version="130"):
         Shader.__init__(self, gl.GL_VERTEX_SHADER, code, version)
 
     @property
@@ -354,7 +354,7 @@ class VertexShader(Shader):
 class FragmentShader(Shader):
     """ Fragment shader class """
 
-    def __init__(self, code=None, version="120"):
+    def __init__(self, code=None, version="130"):
         Shader.__init__(self, gl.GL_FRAGMENT_SHADER, code, version)
 
     @property
@@ -387,7 +387,7 @@ class GeometryShader(Shader):
     """
 
     def __init__(self, code=None,
-                 vertices_out=None, input_type=None, output_type=None, version="120"):
+                 vertices_out=None, input_type=None, output_type=None, version="130"):
         Shader.__init__(self, gl.GL_GEOMETRY_SHADER_EXT, code, version)
 
         self._vertices_out = vertices_out

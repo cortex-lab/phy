@@ -50,7 +50,7 @@ class Program(GLObject):
 
     # ---------------------------------
     def __init__(self, vertex=None, fragment=None, geometry=None,
-                 count=0, version="120"):
+                 count=0, version="130"):
         """
         Initialize the program and optionnaly buffer.
         """

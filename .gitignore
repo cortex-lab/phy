@@ -49,3 +49,5 @@ docs/_build
 
 .vscode
 *.code-workspace
+msdfgen
+*.sh
