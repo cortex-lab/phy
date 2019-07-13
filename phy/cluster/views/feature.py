@@ -241,13 +241,15 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             label_y = self._get_axis_label(dim_y)
             # Add labels.
             self.text_visual.add_batch_data(
-                pos=[.8, .9],
+                pos=[1, 1],
+                anchor=[-1, -1],
                 text=label_y,
                 data_bounds=None,
                 box_index=(i, j),
             )
             self.text_visual.add_batch_data(
-                pos=[0, -.9],
+                pos=[0, -1.],
+                anchor=[0, 1],
                 text=label_x,
                 data_bounds=None,
                 box_index=(i, j),
