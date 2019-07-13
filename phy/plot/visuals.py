@@ -23,7 +23,7 @@ from .base import BaseVisual
 from .transform import Range, NDC
 from .utils import (
     _tesselate_histogram, _get_texture, _get_array, _get_pos, _get_index)
-# from phy.gui.qt import is_high_dpi
+from phy.gui.qt import is_high_dpi
 from phylib.io.array import _as_array
 from phylib.utils import Bunch
 from phylib.utils.geometry import _get_data_bounds
@@ -718,7 +718,9 @@ class TextVisual(BaseVisual):
         self.color = color
 
         # Font size.
-        self.font_size = font_size or 8.  # in points
+        self.font_size = font_size or 4.  # in points
+        if is_high_dpi():  # pragma: no cover
+            self.font_size *= 2
         assert self.font_size > 0
 
         # Load the multi signed distance field font map.
