@@ -78,7 +78,7 @@ class BaseVisual(object):
     def on_resize(self, size):
         # HACK: we check whether u_window_size is used in order to avoid
         # the VisPy warning. We only update it if that uniform is active.
-        s = '\n'.join(self.program.shaders)
+        s = '\n'.join(s.code for s in self.program.shaders)
         s = s.replace('uniform vec2 u_window_size;', '')
         if 'u_window_size' in s:
             self.program['u_window_size'] = size
