@@ -23,17 +23,17 @@ Minimal installation instructions (to be completed):
 
 2. Open a terminal and type:
 
-    ```
-    conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython -y
-    conda activate phy2
-    pip install colorcet pyopengl qtconsole requests traitlets tqdm joblib click mkdocs PyQtWebEngine
-    pip install git+https://github.com/cortex-lab/phy.git@dev
-    pip install git+https://github.com/cortex-lab/phylib.git
-    ```
+```
+conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython -y
+conda activate phy2
+pip install colorcet pyopengl qtconsole requests traitlets tqdm joblib click mkdocs PyQtWebEngine
+pip install git+https://github.com/cortex-lab/phy.git@dev
+pip install git+https://github.com/cortex-lab/phylib.git
+```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
 
-    ```
-    cd path/to/my/spikesorting/output
-    phy template-gui params.py
-    ```
+```
+cd path/to/my/spikesorting/output
+phy template-gui params.py
+```
