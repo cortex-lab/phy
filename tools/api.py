@@ -240,7 +240,7 @@ def generate_api_doc(package, subpackages, path=None):
         return out
     else:
         with open(path, 'w') as f:
-            f.write(out)
+            f.write('\n'.join([_.rstrip() for _ in out.splitlines()]))
 
 
 if __name__ == '__main__':
