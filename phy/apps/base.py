@@ -615,6 +615,7 @@ class BaseController(object):
     """
 
     gui_name = 'BaseGUI'
+    gui_version = 2
 
     # Number of spikes to show in the views.
     n_spikes_amplitudes = 2500
@@ -1301,6 +1302,9 @@ class BaseController(object):
             # Update the controller params in the GUI state.
             for param in self._state_params:
                 gui.state[param] = getattr(self, param, None)
+
+            gui.state['GUI_VERSION'] = self.gui_version
+
             self.context.save_memcache()
 
         emit('gui_ready', self, gui)
