@@ -119,8 +119,8 @@ def _gui_command(f):
         '--clear-cache/--no-clear-cache', default=False,
         help="Clear the .phy cache in the data directory.")(f)
     f = click.option(
-        '--clear-config/--no-clear-config', default=False,
-        help="Clear the GUI configuration in `~/.phy/` and in `.phy`.")(f)
+        '--clear-state/--no-clear-state', default=False,
+        help="Clear the GUI state in `~/.phy/` and in `.phy`.")(f)
     return f
 
 

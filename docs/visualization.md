@@ -24,9 +24,8 @@ Usage: phy template-gui [OPTIONS] PARAMS_PATH
   Launch the template GUI on a params.py file.
 
 Options:
-  --clear-config / --no-clear-config
-                                  Clear the GUI configuration in `~/.phy/` and
-                                  in `.phy`.
+  --clear-state / --no-clear-state
+                                  Clear the GUI state in `~/.phy/` and in `.phy`.
   --clear-cache / --no-clear-cache
                                   Clear the .phy cache in the data directory.
   --help                          Show this message and exit.
