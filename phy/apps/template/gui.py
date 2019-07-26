@@ -169,7 +169,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
 
     def create_template_feature_view(self):
-        if self.model.sparse_template_features is None:
+        if self.model.template_features is None:
             return
         return TemplateFeatureView(coords=self._get_template_features)
 
