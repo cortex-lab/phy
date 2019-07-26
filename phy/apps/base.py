@@ -137,7 +137,7 @@ class WaveformMixin(object):
         spike_ids = self.selector.select_spikes(
             [cluster_id], n_spikes_waveforms, batch_size_waveforms)
         channel_ids = self.get_best_channels(cluster_id)
-        channel_labels = ['%d' % ch for ch in self.model.channel_mapping[channel_ids]]
+        channel_labels = self._get_channel_labels(channel_ids)
         data = self.model.get_waveforms(spike_ids, channel_ids)
         data = data - data.mean() if data is not None else None
         return Bunch(
@@ -265,7 +265,7 @@ class FeatureMixin(object):
         data[np.isnan(data)] = 0
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         assert np.isnan(data).sum() == 0
-        channel_labels = ['%d' % ch for ch in self.model.channel_mapping[channel_ids]]
+        channel_labels = self._get_channel_labels(channel_ids)
         return Bunch(
             data=data, spike_ids=spike_ids, channel_ids=channel_ids, channel_labels=channel_labels)
 
@@ -445,7 +445,7 @@ class TemplateMixin(object):
         view = TemplateView(
             templates=self._get_all_templates,
             channel_ids=np.arange(self.model.n_channels),
-            channel_labels=['%d' % ch for ch in self.model.channel_mapping],
+            channel_labels=self._get_channel_labels(),
             cluster_color_selector=self.supervisor.color_selector,
         )
         self._attach_global_view(view)
@@ -497,7 +497,7 @@ class TraceMixin(object):
             traces=self._get_traces,
             spike_times=self._trace_spike_times,
             n_channels=self.model.n_channels,
-            channel_labels=['%d' % ch for ch in self.model.channel_mapping],
+            channel_labels=self._get_channel_labels(),
             sample_rate=self.model.sample_rate,
             duration=self.model.duration,
             channel_vertical_order=getattr(self.model, 'channel_vertical_order', None),
@@ -843,6 +843,16 @@ class BaseController(object):
             memcached = _concatenate_parents_attributes(self.__class__, '_memcached')
             cached = _concatenate_parents_attributes(self.__class__, '_cached')
             _cache_methods(self, memcached, cached)
+
+    def _get_channel_labels(self, channel_ids=None):
+        """Return the labels of a list of channels."""
+        if channel_ids is None:
+            channel_labels = getattr(self.model, 'channel_mapping', 'channel_ids')
+        elif not hasattr(self.model, 'channel_mapping'):
+            channel_labels = channel_ids
+        else:
+            channel_labels = self.model.channel_mapping[channel_ids]
+        return ['%d' % ch for ch in channel_labels]
 
     # Internal view methods
     # -------------------------------------------------------------------------
