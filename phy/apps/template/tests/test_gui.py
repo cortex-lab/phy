@@ -32,7 +32,8 @@ def _template_controller(tempdir, dir_path, **kwargs):
     kwargs.update(get_template_params(dir_path / 'params.py'))
     return TemplateController(
         config_dir=tempdir / 'config', plugin_dirs=[plugins_dir()],
-        clear_cache=True, clear_state=True, enable_threading=False, **kwargs)
+        clear_cache=kwargs.pop('clear_cache', True),
+        clear_state=True, enable_threading=False, **kwargs)
 
 
 def test_template_describe(qtbot, tempdir):
@@ -105,9 +106,11 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
 
         # Close the GUI.
         self.__class__._close_gui()
+
         # Recreate the controller on the model.
         self.__class__._controller = _template_controller(
-            self.__class__._tempdir, self.__class__._dataset.parent)
+            self.__class__._tempdir, self.__class__._dataset.parent,
+            clear_cache=False)
         self.__class__._create_gui()
 
         # Check that the data has been saved.

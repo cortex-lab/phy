@@ -338,6 +338,7 @@ class TemplateMixin(object):
         'get_template_counts',
         'get_template_for_cluster',
         'get_template_amplitude',
+        'get_cluster_amplitude',
     )
 
     def get_amplitudes(self, cluster_id, load_all=False):
@@ -709,7 +710,7 @@ class BaseController(object):
         self._async_callers = {}
         self.config_dir = config_dir
 
-        # Clear the configuration file if needed.
+        # Clear the GUI state files if needed.
         if clear_state:
             self._clear_state()
 
@@ -741,6 +742,10 @@ class BaseController(object):
         """Create a model using the constructor parameters. To be overriden."""
         return
 
+    def _clear_cache(self):
+        logger.warn("Deleting the cache directory %s.", self.cache_dir)
+        shutil.rmtree(self.cache_dir, ignore_errors=True)
+
     def _clear_state(self):
         """Clear the global and local GUI state files."""
         state_path = _gui_state_path(self.gui_name, config_dir=self.config_dir)
@@ -756,8 +761,7 @@ class BaseController(object):
         """Set up the cache, clear it if required, and create the Context instance."""
         self.cache_dir = self.dir_path / '.phy'
         if clear_cache:
-            logger.warn("Deleting the cache directory %s.", self.cache_dir)
-            shutil.rmtree(self.cache_dir, ignore_errors=True)
+            self._clear_cache()
         self.context = Context(self.cache_dir)
 
     def _set_view_creator(self):
@@ -847,7 +851,8 @@ class BaseController(object):
     def _get_channel_labels(self, channel_ids=None):
         """Return the labels of a list of channels."""
         if channel_ids is None:
-            channel_labels = getattr(self.model, 'channel_mapping', 'channel_ids')
+            channel_labels = getattr(
+                self.model, 'channel_mapping', np.arange(self.model.n_channels))
         elif not hasattr(self.model, 'channel_mapping'):
             channel_labels = channel_ids
         else:
