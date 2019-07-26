@@ -136,9 +136,9 @@ Add an alpha channel to an RGB color.
 **Parameters**
 
 
-* `c : array-like (2D, shape[1] == 3) or 3-tuple` 　 
+* `c : array-like (2D, shape[1] == 3) or 3-tuple`
 
-* `alpha : float` 　 
+* `alpha : float`
 
 ---
 
@@ -155,13 +155,13 @@ class name of the Controller instance, plus those specified in the plugins keywo
 **Parameters**
 
 
-* `controller : object` 　 
+* `controller : object`
     The controller object that will be passed to the `attach_to_controller()` plugins methods.
 
-* `plugins : list of str` 　 
+* `plugins : list of str`
     List of plugin names to attach in addition to those found in the user configuration file.
 
-* `config_dir : str` 　 
+* `config_dir : str`
     Path to the user configuration file. By default, the directory is `~/.phy/`.
 
 ---
@@ -222,12 +222,12 @@ Read a Python file.
 **Parameters**
 
 
-* `path : str or Path` 　 
+* `path : str or Path`
 
 **Returns**
 
 
-* `metadata : dict` 　 
+* `metadata : dict`
     A dictionary containing all variables defined in the Python file (with `exec()`).
 
 ---
@@ -251,7 +251,7 @@ Read a CSV/TSV file.
 **Returns**
 
 
-* `data : list of dicts` 　 
+* `data : list of dicts`
 
 ---
 
@@ -305,15 +305,15 @@ Write a CSV/TSV file.
 **Parameters**
 
 
-* `data : list of dicts` 　 
+* `data : list of dicts`
 
-* `first_field : str` 　 
+* `first_field : str`
     The name of the field that should come first in the file.
 
-* `exclude_fields : list-like` 　 
+* `exclude_fields : list-like`
     Fields present in the data that should not be saved in the file.
 
-* `n_significant_figures : int` 　 
+* `n_significant_figures : int`
     Number of significant figures used for floating-point numbers in the file.
 
 ---
@@ -376,12 +376,12 @@ Convert values to colors using the selected colormap.
 **Parameters**
 
 
-* `values : array-like (1D)` 　 
+* `values : array-like (1D)`
 
 **Returns**
 
 
-* `colors : array-like (2D, shape[1] == 3)` 　 
+* `colors : array-like (2D, shape[1] == 3)`
 
 ---
 
@@ -404,17 +404,17 @@ Set the field used to choose the cluster colors, and the associated colormap.
 **Parameters**
 
 
-* `color_field : str` 　 
+* `color_field : str`
     Name of the cluster metrics or label to use for the color.
 
-* `colormap : array-like` 　 
+* `colormap : array-like`
     A `(N, 3)` array with the colormaps colors
 
-* `categorical : boolean` 　 
+* `categorical : boolean`
     Whether the colormap is categorical (one value = one color) or continuous (values
     are continuously mapped from their initial interval to the colors).
 
-* `logarithmic : boolean` 　 
+* `logarithmic : boolean`
     Whether to use a logarithmic transform for the mapping.
 
 ---
@@ -455,10 +455,10 @@ than loading the result from disk.
 **Constructor**
 
 
-* `cache_dir : str` 　 
+* `cache_dir : str`
     The directory in which the cache will be created.
 
-* `verbose : int` 　 
+* `verbose : int`
     The verbosity level passed to joblib Memory.
 
 **Examples**
@@ -494,10 +494,10 @@ Load a dictionary saved in the cache directory.
 **Parameters**
 
 
-* `name : str` 　 
+* `name : str`
     The name of the object to save to disk.
 
-* `location : str` 　 
+* `location : str`
     Can be `local` or `global`.
 
 ---
@@ -530,16 +530,16 @@ Save a dictionary in a JSON/pickle file within the cache directory.
 **Parameters**
 
 
-* `name : str` 　 
+* `name : str`
     The name of the object to save to disk.
 
-* `data : dict` 　 
+* `data : dict`
     Any serializable dictionary that will be persisted to disk.
 
-* `location : str` 　 
+* `location : str`
     Can be `local` or `global`.
 
-* `kind : str` 　 
+* `kind : str`
     Can be `json` or `pickle`.
 
 ---
@@ -595,13 +595,13 @@ Display a dialog with a text box.
 **Parameters**
 
 
-* `title : str` 　 
+* `title : str`
     Title of the dialog.
 
-* `sentence : str` 　 
+* `sentence : str`
     Message of the dialog.
 
-* `text : str` 　 
+* `text : str`
     Default text in the text box.
 
 ---
@@ -627,11 +627,11 @@ Display a message box.
 
 **Parameters**
 
-* `message : str` 　 
+* `message : str`
 
-* `title : str` 　 
+* `title : str`
 
-* `level : str` 　 
+* `level : str`
     information, warning, or critical
 
 ---
@@ -646,14 +646,14 @@ Display a dialog with several buttons to confirm or cancel an action.
 **Parameters**
 
 
-* `message : str` 　 
+* `message : str`
     Dialog message.
 
-* `buttons : tuple` 　 
+* `buttons : tuple`
     Name of the standard buttons to show in the prompt: yes, no, ok, cancel, close, etc.
     See the full list at https://doc.qt.io/qt-5/qmessagebox.html#StandardButton-enum
 
-* `title : str` 　 
+* `title : str`
     Dialog title.
 
 ---
@@ -699,10 +699,10 @@ Save a screenshot of a Qt widget to a PNG file.
 **Parameters**
 
 
-* `widget : Qt widget` 　 
+* `widget : Qt widget`
     Any widget to capture (including OpenGL widgets).
 
-* `path : str or Path` 　 
+* `path : str or Path`
     Path to the PNG file.
 
 ---
@@ -736,21 +736,21 @@ This class attaches to a GUI and implements the following features:
 **Constructor**
 
 
-* `gui : GUI instance` 　 
+* `gui : GUI instance`
 
-* `name : str` 　 
+* `name : str`
     Name of this group of actions.
 
-* `menu : str` 　 
+* `menu : str`
     Name of the GUI menu that will contain the actions.
 
-* `submenu : str` 　 
+* `submenu : str`
     Name of the GUI submenu that will contain the actions.
 
-* `default_shortcuts : dict` 　 
+* `default_shortcuts : dict`
     Map action names to keyboard shortcuts (regular strings).
 
-* `default_snippets : dict` 　 
+* `default_snippets : dict`
     Map action names to snippets (regular strings).
 
 ---
@@ -765,50 +765,50 @@ Add an action with a keyboard shortcut.
 **Parameters**
 
 
-* `callback : function` 　 
+* `callback : function`
     Take no argument if checkable is False, or a boolean (checked) if it is True
 
-* `name : str` 　 
+* `name : str`
     Action name, the callback's name by default.
 
-* `shortcut : str` 　 
+* `shortcut : str`
     The keyboard shortcut for this action.
 
-* `alias : str` 　 
+* `alias : str`
     Snippet, the name by default.
 
-* `prompt : boolean` 　 
+* `prompt : boolean`
     Whether this action should display a dialog with an input box where the user can
     write arguments to the callback function.
 
-* `n_args : int` 　 
+* `n_args : int`
     If prompt is True, specify the number of expected arguments.
 
-* `set_busy : boolean` 　 
+* `set_busy : boolean`
     Whether to use a busy cursor while performing the action.
 
-* `prompt_default : str` 　 
+* `prompt_default : str`
     The default text in the input text box, if prompt is True.
 
-* `docstring : str` 　 
+* `docstring : str`
     The action docstring, to be displayed in the status bar when hovering over the action
     item in the menu. By default, the function's docstring.
 
-* `menu : str` 　 
+* `menu : str`
     The name of the menu where the action should be added. It is automatically created
     if it doesn't exist.
 
-* `submenu : str` 　 
+* `submenu : str`
     The name of the submenu where the action should be added. It is automatically created
     if it doesn't exist.
 
-* `checkable : boolean` 　 
+* `checkable : boolean`
     Whether the action is checkable (toggle on/off).
 
-* `checked : boolean` 　 
+* `checked : boolean`
     Whether the checkable action is initially checked or not.
 
-* `show_shortcut : boolean` 　 
+* `show_shortcut : boolean`
     Whether to show the shortcut in the Help action that displays all GUI shortcuts.
 
 ---
@@ -877,7 +877,7 @@ Add a separator.
 **Parameters**
 
 
-* `menu : str` 　 
+* `menu : str`
     The menu that will contain the separator, or the Actions menu by default.
 
 ---
@@ -916,7 +916,7 @@ selection is taking a perceptible time to finish.
 **Constructor**
 
 
-* `delay : int` 　 
+* `delay : int`
     The minimal delay between the execution of two successive actions.
 
 **Example**
@@ -957,33 +957,33 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
 **Constructor**
 
 
-* `position : 2-tuple` 　 
+* `position : 2-tuple`
     Coordinates of the GUI window on the screen, in pixels.
 
-* `size : 2-tuple` 　 
+* `size : 2-tuple`
     Requested size of the GUI window, in pixels.
 
-* `name : str` 　 
+* `name : str`
     Name of the GUI window, set in the title bar.
 
-* `subtitle : str` 　 
+* `subtitle : str`
     Subtitle of the GUI window, set in the title bar after the name.
 
-* `view_creator : dict` 　 
+* `view_creator : dict`
     Map view classnames to functions that take no arguments and return a new view instance
     of that class.
 
-* `view_count : dict` 　 
+* `view_count : dict`
     Map view classnames to integers specifying the number of views to create for every
     view class.
 
-* `default_views : list-like` 　 
+* `default_views : list-like`
     List of view names to create by default (overriden by `view_count` if not empty).
 
-* `config_dir : str or Path` 　 
+* `config_dir : str or Path`
     User configuration directory used to load/save the GUI state
 
-* `enable_threading : boolean` 　 
+* `enable_threading : boolean`
     Whether to enable threading in views or not (used in `ManualClusteringView`).
 
 **Events**
@@ -1005,18 +1005,18 @@ Add a dock widget to the main window.
 **Parameters**
 
 
-* `view : View` 　 
+* `view : View`
 
-* `position : str` 　 
+* `position : str`
     Relative position where to add the view (left, right, top, bottom).
 
-* `closable : boolean` 　 
+* `closable : boolean`
     Whether the view can be closed by the user.
 
-* `floatable : boolean` 　 
+* `floatable : boolean`
     Whether the view can be detached from the main GUI.
 
-* `floating : boolean` 　 
+* `floating : boolean`
     Whether the view should be added in floating mode or not.
 
 ---
@@ -1205,16 +1205,16 @@ The local GUI state is specific to an instance of the GUI, for example a given d
 **Constructor**
 
 
-* `path : str or Path` 　 
+* `path : str or Path`
     The path to the JSON file containing the global GUI state.
 
-* `local_path : str or Path` 　 
+* `local_path : str or Path`
     The path to the JSON file containing the local GUI state.
 
-* `default_state_path : str or Path` 　 
+* `default_state_path : str or Path`
     The path to the default JSON file provided in the library.
 
-* `local_keys : list` 　 
+* `local_keys : list`
     A list of strings `key1.key2` of the elements of the GUI state that should only be saved
     in the local state, and not the global state.
 
@@ -1275,9 +1275,9 @@ Update the state of a view instance.
 **Parameters**
 
 
-* `view : View instance` 　 
+* `view : View instance`
 
-* `state : Bunch instance` 　 
+* `state : Bunch instance`
 
 ---
 
@@ -1369,11 +1369,11 @@ for unit tests.
 **Constructor**
 
 
-* `parent : Widget` 　 
+* `parent : Widget`
 
-* `title : window title` 　 
+* `title : window title`
 
-* `debounce_events : list-like` 　 
+* `debounce_events : list-like`
     The list of event names, raised by the underlying HTML widget, that should be debounced.
 
 ---
@@ -1397,10 +1397,10 @@ Evaluate a Javascript expression.
 **Parameters**
 
 
-* `expr : str` 　 
+* `expr : str`
     A Javascript expression.
 
-* `callback : function` 　 
+* `callback : function`
     A Python function that is called once the Javascript expression has been
     evaluated. It takes as input the output of the Javascript expression.
 
@@ -1496,7 +1496,7 @@ for every keystroke. These actions are removed when the snippet mode is disabled
 **Constructor**
 
 
-* `gui : GUI instance` 　 
+* `gui : GUI instance`
 
 ---
 
@@ -1604,10 +1604,10 @@ are transparently converted between Python and Javascript.
 **Parameters**
 
 
-* `expr : str` 　 
+* `expr : str`
     A Javascript expression.
 
-* `callback : function` 　 
+* `callback : function`
     A Python function that is called once the Javascript expression has been
     evaluated. It takes as input the output of the Javascript expression.
 
@@ -1804,11 +1804,11 @@ A task (just a Python function) running in the thread pool.
 **Constructor**
 
 
-* `fn : function` 　 
+* `fn : function`
 
-* `*args : function positional arguments` 　 
+* `*args : function positional arguments`
 
-* `**kwargs : function keyword arguments` 　 
+* `**kwargs : function keyword arguments`
 
 ---
 
@@ -1857,16 +1857,16 @@ Dynamic axes that move along the camera when panning and zooming.
 **Constructor**
 
 
-* `data_bounds : 4-tuple` 　 
+* `data_bounds : 4-tuple`
     The data coordinates of the initial viewport (when there is no panning and zooming).
 
-* `color : 4-tuple` 　 
+* `color : 4-tuple`
     Color of the grid.
 
-* `show_x : boolean` 　 
+* `show_x : boolean`
     Whether to show the vertical grid lines.
 
-* `show_y : boolean` 　 
+* `show_y : boolean`
     Whether to show the horizontal grid lines.
 
 ---
@@ -1910,13 +1910,13 @@ Determine the location of ticks in a view.
 **Constructor**
 
 
-* `nbinsx : int` 　 
+* `nbinsx : int`
     Number of ticks on the x axis.
 
-* `nbinsy : int` 　 
+* `nbinsy : int`
     Number of ticks on the y axis.
 
-* `data_bounds : 4-tuple` 　 
+* `data_bounds : 4-tuple`
     Initial coordinates of the viewport, as (xmin, ymin, xmax, ymax), in data coordinates.
     These are the data coordinates of the lower left and upper right points of the window.
 
@@ -1968,16 +1968,16 @@ We can't build the visual's program before, because we need the canvas' transfor
 **Parameters**
 
 
-* `visual : Visual` 　 
+* `visual : Visual`
 
-* `clearable : True` 　 
+* `clearable : True`
     Whether the visual should be deleted when calling `canvas.clear()`.
 
-* `exclude_origins : list-like` 　 
+* `exclude_origins : list-like`
     List of interact instances that should not apply to that visual. For example, use to
     add a visual outside of the subplots, or with no support for pan and zoom.
 
-* `key : str` 　 
+* `key : str`
     An optional key to identify a visual
 
 ---
@@ -2436,16 +2436,16 @@ Add data for a given batch iteration.
 **Parameters**
 
 
-* `b : Bunch` 　 
+* `b : Bunch`
     Data to add to the current batch iteration.
 
-* `noconcat : tuple` 　 
+* `noconcat : tuple`
     List of keys that should not be concatenated.
 
-* `n_items : int` 　 
+* `n_items : int`
     Number of visual items to add in this batch iteration.
 
-* `n_vertices : int` 　 
+* `n_vertices : int`
     Number of vertices added in this batch iteration.
 
 **Note**
@@ -2485,7 +2485,7 @@ An iterative algorithm is used to find the largest box size that will not make t
 **Constructor**
 
 
-* `box_bounds : array-like` 　 
+* `box_bounds : array-like`
     A (n, 4) array where each row contains the `(xmin, ymin, xmax, ymax)`
     bounds of every box, in normalized device coordinates.
 
@@ -2494,17 +2494,17 @@ An iterative algorithm is used to find the largest box size that will not make t
     of the values when they are passed to a gloo Texture2D.
 
 
-* `box_pos : array-like (2D, shape[1] == 2)` 　 
+* `box_pos : array-like (2D, shape[1] == 2)`
     Position of the centers of the boxes.
 
-* `box_size : array-like (2D, shape[1] == 2)` 　 
+* `box_size : array-like (2D, shape[1] == 2)`
     Size of the boxes.
 
 
-* `box_var : str` 　 
+* `box_var : str`
     Name of the GLSL variable with the box index.
 
-* `keep_aspect_ratio : boolean` 　 
+* `keep_aspect_ratio : boolean`
     Whether to keep the aspect ratio of the bounds.
 
 **Note**
@@ -2677,13 +2677,13 @@ Insert all GLSL snippets in a vertex and fragment shaders.
 **Parameters**
 
 
-* `vertex : str` 　 
+* `vertex : str`
     GLSL code of the vertex shader
 
-* `fragment : str` 　 
+* `fragment : str`
     GLSL code of the fragment shader
 
-* `exclude_origins : list-like` 　 
+* `exclude_origins : list-like`
     List of interact instances to exclude when inserting the shaders.
 
 **Notes**
@@ -2705,10 +2705,10 @@ Insert a GLSL snippet into the vertex shader.
 **Parameters**
 
 
-* `glsl : str` 　 
+* `glsl : str`
     The GLSL code to insert.
 
-* `location : str` 　 
+* `location : str`
     Where to insert the GLSL code. Can be:
 
     * `header`: declaration of GLSL variables
@@ -2717,11 +2717,11 @@ Insert a GLSL snippet into the vertex shader.
     * `after_transforms`: just after the GPU transforms
 
 
-* `origin : Interact` 　 
+* `origin : Interact`
     The interact object that adds this GLSL snippet. Should be discared by
     visuals that are added with that interact object in `exclude_origins`.
 
-* `index : int` 　 
+* `index : int`
     Index of the snippets list to insert the snippet.
 
 ---
@@ -2733,16 +2733,16 @@ Layout showing subplots arranged in a 2D grid.
 **Constructor**
 
 
-* `shape : tuple or str` 　 
+* `shape : tuple or str`
     Number of rows, cols in the grid.
 
-* `shape_var : str` 　 
+* `shape_var : str`
     Name of the GLSL uniform variable that holds the shape, when it is variable.
 
-* `box_var : str` 　 
+* `box_var : str`
     Name of the GLSL variable with the box index.
 
-* `has_clip : boolean` 　 
+* `has_clip : boolean`
     Whether subplots should be clipped.
 
 **Note**
@@ -2849,11 +2849,11 @@ A histogram visual.
 **Parameters**
 
 
-* `hist : array-like (1D), or list of 1D arrays, or 2D array` 　 
+* `hist : array-like (1D), or list of 1D arrays, or 2D array`
 
-* `color : array-like (2D, shape[1] == 4)` 　 
+* `color : array-like (2D, shape[1] == 4)`
 
-* `ylim : array-like (1D)` 　 
+* `ylim : array-like (1D)`
     The maximum hist value in the viewport.
 
 ---
@@ -2990,7 +2990,7 @@ Display a 2D image.
 
 **Parameters**
 
-* `image : array-like (3D)` 　 
+* `image : array-like (3D)`
 
 ---
 
@@ -3214,11 +3214,11 @@ Line segments.
 
 **Parameters**
 
-* `pos : array-like (2D)` 　 
+* `pos : array-like (2D)`
 
-* `color : array-like (2D, shape[1] == 4)` 　 
+* `color : array-like (2D, shape[1] == 4)`
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -3355,43 +3355,43 @@ Pan and zoom interact. Support mouse and keyboard interactivity.
 **Constructor**
 
 
-* `aspect : float` 　 
+* `aspect : float`
     Aspect ratio to keep while panning and zooming.
 
-* `pan : 2-tuple` 　 
+* `pan : 2-tuple`
     Initial pan.
 
-* `zoom : 2-tuple` 　 
+* `zoom : 2-tuple`
     Initial zoom.
 
-* `zmin : float` 　 
+* `zmin : float`
     Minimum zoom allowed.
 
-* `zmax : float` 　 
+* `zmax : float`
     Maximum zoom allowed.
 
-* `xmin : float` 　 
+* `xmin : float`
     Minimum x allowed.
 
-* `xmax : float` 　 
+* `xmax : float`
     Maximum x allowed.
 
-* `ymin : float` 　 
+* `ymin : float`
     Minimum y allowed.
 
-* `ymax : float` 　 
+* `ymax : float`
     Maximum y allowed.
 
-* `constrain_bounds : 4-tuple` 　 
+* `constrain_bounds : 4-tuple`
     Equivalent to (xmin, ymin, xmax, ymax).
 
-* `pan_var_name : str` 　 
+* `pan_var_name : str`
     Name of the pan GLSL variable name
 
-* `zoom_var_name : str` 　 
+* `zoom_var_name : str`
     Name of the zoom GLSL variable name
 
-* `enable_mouse_wheel : boolean` 　 
+* `enable_mouse_wheel : boolean`
     Whether to enable the mouse wheel for zooming.
 
 **Interactivity**
@@ -3692,16 +3692,16 @@ Add a visual and possibly set some data directly.
 **Parameters**
 
 
-* `visual : Visual` 　 
+* `visual : Visual`
 
-* `clearable : True` 　 
+* `clearable : True`
     Whether the visual should be deleted when calling `canvas.clear()`.
 
-* `exclude_origins : list-like` 　 
+* `exclude_origins : list-like`
     List of interact instances that should not apply to that visual. For example, use to
     add a visual outside of the subplots, or with no support for pan and zoom.
 
-* `key : str` 　 
+* `key : str`
     An optional key to identify a visual
 
 ---
@@ -4051,18 +4051,18 @@ Plot visual, with multiple line plots of various sizes and colors.
 **Parameters**
 
 
-* `x : array-like (1D), or list of 1D arrays for different plots` 　 
+* `x : array-like (1D), or list of 1D arrays for different plots`
 
-* `y : array-like (1D), or list of 1D arrays, for different plots` 　 
+* `y : array-like (1D), or list of 1D arrays, for different plots`
 
-* `color : array-like (2D, shape[-1] == 4)` 　 
+* `color : array-like (2D, shape[-1] == 4)`
 
-* `depth : array-like (1D)` 　 
+* `depth : array-like (1D)`
 
-* `masks : array-like (1D)` 　 
+* `masks : array-like (1D)`
     Similar to an alpha channel, but for color saturation instead of transparency.
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -4207,9 +4207,9 @@ Polygon.
 
 **Parameters**
 
-* `pos : array-like (2D)` 　 
+* `pos : array-like (2D)`
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -4346,10 +4346,10 @@ Linear transform from a source rectangle to a target rectangle.
 **Constructor**
 
 
-* `from_bounds : 4-tuple` 　 
+* `from_bounds : 4-tuple`
     Bounds of the source rectangle.
 
-* `to_bounds : 4-tuple` 　 
+* `to_bounds : 4-tuple`
     Bounds of the target rectangle.
 
 ---
@@ -4387,7 +4387,7 @@ Scaling transform.
 
 **Constructor**
 
-* `value : 2-tuple` 　 
+* `value : 2-tuple`
     Coordinates of the scaling.
 
 ---
@@ -4426,27 +4426,27 @@ Scatter visual, displaying a fixed marker at various positions, colors, and mark
 **Constructor**
 
 
-* `marker : string (used for all points in the scatter visual)` 　 
+* `marker : string (used for all points in the scatter visual)`
     Default: disc. Can be one of: arrow, asterisk, chevron, clover, club, cross, diamond,
     disc, ellipse, hbar, heart, infinity, pin, ring, spade, square, tag, triangle, vbar
 
 **Parameters**
 
 
-* `x : array-like (1D)` 　 
+* `x : array-like (1D)`
 
-* `y : array-like (1D)` 　 
+* `y : array-like (1D)`
 
-* `pos : array-like (2D)` 　 
+* `pos : array-like (2D)`
 
-* `color : array-like (2D, shape[1] == 4)` 　 
+* `color : array-like (2D, shape[1] == 4)`
 
-* `size : array-like (1D)` 　 
+* `size : array-like (1D)`
     Marker sizes, in pixels
 
-* `depth : array-like (1D)` 　 
+* `depth : array-like (1D)`
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -4601,10 +4601,10 @@ Transform to a grid subplot rectangle.
 **Constructor**
 
 
-* `shape : 2-tuple` 　 
+* `shape : 2-tuple`
     Number of rows and columns in the grid.
 
-* `index : 2-tuple` 　 
+* `index : 2-tuple`
     Row and column index of the subplot to transform into.
 
 ---
@@ -4643,17 +4643,17 @@ Display strings at multiple locations.
 **Constructor**
 
 
-* `color : 4-tuple` 　 
+* `color : 4-tuple`
 
 **Parameters**
 
 
-* `pos : array-like (2D)` 　 
+* `pos : array-like (2D)`
     Position of each string (of variable length).
 
-* `text : list of strings (variable lengths)` 　 
+* `text : list of strings (variable lengths)`
 
-* `anchor : array-like (2D)` 　 
+* `anchor : array-like (2D)`
     For each string, specifies the anchor of the string with respect to the string's position.
 
     Examples:
@@ -4668,7 +4668,7 @@ Display strings at multiple locations.
     of the anchor is (string width, string height).
 
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -4873,7 +4873,7 @@ Translation transform.
 
 **Constructor**
 
-* `value : 2-tuple` 　 
+* `value : 2-tuple`
     Coordinates of the translation.
 
 ---
@@ -4912,21 +4912,21 @@ A plot visual with a uniform color.
 **Constructor**
 
 
-* `color : 4-tuple` 　 
+* `color : 4-tuple`
 
-* `depth : scalar` 　 
+* `depth : scalar`
 
 **Parameters**
 
 
-* `x : array-like (1D), or list of 1D arrays for different plots` 　 
+* `x : array-like (1D), or list of 1D arrays for different plots`
 
-* `y : array-like (1D), or list of 1D arrays, for different plots` 　 
+* `y : array-like (1D), or list of 1D arrays, for different plots`
 
-* `masks : array-like (1D)` 　 
+* `masks : array-like (1D)`
     Similar to an alpha channel, but for color saturation instead of transparency.
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -5063,25 +5063,25 @@ Scatter visual with a fixed marker color and size.
 **Constructor**
 
 
-* `marker : str` 　 
+* `marker : str`
 
-* `color : 4-tuple` 　 
+* `color : 4-tuple`
 
-* `size : scalar` 　 
+* `size : scalar`
 
 **Parameters**
 
 
-* `x : array-like (1D)` 　 
+* `x : array-like (1D)`
 
-* `y : array-like (1D)` 　 
+* `y : array-like (1D)`
 
-* `pos : array-like (2D)` 　 
+* `pos : array-like (2D)`
 
-* `masks : array-like (1D)` 　 
+* `masks : array-like (1D)`
     Similar to an alpha channel, but for color saturation instead of transparency.
 
-* `data_bounds : array-like (2D, shape[1] == 4)` 　 
+* `data_bounds : array-like (2D, shape[1] == 4)`
 
 ---
 
@@ -5233,7 +5233,7 @@ This view displays an amplitude plot for all selected clusters.
 **Constructor**
 
 
-* `amplitudes : function` 　 
+* `amplitudes : function`
     Maps `cluster_ids` to a list `[Bunch(amplitudes, spike_ids), ...]` for each cluster.
     Use `cluster_id=None` for background amplitudes.
 
@@ -5465,7 +5465,7 @@ Redo the next metadata change.
 **Returns**
 
 
-* `up : UpdateInfo instance` 　 
+* `up : UpdateInfo instance`
 
 ---
 
@@ -5479,22 +5479,22 @@ Set the value of one of several clusters.
 **Parameters**
 
 
-* `field : str` 　 
+* `field : str`
     The field to set.
 
-* `clusters : list` 　 
+* `clusters : list`
     The list of cluster ids to change.
 
-* `value : str` 　 
+* `value : str`
     The new metadata value for the given clusters.
 
-* `add_to_stack : boolean` 　 
+* `add_to_stack : boolean`
     Whether this metadata change should be recorded in the undo stack.
 
 **Returns**
 
 
-* `up : UpdateInfo instance` 　 
+* `up : UpdateInfo instance`
 
 ---
 
@@ -5508,10 +5508,10 @@ Update metadata of some clusters given the metadata of their ascendants.
 **Parameters**
 
 
-* `descendants : list` 　 
+* `descendants : list`
     List of pairs (old_cluster_id, new_cluster_id)
 
-* `largest_old_cluster : int` 　 
+* `largest_old_cluster : int`
     If available, the cluster id of the largest old cluster, used as a reference.
 
 ---
@@ -5535,7 +5535,7 @@ Undo the last metadata change.
 **Returns**
 
 
-* `up : UpdateInfo instance` 　 
+* `up : UpdateInfo instance`
 
 ---
 
@@ -5555,15 +5555,15 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
 **Constructor**
 
 
-* `parent : Qt widget` 　 
+* `parent : Qt widget`
 
-* `data : list` 　 
+* `data : list`
     List of dictionaries mapping fields to values.
 
-* `columns : list` 　 
+* `columns : list`
     List of columns in the table.
 
-* `sort : 2-tuple` 　 
+* `sort : 2-tuple`
     Initial sort of the table as a pair (column_name, order), where order is
     either `asc` or `desc`.
 
@@ -5616,10 +5616,10 @@ are transparently converted between Python and Javascript.
 **Parameters**
 
 
-* `expr : str` 　 
+* `expr : str`
     A Javascript expression.
 
-* `callback : function` 　 
+* `callback : function`
     A Python function that is called once the Javascript expression has been
     evaluated. It takes as input the output of the Javascript expression.
 
@@ -5834,14 +5834,14 @@ Handle cluster changes in a set of spikes.
 **Constructor**
 
 
-* `spike_clusters : array-like` 　 
+* `spike_clusters : array-like`
     Spike-cluster assignments, giving the cluster id of every spike.
 
-* `new_cluster_id : int` 　 
+* `new_cluster_id : int`
     Cluster id that is not used yet (and not used in the cache if there is one). We need to
     ensure that cluster ids are unique and not reused in a given session.
 
-* `spikes_per_cluster : dict` 　 
+* `spikes_per_cluster : dict`
     Dictionary mapping each cluster id to the spike ids belonging to it. This is recomputed
     if not given. This object may take a while to compute, so it may be cached and passed
     to the constructor.
@@ -5881,17 +5881,17 @@ Make new spike cluster assignments.
 **Parameters**
 
 
-* `spike_ids : array-like` 　 
+* `spike_ids : array-like`
     List of spike ids.
 
-* `spike_clusters_rel : array-like` 　 
+* `spike_clusters_rel : array-like`
     Relative cluster ids of the spikes in `spike_ids`. This
     must have the same size as `spike_ids`.
 
 **Returns**
 
 
-* `up : UpdateInfo instance` 　 
+* `up : UpdateInfo instance`
 
 **Note**
 
@@ -5929,16 +5929,16 @@ Merge several clusters to a new cluster.
 **Parameters**
 
 
-* `cluster_ids : array-like` 　 
+* `cluster_ids : array-like`
     List of clusters to merge.
 
-* `to : integer` 　 
+* `to : integer`
     The id of the new cluster. By default, this is `new_cluster_id()`.
 
 **Returns**
 
 
-* `up : UpdateInfo instance` 　 
+* `up : UpdateInfo instance`
 
 ---
 
@@ -5968,7 +5968,7 @@ Redo the last cluster assignment operation.
 **Returns**
 
 
-* `up : UpdateInfo instance of the changes done by this operation.` 　 
+* `up : UpdateInfo instance of the changes done by this operation.`
 
 ---
 
@@ -6004,16 +6004,16 @@ This is equivalent to an `assign()` to a single new cluster.
 **Parameters**
 
 
-* `spike_ids : array-like` 　 
+* `spike_ids : array-like`
     Array of spike ids to split.
 
-* `spike_clusters_rel : array-like (or None)` 　 
+* `spike_clusters_rel : array-like (or None)`
     Array of relative spike clusters.
 
 **Returns**
 
 
-* `up : UpdateInfo instance` 　 
+* `up : UpdateInfo instance`
 
 **Note**
 
@@ -6033,7 +6033,7 @@ Undo the last cluster assignment operation.
 **Returns**
 
 
-* `up : UpdateInfo instance of the changes done by this operation.` 　 
+* `up : UpdateInfo instance of the changes done by this operation.`
 
 ---
 
@@ -6099,11 +6099,11 @@ of cluster pairs.
 **Constructor**
 
 
-* `correlograms : function` 　 
+* `correlograms : function`
     Maps `(cluster_ids, bin_size, window_size)` to an `(n_clusters, n_clusters, n_bins) array`.
 
 
-* `firing_rate : function` 　 
+* `firing_rate : function`
     Maps `(cluster_ids, bin_size)` to an `(n_clusters, n_clusters) array`
 
 ---
@@ -6314,16 +6314,19 @@ component features. This view keeps track of which channels are currently shown.
 **Constructor**
 
 
-* `features : function` 　 
+* `features : function`
     Maps `(cluster_id, channel_ids=None, load_all=False)` to
-    `Bunch(data, channel_ids, spike_ids , masks)`.
+    `Bunch(data, channel_ids, channel_labels, spike_ids , masks)`.
     * `data` is an `(n_spikes, n_channels, n_features)` array
     * `channel_ids` contains the channel ids of every row in `data`
+    * `channel_labels` contains the channel labels of every row in `data`
+    * `spike_ids` is a `(n_spikes,)` array
+    * `masks` is an `(n_spikes, n_channels)` array
 
     This allows for a sparse format.
 
 
-* `attributes : dict` 　 
+* `attributes : dict`
     Maps an attribute name to a 1D array with `n_spikes` numbers (for example, spike times).
 
 ---
@@ -6482,7 +6485,7 @@ Change the grid dim dynamically.
 
 **Parameters**
 
-* `grid_dim : array-like (2D)` 　 
+* `grid_dim : array-like (2D)`
     `grid_dim[row, col]` is a string with two values separated by a comma. Each value
     is the relative channel id (0, 1, 2...) followed by the PC (A, B, C...). For example,
     `grid_dim[row, col] = 0B,1A`. Each value can also be an attribute name, for example
@@ -6566,7 +6569,7 @@ and some text. To be overriden.
 **Constructor**
 
 
-* `cluster_stat : function` 　 
+* `cluster_stat : function`
     Maps `cluster_id` to `Bunch(data (1D array), plot (1D array), text)`.
 
 ---
@@ -6910,10 +6913,10 @@ where the selected clusters belong.
 **Constructor**
 
 
-* `positions : array-like` 　 
+* `positions : array-like`
     An `(n_channels, 2)` array with the channel positions
 
-* `best_channels : function` 　 
+* `best_channels : function`
     Maps `cluster_id` to the list of the best_channel_ids.
 
 ---
@@ -7055,16 +7058,16 @@ This view shows a raster plot of all clusters.
 **Constructor**
 
 
-* `spike_times : array-like` 　 
+* `spike_times : array-like`
     An `(n_spikes,)` array with the spike times, in seconds.
 
-* `spike_clusters : array-like` 　 
+* `spike_clusters : array-like`
     An `(n_spikes,)` array with the spike-cluster assignments.
 
-* `cluster_ids : array-like` 　 
+* `cluster_ids : array-like`
     The list of all clusters to show initially.
 
-* `cluster_color_selector : ClusterColorSelector` 　 
+* `cluster_color_selector : ClusterColorSelector`
     The object managing the color mapping.
 
 ---
@@ -7288,7 +7291,7 @@ This view displays a scatter plot for all selected clusters.
 **Constructor**
 
 
-* `coords : function` 　 
+* `coords : function`
     Maps `cluster_ids` to a list `[Bunch(x, y, spike_ids, data_bounds), ...]` for each cluster.
 
 ---
@@ -7528,10 +7531,10 @@ are transparently converted between Python and Javascript.
 **Parameters**
 
 
-* `expr : str` 　 
+* `expr : str`
     A Javascript expression.
 
-* `callback : function` 　 
+* `callback : function`
     A Python function that is called once the Javascript expression has been
     evaluated. It takes as input the output of the Javascript expression.
 
@@ -7771,26 +7774,26 @@ Component that brings manual clustering facilities to a GUI:
 **Constructor**
 
 
-* `spike_clusters : array-like` 　 
+* `spike_clusters : array-like`
     Spike-clusters assignments.
 
-* `cluster_groups : dict` 　 
+* `cluster_groups : dict`
     Maps a cluster id to a group name (noise, mea, good, None for unsorted).
 
-* `cluster_metrics : dict` 　 
+* `cluster_metrics : dict`
     Maps a metric name to a function `cluster_id => value`
 
-* `similarity : function` 　 
+* `similarity : function`
     Maps a cluster id to a list of pairs `[(similar_cluster_id, similarity), ...]`
 
-* `new_cluster_id : function` 　 
+* `new_cluster_id : function`
     Function that takes no argument and returns a brand new cluster id (smallest cluster id
     not used in the cache).
 
-* `sort : 2-tuple` 　 
+* `sort : 2-tuple`
     Initial sort as a pair `(column_name, order)` where `order` is either `asc` or `desc`
 
-* `context : Context` 　 
+* `context : Context`
     Handles the cache.
 
 **Events**
@@ -8106,18 +8109,21 @@ This view shows all template waveforms of all clusters in a large grid of shape
 **Constructor**
 
 
-* `templates : function` 　 
+* `templates : function`
     Maps `cluster_ids` to a list of `[Bunch(template, channel_ids)]` where `template` is
     an `(n_samples, n_channels)` array, and `channel_ids` specifies the channels of the
     `template` array (sparse format).
 
-* `channel_ids : array-like` 　 
+* `channel_ids : array-like`
     The list of all channel ids.
 
-* `cluster_ids : array-like` 　 
+* `channel_labels : list`
+    Labels of all shown channels. By default, this is just the channel ids.
+
+* `cluster_ids : array-like`
     The list of all clusters to show initially.
 
-* `cluster_color_selector : ClusterColorSelector` 　 
+* `cluster_color_selector : ClusterColorSelector`
     The object managing the color mapping.
 
 ---
@@ -8339,7 +8345,7 @@ This view shows the raw traces along with spike waveforms.
 **Constructor**
 
 
-* `traces : function` 　 
+* `traces : function`
     Maps a time interval `(t0, t1)` to a `Bunch(data, color, waveforms)` where
     * `data` is an `(n_samples, n_channels)` array
     * `waveforms` is a list of bunchs with the following attributes:
@@ -8351,17 +8357,21 @@ This view shows the raw traces along with spike waveforms.
         * `spike_cluster`
 
 
-* `spike_times : function` 　 
+* `spike_times : function`
     Teturns the list of relevant spike times.
 
-* `sample_rate : float` 　 
+* `sample_rate : float`
 
-* `duration : float` 　 
+* `duration : float`
 
-* `n_channels : int` 　 
+* `n_channels : int`
 
-* `channel_vertical_order : array-like` 　 
-    Permutation of the channels.
+* `channel_vertical_order : array-like`
+    Permutation of the channels. This 1D array gives the channel id of all channels from
+    top to bottom (or conversely, depending on `origin=top|bottom`).
+
+* `channel_labels : list`
+    Labels of all shown channels. By default, this is just the channel ids.
 
 ---
 
@@ -8594,6 +8604,15 @@ Switch between top and bottom origin for the channels.
 
 ---
 
+#### TraceView.toggle_auto_scale
+
+
+**`TraceView.toggle_auto_scale(self, checked)`**
+
+Toggle automatic scaling of the traces.
+
+---
+
 #### TraceView.toggle_auto_update
 
 
@@ -8703,33 +8722,33 @@ action. It is passed to event callbacks that react to these changes. Derive from
 **Parameters**
 
 
-* `description : str` 　 
+* `description : str`
     Information about the update: merge, assign, or metadata_xxx for metadata changes
 
-* `history : str` 　 
+* `history : str`
     undo, redo, or None
 
-* `spike_ids : array-like` 　 
+* `spike_ids : array-like`
     All spike ids that were affected by the clustering action.
 
-* `added : list` 　 
+* `added : list`
     List of new cluster ids.
 
-* `deleted : list` 　 
+* `deleted : list`
     List of cluster ids that were deleted during the action. There are no modified clusters:
     every change triggers the deletion of and addition of clusters.
 
-* `descendants : list` 　 
+* `descendants : list`
     List of pairs (old_cluster_id, new_cluster_id), used to track the history of
     the clusters.
 
-* `metadata_changed : list` 　 
+* `metadata_changed : list`
     List of cluster ids that had a change of metadata.
 
-* `metadata_value : str` 　 
+* `metadata_value : str`
     The new metadata value for the affected change.
 
-* `undo_state : Bunch` 　 
+* `undo_state : Bunch`
     Returned during an undo, it contains information about the undone action. This is used
     when redoing the undone action.
 
@@ -8752,11 +8771,12 @@ following the probe geometry.
 **Constructor**
 
 
-* `waveforms : dict of functions` 　 
+* `waveforms : dict of functions`
     Every function maps a cluster id to a Bunch with the following attributes:
 
     * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
     * `channel_ids` : the channel ids corresponding to the third dimension in `data`
+    * `channel_labels` : a list of channel labels for every channel in `channel_ids`
     * `channel_positions` : a 2D array with the coordinates of the channels on the probe
     * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
     * `alpha` : the alpha transparency channel
@@ -8764,13 +8784,8 @@ following the probe geometry.
     The keys of the dictionary are called **waveform types**. The `next_waveforms_type`
     action cycles through all available waveform types. The key `waveforms` is mandatory.
 
-
-* `waveform_type : str` 　 
+* `waveform_type : str`
     Default key of the waveforms dictionary to plot initially.
-
-
-* `channel_labels : array-like` 　 
-    Labels of the channels.
 
 ---
 
@@ -9083,14 +9098,14 @@ Convert a sparse structure into a dense one.
 **Parameters**
 
 
-* `data : array-like` 　 
+* `data : array-like`
     A (n_spikes, n_channels_loc, ...) array with the data.
 
-* `cols : array-like` 　 
+* `cols : array-like`
     A (n_spikes, n_channels_loc) array with the channel indices of
     every row in data.
 
-* `channel_ids : array-like` 　 
+* `channel_ids : array-like`
     List of requested channel ids (columns).
 
 ---
@@ -9137,23 +9152,23 @@ Controller for the Template GUI.
 
 **Constructor**
 
-* `dir_path : str or Path` 　 
+* `dir_path : str or Path`
     Path to the data directory
 
-* `config_dir : str or Path` 　 
+* `config_dir : str or Path`
     Path to the configuration directory
 
-* `model : Model` 　 
+* `model : Model`
     Model object, optional (it is automatically created otherwise)
 
-* `plugins : list` 　 
+* `plugins : list`
     List of plugins to manually activate, optional (the plugins are automatically loaded from
     the user configuration directory).
 
-* `clear_cache : boolean` 　 
+* `clear_cache : boolean`
     Whether to clear the cache on startup.
 
-* `enable_threading : boolean` 　 
+* `enable_threading : boolean`
     Whether to enable threading in the views when selecting clusters.
 
 ---
@@ -9206,7 +9221,7 @@ Create the GUI.
 **Constructor**
 
 
-* `default_views : list` 　 
+* `default_views : list`
     List of views to add in the GUI, optional. By default, all views from the view
     count are added.
 
@@ -9318,6 +9333,15 @@ Return the best channels of a given cluster.
 **`TemplateController.get_channel_shank(self, cluster_id)`**
 
 Return the shank of a cluster's best channel, if the channel_shanks array is available.
+
+---
+
+#### TemplateController.get_cluster_amplitude
+
+
+**`TemplateController.get_cluster_amplitude(self, cluster_id)`**
+
+Return the amplitude of the best template of a cluster.
 
 ---
 
@@ -9457,11 +9481,11 @@ peak channel.
 
 **Parameters**
 
-* `cluster_id : int` 　 
+* `cluster_id : int`
 
 **Returns**
 
-* `similarities : list` 　 
+* `similarities : list`
     List of tuples `(other_cluster_id, similarity_value)` sorted by decreasing
     similarity value.
 
@@ -9483,28 +9507,28 @@ Object holding all data of a KiloSort/phy dataset.
 **Constructor**
 
 
-* `dir_path : str or Path` 　 
+* `dir_path : str or Path`
     Path to the dataset directory
 
-* `dat_path : str, Path, or list` 　 
+* `dat_path : str, Path, or list`
     Path to the raw data files.
 
-* `dtype : NumPy dtype` 　 
+* `dtype : NumPy dtype`
     Data type of the raw data file
 
-* `offset : int` 　 
+* `offset : int`
     Header offset of the binary file
 
-* `n_channels_dat : int` 　 
+* `n_channels_dat : int`
     Number of channels in the dat file
 
-* `sample_rate : float` 　 
+* `sample_rate : float`
     Sampling rate of the data file.
 
-* `filter_order : int` 　 
+* `filter_order : int`
     Order of the filter used for waveforms
 
-* `hp_filtered : bool` 　 
+* `hp_filtered : bool`
     Whether the raw data file is already high-pass filtered. In that case, disable the
     filtering for the waveform extraction.
 
@@ -9645,4 +9669,3 @@ a TSV file.
 Save the spike clusters.
 
 ---
-

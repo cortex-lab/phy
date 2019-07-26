@@ -16,9 +16,17 @@ Every shank has a unique identifier, the `shank_id`, ranging from `0` to `n_shan
 
 ## Channel
 
-A **channel** is a recording site on the probe. For a given recording, there are `n_channels` channels across all shanks.
+In phy, a **channel** corresponds to the digital signal recorded on a given **electrode site**.
 
-Every channel has a unique identifier, `channel_id`, ranging from `0` to `n_channels-1`.
+There are several mappings between electrode sites, channel numbers specified by the acquisition system, column indexes in the raw data 2D array, channel ids used in phy, and channel labels displayed in phy.
+
+Here is the assumptions made by phy:
+
+* The `channel_map.npy` file contains a `channel_map` 1D integer array, of size `(n_channels,)`.
+* The raw data array has `n_channels_dat` columns (which may be different from `n_channels` if the user decides to drop some channels in phy).
+* The raw data columns are immediately and virtually swapped using the channel map, as follows: `X = raw_data[:, channel_map]`. This applies to all views that show multiple channels: trace view, waveform view, template view, etc. In other words, phy always sees the raw data as a NumPy-like array (in fact, a virtual memmapped and column-swapped array) with `n_channels` columns, which correspond to the `channel_map`-swapped columns in the binary file.
+* The `channel_ids` used internally in phy are always ranging from 0 to `n_channels - 1`.
+* The channel label displayed in phy of channel `channel_id` is `channel_map[channel_id]`.
 
 
 ## Spike
