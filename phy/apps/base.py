@@ -536,8 +536,8 @@ class BaseController(object):
         the user configuration directory).
     clear_cache : boolean
         Whether to clear the cache on startup.
-    clear_config : boolean
-        Whether to clear the GUI user configuration file on startup.
+    clear_state : boolean
+        Whether to clear the GUI state files on startup.
     enable_threading : boolean
         Whether to enable threading in the views when selecting clusters.
 
@@ -651,7 +651,7 @@ class BaseController(object):
 
     def __init__(
             self, dir_path=None, config_dir=None, model=None,
-            clear_cache=None, clear_config=None,
+            clear_cache=None, clear_state=None,
             enable_threading=True, **kwargs):
 
         self._enable_threading = enable_threading
@@ -686,8 +686,8 @@ class BaseController(object):
         self.config_dir = config_dir
 
         # Clear the configuration file if needed.
-        if clear_config:
-            self._clear_config()
+        if clear_state:
+            self._clear_state()
 
         self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
 
@@ -717,8 +717,8 @@ class BaseController(object):
         """Create a model using the constructor parameters. To be overriden."""
         return
 
-    def _clear_config(self):
-        """Clear the global and local configuration file of the GUI."""
+    def _clear_state(self):
+        """Clear the global and local GUI state files."""
         state_path = _gui_state_path(self.gui_name, config_dir=self.config_dir)
         if state_path.exists():
             logger.warning("Deleting %s.", state_path)
