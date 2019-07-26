@@ -21,23 +21,19 @@ Minimal installation instructions (to be completed):
 
 1. Install [Anaconda](https://www.anaconda.com/distribution/#download-section).
 
-2. Download the [environment file](https://raw.githubusercontent.com/cortex-lab/phy/dev/environment.yml).
+2. Open a terminal and type:
 
-3. Open a terminal and run:
-
-    ```
-    conda env create -f path/to/environment.yml
-    ```
-
-    Wait for the virtual environment to be created and the dependencies installed.
-
-4. Activate the virtual environment: `conda activate phy2`
-
-5. Run phy:
-
-    ```
-    cd path/to/my/spikesorting/output
-    phy template-gui params.py
+    ```bash
+    $ conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython -y
+    $ conda activate phy2
+    (phy2) $ pip install colorcet pyopengl qtconsole requests traitlets tqdm joblib click mkdocs PyQtWebEngine
+    (phy2) $ pip install git+https://github.com/cortex-lab/phy.git@dev
+    (phy2) $ pip install git+https://github.com/cortex-lab/phylib.git
     ```
 
-*Note*: on some systems, if you have import errors related to Qt, you may need to do `pip install PyQtWebEngine`.
+3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
+
+    ```
+    (phy2) $ cd path/to/my/spikesorting/output
+    (phy2) $ phy template-gui params.py
+    ```

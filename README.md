@@ -17,9 +17,14 @@
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
 
 
+## User installation instructions
+
+[**Click here to see the installation instructions.**](https://phy.readthedocs.io/en/latest/installation/)
+
+
 ## Developer installation instructions
 
-Use these instructions if you're a developer who wants to contribute to phy. Assuming you have a scientific Python distribution like Anaconda with the most important dependencies installed (NumPy, SciPy, matplotlib, IPython, PyQt5...), do **in a fresh environment** (and NOT in an environment that already has phy 1.x installed):
+Use these instructions if you're a **developer** who wants to contribute to phy. Assuming you have a scientific Python distribution like Anaconda with the most important dependencies installed (NumPy, SciPy, matplotlib, IPython, PyQt5...), do **in a fresh environment** (and NOT in an environment that already has phy 1.x installed):
 
 ```bash
 git clone -b dev https://github.com/cortex-lab/phy.git
