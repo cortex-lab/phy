@@ -108,9 +108,11 @@ class TraceView(ScalingMixin, ManualClusteringView):
     """
     _default_position = 'left'
     auto_update = True
+    auto_scale = True
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.25
+    trace_quantile = .01  # quantile for auto-scaling
     default_trace_color = (.5, .5, .5, 1)
     default_shortcuts = {
         'change_trace_size': 'ctrl+wheel',
@@ -169,7 +171,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         # Initialize the view.
         super(TraceView, self).__init__(**kwargs)
-        self.state_attrs += ('origin', 'do_show_labels', 'show_all_spikes')
+        self.state_attrs += ('origin', 'do_show_labels', 'show_all_spikes', 'auto_scale')
         self.local_state_attrs += ('interval', 'scaling',)
 
         self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
@@ -306,7 +308,11 @@ class TraceView(ScalingMixin, ManualClusteringView):
                 self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
 
             # Find the data bounds.
-            ymin, ymax = traces.data.min(), traces.data.max()
+            if self.auto_scale or getattr(self, 'data_bounds', NDC) == NDC:
+                ymin = np.quantile(traces.data, self.trace_quantile)
+                ymax = np.quantile(traces.data, 1. - self.trace_quantile)
+            else:
+                ymin, ymax = self.data_bounds[1], self.data_bounds[3]
             self.data_bounds = (start, ymin, end, ymax)
 
             # Used for spike click.
@@ -355,6 +361,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(
             self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes)
+        self.actions.add(self.toggle_auto_scale, checkable=True, checked=self.auto_scale)
         self.actions.add(self.switch_origin)
         self.actions.separator()
 
@@ -476,10 +483,19 @@ class TraceView(ScalingMixin, ManualClusteringView):
         h /= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
 
+    # Misc
+    # -------------------------------------------------------------------------
+
     def toggle_show_labels(self, checked):
         """Toggle the display of the channel ids."""
+        logger.debug("Set show labels to %s.", checked)
         self.do_show_labels = checked
         self.set_interval()
+
+    def toggle_auto_scale(self, checked):
+        """Toggle automatic scaling of the traces."""
+        logger.debug("Set auto scale to %s.", checked)
+        self.auto_scale = checked
 
     # Scaling
     # -------------------------------------------------------------------------

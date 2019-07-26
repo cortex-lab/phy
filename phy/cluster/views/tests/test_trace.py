@@ -146,6 +146,16 @@ def test_trace_view_1(qtbot, tempdir, gui):
 
     v.toggle_show_labels(True)
     v.go_right()
+
+    # Check auto scaling.
+    db = v.data_bounds
+    v.toggle_auto_scale(False)
+    v.narrow()
+    qtbot.wait(1)
+    # Check that ymin and ymax have not changed.
+    assert v.data_bounds[1] == db[1]
+    assert v.data_bounds[3] == db[3]
+
     v.toggle_auto_update(True)
     assert v.do_show_labels
     qtbot.wait(1)
