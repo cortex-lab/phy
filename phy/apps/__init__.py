@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa
 
 """CLI tool."""
 
@@ -20,6 +21,10 @@ from phylib import _logger_date_fmt, _logger_fmt
 from phy import __version_git__
 from phy.gui.qt import QtDialogLogger
 from phy.utils.profiling import _enable_profiler, _enable_pdb
+
+from .base import (
+    BaseController, ISIView, FiringRateView,
+    WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin)
 
 
 logger = logging.getLogger(__name__)
@@ -81,17 +86,6 @@ def capture_exceptions():  # pragma: no cover
     logging.getLogger('phy').removeHandler(handler)
 
     logger.debug("Stop capturing exceptions.")
-
-
-def _add_log_file(filename):  # pragma: no cover
-    """Create a `phy.log` log file with DEBUG level in the
-    current directory."""
-    handler = logging.FileHandler(filename)
-
-    handler.setLevel(logging.DEBUG)
-    formatter = _Formatter(fmt=_logger_fmt, datefmt=_logger_date_fmt)
-    handler.setFormatter(formatter)
-    logging.getLogger('phy').addHandler(handler)
 
 
 #------------------------------------------------------------------------------

@@ -106,6 +106,23 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.cluster.WaveformView](#phyclusterwaveformview)
 
 
+### [phy.apps](#phyapps)
+
+* [phy.apps.add_default_handler](#phyappsadd_default_handler)
+* [phy.apps.capture_exceptions](#phyappscapture_exceptions)
+* [phy.apps.contextmanager](#phyappscontextmanager)
+* [phy.apps.exceptionHandler](#phyappsexceptionhandler)
+* [phy.apps.format_exception](#phyappsformat_exception)
+* [phy.apps.BaseController](#phyappsbasecontroller)
+* [phy.apps.FeatureMixin](#phyappsfeaturemixin)
+* [phy.apps.FiringRateView](#phyappsfiringrateview)
+* [phy.apps.ISIView](#phyappsisiview)
+* [phy.apps.QtDialogLogger](#phyappsqtdialoglogger)
+* [phy.apps.TemplateMixin](#phyappstemplatemixin)
+* [phy.apps.TraceMixin](#phyappstracemixin)
+* [phy.apps.WaveformMixin](#phyappswaveformmixin)
+
+
 ### [phy.apps.template](#phyappstemplate)
 
 * [phy.apps.template.from_sparse](#phyappstemplatefrom_sparse)
@@ -115,6 +132,13 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.apps.template.template_gui](#phyappstemplatetemplate_gui)
 * [phy.apps.template.TemplateController](#phyappstemplatetemplatecontroller)
 * [phy.apps.template.TemplateModel](#phyappstemplatetemplatemodel)
+
+
+### [phy.apps.kwik](#phyappskwik)
+
+* [phy.apps.kwik.kwik_describe](#phyappskwikkwik_describe)
+* [phy.apps.kwik.kwik_gui](#phyappskwikkwik_gui)
+* [phy.apps.kwik.KwikController](#phyappskwikkwikcontroller)
 
 
 
@@ -9082,6 +9106,959 @@ GUI is closed. To be overriden.
 
 ---
 
+## phy.apps
+
+CLI tool.
+
+---
+
+#### phy.apps.add_default_handler
+
+
+**`phy.apps.add_default_handler(level='INFO', logger=<Logger phylib (DEBUG)>)`**
+
+
+
+---
+
+#### phy.apps.capture_exceptions
+
+
+**`phy.apps.capture_exceptions()`**
+
+Log exceptions instead of crashing the GUI, and display an error dialog on errors.
+
+---
+
+#### phy.apps.contextmanager
+
+
+**`phy.apps.contextmanager(func)`**
+
+@contextmanager decorator.
+
+Typical usage:
+
+    @contextmanager
+    def some_generator(<arguments>):
+        <setup>
+        try:
+            yield <value>
+        finally:
+            <cleanup>
+
+This makes this:
+
+    with some_generator(<arguments>) as <variable>:
+        <body>
+
+equivalent to this:
+
+    <setup>
+    try:
+        <variable> = <value>
+        <body>
+    finally:
+        <cleanup>
+
+---
+
+#### phy.apps.exceptionHandler
+
+
+**`phy.apps.exceptionHandler(exception_type, exception, traceback)`**
+
+
+
+---
+
+#### phy.apps.format_exception
+
+
+**`phy.apps.format_exception(etype, value, tb, limit=None, chain=True)`**
+
+Format a stack trace and the exception information.
+
+The arguments have the same meaning as the corresponding arguments
+to print_exception().  The return value is a list of strings, each
+ending in a newline and some containing internal newlines.  When
+these lines are concatenated and printed, exactly the same text is
+printed as does print_exception().
+
+---
+
+### phy.apps.BaseController
+
+Base controller for manual clustering GUI.
+
+**Constructor**
+
+* `dir_path : str or Path`
+    Path to the data directory
+
+* `config_dir : str or Path`
+    Path to the configuration directory
+
+* `model : Model`
+    Model object, optional (it is automatically created otherwise)
+
+* `plugins : list`
+    List of plugins to manually activate, optional (the plugins are automatically loaded from
+    the user configuration directory).
+
+* `clear_cache : boolean`
+    Whether to clear the cache on startup.
+
+* `clear_state : boolean`
+    Whether to clear the GUI state files on startup.
+
+* `enable_threading : boolean`
+    Whether to enable threading in the views when selecting clusters.
+
+**Methods to override**
+
+The main methods that can be overriden when implementing a custom `Controller` are:
+
+
+* `_create_model() : None => object`
+    Return a Model instance (any object, see below) from the controller constructor's
+    parameters.
+
+* `_set_view_creator() : None => None`
+    Populate the `self.view_creator` dictionary with custom views.
+
+* `get_best_channels(cluster_id) : int => list`
+    Return the list of best channels for any given cluster, sorted by decreasing match.
+
+**Model**
+
+The Model can be any object, but it needs to implement the following properties and methods
+in order to work with the BaseController:
+
+
+* `channel_mapping : array-like`
+    A `(n_channels,)` array with the column index in the raw data array of every channel.
+    The displayed channel label of channel `channel_id` is `channel_mapping[channel_id]`.
+
+* `channel_positions : array-like`
+    A `(n_channels, 2)` array with the x, y coordinates of the electrode sites,
+    in any unit (e.g. μm).
+
+* `channel_shanks : array-like`
+    A `(n_channels,)` array with the shank index of every channel.
+channel_vertical_order = array-like
+    Permutation of the channels for display in the trace view. The shape is `(n_channels,)`.
+
+* `duration : float`
+    The total duration of the recording, in seconds.
+
+* `features : array-like`
+    The object containing the features. The feature view is shown if this object is not None.
+
+* `metadata : dict`
+    Cluster metadata. Map metadata field names to dictionaries {cluster_id: value}.
+    It is only expected to hold information representative of the state of the dataset
+    on disk, not during a live clustering session.
+    The special metadata field name `group` is reserved to cluster groups.
+
+* `n_channels : int`
+    Total number of channels in the recording (number of columns in the raw data array).
+
+* `n_samples_waveforms : int`
+    Number of time samples to use when extracting raw waveforms.
+
+* `sample_rate : float`
+    The sampling rate of the raw data.
+
+* `spike_attributes : dict`
+    Map attribute names to spike attributes, arrays of shape `(n_spikes,)`.
+
+* `spike_clusters : array-like`
+    Initial spike-cluster assignments, shape `(n_spikes,)`.
+
+* `spike_times : array-like`
+    Spike times, in seconds, shape `(n_spikes,)`.
+
+* `traces : array-like`
+    Array (can be virtual/memmapped) of shape `(n_samples_total, n_channels)` with the
+    raw data. The trace view is shown if this object is not None.
+
+get_features(spike_ids, channel_ids) : array-like, array-like => array-like
+    Return spike features of specified spikes on the specified channels. Optional.
+get_waveforms(spike_ids, channel_ids) : array-like, array-like => array-like
+    Return raw spike waveforms of specified spikes on the specified channels. Optional.
+
+
+* `save_spike_clusters(spike_clusters) : array-like => None`
+    Save spike clusters assignments back to disk.
+save_metadata(name, values) : str, dict => None
+    Save cluster metadata, where name is the metadata field name, and values a dictionary
+    `{cluster_id: value}`.
+
+**Note**
+
+The Model represents data as it is stored on disk. When cluster data changes during
+a manual clustering session (like spike-cluster assignments), the data in the model
+is not expected to change (it is rather the responsability of the controller).
+
+The model implements saving option for spike cluster assignments and cluster metadata.
+
+---
+
+#### BaseController.at_least_one_view
+
+
+**`BaseController.at_least_one_view(self, view_name)`**
+
+Add a view of a given type if there is not already one.
+
+To be called before creating a GUI.
+
+---
+
+#### BaseController.create_amplitude_view
+
+
+**`BaseController.create_amplitude_view(self)`**
+
+Create the amplitude view.
+
+---
+
+#### BaseController.create_correlogram_view
+
+
+**`BaseController.create_correlogram_view(self)`**
+
+Create a correlogram view.
+
+---
+
+#### BaseController.create_gui
+
+
+**`BaseController.create_gui(self, default_views=None, **kwargs)`**
+
+Create the GUI.
+
+**Constructor**
+
+
+* `default_views : list`
+    List of views to add in the GUI, optional. By default, all views from the view
+    count are added.
+
+---
+
+#### BaseController.create_ipython_view
+
+
+**`BaseController.create_ipython_view(self)`**
+
+Create an IPython View.
+
+---
+
+#### BaseController.create_probe_view
+
+
+**`BaseController.create_probe_view(self)`**
+
+Create a probe view.
+
+---
+
+#### BaseController.create_raster_view
+
+
+**`BaseController.create_raster_view(self)`**
+
+Create a raster view.
+
+---
+
+#### BaseController.get_background_spike_ids
+
+
+**`BaseController.get_background_spike_ids(self, n=None)`**
+
+Return regularly spaced spikes.
+
+---
+
+#### BaseController.get_best_channel
+
+
+**`BaseController.get_best_channel(self, cluster_id)`**
+
+Return the best channel of a given cluster. This is the first channel returned
+by `get_best_channels()`.
+
+---
+
+#### BaseController.get_best_channels
+
+
+**`BaseController.get_best_channels(self, cluster_id)`**
+
+Return the best channels of a given cluster. To be overriden.
+
+---
+
+#### BaseController.get_channel_shank
+
+
+**`BaseController.get_channel_shank(self, cluster_id)`**
+
+Return the shank of a cluster's best channel, if the channel_shanks array is available.
+
+---
+
+#### BaseController.get_clusters_on_channel
+
+
+**`BaseController.get_clusters_on_channel(self, channel_id)`**
+
+Return all clusters which have the specified channel among their best channels.
+
+---
+
+#### BaseController.get_mean_firing_rate
+
+
+**`BaseController.get_mean_firing_rate(self, cluster_id)`**
+
+Return the mean firing rate of a cluster.
+
+---
+
+#### BaseController.get_probe_depth
+
+
+**`BaseController.get_probe_depth(self, cluster_id)`**
+
+Return the depth of a cluster.
+
+---
+
+#### BaseController.get_spike_ids
+
+
+**`BaseController.get_spike_ids(self, cluster_id, n=None)`**
+
+Return part or all of spike ids belonging to a given cluster.
+
+---
+
+#### BaseController.get_spike_times
+
+
+**`BaseController.get_spike_times(self, cluster_id, n=None)`**
+
+Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`.
+
+---
+
+#### BaseController.on_save_clustering
+
+
+**`BaseController.on_save_clustering(self, sender, spike_clusters, groups, *labels)`**
+
+Save the modified data.
+
+---
+
+#### BaseController.peak_channel_similarity
+
+
+**`BaseController.peak_channel_similarity(self, cluster_id)`**
+
+Return the list of similar clusters to a given cluster, just on the basis of the
+peak channel.
+
+**Parameters**
+
+* `cluster_id : int`
+
+**Returns**
+
+* `similarities : list`
+    List of tuples `(other_cluster_id, similarity_value)` sorted by decreasing
+    similarity value.
+
+---
+
+### phy.apps.FeatureMixin
+
+
+
+---
+
+#### FeatureMixin.create_amplitude_view
+
+
+**`FeatureMixin.create_amplitude_view(self)`**
+
+
+
+---
+
+#### FeatureMixin.create_feature_view
+
+
+**`FeatureMixin.create_feature_view(self)`**
+
+
+
+---
+
+#### FeatureMixin.get_spike_feature_amplitudes
+
+
+**`FeatureMixin.get_spike_feature_amplitudes(self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs)`**
+
+Return the features for the specified channel and PC.
+
+---
+
+### phy.apps.FiringRateView
+
+Histogram view showing the time-dependent firing rate.
+
+---
+
+#### FiringRateView.attach
+
+
+**`FiringRateView.attach(self, gui)`**
+
+Attach the view to the GUI.
+
+---
+
+#### FiringRateView.close
+
+
+**`FiringRateView.close(self)`**
+
+Close the underlying canvas.
+
+---
+
+#### FiringRateView.decrease
+
+
+**`FiringRateView.decrease(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### FiringRateView.get_clusters_data
+
+
+**`FiringRateView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
+#### FiringRateView.increase
+
+
+**`FiringRateView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### FiringRateView.on_cluster
+
+
+**`FiringRateView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
+#### FiringRateView.on_mouse_wheel
+
+
+**`FiringRateView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### FiringRateView.on_select
+
+
+**`FiringRateView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback function when clusters are selected. May be overriden.
+
+---
+
+#### FiringRateView.plot
+
+
+**`FiringRateView.plot(self, **kwargs)`**
+
+Update the view with the selected clusters.
+
+---
+
+#### FiringRateView.reset_scaling
+
+
+**`FiringRateView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
+#### FiringRateView.screenshot
+
+
+**`FiringRateView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### FiringRateView.set_n_bins
+
+
+**`FiringRateView.set_n_bins(self, n_bins)`**
+
+Set the number of bins in the histogram.
+
+---
+
+#### FiringRateView.set_state
+
+
+**`FiringRateView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### FiringRateView.set_status
+
+
+**`FiringRateView.set_status(self, message=None)`**
+
+Set the status bar message in the GUI.
+
+---
+
+#### FiringRateView.set_x_max
+
+
+**`FiringRateView.set_x_max(self, x_max)`**
+
+Set the maximum value on the x axis for the histogram.
+
+---
+
+#### FiringRateView.set_x_min
+
+
+**`FiringRateView.set_x_min(self, x_min)`**
+
+Set the minimum value on the x axis for the histogram.
+
+---
+
+#### FiringRateView.show
+
+
+**`FiringRateView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### FiringRateView.toggle_auto_update
+
+
+**`FiringRateView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### FiringRateView.state
+
+
+**`FiringRateView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
+
+---
+
+### phy.apps.ISIView
+
+Histogram view showing the interspike intervals.
+
+---
+
+#### ISIView.attach
+
+
+**`ISIView.attach(self, gui)`**
+
+Attach the view to the GUI.
+
+---
+
+#### ISIView.close
+
+
+**`ISIView.close(self)`**
+
+Close the underlying canvas.
+
+---
+
+#### ISIView.decrease
+
+
+**`ISIView.decrease(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### ISIView.get_clusters_data
+
+
+**`ISIView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
+#### ISIView.increase
+
+
+**`ISIView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### ISIView.on_cluster
+
+
+**`ISIView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
+#### ISIView.on_mouse_wheel
+
+
+**`ISIView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### ISIView.on_select
+
+
+**`ISIView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback function when clusters are selected. May be overriden.
+
+---
+
+#### ISIView.plot
+
+
+**`ISIView.plot(self, **kwargs)`**
+
+Update the view with the selected clusters.
+
+---
+
+#### ISIView.reset_scaling
+
+
+**`ISIView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
+#### ISIView.screenshot
+
+
+**`ISIView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### ISIView.set_n_bins
+
+
+**`ISIView.set_n_bins(self, n_bins)`**
+
+Set the number of bins in the histogram.
+
+---
+
+#### ISIView.set_state
+
+
+**`ISIView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### ISIView.set_status
+
+
+**`ISIView.set_status(self, message=None)`**
+
+Set the status bar message in the GUI.
+
+---
+
+#### ISIView.set_x_max
+
+
+**`ISIView.set_x_max(self, x_max)`**
+
+Set the maximum value on the x axis for the histogram.
+
+---
+
+#### ISIView.set_x_min
+
+
+**`ISIView.set_x_min(self, x_min)`**
+
+Set the minimum value on the x axis for the histogram.
+
+---
+
+#### ISIView.show
+
+
+**`ISIView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### ISIView.toggle_auto_update
+
+
+**`ISIView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ISIView.state
+
+
+**`ISIView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
+
+---
+
+### phy.apps.QtDialogLogger
+
+Display a message box for all errors.
+
+---
+
+#### QtDialogLogger.emit
+
+
+**`QtDialogLogger.emit(self, record)`**
+
+Do whatever it takes to actually log the specified logging record.
+
+This version is intended to be implemented by subclasses and so
+raises a NotImplementedError.
+
+---
+
+### phy.apps.TemplateMixin
+
+Support templates.
+
+The model needs to implement specific properties and methods.
+
+amplitudes : array-like
+    The template amplitude of every spike (only with TemplateMixin).
+n_templates : int
+    Initial number of templates.
+spike_templates : array-like
+    The template initial id of every spike.
+get_template(template_id) : int => Bunch(template, channel_ids)
+    Return the template data as a `(n_samples, n_channels)` array, the corresponding
+    channel ids of the template.
+
+---
+
+#### TemplateMixin.create_template_view
+
+
+**`TemplateMixin.create_template_view(self)`**
+
+Create a template view.
+
+---
+
+#### TemplateMixin.get_amplitudes
+
+
+**`TemplateMixin.get_amplitudes(self, cluster_id, load_all=False)`**
+
+Return the spike amplitudes found in `amplitudes.npy`, for a given cluster.
+
+---
+
+#### TemplateMixin.get_cluster_amplitude
+
+
+**`TemplateMixin.get_cluster_amplitude(self, cluster_id)`**
+
+Return the amplitude of the best template of a cluster.
+
+---
+
+#### TemplateMixin.get_mean_spike_template_amplitudes
+
+
+**`TemplateMixin.get_mean_spike_template_amplitudes(self, cluster_id)`**
+
+Return the average of the spike template amplitudes.
+
+---
+
+#### TemplateMixin.get_spike_template_amplitudes
+
+
+**`TemplateMixin.get_spike_template_amplitudes(self, spike_ids, **kwargs)`**
+
+Return the template amplitudes multiplied by the spike's amplitude.
+
+---
+
+#### TemplateMixin.get_template_amplitude
+
+
+**`TemplateMixin.get_template_amplitude(self, template_id)`**
+
+Return the maximum amplitude of a template's waveforms across all channels.
+
+---
+
+#### TemplateMixin.get_template_counts
+
+
+**`TemplateMixin.get_template_counts(self, cluster_id)`**
+
+Return a histogram of the number of spikes in each template for a given cluster.
+
+---
+
+#### TemplateMixin.get_template_for_cluster
+
+
+**`TemplateMixin.get_template_for_cluster(self, cluster_id)`**
+
+Return the largest template associated to a cluster.
+
+---
+
+### phy.apps.TraceMixin
+
+
+
+---
+
+#### TraceMixin.create_trace_view
+
+
+**`TraceMixin.create_trace_view(self)`**
+
+Create a trace view.
+
+---
+
+### phy.apps.WaveformMixin
+
+
+
+---
+
+#### WaveformMixin.create_waveform_view
+
+
+**`WaveformMixin.create_waveform_view(self)`**
+
+
+
+---
+
+#### WaveformMixin.get_mean_spike_raw_amplitudes
+
+
+**`WaveformMixin.get_mean_spike_raw_amplitudes(self, cluster_id)`**
+
+Return the average of the spike raw amplitudes.
+
+---
+
+#### WaveformMixin.get_spike_raw_amplitudes
+
+
+**`WaveformMixin.get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs)`**
+
+Return the maximum amplitude of the raw waveforms across all channels.
+
+---
+
 ## phy.apps.template
 
 Template GUI.
@@ -9667,5 +10644,299 @@ a TSV file.
 **`TemplateModel.save_spike_clusters(self, spike_clusters)`**
 
 Save the spike clusters.
+
+---
+
+## phy.apps.kwik
+
+Kwik GUI.
+
+---
+
+#### phy.apps.kwik.kwik_describe
+
+
+**`phy.apps.kwik.kwik_describe(path, channel_group=None, clustering=None)`**
+
+Describe a template dataset.
+
+---
+
+#### phy.apps.kwik.kwik_gui
+
+
+**`phy.apps.kwik.kwik_gui(path, channel_group=None, clustering=None, **kwargs)`**
+
+Launch the Kwik GUI.
+
+---
+
+### phy.apps.kwik.KwikController
+
+Controller for the Kwik GUI.
+
+**Constructor**
+
+* `kwik_path : str or Path`
+    Path to the kwik file
+
+* `channel_group : int`
+    The default channel group to load
+
+* `clustering : str`
+    The default clustering to load
+
+* `config_dir : str or Path`
+    Path to the configuration directory
+
+* `model : Model`
+    Model object, optional (it is automatically created otherwise)
+
+* `plugins : list`
+    List of plugins to manually activate, optional (the plugins are automatically loaded from
+    the user configuration directory).
+
+* `clear_cache : boolean`
+    Whether to clear the cache on startup.
+
+* `enable_threading : boolean`
+    Whether to enable threading in the views when selecting clusters.
+
+---
+
+#### KwikController.at_least_one_view
+
+
+**`KwikController.at_least_one_view(self, view_name)`**
+
+Add a view of a given type if there is not already one.
+
+To be called before creating a GUI.
+
+---
+
+#### KwikController.create_amplitude_view
+
+
+**`KwikController.create_amplitude_view(self)`**
+
+
+
+---
+
+#### KwikController.create_correlogram_view
+
+
+**`KwikController.create_correlogram_view(self)`**
+
+Create a correlogram view.
+
+---
+
+#### KwikController.create_feature_view
+
+
+**`KwikController.create_feature_view(self)`**
+
+
+
+---
+
+#### KwikController.create_gui
+
+
+**`KwikController.create_gui(self, default_views=None, **kwargs)`**
+
+Create the GUI.
+
+**Constructor**
+
+
+* `default_views : list`
+    List of views to add in the GUI, optional. By default, all views from the view
+    count are added.
+
+---
+
+#### KwikController.create_ipython_view
+
+
+**`KwikController.create_ipython_view(self)`**
+
+Create an IPython View.
+
+---
+
+#### KwikController.create_probe_view
+
+
+**`KwikController.create_probe_view(self)`**
+
+Create a probe view.
+
+---
+
+#### KwikController.create_raster_view
+
+
+**`KwikController.create_raster_view(self)`**
+
+Create a raster view.
+
+---
+
+#### KwikController.create_trace_view
+
+
+**`KwikController.create_trace_view(self)`**
+
+Create a trace view.
+
+---
+
+#### KwikController.create_waveform_view
+
+
+**`KwikController.create_waveform_view(self)`**
+
+
+
+---
+
+#### KwikController.get_background_spike_ids
+
+
+**`KwikController.get_background_spike_ids(self, n=None)`**
+
+Return regularly spaced spikes.
+
+---
+
+#### KwikController.get_best_channel
+
+
+**`KwikController.get_best_channel(self, cluster_id)`**
+
+Return the best channel of a given cluster. This is the first channel returned
+by `get_best_channels()`.
+
+---
+
+#### KwikController.get_best_channels
+
+
+**`KwikController.get_best_channels(self, cluster_id)`**
+
+Get the best channels of a given cluster.
+
+---
+
+#### KwikController.get_channel_shank
+
+
+**`KwikController.get_channel_shank(self, cluster_id)`**
+
+Return the shank of a cluster's best channel, if the channel_shanks array is available.
+
+---
+
+#### KwikController.get_clusters_on_channel
+
+
+**`KwikController.get_clusters_on_channel(self, channel_id)`**
+
+Return all clusters which have the specified channel among their best channels.
+
+---
+
+#### KwikController.get_mean_firing_rate
+
+
+**`KwikController.get_mean_firing_rate(self, cluster_id)`**
+
+Return the mean firing rate of a cluster.
+
+---
+
+#### KwikController.get_mean_spike_raw_amplitudes
+
+
+**`KwikController.get_mean_spike_raw_amplitudes(self, cluster_id)`**
+
+Return the average of the spike raw amplitudes.
+
+---
+
+#### KwikController.get_probe_depth
+
+
+**`KwikController.get_probe_depth(self, cluster_id)`**
+
+Return the depth of a cluster.
+
+---
+
+#### KwikController.get_spike_feature_amplitudes
+
+
+**`KwikController.get_spike_feature_amplitudes(self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs)`**
+
+Return the features for the specified channel and PC.
+
+---
+
+#### KwikController.get_spike_ids
+
+
+**`KwikController.get_spike_ids(self, cluster_id, n=None)`**
+
+Return part or all of spike ids belonging to a given cluster.
+
+---
+
+#### KwikController.get_spike_raw_amplitudes
+
+
+**`KwikController.get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs)`**
+
+Return the maximum amplitude of the raw waveforms across all channels.
+
+---
+
+#### KwikController.get_spike_times
+
+
+**`KwikController.get_spike_times(self, cluster_id, n=None)`**
+
+Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`.
+
+---
+
+#### KwikController.on_save_clustering
+
+
+**`KwikController.on_save_clustering(self, sender, spike_clusters, groups, *labels)`**
+
+Save the modified data.
+
+---
+
+#### KwikController.peak_channel_similarity
+
+
+**`KwikController.peak_channel_similarity(self, cluster_id)`**
+
+Return the list of similar clusters to a given cluster, just on the basis of the
+peak channel.
+
+**Parameters**
+
+* `cluster_id : int`
+
+**Returns**
+
+* `similarities : list`
+    List of tuples `(other_cluster_id, similarity_value)` sorted by decreasing
+    similarity value.
 
 ---

@@ -31,6 +31,7 @@ def test_waveform_view(qtbot, tempdir, gui):
         return Bunch(
             data=w,
             channel_ids=np.arange(nc),
+            channel_labels=['%d' % (ch * 10) for ch in range(nc)],
             waveform_duration=1000,
             channel_positions=staggered_positions(nc))
 

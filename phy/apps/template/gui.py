@@ -13,12 +13,12 @@ from pathlib import Path
 
 import numpy as np
 
+from phylib import _add_log_file
 from phylib.io.model import TemplateModel, get_template_params, load_model
 from phylib.utils import Bunch, connect
 
 from phy.cluster.views import ScatterView
 from phy.gui import create_app, run_app
-from .. import _add_log_file
 from ..base import WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin, BaseController
 
 logger = logging.getLogger(__name__)

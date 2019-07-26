@@ -16,6 +16,7 @@ import shutil
 
 import numpy as np
 
+from phylib import _add_log_file
 from phylib.io.array import Selector, _index_of, _flatten
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
@@ -27,7 +28,6 @@ from phy.cluster.views import (
     WaveformView, FeatureView, TraceView, CorrelogramView, AmplitudeView,
     ScatterView, ProbeView, RasterView, TemplateView, HistogramView, select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
-from . import _add_log_file
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
 from phy.gui.qt import AsyncCaller
@@ -137,9 +137,13 @@ class WaveformMixin(object):
         spike_ids = self.selector.select_spikes(
             [cluster_id], n_spikes_waveforms, batch_size_waveforms)
         channel_ids = self.get_best_channels(cluster_id)
+        channel_labels = ['%d' % ch for ch in self.model.channel_mapping[channel_ids]]
         data = self.model.get_waveforms(spike_ids, channel_ids)
         data = data - data.mean() if data is not None else None
-        return Bunch(data=data, channel_ids=channel_ids, channel_positions=pos[channel_ids])
+        return Bunch(
+            data=data, channel_ids=channel_ids,
+            channel_labels=channel_labels,
+            channel_positions=pos[channel_ids])
 
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
@@ -261,7 +265,9 @@ class FeatureMixin(object):
         data[np.isnan(data)] = 0
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         assert np.isnan(data).sum() == 0
-        return Bunch(data=data, spike_ids=spike_ids, channel_ids=channel_ids)
+        channel_labels = ['%d' % ch for ch in self.model.channel_mapping[channel_ids]]
+        return Bunch(
+            data=data, spike_ids=spike_ids, channel_ids=channel_ids, channel_labels=channel_labels)
 
     def _get_features(self, cluster_id=None, channel_ids=None, load_all=False):
         """Return the features of a given cluster on specified channels."""
@@ -427,8 +433,8 @@ class TemplateMixin(object):
         return {
             cluster_id: Bunch(
                 template=bunchs[cluster_id].data[0, ...] * mean_amp[cluster_id],
-                channel_ids=bunchs[cluster_id].channel_ids)
-            for cluster_id in cluster_ids}
+                channel_ids=bunchs[cluster_id].channel_ids,
+            ) for cluster_id in cluster_ids}
 
     def _set_view_creator(self):
         super(TemplateMixin, self)._set_view_creator()
@@ -439,6 +445,7 @@ class TemplateMixin(object):
         view = TemplateView(
             templates=self._get_all_templates,
             channel_ids=np.arange(self.model.n_channels),
+            channel_labels=['%d' % ch for ch in self.model.channel_mapping],
             cluster_color_selector=self.supervisor.color_selector,
         )
         self._attach_global_view(view)
@@ -490,6 +497,7 @@ class TraceMixin(object):
             traces=self._get_traces,
             spike_times=self._trace_spike_times,
             n_channels=self.model.n_channels,
+            channel_labels=['%d' % ch for ch in self.model.channel_mapping],
             sample_rate=self.model.sample_rate,
             duration=self.model.duration,
             channel_vertical_order=getattr(self.model, 'channel_vertical_order', None),
@@ -570,6 +578,9 @@ class BaseController(object):
     The Model can be any object, but it needs to implement the following properties and methods
     in order to work with the BaseController:
 
+    channel_mapping : array-like
+        A `(n_channels,)` array with the column index in the raw data array of every channel.
+        The displayed channel label of channel `channel_id` is `channel_mapping[channel_id]`.
     channel_positions : array-like
         A `(n_channels, 2)` array with the x, y coordinates of the electrode sites,
         in any unit (e.g. μm).

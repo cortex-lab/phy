@@ -246,7 +246,7 @@ def generate_api_doc(package, subpackages, path=None):
 if __name__ == '__main__':
 
     package = 'phy'
-    subpackages = ['utils', 'gui', 'plot', 'cluster', 'apps.template']
+    subpackages = ['utils', 'gui', 'plot', 'cluster', 'apps', 'apps.template', 'apps.kwik']
 
     curdir = op.dirname(op.realpath(__file__))
     path = op.join(curdir, '../docs/api.md')
