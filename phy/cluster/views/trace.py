@@ -103,7 +103,10 @@ class TraceView(ScalingMixin, ManualClusteringView):
     duration : float
     n_channels : int
     channel_vertical_order : array-like
-        Permutation of the channels.
+        Permutation of the channels. This 1D array gives the channel id of all channels from
+        top to bottom (or conversely, depending on `origin=top|bottom`).
+    channel_labels : list
+        Labels of all shown channels. By default, this is just the channel ids.
 
     """
     _default_position = 'left'
@@ -137,7 +140,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
     def __init__(
             self, traces=None, sample_rate=None, spike_times=None, duration=None, n_channels=None,
-            channel_vertical_order=None, **kwargs):
+            channel_vertical_order=None, channel_labels=None, **kwargs):
 
         self.do_show_labels = True
         self.show_all_spikes = False
@@ -161,10 +164,17 @@ class TraceView(ScalingMixin, ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
+        # Channel permutation.
         self._channel_perm = (
             np.arange(n_channels) if channel_vertical_order is None else channel_vertical_order)
         assert self._channel_perm.shape == (n_channels,)
         self._channel_perm = np.argsort(self._channel_perm)
+
+        # Channel labels.
+        self.channel_labels = (
+            channel_labels if channel_labels is not None else
+            ['%d' % ch for ch in range(n_channels)])
+        assert len(self.channel_labels) == n_channels
 
         # Box and probe scaling.
         self._origin = None
@@ -257,7 +267,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.text_visual.reset_batch()
         for ch in range(self.n_channels):
             bi = self._permute_channels(ch)
-            ch_label = '%d' % ch
+            ch_label = self.channel_labels[ch]
             self.text_visual.add_batch_data(
                 pos=[self.data_bounds[0], 0],
                 text=ch_label,

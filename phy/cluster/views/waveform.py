@@ -76,18 +76,15 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         * `data` : a 3D array `(n_spikes, n_samples, n_channels_loc)`
         * `channel_ids` : the channel ids corresponding to the third dimension in `data`
+        * `channel_labels` : a list of channel labels for every channel in `channel_ids`
         * `channel_positions` : a 2D array with the coordinates of the channels on the probe
         * `masks` : a 2D array `(n_spikes, n_channels)` with the waveforms masks
         * `alpha` : the alpha transparency channel
 
         The keys of the dictionary are called **waveform types**. The `next_waveforms_type`
         action cycles through all available waveform types. The key `waveforms` is mandatory.
-
     waveform_type : str
         Default key of the waveforms dictionary to plot initially.
-
-    channel_labels : array-like
-        Labels of the channels.
 
     """
 
@@ -117,11 +114,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         'change_n_spikes_waveforms': 'wn',
     }
 
-    def __init__(self, waveforms=None, waveforms_type=None, channel_labels=None, **kwargs):
+    def __init__(self, waveforms=None, waveforms_type=None, **kwargs):
         self._overlap = False
         self.do_show_labels = True
         self.channel_ids = None
-        self.channel_labels = channel_labels
         self.filtered_tags = ()
 
         # Initialize the view.
@@ -219,13 +215,13 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             x=t, y=wave, color=bunch.color, masks=masks, box_index=box_index,
             data_bounds=self.data_bounds)
 
-    def _plot_labels(self, channel_ids, n_clusters, channel_labels=None):
+    def _plot_labels(self, channel_ids, n_clusters, channel_labels):
         # Add channel labels.
         if not self.do_show_labels:
             return
         self.text_visual.reset_batch()
         for i, ch in enumerate(channel_ids):
-            label = self.channel_labels[i] if self.channel_labels is not None else ch
+            label = channel_labels[ch]
             self.text_visual.add_batch_data(
                 pos=[-1, 0],
                 text=str(label),
@@ -244,6 +240,13 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
         self.channel_ids = channel_ids
 
+        # Channel labels.
+        channel_labels = {}
+        for d in bunchs:
+            chl = d.get('channel_labels', ['%d' % ch for ch in d.channel_ids])
+            channel_labels.update({
+                channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)})
+
         # Update the box bounds as a function of the selected channels.
         if channel_ids:
             self.canvas.boxed.box_bounds = _get_box_bounds(bunchs, channel_ids)
@@ -258,7 +261,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             self._plot_cluster(bunch)
         self.canvas.update_visual(self.waveform_visual)
 
-        self._plot_labels(channel_ids, len(self.cluster_ids))
+        self._plot_labels(channel_ids, len(self.cluster_ids), channel_labels)
         self._update_axes(bunchs)
         self.canvas.update()
 
@@ -416,7 +419,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             # Get mouse position in NDC.
             channel_idx, _ = self.canvas.boxed.box_map(e.pos)
             channel_id = self.channel_ids[channel_idx]
-            logger.debug("Click on channel %d with key %s and button %s.", channel_id, key, b)
+            logger.debug("Click on channel_id %d with key %s and button %s.", channel_id, key, b)
             emit('channel_click', self, channel_id=channel_id, key=key, button=b)
 
     def next_waveforms_type(self):

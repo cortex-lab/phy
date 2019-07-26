@@ -39,6 +39,8 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         `template` array (sparse format).
     channel_ids : array-like
         The list of all channel ids.
+    channel_labels : list
+        Labels of all shown channels. By default, this is just the channel ids.
     cluster_ids : array-like
         The list of all clusters to show initially.
     cluster_color_selector : ClusterColorSelector
@@ -56,20 +58,29 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
     }
 
     def __init__(
-            self, templates=None, channel_ids=None, cluster_ids=None, cluster_color_selector=None,
-            **kwargs):
+            self, templates=None, channel_ids=None, channel_labels=None,
+            cluster_ids=None, cluster_color_selector=None, **kwargs):
         super(TemplateView, self).__init__(**kwargs)
         self.state_attrs += ()
         self.local_state_attrs += ('scaling',)
 
         self.cluster_color_selector = cluster_color_selector
+
         # Full list of channels.
         self.channel_ids = channel_ids
+        self.n_channels = len(channel_ids)
+
+        # Channel labels.
+        self.channel_labels = (
+            channel_labels if channel_labels is not None else
+            ['%d' % ch for ch in range(self.n_channels)])
+        assert len(self.channel_labels) == self.n_channels
+        # TODO: show channel and cluster labels
+
         # Full list of clusters.
         if cluster_ids is not None:
             self.set_cluster_ids(cluster_ids)
-        # Total number of channels.
-        self.n_channels = len(channel_ids)
+
         self.canvas.set_layout('grid', box_bounds=[[-1, -1, +1, +1]], has_clip=False)
         self.canvas.enable_axes()
         self.templates = templates

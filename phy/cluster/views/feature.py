@@ -75,9 +75,12 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
     features : function
         Maps `(cluster_id, channel_ids=None, load_all=False)` to
-        `Bunch(data, channel_ids, spike_ids , masks)`.
+        `Bunch(data, channel_ids, channel_labels, spike_ids , masks)`.
         * `data` is an `(n_spikes, n_channels, n_features)` array
         * `channel_ids` contains the channel ids of every row in `data`
+        * `channel_labels` contains the channel labels of every row in `data`
+        * `spike_ids` is a `(n_spikes,)` array
+        * `masks` is an `(n_spikes, n_channels)` array
 
         This allows for a sparse format.
 
@@ -157,10 +160,11 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
                 yield i, j, dim_x, dim_y
 
     def _get_axis_label(self, dim):
-        """Return the channel id from a dimension, if applicable."""
+        """Return the channel label from a dimension, if applicable."""
         if str(dim[:-1]).isdecimal():
             n = len(self.channel_ids)
-            return str(self.channel_ids[int(dim[:-1]) % n]) + dim[-1]
+            channel_id = self.channel_ids[int(dim[:-1]) % n]
+            return self.channel_labels[channel_id] + dim[-1]
         else:
             return dim
 
@@ -306,6 +310,13 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             self.channel_ids = channel_ids
         assert len(self.channel_ids)
 
+        # Channel labels.
+        self.channel_labels = {}
+        for d in bunchs:
+            chl = d.get('channel_labels', ['%d' % ch for ch in d.channel_ids])
+            self.channel_labels.update({
+                channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)})
+
         return bunchs
 
     def plot(self, **kwargs):
@@ -412,7 +423,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
                 if channel_pc is None:
                     return
                 channel_id, pc = channel_pc
-                logger.debug("Click on feature dim %s, channel %s, PC %s.", dim, channel_id, pc)
+                logger.debug("Click on feature dim %s, channel id %s, PC %s.", dim, channel_id, pc)
             else:
                 channel_id = pc = None
                 logger.debug("Click on feature dim %s.", dim)
