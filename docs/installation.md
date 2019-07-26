@@ -9,7 +9,10 @@ phy works better on computers with sufficient RAM, a recent graphics card, and a
 
 Main dependencies are NumPy, SciPy, PyQt5, pyopengl, joblib. The full list of dependencies is available in the `environment.yml` file.
 
-**Don't install phy 2 in an existing Python environment that already has phy 1.x. Create a new environment.**
+## Upgrading from phy 1 to phy 2
+
+* Never install phy 1 and phy 2 in the same conda environment.
+* It is recommended to delete `~/.phy/TemplateGUI/state.json` when upgrading.
 
 
 ## Instructions

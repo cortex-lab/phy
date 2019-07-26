@@ -109,6 +109,9 @@ def _get_global_data(d, local_keys):
     return d
 
 
+GUI_STATE_VERSION = 2
+
+
 class GUIState(Bunch):
     """Represent the state of the GUI: positions of the views and all parameters associated
     to the GUI and views. Derive from `Bunch`, which itself derives from `dict`.
@@ -139,7 +142,6 @@ class GUIState(Bunch):
         self._path = Path(path) if path else None
         if self._path:
             ensure_dir_exists(str(self._path.parent))
-
         self._local_path = Path(local_path) if local_path else None
         self._local_keys = local_keys or []  # A list of strings with full paths key1.key2
         if self._local_path:
@@ -235,6 +237,8 @@ class GUIState(Bunch):
 
     def save(self):
         """Save the state to the JSON files in the config dir (global) and local dir (if any)."""
+        # Save the GUI state version.
+        self.GUI_STATE_VERSION = GUI_STATE_VERSION
         self._save_global()
         self._save_local()
 
