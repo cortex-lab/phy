@@ -210,7 +210,7 @@ class FeatureMixin(object):
     def get_spike_feature_amplitudes(
             self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs):
         """Return the features for the specified channel and PC."""
-        if self.model.features is None:
+        if self.model.sparse_features is None:
             return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
         features = self._get_spike_features(spike_ids, [channel_id]).data
@@ -220,7 +220,7 @@ class FeatureMixin(object):
 
     def create_amplitude_view(self):
         view = super(FeatureMixin, self).create_amplitude_view()
-        if self.model.features is None:
+        if self.model.sparse_features is None:
             return view
 
         @connect
@@ -279,7 +279,7 @@ class FeatureMixin(object):
         return self._get_spike_features(spike_ids, channel_ids)
 
     def create_feature_view(self):
-        if self.model.features is None:
+        if self.model.sparse_features is None:
             return
         view = FeatureView(
             features=self._get_features,
