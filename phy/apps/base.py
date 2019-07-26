@@ -359,6 +359,16 @@ class TemplateMixin(object):
         assert waveforms.ndim == 2  # shape: (n_samples, n_channels)
         return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
 
+    def get_cluster_amplitude(self, cluster_id):
+        """Return the amplitude of the best template of a cluster."""
+        template_id = self.get_template_for_cluster(cluster_id)
+        return self.get_template_amplitude(template_id)
+
+    def _set_cluster_metrics(self):
+        """Add an amplitude column in the cluster view."""
+        super(TemplateMixin, self)._set_cluster_metrics()
+        self.cluster_metrics['amplitude'] = self.get_cluster_amplitude
+
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
         """Return the template amplitudes multiplied by the spike's amplitude."""
         amplitudes = self.model.amplitudes[spike_ids]
@@ -619,6 +629,9 @@ class BaseController(object):
 
     # Number of spikes to show in the views.
     n_spikes_amplitudes = 2500
+
+    # Pairs (amplitude_type_name, method_name) where amplitude methods return spike amplitudes
+    # of a given type.
     _amplitude_functions = (
     )
 
