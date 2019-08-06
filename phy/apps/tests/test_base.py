@@ -10,12 +10,13 @@ from itertools import cycle, islice
 import logging
 import os
 from pathlib import Path
+import shutil
+import tempfile
 import unittest
 
 import numpy as np
 from pytestqt.plugin import QtBot
 
-from phylib.conftest import TemporaryDirectory_
 from phylib.io.mock import (
     artificial_features, artificial_traces, artificial_spike_clusters, artificial_spike_samples,
     artificial_waveforms
@@ -242,8 +243,8 @@ class BaseControllerTests(object):
     def setUpClass(cls):
         Debouncer.delay = 1
         cls._qtbot = QtBot(create_app())
-        cls._tempdir_ = TemporaryDirectory_()
-        cls._tempdir = Path(cls._tempdir_.__enter__())
+        cls._tempdir_ = tempfile.mkdtemp()
+        cls._tempdir = Path(cls._tempdir_)
         cls._controller = cls.get_controller(cls._tempdir)
         cls._create_gui()
 
@@ -252,7 +253,7 @@ class BaseControllerTests(object):
         if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
             cls._qtbot.stop()
         cls._close_gui()
-        cls._tempdir_.__exit__(None, None, None)
+        shutil.rmtree(cls._tempdir_)
 
     @classmethod
     def _create_gui(cls):
