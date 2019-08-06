@@ -139,14 +139,14 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             pos = np.array([[0, bunch.firing_rate, bunch.data_bounds[2], bunch.firing_rate]])
             self.line_visual.add_batch_data(
                 pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index)
-            # Text.
-            self.text_visual.add_batch_data(
-                pos=[bunch.data_bounds[2], bunch.firing_rate],
-                text='%.2f' % bunch.firing_rate,
-                anchor=(-1, 0),
-                box_index=bunch.pair_index,
-                data_bounds=bunch.data_bounds,
-            )
+            # # Text.
+            # self.text_visual.add_batch_data(
+            #     pos=[bunch.data_bounds[2], bunch.firing_rate],
+            #     text='%.2f' % bunch.firing_rate,
+            #     anchor=(-1, 0),
+            #     box_index=bunch.pair_index,
+            #     data_bounds=bunch.data_bounds,
+            # )
 
         # Refractory period.
         xrp0 = round((self.window_size * .5 - self.refractory_period) / self.bin_size)
@@ -164,14 +164,14 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             self.text_visual.add_batch_data(
                 pos=[-1, 0],
                 text=str(self.cluster_ids[k]),
-                anchor=[1, 0],
+                anchor=[-1.25, 0],
                 data_bounds=None,
                 box_index=(k, 0),
             )
             self.text_visual.add_batch_data(
                 pos=[0, -1],
                 text=str(self.cluster_ids[k]),
-                anchor=[0, 1],
+                anchor=[0, -1.25],
                 data_bounds=None,
                 box_index=(n - 1, k),
             )
@@ -179,7 +179,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         # Display the window size in the bottom right subplot.
         self.text_visual.add_batch_data(
             pos=[1, -1],
-            anchor=[-1, 1],
+            anchor=[1.25, 1],
             text='%.1f ms' % (1000 * .5 * self.window_size),
             box_index=(n - 1, n - 1),
         )
