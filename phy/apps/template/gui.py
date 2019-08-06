@@ -189,8 +189,11 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
     gui.show()
     run_app()
     gui.close()
+    controller.model.close()
 
 
 def template_describe(params_path):
     """Describe a template dataset."""
-    load_model(params_path).describe()
+    model = load_model(params_path)
+    model.describe()
+    model.close()
