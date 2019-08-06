@@ -49,3 +49,7 @@ docs/_build
 
 .vscode
 *.code-workspace
+msdfgen
+*.sh
+tools/*.png
+tools/*.ttf

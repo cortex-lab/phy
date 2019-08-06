@@ -161,12 +161,19 @@ class Texture(GPUData, GLObject):
     @interpolation.setter
     def interpolation(self, value):
         """ Texture interpolation for minication and magnification. """
+        if isinstance(value, str):
+            value = getattr(gl, 'GL_%s' % value.upper())
 
         if isinstance(value, (list, tuple)):
             self._interpolation = value
         else:
             self._interpolation = value, value
         self._need_setup = True
+
+    def set_interpolation(self, value):
+        if isinstance(value, str):
+            value = getattr(gl, 'GL_%s' % value.upper())
+            self._interpolation = value, value
 
     def _setup(self):
         """ Setup texture on GPU """

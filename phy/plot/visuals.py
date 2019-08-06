@@ -660,6 +660,13 @@ class HistogramVisual(BaseVisual):
 # Test visual
 #------------------------------------------------------------------------------
 
+FONT_MAP_PATH = Path(__file__).parent / 'static/SourceCodePro-Regular.npy.gz'
+FONT_MAP_SIZE = (6, 16)
+SDF_SIZE = 64
+GLYPH_SIZE = (40, 64)
+FONT_MAP_CHARS = ''.join(chr(i) for i in range(32, 32 + FONT_MAP_SIZE[0] * FONT_MAP_SIZE[1]))
+
+
 class TextVisual(BaseVisual):
     """Display strings at multiple locations.
 
@@ -667,6 +674,8 @@ class TextVisual(BaseVisual):
     -----------
 
     color : 4-tuple
+    font_size : float
+        The font size, in points (8 by default).
 
     Parameters
     ----------
@@ -695,9 +704,9 @@ class TextVisual(BaseVisual):
     _init_keywords = ('color',)
     _noconcat = ('text',)
 
-    def __init__(self, color=None):
+    def __init__(self, color=None, font_size=None):
         super(TextVisual, self).__init__()
-        self.set_shader('text')
+        self.set_shader('msdf')
         self.set_primitive_type('triangles')
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
@@ -708,21 +717,21 @@ class TextVisual(BaseVisual):
         assert len(color) == 4
         self.color = color
 
-        # Load the font.
-        curdir = Path(__file__).parent
-        font_name = 'SourceCodePro-Regular'
-        font_size = 24 if not is_high_dpi() else 32
-        # The font texture is gzipped.
-        fn = '%s-%d.npy.gz' % (font_name, font_size)
-        with gzip.open(str(curdir / 'static' / fn), 'rb') as f:
+        # Font size.
+        self.font_size = font_size or 4.  # in points
+        if is_high_dpi():  # pragma: no cover
+            self.font_size *= 2
+        assert self.font_size > 0
+
+        # Load the multi signed distance field font map.
+        with gzip.open(str(FONT_MAP_PATH), 'rb') as f:
             self._tex = np.load(f)
-        with open(str(curdir / 'static' / 'chars.txt'), 'r') as f:
-            self._chars = f.read()
 
     def _get_glyph_indices(self, s):
-        return [self._chars.index(char) for char in s]
+        return [FONT_MAP_CHARS.index(char) for char in s]
 
-    def validate(self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs):
+    def validate(
+            self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
 
         if text is None:
@@ -783,7 +792,7 @@ class TextVisual(BaseVisual):
         tex = self._tex
         glyph_height = tex.shape[0] // 6
         glyph_width = tex.shape[1] // 16
-        glyph_size = (glyph_width, glyph_height)
+        glyph_size = (glyph_width * self.font_size / 12, glyph_height * self.font_size / 12)
 
         # Position of all glyphs.
         a_position = np.repeat(pos, lengths, axis=0)
@@ -835,9 +844,15 @@ class TextVisual(BaseVisual):
         self.program['u_color'] = self.color
 
         self.program['u_tex'] = tex[::-1, :]
+        self.program['u_tex_size'] = tex.shape[:2]
 
         self.emit_visual_set_data()
         return data
+
+    def on_draw(self):
+        # NOTE: use linear interpolation for the SDF texture.
+        self.program._uniforms['u_tex']._data.set_interpolation('linear')
+        super(TextVisual, self).on_draw()
 
 
 #------------------------------------------------------------------------------

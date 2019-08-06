@@ -303,7 +303,8 @@ def test_text_1(qtbot, canvas_pz):
 
     pos = np.c_[np.linspace(-.5, .5, 10), np.linspace(-.5, .5, 10)]
 
-    _test_visual(qtbot, canvas_pz, TextVisual(color=(1, 1, 0, 1)), pos=pos, text=text)
+    _test_visual(
+        qtbot, canvas_pz, TextVisual(color=(0, 0, 1, 1), font_size=32), pos=pos, text=text)
 
 
 def test_text_2(qtbot, canvas_pz):
