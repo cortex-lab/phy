@@ -13,5 +13,6 @@ class ExampleHelloPlugin(IPlugin):
 
             @connect(sender=controller.supervisor)
             def on_cluster(sender, up):
-                """This is called every time a cluster assignment or cluster group/label changes."""
+                """This is called every time a cluster assignment or cluster group/label
+                changes."""
                 print("Clusters update: %s" % up)

@@ -50,7 +50,9 @@ for file in files:
 supervisor_shortcuts = _get_shortcuts(ActionCreator).replace('ActionCreator', 'Clustering')
 gui_shortcuts = _get_shortcuts(GUI)
 
-all_shortcuts = supervisor_shortcuts + gui_shortcuts + ''.join(_get_shortcuts(cls) for cls in view_classes)
+all_shortcuts = (
+    supervisor_shortcuts + gui_shortcuts +
+    ''.join(_get_shortcuts(cls) for cls in view_classes))
 
 pattern = re.compile(r'```text\nAll keyboard shortcuts\n([^`]+)\n```')
 shortcuts_file = docs_dir / 'shortcuts.md'
