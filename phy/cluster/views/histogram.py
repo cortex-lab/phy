@@ -64,6 +64,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     # If None, then `data.max()` is used.
     x_max = None
 
+    # Unit of the bin in the set_bin_size, set_x_min, set_x_max actions.
+    bin_unit = 's'  # s (seconds) or ms (milliseconds)
+
     # The snippet to update this view are `hn` to change the number of bins, and `hm` to
     # change the maximum value on the x axis. The character `h` can be customized by child classes.
     alias_char = 'h'
@@ -194,26 +197,33 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     def _set_scaling_value(self, value):
         self.set_x_max(value)
 
-    @property
-    def bin_size(self):
-        """Return the bin size."""
-        return (self.x_max - self.x_min) / self.n_bins
-
     def set_n_bins(self, n_bins):
         """Set the number of bins in the histogram."""
         self.n_bins = n_bins
         logger.debug("Change number of bins to %d for %s.", n_bins, self.__class__.__name__)
         self.plot()
 
+    @property
+    def bin_size(self):
+        """Return the bin size (in seconds or milliseconds depending on `self.bin_unit`)."""
+        bs = (self.x_max - self.x_min) / self.n_bins
+        if self.bin_unit == 'ms':
+            bs *= 1000
+        return bs
+
     def set_bin_size(self, bin_size):
         """Set the bin size in the histogram."""
         assert bin_size > 0
+        if self.bin_unit == 'ms':
+            bin_size /= 1000
         self.n_bins = np.round((self.x_max - self.x_min) / bin_size)
         logger.debug("Change number of bins to %d for %s.", self.n_bins, self.__class__.__name__)
         self.plot()
 
     def set_x_min(self, x_min):
         """Set the minimum value on the x axis for the histogram."""
+        if self.bin_unit == 'ms':
+            x_min /= 1000
         x_min = min(x_min, self.x_max)
         if x_min == self.x_max:
             return
@@ -223,6 +233,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     def set_x_max(self, x_max):
         """Set the maximum value on the x axis for the histogram."""
+        if self.bin_unit == 'ms':
+            x_max /= 1000
         x_max = max(x_max, self.x_min)
         if x_max == self.x_min:
             return

@@ -30,7 +30,7 @@ def test_histogram_view_0(qtbot, gui):
     v.attach(gui)
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
-    # v.on_select(cluster_ids=[2, 3, 5])
+    v.on_select(cluster_ids=[2, 3, 5])
 
     v.set_n_bins(200)
     assert v.n_bins == 200
@@ -52,5 +52,16 @@ def test_histogram_view_0(qtbot, gui):
 
     v.increase()
     v.decrease()
+
+    # Use ms unit.
+    v.bin_unit = 'ms'
+    v.set_x_min(100)
+    assert v.x_min == .1
+    v.set_x_max(500)
+    assert v.x_max == .5
+    v.set_n_bins(400)
+    assert v.bin_size == 1  # 1 ms
+    v.set_bin_size(2)
+    assert v.n_bins == 200
 
     _stop_and_close(qtbot, v)

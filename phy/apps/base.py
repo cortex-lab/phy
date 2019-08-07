@@ -76,6 +76,7 @@ class ISIView(HistogramView):
     x_max = .05  # window size is 50 ms by default
     n_bins = int(x_max / .001)  # by default, 1 bin = 1 ms
     alias_char = 'isi'  # provide `:isisn` (set number of bins) and `:isim` (set max bin) snippets
+    bin_unit = 'ms'  # user-provided bin values in milliseconds, but stored in seconds
 
 
 class FiringRateView(HistogramView):
