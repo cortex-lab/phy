@@ -290,7 +290,7 @@ def test_lasso_grid(qtbot, canvas):
 
     canvas.show()
     qtbot.waitForWindowShown(canvas)
-    qtbot.wait(10)
+    qtbot.wait(20)
 
     def _ctrl_click(x, y, button='left'):
         mouse_click(qtbot, canvas, (x, y), button=button, modifiers=('Control',))
@@ -316,4 +316,5 @@ def test_lasso_grid(qtbot, canvas):
     assert l.polygon.shape == (0, 2)
     assert l.box is None
 
+    qtbot.wait(20)
     canvas.close()

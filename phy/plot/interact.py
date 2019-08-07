@@ -432,6 +432,34 @@ class Stacked(Boxed):
         self._origin = value
         self.box_bounds = self.get_box_bounds(self.n_boxes)
 
+    def attach(self, canvas):
+        """Attach the stacked interact to a canvas."""
+        BaseLayout.attach(self, canvas)
+        canvas.transforms += self.transforms
+        canvas.inserter.insert_vert("""
+            #include "utils.glsl"
+            attribute float {};
+            uniform float n_boxes;
+            uniform vec2 u_box_scaling;
+            """.format(self.box_var), 'header', origin=self)
+        canvas.inserter.insert_vert("""
+            float margin = .1 / n_boxes;
+            float a = 1 - 2. / n_boxes + margin;
+            float b = -1 + 2. / n_boxes - margin;
+            float u = {} / (n_boxes - 1);
+            float y0 = -1 + u * (a + 1);
+            float y1 = b + u * (1 - b);
+
+            vec4 box_bounds = vec4(-1., y0, +1., y1);
+            """.format(self.box_var), 'before_transforms', origin=self)
+
+    def update_visual(self, visual):
+        """Update a visual."""
+        BaseLayout.update_visual(self, visual)
+        if 'n_boxes' in visual.program:
+            visual.program['n_boxes'] = self.n_boxes
+            visual.program['u_box_scaling'] = self._scaling
+
 
 #------------------------------------------------------------------------------
 # Interactive tools
