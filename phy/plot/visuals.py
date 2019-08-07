@@ -427,8 +427,9 @@ class PlotVisual(BaseVisual):
 
         # Position and depth.
         depth = np.repeat(data.depth, n_samples, axis=0)
+        pos_depth = np.c_[pos, depth]
 
-        self.program['a_position'] = np.c_[pos, depth].astype(np.float32)
+        self.program['a_position'] = pos_depth.astype(np.float32)
         self.program['a_color'] = color.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
         self.program['a_mask'] = masks.astype(np.float32)

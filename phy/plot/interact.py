@@ -416,7 +416,7 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        origin = self._origin or 'top'
+        origin = self._origin or 'bottom'
         if origin == 'top':
             b = b[::-1, :]
         return b

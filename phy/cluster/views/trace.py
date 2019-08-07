@@ -411,7 +411,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
     def switch_origin(self):
         """Switch between top and bottom origin for the channels."""
-        self.origin = 'top' if self._origin == 'bottom' else 'bottom'
+        self.origin = 'top' if self._origin in ('bottom', None) else 'bottom'
 
     # Navigation
     # -------------------------------------------------------------------------
