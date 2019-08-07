@@ -23,8 +23,7 @@ from phy.gui.qt import QtDialogLogger
 from phy.utils.profiling import _enable_profiler, _enable_pdb
 
 from .base import (
-    BaseController, ISIView, FiringRateView,
-    WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin)
+    BaseController, WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin)
 
 
 logger = logging.getLogger(__name__)

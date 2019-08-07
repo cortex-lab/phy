@@ -26,7 +26,8 @@ from phy.cluster.supervisor import Supervisor
 from phy.cluster.views.base import ManualClusteringView
 from phy.cluster.views import (
     WaveformView, FeatureView, TraceView, CorrelogramView, AmplitudeView,
-    ScatterView, ProbeView, RasterView, TemplateView, HistogramView, select_traces)
+    ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView,
+    select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
@@ -70,19 +71,6 @@ class Selection(Bunch):
 #------------------------------------------------------------------------------
 # Custom views
 #------------------------------------------------------------------------------
-
-class ISIView(HistogramView):
-    """Histogram view showing the interspike intervals."""
-    x_max = .05  # window size is 50 ms by default
-    n_bins = int(x_max / .001)  # by default, 1 bin = 1 ms
-    alias_char = 'isi'  # provide `:isisn` (set number of bins) and `:isim` (set max bin) snippets
-    bin_unit = 'ms'  # user-provided bin values in milliseconds, but stored in seconds
-
-
-class FiringRateView(HistogramView):
-    """Histogram view showing the time-dependent firing rate."""
-    n_bins = 200
-    alias_char = 'fr'
 
 
 #------------------------------------------------------------------------------
