@@ -93,7 +93,9 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.cluster.Clustering](#phyclusterclustering)
 * [phy.cluster.CorrelogramView](#phyclustercorrelogramview)
 * [phy.cluster.FeatureView](#phyclusterfeatureview)
+* [phy.cluster.FiringRateView](#phyclusterfiringrateview)
 * [phy.cluster.HistogramView](#phyclusterhistogramview)
+* [phy.cluster.ISIView](#phyclusterisiview)
 * [phy.cluster.ManualClusteringView](#phyclustermanualclusteringview)
 * [phy.cluster.ProbeView](#phyclusterprobeview)
 * [phy.cluster.RasterView](#phyclusterrasterview)
@@ -115,8 +117,6 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.apps.format_exception](#phyappsformat_exception)
 * [phy.apps.BaseController](#phyappsbasecontroller)
 * [phy.apps.FeatureMixin](#phyappsfeaturemixin)
-* [phy.apps.FiringRateView](#phyappsfiringrateview)
-* [phy.apps.ISIView](#phyappsisiview)
 * [phy.apps.QtDialogLogger](#phyappsqtdialoglogger)
 * [phy.apps.TemplateMixin](#phyappstemplatemixin)
 * [phy.apps.TraceMixin](#phyappstracemixin)
@@ -4669,6 +4669,9 @@ Display strings at multiple locations.
 
 * `color : 4-tuple`
 
+* `font_size : float`
+    The font size, in points (8 by default).
+
 **Parameters**
 
 
@@ -6311,6 +6314,15 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### CorrelogramView.toggle_labels
+
+
+**`CorrelogramView.toggle_labels(self, checked)`**
+
+Show or hide all labels.
+
+---
+
 #### CorrelogramView.toggle_normalization
 
 
@@ -6585,6 +6597,215 @@ GUI is closed. To be overriden.
 
 ---
 
+### phy.cluster.FiringRateView
+
+Histogram view showing the time-dependent firing rate.
+
+---
+
+#### FiringRateView.attach
+
+
+**`FiringRateView.attach(self, gui)`**
+
+Attach the view to the GUI.
+
+---
+
+#### FiringRateView.close
+
+
+**`FiringRateView.close(self)`**
+
+Close the underlying canvas.
+
+---
+
+#### FiringRateView.decrease
+
+
+**`FiringRateView.decrease(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### FiringRateView.get_clusters_data
+
+
+**`FiringRateView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
+#### FiringRateView.increase
+
+
+**`FiringRateView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### FiringRateView.on_cluster
+
+
+**`FiringRateView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
+#### FiringRateView.on_mouse_wheel
+
+
+**`FiringRateView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### FiringRateView.on_select
+
+
+**`FiringRateView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback function when clusters are selected. May be overriden.
+
+---
+
+#### FiringRateView.plot
+
+
+**`FiringRateView.plot(self, **kwargs)`**
+
+Update the view with the selected clusters.
+
+---
+
+#### FiringRateView.reset_scaling
+
+
+**`FiringRateView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
+#### FiringRateView.screenshot
+
+
+**`FiringRateView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### FiringRateView.set_bin_size
+
+
+**`FiringRateView.set_bin_size(self, bin_size)`**
+
+Set the bin size in the histogram.
+
+---
+
+#### FiringRateView.set_n_bins
+
+
+**`FiringRateView.set_n_bins(self, n_bins)`**
+
+Set the number of bins in the histogram.
+
+---
+
+#### FiringRateView.set_state
+
+
+**`FiringRateView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### FiringRateView.set_status
+
+
+**`FiringRateView.set_status(self, message=None)`**
+
+Set the status bar message in the GUI.
+
+---
+
+#### FiringRateView.set_x_max
+
+
+**`FiringRateView.set_x_max(self, x_max)`**
+
+Set the maximum value on the x axis for the histogram.
+
+---
+
+#### FiringRateView.set_x_min
+
+
+**`FiringRateView.set_x_min(self, x_min)`**
+
+Set the minimum value on the x axis for the histogram.
+
+---
+
+#### FiringRateView.show
+
+
+**`FiringRateView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### FiringRateView.toggle_auto_update
+
+
+**`FiringRateView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### FiringRateView.bin_size
+
+
+**`FiringRateView.bin_size`**
+
+Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
+
+---
+
+#### FiringRateView.state
+
+
+**`FiringRateView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
+
+---
+
 ### phy.cluster.HistogramView
 
 This view displays a histogram for every selected cluster, along with a possible plot
@@ -6706,6 +6927,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### HistogramView.set_bin_size
+
+
+**`HistogramView.set_bin_size(self, bin_size)`**
+
+Set the bin size in the histogram.
+
+---
+
 #### HistogramView.set_n_bins
 
 
@@ -6773,10 +7003,228 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### HistogramView.bin_size
+
+
+**`HistogramView.bin_size`**
+
+Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
+
+---
+
 #### HistogramView.state
 
 
 **`HistogramView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
+
+---
+
+### phy.cluster.ISIView
+
+Histogram view showing the interspike intervals.
+
+---
+
+#### ISIView.attach
+
+
+**`ISIView.attach(self, gui)`**
+
+Attach the view to the GUI.
+
+---
+
+#### ISIView.close
+
+
+**`ISIView.close(self)`**
+
+Close the underlying canvas.
+
+---
+
+#### ISIView.decrease
+
+
+**`ISIView.decrease(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### ISIView.get_clusters_data
+
+
+**`ISIView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
+#### ISIView.increase
+
+
+**`ISIView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### ISIView.on_cluster
+
+
+**`ISIView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
+#### ISIView.on_mouse_wheel
+
+
+**`ISIView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### ISIView.on_select
+
+
+**`ISIView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback function when clusters are selected. May be overriden.
+
+---
+
+#### ISIView.plot
+
+
+**`ISIView.plot(self, **kwargs)`**
+
+Update the view with the selected clusters.
+
+---
+
+#### ISIView.reset_scaling
+
+
+**`ISIView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
+#### ISIView.screenshot
+
+
+**`ISIView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### ISIView.set_bin_size
+
+
+**`ISIView.set_bin_size(self, bin_size)`**
+
+Set the bin size in the histogram.
+
+---
+
+#### ISIView.set_n_bins
+
+
+**`ISIView.set_n_bins(self, n_bins)`**
+
+Set the number of bins in the histogram.
+
+---
+
+#### ISIView.set_state
+
+
+**`ISIView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### ISIView.set_status
+
+
+**`ISIView.set_status(self, message=None)`**
+
+Set the status bar message in the GUI.
+
+---
+
+#### ISIView.set_x_max
+
+
+**`ISIView.set_x_max(self, x_max)`**
+
+Set the maximum value on the x axis for the histogram.
+
+---
+
+#### ISIView.set_x_min
+
+
+**`ISIView.set_x_min(self, x_min)`**
+
+Set the minimum value on the x axis for the histogram.
+
+---
+
+#### ISIView.show
+
+
+**`ISIView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### ISIView.toggle_auto_update
+
+
+**`ISIView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ISIView.bin_size
+
+
+**`ISIView.bin_size`**
+
+Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
+
+---
+
+#### ISIView.state
+
+
+**`ISIView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
@@ -9521,388 +9969,6 @@ Return the features for the specified channel and PC.
 
 ---
 
-### phy.apps.FiringRateView
-
-Histogram view showing the time-dependent firing rate.
-
----
-
-#### FiringRateView.attach
-
-
-**`FiringRateView.attach(self, gui)`**
-
-Attach the view to the GUI.
-
----
-
-#### FiringRateView.close
-
-
-**`FiringRateView.close(self)`**
-
-Close the underlying canvas.
-
----
-
-#### FiringRateView.decrease
-
-
-**`FiringRateView.decrease(self)`**
-
-Decrease the scaling parameter.
-
----
-
-#### FiringRateView.get_clusters_data
-
-
-**`FiringRateView.get_clusters_data(self, load_all=None)`**
-
-Return a list of Bunch instances, with attributes pos and spike_ids.
-
-To override.
-
----
-
-#### FiringRateView.increase
-
-
-**`FiringRateView.increase(self)`**
-
-Increase the scaling parameter.
-
----
-
-#### FiringRateView.on_cluster
-
-
-**`FiringRateView.on_cluster(self, up)`**
-
-Callback function when a clustering action occurs. May be overriden.
-
-Note: this method is called *before* on_select() so as to give a chance to the view
-to update itself before the selection of the new clusters.
-
-This method is mostly only useful to views that show all clusters and not just the
-selected clusters (template view, raster view).
-
----
-
-#### FiringRateView.on_mouse_wheel
-
-
-**`FiringRateView.on_mouse_wheel(self, e)`**
-
-Change the scaling with the wheel.
-
----
-
-#### FiringRateView.on_select
-
-
-**`FiringRateView.on_select(self, cluster_ids=None, **kwargs)`**
-
-Callback function when clusters are selected. May be overriden.
-
----
-
-#### FiringRateView.plot
-
-
-**`FiringRateView.plot(self, **kwargs)`**
-
-Update the view with the selected clusters.
-
----
-
-#### FiringRateView.reset_scaling
-
-
-**`FiringRateView.reset_scaling(self)`**
-
-Reset the scaling to the default value.
-
----
-
-#### FiringRateView.screenshot
-
-
-**`FiringRateView.screenshot(self, dir=None)`**
-
-Save a PNG screenshot of the view into a given directory. By default, the screenshots
-are saved in `~/.phy/screenshots/`.
-
----
-
-#### FiringRateView.set_n_bins
-
-
-**`FiringRateView.set_n_bins(self, n_bins)`**
-
-Set the number of bins in the histogram.
-
----
-
-#### FiringRateView.set_state
-
-
-**`FiringRateView.set_state(self, state)`**
-
-Set the view state.
-
-The passed object is the persisted `self.state` bunch.
-
-May be overriden.
-
----
-
-#### FiringRateView.set_status
-
-
-**`FiringRateView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
-
----
-
-#### FiringRateView.set_x_max
-
-
-**`FiringRateView.set_x_max(self, x_max)`**
-
-Set the maximum value on the x axis for the histogram.
-
----
-
-#### FiringRateView.set_x_min
-
-
-**`FiringRateView.set_x_min(self, x_min)`**
-
-Set the minimum value on the x axis for the histogram.
-
----
-
-#### FiringRateView.show
-
-
-**`FiringRateView.show(self)`**
-
-Show the underlying canvas.
-
----
-
-#### FiringRateView.toggle_auto_update
-
-
-**`FiringRateView.toggle_auto_update(self, checked)`**
-
-When on, the view is automatically updated when the cluster selection changes.
-
----
-
-#### FiringRateView.state
-
-
-**`FiringRateView.state`**
-
-View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
-
----
-
-### phy.apps.ISIView
-
-Histogram view showing the interspike intervals.
-
----
-
-#### ISIView.attach
-
-
-**`ISIView.attach(self, gui)`**
-
-Attach the view to the GUI.
-
----
-
-#### ISIView.close
-
-
-**`ISIView.close(self)`**
-
-Close the underlying canvas.
-
----
-
-#### ISIView.decrease
-
-
-**`ISIView.decrease(self)`**
-
-Decrease the scaling parameter.
-
----
-
-#### ISIView.get_clusters_data
-
-
-**`ISIView.get_clusters_data(self, load_all=None)`**
-
-Return a list of Bunch instances, with attributes pos and spike_ids.
-
-To override.
-
----
-
-#### ISIView.increase
-
-
-**`ISIView.increase(self)`**
-
-Increase the scaling parameter.
-
----
-
-#### ISIView.on_cluster
-
-
-**`ISIView.on_cluster(self, up)`**
-
-Callback function when a clustering action occurs. May be overriden.
-
-Note: this method is called *before* on_select() so as to give a chance to the view
-to update itself before the selection of the new clusters.
-
-This method is mostly only useful to views that show all clusters and not just the
-selected clusters (template view, raster view).
-
----
-
-#### ISIView.on_mouse_wheel
-
-
-**`ISIView.on_mouse_wheel(self, e)`**
-
-Change the scaling with the wheel.
-
----
-
-#### ISIView.on_select
-
-
-**`ISIView.on_select(self, cluster_ids=None, **kwargs)`**
-
-Callback function when clusters are selected. May be overriden.
-
----
-
-#### ISIView.plot
-
-
-**`ISIView.plot(self, **kwargs)`**
-
-Update the view with the selected clusters.
-
----
-
-#### ISIView.reset_scaling
-
-
-**`ISIView.reset_scaling(self)`**
-
-Reset the scaling to the default value.
-
----
-
-#### ISIView.screenshot
-
-
-**`ISIView.screenshot(self, dir=None)`**
-
-Save a PNG screenshot of the view into a given directory. By default, the screenshots
-are saved in `~/.phy/screenshots/`.
-
----
-
-#### ISIView.set_n_bins
-
-
-**`ISIView.set_n_bins(self, n_bins)`**
-
-Set the number of bins in the histogram.
-
----
-
-#### ISIView.set_state
-
-
-**`ISIView.set_state(self, state)`**
-
-Set the view state.
-
-The passed object is the persisted `self.state` bunch.
-
-May be overriden.
-
----
-
-#### ISIView.set_status
-
-
-**`ISIView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
-
----
-
-#### ISIView.set_x_max
-
-
-**`ISIView.set_x_max(self, x_max)`**
-
-Set the maximum value on the x axis for the histogram.
-
----
-
-#### ISIView.set_x_min
-
-
-**`ISIView.set_x_min(self, x_min)`**
-
-Set the minimum value on the x axis for the histogram.
-
----
-
-#### ISIView.show
-
-
-**`ISIView.show(self)`**
-
-Show the underlying canvas.
-
----
-
-#### ISIView.toggle_auto_update
-
-
-**`ISIView.toggle_auto_update(self, checked)`**
-
-When on, the view is automatically updated when the cluster selection changes.
-
----
-
-#### ISIView.state
-
-
-**`ISIView.state`**
-
-View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
-
----
-
 ### phy.apps.QtDialogLogger
 
 Display a message box for all errors.
@@ -10508,6 +10574,15 @@ Object holding all data of a KiloSort/phy dataset.
 * `hp_filtered : bool`
     Whether the raw data file is already high-pass filtered. In that case, disable the
     filtering for the waveform extraction.
+
+---
+
+#### TemplateModel.close
+
+
+**`TemplateModel.close(self)`**
+
+Close all memmapped files.
 
 ---
 

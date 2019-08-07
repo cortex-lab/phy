@@ -180,6 +180,9 @@ Keyboard shortcuts for WaveformView
 - toggle_waveform_overlap                  o
 - widen                                    ctrl+right
 
+Snippets for WaveformView
+- change_n_spikes_waveforms                :wn
+
 ```
 
 
@@ -215,6 +218,8 @@ Keyboard shortcuts for FeatureView
 - stop_lasso                               ctrl+right click
 - toggle_automatic_channel_selection       c
 
+Snippets for FeatureView
+
 ```
 
 
@@ -231,6 +236,8 @@ This view is only active when exactly two clusters are selected. It shows the `t
 Keyboard shortcuts for ScatterView
 
 - change_marker_size                       ctrl+wheel
+
+Snippets for ScatterView
 
 ```
 
@@ -256,6 +263,11 @@ The parameter `controller.n_spikes_correlograms=100000`, by default, specifies t
 Keyboard shortcuts for CorrelogramView
 
 - change_window_size                       ctrl+wheel
+
+Snippets for CorrelogramView
+- set_bin                                  :cb
+- set_refractory_period                    :cr
+- set_window                               :cw
 
 ```
 
@@ -285,6 +297,10 @@ Keyboard shortcuts for TraceView
 - toggle_highlighted_spikes                alt+s
 - toggle_show_labels                       alt+l
 - widen                                    alt+-
+
+Snippets for TraceView
+- go_to                                    :tg
+- shift                                    :ts
 
 ```
 
@@ -325,6 +341,8 @@ Keyboard shortcuts for AmplitudeView
 - select_x_dim                             alt+left click
 - select_y_dim                             alt+right click
 
+Snippets for AmplitudeView
+
 ```
 
 
@@ -340,9 +358,28 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 #### Keyboard shortcuts
 
 ```text
-Keyboard shortcuts for HistogramView
+Keyboard shortcuts for ISIView
 
 - change_window_size                       ctrl+wheel
+
+Snippets for ISIView
+- set_bin_size (ms)                        :isib
+- set_n_bins                               :isin
+- set_x_max (ms)                           :isimax
+- set_x_min (ms)                           :isimin
+
+```
+
+```text
+Keyboard shortcuts for FiringRateView
+
+- change_window_size                       ctrl+wheel
+
+Snippets for FiringRateView
+- set_bin_size (s)                         :frb
+- set_n_bins                               :frn
+- set_x_max (s)                            :frmax
+- set_x_min (s)                            :frmin
 
 ```
 
@@ -365,6 +402,8 @@ Keyboard shortcuts for RasterView
 - increase                                 ctrl+shift++
 - select_cluster                           ctrl+click
 
+Snippets for RasterView
+
 ```
 
 
@@ -385,6 +424,8 @@ Keyboard shortcuts for TemplateView
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
 - select_cluster                           ctrl+click
+
+Snippets for TemplateView
 
 ```
 
@@ -408,6 +449,8 @@ You can split clusters by drawing polygons in the spike attribute views, as in t
 Keyboard shortcuts for ScatterView
 
 - change_marker_size                       ctrl+wheel
+
+Snippets for ScatterView
 
 ```
 
