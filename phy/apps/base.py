@@ -671,7 +671,7 @@ class BaseController(object):
         self._enable_threading = enable_threading
 
         assert dir_path
-        self.dir_path = Path(dir_path)
+        self.dir_path = Path(dir_path).resolve()
         assert self.dir_path.exists()
 
         # Add a log file.
