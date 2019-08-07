@@ -72,7 +72,14 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     alias_char = 'h'
 
     default_shortcuts = {
-        'change_window_size': 'ctrl+wheel'
+        'change_window_size': 'ctrl+wheel',
+    }
+
+    default_snippets = {
+        'set_n_bins': ':%sn' % alias_char,
+        'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
+        'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
+        'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
     }
 
     def __init__(self, cluster_stat=None):
@@ -241,3 +248,40 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         self.x_max = x_max
         logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.plot()
+
+
+class ISIView(HistogramView):
+    """Histogram view showing the interspike intervals."""
+    x_max = .05  # window size is 50 ms by default
+    n_bins = int(x_max / .001)  # by default, 1 bin = 1 ms
+    alias_char = 'isi'  # provide `:isisn` (set number of bins) and `:isim` (set max bin) snippets
+    bin_unit = 'ms'  # user-provided bin values in milliseconds, but stored in seconds
+
+    default_shortcuts = {
+        'change_window_size': 'ctrl+wheel',
+    }
+
+    default_snippets = {
+        'set_n_bins': ':%sn' % alias_char,
+        'set_bin_size (%s)' % bin_unit: ':%sb' % alias_char,
+        'set_x_min (%s)' % bin_unit: ':%smin' % alias_char,
+        'set_x_max (%s)' % bin_unit: ':%smax' % alias_char,
+    }
+
+
+class FiringRateView(HistogramView):
+    """Histogram view showing the time-dependent firing rate."""
+    n_bins = 200
+    alias_char = 'fr'
+    bin_unit = 's'
+
+    default_shortcuts = {
+        'change_window_size': 'ctrl+wheel',
+    }
+
+    default_snippets = {
+        'set_n_bins': '%sn' % alias_char,
+        'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
+        'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
+        'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
+    }
