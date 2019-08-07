@@ -127,6 +127,19 @@ def _show_shortcuts(shortcuts, name=None):
             print('- {0:<40} {1:s}'.format(name, shortcut))
 
 
+def _show_snippets(snippets, name=None):
+    """Display snippets."""
+    name = name or ''
+    print('')
+    if name:
+        name = ' for ' + name
+    print('Snippets' + name)
+    for name in sorted(snippets):
+        snippet = snippets[name]
+        if not name.startswith('_'):
+            print('- {0:<40} :{1:s}'.format(name, snippet))
+
+
 # -----------------------------------------------------------------------------
 # Actions
 # -----------------------------------------------------------------------------
@@ -300,7 +313,7 @@ class Actions(object):
 
         # Get the name from the callback function if needed.
         name = name or callback.__name__
-        alias = alias or self._default_snippets.get(name, _alias(name))
+        alias = alias or self._default_snippets.get(name, _alias(name)).split(' ')[0]
         name = name.replace('&', '')
         shortcut = shortcut or self._default_shortcuts.get(name, None)
 
@@ -425,6 +438,7 @@ class Actions(object):
         name = ('{} - {}'.format(gui_name, actions_name)
                 if actions_name else gui_name)
         _show_shortcuts(self.shortcuts, name)
+        _show_snippets(self._default_snippets, name)
 
     def __contains__(self, name):
         """Whether the Actions group contains a specified action."""

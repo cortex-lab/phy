@@ -10,13 +10,9 @@ from functools import partial
 
 from pytest import raises
 
-from ..actions import (_show_shortcuts,
-                       _get_shortcut_string,
-                       _get_qkeysequence,
-                       _parse_snippet,
-                       _expected_args,
-                       Actions,
-                       )
+from ..actions import (
+    _show_shortcuts, _show_snippets, _get_shortcut_string, _get_qkeysequence, _parse_snippet,
+    _expected_args, Actions)
 from phylib.utils.testing import captured_output, captured_logging
 from ..qt import mock_dialogs
 
@@ -65,6 +61,15 @@ def test_show_shortcuts(qapp):
         _show_shortcuts(shortcuts, 'test')
     assert 'ctrl+a, shift+b' in stdout.getvalue()
     assert 'ctrl+z' in stdout.getvalue()
+
+
+def test_show_snippets():
+    snippets = {
+        'test_1 (note)': 't1',
+    }
+    with captured_output() as (stdout, stderr):
+        _show_snippets(snippets, 'test')
+    assert ':t1' in stdout.getvalue()
 
 
 def test_actions_default_shortcuts(gui):
