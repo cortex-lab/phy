@@ -328,6 +328,8 @@ class GUI(QMainWindow):
 
     def list_views(self, cls):
         """Return the list of views which are instances of a given class."""
+        if isinstance(cls, str):
+            return [view for view in self._views if view.__class__.__name__ == cls]
         return [view for view in self._views if view.__class__ == cls]
 
     def get_view(self, cls, index=0):

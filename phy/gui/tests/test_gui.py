@@ -155,7 +155,7 @@ def test_gui_creator(tempdir, qtbot):
     assert len(gui.list_views(BaseCanvas)) == 1
 
     # Two MyCanvas views.
-    views = gui.list_views(MyCanvas)
+    views = gui.list_views('MyCanvas')
     assert len(views) == 2
 
     add_action = gui.view_actions.get('Add MyCanvas')
