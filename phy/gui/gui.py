@@ -149,6 +149,7 @@ class GUI(QMainWindow):
         'show_all_shortcuts': 'h',
         'exit': 'ctrl+q',
     }
+    default_snippets = {}
 
     def __init__(
             self, position=None, size=None, name=None, subtitle=None, view_creator=None,

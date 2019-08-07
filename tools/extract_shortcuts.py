@@ -3,7 +3,7 @@ import re
 
 from phy.cluster import views
 from phy.cluster.supervisor import ActionCreator
-from phy.gui.actions import _show_shortcuts
+from phy.gui.actions import _show_shortcuts, _show_snippets
 from phy.gui import GUI
 from phylib.utils.testing import captured_output
 
@@ -17,6 +17,7 @@ view_classes = [getattr(views, name) for name in view_names]
 def _get_shortcuts(cls):
     with captured_output() as (stdout, stderr):
         _show_shortcuts(cls.default_shortcuts, cls.__name__)
+        _show_snippets(cls.default_snippets, cls.__name__)
     return stdout.getvalue()
 
 

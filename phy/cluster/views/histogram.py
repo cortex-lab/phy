@@ -76,7 +76,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     }
 
     default_snippets = {
-        'set_n_bins': ':%sn' % alias_char,
+        'set_n_bins': '%sn' % alias_char,
         'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
         'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
         'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
@@ -262,10 +262,10 @@ class ISIView(HistogramView):
     }
 
     default_snippets = {
-        'set_n_bins': ':%sn' % alias_char,
-        'set_bin_size (%s)' % bin_unit: ':%sb' % alias_char,
-        'set_x_min (%s)' % bin_unit: ':%smin' % alias_char,
-        'set_x_max (%s)' % bin_unit: ':%smax' % alias_char,
+        'set_n_bins': '%sn' % alias_char,
+        'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
+        'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
+        'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
     }
 
 
