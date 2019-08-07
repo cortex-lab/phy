@@ -69,11 +69,6 @@ class Selection(Bunch):
 
 
 #------------------------------------------------------------------------------
-# Custom views
-#------------------------------------------------------------------------------
-
-
-#------------------------------------------------------------------------------
 # View mixins
 #------------------------------------------------------------------------------
 
@@ -776,7 +771,7 @@ class BaseController(object):
     def _set_cluster_metrics(self):
         """Set the cluster metrics dictionary with some default metrics."""
         self.cluster_metrics = {}  # dictionary {name: function cluster_id => value}, for plugins
-        self.cluster_metrics['channel'] = self.get_best_channel
+        self.cluster_metrics['channel'] = self.get_best_channel_label
         if getattr(self.model, 'channel_shanks', None) is not None:
             self.cluster_metrics['shank'] = self.get_channel_shank
         self.cluster_metrics['depth'] = self.get_probe_depth
@@ -985,11 +980,15 @@ class BaseController(object):
         return "%.1f spk/s" % (self.supervisor.n_spikes(cluster_id) / max(1, self.model.duration))
 
     def get_best_channel(self, cluster_id):
-        """Return the best channel of a given cluster. This is the first channel returned
+        """Return the best channel id of a given cluster. This is the first channel returned
         by `get_best_channels()`."""
         channel_ids = self.get_best_channels(cluster_id)
         assert channel_ids is not None and len(channel_ids)
         return channel_ids[0]
+
+    def get_best_channel_label(self, cluster_id):
+        """Return the channel label of the best channel, for display in the cluster view."""
+        return self._get_channel_labels([self.get_best_channel(cluster_id)])[0]
 
     def get_best_channels(self, cluster_id):  # pragma: no cover
         """Return the best channels of a given cluster. To be overriden."""
