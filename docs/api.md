@@ -9839,8 +9839,17 @@ Return regularly spaced spikes.
 
 **`BaseController.get_best_channel(self, cluster_id)`**
 
-Return the best channel of a given cluster. This is the first channel returned
+Return the best channel id of a given cluster. This is the first channel returned
 by `get_best_channels()`.
+
+---
+
+#### BaseController.get_best_channel_label
+
+
+**`BaseController.get_best_channel_label(self, cluster_id)`**
+
+Return the channel label of the best channel, for display in the cluster view.
 
 ---
 
@@ -10356,8 +10365,17 @@ Return regularly spaced spikes.
 
 **`TemplateController.get_best_channel(self, cluster_id)`**
 
-Return the best channel of a given cluster. This is the first channel returned
+Return the best channel id of a given cluster. This is the first channel returned
 by `get_best_channels()`.
+
+---
+
+#### TemplateController.get_best_channel_label
+
+
+**`TemplateController.get_best_channel_label(self, cluster_id)`**
+
+Return the channel label of the best channel, for display in the cluster view.
 
 ---
 
@@ -10892,8 +10910,17 @@ Return regularly spaced spikes.
 
 **`KwikController.get_best_channel(self, cluster_id)`**
 
-Return the best channel of a given cluster. This is the first channel returned
+Return the best channel id of a given cluster. This is the first channel returned
 by `get_best_channels()`.
+
+---
+
+#### KwikController.get_best_channel_label
+
+
+**`KwikController.get_best_channel_label(self, cluster_id)`**
+
+Return the channel label of the best channel, for display in the cluster view.
 
 ---
 
