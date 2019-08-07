@@ -61,6 +61,16 @@ class IPythonView(RichJupyterWidget):
         gui.add_view(self)
         self.start_kernel()
         self.inject(gui=gui, **kwargs)
+        try:
+            import numpy
+            self.inject(np=numpy)
+        except ImportError:  # pragma: no cover
+            pass
+        try:
+            import matplotlib.pyplot as plt
+            self.inject(plt=plt)
+        except ImportError:  # pragma: no cover
+            pass
 
         @connect
         def on_close_view(sender, view):
