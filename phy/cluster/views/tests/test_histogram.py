@@ -45,6 +45,11 @@ def test_histogram_view_0(qtbot, gui):
     v.set_x_max(-10)  # should fail
     assert v.x_max <= 5
 
+    bs = v.bin_size
+    assert bs > 0
+    v.set_bin_size(bs)
+    assert v.bin_size == bs
+
     v.increase()
     v.decrease()
 

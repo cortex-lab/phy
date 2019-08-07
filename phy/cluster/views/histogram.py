@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, ignore_zeros=False):
     """Compute the histogram of an array."""
     assert x_min <= x_max
+    assert n_bins >= 0
+    n_bins = np.clip(n_bins, 2, 1e6)
     bins = np.linspace(x_min, x_max, n_bins)
     if ignore_zeros:
         data = data[data != 0]
@@ -173,6 +175,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             self.set_n_bins, alias=self.alias_char + 'n',
             prompt=True, prompt_default=lambda: self.n_bins)
         self.actions.add(
+            self.set_bin_size, alias=self.alias_char + 'b',
+            prompt=True, prompt_default=lambda: self.bin_size)
+        self.actions.add(
             self.set_x_min, alias=self.alias_char + 'min',
             prompt=True, prompt_default=lambda: self.x_min)
         self.actions.add(
@@ -189,10 +194,22 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     def _set_scaling_value(self, value):
         self.set_x_max(value)
 
+    @property
+    def bin_size(self):
+        """Return the bin size."""
+        return (self.x_max - self.x_min) / self.n_bins
+
     def set_n_bins(self, n_bins):
         """Set the number of bins in the histogram."""
         self.n_bins = n_bins
         logger.debug("Change number of bins to %d for %s.", n_bins, self.__class__.__name__)
+        self.plot()
+
+    def set_bin_size(self, bin_size):
+        """Set the bin size in the histogram."""
+        assert bin_size > 0
+        self.n_bins = np.round((self.x_max - self.x_min) / bin_size)
+        logger.debug("Change number of bins to %d for %s.", self.n_bins, self.__class__.__name__)
         self.plot()
 
     def set_x_min(self, x_min):
