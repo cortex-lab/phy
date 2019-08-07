@@ -405,7 +405,7 @@ class TemplateMixin(object):
         ns = self.model.n_samples_waveforms
         data = np.zeros((len(template_ids), ns, self.model.n_channels))
         for i, b in enumerate(templates):
-            data[i][:, b.channel_ids] = b.template * mean_amp
+            data[i][:, b.channel_ids] = b.template
         waveforms = data[..., channel_ids]
         assert waveforms.shape == (len(template_ids), ns, len(channel_ids))
         return Bunch(
@@ -420,9 +420,12 @@ class TemplateMixin(object):
         mean_amp = {
             cluster_id: self.get_amplitudes(cluster_id).mean()
             for cluster_id in cluster_ids}
+        temp_amp = {
+            cluster_id: (np.amax(np.abs(bunchs[cluster_id].data[0, ..., 0])))
+            for cluster_id in cluster_ids}
         return {
             cluster_id: Bunch(
-                template=bunchs[cluster_id].data[0, ...] * mean_amp[cluster_id],
+                template=bunchs[cluster_id].data[0, ...]/temp_amp[cluster_id] * mean_amp[cluster_id],
                 channel_ids=bunchs[cluster_id].channel_ids,
             ) for cluster_id in cluster_ids}
 
