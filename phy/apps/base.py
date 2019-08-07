@@ -893,6 +893,11 @@ class BaseController(object):
         def on_cluster_click(sender, cluster_id, key=None, button=None):
             """Select a cluster by clicking on it."""
             self.supervisor.select([cluster_id])
+        
+        @connect(sender=view)
+        def on_cluster_sclick(sender, cluster_id, key=None, button=None):
+            """Select a cluster by clicking on it."""
+            self.supervisor.select(self.supervisor.selected+[cluster_id])
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
