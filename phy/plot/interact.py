@@ -446,7 +446,7 @@ class Stacked(Boxed):
             float margin = .1 / n_boxes;
             float a = 1 - 2. / n_boxes + margin;
             float b = -1 + 2. / n_boxes - margin;
-            float u = {} / (n_boxes - 1);
+            float u = {} / max(1., n_boxes - 1.);
             float y0 = -1 + u * (a + 1);
             float y1 = b + u * (1 - b);
 
