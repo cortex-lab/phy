@@ -86,6 +86,7 @@ class Grid(BaseLayout):
         assert box is not None
         assert len(box) == self.n_dims
         arr = self._transforms[0].apply(arr)
+        arr = self._transforms[1].apply(arr)
         arr = Subplot(self.shape, box).apply(arr)
         return arr
 
@@ -93,6 +94,7 @@ class Grid(BaseLayout):
         """Apply the subplot inverse transformation to a position array."""
         assert box is not None
         arr = Subplot(self.shape, box).inverse().apply(arr)
+        arr = self._transforms[1].inverse().apply(arr)
         arr = self._transforms[0].inverse().apply(arr)
         return arr
 
