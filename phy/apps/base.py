@@ -366,20 +366,10 @@ class TemplateMixin(object):
         self.cluster_metrics['amplitude'] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
-        """Return the template amplitudes multiplied by the spike's amplitude."""
-        amplitudes = self.model.amplitudes[spike_ids]
-        # Spike-template assignments.
-        spike_templates = self.model.spike_templates[spike_ids]
-        # Find the template amplitudes of all templates appearing in spike_templates.
-        unique_template_ids = np.unique(spike_templates)
-        # Create an array with the template amplitudes.
-        template_amplitudes = np.array(
-            [self.get_template_amplitude(tid) for tid in unique_template_ids])
-        # Get the template amplitude of every spike.
-        spike_templates_rel = _index_of(spike_templates, unique_template_ids)
-        assert spike_templates_rel.shape == amplitudes.shape
-        # Multiply that by the spike amplitude.
-        return template_amplitudes[spike_templates_rel] * amplitudes
+        first_cluster=kwargs['fclust']
+        template_amplitudes = self.model.get_template_features(spike_ids)[:,first_cluster]
+        assert template_amplitudes.shape == spike_ids.shape
+        return template_amplitudes
 
     def get_mean_spike_template_amplitudes(self, cluster_id):
         """Return the average of the spike template amplitudes."""
@@ -1119,7 +1109,7 @@ class BaseController(object):
             channel_id = self.selection.get('feature_channel_id', None)
             pc = self.selection.get('feature_pc', None)
             amplitudes = f(
-                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc)
+                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc, fclust=first_cluster)
             if amplitudes is None:
                 continue
             assert amplitudes.shape == spike_ids.shape == spike_times.shape
