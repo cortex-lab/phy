@@ -110,11 +110,17 @@ class WaveformMixin(object):
     def get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs):
         """Return the maximum amplitude of the raw waveforms across all channels."""
         # WARNING: extracting raw waveforms is long!
-        waveforms = self.model.get_waveforms(spike_ids, channel_ids)
+        waveforms = self.model.get_waveforms(spike_ids, [channel_ids[0]])
+        cluster_id = self.model.spike_templates[spike_ids][0]
+        current_clust_channels = self.model.channel_mapping[self.get_best_channels(cluster_id)]
+        overlap = channel_ids[0] in current_clust_channels
         if waveforms is None:
             return
-        assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
-        return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
+        elif not overlap:
+            return np.zeros(len(spike_ids))
+        else:
+            assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
+            return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
 
     def get_mean_spike_raw_amplitudes(self, cluster_id):
         """Return the average of the spike raw amplitudes."""
