@@ -121,6 +121,28 @@ class ExampleNspikesViewsPlugin(IPlugin):
 *Note*: you need to manually delete the `.phy` subdirectory within your data directory when changing these parameters, otherwise errors will happen in the GUI.
 
 
+## Customizing the columns of the cluster view
+
+In this plugin, we show how to change the columns shown in the cluster and similarity views.
+
+![image](https://user-images.githubusercontent.com/1942359/62779931-cac07180-bab4-11e9-967c-c2be0304b068.png)
+
+```python
+# import from plugins/custom_columns.py
+"""Show how to customize the columns in the cluster and similarity views."""
+
+from phy import IPlugin, connect
+
+
+class ExampleCustomColumnsPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        @connect
+        def on_controller_ready(sender):
+            controller.supervisor.columns = ['id', 'n_spikes']
+
+```
+
+
 ## Defining a custom cluster metrics
 
 In addition to cluster labels that you can create and modify in the cluster view, you can also define **cluster metrics**.

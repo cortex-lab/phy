@@ -719,6 +719,8 @@ class BaseController(object):
         # Set up the Selector instance, responsible for selecting the spikes for display.
         self._set_selector()
 
+        emit('controller_ready', self)
+
     # Internal initialization methods
     # -------------------------------------------------------------------------
 
