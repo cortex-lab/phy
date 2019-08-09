@@ -110,7 +110,7 @@ class WaveformMixin(object):
     def get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs):
         """Return the maximum amplitude of the raw waveforms across all channels."""
         # WARNING: extracting raw waveforms is long!
-        waveforms = self.model.get_waveforms(spike_ids, channel_ids)
+        waveforms = self.model.get_waveforms(spike_ids, [channel_ids[0]])
         if waveforms is None:
             return
         assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
