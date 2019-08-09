@@ -11,8 +11,6 @@ from datetime import datetime
 import gc
 import logging
 from pathlib import Path
-import sys
-import traceback
 
 import numpy as np
 
@@ -60,6 +58,7 @@ class ManualClusteringView(object):
     plot_canvas_class = PlotCanvas
 
     def __init__(self, shortcuts=None, **kwargs):
+        self._lock = None
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -191,6 +190,13 @@ class ManualClusteringView(object):
             if not cluster_ids:
                 return
 
+            # The lock is used so that two different background threads do not access the same
+            # view simultaneously, which can lead to conflicts, errors in the plotting code,
+            # and QTimer thread exceptions that lead to frozen OpenGL views.
+            if self._lock:
+                return
+            self._lock = True
+
             # The view update occurs in a thread in order not to block the main GUI thread.
             # A complication is that OpenGL updates should only occur in the main GUI thread,
             # whereas the computation of the data buffers to upload to the GPU should happen
@@ -200,11 +206,7 @@ class ManualClusteringView(object):
 
             # This function executes in the Qt thread pool.
             def _worker():  # pragma: no cover
-                try:
-                    # All errors happening in the view updates are collected here.
-                    self.on_select(cluster_ids=cluster_ids, **kwargs)
-                except Exception:
-                    logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
+                self.on_select(cluster_ids=cluster_ids, **kwargs)
 
             # We launch this function in the thread pool.
             worker = Worker(_worker)
@@ -229,6 +231,7 @@ class ManualClusteringView(object):
                 # Finally, we update the canvas.
                 self.canvas.update()
                 emit('is_busy', self, False)
+                self._lock = None
 
             # Start the task on the thread pool, and let the OpenGL canvas know that we're
             # starting to record all OpenGL calls instead of executing them immediately.
@@ -241,6 +244,7 @@ class ManualClusteringView(object):
             else:
                 # This is for OpenGL views, without threading.
                 worker.run()
+                self._lock = None
 
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the view.

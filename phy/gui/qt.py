@@ -427,8 +427,8 @@ class Worker(QRunnable):
 
     @pyqtSlot()
     def run(self):  # pragma: no cover
-        """Run the task. Should not be called directly unless you want to bypass the
-        thread pool."""
+        """Run the task in a background thread. Should not be called directly unless you want
+        to bypass the thread pool."""
         # Bug with coverage, which doesn't recognize these lines as
         # called when they are called from a different thread.
         try:
