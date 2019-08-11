@@ -331,7 +331,6 @@ class TemplateMixin(object):
 
     _amplitude_functions = (
         ('template', 'get_spike_template_amplitudes'),
-        ('template_feature', 'get_spike_template_features')
     )
 
     _waveform_functions = (
@@ -352,6 +351,15 @@ class TemplateMixin(object):
         'get_template_amplitude',
         'get_cluster_amplitude',
     )
+
+    def __init__(self, *args, **kwargs):
+        super(TemplateMixin, self).__init__(*args, **kwargs)
+
+    def _get_amplitude_functions(self):
+        out = super(TemplateMixin, self)._get_amplitude_functions()
+        if getattr(self.model, 'template_features', None) is not None:
+            out['template_feature'] = self.get_spike_template_features
+        return out
 
     def get_amplitudes(self, cluster_id, load_all=False):
         """Return the spike amplitudes found in `amplitudes.npy`, for a given cluster."""
@@ -405,7 +413,10 @@ class TemplateMixin(object):
 
         """
         assert first_cluster >= 0
-        template_amplitudes = self.model.get_template_features(spike_ids)[:, first_cluster]
+        tf = self.model.get_template_features(spike_ids)
+        if tf is None:
+            return
+        template_amplitudes = tf[:, first_cluster]
         assert template_amplitudes.shape == spike_ids.shape
         return template_amplitudes
 
