@@ -17,7 +17,7 @@ import shutil
 import numpy as np
 
 from phylib import _add_log_file
-from phylib.io.array import Selector, _index_of, _flatten
+from phylib.io.array import Selector, _flatten
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._misc import write_tsv
@@ -102,20 +102,23 @@ class WaveformMixin(object):
         '_get_mean_waveforms',
     )
 
-    def get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs):
-        """Return the maximum amplitude of the raw waveforms across all channels."""
+    def get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs):
+        """Return the maximum amplitude of the raw waveforms on the best channel of
+        the first selected cluster."""
+        # The cluster assignments of the requested spikes.
+        spike_clusters = self.supervisor.clustering.spike_clusters[spike_ids]
+        # Only keep spikes from clusters on the "best" channel.
+        to_keep = np.in1d(spike_clusters, self.get_clusters_on_channel(channel_id))
         # WARNING: extracting raw waveforms is long!
-        waveforms = self.model.get_waveforms(spike_ids, [channel_ids[0]])
-        cluster_id = self.model.spike_templates[spike_ids][0]
-        current_clust_channels = self.model.channel_mapping[self.get_best_channels(cluster_id)]
-        overlap = channel_ids[0] in current_clust_channels
-        if waveforms is None:
-            return
-        elif not overlap:
-            return np.zeros(len(spike_ids))
-        else:
-            assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
-            return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
+        waveforms = self.model.get_waveforms(spike_ids[to_keep], [channel_id])[..., 0]
+        assert waveforms.ndim == 2  # shape: (n_spikes_kept, n_samples)
+        # Amplitudes of the kept spikes.
+        amplitudes = waveforms.max(axis=1) - waveforms.min(axis=1)
+        # Spikes not kept get an amplitude of zero.
+        out = np.zeros(len(spike_ids))
+        out[to_keep] = amplitudes
+        assert np.all(out >= 0)
+        return out
 
     def get_mean_spike_raw_amplitudes(self, cluster_id):
         """Return the average of the spike raw amplitudes."""
@@ -311,6 +314,7 @@ class TemplateMixin(object):
 
     _amplitude_functions = (
         ('template', 'get_spike_template_amplitudes'),
+        ('template_feature', 'get_spike_template_features')
     )
 
     _waveform_functions = (
@@ -320,6 +324,7 @@ class TemplateMixin(object):
     _cached = (
         'get_amplitudes',
         'get_spike_template_amplitudes',
+        'get_spike_template_features',
     )
 
     _memcached = (
@@ -367,8 +372,23 @@ class TemplateMixin(object):
         self.cluster_metrics['amplitude'] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
-        first_cluster=kwargs['fclust']
-        template_amplitudes = self.model.get_template_features(spike_ids)[:,first_cluster]
+        """Return the template amplitudes multiplied by the spike's amplitude."""
+        amplitudes = self.model.amplitudes[spike_ids]
+        return amplitudes
+
+    def get_spike_template_features(self, spike_ids, first_cluster=None, **kwargs):
+        """Return the template features of the requested spikes onto the first selected
+        cluster.
+
+        This is "the dot product (projection) of each spike waveform onto the template of the
+        first cluster."
+
+        See @mswallac's comment at
+        https://github.com/cortex-lab/phy/issues/868#issuecomment-520032905
+
+        """
+        assert first_cluster >= 0
+        template_amplitudes = self.model.get_template_features(spike_ids)[:, first_cluster]
         assert template_amplitudes.shape == spike_ids.shape
         return template_amplitudes
 
@@ -389,7 +409,7 @@ class TemplateMixin(object):
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
         # Get the mean amplitude for the cluster.
-        mean_amp = self.get_amplitudes(cluster_id).mean()
+        # mean_amp = self.get_amplitudes(cluster_id).mean()
         # Get all templates from which this cluster stems from.
         templates = [self.model.get_template(template_id) for template_id in template_ids]
         # Construct the waveforms array.
@@ -405,20 +425,16 @@ class TemplateMixin(object):
 
     def _get_all_templates(self, cluster_ids):
         """Get the template waveforms of a set of clusters."""
-        bunchs = {
-            cluster_id: self._get_template_waveforms(cluster_id)
-            for cluster_id in cluster_ids}
-        mean_amp = {
-            cluster_id: self.get_amplitudes(cluster_id).mean()
-            for cluster_id in cluster_ids}
-        temp_amp = {
-            cluster_id: (np.amax(np.abs(bunchs[cluster_id].data[0, ..., 0])))
-            for cluster_id in cluster_ids}
-        return {
-            cluster_id: Bunch(
-                template=bunchs[cluster_id].data[0, ...]/temp_amp[cluster_id] * mean_amp[cluster_id],
-                channel_ids=bunchs[cluster_id].channel_ids,
-            ) for cluster_id in cluster_ids}
+        out = {}
+        for cluster_id in cluster_ids:
+            waveforms = self._get_template_waveforms(cluster_id)
+            mean_amp = self.get_amplitudes(cluster_id).mean()
+            temp_amp = np.amax(np.abs(waveforms.data[0, :, 0]))
+            out[cluster_id] = Bunch(
+                template=waveforms.data[0, ...] / temp_amp * mean_amp,
+                channel_ids=waveforms.channel_ids,
+            )
+        return out
 
     def _set_view_creator(self):
         super(TemplateMixin, self)._set_view_creator()
@@ -883,14 +899,14 @@ class BaseController(object):
                 _update_plot()
 
         @connect(sender=view)
-        def on_cluster_click(sender, cluster_id, key=None, button=None):
+        def on_cluster_click(sender, cluster_id, key=None, button=None, modifiers=None):
             """Select a cluster by clicking on it."""
-            self.supervisor.select([cluster_id])
-        
-        @connect(sender=view)
-        def on_cluster_sclick(sender, cluster_id, key=None, button=None):
-            """Select a cluster by clicking on it."""
-            self.supervisor.select(self.supervisor.selected+[cluster_id])
+            cluster_ids = [cluster_id]
+            # If Shift was pressed during the cluster click, the selected clusters should remain
+            # selected in addition to the clicked cluster.
+            if 'Shift' in (modifiers or ()):
+                cluster_ids = self.supervisor.selected + cluster_ids
+            self.supervisor.select(cluster_ids)
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
@@ -1097,7 +1113,9 @@ class BaseController(object):
             n //= 5
         # Find the first cluster, used to determine the best channels.
         first_cluster = next(cluster_id for cluster_id in cluster_ids if cluster_id is not None)
+        # Best channels of the first cluster.
         channel_ids = self.get_best_channels(first_cluster)
+        # Best channel of the first cluster.
         channel_id = channel_ids[0]
         # All clusters appearing on the first cluster's peak channel.
         other_clusters = self.get_clusters_on_channel(channel_id)
@@ -1113,10 +1131,11 @@ class BaseController(object):
             spike_times = self.model.spike_times[spike_ids]
             # Retrieve the feature PC selected in the feature view.
             # This is only used when name == 'feature'
-            channel_id = self.selection.get('feature_channel_id', None)
+            channel_id = self.selection.get('feature_channel_id', channel_id)
             pc = self.selection.get('feature_pc', None)
             amplitudes = f(
-                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc, fclust=first_cluster)
+                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc,
+                first_cluster=first_cluster)
             if amplitudes is None:
                 continue
             assert amplitudes.shape == spike_ids.shape == spike_times.shape

@@ -78,7 +78,7 @@ def test_template_view_1(qtbot, tempdir, gui):
     _clicked = []
 
     @connect(sender=v)
-    def on_cluster_click(sender, cluster_id=None, button=None):
+    def on_cluster_click(sender, cluster_id=None, button=None, modifiers=None):
         _clicked.append((cluster_id, button))
 
     mouse_click(qtbot, v.canvas, pos=(10., 10.), button='Left', modifiers=('Control',))
