@@ -401,6 +401,16 @@ class MockControllerWTests(BaseControllerTests, unittest.TestCase):
         self.next()
         self.assertTrue(self.controller.get_mean_spike_raw_amplitudes(self.selected[0]) >= 0)
 
+    def test_waveform_channel_click(self):
+        self.amplitude_view.amplitude_name = 'template'
+
+        fv = self.waveform_view
+        # Select channel in waveform view.
+        w, h = fv.canvas.get_size()
+        w, h = w / 2, h / 2
+        x, y = w / 2, h / 2
+        mouse_click(self.qtbot, fv.canvas, (x, y), button='Left', modifiers=('Control',))
+
 
 class MockControllerFTests(BaseControllerTests, unittest.TestCase):
     """Mock controller with features."""
@@ -448,6 +458,7 @@ class MockControllerTTests(GlobalViewsTests, BaseControllerTests, unittest.TestC
         self.trace_view.actions.go_to_previous_spike()
         self.trace_view.actions.toggle_highlighted_spikes(True)
         mouse_click(self.qtbot, self.trace_view.canvas, (100, 100), modifiers=('Control',))
+        mouse_click(self.qtbot, self.trace_view.canvas, (150, 100), modifiers=('Shift',))
 
 
 class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
