@@ -52,6 +52,7 @@ Snippets for GUI
 Keyboard shortcuts for AmplitudeView
 - change_marker_size                       ctrl+wheel
 - next_amplitude_type                      a
+- previous_amplitude_type                  shift+a
 - select_x_dim                             alt+left click
 - select_y_dim                             alt+right click
 

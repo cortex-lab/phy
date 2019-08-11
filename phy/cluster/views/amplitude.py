@@ -58,6 +58,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
         'next_amplitude_type': 'a',
+        'previous_amplitude_type': 'shift+a',
         'select_x_dim': 'alt+left click',
         'select_y_dim': 'alt+right click',
     }
@@ -188,11 +189,19 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         """Attach the view to the GUI."""
         super(AmplitudeView, self).attach(gui)
         self.actions.add(self.next_amplitude_type, set_busy=True)
+        self.actions.add(self.previous_amplitude_type, set_busy=True)
+
+    def _change_amplitude_type(self, dir=+1):
+        i = self.amplitude_names.index(self.amplitude_name)
+        n = len(self.amplitude_names)
+        self.amplitude_name = self.amplitude_names[(i + dir) % n]
+        logger.debug("Switch to amplitude type: %s.", self.amplitude_name)
+        self.plot()
 
     def next_amplitude_type(self):
         """Switch to the next amplitude type."""
-        i = self.amplitude_names.index(self.amplitude_name)
-        n = len(self.amplitude_names)
-        self.amplitude_name = self.amplitude_names[(i + 1) % n]
-        logger.debug("Switch to amplitude type %s.", self.amplitude_name)
-        self.plot()
+        self._change_amplitude_type(+1)
+
+    def previous_amplitude_type(self):
+        """Switch to the previous amplitude type."""
+        self._change_amplitude_type(-1)

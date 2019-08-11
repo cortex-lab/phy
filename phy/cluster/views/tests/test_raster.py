@@ -61,7 +61,7 @@ def test_raster_0(qtbot, gui):
 
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
 
-    assert _clicked == [(2, 'Left')]
+    assert _clicked == [(1, 'Left')]
 
     _stop_and_close(qtbot, v)
 

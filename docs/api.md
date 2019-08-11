@@ -1841,8 +1841,8 @@ A task (just a Python function) running in the thread pool.
 
 **`Worker.run(self)`**
 
-Run the task. Should not be called directly unless you want to bypass the
-thread pool.
+Run the task in a background thread. Should not be called directly unless you want
+to bypass the thread pool.
 
 ---
 
@@ -5368,6 +5368,15 @@ Callback function when clusters are selected. May be overriden.
 **`AmplitudeView.plot(self, **kwargs)`**
 
 Update the view with the current cluster selection.
+
+---
+
+#### AmplitudeView.previous_amplitude_type
+
+
+**`AmplitudeView.previous_amplitude_type(self)`**
+
+Switch to the previous amplitude type.
 
 ---
 
@@ -10059,6 +10068,22 @@ Return the template amplitudes multiplied by the spike's amplitude.
 
 ---
 
+#### TemplateMixin.get_spike_template_features
+
+
+**`TemplateMixin.get_spike_template_features(self, spike_ids, first_cluster=None, **kwargs)`**
+
+Return the template features of the requested spikes onto the first selected
+cluster.
+
+This is "the dot product (projection) of each spike waveform onto the template of the
+first cluster."
+
+See @mswallac's comment at
+https://github.com/cortex-lab/phy/issues/868#issuecomment-520032905
+
+---
+
 #### TemplateMixin.get_template_amplitude
 
 
@@ -10128,9 +10153,10 @@ Return the average of the spike raw amplitudes.
 #### WaveformMixin.get_spike_raw_amplitudes
 
 
-**`WaveformMixin.get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs)`**
+**`WaveformMixin.get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs)`**
 
-Return the maximum amplitude of the raw waveforms across all channels.
+Return the maximum amplitude of the raw waveforms on the best channel of
+the first selected cluster.
 
 ---
 
@@ -10472,9 +10498,10 @@ Return part or all of spike ids belonging to a given cluster.
 #### TemplateController.get_spike_raw_amplitudes
 
 
-**`TemplateController.get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs)`**
+**`TemplateController.get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs)`**
 
-Return the maximum amplitude of the raw waveforms across all channels.
+Return the maximum amplitude of the raw waveforms on the best channel of
+the first selected cluster.
 
 ---
 
@@ -10484,6 +10511,22 @@ Return the maximum amplitude of the raw waveforms across all channels.
 **`TemplateController.get_spike_template_amplitudes(self, spike_ids, **kwargs)`**
 
 Return the template amplitudes multiplied by the spike's amplitude.
+
+---
+
+#### TemplateController.get_spike_template_features
+
+
+**`TemplateController.get_spike_template_features(self, spike_ids, first_cluster=None, **kwargs)`**
+
+Return the template features of the requested spikes onto the first selected
+cluster.
+
+This is "the dot product (projection) of each spike waveform onto the template of the
+first cluster."
+
+See @mswallac's comment at
+https://github.com/cortex-lab/phy/issues/868#issuecomment-520032905
 
 ---
 
@@ -10999,9 +11042,10 @@ Return part or all of spike ids belonging to a given cluster.
 #### KwikController.get_spike_raw_amplitudes
 
 
-**`KwikController.get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs)`**
+**`KwikController.get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs)`**
 
-Return the maximum amplitude of the raw waveforms across all channels.
+Return the maximum amplitude of the raw waveforms on the best channel of
+the first selected cluster.
 
 ---
 
