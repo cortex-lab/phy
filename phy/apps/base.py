@@ -105,11 +105,17 @@ class WaveformMixin(object):
     def get_spike_raw_amplitudes(self, spike_ids, channel_ids=None, **kwargs):
         """Return the maximum amplitude of the raw waveforms across all channels."""
         # WARNING: extracting raw waveforms is long!
-        waveforms = self.model.get_waveforms(spike_ids, channel_ids)
+        waveforms = self.model.get_waveforms(spike_ids, [channel_ids[0]])
+        cluster_id = self.model.spike_templates[spike_ids][0]
+        current_clust_channels = self.model.channel_mapping[self.get_best_channels(cluster_id)]
+        overlap = channel_ids[0] in current_clust_channels
         if waveforms is None:
             return
-        assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
-        return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
+        elif not overlap:
+            return np.zeros(len(spike_ids))
+        else:
+            assert waveforms.ndim == 3  # shape: (n_spikes, n_samples, n_channels_loc)
+            return (waveforms.max(axis=1) - waveforms.min(axis=1)).max(axis=1)
 
     def get_mean_spike_raw_amplitudes(self, cluster_id):
         """Return the average of the spike raw amplitudes."""
@@ -361,20 +367,10 @@ class TemplateMixin(object):
         self.cluster_metrics['amplitude'] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
-        """Return the template amplitudes multiplied by the spike's amplitude."""
-        amplitudes = self.model.amplitudes[spike_ids]
-        # Spike-template assignments.
-        spike_templates = self.model.spike_templates[spike_ids]
-        # Find the template amplitudes of all templates appearing in spike_templates.
-        unique_template_ids = np.unique(spike_templates)
-        # Create an array with the template amplitudes.
-        template_amplitudes = np.array(
-            [self.get_template_amplitude(tid) for tid in unique_template_ids])
-        # Get the template amplitude of every spike.
-        spike_templates_rel = _index_of(spike_templates, unique_template_ids)
-        assert spike_templates_rel.shape == amplitudes.shape
-        # Multiply that by the spike amplitude.
-        return template_amplitudes[spike_templates_rel] * amplitudes
+        first_cluster=kwargs['fclust']
+        template_amplitudes = self.model.get_template_features(spike_ids)[:,first_cluster]
+        assert template_amplitudes.shape == spike_ids.shape
+        return template_amplitudes
 
     def get_mean_spike_template_amplitudes(self, cluster_id):
         """Return the average of the spike template amplitudes."""
@@ -400,7 +396,7 @@ class TemplateMixin(object):
         ns = self.model.n_samples_waveforms
         data = np.zeros((len(template_ids), ns, self.model.n_channels))
         for i, b in enumerate(templates):
-            data[i][:, b.channel_ids] = b.template * mean_amp
+            data[i][:, b.channel_ids] = b.template
         waveforms = data[..., channel_ids]
         assert waveforms.shape == (len(template_ids), ns, len(channel_ids))
         return Bunch(
@@ -415,9 +411,12 @@ class TemplateMixin(object):
         mean_amp = {
             cluster_id: self.get_amplitudes(cluster_id).mean()
             for cluster_id in cluster_ids}
+        temp_amp = {
+            cluster_id: (np.amax(np.abs(bunchs[cluster_id].data[0, ..., 0])))
+            for cluster_id in cluster_ids}
         return {
             cluster_id: Bunch(
-                template=bunchs[cluster_id].data[0, ...] * mean_amp[cluster_id],
+                template=bunchs[cluster_id].data[0, ...]/temp_amp[cluster_id] * mean_amp[cluster_id],
                 channel_ids=bunchs[cluster_id].channel_ids,
             ) for cluster_id in cluster_ids}
 
@@ -887,6 +886,11 @@ class BaseController(object):
         def on_cluster_click(sender, cluster_id, key=None, button=None):
             """Select a cluster by clicking on it."""
             self.supervisor.select([cluster_id])
+        
+        @connect(sender=view)
+        def on_cluster_sclick(sender, cluster_id, key=None, button=None):
+            """Select a cluster by clicking on it."""
+            self.supervisor.select(self.supervisor.selected+[cluster_id])
 
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
@@ -1112,7 +1116,7 @@ class BaseController(object):
             channel_id = self.selection.get('feature_channel_id', None)
             pc = self.selection.get('feature_pc', None)
             amplitudes = f(
-                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc)
+                spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc, fclust=first_cluster)
             if amplitudes is None:
                 continue
             assert amplitudes.shape == spike_ids.shape == spike_times.shape

@@ -233,6 +233,12 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
             cluster_id = self.all_cluster_ids[cluster_rel]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
             emit('cluster_click', self, cluster_id, button=b)
+        elif 'Shift' in e.modifiers:
+            # Get mouse position in NDC.
+            (channel_idx, cluster_rel), _ = self.canvas.grid.box_map(e.pos)
+            cluster_id = self.all_cluster_ids[cluster_rel]
+            logger.debug("Click on cluster %d with button %s.", cluster_id, b)
+            emit('cluster_sclick', self, cluster_id, button=b)
 
     # Scaling
     # -------------------------------------------------------------------------

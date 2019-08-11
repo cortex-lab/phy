@@ -719,7 +719,7 @@ class TextVisual(BaseVisual):
         self.color = color
 
         # Font size.
-        self.font_size = font_size or 4.  # in points
+        self.font_size = font_size or 6.  # in points
         if is_high_dpi():  # pragma: no cover
             self.font_size *= 2
         assert self.font_size > 0
