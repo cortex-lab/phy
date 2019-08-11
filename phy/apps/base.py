@@ -163,6 +163,12 @@ class WaveformMixin(object):
             return
         v = WaveformView(waveforms_dict)
 
+        @connect(sender=v)
+        def on_channel_click(sender, channel_id=None, key=None, button=None):
+            # Update the Selection object with the channel id clicked in the waveform view.
+            self.selection.channel_id = channel_id
+            emit('selected_channel_changed', v)
+
         # Add extra actions.
         @connect(sender=v)
         def on_view_actions_created(sender):
@@ -218,7 +224,18 @@ class FeatureMixin(object):
 
         @connect
         def on_selected_feature_changed(sender):
+            # Replot the amplitude view with the selected feature.
             view.amplitude_name = 'feature'
+            view.plot()
+
+        @connect
+        def on_selected_channel_changed(sender):
+            # Make sure the amplitude is either feature or raw. If it is neither, use raw.
+            if view.amplitude_name not in ('feature', 'raw'):
+                view.amplitude_name = 'raw'
+            # In all cases, replot the amplitude view, which will use
+            # Selection.selected_channel_id to use the requested channel in the computation of
+            # the amplitudes.
             view.plot()
 
         @connect(sender=self.supervisor)
@@ -282,7 +299,7 @@ class FeatureMixin(object):
         @connect(sender=view)
         def on_feature_click(sender, dim=None, channel_id=None, pc=None):
             # Update the Selection object with the channel id and PC clicked in the feature view.
-            self.selection.feature_channel_id = channel_id
+            self.selection.channel_id = channel_id
             self.selection.feature_pc = pc
             emit('selected_feature_changed', view)
 
@@ -1129,9 +1146,12 @@ class BaseController(object):
                 # Background spikes.
                 spike_ids = self.selector.select_spikes(other_clusters, n)
             spike_times = self.model.spike_times[spike_ids]
-            # Retrieve the feature PC selected in the feature view.
-            # This is only used when name == 'feature'
-            channel_id = self.selection.get('feature_channel_id', channel_id)
+            if name == 'feature':
+                # Retrieve the feature PC selected in the feature view.
+                channel_id = self.selection.get('channel_id', channel_id)
+            elif name == 'raw':
+                # Retrieve the channel selected in the waveform view.
+                channel_id = self.selection.get('channel_id', channel_id)
             pc = self.selection.get('feature_pc', None)
             amplitudes = f(
                 spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc,
