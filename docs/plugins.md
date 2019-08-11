@@ -121,6 +121,26 @@ class ExampleNspikesViewsPlugin(IPlugin):
 *Note*: you need to manually delete the `.phy` subdirectory within your data directory when changing these parameters, otherwise errors will happen in the GUI.
 
 
+## Customizing the default font size
+
+In this plugin, we show how to change the default font size in the text visuals.
+
+```python
+# import from plugins/font_size.py
+"""Show how to change the default text font size."""
+
+from phy import IPlugin
+from phy.plot.visuals import TextVisual
+
+
+class ExampleFontSizePlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        # Smaller font size than the default (6).
+        TextVisual.default_font_size = 4.
+
+```
+
+
 ## Customizing the columns of the cluster view
 
 In this plugin, we show how to change the columns shown in the cluster and similarity views.

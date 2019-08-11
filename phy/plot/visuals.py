@@ -64,9 +64,9 @@ class ScatterVisual(BaseVisual):
 
     """
     _init_keywords = ('marker',)
-    _default_marker_size = 10.
-    _default_marker = 'disc'
-    _default_color = DEFAULT_COLOR
+    default_marker_size = 10.
+    default_marker = 'disc'
+    default_color = DEFAULT_COLOR
     _supported_markers = (
         'arrow',
         'asterisk',
@@ -93,7 +93,7 @@ class ScatterVisual(BaseVisual):
         super(ScatterVisual, self).__init__()
 
         # Set the marker type.
-        self.marker = marker or self._default_marker
+        self.marker = marker or self.default_marker
         assert self.marker in self._supported_markers
 
         self.set_shader('scatter')
@@ -119,8 +119,8 @@ class ScatterVisual(BaseVisual):
         n = pos.shape[0]
 
         # Validate the data.
-        color = _get_array(color, (n, 4), ScatterVisual._default_color, dtype=np.float32)
-        size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
+        color = _get_array(color, (n, 4), ScatterVisual.default_color, dtype=np.float32)
+        size = _get_array(size, (n, 1), ScatterVisual.default_marker_size)
         depth = _get_array(depth, (n, 1), 0)
         if data_bounds is not None:
             data_bounds = _get_data_bounds(data_bounds, pos)
@@ -148,7 +148,7 @@ class ScatterVisual(BaseVisual):
 
     def set_color(self, color):
         """Change the color of the markers."""
-        color = _get_array(color, (self.n_vertices, 4), ScatterVisual._default_color)
+        color = _get_array(color, (self.n_vertices, 4), ScatterVisual.default_color)
         self.program['a_color'] = color.astype(np.float32)
 
     def set_marker_size(self, marker_size):
@@ -181,9 +181,9 @@ class UniformScatterVisual(BaseVisual):
     """
 
     _init_keywords = ('marker', 'color', 'size')
-    _default_marker_size = 10.
-    _default_marker = 'disc'
-    _default_color = DEFAULT_COLOR
+    default_marker_size = 10.
+    default_marker = 'disc'
+    default_color = DEFAULT_COLOR
     _supported_markers = (
         'arrow',
         'asterisk',
@@ -210,14 +210,14 @@ class UniformScatterVisual(BaseVisual):
         super(UniformScatterVisual, self).__init__()
 
         # Set the marker type.
-        self.marker = marker or self._default_marker
+        self.marker = marker or self.default_marker
         assert self.marker in self._supported_markers
 
         self.set_shader('uni_scatter')
         self.fragment_shader = self.fragment_shader.replace('%MARKER', self.marker)
 
-        self.color = color or self._default_color
-        self.marker_size = size or self._default_marker_size
+        self.color = color or self.default_color
+        self.marker_size = size or self.default_marker_size
 
         self.set_primitive_type('points')
         self.data_range = Range(NDC)
@@ -312,7 +312,7 @@ class PlotVisual(BaseVisual):
 
     """
 
-    _default_color = DEFAULT_COLOR
+    default_color = DEFAULT_COLOR
     _noconcat = ('x', 'y')
 
     def __init__(self):
@@ -350,7 +350,7 @@ class PlotVisual(BaseVisual):
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         color = _get_array(color, (n_signals, 4),
-                           PlotVisual._default_color,
+                           PlotVisual.default_color,
                            dtype=np.float32,
                            )
         assert color.shape == (n_signals, 4)
@@ -459,7 +459,7 @@ class UniformPlotVisual(BaseVisual):
 
     """
 
-    _default_color = DEFAULT_COLOR
+    default_color = DEFAULT_COLOR
     _noconcat = ('x', 'y')
 
     def __init__(self, color=None, depth=None):
@@ -467,7 +467,7 @@ class UniformPlotVisual(BaseVisual):
 
         self.set_shader('uni_plot')
         self.set_primitive_type('line_strip')
-        self.color = color or self._default_color
+        self.color = color or self.default_color
 
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
@@ -580,7 +580,7 @@ class HistogramVisual(BaseVisual):
 
     """
 
-    _default_color = DEFAULT_COLOR
+    default_color = DEFAULT_COLOR
 
     def __init__(self):
         super(HistogramVisual, self).__init__()
@@ -601,7 +601,7 @@ class HistogramVisual(BaseVisual):
         n_hists, n_bins = hist.shape
 
         # Validate the data.
-        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color, dtype=np.float32)
+        color = _get_array(color, (n_hists, 4), HistogramVisual.default_color, dtype=np.float32)
 
         # Validate ylim.
         if ylim is None:
@@ -649,7 +649,7 @@ class HistogramVisual(BaseVisual):
         self.program['a_hist_index'] = hist_index.astype(np.float32)
 
         # Hist colors.
-        tex = _get_texture(data.color, self._default_color, n_hists, [0, 1])
+        tex = _get_texture(data.color, self.default_color, n_hists, [0, 1])
         self.program['u_color'] = tex.astype(np.float32)
         self.program['n_hists'] = n_hists
 
@@ -701,7 +701,8 @@ class TextVisual(BaseVisual):
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
-    _default_color = (1., 1., 1., 1.)
+    default_color = (1., 1., 1., 1.)
+    default_font_size = 6.
     _init_keywords = ('color',)
     _noconcat = ('text',)
 
@@ -713,13 +714,13 @@ class TextVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
         # Color.
-        color = color if color is not None else TextVisual._default_color
+        color = color if color is not None else TextVisual.default_color
         assert not isinstance(color, np.ndarray)  # uniform color for now
         assert len(color) == 4
         self.color = color
 
         # Font size.
-        self.font_size = font_size or 6.  # in points
+        self.font_size = font_size or self.default_font_size  # in points
         if is_high_dpi():  # pragma: no cover
             self.font_size *= 2
         assert self.font_size > 0
@@ -871,7 +872,7 @@ class LineVisual(BaseVisual):
 
     """
 
-    _default_color = (.3, .3, .3, 1.)
+    default_color = (.3, .3, .3, 1.)
     _init_keywords = ('color',)
 
     def __init__(self):
@@ -891,7 +892,7 @@ class LineVisual(BaseVisual):
         assert pos.shape[1] == 4
 
         # Color.
-        color = _get_array(color, (n_lines, 4), LineVisual._default_color)
+        color = _get_array(color, (n_lines, 4), LineVisual.default_color)
 
         # By default, we assume that the coordinates are in NDC.
         if data_bounds is None:
@@ -1015,7 +1016,7 @@ class PolygonVisual(BaseVisual):
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
-    _default_color = (1, 1, 1, 1)
+    default_color = (1, 1, 1, 1)
 
     def __init__(self):
         super(PolygonVisual, self).__init__()
@@ -1066,7 +1067,7 @@ class PolygonVisual(BaseVisual):
         assert pos_tr.shape == (n_vertices, 2)
         self.program['a_position'] = pos_tr.astype(np.float32)
 
-        self.program['u_color'] = self._default_color
+        self.program['u_color'] = self.default_color
 
         self.emit_visual_set_data()
         return data
