@@ -66,7 +66,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
 
         super(RasterView, self).__init__(**kwargs)
 
-        self.canvas.set_layout('stacked', n_plots=self.n_clusters, has_clip=False)
+        self.canvas.set_layout('stacked', origin='top', n_plots=self.n_clusters, has_clip=False)
         self.canvas.enable_axes()
 
         self.visual = ScatterVisual(marker='vbar')
