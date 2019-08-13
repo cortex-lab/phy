@@ -8519,6 +8519,15 @@ Undo the last action.
 
 ---
 
+#### Supervisor.unselect_similar
+
+
+**`Supervisor.unselect_similar(self, callback=None)`**
+
+Select only the clusters in the cluster view.
+
+---
+
 #### Supervisor.all_cluster_ids
 
 

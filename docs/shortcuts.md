@@ -31,6 +31,7 @@ Keyboard shortcuts for Clustering
 - reset                                    ctrl+alt+space
 - split                                    k
 - undo                                     ctrl+z
+- unselect_similar                         backspace
 
 Snippets for Clustering
 - filter                                   :f
