@@ -41,6 +41,7 @@ For each similar cluster, you can either:
 * Press `space` to do nothing and go to the next similar cluster.
 * Press `g` to merge the best and similar clusters, and go to the next similar cluster.
 * Press one of the keyboard shortcuts to move either the similar cluster, the best cluster, or both clusters, to either the `good`, `mua`, or `noise` group (there are nine keyboard shorcuts for nine possibilities, see below). The best and/or similar clusters change automatically afterwards.
+* Press `backspace` to unselect all similar clusters, and keep only best clusters (in the cluster view) selected.
 
 
 ## Moving clusters to different groups

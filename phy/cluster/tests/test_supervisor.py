@@ -13,12 +13,8 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from .. import supervisor as _supervisor
-from ..supervisor import (Supervisor,
-                          TaskLogger,
-                          ClusterView,
-                          SimilarityView,
-                          ActionCreator,
-                          )
+from ..supervisor import (
+    Supervisor, TaskLogger, ClusterView, SimilarityView, ActionCreator)
 from phy.gui import GUI
 from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
@@ -309,12 +305,13 @@ def test_supervisor_cluster_metrics(
 
     cluster_metrics = {'my_metrics': my_metrics}
 
-    mc = Supervisor(spike_clusters,
-                    cluster_groups=cluster_groups,
-                    cluster_metrics=cluster_metrics,
-                    similarity=similarity,
-                    context=Context(tempdir),
-                    )
+    mc = Supervisor(
+        spike_clusters,
+        cluster_groups=cluster_groups,
+        cluster_metrics=cluster_metrics,
+        similarity=similarity,
+        context=Context(tempdir),
+    )
     mc.attach(gui)
     b = Barrier()
     connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
@@ -521,9 +518,7 @@ def test_supervisor_split_1(supervisor):
 def test_supervisor_split_2(gui, similarity):
     spike_clusters = np.array([0, 0, 1])
 
-    supervisor = Supervisor(spike_clusters,
-                            similarity=similarity,
-                            )
+    supervisor = Supervisor(spike_clusters, similarity=similarity)
     supervisor.attach(gui)
 
     b = Barrier()
@@ -760,6 +755,10 @@ def test_supervisor_reset(qtbot, supervisor):
     supervisor.select_actions.previous()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
+
+    supervisor.select_actions.unselect_similar()
+    supervisor.block()
+    _assert_selected(supervisor, [30])
 
 
 def test_supervisor_nav(qtbot, supervisor):

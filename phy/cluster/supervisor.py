@@ -421,6 +421,7 @@ class ActionCreator(object):
         'reset': 'ctrl+alt+space',
         'next': 'space',
         'previous': 'shift+space',
+        'unselect_similar': 'backspace',
         'next_best': 'down',
         'previous_best': 'up',
 
@@ -503,6 +504,7 @@ class ActionCreator(object):
 
         # Selection.
         self.add(w, 'select', prompt=True, n_args=1)
+        self.add(w, 'unselect_similar')
         self.select_actions.separator()
 
         # Sort and filter
@@ -1137,6 +1139,10 @@ class Supervisor(object):
     def previous(self, callback=None):
         """Select the previous cluster in the similarity view."""
         self.similarity_view.previous(callback=callback or partial(emit, 'wizard_done', self))
+
+    def unselect_similar(self, callback=None):
+        """Select only the clusters in the cluster view."""
+        self.cluster_view.select(self.selected_clusters, callback=callback)
 
     # Color mapping actions
     # -------------------------------------------------------------------------
