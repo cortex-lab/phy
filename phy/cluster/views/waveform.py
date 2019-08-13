@@ -225,7 +225,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             self.text_visual.add_batch_data(
                 pos=[-1, 0],
                 text=str(label),
-                anchor=[-2, 0],
+                anchor=[-1.25, 0],
                 box_index=i,
             )
         self.canvas.update_visual(self.text_visual)

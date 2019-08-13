@@ -420,14 +420,20 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
             dim = self.grid_dim[i][j]
             dim_x, dim_y = dim.split(',')
             dim = dim_x if b == 'Left' else dim_y
+            other_dim = dim_y if b == 'Left' else dim_x
             if dim not in self.attributes:
+                # When a regular (channel, PC) dimension is selected.
                 channel_pc = self._get_channel_and_pc(dim)
                 if channel_pc is None:
                     return
                 channel_id, pc = channel_pc
                 logger.debug("Click on feature dim %s, channel id %s, PC %s.", dim, channel_id, pc)
             else:
-                channel_id = pc = None
+                # When the selected dimension is an attribute, e.g. "time".
+                pc = None
+                # Take the channel id in the other dimension.
+                channel_pc = self._get_channel_and_pc(other_dim)
+                channel_id = channel_pc[0] if channel_pc is not None else None
                 logger.debug("Click on feature dim %s.", dim)
             emit('feature_click', self, dim=dim, channel_id=channel_id, pc=pc)
 
