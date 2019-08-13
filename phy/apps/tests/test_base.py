@@ -474,6 +474,7 @@ class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
 
     def test_template_view_select(self):
         mouse_click(self.qtbot, self.template_view.canvas, (100, 100), modifiers=('Control',))
+        mouse_click(self.qtbot, self.template_view.canvas, (150, 100), modifiers=('Shift',))
 
     def test_mean_amplitudes(self):
         self.next()

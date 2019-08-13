@@ -183,6 +183,12 @@ class WaveformMixin(object):
 
             v.actions.separator()
 
+        @connect
+        def on_close_view(sender, view):
+            if view == v:
+                unconnect(on_channel_click)
+                unconnect(on_view_actions_created)
+
         return v
 
 
@@ -228,22 +234,18 @@ class FeatureMixin(object):
             view.amplitude_name = 'feature'
             view.plot()
 
-        @connect
-        def on_selected_channel_changed(sender):
-            # Make sure the amplitude is either feature or raw. If it is neither, use raw.
-            if view.amplitude_name not in ('feature', 'raw'):
-                view.amplitude_name = 'raw'
-            # In all cases, replot the amplitude view, which will use
-            # Selection.selected_channel_id to use the requested channel in the computation of
-            # the amplitudes.
-            view.plot()
-
         @connect(sender=self.supervisor)
         def on_select(sender, cluster_ids, update_views=True):
             # Update the feature amplitude view when the cluster selection changes,
             # because the best channels change as well.
             if update_views and view.amplitude_name == 'feature':
                 view.plot()
+
+        @connect
+        def on_close_view(sender, view_):
+            if view == view_:
+                unconnect(on_selected_feature_changed)
+                unconnect(on_select)
 
         return view
 
@@ -302,6 +304,11 @@ class FeatureMixin(object):
             self.selection.channel_id = channel_id
             self.selection.feature_pc = pc
             emit('selected_feature_changed', view)
+
+        @connect
+        def on_close_view(sender, view_):
+            if view == view_:
+                unconnect(on_feature_click)
 
         return view
 
@@ -1189,6 +1196,32 @@ class BaseController(object):
             amplitude_name=None,  # TODO: GUI state
             duration=self.model.duration,
         )
+
+        @connect
+        def on_selected_channel_changed(sender):
+            """Called when a channel is selected in the waveform view."""
+            # Do nothing if the displayed amplitude does not depend on the channel.
+            if view.amplitude_name not in ('feature', 'raw'):
+                return
+            # Otherwise, replot the amplitude view, which will use
+            # Selection.selected_channel_id to use the requested channel in the computation of
+            # the amplitudes.
+            view.plot()
+
+        @connect(sender=self.supervisor)
+        def on_select(sender, cluster_ids, update_views=True):
+            # Update the amplitude view when the cluster selection changes,
+            # because the best channels change as well.
+            if update_views and view.amplitude_name in ('feature', 'raw') and len(cluster_ids):
+                # Update the channel used in the amplitude when the cluster selection changes.
+                self.selection.channel_id = self.get_best_channel(cluster_ids[0])
+                view.plot()
+
+        @connect
+        def on_close_view(sender, view_):
+            if view == view_:
+                unconnect(on_selected_channel_changed)
+
         return view
 
     # Raster view

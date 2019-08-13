@@ -105,6 +105,12 @@ def _prompt_save():  # pragma: no cover
     return show_box(b)
 
 
+def _remove_duplicates(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
+
+
 class GUI(QMainWindow):
     """A Qt main window containing docking widgets. This class derives from `QMainWindow`.
 
@@ -384,6 +390,8 @@ class GUI(QMainWindow):
         # We add the views in the requested view count, but not in the default views.
         view_names.extend([
             vn for vn in self._requested_view_count.keys() if vn not in self.default_views])
+        # Remove duplicates in view names.
+        view_names = _remove_duplicates(view_names)
         # We add the view in the order they appear in the default views.
         for view_name in view_names:
             n_views = self._requested_view_count[view_name]
