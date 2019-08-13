@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow, QMessageBox, Qt,
-    QSize, QMetaObject, _wait, prompt, show_box)
+    QSize, _wait, prompt, show_box)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
 from phylib.utils import emit, connect
@@ -167,7 +167,6 @@ class GUI(QMainWindow):
         if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
-        QMetaObject.connectSlotsByName(self)
         self.setDockOptions(
             QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
         self.setAnimated(False)
@@ -321,7 +320,9 @@ class GUI(QMainWindow):
     @property
     def views(self):
         """Return the list of views in the GUI."""
-        return self._views
+        # NOTE: need to do a copy because the list will be modified when iterating through
+        # views for closing them.
+        return self._views.copy()
 
     @property
     def view_count(self):
