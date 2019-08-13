@@ -402,7 +402,7 @@ class MockControllerWTests(BaseControllerTests, unittest.TestCase):
         self.assertTrue(self.controller.get_mean_spike_raw_amplitudes(self.selected[0]) >= 0)
 
     def test_waveform_channel_click(self):
-        self.amplitude_view.amplitude_name = 'template'
+        self.amplitude_view.amplitude_name = 'raw'
 
         fv = self.waveform_view
         # Select channel in waveform view.
