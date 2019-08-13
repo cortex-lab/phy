@@ -1212,10 +1212,9 @@ class BaseController(object):
         def on_select(sender, cluster_ids, update_views=True):
             # Update the amplitude view when the cluster selection changes,
             # because the best channels change as well.
-            if update_views and view.amplitude_name in ('feature', 'raw') and len(cluster_ids):
+            if update_views and view.amplitude_name == 'raw' and len(cluster_ids):
                 # Update the channel used in the amplitude when the cluster selection changes.
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
-                view.plot()
 
         @connect
         def on_close_view(sender, view_):
