@@ -37,3 +37,10 @@ pip install git+https://github.com/cortex-lab/phylib.git
 cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
+
+## How to reset the GUI configuration
+
+Run `phy` with the `--clear-state` option. Alternatively, delete both files:
+
+* **Global GUI state**: `~/.phy/TemplateGUI/state.json` (common to all datasets)
+* **Local GUI state**: `.phy/state.json` (within your data directory)
