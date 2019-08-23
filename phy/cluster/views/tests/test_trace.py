@@ -139,6 +139,14 @@ def test_trace_view_1(qtbot, tempdir, gui):
     ac(v.interval, (.25, .75))
     qtbot.wait(1)
 
+    v.go_to_start()
+    qtbot.wait(1)
+    assert v.interval[0] == 0
+
+    v.go_to_end()
+    qtbot.wait(1)
+    assert v.interval[1] == duration
+
     # Widen the max interval.
     v.set_interval((0, duration))
     v.widen()

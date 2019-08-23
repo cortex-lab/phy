@@ -8930,6 +8930,15 @@ Go to a specific time (in seconds).
 
 ---
 
+#### TraceView.go_to_end
+
+
+**`TraceView.go_to_end(self)`**
+
+Go to end of the recording.
+
+---
+
 #### TraceView.go_to_next_spike
 
 
@@ -8945,6 +8954,15 @@ Jump to the next spike from the first selected cluster.
 **`TraceView.go_to_previous_spike(self)`**
 
 Jump to the previous spike from the first selected cluster.
+
+---
+
+#### TraceView.go_to_start
+
+
+**`TraceView.go_to_start(self)`**
+
+Go to the start of the recording.
 
 ---
 

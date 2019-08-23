@@ -123,6 +123,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
         'increase': 'alt+up',
         'go_left': 'alt+left',
         'go_right': 'alt+right',
+        'go_to_start': 'alt+home',
+        'go_to_end': 'alt+end',
         'go_to': 'alt+t',
         'go_to_next_spike': 'alt+pgdown',
         'go_to_previous_spike': 'alt+pgup',
@@ -379,6 +381,10 @@ class TraceView(ScalingMixin, ManualClusteringView):
             self.go_to, prompt=True, prompt_default=lambda: str(self.time))
         self.actions.separator()
 
+        self.actions.add(self.go_to_start)
+        self.actions.add(self.go_to_end)
+        self.actions.separator()
+
         self.actions.add(self.shift, prompt=True)
         self.actions.add(self.go_right)
         self.actions.add(self.go_left)
@@ -447,6 +453,14 @@ class TraceView(ScalingMixin, ManualClusteringView):
     def shift(self, delay):
         """Shift the interval by a given delay (in seconds)."""
         self.go_to(self.time + delay)
+
+    def go_to_start(self):
+        """Go to the start of the recording."""
+        self.go_to(0)
+
+    def go_to_end(self):
+        """Go to end of the recording."""
+        self.go_to(self.duration)
 
     def go_right(self):
         """Go to right."""

@@ -288,8 +288,10 @@ Keyboard shortcuts for TraceView
 - go_left                                  alt+left
 - go_right                                 alt+right
 - go_to                                    alt+t
+- go_to_end                                alt+end
 - go_to_next_spike                         alt+pgdown
 - go_to_previous_spike                     alt+pgup
+- go_to_start                              alt+home
 - increase                                 alt+up
 - narrow                                   alt++
 - select_spike                             ctrl+click
