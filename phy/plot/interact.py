@@ -418,7 +418,7 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        origin = self._origin or 'bottom'
+        origin = self._origin or 'top'
         if origin == 'top':
             b = b[::-1, :]
         return b
@@ -442,20 +442,19 @@ class Stacked(Boxed):
             #include "utils.glsl"
             attribute float {};
             uniform float n_boxes;
+            uniform bool u_top_origin;
             uniform vec2 u_box_scaling;
             """.format(self.box_var), 'header', origin=self)
-        # Take origin into account in the GLSL transformation.
-        bv = self.box_var if self.origin == 'bottom' else '(n_boxes - 1. - %s)' % self.box_var
         canvas.inserter.insert_vert("""
             float margin = .1 / n_boxes;
             float a = 1 - 2. / n_boxes + margin;
             float b = -1 + 2. / n_boxes - margin;
-            float u = {} / max(1., n_boxes - 1.);
+            float u = (u_top_origin ? (n_boxes - 1. - {bv}) : {bv}) / max(1., n_boxes - 1.);
             float y0 = -1 + u * (a + 1);
             float y1 = b + u * (1 - b);
 
             vec4 box_bounds = vec4(-1., y0, +1., y1);
-        """.format(bv), 'before_transforms', origin=self)
+        """.format(bv=self.box_var), 'before_transforms', origin=self)
 
     def update_visual(self, visual):
         """Update a visual."""
@@ -463,6 +462,7 @@ class Stacked(Boxed):
         if 'n_boxes' in visual.program:
             visual.program['n_boxes'] = self.n_boxes
             visual.program['u_box_scaling'] = self._scaling
+            visual.program['u_top_origin'] = self._origin == 'top'
 
 
 #------------------------------------------------------------------------------
