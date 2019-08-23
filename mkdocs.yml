@@ -9,6 +9,8 @@ pages:
   - Interactive visualization: 'visualization.md'
   - Manual clustering: 'clustering.md'
   - Keyboard shortcuts and snippets: 'shortcuts.md'
+- Tutorials:
+  - Manual Clustering Practical Guide (by S. Lenzi and N. Steinmetz): 'sorting_user_guide.md'
 - Developer guide:
   - Customization: 'customization.md'
   - Plugin examples: 'plugins.md'
