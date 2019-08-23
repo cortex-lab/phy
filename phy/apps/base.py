@@ -134,7 +134,8 @@ class WaveformMixin(object):
         data = self.model.get_waveforms(spike_ids, channel_ids)
         data = data - data.mean() if data is not None else None
         return Bunch(
-            data=data, channel_ids=channel_ids,
+            data=data,
+            channel_ids=channel_ids,
             channel_labels=channel_labels,
             channel_positions=pos[channel_ids])
 
@@ -455,7 +456,10 @@ class TemplateMixin(object):
         waveforms = data[..., channel_ids]
         assert waveforms.shape == (len(template_ids), ns, len(channel_ids))
         return Bunch(
-            data=waveforms, channel_ids=channel_ids, channel_positions=pos[channel_ids],
+            data=waveforms,
+            channel_ids=channel_ids,
+            channel_labels=self._get_channel_labels(channel_ids),
+            channel_positions=pos[channel_ids],
             masks=masks, alpha=1.)
 
     def _get_all_templates(self, cluster_ids):
