@@ -97,8 +97,9 @@ class AxisLocator(object):
         self.xticks_view, self.yticks_view = self._transform_ticks(self.xticks, self.yticks)
 
         # Get the text in data coordinates.
-        self.xtext = ['%g' % v for v in self.xticks]
-        self.ytext = ['%g' % v for v in self.yticks]
+        fmt = '%.9g'
+        self.xtext = [fmt % v for v in self.xticks]
+        self.ytext = [fmt % v for v in self.yticks]
 
 
 #------------------------------------------------------------------------------
