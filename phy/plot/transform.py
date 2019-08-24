@@ -52,8 +52,16 @@ def _glslify(r):
     if isinstance(r, str):
         return r
     else:
+        r = _call_if_callable(r)
         assert 2 <= len(r) <= 4
         return 'vec{}({})'.format(len(r), ', '.join(map(str, r)))
+
+
+def _call_if_callable(s):
+    """Call a variable if it's a callable, otherwise return it."""
+    if hasattr(s, '__call__'):
+        return s()
+    return s
 
 
 def _minus(value):
@@ -150,13 +158,15 @@ NDC = (-1.0, -1.0, +1.0, +1.0)
 
 
 #------------------------------------------------------------------------------
-# Transforms
+# Base Transform
 #------------------------------------------------------------------------------
 
 class BaseTransform(object):
     """Base class for all transforms."""
-    def __init__(self, value=None):
-        self.value = value
+    def __init__(self, **kwargs):
+        self.__dict__.update(**{k: v for k, v in kwargs.items() if v is not None})
+
+        # Method decorators.
         self.apply = _wrap_apply(self.apply)
         self.glsl = _wrap_glsl(self.glsl)
 
@@ -173,24 +183,39 @@ class BaseTransform(object):
         raise NotImplementedError()
 
     def __repr__(self):
-        return '<%s (%s)>' % (self.__class__.__name__, self.value)
+        return '<%s>' % (self.__class__.__name__)
 
+    def __add__(self, other):
+        return TransformChain().add([self, other])
+
+
+#------------------------------------------------------------------------------
+# Transforms
+#------------------------------------------------------------------------------
 
 class Translate(BaseTransform):
     """Translation transform.
 
     Constructor
     -----------
-    value : 2-tuple
+    amount : 2-tuple
         Coordinates of the translation.
+    gpu_var : str
+        The name of the GPU variable with the translate vector.
 
     """
 
-    def apply(self, arr, value=None):
+    amount = None
+    gpu_var = None
+
+    def __init__(self, amount=None, **kwargs):
+        super(Translate, self).__init__(amount=amount, **kwargs)
+
+    def apply(self, arr, param=None):
         """Apply a translation to a NumPy array."""
         assert isinstance(arr, np.ndarray)
-        value = value if value is not None else self.value
-        return arr + np.asarray(value)
+        param = param if param is not None else _call_if_callable(self.amount)
+        return arr + np.asarray(param)
 
     def glsl(self, var):
         """Return a GLSL snippet that applies the translation to a given GLSL variable name."""
@@ -198,47 +223,52 @@ class Translate(BaseTransform):
         return '''
         // Translate transform.
         {var} = {var} + {translate};
-        '''.format(var=var, translate=self.value)
+        '''.format(var=var, translate=self.gpu_var or _call_if_callable(self.amount))
 
     def inverse(self):
         """Return the inverse Translate instance."""
-        if isinstance(self.value, str):
-            return Translate('-' + self.value)
-        else:
-            return Translate(_minus(self.value))
+        return Translate(
+            amount=_minus(_call_if_callable(self.amount)) if self.amount is not None else None,
+            gpu_var=('-%s' % self.gpu_var) if self.gpu_var else None)
 
 
 class Scale(BaseTransform):
-    """Scaling transform.
+    """Scale transform.
 
     Constructor
     -----------
-    value : 2-tuple
+    amount : 2-tuple
         Coordinates of the scaling.
+    gpu_var : str
+        The name of the GPU variable with the scaling vector.
 
     """
 
-    def apply(self, arr, value=None):
+    amount = None
+    gpu_var = None
+
+    def __init__(self, amount=None, **kwargs):
+        super(Scale, self).__init__(amount=amount, **kwargs)
+
+    def apply(self, arr, param=None):
         """Apply a scaling to a NumPy array."""
-        value = value if value is not None else self.value
-        if isinstance(value, str):
-            value = 1
-        return arr * np.asarray(value)
+        assert isinstance(arr, np.ndarray)
+        param = param if param is not None else _call_if_callable(self.amount)
+        return arr * np.asarray(param)
 
     def glsl(self, var):
         """Return a GLSL snippet that applies the scaling to a given GLSL variable name."""
         assert var
         return '''
-        // Scale transform.
-        {var} = {var} * {scale};
-        '''.format(var=var, scale=self.value)
+        // Translate transform.
+        {var} = {var} * {scaling};
+        '''.format(var=var, scaling=self.gpu_var or _call_if_callable(self.amount))
 
     def inverse(self):
         """Return the inverse Scale instance."""
-        if isinstance(self.value, str):
-            return Scale('1.0 / ' + self.value)
-        else:
-            return Scale(_inverse(self.value))
+        return Scale(
+            amount=_inverse(_call_if_callable(self.amount)) if self.amount is not None else None,
+            gpu_var=('1.0 / %s' % self.gpu_var) if self.gpu_var else None)
 
 
 class Rotate(BaseTransform):
@@ -246,25 +276,26 @@ class Rotate(BaseTransform):
 
     Constructor
     -----------
-    value : str
+    direction : str
         Either `cw` (default) or `ccw`.
 
     """
-    def __init__(self, value=None):
-        value = value or 'cw'
-        assert value in ('cw', 'ccw')
-        super(Rotate, self).__init__(value=value)
 
-    def apply(self, arr, value=None):
+    direction = 'cw'
+
+    def __init__(self, direction=None, **kwargs):
+        super(Rotate, self).__init__(direction=direction, **kwargs)
+
+    def apply(self, arr, direction=None):
         """Apply a rotation to a NumPy array."""
         assert isinstance(arr, np.ndarray)
-        value = value if value is not None else self.value
-        value = value or 'cw'  # clockwise is the default
-        assert value in ('cw', 'ccw')
+        direction = direction or self.direction or 'cw'
+        assert direction in ('cw', 'ccw')
+
         assert arr.ndim == 2
         assert arr.shape[1] == 2
         x, y = arr.T
-        if value == 'ccw':
+        if direction == 'ccw':
             return np.c_[-y, x]
         else:
             return np.c_[y, -x]
@@ -272,19 +303,19 @@ class Rotate(BaseTransform):
     def glsl(self, var):
         """Return a GLSL snippet that applies the rotation to a given GLSL variable name."""
         assert var
-        assert self.value in ('cw', 'ccw')
-        m = '' if self.value == 'ccw' else '-'
+        direction = self.direction or 'cw'
+        assert direction in ('cw', 'ccw')
+        m = '' if direction == 'ccw' else '-'
         return '''
-        {var} = {m}vec2(-{var}.y, {var}.x);  // Rotation transform.
+        // Rotation transform.
+        {var} = {m}vec2(-{var}.y, {var}.x);
         '''.format(var=var, m=m)
 
     def inverse(self):
         """Return the inverse Rotate instance."""
-        assert self.value in ('cw', 'ccw')
-        if self.value == 'ccw':
-            return Rotate('cw')
-        else:
-            return Rotate('ccw')
+        direction = self.direction or 'cw'
+        assert direction in ('cw', 'ccw')
+        return Rotate('cw' if direction == 'ccw' else 'ccw')
 
 
 class Range(BaseTransform):
@@ -297,56 +328,76 @@ class Range(BaseTransform):
         Bounds of the source rectangle.
     to_bounds : 4-tuple
         Bounds of the target rectangle.
+    from_gpu_var : str
+        Name of the GPU variable with the from bounds.
+    to_gpu_var : str
+        Name of the GPU variable with the to bounds.
 
     """
 
-    def __init__(self, from_bounds=None, to_bounds=None):
-        super(Range, self).__init__()
-        self.from_bounds = from_bounds if from_bounds is not None else NDC
-        self.to_bounds = to_bounds if to_bounds is not None else NDC
+    from_bounds = NDC
+    to_bounds = NDC
+    from_gpu_var = None
+    to_gpu_var = None
+
+    def __init__(self, from_bounds=None, to_bounds=None, **kwargs):
+        super(Range, self).__init__(from_bounds=from_bounds, to_bounds=to_bounds, **kwargs)
 
     def apply(self, arr, from_bounds=None, to_bounds=None):
         """Apply the transform to a NumPy array."""
-        from_bounds = np.asarray(
-            from_bounds if from_bounds is not None else self.from_bounds, dtype=np.float64)
-        to_bounds = np.asarray(
-            to_bounds if to_bounds is not None else self.to_bounds, dtype=np.float64)
+        from_bounds = from_bounds if from_bounds is not None else self.from_bounds
+        to_bounds = to_bounds if to_bounds is not None else self.to_bounds
+        assert not isinstance(from_bounds, str) and not isinstance(to_bounds, str)
+        from_bounds = np.asarray(_call_if_callable(from_bounds), dtype=np.float64)
+        to_bounds = np.asarray(_call_if_callable(to_bounds), dtype=np.float64)
         return range_transform(from_bounds, to_bounds, arr)
 
     def glsl(self, var):
         """Return a GLSL snippet that applies the transform to a given GLSL variable name."""
         assert var
 
-        from_bounds = _glslify(self.from_bounds)
-        to_bounds = _glslify(self.to_bounds)
+        from_bounds = _glslify(
+            self.from_bounds if self.from_bounds is not None else self.from_gpu_var)
+        to_bounds = _glslify(
+            self.to_bounds if self.to_bounds is not None else self.to_gpu_var)
 
         return '''
         // Range transform.
-        vec2 fxy = {f}.xy;
-        vec2 fzw = {f}.zw;
-        vec2 txy = {t}.xy;
-        vec2 tzw = {t}.zw;
-        {var} = ({var} - fxy);
-        {var} = {var} * (tzw - txy);
-        {var} = {var} / (fzw - fxy);
-        {var} = {var} + txy;
+        {var} = ({var} - {f}.xy);
+        {var} = {var} * ({t}.zw - {t}.xy);
+        {var} = {var} / ({f}.zw - {f}.xy);
+        {var} = {var} + {t}.xy;
         '''.format(var=var, f=from_bounds, t=to_bounds)
 
     def inverse(self):
         """Return the inverse Range instance."""
-        return Range(from_bounds=self.to_bounds, to_bounds=self.from_bounds)
+        return Range(
+            from_bounds=self.to_bounds, to_bounds=self.from_bounds,
+            from_gpu_var=self.to_gpu_var, to_gpu_var=self.from_gpu_var,
+        )
 
 
 class Clip(BaseTransform):
-    """Transform that discards data outside a given rectangle."""
+    """Transform that discards data outside a given rectangle.
 
-    def __init__(self, bounds=None):
-        super(Clip, self).__init__()
-        self.bounds = bounds or NDC
+    Constructor
+    -----------
+
+    bounds : 4-tuple
+        Bounds of the clipping rectangle.
+
+    """
+
+    bounds = NDC
+
+    def __init__(self, bounds=None, **kwargs):
+        super(Clip, self).__init__(bounds=bounds, **kwargs)
 
     def apply(self, arr, bounds=None):
         """Apply the clipping to a NumPy array."""
-        bounds = bounds if bounds is not None else self.bounds
+        bounds = bounds if bounds is not None else _call_if_callable(self.bounds)
+        assert isinstance(bounds, (tuple, list))
+        assert len(bounds) == 4
         index = ((arr[:, 0] >= bounds[0]) &
                  (arr[:, 1] >= bounds[1]) &
                  (arr[:, 0] <= bounds[2]) &
@@ -384,82 +435,79 @@ class Subplot(Range):
         Number of rows and columns in the grid.
     index : 2-tuple
         Row and column index of the subplot to transform into.
+    shape_gpu_var : str
+        Name of the GPU variable with the grid's shape.
+    index_gpu_var : str
+        Name of the GPU variable with the box index.
 
     """
 
-    def __init__(self, shape, index=None):
-        super(Subplot, self).__init__()
-        self.shape = shape
-        self.index = index
-        self.from_bounds = NDC
+    shape = None
+    index = None
+    shape_gpu_var = None
+    index_gpu_var = None
+
+    def __init__(self, shape=None, index=None, **kwargs):
+        kwargs['shape'] = shape
+        kwargs['index'] = index
+        super(Subplot, self).__init__(**kwargs)
         if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
             self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
-        elif (isinstance(self.shape, str) and
-                isinstance(self.index, str)):
-            self.to_bounds = subplot_bounds_glsl(shape=self.shape, index=self.index)
+        elif (isinstance(self.shape, str) and isinstance(self.index, str)):
+            self.to_gpu_var = subplot_bounds_glsl(shape=self.shape, index=self.index)
 
 
 #------------------------------------------------------------------------------
-# Transform chains
+# Transform chain
 #------------------------------------------------------------------------------
 
 class TransformChain(object):
-    """A linear sequence of transforms that happen on the CPU and GPU."""
+    """A linear sequence of transforms."""
     def __init__(self):
         self.transformed_var_name = None
-        self._transforms = []  # list of tuples (cpu|gpu, transform, origin)
+        self._transforms = []  # list of tuples (transform, origin)
 
     @property
-    def cpu_transforms(self):
-        """List of CPU transforms."""
-        return [t for (where, t, origin) in self._transforms if where == 'cpu']
+    def transforms(self):
+        """List of transforms."""
+        return [t for (t, origin) in self._transforms]
 
-    @property
-    def gpu_transforms(self):
-        """List of GPU transforms."""
-        return [t for (where, t, origin) in self._transforms if where == 'gpu']
-
-    def add_on_cpu(self, transforms, origin=None):
-        """Add some transforms on the CPU."""
+    def add(self, transforms, origin=None):
+        """Add some transforms."""
         if not isinstance(transforms, list):
             transforms = [transforms]
-        self._transforms.extend([('cpu', t, origin) for t in transforms])
-        return self
-
-    def add_on_gpu(self, transforms, origin=None):
-        """Add some transforms on the GPU."""
-        if not isinstance(transforms, list):
-            transforms = [transforms]
-        self._transforms.extend([('gpu', t, origin) for t in transforms])
+        self._transforms.extend([(t, origin) for t in transforms])
         return self
 
     def get(self, class_name):
         """Get a transform in the chain from its name."""
-        for where, transform, origin in self._transforms:
+        for transform, origin in self._transforms:
             if transform.__class__.__name__ == class_name:
                 return transform
 
     def apply(self, arr):
-        """Apply all CPU transforms on an array."""
-        for t in self.cpu_transforms:
+        """Apply all transforms on an array."""
+        for t in self.transforms:
             arr = t.apply(arr)
         return arr
 
     def inverse(self):
         """Return the inverse chain of transforms."""
         inv_transforms = [
-            (where, transform.inverse(), origin)
-            for (where, transform, origin) in self._transforms[::-1]]
+            (transform.inverse(), origin)
+            for (transform, origin) in self._transforms[::-1]]
         inv = TransformChain()
         inv._transforms = inv_transforms
         return inv
 
     def __add__(self, tc):
         """Concatenate multiple transform chains."""
+        if isinstance(tc, BaseTransform):
+            return self.add(tc)
         assert isinstance(tc, TransformChain)
         assert tc.transformed_var_name == self.transformed_var_name
         self._transforms.extend(tc._transforms)
         return self
 
     def __repr__(self):
-        return 'CPU: %s ; GPU: %s' % (self.cpu_transforms, self.gpu_transforms)
+        return ' + '.join(map(str, self.transforms))
