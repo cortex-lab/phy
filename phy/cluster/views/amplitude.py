@@ -84,8 +84,10 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
         # Histogram visual.
         self.hist_visual = HistogramVisual()
-        self.hist_visual.transforms.add_on_gpu([
-            Range(NDC, (-1, -1, 1, -1 + 2 * self.histogram_scale)), Rotate('ccw')])
+        self.hist_visual.transforms.add([
+            Range(NDC, (-1, -1, 1, -1 + 2 * self.histogram_scale)),
+            Rotate('ccw'),
+        ])
         self.canvas.add_visual(self.hist_visual)
 
         # Scatter plot.

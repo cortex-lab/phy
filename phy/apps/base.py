@@ -162,7 +162,7 @@ class WaveformMixin(object):
         waveforms_dict = {name: getattr(self, method) for name, method in waveform_functions}
         if not waveforms_dict:
             return
-        v = WaveformView(waveforms_dict)
+        v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
 
         @connect(sender=v)
         def on_channel_click(sender, channel_id=None, key=None, button=None):
