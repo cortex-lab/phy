@@ -227,10 +227,11 @@ def test_transform_chain_one(array):
 def test_transform_chain_two(array):
     translate = Translate([1, 2])
     scale = Scale([.5, .5])
-    t = TransformChain()
-    t.add([translate, scale])
+    t = TransformChain([translate, scale])
 
     assert t.transforms == [translate, scale]
+    assert t[0] == translate
+    assert t[1] == scale
 
     assert isinstance(t.get('Translate'), Translate)
     assert t.get('Unknown') is None

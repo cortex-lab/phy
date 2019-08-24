@@ -182,8 +182,11 @@ class BaseTransform(object):
         """Return a Transform instance for the inverse transform."""
         raise NotImplementedError()
 
-    def __repr__(self):
-        return '<%s>' % (self.__class__.__name__)
+    def update(self):
+        pass
+
+    # def __repr__(self):
+    #     return '<%s>' % (self.__class__.__name__)
 
     def __add__(self, other):
         return TransformChain().add([self, other])
@@ -377,6 +380,41 @@ class Range(BaseTransform):
         )
 
 
+class Subplot(Range):
+    """Transform to a grid subplot rectangle.
+
+    Constructor
+    -----------
+
+    shape : 2-tuple
+        Number of rows and columns in the grid.
+    index : 2-tuple
+        Row and column index of the subplot to transform into.
+    shape_gpu_var : str
+        Name of the GPU variable with the grid's shape.
+    index_gpu_var : str
+        Name of the GPU variable with the box index.
+
+    """
+
+    shape = None
+    index = None
+    shape_gpu_var = None
+    index_gpu_var = None
+
+    def __init__(self, shape=None, index=None, **kwargs):
+        kwargs['shape'] = shape
+        kwargs['index'] = index
+        super(Subplot, self).__init__(**kwargs)
+        self.update()
+
+    def update(self):
+        if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
+            self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
+        elif (isinstance(self.shape, str) and isinstance(self.index, str)):
+            self.to_gpu_var = subplot_bounds_glsl(shape=self.shape, index=self.index)
+
+
 class Clip(BaseTransform):
     """Transform that discards data outside a given rectangle.
 
@@ -425,47 +463,18 @@ class Clip(BaseTransform):
         return self
 
 
-class Subplot(Range):
-    """Transform to a grid subplot rectangle.
-
-    Constructor
-    -----------
-
-    shape : 2-tuple
-        Number of rows and columns in the grid.
-    index : 2-tuple
-        Row and column index of the subplot to transform into.
-    shape_gpu_var : str
-        Name of the GPU variable with the grid's shape.
-    index_gpu_var : str
-        Name of the GPU variable with the box index.
-
-    """
-
-    shape = None
-    index = None
-    shape_gpu_var = None
-    index_gpu_var = None
-
-    def __init__(self, shape=None, index=None, **kwargs):
-        kwargs['shape'] = shape
-        kwargs['index'] = index
-        super(Subplot, self).__init__(**kwargs)
-        if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
-            self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
-        elif (isinstance(self.shape, str) and isinstance(self.index, str)):
-            self.to_gpu_var = subplot_bounds_glsl(shape=self.shape, index=self.index)
-
-
 #------------------------------------------------------------------------------
 # Transform chain
 #------------------------------------------------------------------------------
 
 class TransformChain(object):
     """A linear sequence of transforms."""
-    def __init__(self):
+    def __init__(self, transforms=None, origin=None):
         self.transformed_var_name = None
+        self.origin = origin
         self._transforms = []  # list of tuples (transform, origin)
+        if transforms:
+            self.add(transforms)
 
     @property
     def transforms(self):
@@ -474,6 +483,7 @@ class TransformChain(object):
 
     def add(self, transforms, origin=None):
         """Add some transforms."""
+        origin = origin or self.origin
         if not isinstance(transforms, list):
             transforms = [transforms]
         self._transforms.extend([(t, origin) for t in transforms])
@@ -500,6 +510,9 @@ class TransformChain(object):
         inv._transforms = inv_transforms
         return inv
 
+    def __getitem__(self, i):
+        return self._transforms[i][0]
+
     def __add__(self, tc):
         """Concatenate multiple transform chains."""
         if isinstance(tc, BaseTransform):
@@ -509,5 +522,5 @@ class TransformChain(object):
         self._transforms.extend(tc._transforms)
         return self
 
-    def __repr__(self):
-        return ' + '.join(map(str, self.transforms))
+    # def __repr__(self):
+    #     return ' + '.join(map(str, self.transforms))
