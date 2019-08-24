@@ -80,9 +80,8 @@ def test_glsl_inserter_hook(vertex_shader, fragment_shader):
     inserter = GLSLInserter()
     inserter.insert_vert('uniform float boo;', 'header')
     inserter.insert_frag('// In fragment shader.', 'before_transforms')
-    tc = TransformChain()
-    tc.add_on_gpu([Scale(.5)])
-    inserter.add_transform_chain(tc)
+    tc = TransformChain([Scale(.5)])
+    inserter.add_gpu_transforms(tc)
     vs, fs = inserter.insert_into_shaders(vertex_shader, fragment_shader)
     assert 'temp_pos_tr = temp_pos_tr * 0.5;' in vs
     assert 'uniform float boo;' in vs
@@ -146,11 +145,10 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
             self.vertex_shader = vertex_shader
             self.fragment_shader = fragment_shader
             self.set_primitive_type('points')
-            self.transforms.add_on_cpu(Scale((.1, .1)))
-            self.transforms.add_on_cpu(Translate((-1, -1)))
-            self.transforms.add_on_cpu(Range((-1, -1, 1, 1),
-                                             (-1.5, -1.5, 1.5, 1.5),
-                                             ))
+            self.transforms.add(Scale((.1, .1)))
+            self.transforms.add(Translate((-1, -1)))
+            self.transforms.add(Range(
+                (-1, -1, 1, 1), (-1.5, -1.5, 1.5, 1.5)))
             s = 'gl_Position.y += (1 + 1e-8 * u_window_size.x);'
             self.inserter.insert_vert(s, 'after_transforms')
 
@@ -161,9 +159,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
             self.program['a_position'] = pos
 
     bounds = subplot_bounds(shape=(2, 3), index=(1, 2))
-    canvas.transforms.add_on_gpu([Subplot((2, 3), (1, 2)),
-                                  Clip(bounds),
-                                  ])
+    canvas.gpu_transforms.add([Subplot((2, 3), (1, 2)), Clip(bounds)])
 
     # We attach the visual to the canvas. By default, a BaseLayout is used.
     v = MyVisual2()

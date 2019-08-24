@@ -80,7 +80,7 @@ def preprocess(code):
     """ Preprocess a code by removing comments, version and merging includes"""
 
     if code:
-        code = remove_comments(code)
+        # code = remove_comments(code)
         code = remove_version(code)
         code = merge_includes(code)
     return code

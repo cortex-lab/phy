@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from .base import BaseVisual
-from .transform import Range, NDC
+from .transform import NDC
 from .utils import (
     _tesselate_histogram, _get_texture, _get_array, _get_pos, _get_index)
 from phy.gui.qt import is_high_dpi
@@ -99,8 +99,7 @@ class ScatterVisual(BaseVisual):
         self.set_shader('scatter')
         self.fragment_shader = self.fragment_shader.replace('%MARKER', self.marker)
         self.set_primitive_type('points')
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
     def vertex_count(self, x=None, y=None, pos=None, **kwargs):
         """Number of vertices for the requested data."""
@@ -220,8 +219,7 @@ class UniformScatterVisual(BaseVisual):
         self.marker_size = size or self.default_marker_size
 
         self.set_primitive_type('points')
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
     def vertex_count(self, x=None, y=None, pos=None, **kwargs):
         """Number of vertices for the requested data."""
@@ -320,9 +318,7 @@ class PlotVisual(BaseVisual):
 
         self.set_shader('plot')
         self.set_primitive_type('line_strip')
-
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
     def validate(
             self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs):
@@ -468,9 +464,7 @@ class UniformPlotVisual(BaseVisual):
         self.set_shader('uni_plot')
         self.set_primitive_type('line_strip')
         self.color = color or self.default_color
-
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
     def validate(self, x=None, y=None, masks=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
@@ -587,9 +581,7 @@ class HistogramVisual(BaseVisual):
 
         self.set_shader('histogram')
         self.set_primitive_type('triangles')
-
-        self.data_range = Range([0, 0, 1, 1])
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range([0, 0, 1, 1])
 
     def validate(self, hist=None, color=None, ylim=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
@@ -710,8 +702,7 @@ class TextVisual(BaseVisual):
         super(TextVisual, self).__init__()
         self.set_shader('msdf')
         self.set_primitive_type('triangles')
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
         # Color.
         color = color if color is not None else TextVisual.default_color
@@ -879,8 +870,7 @@ class LineVisual(BaseVisual):
         super(LineVisual, self).__init__()
         self.set_shader('line')
         self.set_primitive_type('lines')
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
     def validate(self, pos=None, color=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
@@ -1022,8 +1012,7 @@ class PolygonVisual(BaseVisual):
         super(PolygonVisual, self).__init__()
         self.set_shader('polygon')
         self.set_primitive_type('line_loop')
-        self.data_range = Range(NDC)
-        self.transforms.add_on_cpu(self.data_range)
+        self.set_data_range(NDC)
 
     def validate(self, pos=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""

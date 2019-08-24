@@ -59,20 +59,26 @@ class Grid(BaseLayout):
         self._shape = shape
         ms = 1 - self.margin
         mc = 1 - self.margin
-        _transforms = [
-            Scale('u_grid_scaling'), Scale((ms, ms)), Clip([-mc, -mc, +mc, +mc]),
-            Subplot(self.shape_var, self.box_var)]
-        if has_clip is False:
-            # Remove the Clip transform.
-            del _transforms[2]
-        self._transforms = _transforms
-        self.transforms = TransformChain()
-        self.transforms.add_on_gpu(_transforms, origin=self)
+
+        # Define the GPU transforms of the Grid layout.
+        self.gpu_transforms = TransformChain(origin=self)
+        # 1. Global scaling.
+        self.gpu_transforms.add(Scale(self._scaling, gpu_var='u_grid_scaling'))
+        # 2. Margin.
+        self.gpu_transforms.add(Scale((ms, ms)))
+        # 3. Clipping for the subplots.
+        if has_clip:
+            self.gpu_transforms.add(Clip([-mc, -mc, +mc, +mc]))
+        # 4. Subplots.
+        self.gpu_transforms.add(Subplot(
+            # The parameters of the subplots are callable as they can be changed dynamically.
+            shape=lambda: self._shape, index=lambda: self.active_box,
+            shape_gpu_var=self.shape_var, index_gpu_var=self.box_var))
 
     def attach(self, canvas):
         """Attach the grid to a canvas."""
         super(Grid, self).attach(canvas)
-        canvas.transforms += self.transforms
+        canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert(
             """
             attribute vec2 {};
@@ -80,23 +86,6 @@ class Grid(BaseLayout):
             uniform vec2 u_grid_scaling;
             """.format(self.box_var, self.shape_var),
             'header', origin=self)
-
-    def map(self, arr, box=None):
-        """Apply the subplot transformation to a position array."""
-        assert box is not None
-        assert len(box) == self.n_dims
-        arr = self._transforms[0].apply(arr)
-        arr = self._transforms[1].apply(arr)
-        arr = Subplot(self.shape, box).apply(arr)
-        return arr
-
-    def imap(self, arr, box=None):
-        """Apply the subplot inverse transformation to a position array."""
-        assert box is not None
-        arr = Subplot(self.shape, box).inverse().apply(arr)
-        arr = self._transforms[1].inverse().apply(arr)
-        arr = self._transforms[0].inverse().apply(arr)
-        return arr
 
     def add_boxes(self, canvas, shape=None):
         """Show subplot boxes."""
@@ -228,14 +217,16 @@ class Boxed(BaseLayout):
         self._box_bounds = np.atleast_2d(box_bounds)
         assert self._box_bounds.shape[1] == 4
 
-        self.transforms = TransformChain()
-        self.transforms.add_on_gpu([
-            Scale('u_box_scaling'), Range(NDC, 'box_bounds')], origin=self)
+        self.gpu_transforms = TransformChain()
+        self.gpu_transforms.add(Scale(lambda: self._scaling, gpu_var='u_box_scaling'))
+        self.gpu_transforms.add(Range(
+            NDC, lambda: self.box_bounds[self.active_box],
+            from_gpu_var='vec4(-1, -1, 1, 1)', to_gpu_var='box_bounds'))
 
     def attach(self, canvas):
         """Attach the boxed interact to a canvas."""
         super(Boxed, self).attach(canvas)
-        canvas.transforms += self.transforms
+        canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
             attribute float {};
@@ -248,17 +239,6 @@ class Boxed(BaseLayout):
             vec4 box_bounds = fetch_texture({}, u_box_bounds, n_boxes);
             box_bounds = (2 * box_bounds - 1);  // See hack in Python.
             """.format(self.box_var), 'before_transforms', origin=self)
-
-    def map(self, arr, box=None):
-        """Apply the boxed transformation to a position array."""
-        assert box is not None
-        assert 0 <= box < len(self.box_bounds)
-        return Range(NDC, self.box_bounds[box]).apply(arr)
-
-    def imap(self, arr, box=None):
-        """Apply the boxed inverse transformation to a position array."""
-        assert 0 <= box < len(self.box_bounds)
-        return Range(NDC, self.box_bounds[box]).inverse().apply(arr)
 
     def update_visual(self, visual):
         """Update a visual."""
@@ -437,7 +417,7 @@ class Stacked(Boxed):
     def attach(self, canvas):
         """Attach the stacked interact to a canvas."""
         BaseLayout.attach(self, canvas)
-        canvas.transforms += self.transforms
+        canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
             attribute float {};

@@ -103,9 +103,6 @@ def _fix_coordinate_in_visual(visual, coord):
 
 def subplot_bounds(shape=None, index=None):
     """Get the data bounds of a subplot."""
-    shape = _call_if_callable(shape)
-    index = _call_if_callable(index)
-
     i, j = index
     n_rows, n_cols = shape
 
@@ -184,12 +181,6 @@ class BaseTransform(object):
     def inverse(self):
         """Return a Transform instance for the inverse transform."""
         raise NotImplementedError()
-
-    def update(self):
-        pass
-
-    # def __repr__(self):
-    #     return '<%s>' % (self.__class__.__name__)
 
     def __add__(self, other):
         return TransformChain().add([self, other])
@@ -354,18 +345,18 @@ class Range(BaseTransform):
         from_bounds = from_bounds if from_bounds is not None else self.from_bounds
         to_bounds = to_bounds if to_bounds is not None else self.to_bounds
         assert not isinstance(from_bounds, str) and not isinstance(to_bounds, str)
-        from_bounds = np.asarray(_call_if_callable(from_bounds), dtype=np.float64)
-        to_bounds = np.asarray(_call_if_callable(to_bounds), dtype=np.float64)
+        from_bounds = np.atleast_2d(_call_if_callable(from_bounds)).astype(np.float64)
+        to_bounds = np.atleast_2d(_call_if_callable(to_bounds)).astype(np.float64)
+        assert from_bounds.shape[-1] == 4
+        assert to_bounds.shape[-1] == 4
         return range_transform(from_bounds, to_bounds, arr)
 
     def glsl(self, var):
         """Return a GLSL snippet that applies the transform to a given GLSL variable name."""
         assert var
 
-        from_bounds = _glslify(
-            self.from_bounds if self.from_bounds is not None else self.from_gpu_var)
-        to_bounds = _glslify(
-            self.to_bounds if self.to_bounds is not None else self.to_gpu_var)
+        from_bounds = _glslify(self.from_gpu_var or self.from_bounds)
+        to_bounds = _glslify(self.to_gpu_var or self.to_bounds)
 
         return '''
         // Range transform.
@@ -383,16 +374,42 @@ class Range(BaseTransform):
         )
 
 
-def Subplot(shape=None, index=None):
+def Subplot(shape=None, index=None, shape_gpu_var=None, index_gpu_var=None):
+    """Return a particular Range transform that transforms from NDC to a subplot at a particular
+    location, in a grid layout.
+
+    Parameters
+    ----------
+    shape : 2-tuple
+        Number of rows and columns in the grid layout.
+    index : 2-tuple
+        Index o the row and column of the subplot.
+    shape_gpu_var : str
+        Name of the GPU variable with the grid's shape.
+    index_gpu_var : str
+        Name of the GPU variable with the grid's subplot index.
+
+    """
     from_bounds = NDC
     to_bounds = NDC
     from_gpu_var = None
     to_gpu_var = None
 
-    if (isinstance(shape, str) and isinstance(index, str)):
-        to_gpu_var = subplot_bounds_glsl(shape=shape, index=index)
-    else:
-        to_bounds = subplot_bounds(shape, index)
+    if isinstance(shape, str):
+        shape_gpu_var = shape
+        shape = None
+
+    if isinstance(index, str):
+        index_gpu_var = index
+        index = None
+
+    if shape_gpu_var is not None:
+        to_gpu_var = subplot_bounds_glsl(shape=shape_gpu_var, index=index_gpu_var)
+    if shape is not None:
+        if hasattr(shape, '__call__') and hasattr(index, '__call__'):
+            to_bounds = lambda: subplot_bounds(shape(), index())
+        else:
+            to_bounds = subplot_bounds(shape, index)
 
     return Range(
         from_bounds=from_bounds, to_bounds=to_bounds,
@@ -482,7 +499,6 @@ class TransformChain(object):
     def apply(self, arr):
         """Apply all transforms on an array."""
         for t in self.transforms:
-            print("apply", t, getattr(t, 'to_bounds', None))
             arr = t.apply(arr)
         return arr
 

@@ -135,8 +135,8 @@ class PanZoom(object):
 
         # Will be set when attached to a canvas.
         self.canvas = None
-        self._translate = Translate(self.pan_var_name)
-        self._scale = Scale(self.zoom_var_name)
+        self._translate = Translate(gpu_var=self.pan_var_name)
+        self._scale = Scale(gpu_var=self.zoom_var_name)
 
     def set_constrain_bounds(self, bounds):
         self._xmin, self._ymin, self._xmax, self._ymax = bounds
@@ -535,7 +535,7 @@ class PanZoom(object):
         if not all(v.visual.program is None for v in canvas.visuals):  # pragma: no cover
             raise RuntimeError("The PanZoom instance must be attached before the visuals.")
 
-        canvas.transforms.add_on_gpu([self._translate, self._scale], origin=self)
+        canvas.gpu_transforms.add([self._translate, self._scale], origin=self)
         # Add the variable declarations.
         vs = ('uniform vec2 {};\n'.format(self.pan_var_name) +
               'uniform vec2 {};\n'.format(self.zoom_var_name))
