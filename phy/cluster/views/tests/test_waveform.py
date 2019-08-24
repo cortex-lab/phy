@@ -32,10 +32,12 @@ def test_waveform_view(qtbot, tempdir, gui):
             data=w,
             channel_ids=np.arange(nc),
             channel_labels=['%d' % (ch * 10) for ch in range(nc)],
-            waveform_duration=1000,
             channel_positions=staggered_positions(nc))
 
-    v = WaveformView(waveforms={'waveforms': get_waveforms, 'mean_waveforms': get_waveforms})
+    v = WaveformView(
+        waveforms={'waveforms': get_waveforms, 'mean_waveforms': get_waveforms},
+        sample_rate=10000.,
+    )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
