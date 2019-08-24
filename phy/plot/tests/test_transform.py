@@ -242,7 +242,7 @@ def test_transform_chain_two(array):
 def test_transform_chain_complete(array):
     t = (
         Scale(.5) + Scale(2.) + Range([-3, -3, 1, 1]) +
-        Clip() + Subplot(shape_gpu_var='u_shape', index_gpu_var='a_box_index'))
+        Clip() + Subplot('u_shape', 'a_box_index'))
 
     assert len(t.transforms) == 5
 

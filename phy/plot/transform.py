@@ -103,6 +103,9 @@ def _fix_coordinate_in_visual(visual, coord):
 
 def subplot_bounds(shape=None, index=None):
     """Get the data bounds of a subplot."""
+    shape = _call_if_callable(shape)
+    index = _call_if_callable(index)
+
     i, j = index
     n_rows, n_cols = shape
 
@@ -380,39 +383,20 @@ class Range(BaseTransform):
         )
 
 
-class Subplot(Range):
-    """Transform to a grid subplot rectangle.
+def Subplot(shape=None, index=None):
+    from_bounds = NDC
+    to_bounds = NDC
+    from_gpu_var = None
+    to_gpu_var = None
 
-    Constructor
-    -----------
+    if (isinstance(shape, str) and isinstance(index, str)):
+        to_gpu_var = subplot_bounds_glsl(shape=shape, index=index)
+    else:
+        to_bounds = subplot_bounds(shape, index)
 
-    shape : 2-tuple
-        Number of rows and columns in the grid.
-    index : 2-tuple
-        Row and column index of the subplot to transform into.
-    shape_gpu_var : str
-        Name of the GPU variable with the grid's shape.
-    index_gpu_var : str
-        Name of the GPU variable with the box index.
-
-    """
-
-    shape = None
-    index = None
-    shape_gpu_var = None
-    index_gpu_var = None
-
-    def __init__(self, shape=None, index=None, **kwargs):
-        kwargs['shape'] = shape
-        kwargs['index'] = index
-        super(Subplot, self).__init__(**kwargs)
-        self.update()
-
-    def update(self):
-        if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
-            self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
-        elif (isinstance(self.shape, str) and isinstance(self.index, str)):
-            self.to_gpu_var = subplot_bounds_glsl(shape=self.shape, index=self.index)
+    return Range(
+        from_bounds=from_bounds, to_bounds=to_bounds,
+        from_gpu_var=from_gpu_var, to_gpu_var=to_gpu_var)
 
 
 class Clip(BaseTransform):
@@ -498,6 +482,7 @@ class TransformChain(object):
     def apply(self, arr):
         """Apply all transforms on an array."""
         for t in self.transforms:
+            print("apply", t, getattr(t, 'to_bounds', None))
             arr = t.apply(arr)
         return arr
 
@@ -521,6 +506,3 @@ class TransformChain(object):
         assert tc.transformed_var_name == self.transformed_var_name
         self._transforms.extend(tc._transforms)
         return self
-
-    # def __repr__(self):
-    #     return ' + '.join(map(str, self.transforms))
