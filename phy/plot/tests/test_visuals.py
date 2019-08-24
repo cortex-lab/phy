@@ -221,7 +221,7 @@ def test_histogram_2(qtbot, canvas_pz):
 def test_histogram_3(qtbot, canvas_pz):
     hist = np.random.rand(1, 100)
     visual = HistogramVisual()
-    visual.transforms.add(Rotate(skip_cpu=True))
+    visual.transforms.add(Rotate())
     _test_visual(qtbot, canvas_pz, visual, hist=hist)
 
 

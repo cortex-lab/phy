@@ -14,7 +14,7 @@ from phylib.io.array import _in_polygon
 from phylib.utils.geometry import _get_boxes, _get_box_pos_size
 
 from .base import BaseLayout
-from .transform import Scale, Range, Subplot, Clip, NDC, TransformChain
+from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture
 from .visuals import LineVisual, PolygonVisual
 
@@ -61,7 +61,6 @@ class Grid(BaseLayout):
         mc = 1 - self.margin
 
         # Define the GPU transforms of the Grid layout.
-        self.gpu_transforms = TransformChain(origin=self)
         # 1. Global scaling.
         self.gpu_transforms.add(Scale(self._scaling, gpu_var='u_grid_scaling'))
         # 2. Margin.
@@ -217,7 +216,6 @@ class Boxed(BaseLayout):
         self._box_bounds = np.atleast_2d(box_bounds)
         assert self._box_bounds.shape[1] == 4
 
-        self.gpu_transforms = TransformChain()
         self.gpu_transforms.add(Scale(lambda: self._scaling, gpu_var='u_box_scaling'))
         self.gpu_transforms.add(Range(
             NDC, lambda: self.box_bounds[self.active_box],

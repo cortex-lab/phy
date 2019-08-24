@@ -103,7 +103,7 @@ class BaseVisual(object):
 
     def set_data_range(self, data_range):
         """Add a CPU Range transform for data normalization."""
-        self.data_range = Range(data_range, skip_gpu=True)
+        self.data_range = Range(data_range)
         self.transforms.add(self.data_range)
 
     def on_draw(self):
@@ -576,20 +576,17 @@ class BaseCanvas(QOpenGLWindow):
         exclude_origins = kwargs.pop('exclude_origins', ())
 
         # Retrieve the visual's GLSL inserter.
-        inserter = visual.inserter
-
-        # NOTE: uncomment if ever a visual needs to add GPU transformations (currently,
-        # all visual transforms are CPU transforms for data normalization).
+        v_inserter = visual.inserter
 
         # Add the canvas' GPU transforms.
-        inserter.add_gpu_transforms(self.gpu_transforms)
+        v_inserter.add_gpu_transforms(self.gpu_transforms)
         # Also, add the canvas' inserter. The snippets that should be ignored will be excluded
         # in insert_into_shaders() below.
-        inserter += self.inserter
+        v_inserter += self.inserter
 
         # Now, we insert the transforms GLSL into the shaders.
         vs, fs = visual.vertex_shader, visual.fragment_shader
-        vs, fs = inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
+        vs, fs = v_inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
 
         # Finally, we create the visual's program.
         visual.program = LazyProgram(vs, fs)
@@ -795,7 +792,7 @@ class BaseLayout(object):
 
     def __init__(self, box_var=None):
         self.box_var = box_var or 'a_box_index'
-        self.gpu_transforms = TransformChain()
+        self.gpu_transforms = TransformChain(origin=self)
 
     def attach(self, canvas):
         """Attach this layout to a canvas."""
