@@ -12,7 +12,6 @@ import gc
 import logging
 import re
 from timeit import default_timer
-import traceback
 
 import numpy as np
 
@@ -624,8 +623,11 @@ class BaseCanvas(QOpenGLWindow):
     def initializeGL(self):
         """Create the scene."""
         # Enable transparency.
-        gl.enable_depth_mask()
-        self.update()
+        try:
+            gl.enable_depth_mask()
+        except Exception as e:  # pragma: no cover
+            logger.debug("Exception in initializetGL: %s", str(e))
+            return
 
     def paintGL(self):
         """Draw all visuals."""
@@ -649,8 +651,9 @@ class BaseCanvas(QOpenGLWindow):
                     logger.log(5, "Draw visual `%s`.", visual)
                     visual.on_draw()
             self._size = size
-        except Exception:  # pragma: no cover
-            traceback.print_exc()
+        except Exception as e:  # pragma: no cover
+            logger.debug("Exception in paintGL: %s", str(e))
+            return
 
     # Events
     # ---------------------------------------------------------------------------------------------
