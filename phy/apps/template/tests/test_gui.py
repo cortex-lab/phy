@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Testing the Template model."""
+"""Testing the Template GUI."""
 
 #------------------------------------------------------------------------------
 # Imports

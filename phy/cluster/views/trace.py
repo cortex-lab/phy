@@ -308,7 +308,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         # Load the traces.
         traces = self.traces(interval)
-        self.waveforms = traces.waveforms
+        self.waveforms = traces.get('waveforms', [])
 
         if interval != self._interval:
             logger.debug("Redraw the entire trace view.")

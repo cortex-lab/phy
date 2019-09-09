@@ -15,6 +15,9 @@ lint:
 	flake8 phy
 
 test: lint
+	py.test -vv --cov-report term-missing --cov=phy phy --ignore=phy/apps/
+
+test-full: lint
 	py.test -vv --cov-report term-missing --cov=phy phy
 
 doc:

@@ -118,6 +118,34 @@ def _gui_command(f):
 
 
 #------------------------------------------------------------------------------
+# Raw data GUI
+#------------------------------------------------------------------------------
+
+@phycli.command('trace-gui')  # pragma: no cover
+@click.argument('dat-path', type=click.Path(exists=True))
+@click.option('-s', '--sample-rate', type=float)
+@click.option('-d', '--dtype', type=str)
+@click.option('-n', '--n-channels', type=int)
+@click.option('-h', '--offset', type=int)
+@_gui_command
+@click.pass_context
+def cli_trace_gui(ctx, dat_path, **kwargs):
+    """Launch the trace GUI on a raw data file."""
+    from .trace.gui import trace_gui
+    with capture_exceptions():
+        trace_gui(dat_path, **kwargs)
+
+
+@phycli.command('template-describe')
+@click.argument('params-path', type=click.Path(exists=True))
+@click.pass_context
+def cli_template_describe(ctx, params_path):
+    """Describe a template file."""
+    from .template.gui import template_describe
+    template_describe(params_path)
+
+
+#------------------------------------------------------------------------------
 # Template GUI
 #------------------------------------------------------------------------------
 
