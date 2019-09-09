@@ -109,7 +109,7 @@ $  phy template-gui params.py
 
 The Template-GUI consists of several interactive plotting windows called Views.
 
-![gui](screenshots/template_gui_traces_only.png)
+![gui](https://raw.githubusercontent.com/kwikteam/phy-contrib/master/docs/screenshots/template_gui_traces_only.png)
 
 In the image above, you can see how these panels are arranged along with the type of plots that are generated. These panels can be rearranged depending on your personal preference. Further information on each view can be found by following these links:
 
@@ -130,7 +130,7 @@ ________________
 
 The raw traces are plotted in [TraceView](#TraceView) automatically when the application launches. Detected events are highlighted in colour, each colour corresponds to a different cluster. If you select a cluster in [Clusterview](#ClusterView), events from this cluster are highlighted as is shown below:
 
-![single cluster](screenshots/single_cluster.png)
+![single cluster](https://raw.githubusercontent.com/kwikteam/phy-contrib/master/docs/screenshots/single_cluster.png)
 
 The scaling of the traces can be adjusted using the drop down toolbar for TraceView, using the mouse (`right click + drag`) or [keyboard shortcuts](#keyboard-shortcuts). TraceView shows only a subset of the total trace at any given time. The length of visible trace can be adjusted by using the command 'Widen Trace' (`Ctrl + Alt + right`) in the drop down menu.
 
@@ -149,11 +149,11 @@ __________________________________
 
 A cluster can be selected by clicking it (de-select with `Ctrl and click`), which results in plotting in all the other Views in blue (if selected from `ClusterView`) and red (if selected from the `SimilarityView`). Events from the cluster will also be highlighted in TraceView in the corresponding colours.
 
-![two clusters](screenshots/two_clusters.png)
+![two clusters](https://raw.githubusercontent.com/kwikteam/phy-contrib/master/docs/screenshots/two_clusters.png)
 
 Additional clusters can be selected by holding Ctrl and selecting additional clusters. Shift + clicking will allow you to select a range. Each additional cluster is plotted in a different colour.
 
-![six clusters](screenshots/six_clusters.png)
+![six clusters](https://raw.githubusercontent.com/kwikteam/phy-contrib/master/docs/screenshots/six_clusters.png)
 
 
 <a name="CorrelogramView"></a>
@@ -189,7 +189,7 @@ _______________
 
 FeatureView computes and displays principle component features for the [best channel](#best-channel) to aid the user in deciding whether events arise from the same or different clusters. The grid is arranged as follows:
 
-![cluster features](screenshots/cluster_features.png)
+![cluster features](https://raw.githubusercontent.com/kwikteam/phy-contrib/master/docs/screenshots/cluster_features.png)
 
 There are four features you can see (channel0 pc0 and 1, channel1 pc0 and 1). Each of these is has its own row and column to give you all combinations. The main diagonal is special, with time always on the x-axis.
 
