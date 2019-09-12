@@ -133,6 +133,7 @@ def cli_trace_gui(ctx, dat_path, **kwargs):
     """Launch the trace GUI on a raw data file."""
     from .trace.gui import trace_gui
     with capture_exceptions():
+        kwargs['n_channels_dat'] = kwargs.pop('n_channels')
         trace_gui(dat_path, **kwargs)
 
 
