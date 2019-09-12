@@ -29,6 +29,6 @@ before_script:
     - "herbstluftwm &"
     - sleep 1
 script:
-  - make test
+  - make test-full
 after_success:
   - codecov
