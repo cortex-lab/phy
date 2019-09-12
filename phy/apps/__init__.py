@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# flake8: noqa
 
 """CLI tool."""
 
@@ -10,19 +9,20 @@
 
 from contextlib import contextmanager
 import logging
+from pathlib import Path
 import sys
 from traceback import format_exception
 
 import click
 
-from phylib import add_default_handler, _Formatter
-from phylib import _logger_date_fmt, _logger_fmt
+from phylib import add_default_handler, _Formatter   # noqa
+from phylib import _logger_date_fmt, _logger_fmt   # noqa
 
 from phy import __version_git__
 from phy.gui.qt import QtDialogLogger
 from phy.utils.profiling import _enable_profiler, _enable_pdb
 
-from .base import (
+from .base import (  # noqa
     BaseController, WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin)
 
 
@@ -136,15 +136,6 @@ def cli_trace_gui(ctx, dat_path, **kwargs):
         trace_gui(dat_path, **kwargs)
 
 
-@phycli.command('template-describe')
-@click.argument('params-path', type=click.Path(exists=True))
-@click.pass_context
-def cli_template_describe(ctx, params_path):
-    """Describe a template file."""
-    from .template.gui import template_describe
-    template_describe(params_path)
-
-
 #------------------------------------------------------------------------------
 # Template GUI
 #------------------------------------------------------------------------------
@@ -208,15 +199,25 @@ def cli_kwik_describe(ctx, path, channel_group=0, clustering='main'):
 # Conversion
 #------------------------------------------------------------------------------
 
-@phycli.command('alfconvert')
-@click.argument('params-path', type=click.Path(exists=True))
+@phycli.command('alf-convert')
+@click.argument('subdirs', nargs=-1, type=click.Path(exists=True, file_okay=False, dir_okay=True))
 @click.argument('out_dir', type=click.Path())
 @click.pass_context
-def cli_alf_convert(ctx, params_path, out_dir):
-    """Describe a template file."""
+def cli_alf_convert(ctx, subdirs, out_dir):
+    """Convert an ephys dataset into ALF. If several directories are specified, it is assumed
+    that each directory contains the data for one probe of the same recording."""
     from phylib.io.alf import EphysAlfCreator
+    from phylib.io.merge import Merger
     from phylib.io.model import load_model
 
-    model = load_model(params_path)
+    out_dir = Path(out_dir)
+
+    if len(subdirs) >= 2:
+        # Merge in the `merged` subdirectory inside the output directory.
+        m = Merger(subdirs, out_dir / '_tmp_merged')
+        model = m.merge()
+    else:
+        model = load_model(Path(subdirs[0]) / 'params.py')
+
     c = EphysAlfCreator(model)
     c.convert(out_dir)

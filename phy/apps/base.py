@@ -623,8 +623,12 @@ class BaseController(object):
     channel_positions : array-like
         A `(n_channels, 2)` array with the x, y coordinates of the electrode sites,
         in any unit (e.g. μm).
-    channel_shanks : array-like
-        A `(n_channels,)` array with the shank index of every channel.
+    channel_probes : array-like (optional)
+        An `(n_channels,)` array with the probe index of every channel.
+    channel_shanks : array-like (optional)
+        An `(n_channels,)` array with the shank index of every channel (every probe might have
+        multiple shanks). The shank index is relative to the probe. The pair (probe, shank)
+        identifies uniquely a shank.
     channel_vertical_order = array-like
         Permutation of the channels for display in the trace view. The shape is `(n_channels,)`.
     duration : float
