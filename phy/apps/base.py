@@ -1338,7 +1338,10 @@ class BaseController(object):
         """Create an IPython View."""
         view = IPythonView()
         view.start_kernel()
-        view.inject(controller=self, c=self, m=self.model, s=self.supervisor)
+        view.inject(
+            controller=self, c=self, m=self.model, s=self.supervisor,
+            emit=emit, connect=connect,
+        )
         return view
 
     # GUI
