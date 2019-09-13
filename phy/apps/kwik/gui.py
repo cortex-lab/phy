@@ -92,12 +92,12 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         'TraceView',
     )
 
-    def __init__(self, kwik_path=None, channel_group=None, clustering=None, **kwargs):
+    def __init__(self, kwik_path=None, **kwargs):
         assert kwik_path
         kwik_path = Path(kwik_path)
         dir_path = kwik_path.parent
-        self.channel_group = channel_group
-        self.clustering = clustering
+        self.channel_group = kwargs.get('channel_group', None)
+        self.clustering = kwargs.get('clustering', None)
         super(KwikController, self).__init__(kwik_path=kwik_path, dir_path=dir_path, **kwargs)
 
     # Internal methods
@@ -117,6 +117,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         kwik_path = kwargs.get('kwik_path')
         _backup(kwik_path)
         kwargs = {k: v for k, v in kwargs.items() if k in ('clustering', 'channel_group')}
+
         return KwikModelGUI(str(kwik_path), **kwargs)
 
     def _set_supervisor(self):
