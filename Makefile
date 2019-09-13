@@ -17,8 +17,8 @@ lint:
 test: lint
 	py.test --cov-report term-missing --cov=phy phy --ignore=phy/apps/
 
-test-full: lint
-	py.test --cov-report term-missing --cov=phy phy
+test-full: test
+	py.test --cov-report term-missing --cov=phy.apps phy/apps/
 
 doc:
 	python tools/api.py && python tools/extract_shortcuts.py && python tools/plugins_doc.py
