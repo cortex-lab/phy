@@ -233,11 +233,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         x = _overlap_transform(x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         # Generate the (N, 4) array for LineVisual.
         lpos = np.c_[x, m * np.ones(n), x, M * np.ones(n)]
-        lpos = np.repeat(lpos, len(self.channel_ids), axis=0)
+        lpos = np.tile(lpos, (len(channel_ids_loc), 1))
         # Generate the box index.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
-        box_index = np.repeat(box_index, n)
-        assert lpos.shape[0] == box_index.size
+        box_index = np.repeat(box_index, n * 2)
+        assert lpos.size // 2 == box_index.size
 
         self.line_visual.add_batch_data(
             pos=lpos,
