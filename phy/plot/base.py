@@ -843,7 +843,10 @@ class BaseLayout(object):
         box = self.get_closest_box(ndc)
         self.active_box = box
         # From NDC to data coordinates, in the given box.
-        return box, self.imap(ndc, box)
+        pos = self.imap(ndc, box).squeeze()
+        assert len(pos) == 2
+        x, y = pos
+        return box, (x, y)
 
     def update_visual(self, visual):
         """Called whenever visual.set_data() is called. Set a_box_index in here."""

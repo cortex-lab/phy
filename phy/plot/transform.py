@@ -499,6 +499,8 @@ class TransformChain(object):
     def apply(self, arr):
         """Apply all transforms on an array."""
         for t in self.transforms:
+            if isinstance(t, Clip):
+                continue
             arr = t.apply(arr)
         return arr
 

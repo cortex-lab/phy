@@ -503,7 +503,7 @@ class Lasso(object):
 
     def update_lasso_visual(self):
         """Update the lasso visual with the current polygon."""
-        if not self.visual:
+        if not self.visual and self.count > 0:
             return
         # The following call updates a_box_index with the active box in BaseLayout.
         self.visual.set_data(pos=self.polygon)

@@ -240,13 +240,9 @@ def test_transform_chain_two(array):
 
 
 def test_transform_chain_complete(array):
-    t = (
-        Scale(.5) + Scale(2.) + Range([-3, -3, 1, 1]) +
-        Clip() + Subplot('u_shape', 'a_box_index'))
-
-    assert len(t.transforms) == 5
-
-    ae(t.apply(array), [[0, .5]])
+    t = Scale(.5) + Scale(2.) + Range([-3, -3, 1, 1]) + Subplot('u_shape', 'a_box_index')
+    assert len(t.transforms) == 4
+    ae(t.apply(array), [[0, .5], [1, 1.5]])
 
 
 def test_transform_chain_add():
