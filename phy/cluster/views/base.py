@@ -394,13 +394,20 @@ class BaseGlobalView(object):
         self.update_color(selected_clusters=cluster_ids)
 
 
-class ScalingMixin(object):
+class BaseWheelMixin(object):
+    def on_mouse_wheel(self, e):
+        pass
+
+
+class ScalingMixin(BaseWheelMixin):
     """Provide features to change the scaling.
 
     Implement increase, decrease, reset actions, as well as control+wheel shortcut."""
     _scaling_param_increment = 1.1
-    _scaling_param_min = .01
+    _scaling_param_min = 1e-3
+    _scaling_param_max = 1e3
     _scaling_default = 1.0
+    _scaling_modifiers = ('Control',)
 
     def attach(self, gui):
         super(ScalingMixin, self).attach(gui)
@@ -411,7 +418,8 @@ class ScalingMixin(object):
 
     def on_mouse_wheel(self, e):  # pragma: no cover
         """Change the scaling with the wheel."""
-        if e.modifiers == ('Control',):
+        super(ScalingMixin, self).on_mouse_wheel(e)
+        if e.modifiers == self._scaling_modifiers:
             if e.delta > 0:
                 self.increase()
             else:
@@ -428,7 +436,8 @@ class ScalingMixin(object):
     def increase(self):
         """Increase the scaling parameter."""
         value = self._get_scaling_value()
-        self._set_scaling_value(value * self._scaling_param_increment)
+        self._set_scaling_value(min(
+            self._scaling_param_max, value * self._scaling_param_increment))
 
     def decrease(self):
         """Decrease the scaling parameter."""
@@ -441,9 +450,12 @@ class ScalingMixin(object):
         self._set_scaling_value(self._scaling_default)
 
 
-class MarkerSizeMixin(ScalingMixin):
+class MarkerSizeMixin(BaseWheelMixin):
     _marker_size = 5.
-    _scaling_default = 5.
+    _default_marker_size = 5.
+    _marker_size_min = 1e-2
+    _marker_size_max = 1e2
+    _marker_size_increment = 1.1
 
     def __init__(self, *args, **kwargs):
         super(MarkerSizeMixin, self).__init__(*args, **kwargs)
@@ -452,12 +464,6 @@ class MarkerSizeMixin(ScalingMixin):
 
     # Marker size
     # -------------------------------------------------------------------------
-
-    def _get_scaling_value(self):
-        return self.marker_size
-
-    def _set_scaling_value(self, value):
-        self.marker_size = value
 
     @property
     def marker_size(self):
@@ -470,6 +476,36 @@ class MarkerSizeMixin(ScalingMixin):
         self._marker_size = val
         self.visual.set_marker_size(val)
         self.canvas.update()
+
+    def attach(self, gui):
+        super(MarkerSizeMixin, self).attach(gui)
+        self.actions.add(self.increase_marker_size)
+        self.actions.add(self.decrease_marker_size)
+        self.actions.add(self.reset_marker_size)
+        self.actions.separator()
+
+    def increase_marker_size(self):
+        """Increase the scaling parameter."""
+        self.marker_size = min(
+            self._marker_size_max, self.marker_size * self._marker_size_increment)
+
+    def decrease_marker_size(self):
+        """Decrease the scaling parameter."""
+        self.marker_size = max(
+            self._marker_size_min, self.marker_size / self._marker_size_increment)
+
+    def reset_marker_size(self):
+        """Reset the scaling to the default value."""
+        self.marker_size = self._default_marker_size
+
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Change the scaling with the wheel."""
+        super(MarkerSizeMixin, self).on_mouse_wheel(e)
+        if e.modifiers == ('Alt',):
+            if e.delta > 0:
+                self.increase_marker_size()
+            else:
+                self.decrease_marker_size()
 
 
 class LassoMixin(object):

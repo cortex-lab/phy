@@ -16,7 +16,7 @@ from phylib.utils import Bunch, connect, emit
 from phylib.utils.color import selected_cluster_color
 from phy.plot.transform import Range
 from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
-from .base import ManualClusteringView, MarkerSizeMixin
+from .base import ManualClusteringView, MarkerSizeMixin, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def _uniq(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-class FeatureView(MarkerSizeMixin, ManualClusteringView):
+class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     """This view displays a 4x4 subplot matrix with different projections of the principal
     component features. This view keeps track of which channels are currently shown.
 
@@ -275,6 +275,13 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
         M = max(abs(m), abs(M))
         return M
+
+    def _get_scaling_value(self):
+        return self.canvas.grid.scaling[0]
+
+    def _set_scaling_value(self, value):
+        self.canvas.grid.scaling = (value, value)
+        self.canvas.grid.update()
 
     # Public methods
     # -------------------------------------------------------------------------

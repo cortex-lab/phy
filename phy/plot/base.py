@@ -725,7 +725,7 @@ class BaseCanvas(QOpenGLWindow):
         """Emit an internal `mouse_wheel` event."""
         # NOTE: Qt has no way to simulate wheel events for testing
         delta = e.angleDelta()
-        deltay = delta.y() / 120.0
+        deltay = (delta.y() or delta.x()) / 120.0
         pos = e.pos().x(), e.pos().y()
         modifiers = get_modifiers(e)
         self.emit('mouse_wheel', pos=pos, delta=deltay, modifiers=modifiers)
