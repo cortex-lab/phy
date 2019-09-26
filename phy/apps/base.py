@@ -156,16 +156,15 @@ class WaveformMixin(object):
         super(WaveformMixin, self)._set_view_creator()
         self.view_creator['WaveformView'] = self.create_waveform_view
 
-    def create_waveform_view(self):
+    def _get_waveforms_dict(self):
         waveform_functions = _concatenate_parents_attributes(
             self.__class__, '_waveform_functions')
-        waveforms_dict = {name: getattr(self, method) for name, method in waveform_functions}
+        return {name: getattr(self, method) for name, method in waveform_functions}
+
+    def create_waveform_view(self):
+        waveforms_dict = self._get_waveforms_dict()
         if not waveforms_dict:
             return
-        # Remove waveforms and mean_waveforms if there is no raw data file.
-        if self.model.traces is None:
-            waveforms_dict.pop('waveforms', None)
-            waveforms_dict.pop('mean_waveforms', None)
         v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
 
         @connect(sender=v)

@@ -141,8 +141,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self._update_boxes()
 
         # Ensure waveforms is a dictionary, even if there is a single waveforms type.
+        waveforms = waveforms or {}
         waveforms = waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
-        assert waveforms
         self.waveforms = waveforms
         self.waveforms_types = list(waveforms.keys())
         # Current waveforms type.

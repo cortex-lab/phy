@@ -15,10 +15,14 @@ lint:
 	flake8 phy
 
 test: lint
-	py.test --cov-report term-missing --cov=phy phy --ignore=phy/apps/
+	py.test --cov-report= --cov=phy phy --ignore=phy/apps/
+	coverage report --omit */phy/apps/*,*/phy/plot/gloo/*
+
+test-apps: lint
+	py.test --cov-report term-missing --cov=phy.apps phy/apps/
 
 test-full: test
-	py.test --cov-report term-missing --cov=phy.apps phy/apps/
+	py.test --cov-report term-missing --cov=phy phy
 
 doc:
 	python tools/api.py && python tools/extract_shortcuts.py && python tools/plugins_doc.py

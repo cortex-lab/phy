@@ -55,7 +55,8 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
 
     @property
     def waveform_view(self):
-        return self.gui.list_views(WaveformView)[0]
+        views = self.gui.list_views(WaveformView)
+        return views[0] if views else None
 
     def test_kwik_snippets(self):
         self.key('Down')
@@ -73,9 +74,10 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
         self.key('Enter')
 
     def test_kwik_waveform_view(self):
+        if not self.waveform_view:
+            return
         self.next()
         for _ in range(3):
-            print("HELLO")
             self.waveform_view.next_waveforms_type()
             self.qtbot.wait(250)
 
