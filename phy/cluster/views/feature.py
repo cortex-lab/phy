@@ -94,6 +94,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
     # Whether to disable automatic selection of channels.
     fixed_channels = False
+    feature_scaling = 1.
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
@@ -104,7 +105,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
     def __init__(self, features=None, attributes=None, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
-        self.state_attrs += ('fixed_channels',)
+        self.state_attrs += ('fixed_channels', 'feature_scaling')
 
         assert features
         self.features = features
@@ -199,7 +200,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         c = list(bunch.channel_ids).index(channel_id)
         if masks is not None:
             masks = masks[:, c]
-        return Bunch(data=bunch.data[:, c, pc], masks=masks)
+        return Bunch(data=self.feature_scaling * bunch.data[:, c, pc], masks=masks)
 
     def _get_axis_bounds(self, dim, bunch):
         """Return the min/max of an axis."""
@@ -277,11 +278,11 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         return M
 
     def _get_scaling_value(self):
-        return self.canvas.grid.scaling[0]
+        return self.feature_scaling
 
     def _set_scaling_value(self, value):
-        self.canvas.grid.scaling = (value, value)
-        self.canvas.grid.update()
+        self.feature_scaling = value
+        self.plot()
 
     # Public methods
     # -------------------------------------------------------------------------
