@@ -54,8 +54,7 @@
     "overlap": false,
     "probe_scaling": [
       1, 1
-    ],
-    "waveforms_type": "waveforms"
+    ]
   },
   "batch_size_waveforms": 10,
   "color_selector": {

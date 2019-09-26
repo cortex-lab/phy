@@ -162,6 +162,10 @@ class WaveformMixin(object):
         waveforms_dict = {name: getattr(self, method) for name, method in waveform_functions}
         if not waveforms_dict:
             return
+        # Remove waveforms and mean_waveforms if there is no raw data file.
+        if self.model.traces is None:
+            waveforms_dict.pop('waveforms', None)
+            waveforms_dict.pop('mean_waveforms', None)
         v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
 
         @connect(sender=v)
