@@ -89,6 +89,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     """
 
     _default_position = 'right'
+    ax_color = (.5, .5, .5, 1)
     cluster_ids = ()
 
     default_shortcuts = {
@@ -147,7 +148,6 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Current waveforms type.
         self.waveforms_type = waveforms_type or self.waveforms_types[0]
         assert self.waveforms_type in waveforms
-        assert 'waveforms' in waveforms
 
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
@@ -215,14 +215,35 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Generate the waveform array.
         wave = np.transpose(wave, (0, 2, 1))
-        wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
+        nw = n_spikes_clu * n_channels
+        wave = wave.reshape((nw, n_samples))
 
         self.waveform_visual.add_batch_data(
             x=t, y=wave, color=bunch.color, masks=masks, box_index=box_index,
             data_bounds=self.data_bounds)
 
+        # Waveform axes.
+        _, m, _, M = self.data_bounds
+        mm = max(abs(m), abs(M))
+        ax_db = (-1, m / mm, +1, M / mm)
+
+        # Horizontal y=0 lines.
+        a, b = _overlap_transform(
+            np.array([-1, 1]), offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
+        box_index = _index_of(channel_ids_loc, self.channel_ids)
+        box_index = np.repeat(box_index, 2)
+        box_index = np.tile(box_index, n_spikes_clu)
+        hpos = np.tile([[a, 0, b, 0]], (nw, 1))
+        assert box_index.size == hpos.shape[0] * 2
+        self.line_visual.add_batch_data(
+            pos=hpos,
+            color=self.ax_color,
+            data_bounds=ax_db,
+            box_index=box_index,
+        )
+
         # Vertical ticks every millisecond.
-        m, M = self.data_bounds[1], self.data_bounds[3]
+        # m, M = self.data_bounds[1], self.data_bounds[3]
         steps = np.arange(np.round(self.wave_duration * 1000))
         n = len(steps)
         # A vline every millisecond.
@@ -232,17 +253,16 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Take overlap into account.
         x = _overlap_transform(x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         # Generate the (N, 4) array for LineVisual.
-        lpos = np.c_[x, m * np.ones(n), x, M * np.ones(n)]
+        lpos = np.c_[x, np.zeros(n), x, -.1 * np.ones(n)]
         lpos = np.tile(lpos, (len(channel_ids_loc), 1))
         # Generate the box index.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
         box_index = np.repeat(box_index, n * 2)
         assert lpos.size // 2 == box_index.size
-
         self.line_visual.add_batch_data(
             pos=lpos,
-            color=(.5, .5, .5, 1),
-            data_bounds=self.data_bounds,
+            color=self.ax_color,
+            data_bounds=ax_db,
             box_index=box_index,
         )
 
@@ -270,7 +290,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
         self.channel_ids = channel_ids
-        self.wave_duration = bunchs[0].data.shape[1] / float(self.sample_rate)
+        if bunchs[0].data is not None:
+            self.wave_duration = bunchs[0].data.shape[1] / float(self.sample_rate)
+        else:  # pragma: no cover
+            self.wave_duration = 1.
 
         # Channel labels.
         channel_labels = {}
@@ -455,7 +478,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def toggle_mean_waveforms(self, checked):
         """Switch to the `mean_waveforms` type, if it is available."""
-        if self.waveforms_type == 'mean_waveforms':
+        if self.waveforms_type == 'mean_waveforms' and 'waveforms' in self.waveforms_types:
             self.waveforms_type = 'waveforms'
             self.plot()
         elif 'mean_waveforms' in self.waveforms_types:
