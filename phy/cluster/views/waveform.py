@@ -89,7 +89,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     """
 
     _default_position = 'right'
-    ax_color = (.5, .5, .5, 1)
+    ax_color = (.75, .75, .75, 1.)
     cluster_ids = ()
 
     default_shortcuts = {
@@ -152,11 +152,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
 
-        self.line_visual = LineVisual()
-        self.canvas.add_visual(self.line_visual)
-
         self.waveform_visual = PlotVisual()
         self.canvas.add_visual(self.waveform_visual)
+
+        self.line_visual = LineVisual()
+        self.canvas.add_visual(self.line_visual)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -223,6 +223,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             data_bounds=self.data_bounds)
 
         # Waveform axes.
+        if self.overlap and bunch.index > 0:
+            # When overlapping, only show the axes for the first cluster.
+            return
+
         _, m, _, M = self.data_bounds
         mm = max(abs(m), abs(M))
         ax_db = (-1, m / mm, +1, M / mm)
@@ -243,7 +247,6 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         )
 
         # Vertical ticks every millisecond.
-        # m, M = self.data_bounds[1], self.data_bounds[3]
         steps = np.arange(np.round(self.wave_duration * 1000))
         n = len(steps)
         # A vline every millisecond.
@@ -253,7 +256,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Take overlap into account.
         x = _overlap_transform(x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         # Generate the (N, 4) array for LineVisual.
-        lpos = np.c_[x, np.zeros(n), x, -.1 * np.ones(n)]
+        lpos = np.c_[x, np.zeros(n), x, -.25 * np.ones(n)]
         lpos = np.tile(lpos, (len(channel_ids_loc), 1))
         # Generate the box index.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
