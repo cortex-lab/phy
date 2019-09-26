@@ -61,10 +61,10 @@ def _iter_spike_waveforms(
         if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
             continue
         # Choose cluster color.
-        if c in p.selected:
+        if c in p.selected:  # pragma: no cover
             i = p.selected.index(c)
             color = selected_cluster_color(i, alpha=1)
-        else:  # pragma: no cover
+        else:
             color = cs.get(c, alpha=1)
         # Extract the waveform.
         wave = Bunch(

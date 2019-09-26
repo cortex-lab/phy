@@ -28,8 +28,8 @@ def test_scatter_view_0(qtbot, gui):
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
-    v.increase()
-    v.decrease()
+    v.increase_marker_size()
+    v.decrease_marker_size()
 
     v.coords = lambda cluster_ids: 1
     with raises(ValueError):

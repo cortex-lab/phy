@@ -160,8 +160,8 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         """Attach the view to the GUI."""
         super(RasterView, self).attach(gui)
 
-        self.actions.add(self.increase)
-        self.actions.add(self.decrease)
+        self.actions.add(self.increase_marker_size)
+        self.actions.add(self.decrease_marker_size)
         self.actions.separator()
 
     def on_mouse_click(self, e):

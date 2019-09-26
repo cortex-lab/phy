@@ -64,4 +64,7 @@ def test_histogram_view_0(qtbot, gui):
     v.set_bin_size(2)
     assert v.n_bins == 200
 
+    v.increase()
+    v.decrease()
+
     _stop_and_close(qtbot, v)
