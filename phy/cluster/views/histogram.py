@@ -202,6 +202,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         return self.x_max
 
     def _set_scaling_value(self, value):
+        if self.bin_unit == 'ms':
+            value *= 1000
         self.set_x_max(value)
 
     def set_n_bins(self, n_bins):

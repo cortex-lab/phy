@@ -72,7 +72,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.canvas.set_layout(layout='grid')
 
         # Outside margin to show labels.
-        self.canvas.transforms.add_on_gpu(Scale(.9))
+        self.canvas.gpu_transforms.add(Scale(.9))
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)

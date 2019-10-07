@@ -16,7 +16,7 @@ from phylib.utils import Bunch, connect, emit
 from phylib.utils.color import selected_cluster_color
 from phy.plot.transform import Range
 from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
-from .base import ManualClusteringView, MarkerSizeMixin
+from .base import ManualClusteringView, MarkerSizeMixin, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def _uniq(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-class FeatureView(MarkerSizeMixin, ManualClusteringView):
+class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     """This view displays a 4x4 subplot matrix with different projections of the principal
     component features. This view keeps track of which channels are currently shown.
 
@@ -94,6 +94,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
     # Whether to disable automatic selection of channels.
     fixed_channels = False
+    feature_scaling = 1.
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
@@ -104,7 +105,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
 
     def __init__(self, features=None, attributes=None, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
-        self.state_attrs += ('fixed_channels',)
+        self.state_attrs += ('fixed_channels', 'feature_scaling')
 
         assert features
         self.features = features
@@ -199,7 +200,7 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         c = list(bunch.channel_ids).index(channel_id)
         if masks is not None:
             masks = masks[:, c]
-        return Bunch(data=bunch.data[:, c, pc], masks=masks)
+        return Bunch(data=self.feature_scaling * bunch.data[:, c, pc], masks=masks)
 
     def _get_axis_bounds(self, dim, bunch):
         """Return the min/max of an axis."""
@@ -275,6 +276,13 @@ class FeatureView(MarkerSizeMixin, ManualClusteringView):
         m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
         M = max(abs(m), abs(M))
         return M
+
+    def _get_scaling_value(self):
+        return self.feature_scaling
+
+    def _set_scaling_value(self, value):
+        self.feature_scaling = value
+        self.plot()
 
     # Public methods
     # -------------------------------------------------------------------------

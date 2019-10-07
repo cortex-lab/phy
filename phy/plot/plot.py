@@ -59,7 +59,7 @@ class PlotCanvas(BaseCanvas):
 
     def set_layout(
             self, layout=None, shape=None, n_plots=None, origin=None,
-            box_bounds=None, box_pos=None, box_size=None, has_clip=None):
+            box_bounds=None, box_pos=None, box_size=None, has_clip=True):
         """Set the plot layout: grid, boxed, stacked, or None."""
 
         self.layout = layout

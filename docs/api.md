@@ -54,6 +54,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ### [phy.plot](#phyplot)
 
+* [phy.plot.Subplot](#phyplotsubplot)
 * [phy.plot.extend_bounds](#phyplotextend_bounds)
 * [phy.plot.get_linear_x](#phyplotget_linear_x)
 * [phy.plot.Axes](#phyplotaxes)
@@ -76,7 +77,6 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.plot.Range](#phyplotrange)
 * [phy.plot.Scale](#phyplotscale)
 * [phy.plot.ScatterVisual](#phyplotscattervisual)
-* [phy.plot.Subplot](#phyplotsubplot)
 * [phy.plot.TextVisual](#phyplottextvisual)
 * [phy.plot.TransformChain](#phyplottransformchain)
 * [phy.plot.Translate](#phyplottranslate)
@@ -117,6 +117,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.apps.format_exception](#phyappsformat_exception)
 * [phy.apps.BaseController](#phyappsbasecontroller)
 * [phy.apps.FeatureMixin](#phyappsfeaturemixin)
+* [phy.apps.Path](#phyappspath)
 * [phy.apps.QtDialogLogger](#phyappsqtdialoglogger)
 * [phy.apps.TemplateMixin](#phyappstemplatemixin)
 * [phy.apps.TraceMixin](#phyappstracemixin)
@@ -1854,6 +1855,30 @@ For advanced users!
 
 ---
 
+#### phy.plot.Subplot
+
+
+**`phy.plot.Subplot(shape=None, index=None, shape_gpu_var=None, index_gpu_var=None)`**
+
+Return a particular Range transform that transforms from NDC to a subplot at a particular
+location, in a grid layout.
+
+**Parameters**
+
+* `shape : 2-tuple`
+    Number of rows and columns in the grid layout.
+
+* `index : 2-tuple`
+    Index o the row and column of the subplot.
+
+* `shape_gpu_var : str`
+    Name of the GPU variable with the grid's shape.
+
+* `index_gpu_var : str`
+    Name of the GPU variable with the grid's subplot index.
+
+---
+
 #### phy.plot.extend_bounds
 
 
@@ -2256,16 +2281,25 @@ Override to return the box closest to a given position in NDC.
 
 **`BaseLayout.imap(self, arr, box=None)`**
 
-Inverse transformation from NDC to data coordinates.
+Apply the layout inverse transformation to a position array.
 
 ---
 
 #### BaseLayout.map
 
 
-**`BaseLayout.map(self, arr, box=None)`**
+**`BaseLayout.map(self, arr, box=None, inverse=None)`**
 
-Direct transformation from data to NDC coordinates.
+Apply the layout transformation to a position array.
+
+---
+
+#### BaseLayout.swap_active_box
+
+
+**`BaseLayout.swap_active_box(self, box)`**
+
+Context manager to temporary change the active box.
 
 ---
 
@@ -2392,6 +2426,15 @@ Set data to the program.
 
 Must be called *after* attach(canvas), because the program is built
 when the visual is attached to the canvas.
+
+---
+
+#### BaseVisual.set_data_range
+
+
+**`BaseVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
 
 ---
 
@@ -2579,16 +2622,25 @@ Get the box closest to some position.
 
 **`Boxed.imap(self, arr, box=None)`**
 
-Apply the boxed inverse transformation to a position array.
+Apply the layout inverse transformation to a position array.
 
 ---
 
 #### Boxed.map
 
 
-**`Boxed.map(self, arr, box=None)`**
+**`Boxed.map(self, arr, box=None, inverse=None)`**
 
-Apply the boxed transformation to a position array.
+Apply the layout transformation to a position array.
+
+---
+
+#### Boxed.swap_active_box
+
+
+**`Boxed.swap_active_box(self, box)`**
+
+Context manager to temporary change the active box.
 
 ---
 
@@ -2673,10 +2725,10 @@ This class provides methods to specify the snippets to insert, and the
 
 ---
 
-#### GLSLInserter.add_transform_chain
+#### GLSLInserter.add_gpu_transforms
 
 
-**`GLSLInserter.add_transform_chain(self, tc)`**
+**`GLSLInserter.add_gpu_transforms(self, tc)`**
 
 Insert all GLSL snippets from a transform chain.
 
@@ -2817,16 +2869,25 @@ Get the box index (i, j) closest to a given position in NDC coordinates.
 
 **`Grid.imap(self, arr, box=None)`**
 
-Apply the subplot inverse transformation to a position array.
+Apply the layout inverse transformation to a position array.
 
 ---
 
 #### Grid.map
 
 
-**`Grid.map(self, arr, box=None)`**
+**`Grid.map(self, arr, box=None, inverse=None)`**
 
-Apply the subplot transformation to a position array.
+Apply the layout transformation to a position array.
+
+---
+
+#### Grid.swap_active_box
+
+
+**`Grid.swap_active_box(self, box)`**
+
+Context manager to temporary change the active box.
 
 ---
 
@@ -2963,6 +3024,15 @@ Update the visual data.
 
 ---
 
+#### HistogramVisual.set_data_range
+
+
+**`HistogramVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
+
+---
+
 #### HistogramVisual.set_primitive_type
 
 
@@ -3096,6 +3166,15 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 **`ImageVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
+
+---
+
+#### ImageVisual.set_data_range
+
+
+**`ImageVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
 
 ---
 
@@ -3324,6 +3403,15 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 **`LineVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
+
+---
+
+#### LineVisual.set_data_range
+
+
+**`LineVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
 
 ---
 
@@ -3977,7 +4065,7 @@ Add a standalone (no batch) scatter plot.
 #### PlotCanvas.set_layout
 
 
-**`PlotCanvas.set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_bounds=None, box_pos=None, box_size=None, has_clip=None)`**
+**`PlotCanvas.set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_bounds=None, box_pos=None, box_size=None, has_clip=True)`**
 
 Set the plot layout: grid, boxed, stacked, or None.
 
@@ -4180,6 +4268,15 @@ Update the visual data.
 
 ---
 
+#### PlotVisual.set_data_range
+
+
+**`PlotVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
+
+---
+
 #### PlotVisual.set_primitive_type
 
 
@@ -4318,6 +4415,15 @@ Update the visual data.
 
 ---
 
+#### PolygonVisual.set_data_range
+
+
+**`PolygonVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
+
+---
+
 #### PolygonVisual.set_primitive_type
 
 
@@ -4376,6 +4482,12 @@ Linear transform from a source rectangle to a target rectangle.
 * `to_bounds : 4-tuple`
     Bounds of the target rectangle.
 
+* `from_gpu_var : str`
+    Name of the GPU variable with the from bounds.
+
+* `to_gpu_var : str`
+    Name of the GPU variable with the to bounds.
+
 ---
 
 #### Range.apply
@@ -4407,19 +4519,22 @@ Return the inverse Range instance.
 
 ### phy.plot.Scale
 
-Scaling transform.
+Scale transform.
 
 **Constructor**
 
-* `value : 2-tuple`
+* `amount : 2-tuple`
     Coordinates of the scaling.
+
+* `gpu_var : str`
+    The name of the GPU variable with the scaling vector.
 
 ---
 
 #### Scale.apply
 
 
-**`Scale.apply(self, arr, value=None)`**
+**`Scale.apply(self, arr, param=None)`**
 
 Apply a scaling to a NumPy array.
 
@@ -4564,6 +4679,15 @@ Update the visual data.
 
 ---
 
+#### ScatterVisual.set_data_range
+
+
+**`ScatterVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
+
+---
+
 #### ScatterVisual.set_marker_size
 
 
@@ -4615,48 +4739,6 @@ Validate the requested data before passing it to set_data().
 **`ScatterVisual.vertex_count(self, x=None, y=None, pos=None, **kwargs)`**
 
 Number of vertices for the requested data.
-
----
-
-### phy.plot.Subplot
-
-Transform to a grid subplot rectangle.
-
-**Constructor**
-
-
-* `shape : 2-tuple`
-    Number of rows and columns in the grid.
-
-* `index : 2-tuple`
-    Row and column index of the subplot to transform into.
-
----
-
-#### Subplot.apply
-
-
-**`Subplot.apply(self, arr, from_bounds=None, to_bounds=None)`**
-
-Apply the transform to a NumPy array.
-
----
-
-#### Subplot.glsl
-
-
-**`Subplot.glsl(self, var)`**
-
-Return a GLSL snippet that applies the transform to a given GLSL variable name.
-
----
-
-#### Subplot.inverse
-
-
-**`Subplot.inverse(self)`**
-
-Return the inverse Range instance.
 
 ---
 
@@ -4780,6 +4862,15 @@ Update the visual data.
 
 ---
 
+#### TextVisual.set_data_range
+
+
+**`TextVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
+
+---
+
 #### TextVisual.set_primitive_type
 
 
@@ -4827,25 +4918,16 @@ Number of vertices for the requested data.
 
 ### phy.plot.TransformChain
 
-A linear sequence of transforms that happen on the CPU and GPU.
+A linear sequence of transforms.
 
 ---
 
-#### TransformChain.add_on_cpu
+#### TransformChain.add
 
 
-**`TransformChain.add_on_cpu(self, transforms, origin=None)`**
+**`TransformChain.add(self, transforms, origin=None)`**
 
-Add some transforms on the CPU.
-
----
-
-#### TransformChain.add_on_gpu
-
-
-**`TransformChain.add_on_gpu(self, transforms, origin=None)`**
-
-Add some transforms on the GPU.
+Add some transforms.
 
 ---
 
@@ -4854,7 +4936,7 @@ Add some transforms on the GPU.
 
 **`TransformChain.apply(self, arr)`**
 
-Apply all CPU transforms on an array.
+Apply all transforms on an array.
 
 ---
 
@@ -4876,21 +4958,12 @@ Return the inverse chain of transforms.
 
 ---
 
-#### TransformChain.cpu_transforms
+#### TransformChain.transforms
 
 
-**`TransformChain.cpu_transforms`**
+**`TransformChain.transforms`**
 
-List of CPU transforms.
-
----
-
-#### TransformChain.gpu_transforms
-
-
-**`TransformChain.gpu_transforms`**
-
-List of GPU transforms.
+List of transforms.
 
 ---
 
@@ -4900,15 +4973,18 @@ Translation transform.
 
 **Constructor**
 
-* `value : 2-tuple`
+* `amount : 2-tuple`
     Coordinates of the translation.
+
+* `gpu_var : str`
+    The name of the GPU variable with the translate vector.
 
 ---
 
 #### Translate.apply
 
 
-**`Translate.apply(self, arr, value=None)`**
+**`Translate.apply(self, arr, param=None)`**
 
 Apply a translation to a NumPy array.
 
@@ -5035,6 +5111,15 @@ Set the visual's box index. This is used by layouts (e.g. subplot indices).
 **`UniformPlotVisual.set_data(self, *args, **kwargs)`**
 
 Update the visual data.
+
+---
+
+#### UniformPlotVisual.set_data_range
+
+
+**`UniformPlotVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
 
 ---
 
@@ -5193,6 +5278,15 @@ Update the visual data.
 
 ---
 
+#### UniformScatterVisual.set_data_range
+
+
+**`UniformScatterVisual.set_data_range(self, data_range)`**
+
+Add a CPU Range transform for data normalization.
+
+---
+
 #### UniformScatterVisual.set_primitive_type
 
 
@@ -5284,10 +5378,10 @@ Close the underlying canvas.
 
 ---
 
-#### AmplitudeView.decrease
+#### AmplitudeView.decrease_marker_size
 
 
-**`AmplitudeView.decrease(self)`**
+**`AmplitudeView.decrease_marker_size(self)`**
 
 Decrease the scaling parameter.
 
@@ -5302,10 +5396,10 @@ Return a list of Bunch instances, with attributes pos and spike_ids.
 
 ---
 
-#### AmplitudeView.increase
+#### AmplitudeView.increase_marker_size
 
 
-**`AmplitudeView.increase(self)`**
+**`AmplitudeView.increase_marker_size(self)`**
 
 Increase the scaling parameter.
 
@@ -5380,10 +5474,10 @@ Switch to the previous amplitude type.
 
 ---
 
-#### AmplitudeView.reset_scaling
+#### AmplitudeView.reset_marker_size
 
 
-**`AmplitudeView.reset_scaling(self)`**
+**`AmplitudeView.reset_marker_size(self)`**
 
 Reset the scaling to the default value.
 
@@ -6412,6 +6506,15 @@ Decrease the scaling parameter.
 
 ---
 
+#### FeatureView.decrease_marker_size
+
+
+**`FeatureView.decrease_marker_size(self)`**
+
+Decrease the scaling parameter.
+
+---
+
 #### FeatureView.get_clusters_data
 
 
@@ -6427,6 +6530,15 @@ To override.
 
 
 **`FeatureView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### FeatureView.increase_marker_size
+
+
+**`FeatureView.increase_marker_size(self)`**
 
 Increase the scaling parameter.
 
@@ -6499,6 +6611,15 @@ Callback function when clusters are selected. May be overriden.
 **`FeatureView.plot(self, **kwargs)`**
 
 Update the view with the selected clusters.
+
+---
+
+#### FeatureView.reset_marker_size
+
+
+**`FeatureView.reset_marker_size(self)`**
+
+Reset the scaling to the default value.
 
 ---
 
@@ -7571,10 +7692,10 @@ Close the underlying canvas.
 
 ---
 
-#### RasterView.decrease
+#### RasterView.decrease_marker_size
 
 
-**`RasterView.decrease(self)`**
+**`RasterView.decrease_marker_size(self)`**
 
 Decrease the scaling parameter.
 
@@ -7591,10 +7712,10 @@ To override.
 
 ---
 
-#### RasterView.increase
+#### RasterView.increase_marker_size
 
 
-**`RasterView.increase(self)`**
+**`RasterView.increase_marker_size(self)`**
 
 Increase the scaling parameter.
 
@@ -7651,10 +7772,10 @@ Make the raster plot.
 
 ---
 
-#### RasterView.reset_scaling
+#### RasterView.reset_marker_size
 
 
-**`RasterView.reset_scaling(self)`**
+**`RasterView.reset_marker_size(self)`**
 
 Reset the scaling to the default value.
 
@@ -7795,10 +7916,10 @@ Close the underlying canvas.
 
 ---
 
-#### ScatterView.decrease
+#### ScatterView.decrease_marker_size
 
 
-**`ScatterView.decrease(self)`**
+**`ScatterView.decrease_marker_size(self)`**
 
 Decrease the scaling parameter.
 
@@ -7813,10 +7934,10 @@ Return a list of Bunch instances, with attributes pos and spike_ids.
 
 ---
 
-#### ScatterView.increase
+#### ScatterView.increase_marker_size
 
 
-**`ScatterView.increase(self)`**
+**`ScatterView.increase_marker_size(self)`**
 
 Increase the scaling parameter.
 
@@ -7873,10 +7994,10 @@ Update the view with the current cluster selection.
 
 ---
 
-#### ScatterView.reset_scaling
+#### ScatterView.reset_marker_size
 
 
-**`ScatterView.reset_scaling(self)`**
+**`ScatterView.reset_marker_size(self)`**
 
 Reset the scaling to the default value.
 
@@ -9728,8 +9849,13 @@ in order to work with the BaseController:
     A `(n_channels, 2)` array with the x, y coordinates of the electrode sites,
     in any unit (e.g. μm).
 
-* `channel_shanks : array-like`
-    A `(n_channels,)` array with the shank index of every channel.
+* `channel_probes : array-like (optional)`
+    An `(n_channels,)` array with the probe index of every channel.
+
+* `channel_shanks : array-like (optional)`
+    An `(n_channels,)` array with the shank index of every channel (every probe might have
+    multiple shanks). The shank index is relative to the probe. The pair (probe, shank)
+    identifies uniquely a shank.
 channel_vertical_order = array-like
     Permutation of the channels for display in the trace view. The shape is `(n_channels,)`.
 
@@ -10011,6 +10137,48 @@ peak channel.
 **`FeatureMixin.get_spike_feature_amplitudes(self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs)`**
 
 Return the features for the specified channel and PC.
+
+---
+
+### phy.apps.Path
+
+PurePath subclass that can make system calls.
+
+Path represents a filesystem path but unlike PurePath, also offers
+methods to do system calls on path objects. Depending on your system,
+instantiating a Path will return either a PosixPath or a WindowsPath
+object. You can also instantiate a PosixPath or WindowsPath directly,
+but cannot instantiate a WindowsPath on a POSIX system or vice versa.
+
+---
+
+#### Path.None
+
+
+**`Path.None`**
+
+attrgetter(attr, ...) --> attrgetter object
+
+Return a callable object that fetches the given attribute(s) from its operand.
+After f = attrgetter('name'), the call f(r) returns r.name.
+After g = attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).
+After h = attrgetter('name.first', 'name.last'), the call h(r) returns
+(r.name.first, r.name.last).
+
+---
+
+#### Path.None
+
+
+**`Path.None`**
+
+attrgetter(attr, ...) --> attrgetter object
+
+Return a callable object that fetches the given attribute(s) from its operand.
+After f = attrgetter('name'), the call f(r) returns r.name.
+After g = attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).
+After h = attrgetter('name.first', 'name.last'), the call h(r) returns
+(r.name.first, r.name.last).
 
 ---
 
@@ -10807,6 +10975,42 @@ a TSV file.
 **`TemplateModel.save_spike_clusters(self, spike_clusters)`**
 
 Save the spike clusters.
+
+---
+
+#### TemplateModel.templates_amplitudes
+
+
+**`TemplateModel.templates_amplitudes`**
+
+Returns the average amplitude per cluster
+
+---
+
+#### TemplateModel.templates_channels
+
+
+**`TemplateModel.templates_channels`**
+
+Returns a vector of peak channels for all templates
+
+---
+
+#### TemplateModel.templates_probes
+
+
+**`TemplateModel.templates_probes`**
+
+Returns a vector of probe index for all templates
+
+---
+
+#### TemplateModel.templates_waveforms_durations
+
+
+**`TemplateModel.templates_waveforms_durations`**
+
+Returns a vector of waveform durations (ms) for all templates
 
 ---
 

@@ -156,13 +156,16 @@ class WaveformMixin(object):
         super(WaveformMixin, self)._set_view_creator()
         self.view_creator['WaveformView'] = self.create_waveform_view
 
-    def create_waveform_view(self):
+    def _get_waveforms_dict(self):
         waveform_functions = _concatenate_parents_attributes(
             self.__class__, '_waveform_functions')
-        waveforms_dict = {name: getattr(self, method) for name, method in waveform_functions}
+        return {name: getattr(self, method) for name, method in waveform_functions}
+
+    def create_waveform_view(self):
+        waveforms_dict = self._get_waveforms_dict()
         if not waveforms_dict:
             return
-        v = WaveformView(waveforms_dict)
+        v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
 
         @connect(sender=v)
         def on_channel_click(sender, channel_id=None, key=None, button=None):
@@ -402,7 +405,7 @@ class TemplateMixin(object):
     def _set_cluster_metrics(self):
         """Add an amplitude column in the cluster view."""
         super(TemplateMixin, self)._set_cluster_metrics()
-        self.cluster_metrics['amplitude'] = self.get_cluster_amplitude
+        self.cluster_metrics['amp'] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
         """Return the template amplitudes multiplied by the spike's amplitude."""
@@ -424,7 +427,8 @@ class TemplateMixin(object):
         tf = self.model.get_template_features(spike_ids)
         if tf is None:
             return
-        template_amplitudes = tf[:, first_cluster]
+        template = self.get_template_for_cluster(first_cluster)
+        template_amplitudes = tf[:, template]
         assert template_amplitudes.shape == spike_ids.shape
         return template_amplitudes
 

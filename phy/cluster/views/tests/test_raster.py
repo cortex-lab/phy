@@ -49,8 +49,8 @@ def test_raster_0(qtbot, gui):
     c.set_color_mapping('quality', 'categorical')
     v.plot()
 
-    v.increase()
-    v.decrease()
+    v.increase_marker_size()
+    v.decrease_marker_size()
 
     # Simulate channel selection.
     _clicked = []

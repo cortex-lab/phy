@@ -7,11 +7,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
 import gc
 import logging
 import re
 from timeit import default_timer
-import traceback
 
 import numpy as np
 
@@ -19,7 +19,7 @@ from phylib.utils import connect, emit, Bunch
 from phy.gui.qt import Qt, QEvent, QOpenGLWindow
 from . import gloo
 from .gloo import gl
-from .transform import TransformChain, Clip, pixels_to_ndc
+from .transform import TransformChain, Clip, pixels_to_ndc, Range
 from .utils import _load_shader, _get_array, BatchAccumulator
 
 
@@ -75,7 +75,7 @@ class BaseVisual(object):
 
     def __init__(self):
         self.gl_primitive_type = None
-        self.transforms = TransformChain()
+        self.transforms = TransformChain()  # CPU transforms for data normalization.
         self.inserter = GLSLInserter()
         self.inserter.insert_vert('uniform vec2 u_window_size;', 'header')
         # The program will be set by the canvas when the visual is
@@ -99,6 +99,11 @@ class BaseVisual(object):
     def set_primitive_type(self, primitive_type):
         """Set the primitive type (points, lines, line_strip, line_fan, triangles)."""
         self.gl_primitive_type = primitive_type
+
+    def set_data_range(self, data_range):
+        """Add a CPU Range transform for data normalization."""
+        self.data_range = Range(data_range)
+        self.transforms.add(self.data_range)
 
     def on_draw(self):
         """Draw the visual."""
@@ -267,12 +272,10 @@ class GLSLInserter(object):
         """Insert a GLSL snippet into the fragment shader. See `insert_vert()`."""
         self._insert('frag', glsl, location, origin=origin, index=index)
 
-    def add_transform_chain(self, tc):
+    def add_gpu_transforms(self, tc):
         """Insert all GLSL snippets from a transform chain."""
         # Generate the transforms snippet.
-        for where, t, origin in tc._transforms:
-            if where != 'gpu':
-                continue
+        for t, origin in tc._transforms:
             if isinstance(t, Clip):
                 # Set the varying value in the vertex shader.
                 self.insert_vert('v_temp_pos_tr = temp_pos_tr;', origin=origin)
@@ -471,7 +474,7 @@ class BaseCanvas(QOpenGLWindow):
 
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
-        self.transforms = TransformChain()
+        self.gpu_transforms = TransformChain()
         self.inserter = GLSLInserter()
         self.visuals = []
         self._next_paint_callbacks = []
@@ -572,20 +575,17 @@ class BaseCanvas(QOpenGLWindow):
         exclude_origins = kwargs.pop('exclude_origins', ())
 
         # Retrieve the visual's GLSL inserter.
-        inserter = visual.inserter
+        v_inserter = visual.inserter
 
-        # Add the visual's transforms first.
-        inserter.add_transform_chain(visual.transforms)
-
-        # Then, add the canvas' transforms.
-        inserter.add_transform_chain(self.transforms)
+        # Add the canvas' GPU transforms.
+        v_inserter.add_gpu_transforms(self.gpu_transforms)
         # Also, add the canvas' inserter. The snippets that should be ignored will be excluded
         # in insert_into_shaders() below.
-        inserter += self.inserter
+        v_inserter += self.inserter
 
         # Now, we insert the transforms GLSL into the shaders.
         vs, fs = visual.vertex_shader, visual.fragment_shader
-        vs, fs = inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
+        vs, fs = v_inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
 
         # Finally, we create the visual's program.
         visual.program = LazyProgram(vs, fs)
@@ -623,8 +623,11 @@ class BaseCanvas(QOpenGLWindow):
     def initializeGL(self):
         """Create the scene."""
         # Enable transparency.
-        gl.enable_depth_mask()
-        self.update()
+        try:
+            gl.enable_depth_mask()
+        except Exception as e:  # pragma: no cover
+            logger.debug("Exception in initializetGL: %s", str(e))
+            return
 
     def paintGL(self):
         """Draw all visuals."""
@@ -648,8 +651,9 @@ class BaseCanvas(QOpenGLWindow):
                     logger.log(5, "Draw visual `%s`.", visual)
                     visual.on_draw()
             self._size = size
-        except Exception:  # pragma: no cover
-            traceback.print_exc()
+        except Exception as e:  # pragma: no cover
+            logger.debug("Exception in paintGL: %s", str(e))
+            return
 
     # Events
     # ---------------------------------------------------------------------------------------------
@@ -721,7 +725,7 @@ class BaseCanvas(QOpenGLWindow):
         """Emit an internal `mouse_wheel` event."""
         # NOTE: Qt has no way to simulate wheel events for testing
         delta = e.angleDelta()
-        deltay = delta.y() / 120.0
+        deltay = (delta.y() or delta.x()) / 120.0
         pos = e.pos().x(), e.pos().y()
         modifiers = get_modifiers(e)
         self.emit('mouse_wheel', pos=pos, delta=deltay, modifiers=modifiers)
@@ -791,6 +795,7 @@ class BaseLayout(object):
 
     def __init__(self, box_var=None):
         self.box_var = box_var or 'a_box_index'
+        self.gpu_transforms = TransformChain(origin=self)
 
     def attach(self, canvas):
         """Attach this layout to a canvas."""
@@ -803,13 +808,28 @@ class BaseLayout(object):
             if canvas.has_visual(visual):
                 self.update_visual(visual)
 
-    def map(self, arr, box=None):
-        """Direct transformation from data to NDC coordinates."""
-        raise NotImplementedError()
+    @contextmanager
+    def swap_active_box(self, box):
+        """Context manager to temporary change the active box."""
+        prev_box = self.active_box
+        self.active_box = box
+        yield self
+        self.active_box = prev_box
+
+    def map(self, arr, box=None, inverse=None):
+        """Apply the layout transformation to a position array."""
+        assert box is not None
+        tc = self.gpu_transforms
+        if inverse:
+            tc = tc.inverse()
+        # Apply the transformation after temporarily switching the active box
+        # to the specified box.
+        with self.swap_active_box(box):
+            return tc.apply(arr)
 
     def imap(self, arr, box=None):
-        """Inverse transformation from NDC to data coordinates."""
-        raise NotImplementedError()
+        """Apply the layout inverse transformation to a position array."""
+        return self.map(arr, box=box, inverse=True)
 
     def get_closest_box(self, ndc):
         """Override to return the box closest to a given position in NDC."""
@@ -823,7 +843,10 @@ class BaseLayout(object):
         box = self.get_closest_box(ndc)
         self.active_box = box
         # From NDC to data coordinates, in the given box.
-        return box, self.imap(ndc, box)
+        pos = self.imap(ndc, box).squeeze()
+        assert len(pos) == 2
+        x, y = pos
+        return box, (x, y)
 
     def update_visual(self, visual):
         """Called whenever visual.set_data() is called. Set a_box_index in here."""

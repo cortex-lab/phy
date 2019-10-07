@@ -64,6 +64,9 @@ def test_feature_view(qtbot, gui, n_channels):
     v.increase()
     v.decrease()
 
+    v.increase_marker_size()
+    v.decrease_marker_size()
+
     v.on_channel_click(channel_id=3, button='Left', key=None)
     v.on_channel_click(channel_id=3, button='Right', key=None)
     v.on_channel_click(channel_id=3, button='Right', key=2)

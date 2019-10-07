@@ -29,8 +29,9 @@ def test_amplitude_view_0(qtbot, gui):
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
-    v.increase()
-    v.decrease()
+    v.increase_marker_size()
+    v.decrease_marker_size()
+    v.reset_marker_size()
 
     _stop_and_close(qtbot, v)
 

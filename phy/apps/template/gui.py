@@ -80,6 +80,14 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     # Internal methods
     # -------------------------------------------------------------------------
 
+    def _get_waveforms_dict(self):
+        waveforms_dict = super(TemplateController, self)._get_waveforms_dict()
+        # Remove waveforms and mean_waveforms if there is no raw data file.
+        if self.model.traces is None:
+            waveforms_dict.pop('waveforms', None)
+            waveforms_dict.pop('mean_waveforms', None)
+        return waveforms_dict
+
     def _create_model(self, dir_path=None, **kwargs):
         return TemplateModel(dir_path=dir_path, **kwargs)
 
