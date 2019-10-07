@@ -355,7 +355,7 @@ class Attribute(Variable):
         else:  # lif not isinstance(data, VertexBuffer):
             name, base, count = self.dtype
             data = np.array(data, dtype=base, copy=False)
-            data = data.ravel().view([self.dtype])
+            data = data.ravel().view([(name, base, (count,))])
             # WARNING : transform data with the right type
             # data = np.array(data,copy=False)
             self._data = data.view(VertexBuffer)

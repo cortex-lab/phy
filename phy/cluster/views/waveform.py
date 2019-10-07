@@ -228,7 +228,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             return
 
         _, m, _, M = self.data_bounds
-        mm = max(abs(m), abs(M))
+        mm = max(abs(m), abs(M)) or 1.
         ax_db = (-1, m / mm, +1, M / mm)
 
         # Horizontal y=0 lines.

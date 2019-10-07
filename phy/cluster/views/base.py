@@ -241,7 +241,7 @@ class ManualClusteringView(object):
                 # This is only for OpenGL views.
                 self.canvas.set_lazy(True)
                 thread_pool().start(worker)
-            else:
+            else:  # pragma: no cover
                 # This is for OpenGL views, without threading.
                 worker.run()
                 self._lock = None
