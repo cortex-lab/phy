@@ -427,7 +427,8 @@ class TemplateMixin(object):
         tf = self.model.get_template_features(spike_ids)
         if tf is None:
             return
-        template_amplitudes = tf[:, first_cluster]
+        template = self.get_template_for_cluster(first_cluster)
+        template_amplitudes = tf[:, template]
         assert template_amplitudes.shape == spike_ids.shape
         return template_amplitudes
 
