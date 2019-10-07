@@ -405,7 +405,7 @@ class TemplateMixin(object):
     def _set_cluster_metrics(self):
         """Add an amplitude column in the cluster view."""
         super(TemplateMixin, self)._set_cluster_metrics()
-        self.cluster_metrics['amplitude'] = self.get_cluster_amplitude
+        self.cluster_metrics['amp'] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
         """Return the template amplitudes multiplied by the spike's amplitude."""
