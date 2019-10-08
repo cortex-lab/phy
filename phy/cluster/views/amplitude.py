@@ -32,8 +32,11 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     Constructor
     -----------
 
-    amplitudes : function
-        Maps `cluster_ids` to a list `[Bunch(amplitudes, spike_ids), ...]` for each cluster.
+    amplitudes : dict
+        Dictionary `{amplitude_name: function}`, for different types of amplitudes.
+
+        Each function maps `cluster_ids` to a list
+        `[Bunch(amplitudes, spike_ids, spike_times), ...]` for each cluster.
         Use `cluster_id=None` for background amplitudes.
 
     """

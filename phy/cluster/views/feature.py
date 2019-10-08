@@ -98,6 +98,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
+        'increase': 'ctrl++',
+        'decrease': 'ctrl+-',
         'add_lasso_point': 'ctrl+click',
         'stop_lasso': 'ctrl+right click',
         'toggle_automatic_channel_selection': 'c',

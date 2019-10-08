@@ -46,8 +46,8 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
-        'decrease': 'ctrl+shift+-',
-        'increase': 'ctrl+shift++',
+        'decrease_marker_size': 'ctrl+shift+-',
+        'increase_marker_size': 'ctrl+shift++',
         'select_cluster': 'ctrl+click',
     }
 
