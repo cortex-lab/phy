@@ -212,7 +212,6 @@ class FeatureMixin(object):
 
     _cached = (
         '_get_features',
-        '_get_feature_view_spike_times',
         'get_spike_feature_amplitudes',
     )
 
@@ -269,8 +268,9 @@ class FeatureMixin(object):
     def _get_feature_view_spike_times(self, cluster_id=None, load_all=False):
         """Return the times of some or all spikes belonging to a given cluster."""
         spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
+        spike_times = self._get_spike_times_reordered(spike_ids)
         return Bunch(
-            data=self.model.spike_times[spike_ids],
+            data=spike_times,
             spike_ids=spike_ids,
             lim=(0., self.model.duration))
 
@@ -301,6 +301,12 @@ class FeatureMixin(object):
             features=self._get_features,
             attributes={'time': self._get_feature_view_spike_times}
         )
+
+        @connect
+        def on_toggle_spike_reorder(sender, do_reorder):
+            """Called when spike reordering is toggled."""
+            self.selection.do_reorder = do_reorder
+            view.plot()
 
         @connect(sender=view)
         def on_feature_click(sender, dim=None, channel_id=None, pc=None):
@@ -1125,6 +1131,15 @@ class BaseController(object):
     # Amplitudes
     # -------------------------------------------------------------------------
 
+    def _get_spike_times_reordered(self, spike_ids):
+        """Get spike times, reordered if needed."""
+        spike_times = self.model.spike_times
+        if (self.selection.get('do_reorder', None) and
+                getattr(self.model, 'spike_reorder', None) is not None):
+            spike_times = spike_times[self.model.spike_reorder]
+        spike_times = spike_times[spike_ids]
+        return spike_times
+
     def _get_amplitude_functions(self):
         """Return a dictionary mapping amplitude names to corresponding methods."""
         # Concatenation of all _amplitude_functions attributes in the class hierarchy.
@@ -1175,7 +1190,7 @@ class BaseController(object):
             else:
                 # Background spikes.
                 spike_ids = self.selector.select_spikes(other_clusters, n)
-            spike_times = self.model.spike_times[spike_ids]
+            spike_times = self._get_spike_times_reordered(spike_ids)
             if name == 'feature':
                 # Retrieve the feature PC selected in the feature view.
                 channel_id = self.selection.get('channel_id', channel_id)
@@ -1208,6 +1223,12 @@ class BaseController(object):
             amplitude_name=None,  # TODO: GUI state
             duration=self.model.duration,
         )
+
+        @connect
+        def on_toggle_spike_reorder(sender, do_reorder):
+            """Called when spike reordering is toggled."""
+            self.selection.do_reorder = do_reorder
+            view.plot()
 
         @connect
         def on_selected_channel_changed(sender):

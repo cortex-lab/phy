@@ -57,6 +57,7 @@ class MyModel(object):
     amplitudes = np.random.normal(size=n_spikes, loc=1, scale=.1)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_templates = spike_clusters
+    spike_reorder = np.random.permutation(n_spikes)
     spike_times = artificial_spike_samples(n_spikes) / sample_rate
     duration = spike_times[-1]
     traces = artificial_traces(int(sample_rate * duration), n_channels)
@@ -430,6 +431,9 @@ class MockControllerFTests(BaseControllerTests, unittest.TestCase):
         self.split()
         # Split one cluster => Two new clusters should be selected after the split.
         self.assertEqual(self.selected[:2], [n + 1, n + 2])
+
+    def test_feature_view_toggle_spike_reorder(self):
+        self.supervisor.toggle_spike_reorder(True)
 
     def test_select_feature(self):
         self.next()
