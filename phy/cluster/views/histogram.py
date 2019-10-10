@@ -82,10 +82,13 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
     }
 
+    _state_attrs = ('n_bins', 'x_min', 'x_max')
+    _local_state_attrs = ()
+
     def __init__(self, cluster_stat=None):
         super(HistogramView, self).__init__()
-        self.state_attrs += ('n_bins', 'x_min', 'x_max')
-        self.local_state_attrs += ()
+        self.state_attrs += self._state_attrs
+        self.local_state_attrs += self._local_state_attrs
         self.canvas.set_layout(layout='stacked', n_plots=1)
         self.canvas.enable_axes()
 
@@ -276,6 +279,9 @@ class FiringRateView(HistogramView):
     n_bins = 200
     alias_char = 'fr'
     bin_unit = 's'
+
+    _state_attrs = ('n_bins', 'x_min')
+    _local_state_attrs = ('x_max',)  # depends on the duration of the dataset
 
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
