@@ -12,6 +12,7 @@ from numpy.testing import assert_allclose as ac
 from phylib.io.mock import artificial_traces, artificial_spike_clusters
 from phylib.utils import Bunch, connect
 from phylib.utils.color import ClusterColorSelector
+from phylib.utils.geometry import linear_positions
 from phy.plot.tests import mouse_click
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
@@ -88,7 +89,7 @@ def test_trace_view_1(qtbot, tempdir, gui):
         n_channels=nc,
         sample_rate=sr,
         duration=duration,
-        channel_vertical_order=np.arange(nc)[::-1],
+        channel_positions=linear_positions(nc),
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)

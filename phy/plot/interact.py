@@ -366,9 +366,11 @@ class Stacked(Boxed):
 
     """
     margin = 0
+    _origin = 'top'
 
     def __init__(self, n_boxes, box_var=None, origin=None):
-        self._origin = origin
+        self._origin = origin or self._origin
+        assert self._origin in ('top', 'bottom')
         b = self.get_box_bounds(n_boxes)
         super(Stacked, self).__init__(b, box_var=box_var, keep_aspect_ratio=False)
 
@@ -396,8 +398,7 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        origin = self._origin or 'top'
-        if origin == 'top':
+        if self._origin == 'top':
             b = b[::-1, :]
         return b
 

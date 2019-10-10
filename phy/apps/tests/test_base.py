@@ -46,7 +46,6 @@ class MyModel(object):
     n_templates = n_clusters
     n_pcs = 5
     n_samples_waveforms = 100
-    channel_vertical_order = None
     channel_positions = np.random.normal(size=(n_channels, 2))
     channel_mapping = np.arange(0, n_channels)
     channel_shanks = np.zeros(n_channels, dtype=np.int32)

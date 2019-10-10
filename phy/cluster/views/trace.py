@@ -13,6 +13,7 @@ import numpy as np
 
 from phylib.utils import Bunch, emit
 from phylib.utils.color import selected_cluster_color
+from phy.plot.interact import Stacked
 from phy.plot.transform import NDC, Range, _fix_coordinate_in_visual
 from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual
 from .base import ManualClusteringView, ScalingMixin
@@ -102,9 +103,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
     sample_rate : float
     duration : float
     n_channels : int
-    channel_vertical_order : array-like
-        Permutation of the channels. This 1D array gives the channel id of all channels from
-        top to bottom (or conversely, depending on `origin=top|bottom`).
+    channel_positions : array-like
+        Positions of the channels, used for displaying the channels in the right y order
     channel_labels : list
         Labels of all shown channels. By default, this is just the channel ids.
 
@@ -141,8 +141,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
     }
 
     def __init__(
-            self, traces=None, sample_rate=None, spike_times=None, duration=None, n_channels=None,
-            channel_vertical_order=None, channel_labels=None, **kwargs):
+            self, traces=None, sample_rate=None, spike_times=None, duration=None,
+            n_channels=None, channel_positions=None, channel_labels=None, **kwargs):
 
         self.do_show_labels = True
         self.show_all_spikes = False
@@ -166,11 +166,13 @@ class TraceView(ScalingMixin, ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
-        # Channel permutation.
-        self._channel_perm = (
-            np.arange(n_channels) if channel_vertical_order is None else channel_vertical_order)
-        assert self._channel_perm.shape == (n_channels,)
-        self._channel_perm = np.argsort(self._channel_perm)
+        # Channel y ranking.
+        self.channel_positions = (
+            channel_positions if channel_positions is not None else
+            np.c_[np.zeros(n_channels), np.arange(n_channels)])
+        # channel_y_ranks[i] is the position of channel #i in the trace view.
+        self.channel_y_ranks = np.argsort(np.argsort(self.channel_positions[:, 1]))
+        assert self.channel_y_ranks.shape == (n_channels,)
 
         # Channel labels.
         self.channel_labels = (
@@ -178,15 +180,12 @@ class TraceView(ScalingMixin, ManualClusteringView):
             ['%d' % ch for ch in range(n_channels)])
         assert len(self.channel_labels) == n_channels
 
-        # Box and probe scaling.
-        self._origin = None
-
         # Initialize the view.
         super(TraceView, self).__init__(**kwargs)
         self.state_attrs += ('origin', 'do_show_labels', 'show_all_spikes', 'auto_scale')
         self.local_state_attrs += ('interval', 'scaling',)
 
-        self.canvas.set_layout('stacked', origin=self.origin, n_plots=self.n_channels)
+        self.canvas.set_layout('stacked', n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
 
         # Visuals.
@@ -214,11 +213,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
     def stacked(self):
         return self.canvas.stacked
 
-    def _permute_channels(self, x, inv=False):
-        cp = self._channel_perm
-        cp = np.argsort(cp)
-        return cp[x]
-
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -232,7 +226,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         t = self._interval[0] + np.arange(n_samples) * self.dt
         t = np.tile(t, (n_ch, 1))
 
-        box_index = self._permute_channels(np.arange(n_ch))
+        box_index = self.channel_y_ranks
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=1)
 
         assert t.shape == (n_ch, n_samples)
@@ -257,7 +251,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        box_index = self._permute_channels(bunch.channel_ids)
+        box_index = self.channel_y_ranks[bunch.channel_ids]
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
         self.waveform_visual.add_batch_data(
             box_index=box_index,
@@ -268,7 +262,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
     def _plot_labels(self, traces):
         self.text_visual.reset_batch()
         for ch in range(self.n_channels):
-            bi = self._permute_channels(ch)
+            bi = self.channel_y_ranks[ch]
             ch_label = self.channel_labels[ch]
             self.text_visual.add_batch_data(
                 pos=[self.data_bounds[0], 0],
@@ -407,17 +401,22 @@ class TraceView(ScalingMixin, ManualClusteringView):
     def origin(self):
         """Whether to show the channels from top to bottom (`top` option, the default), or from
         bottom to top (`bottom`)."""
-        return self._origin
+        return getattr(self.canvas.layout, 'origin', Stacked._origin)
 
     @origin.setter
     def origin(self, value):
-        self._origin = value
+        if value is None:
+            return
         if self.canvas.layout:
             self.canvas.layout.origin = value
+        else:  # pragma: no cover
+            logger.warning(
+                "Could not set origin to %s because the layout instance was not initialized yet.",
+                value)
 
     def switch_origin(self):
         """Switch between top and bottom origin for the channels."""
-        self.origin = 'top' if self._origin in ('bottom', None) else 'bottom'
+        self.origin = 'bottom' if self.origin == 'top' else 'top'
 
     # Navigation
     # -------------------------------------------------------------------------
@@ -551,7 +550,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         if 'Control' in e.modifiers:
             # Get mouse position in NDC.
             box_id, _ = self.canvas.stacked.box_map(e.pos)
-            channel_id = self._permute_channels(box_id, inv=True)
+            channel_id = np.nonzero(self.channel_y_ranks == box_id)[0]
             # Find the spike and cluster closest to the mouse.
             db = self.data_bounds
             # Get the information about the displayed spikes.

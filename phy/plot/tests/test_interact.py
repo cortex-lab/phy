@@ -225,7 +225,7 @@ def test_stacked_closest_box():
     ac(stacked.get_closest_box((-.5, .9)), 0)
     ac(stacked.get_closest_box((+.5, -.9)), 3)
 
-    stacked = Stacked(n_boxes=4, origin='lower')
+    stacked = Stacked(n_boxes=4, origin='bottom')
     ac(stacked.get_closest_box((-.5, .9)), 3)
     ac(stacked.get_closest_box((+.5, -.9)), 0)
 

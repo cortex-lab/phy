@@ -545,11 +545,11 @@ class TraceMixin(object):
         v = TraceView(
             traces=self._get_traces,
             spike_times=self._trace_spike_times,
-            n_channels=self.model.n_channels,
-            channel_labels=self._get_channel_labels(),
             sample_rate=self.model.sample_rate,
             duration=self.model.duration,
-            channel_vertical_order=getattr(self.model, 'channel_vertical_order', None),
+            n_channels=self.model.n_channels,
+            channel_labels=self._get_channel_labels(),
+            channel_positions=self.model.channel_positions,
         )
 
         # Update the get_traces() function with show_all_spikes.
@@ -639,8 +639,6 @@ class BaseController(object):
         An `(n_channels,)` array with the shank index of every channel (every probe might have
         multiple shanks). The shank index is relative to the probe. The pair (probe, shank)
         identifies uniquely a shank.
-    channel_vertical_order = array-like
-        Permutation of the channels for display in the trace view. The shape is `(n_channels,)`.
     duration : float
         The total duration of the recording, in seconds.
     features : array-like
