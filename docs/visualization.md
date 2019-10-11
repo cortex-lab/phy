@@ -215,6 +215,8 @@ Keyboard shortcuts for FeatureView
 
 - add_lasso_point                          ctrl+click
 - change_marker_size                       ctrl+wheel
+- decrease                                 ctrl+-
+- increase                                 ctrl++
 - stop_lasso                               ctrl+right click
 - toggle_automatic_channel_selection       c
 
@@ -401,8 +403,8 @@ Select a cluster with **Control+click**.
 Keyboard shortcuts for RasterView
 
 - change_marker_size                       ctrl+wheel
-- decrease                                 ctrl+shift+-
-- increase                                 ctrl+shift++
+- decrease_marker_size                     ctrl+shift+-
+- increase_marker_size                     ctrl+shift++
 - select_cluster                           ctrl+click
 
 Snippets for RasterView

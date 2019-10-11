@@ -682,6 +682,41 @@ class WaveformUMAPPlugin(IPlugin):
 ```
 
 
+## Adding a custom raw data filter
+
+You can add one or several filters for the trace view and the waveform view. The shortcut `Alt+R` switches the different registered filters.
+
+In this example, we add a Butterworth high-pass filter.
+
+```python
+# import from plugins/raw_data_filter.py
+"""Show how to add a custom raw data filter for the TraceView and Waveform View
+
+Use Alt+R in the GUI to toggle the filter.
+
+"""
+
+import numpy as np
+from scipy.signal import butter, lfilter
+
+from phy import IPlugin
+
+
+class RawDataFilterPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        b, a = butter(3, 150.0 / controller.model.sample_rate * 2.0, 'high')
+
+        @controller.raw_data_filter.add_filter
+        def high_pass(arr, axis=0):
+            arr = lfilter(b, a, arr, axis=axis)
+            arr = np.flip(arr, axis=axis)
+            arr = lfilter(b, a, arr, axis=axis)
+            arr = np.flip(arr, axis=axis)
+            return arr
+
+```
+
+
 ## Writing a custom matplotlib view
 
 Most built-in views in phy are based on OpenGL instead of matplotlib, for performance reasons. Since writing OpenGL views is significantly more complex than with matplotlib, we cover OpenGL views later in this documentation.

@@ -1113,9 +1113,9 @@ specify the view index (0 by default).
 #### GUI.list_views
 
 
-**`GUI.list_views(self, cls)`**
+**`GUI.list_views(self, *classes)`**
 
-Return the list of views which are instances of a given class.
+Return the list of views which are instances of one or several classes.
 
 ---
 
@@ -5354,8 +5354,11 @@ This view displays an amplitude plot for all selected clusters.
 **Constructor**
 
 
-* `amplitudes : function`
-    Maps `cluster_ids` to a list `[Bunch(amplitudes, spike_ids), ...]` for each cluster.
+* `amplitudes : dict`
+    Dictionary `{amplitude_name: function}`, for different types of amplitudes.
+
+    Each function maps `cluster_ids` to a list
+    `[Bunch(amplitudes, spike_ids, spike_times), ...]` for each cluster.
     Use `cluster_id=None` for background amplitudes.
 
 ---
@@ -5453,6 +5456,15 @@ Return the spikes enclosed by the lasso.
 **`AmplitudeView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Callback function when clusters are selected. May be overriden.
+
+---
+
+#### AmplitudeView.on_select_threaded
+
+
+**`AmplitudeView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
 
 ---
 
@@ -6318,6 +6330,15 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### CorrelogramView.on_select_threaded
+
+
+**`CorrelogramView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### CorrelogramView.plot
 
 
@@ -6605,6 +6626,15 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### FeatureView.on_select_threaded
+
+
+**`FeatureView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### FeatureView.plot
 
 
@@ -6810,6 +6840,15 @@ Change the scaling with the wheel.
 **`FiringRateView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Callback function when clusters are selected. May be overriden.
+
+---
+
+#### FiringRateView.on_select_threaded
+
+
+**`FiringRateView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
 
 ---
 
@@ -7029,6 +7068,15 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### HistogramView.on_select_threaded
+
+
+**`HistogramView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### HistogramView.plot
 
 
@@ -7238,6 +7286,15 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### ISIView.on_select_threaded
+
+
+**`ISIView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### ISIView.plot
 
 
@@ -7438,6 +7495,15 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### ManualClusteringView.on_select_threaded
+
+
+**`ManualClusteringView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### ManualClusteringView.plot
 
 
@@ -7581,6 +7647,15 @@ selected clusters (template view, raster view).
 **`ProbeView.on_select(self, cluster_ids=(), **kwargs)`**
 
 Update the view with the selected clusters.
+
+---
+
+#### ProbeView.on_select_threaded
+
+
+**`ProbeView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
 
 ---
 
@@ -7758,6 +7833,15 @@ Change the scaling with the wheel.
 
 
 **`RasterView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
+
+
+
+---
+
+#### RasterView.on_select_threaded
+
+
+**`RasterView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
 
 
 
@@ -7982,6 +8066,15 @@ Return the spikes enclosed by the lasso.
 **`ScatterView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Callback function when clusters are selected. May be overriden.
+
+---
+
+#### ScatterView.on_select_threaded
+
+
+**`ScatterView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
 
 ---
 
@@ -8631,6 +8724,15 @@ Use a logarithmic transform or not for the colormap.
 
 ---
 
+#### Supervisor.toggle_spike_reorder
+
+
+**`Supervisor.toggle_spike_reorder(self, checked)`**
+
+Toggle spike time reordering.
+
+---
+
 #### Supervisor.undo
 
 
@@ -8826,6 +8928,15 @@ Change the scaling with the wheel.
 
 ---
 
+#### TemplateView.on_select_threaded
+
+
+**`TemplateView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### TemplateView.plot
 
 
@@ -8977,9 +9088,8 @@ This view shows the raw traces along with spike waveforms.
 
 * `n_channels : int`
 
-* `channel_vertical_order : array-like`
-    Permutation of the channels. This 1D array gives the channel id of all channels from
-    top to bottom (or conversely, depending on `origin=top|bottom`).
+* `channel_positions : array-like`
+    Positions of the channels, used for displaying the channels in the right y order
 
 * `channel_labels : list`
     Labels of all shown channels. By default, this is just the channel ids.
@@ -9147,12 +9257,21 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### TraceView.on_select_threaded
+
+
+**`TraceView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### TraceView.plot
 
 
-**`TraceView.plot(self, **kwargs)`**
+**`TraceView.plot(self, update_traces=True, update_waveforms=True, change_status=True)`**
 
-Plot the waveforms.
+Update the view with the current cluster selection.
 
 ---
 
@@ -9543,6 +9662,15 @@ Callback function when clusters are selected. May be overriden.
 
 ---
 
+#### WaveformView.on_select_threaded
+
+
+**`WaveformView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
 #### WaveformView.plot
 
 
@@ -9856,8 +9984,6 @@ in order to work with the BaseController:
     An `(n_channels,)` array with the shank index of every channel (every probe might have
     multiple shanks). The shank index is relative to the probe. The pair (probe, shank)
     identifies uniquely a shank.
-channel_vertical_order = array-like
-    Permutation of the channels for display in the trace view. The shape is `(n_channels,)`.
 
 * `duration : float`
     The total duration of the recording, in seconds.
@@ -10823,13 +10949,6 @@ Object holding all data of a KiloSort/phy dataset.
 
 * `sample_rate : float`
     Sampling rate of the data file.
-
-* `filter_order : int`
-    Order of the filter used for waveforms
-
-* `hp_filtered : bool`
-    Whether the raw data file is already high-pass filtered. In that case, disable the
-    filtering for the waveform extraction.
 
 ---
 
