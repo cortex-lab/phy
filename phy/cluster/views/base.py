@@ -8,6 +8,7 @@
 # -----------------------------------------------------------------------------
 
 from datetime import datetime
+from functools import partial
 import gc
 import logging
 from pathlib import Path
@@ -134,6 +135,72 @@ class ManualClusteringView(object):
             return
         self.plot(**kwargs)
 
+    def on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs):
+        # Decide whether the view should react to the select event or not.
+        if not self.auto_update:
+            return
+        if sender.__class__.__name__ != 'Supervisor':
+            return
+        assert isinstance(cluster_ids, list)
+        if not cluster_ids:
+            return
+
+        # The lock is used so that two different background threads do not access the same
+        # view simultaneously, which can lead to conflicts, errors in the plotting code,
+        # and QTimer thread exceptions that lead to frozen OpenGL views.
+        if self._lock:
+            return
+        self._lock = True
+
+        # The view update occurs in a thread in order not to block the main GUI thread.
+        # A complication is that OpenGL updates should only occur in the main GUI thread,
+        # whereas the computation of the data buffers to upload to the GPU should happen
+        # in a thread. Finally, the select events are throttled (more precisely, debounced)
+        # to avoid clogging the GUI when many clusters are successively selected, but this
+        # is implemented at the level of the table widget, not here.
+
+        # This function executes in the Qt thread pool.
+        def _worker():  # pragma: no cover
+            self.on_select(cluster_ids=cluster_ids, **kwargs)
+
+        # We launch this function in the thread pool.
+        worker = Worker(_worker)
+
+        # Once the worker has finished in the thread, the finished signal is raised,
+        # and the callback function below runs on the main GUI thread.
+        # All OpenGL updates triggered in the worker (background thread) where recorded
+        # instead of being immediately executed (which would have caused errors because
+        # OpenGL updates should not be executed from a background thread).
+        # Once these updates have been collected in the right order, we execute all of
+        # them here, in the main GUI thread.
+        @worker.signals.finished.connect
+        def finished():
+            # When the task has finished in the thread pool, we recover all program
+            # updates of the view, and we execute them on the GPU.
+            if isinstance(self.canvas, PlotCanvas):
+                self.canvas.set_lazy(False)
+                # We go through all collected OpenGL updates.
+                for program, name, data in self.canvas.iter_update_queue():
+                    # We update data buffers in OpenGL programs.
+                    program[name] = data
+            # Finally, we update the canvas.
+            self.canvas.update()
+            emit('is_busy', self, False)
+            self._lock = None
+
+        # Start the task on the thread pool, and let the OpenGL canvas know that we're
+        # starting to record all OpenGL calls instead of executing them immediately.
+        # This is what we call the "lazy" mode.
+        emit('is_busy', self, True)
+        if getattr(gui, '_enable_threading', True):
+            # This is only for OpenGL views.
+            self.canvas.set_lazy(True)
+            thread_pool().start(worker)
+        else:  # pragma: no cover
+            # This is for OpenGL views, without threading.
+            worker.run()
+            self._lock = None
+
     def on_cluster(self, up):
         """Callback function when a clustering action occurs. May be overriden.
 
@@ -179,72 +246,8 @@ class ManualClusteringView(object):
 
         emit('view_actions_created', self)
 
-        @connect
-        def on_select(sender, cluster_ids, **kwargs):
-            # Decide whether the view should react to the select event or not.
-            if not self.auto_update:
-                return
-            if sender.__class__.__name__ != 'Supervisor':
-                return
-            assert isinstance(cluster_ids, list)
-            if not cluster_ids:
-                return
-
-            # The lock is used so that two different background threads do not access the same
-            # view simultaneously, which can lead to conflicts, errors in the plotting code,
-            # and QTimer thread exceptions that lead to frozen OpenGL views.
-            if self._lock:
-                return
-            self._lock = True
-
-            # The view update occurs in a thread in order not to block the main GUI thread.
-            # A complication is that OpenGL updates should only occur in the main GUI thread,
-            # whereas the computation of the data buffers to upload to the GPU should happen
-            # in a thread. Finally, the select events are throttled (more precisely, debounced)
-            # to avoid clogging the GUI when many clusters are successively selected, but this
-            # is implemented at the level of the table widget, not here.
-
-            # This function executes in the Qt thread pool.
-            def _worker():  # pragma: no cover
-                self.on_select(cluster_ids=cluster_ids, **kwargs)
-
-            # We launch this function in the thread pool.
-            worker = Worker(_worker)
-
-            # Once the worker has finished in the thread, the finished signal is raised,
-            # and the callback function below runs on the main GUI thread.
-            # All OpenGL updates triggered in the worker (background thread) where recorded
-            # instead of being immediately executed (which would have caused errors because
-            # OpenGL updates should not be executed from a background thread).
-            # Once these updates have been collected in the right order, we execute all of
-            # them here, in the main GUI thread.
-            @worker.signals.finished.connect
-            def finished():
-                # When the task has finished in the thread pool, we recover all program
-                # updates of the view, and we execute them on the GPU.
-                if isinstance(self.canvas, PlotCanvas):
-                    self.canvas.set_lazy(False)
-                    # We go through all collected OpenGL updates.
-                    for program, name, data in self.canvas.iter_update_queue():
-                        # We update data buffers in OpenGL programs.
-                        program[name] = data
-                # Finally, we update the canvas.
-                self.canvas.update()
-                emit('is_busy', self, False)
-                self._lock = None
-
-            # Start the task on the thread pool, and let the OpenGL canvas know that we're
-            # starting to record all OpenGL calls instead of executing them immediately.
-            # This is what we call the "lazy" mode.
-            emit('is_busy', self, True)
-            if getattr(gui, '_enable_threading', True):
-                # This is only for OpenGL views.
-                self.canvas.set_lazy(True)
-                thread_pool().start(worker)
-            else:  # pragma: no cover
-                # This is for OpenGL views, without threading.
-                worker.run()
-                self._lock = None
+        on_select = partial(self.on_select_threaded, gui=gui)
+        connect(on_select, event='select')
 
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the view.

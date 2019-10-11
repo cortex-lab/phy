@@ -158,7 +158,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         # Traces and spikes.
         assert hasattr(traces, '__call__')
         self.traces = traces
-        self.waveforms = None
+        # self.waveforms = None
 
         assert duration >= 0
         self.duration = duration
@@ -259,6 +259,21 @@ class TraceView(ScalingMixin, ManualClusteringView):
             data_bounds=self.data_bounds,
         )
 
+    def _plot_waveforms(self, waveforms, **kwargs):
+        """Plot the waveforms."""
+        # waveforms = self.waveforms
+        assert isinstance(waveforms, list)
+        if waveforms:
+            self.waveform_visual.show()
+            self.waveform_visual.reset_batch()
+            for w in waveforms:
+                self._plot_spike(w)
+                self._waveform_times.append(
+                    (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
+            self.canvas.update_visual(self.waveform_visual)
+        else:  # pragma: no cover
+            self.waveform_visual.hide()
+
     def _plot_labels(self, traces):
         self.text_visual.reset_batch()
         for ch in range(self.n_channels):
@@ -294,24 +309,18 @@ class TraceView(ScalingMixin, ManualClusteringView):
         assert 0 <= start < end <= self.duration
         return start, end
 
-    def set_interval(self, interval=None, change_status=True):
-        """Display the traces and spikes in a given interval."""
-        if interval is None:
-            interval = self._interval
-        interval = self._restrict_interval(interval)
+    def plot(self, update_traces=True, update_waveforms=True, change_status=True):
+        if update_waveforms or update_waveforms:
+            # Load the traces in the interval.
+            traces = self.traces(self._interval)
 
-        # Load the traces.
-        traces = self.traces(interval)
-        self.waveforms = traces.get('waveforms', [])
-
-        if interval != self._interval:
+        if update_traces:
             logger.debug("Redraw the entire trace view.")
-            self._interval = interval
-            start, end = interval
+            start, end = self._interval
 
             # Set the status message.
             if change_status:
-                self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
+                self.set_status('Interval: {:.3f}-{:.3f}s'.format(start, end))
 
             # Find the data bounds.
             if self.auto_scale or getattr(self, 'data_bounds', NDC) == NDC:
@@ -332,8 +341,24 @@ class TraceView(ScalingMixin, ManualClusteringView):
             if self.do_show_labels:
                 self._plot_labels(traces.data)
 
-        # Plot the waveforms.
-        self.plot()
+        if update_waveforms:
+            self._plot_waveforms(traces.get('waveforms', []))
+
+        self._update_axes()
+        self.canvas.update()
+
+    def set_interval(self, interval=None, change_status=True):
+        """Display the traces and spikes in a given interval."""
+        if interval is None:
+            interval = self._interval
+        interval = self._restrict_interval(interval)
+
+        if interval != self._interval:
+            logger.debug("Redraw the entire trace view.")
+            self._interval = interval
+            self.plot(update_traces=True, update_waveforms=True)
+        else:
+            self.plot(update_traces=False, update_waveforms=True)
 
     def on_select(self, cluster_ids=None, **kwargs):
         self.cluster_ids = cluster_ids
@@ -341,24 +366,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
             return
         # Make sure we call again self.traces() when the cluster selection changes.
         self.set_interval()
-
-    def plot(self, **kwargs):
-        """Plot the waveforms."""
-        waveforms = self.waveforms
-        assert isinstance(waveforms, list)
-        if waveforms:
-            self.waveform_visual.show()
-            self.waveform_visual.reset_batch()
-            for w in waveforms:
-                self._plot_spike(w)
-                self._waveform_times.append(
-                    (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
-            self.canvas.update_visual(self.waveform_visual)
-        else:  # pragma: no cover
-            self.waveform_visual.hide()
-
-        self._update_axes()
-        self.canvas.update()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
