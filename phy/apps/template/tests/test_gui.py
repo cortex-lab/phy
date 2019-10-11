@@ -70,7 +70,7 @@ class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
         self.split()
 
         # Split one cluster => Two new clusters should be selected after the split.
-        self.assertEqual(self.selected[-1], n + 1)
+        self.assertTrue((n + 1) in self.selected)
 
     def test_template_split_init(self):
         self.supervisor.actions.split_init()
