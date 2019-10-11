@@ -463,6 +463,24 @@ class MockControllerTTests(GlobalViewsTests, BaseControllerTests, unittest.TestC
         mouse_click(self.qtbot, self.trace_view.canvas, (100, 100), modifiers=('Control',))
         mouse_click(self.qtbot, self.trace_view.canvas, (150, 100), modifiers=('Shift',))
 
+    def test_trace_view_filter(self):
+        rdf = self.controller.raw_data_filter
+        @rdf.add_filter
+        def diff(arr, axis=0):
+            out = np.zeros_like(arr)
+            if axis == 0:
+                out[1:, ...] = np.diff(arr, axis=axis)
+            elif axis == 1:
+                out[:, 1:, ...] = np.diff(arr, axis=axis)
+            return out
+
+        assert rdf.current_filter == 'raw'
+        rdf.set_filter('diff')
+        assert rdf.current_filter == 'diff'
+
+        arr = np.random.rand(10)
+        assert rdf.apply(arr).shape == arr.shape
+
 
 class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
     """Mock controller with templates."""

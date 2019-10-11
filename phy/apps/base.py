@@ -68,6 +68,52 @@ class Selection(Bunch):
         return self.controller.supervisor.color_selector.state.color_field
 
 
+#--------------------------------------------------------------------------
+# Raw data filtering
+#--------------------------------------------------------------------------
+
+class RawDataFilter(object):
+    def __init__(self):
+        self._filters = {'raw': lambda x, axis=None: x}
+        self._current_filter = 'raw'
+
+    def add_filter(self, fun, name=None):
+        """Add a raw data filter."""
+        name = name or fun.__name__
+        logger.debug("Add filter `%s`.", name)
+        self._filters[name] = fun
+
+    def set_filter(self, name):
+        """Set the raw data filter by specifying its name."""
+        if name in self._filters:
+            logger.debug("Setting raw data filter `%s`.", name)
+            self._current_filter = name
+
+    @property
+    def current_filter(self):
+        """Return the current filter name."""
+        return self._current_filter
+
+    def next_filter(self):
+        """Switch to the next filter."""
+        k = list(self._filters.keys())
+        i = k.index(self._current_filter)
+        i = (i + 1) % len(self._filters)
+        self.set_filter(k[i])
+
+    def apply(self, arr, axis=None, name=None):
+        """Filter raw data."""
+        self._current_filter = name or self._current_filter
+        fun = self._filters.get(self._current_filter, None)
+        if fun:
+            logger.log(5, "Applying filter `%s` to raw data.", self._current_filter)
+            arrf = fun(arr, axis=axis)
+        else:
+            arrf = arr
+        assert arrf.shape == arr.shape
+        return arrf
+
+
 #------------------------------------------------------------------------------
 # View mixins
 #------------------------------------------------------------------------------
@@ -93,12 +139,12 @@ class WaveformMixin(object):
     )
 
     _cached = (
-        'get_spike_raw_amplitudes',
+        # 'get_spike_raw_amplitudes',
         '_get_waveforms_with_n_spikes',
     )
 
     _memcached = (
-        'get_mean_spike_raw_amplitudes',
+        # 'get_mean_spike_raw_amplitudes',
         '_get_mean_waveforms',
     )
 
@@ -112,6 +158,8 @@ class WaveformMixin(object):
         # WARNING: extracting raw waveforms is long!
         waveforms = self.model.get_waveforms(spike_ids[to_keep], [channel_id])[..., 0]
         assert waveforms.ndim == 2  # shape: (n_spikes_kept, n_samples)
+        # Filter the waveforms.
+        waveforms = self.raw_data_filter.apply(waveforms, axis=1)
         # Amplitudes of the kept spikes.
         amplitudes = waveforms.max(axis=1) - waveforms.min(axis=1)
         # Spikes not kept get an amplitude of zero.
@@ -125,14 +173,20 @@ class WaveformMixin(object):
         spike_ids = self._get_amplitude_spike_ids(cluster_id)
         return np.mean(self.get_spike_raw_amplitudes(spike_ids))
 
-    def _get_waveforms_with_n_spikes(self, cluster_id, n_spikes_waveforms, batch_size_waveforms):
+    def _get_waveforms_with_n_spikes(
+            self, cluster_id, n_spikes_waveforms, batch_size_waveforms, current_filter=None):
+        # HACK: we pass self.raw_data_filter.current_filter so that it is cached properly.
         pos = self.model.channel_positions
         spike_ids = self.selector.select_spikes(
             [cluster_id], n_spikes_waveforms, batch_size_waveforms)
         channel_ids = self.get_best_channels(cluster_id)
         channel_labels = self._get_channel_labels(channel_ids)
         data = self.model.get_waveforms(spike_ids, channel_ids)
-        data = data - data.mean() if data is not None else None
+        assert data.ndim == 3  # n_spikes, n_samples, n_channels
+        # data = data - data.mean() if data is not None else None
+        # Filter the waveforms.
+        if data is not None:
+            data = self.raw_data_filter.apply(data, axis=1)
         return Bunch(
             data=data,
             channel_ids=channel_ids,
@@ -142,9 +196,10 @@ class WaveformMixin(object):
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         return self._get_waveforms_with_n_spikes(
-            cluster_id, self.n_spikes_waveforms, self.batch_size_waveforms)
+            cluster_id, self.n_spikes_waveforms, self.batch_size_waveforms,
+            current_filter=self.raw_data_filter.current_filter)
 
-    def _get_mean_waveforms(self, cluster_id):
+    def _get_mean_waveforms(self, cluster_id, current_filter=None):
         """Get the mean waveform of a cluster on its best channels."""
         b = self._get_waveforms(cluster_id)
         if b.data is not None:
@@ -510,7 +565,8 @@ class TraceMixin(object):
         k = self.model.n_samples_waveforms
         traces_interval = select_traces(
             self.model.traces, interval, sample_rate=self.model.sample_rate)
-        # Reorder vertically.
+        # Filter the loaded traces.
+        traces_interval = self.raw_data_filter.apply(traces_interval, axis=0)
         out = Bunch(data=traces_interval)
 
         def gbc(cluster_id):
@@ -563,8 +619,6 @@ class TraceMixin(object):
             self.selection['spike_ids'] = [spike_id]
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
-            # Update the trace view.
-            v.on_select(cluster_ids=[cluster_id])
 
         @connect(sender=self.supervisor)
         def on_color_mapping_changed(sender):
@@ -724,6 +778,10 @@ class BaseController(object):
         'CorrelogramView', 'AmplitudeView', 'ISIView', 'FiringRateView', 'ProbeView',
     )
 
+    default_shortcuts = {
+        'switch_raw_data_filter': 'alt+r',
+    }
+
     def __init__(
             self, dir_path=None, config_dir=None, model=None,
             clear_cache=None, clear_state=None,
@@ -743,6 +801,9 @@ class BaseController(object):
 
         # Set up the cache.
         self._set_cache(clear_cache)
+
+        # Raw data filter.
+        self.raw_data_filter = RawDataFilter()
 
         # Map view names to method creating new views. Other views can be added by plugins.
         self._set_view_creator()
@@ -1415,6 +1476,17 @@ class BaseController(object):
 
         gui.set_default_actions()
         gui.create_views()
+
+        @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
+        def switch_raw_data_filter():
+            """Switch the raw data filter."""
+            self.raw_data_filter.next_filter()
+            # Update the trace view.
+            for v in gui.list_views(TraceView):
+                v.plot()
+            # Update the waveform view.
+            for v in gui.list_views(WaveformView):
+                v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
 
         # Show selected clusters when adding new views in the GUI.
         @connect(sender=gui)
