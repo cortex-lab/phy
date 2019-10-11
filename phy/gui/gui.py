@@ -333,11 +333,12 @@ class GUI(QMainWindow):
             vc[v.__class__.__name__] += 1
         return dict(vc)
 
-    def list_views(self, cls):
-        """Return the list of views which are instances of a given class."""
-        if isinstance(cls, str):
-            return [view for view in self._views if view.__class__.__name__ == cls]
-        return [view for view in self._views if view.__class__ == cls]
+    def list_views(self, *classes):
+        """Return the list of views which are instances of one or several classes."""
+        s = set(classes)
+        return [
+            view for view in self._views
+            if s.intersection({view.__class__, view.__class__.__name__})]
 
     def get_view(self, cls, index=0):
         """Return a view from a given class. If there are multiple views of the same class,
