@@ -163,6 +163,7 @@ def test_ipython_view_1(qtbot):
     view.start_kernel()
     view.stop()
     qtbot.wait(10)
+    view.close()
 
 
 @mark.filterwarnings("ignore")

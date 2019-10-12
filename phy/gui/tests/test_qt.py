@@ -12,7 +12,7 @@ from phylib.utils.testing import captured_logging
 from ..qt import (
     QMessageBox, Qt, QWebEngineView, QTimer, _button_name_from_enum, _button_enum_from_name,
     prompt, screen_size, is_high_dpi, _wait_signal, require_qt, create_app, QApplication,
-    WebView, busy_cursor, AsyncCaller, _wait, Worker, _block, screenshot,
+    WebView, busy_cursor, AsyncCaller, _wait, Worker, _block, screenshot, screenshot_default_path,
     Debouncer, thread_pool)
 
 
@@ -148,8 +148,10 @@ def test_javascript_2(qtbot):
 
 
 def test_screenshot(qtbot, tempdir):
+
     path = tempdir / 'capture.png'
     view = WebView()
+    assert str(screenshot_default_path(view, dir=tempdir)).startswith(str(tempdir))
     view.set_html('hello', lambda e: screenshot(view, path))
     qtbot.addWidget(view)
     view.show()

@@ -7,6 +7,7 @@
 # -----------------------------------------------------------------------------
 
 from contextlib import contextmanager
+from datetime import datetime
 from functools import wraps, partial
 import logging
 from pathlib import Path
@@ -34,7 +35,7 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           )
 from PyQt5.QtGui import (  # noqa
     QKeySequence, QColor, QMouseEvent, QGuiApplication,
-    QWindow, QOpenGLWindow)
+    QFontDatabase, QWindow, QOpenGLWindow)
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       QWebEnginePage,
                                       # QWebSettings,
@@ -42,6 +43,8 @@ from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
 from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
                              QMainWindow, QDockWidget, QWidget,
+                             QHBoxLayout, QVBoxLayout,
+                             QPushButton, QLabel, QCheckBox,
                              QMessageBox, QApplication, QMenuBar,
                              QInputDialog, QOpenGLWidget
                              )
@@ -290,8 +293,20 @@ def busy_cursor(activate=True):
         set_busy(False)
 
 
-def screenshot(widget, path):
+def screenshot_default_path(widget, dir=None):
+    """Return a default path for the screenshot of a widget."""
+    from phylib.utils._misc import phy_config_dir
+    date = datetime.now().strftime('%Y%m%d%H%M%S')
+    name = 'phy_screenshot_%s_%s.png' % (date, widget.__class__.__name__)
+    path = (Path(dir) if dir else phy_config_dir() / 'screenshots') / name
+    path.parent.mkdir(exist_ok=True, parents=True)
+    return path
+
+
+def screenshot(widget, path=None, dir=None):
     """Save a screenshot of a Qt widget to a PNG file.
+
+    By default, the screenshots are saved in `~/.phy/screenshots/`.
 
     Parameters
     ----------
@@ -302,6 +317,8 @@ def screenshot(widget, path):
         Path to the PNG file.
 
     """
+    path = path or screenshot_default_path(widget, dir=dir)
+    path = Path(path).resolve()
     if isinstance(widget, QOpenGLWindow):
         # Special call for OpenGL widgets.
         widget.grabFramebuffer().save(str(path))
@@ -309,6 +326,7 @@ def screenshot(widget, path):
         # Generic call for regular Qt widgets.
         widget.grab().save(str(path))
     logger.info("Saved screenshot to %s.", path)
+    return path
 
 
 @require_qt
