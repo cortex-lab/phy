@@ -1186,6 +1186,7 @@ class Supervisor(object):
 
     def toggle_spike_reorder(self, checked):
         """Toggle spike time reordering."""
+        logger.info("%s spike time reordering.", 'Enable' if checked else 'Disable')
         emit('toggle_spike_reorder', self, checked)
 
     def undo(self):

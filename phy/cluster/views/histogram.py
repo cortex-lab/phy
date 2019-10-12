@@ -205,7 +205,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         """Update the status text in the dock title bar."""
         f = 1 if self.bin_unit == 's' else 1000
         self.set_dock_status('[{:.1f}{u}, {:.1f}{u:s}]'.format(
-            self.x_min * f, self.x_max * f, u=self.bin_unit))
+            (self.x_min or 0) * f, (self.x_max or 0) * f, u=self.bin_unit))
 
     # Histogram parameters
     # -------------------------------------------------------------------------

@@ -304,7 +304,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
             bunch.cluster_id = cluster_id
 
         # Choose the channels based on the first selected cluster.
-        channel_ids = list(bunchs[0].channel_ids)
+        channel_ids = list(bunchs[0].channel_ids) if bunchs else []
         common_channels = list(channel_ids)
         # Intersection (with order kept) of channels belonging to all clusters.
         for bunch in bunchs:

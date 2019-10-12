@@ -1205,8 +1205,8 @@ class BaseController(object):
         """Get spike times, reordered if needed."""
         spike_times = self.model.spike_times
         if (self.selection.get('do_reorder', None) and
-                getattr(self.model, 'spike_reorder', None) is not None):
-            spike_times = spike_times[self.model.spike_reorder]
+                getattr(self.model, 'spike_times_reordered', None) is not None):
+            spike_times = self.model.spike_times_reordered
         spike_times = spike_times[spike_ids]
         return spike_times
 
