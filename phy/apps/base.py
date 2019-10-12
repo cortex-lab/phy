@@ -68,6 +68,16 @@ class Selection(Bunch):
         return self.controller.supervisor.color_selector.state.color_field
 
 
+class StatusBarHandler(logging.Handler):
+    """Logging handler that displays messages in the status bar of a GUI."""
+    def __init__(self, gui):
+        self.gui = gui
+        super(StatusBarHandler, self).__init__()
+
+    def emit(self, record):
+        self.gui.status_message = self.format(record)
+
+
 #--------------------------------------------------------------------------
 # Raw data filtering
 #--------------------------------------------------------------------------
@@ -1532,5 +1542,10 @@ class BaseController(object):
             self.context.save_memcache()
 
         emit('gui_ready', self, gui)
+
+        # Handler
+        handler = StatusBarHandler(gui)
+        handler.setLevel(logging.INFO)
+        logging.getLogger('phy').addHandler(handler)
 
         return gui
