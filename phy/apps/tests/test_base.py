@@ -501,7 +501,7 @@ class MockControllerFullTests(BaseControllerTests, unittest.TestCase):
     def test_filter(self):
         rdf = self.controller.raw_data_filter
         @rdf.add_filter
-        def diff(arr, axis=0):
+        def diff(arr, axis=0):  # pragma: no cover
             out = np.zeros_like(arr)
             if axis == 0:
                 out[1:, ...] = np.diff(arr, axis=axis)
@@ -509,14 +509,11 @@ class MockControllerFullTests(BaseControllerTests, unittest.TestCase):
                 out[:, 1:, ...] = np.diff(arr, axis=axis)
             return out
 
-        assert rdf.current_filter == 'raw'
+        self.gui.view_actions.switch_raw_data_filter()
+        self.gui.view_actions.switch_raw_data_filter()
+
         rdf.set_filter('diff')
         assert rdf.current_filter == 'diff'
-
-        arr = np.random.rand(10)
-        assert rdf.apply(arr).shape == arr.shape
-
-        self.gui.view_actions.switch_raw_data_filter()
 
     def test_z1_close_all_views(self):
         self.next()
