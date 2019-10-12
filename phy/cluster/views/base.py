@@ -7,16 +7,13 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from datetime import datetime
 from functools import partial
 import gc
 import logging
-from pathlib import Path
 
 import numpy as np
 
 from phylib.utils import Bunch, connect, unconnect, emit
-from phylib.utils._misc import phy_config_dir
 from phylib.utils.geometry import range_transform
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, screenshot, thread_pool, Worker
@@ -64,9 +61,6 @@ class ManualClusteringView(object):
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
-
-        # Message to show in the status bar.
-        self.status = None
 
         # Whether to enable threading. Disabled in tests.
         self._enable_threading = kwargs.get('enable_threading', True)
@@ -201,6 +195,8 @@ class ManualClusteringView(object):
             worker.run()
             self._lock = None
 
+        self.update_status()
+
     def on_cluster(self, up):
         """Callback function when a clustering action occurs. May be overriden.
 
@@ -249,11 +245,10 @@ class ManualClusteringView(object):
         on_select = partial(self.on_select_threaded, gui=gui)
         connect(on_select, event='select')
 
-        # Update the GUI status message when the `self.set_status()` method
-        # is called, i.e. when the `status` event is raised by the view.
-        @connect(sender=self)  # pragma: no cover
-        def on_status(sender=None, e=None):
-            gui.status_message = e.message
+        # Add checkbox for auto update.
+        self.dock.add_button(
+            name='auto_update', icon='f021', checkable=True, checked=self.auto_update,
+            event='toggle_auto_update', callback=self.toggle_auto_update)
 
         # Save the view state in the GUI state.
         @connect(sender=gui)
@@ -275,7 +270,17 @@ class ManualClusteringView(object):
         self._set_floating = AsyncCaller(delay=1)
         @self._set_floating.set
         def _set_floating():
-            self.dock_widget.setFloating(False)
+            self.dock.setFloating(False)
+
+    def set_dock_status(self, text):
+        """Set the status in the dock title bar."""
+        if hasattr(self, 'dock'):
+            self.dock.set_status(text)
+
+    def update_status(self):
+        """May call `self.set_dock_status()` to update the view's status in the dock title bar.
+        To override."""
+        pass
 
     # -------------------------------------------------------------------------
     # Misc public methods
@@ -283,17 +288,14 @@ class ManualClusteringView(object):
 
     def toggle_auto_update(self, checked):
         """When on, the view is automatically updated when the cluster selection changes."""
+        logger.debug("%s auto update for %s.", 'Enable' if checked else 'Disable', self.name)
         self.auto_update = checked
+        emit('toggle_auto_update', self, checked)
 
     def screenshot(self, dir=None):
         """Save a PNG screenshot of the view into a given directory. By default, the screenshots
         are saved in `~/.phy/screenshots/`."""
-        date = datetime.now().strftime('%Y%m%d%H%M%S')
-        name = 'phy_screenshot_%s_%s.png' % (date, self.__class__.__name__)
-        path = (Path(dir) if dir else phy_config_dir() / 'screenshots') / name
-        path.parent.mkdir(exist_ok=True, parents=True)
-        screenshot(self.canvas, path)
-        return path
+        return screenshot(self.canvas, dir=dir)
 
     @property
     def state(self):
@@ -313,13 +315,6 @@ class ManualClusteringView(object):
         logger.debug("Set state for %s.", getattr(self, 'name', self.__class__.__name__))
         for k, v in state.items():
             setattr(self, k, v)
-
-    def set_status(self, message=None):
-        """Set the status bar message in the GUI."""
-        message = message or self.status
-        if not message:
-            return
-        self.status = message
 
     def show(self):
         """Show the underlying canvas."""

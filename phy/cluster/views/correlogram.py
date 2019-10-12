@@ -176,13 +176,13 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
                 box_index=(n - 1, k),
             )
 
-        # Display the window size in the bottom right subplot.
-        self.text_visual.add_batch_data(
-            pos=[1, -1],
-            anchor=[1.25, 1],
-            text='%.1f ms' % (1000 * .5 * self.window_size),
-            box_index=(n - 1, n - 1),
-        )
+        # # Display the window size in the bottom right subplot.
+        # self.text_visual.add_batch_data(
+        #     pos=[1, -1],
+        #     anchor=[1.25, 1],
+        #     text='%.1f ms' % (1000 * .5 * self.window_size),
+        #     box_index=(n - 1, n - 1),
+        # )
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
@@ -251,9 +251,12 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         assert bin_size < window_size
         self.bin_size = bin_size
         self.window_size = window_size
-        # Set the status message.
+        self.update_status()
+
+    def update_status(self):
+        """Update the status text in the dock title bar."""
         b, w = self.bin_size * 1000, self.window_size * 1000
-        self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
+        self.set_dock_status('{:.1f} ms ({:.1f} ms)'.format(w, b))
 
     def set_refractory_period(self, value):
         """Set the refractory period (in milliseconds)."""

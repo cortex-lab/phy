@@ -17,7 +17,7 @@ from phylib.utils._types import _as_array
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
 from .histogram import _compute_histogram
 from phy.plot.transform import Rotate, Range, NDC
-from phy.plot.visuals import ScatterVisual, TextVisual, HistogramVisual
+from phy.plot.visuals import ScatterVisual, HistogramVisual
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +97,6 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
 
-        # Amplitude name.
-        self.text_visual = TextVisual()
-        self.canvas.add_visual(self.text_visual, exclude_origins=(self.canvas.panzoom,))
-
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
         if not bunchs:  # pragma: no cover
@@ -136,10 +132,6 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # Scatter plot.
         self.visual.add_batch_data(
             pos=bunch.pos, color=bunch.color, size=ms, data_bounds=self.data_bounds)
-
-    def _plot_amplitude_name(self):
-        """Show the amplitude name."""
-        self.text_visual.add_batch_data(pos=[0, 1], anchor=[0, -1], text=self.amplitude_name)
 
     def get_clusters_data(self, load_all=None):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
@@ -179,13 +171,10 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
         self.visual.reset_batch()
         self.hist_visual.reset_batch()
-        self.text_visual.reset_batch()
         for bunch in bunchs:
             self._plot_cluster(bunch)
-        self._plot_amplitude_name()
         self.canvas.update_visual(self.visual)
         self.canvas.update_visual(self.hist_visual)
-        self.canvas.update_visual(self.text_visual)
 
         self._update_axes()
         self.canvas.update()
@@ -196,12 +185,17 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.actions.add(self.next_amplitude_type, set_busy=True)
         self.actions.add(self.previous_amplitude_type, set_busy=True)
 
+    def update_status(self):
+        """Update the status text in the dock title bar."""
+        self.set_dock_status(self.amplitude_name)
+
     def _change_amplitude_type(self, dir=+1):
         i = self.amplitude_names.index(self.amplitude_name)
         n = len(self.amplitude_names)
         self.amplitude_name = self.amplitude_names[(i + dir) % n]
         logger.debug("Switch to amplitude type: %s.", self.amplitude_name)
         self.plot()
+        self.update_status()
 
     def next_amplitude_type(self):
         """Switch to the next amplitude type."""

@@ -123,6 +123,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.wave_duration = 0.  # updated in the plotting method
         self.data_bounds = NDC
         self.sample_rate = sample_rate
+        self._status_suffix = ''
         assert sample_rate > 0., "The sample rate must be provided to the waveform view."
 
         # Initialize the view.
@@ -324,6 +325,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self._plot_labels(channel_ids, len(self.cluster_ids), channel_labels)
 
         self.canvas.update()
+        self.update_status()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -353,6 +355,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def boxed(self):
         """Layout instance."""
         return self.canvas.boxed
+
+    def update_status(self, suffix=''):
+        """Update the status text in the dock title bar."""
+        self.set_dock_status('%s %s' % (self.waveforms_type, suffix or self._status_suffix))
+        self._status_suffix = suffix or self._status_suffix
 
     # Overlap
     # -------------------------------------------------------------------------

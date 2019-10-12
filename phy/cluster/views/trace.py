@@ -309,7 +309,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         assert 0 <= start < end <= self.duration
         return start, end
 
-    def plot(self, update_traces=True, update_waveforms=True, change_status=True):
+    def plot(self, update_traces=True, update_waveforms=True):
         if update_waveforms or update_waveforms:
             # Load the traces in the interval.
             traces = self.traces(self._interval)
@@ -317,10 +317,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
         if update_traces:
             logger.debug("Redraw the entire trace view.")
             start, end = self._interval
-
-            # Set the status message.
-            if change_status:
-                self.set_status('Interval: {:.3f}-{:.3f}s'.format(start, end))
 
             # Find the data bounds.
             if self.auto_scale or getattr(self, 'data_bounds', NDC) == NDC:
@@ -347,7 +343,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self._update_axes()
         self.canvas.update()
 
-    def set_interval(self, interval=None, change_status=True):
+    def set_interval(self, interval=None):
         """Display the traces and spikes in a given interval."""
         if interval is None:
             interval = self._interval
@@ -357,6 +353,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
             logger.debug("Redraw the entire trace view.")
             self._interval = interval
             self.plot(update_traces=True, update_waveforms=True)
+            self.update_status()
         else:
             self.plot(update_traces=False, update_waveforms=True)
 
@@ -400,6 +397,11 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.actions.separator()
 
         self.set_interval()
+
+    def update_status(self):
+        """Update the status text in the dock title bar."""
+        a, b = self._interval
+        self.set_dock_status('[{:.2f}s - {:.2f}s]'.format(a, b))
 
     # Origin
     # -------------------------------------------------------------------------

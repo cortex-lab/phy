@@ -41,6 +41,8 @@ def test_manual_clustering_view_1(qtbot, tempdir):
     assert str(path).startswith(str(tempdir))
     assert path.exists()
 
+    v.set_dock_status("hello world")
+
     _stop_and_close(qtbot, v)
 
 
@@ -58,5 +60,5 @@ def test_manual_clustering_view_2(qtbot, gui):
     qtbot.wait(200)
     # qtbot.stop()
     v.canvas.close()
-    v.dock_widget.close()
+    v.dock.close()
     qtbot.wait(100)

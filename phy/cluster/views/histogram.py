@@ -121,7 +121,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
                 box_index=bunch.index,
             )
 
-        text = bunch.get('text', 'cluster %d' % bunch.cluster_id)
+        text = bunch.get('text', None)
+        if not text:
+            return
         # Support multiline text.
         text = text.splitlines()
         n = len(text)
@@ -179,6 +181,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
         self._update_axes()
         self.canvas.update()
+        self.update_status()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -197,6 +200,12 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             self.set_x_max, alias=self.alias_char + 'max',
             prompt=True, prompt_default=lambda: self.x_max)
         self.actions.separator()
+
+    def update_status(self):
+        """Update the status text in the dock title bar."""
+        f = 1 if self.bin_unit == 's' else 1000
+        self.set_dock_status('[{:.1f}{u}, {:.1f}{u:s}]'.format(
+            self.x_min * f, self.x_max * f, u=self.bin_unit))
 
     # Histogram parameters
     # -------------------------------------------------------------------------

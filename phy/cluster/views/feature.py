@@ -387,6 +387,13 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         """Toggle the automatic selection of channels when the cluster selection changes."""
         self.fixed_channels = not checked
 
+    def update_status(self):
+        """Update the status text in the dock title bar."""
+        if self.channel_ids is None:
+            return
+        channel_labels = [self.channel_labels[ch] for ch in self.channel_ids[:2]]
+        self.set_dock_status(', '.join(channel_labels))
+
     # Dimension selection
     # -------------------------------------------------------------------------
 
