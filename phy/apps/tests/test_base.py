@@ -482,6 +482,8 @@ class MockControllerTTests(GlobalViewsTests, BaseControllerTests, unittest.TestC
         arr = np.random.rand(10)
         assert rdf.apply(arr).shape == arr.shape
 
+        self.gui.view_actions.switch_raw_data_filter()
+
 
 class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
     """Mock controller with templates."""

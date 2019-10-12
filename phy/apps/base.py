@@ -119,10 +119,9 @@ class RawDataFilter(object):
         if fun:
             logger.log(5, "Applying filter `%s` to raw data.", self._current_filter)
             arrf = fun(arr, axis=axis)
-        else:
-            arrf = arr
-        assert arrf.shape == arr.shape
-        return arrf
+            assert arrf.shape == arr.shape
+            arr = arrf
+        return arr
 
 
 #------------------------------------------------------------------------------
