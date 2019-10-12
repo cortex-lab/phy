@@ -1543,7 +1543,7 @@ class BaseController(object):
 
         emit('gui_ready', self, gui)
 
-        # Handler
+        # Status bar handler
         handler = StatusBarHandler(gui)
         handler.setLevel(logging.INFO)
         logging.getLogger('phy').addHandler(handler)

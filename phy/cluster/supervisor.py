@@ -895,6 +895,9 @@ class Supervisor(object):
         # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)
         self.similarity_view.set_busy(busy)
+        # If the GUI is no longer busy, stop the debouncer waiting period.
+        if not busy:
+            self.cluster_view.debouncer.stop_waiting()
 
     # Selection actions
     # -------------------------------------------------------------------------
