@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QHBoxLayout, QPushButton, QLabel, QCheckBox,
-    QFontDatabase, QStatusBar, QMainWindow, QMessageBox, Qt, QSize,
+    QFontDatabase, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _static_abs_path,
     _wait, prompt, show_box, screenshot as make_screenshot)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
@@ -80,9 +80,7 @@ class DockWidget(QDockWidget):
     def __init__(self, *args, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
         # Load the font awesome font.
-        # TODO
-        font_id = QFontDatabase.addApplicationFont(
-            "/home/cyrille/Downloads/fontawesome-free-5.11.2-web/webfonts/fa-solid-900.ttf")
+        font_id = QFontDatabase.addApplicationFont(str(_static_abs_path('fa-solid-900.ttf')))
         font_db = QFontDatabase()
         font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
         self._font = font_db.font(font_family, None, 8)
