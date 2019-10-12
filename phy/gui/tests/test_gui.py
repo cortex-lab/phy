@@ -161,7 +161,7 @@ def test_gui_creator(tempdir, qtbot):
     add_action = gui.view_actions.get('Add MyCanvas')
 
     # Close the first dock widget.
-    views[0].dock_widget.toggleViewAction().activate(0)
+    views[0].dock.toggleViewAction().activate(0)
     gui.remove_menu('&File')
 
     # One remaining MyCanvas view.
@@ -192,31 +192,31 @@ def test_gui_dock_widget_1(qtbot, gui):
         pass
 
     # Add 2 buttons.
-    v.dock_widget.add_button(name='b1', text='hello world', callback=callback)
+    v.dock.add_button(name='b1', text='hello world', callback=callback)
 
-    @v.dock_widget.add_button(
+    @v.dock.add_button(
         name='b2', checkable=True, checked=True, icon='f15c', event='button_clicked')
     def callback_1(checked):
         pass
 
     # Add a checkbox.
-    @v.dock_widget.add_checkbox(name='c1', text='checkbox', checked=True)
+    @v.dock.add_checkbox(name='c1', text='checkbox', checked=True)
     def callback_2(checked):
         pass
 
     # Make sure the second button reacts to events.
-    b2 = v.dock_widget.get_widget('b2')
+    b2 = v.dock.get_widget('b2')
     assert b2.isChecked()
     emit('button_clicked', v, False)
     assert not b2.isChecked()
 
     # Set and check the title bar status text.
-    v.dock_widget.set_status("this is a status")
-    assert v.dock_widget.status == 'this is a status'
+    v.dock.set_status("this is a status")
+    assert v.dock.status == 'this is a status'
 
     b2.click()
-    v.dock_widget.get_widget('b1').click()
-    v.dock_widget.get_widget('c1').click()
+    v.dock.get_widget('b1').click()
+    v.dock.get_widget('c1').click()
 
 
 def test_gui_menu(qtbot, gui):

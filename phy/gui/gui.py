@@ -225,10 +225,10 @@ class DockWidget(QDockWidget):
 
 def _create_dock_widget(widget, name, closable=True, floatable=True):
     """Create a dock widget wrapping any Qt widget."""
-    dock_widget = DockWidget()
-    dock_widget.setObjectName(name)
-    dock_widget.setWindowTitle(name)
-    dock_widget.setWidget(widget)
+    dock = DockWidget()
+    dock.setObjectName(name)
+    dock.setWindowTitle(name)
+    dock.setWidget(widget)
 
     # Set gui widget options.
     options = QDockWidget.DockWidgetMovable
@@ -237,17 +237,17 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
     if floatable:
         options = options | QDockWidget.DockWidgetFloatable
 
-    dock_widget.setFeatures(options)
-    dock_widget.setAllowedAreas(
+    dock.setFeatures(options)
+    dock.setAllowedAreas(
         Qt.LeftDockWidgetArea |
         Qt.RightDockWidgetArea |
         Qt.TopDockWidgetArea |
         Qt.BottomDockWidgetArea
     )
 
-    dock_widget.create_title_bar()
+    dock.create_title_bar()
 
-    return dock_widget
+    return dock
 
 
 def _get_dock_position(position):
@@ -596,23 +596,23 @@ class GUI(QMainWindow):
         widget = _try_get_matplotlib_canvas(view)
         widget = _try_get_opengl_canvas(widget)
 
-        dock_widget = _create_dock_widget(widget, name, closable=closable, floatable=floatable)
-        self.addDockWidget(_get_dock_position(position), dock_widget, Qt.Horizontal)
+        dock = _create_dock_widget(widget, name, closable=closable, floatable=floatable)
+        self.addDockWidget(_get_dock_position(position), dock, Qt.Horizontal)
         if floating is not None:
-            dock_widget.setFloating(floating)
-        dock_widget.view = view
-        view.dock_widget = dock_widget
+            dock.setFloating(floating)
+        dock.view = view
+        view.dock = dock
 
         # Emit the close_view event when the dock widget is closed.
-        @connect(sender=dock_widget)
+        @connect(sender=dock)
         def on_close_dock_widget(sender):
             self._views.remove(view)
             emit('close_view', self, view)
 
-        dock_widget.show()
+        dock.show()
         emit('add_view', self, view)
         logger.log(5, "Add %s to GUI.", name)
-        return dock_widget
+        return dock
 
     # Menu bar
     # -------------------------------------------------------------------------

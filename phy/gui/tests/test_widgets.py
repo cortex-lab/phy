@@ -178,7 +178,7 @@ def test_ipython_view_2(qtbot, tempdir):
     view.attach(gui)  # start the kernel and inject the GUI
 
     gui.show()
-    view.dock_widget.close()
+    view.dock.close()
     qtbot.wait(10)
     gui.close()
     qtbot.wait(10)
