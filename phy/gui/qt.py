@@ -541,6 +541,11 @@ class Debouncer(object):
             f(*args, **kwargs)
             self.pending_functions[key] = None
 
+    def stop_waiting(self, delay=.1):
+        """Stop waiting and force the pending actions to execute (almost) immediately."""
+        # The trigger will occur in `delay` seconds.
+        self._last_submission_time = default_timer() - (self.delay * .001 - delay)
+
 
 class AsyncCaller(object):
     """Call a Python function after a delay."""

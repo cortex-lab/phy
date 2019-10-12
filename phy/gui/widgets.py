@@ -291,6 +291,11 @@ class HTMLWidget(WebView):
         self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
         self.builder.add_script(_DEFAULT_SCRIPT)
 
+    @property
+    def debouncer(self):
+        """Widget debouncer."""
+        return self._event._debouncer
+
     def build(self, callback=None):
         """Rebuild the HTML code of the widget."""
         self.set_html(self.builder.html, callback=callback)

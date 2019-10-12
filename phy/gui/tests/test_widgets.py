@@ -208,6 +208,7 @@ def test_barrier_1(qtbot, table):
 def test_table_empty_1(qtbot):
     table = Table()
     _wait_until_table_ready(qtbot, table)
+    assert table.debouncer
     table.close()
 
 
