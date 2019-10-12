@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class MyModel(object):
+    seed = np.random.seed(0)
     n_channels = 8
     n_spikes = 20000
     n_clusters = 32
@@ -426,7 +427,7 @@ class MockControllerFTests(BaseControllerTests, unittest.TestCase):
     def test_feature_view_split(self):
         self.next()
         n = max(self.cluster_ids)
-        self.lasso(self.feature_view, .25)
+        self.lasso(self.feature_view, .1)
         self.split()
         # Split one cluster => Two new clusters should be selected after the split.
         self.assertEqual(self.selected[:2], [n + 1, n + 2])
@@ -519,7 +520,7 @@ class MockControllerFullTests(BaseControllerTests, unittest.TestCase):
         self.next()
 
         for view in self.gui.views:
-            view.dock_widget.close()
+            view.dock.close()
             self.qtbot.wait(200)
 
     def test_z2_open_all_views(self):

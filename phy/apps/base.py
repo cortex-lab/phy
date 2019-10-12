@@ -88,6 +88,7 @@ class RawDataFilter(object):
         if name in self._filters:
             logger.debug("Setting raw data filter `%s`.", name)
             self._current_filter = name
+            return name
 
     @property
     def current_filter(self):
@@ -99,7 +100,7 @@ class RawDataFilter(object):
         k = list(self._filters.keys())
         i = k.index(self._current_filter)
         i = (i + 1) % len(self._filters)
-        self.set_filter(k[i])
+        return self.set_filter(k[i])
 
     def apply(self, arr, axis=None, name=None):
         """Filter raw data."""
@@ -1480,13 +1481,15 @@ class BaseController(object):
         @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
         def switch_raw_data_filter():
             """Switch the raw data filter."""
-            self.raw_data_filter.next_filter()
+            filter_name = self.raw_data_filter.next_filter()
             # Update the trace view.
             for v in gui.list_views(TraceView):
                 v.plot()
+                v.update_status()
             # Update the waveform view.
             for v in gui.list_views(WaveformView):
                 v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
+                v.update_status(suffix=filter_name)
 
         # Show selected clusters when adding new views in the GUI.
         @connect(sender=gui)
