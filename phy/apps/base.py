@@ -1522,6 +1522,11 @@ class BaseController(object):
                     return False
                 # Otherwise (r is 'close') we do nothing and close as usual.
 
+        # Status bar handler
+        handler = StatusBarHandler(gui)
+        handler.setLevel(logging.INFO)
+        logging.getLogger('phy').addHandler(handler)
+
         # Save the memcache when closing the GUI.
         @connect(sender=gui)  # noqa
         def on_close(sender):
@@ -1537,15 +1542,13 @@ class BaseController(object):
             for param in self._state_params:
                 gui.state[param] = getattr(self, param, None)
 
+            # Save the memcache.
             gui.state['GUI_VERSION'] = self.gui_version
-
             self.context.save_memcache()
 
-        emit('gui_ready', self, gui)
+            # Remove the status bar handler when closing the GUI.
+            logging.getLogger('phy').removeHandler(handler)
 
-        # Status bar handler
-        handler = StatusBarHandler(gui)
-        handler.setLevel(logging.INFO)
-        logging.getLogger('phy').addHandler(handler)
+        emit('gui_ready', self, gui)
 
         return gui
