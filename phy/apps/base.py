@@ -907,6 +907,14 @@ class BaseController(object):
             view_name = 'Spike%sView' % name.title()
             self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
 
+        # Add checkbox for auto update.
+        @connect
+        def on_add_view(sender, view):
+            if isinstance(view, ManualClusteringView):
+                view.dock.add_button(
+                    name='auto_update', icon='f021', checkable=True, checked=view.auto_update,
+                    event='toggle_auto_update', callback=view.toggle_auto_update)
+
     def _set_cluster_metrics(self):
         """Set the cluster metrics dictionary with some default metrics."""
         self.cluster_metrics = {}  # dictionary {name: function cluster_id => value}, for plugins

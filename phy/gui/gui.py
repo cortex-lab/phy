@@ -129,6 +129,7 @@ class DockWidget(QDockWidget):
                 self.add_button, text=text, icon=icon, name=name,
                 checkable=checkable, checked=checked, event=event)
 
+        name = name or getattr(callback, '__name__', None) or text
         assert name
         button = QPushButton(chr(int(icon, 16)) if icon else text)
         button.setFont(self._font)
@@ -173,6 +174,7 @@ class DockWidget(QDockWidget):
         if callback is None:
             return partial(self.add_checkbox, text=text, checked=checked, name=name)
 
+        name = name or getattr(callback, '__name__', None) or text
         assert name
         checkbox = QCheckBox(text)
         checkbox.setLayoutDirection(2)

@@ -483,14 +483,16 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         i = self.waveforms_types.index(self.waveforms_type)
         n = len(self.waveforms_types)
         self.waveforms_type = self.waveforms_types[(i + 1) % n]
-        logger.debug("Switch to waveforms type %s.", self.waveforms_type)
+        logger.info("Switch to waveforms type %s.", self.waveforms_type)
         self.plot()
 
     def toggle_mean_waveforms(self, checked):
         """Switch to the `mean_waveforms` type, if it is available."""
         if self.waveforms_type == 'mean_waveforms' and 'waveforms' in self.waveforms_types:
             self.waveforms_type = 'waveforms'
+            logger.info("Switch to raw waveforms.")
             self.plot()
         elif 'mean_waveforms' in self.waveforms_types:
             self.waveforms_type = 'mean_waveforms'
+            logger.info("Switch to mean waveforms.")
             self.plot()

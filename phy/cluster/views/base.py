@@ -245,11 +245,6 @@ class ManualClusteringView(object):
         on_select = partial(self.on_select_threaded, gui=gui)
         connect(on_select, event='select')
 
-        # Add checkbox for auto update.
-        self.dock.add_button(
-            name='auto_update', icon='f021', checkable=True, checked=self.auto_update,
-            event='toggle_auto_update', callback=self.toggle_auto_update)
-
         # Save the view state in the GUI state.
         @connect(sender=gui)
         def on_close_view(sender, view):
