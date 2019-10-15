@@ -168,6 +168,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         return [-1, m, +1, M]
 
     def get_clusters_data(self):
+        if self.waveforms_type not in self.waveforms:
+            return
         bunchs = [
             self.waveforms[self.waveforms_type](cluster_id) for cluster_id in self.cluster_ids]
         clu_offsets = _get_clu_offsets(bunchs)
@@ -290,6 +292,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         if not self.cluster_ids:
             return
         bunchs = self.get_clusters_data()
+        if not bunchs:
+            return
 
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
@@ -480,7 +484,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def next_waveforms_type(self):
         """Switch to the next waveforms type."""
-        i = self.waveforms_types.index(self.waveforms_type)
+        if self.waveforms_type in self.waveforms_types:
+            i = self.waveforms_types.index(self.waveforms_type)
+        else:  # pragma: no cover
+            i = 0
         n = len(self.waveforms_types)
         self.waveforms_type = self.waveforms_types[(i + 1) % n]
         logger.info("Switch to waveforms type %s.", self.waveforms_type)
