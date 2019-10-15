@@ -42,6 +42,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.thread_pool](#phyguithread_pool)
 * [phy.gui.Actions](#phyguiactions)
 * [phy.gui.Debouncer](#phyguidebouncer)
+* [phy.gui.DockWidget](#phyguidockwidget)
 * [phy.gui.GUI](#phyguigui)
 * [phy.gui.GUIState](#phyguiguistate)
 * [phy.gui.HTMLBuilder](#phyguihtmlbuilder)
@@ -717,9 +718,11 @@ Return the screen size as a tuple (width, height).
 #### phy.gui.screenshot
 
 
-**`phy.gui.screenshot(widget, path)`**
+**`phy.gui.screenshot(widget, path=None, dir=None)`**
 
 Save a screenshot of a Qt widget to a PNG file.
+
+By default, the screenshots are saved in `~/.phy/screenshots/`.
 
 **Parameters**
 
@@ -956,6 +959,15 @@ d.trigger()  # show "hello world 0" and "hello world 9" after a delay
 
 ---
 
+#### Debouncer.stop_waiting
+
+
+**`Debouncer.stop_waiting(self, delay=0.1)`**
+
+Stop waiting and force the pending actions to execute (almost) immediately.
+
+---
+
 #### Debouncer.submit
 
 
@@ -972,6 +984,112 @@ is higher than the threshold, or wait until executing it otherwiser.
 **`Debouncer.trigger(self)`**
 
 Execute the pending actions.
+
+---
+
+### phy.gui.DockWidget
+
+A dock widget with a custom title bar.
+
+The title bar has a status text at the middle, and a group of buttons on the right.
+By default, the buttons on the right are screenshot and close. New buttons can be added
+in this group, from right to left.
+
+---
+
+#### DockWidget.add_button
+
+
+**`DockWidget.add_button(self, callback=None, text=None, icon=None, checkable=False, checked=False, event=None, name=None)`**
+
+Add a button to the dock title bar, to the right.
+
+**Parameters**
+
+
+* `callback : function`
+    Callback function when the button is clicked.
+
+* `text : str`
+    Text of the button.
+
+* `icon : str`
+    Fontawesome icon of the button specified as a unicode string with 4 hexadecimal
+    characters.
+
+* `checkable : boolean`
+    Whether the button is checkable.
+
+* `checked : boolean`
+    Whether the checkable button is initially checked.
+
+* `event : str`
+    Name of the event that is externally raised when the status of the button is changed.
+    This is used to synchronize the button's checked status when the value changes
+    via another mean than clicking on the button.
+
+* `name : str`
+    Name of the button.
+
+---
+
+#### DockWidget.add_checkbox
+
+
+**`DockWidget.add_checkbox(self, callback=None, text=None, checked=False, name=None)`**
+
+Add a checkbox to the dock title bar, to the right.
+
+**Parameters**
+
+
+* `callback : function`
+    Callback function when the checkbox is clicked.
+
+* `text : str`
+    Text of the checkbox.
+
+* `checked : boolean`
+    Whether the checkbox is initially checked.
+
+* `name : str`
+    Name of the button.
+
+---
+
+#### DockWidget.closeEvent
+
+
+**`DockWidget.closeEvent(self, e)`**
+
+Qt slot when the window is closed.
+
+---
+
+#### DockWidget.get_widget
+
+
+**`DockWidget.get_widget(self, name)`**
+
+Get a dock title bar widget by its name.
+
+---
+
+#### DockWidget.set_status
+
+
+**`DockWidget.set_status(self, text)`**
+
+Set the status text of the widget.
+
+---
+
+#### DockWidget.status
+
+
+**`DockWidget.status`**
+
+Current status text of the title bar.
 
 ---
 
@@ -1449,6 +1567,15 @@ View the HTML source of the widget.
 
 ---
 
+#### HTMLWidget.debouncer
+
+
+**`HTMLWidget.debouncer`**
+
+Widget debouncer.
+
+---
+
 ### phy.gui.IPythonView
 
 A view with an IPython console living in the same Python process as the GUI.
@@ -1819,6 +1946,15 @@ Sort by a given variable.
 **`Table.view_source(self, callback=None)`**
 
 View the HTML source of the widget.
+
+---
+
+#### Table.debouncer
+
+
+**`Table.debouncer`**
+
+Widget debouncer.
 
 ---
 
@@ -5505,6 +5641,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### AmplitudeView.set_dock_status
+
+
+**`AmplitudeView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### AmplitudeView.set_state
 
 
@@ -5515,15 +5660,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### AmplitudeView.set_status
-
-
-**`AmplitudeView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -5542,6 +5678,15 @@ Show the underlying canvas.
 **`AmplitudeView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### AmplitudeView.update_status
+
+
+**`AmplitudeView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -5957,6 +6102,15 @@ Sort by a given variable.
 **`ClusterView.view_source(self, callback=None)`**
 
 View the HTML source of the widget.
+
+---
+
+#### ClusterView.debouncer
+
+
+**`ClusterView.debouncer`**
+
+Widget debouncer.
 
 ---
 
@@ -6378,6 +6532,15 @@ Example: `1`
 
 ---
 
+#### CorrelogramView.set_dock_status
+
+
+**`CorrelogramView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### CorrelogramView.set_refractory_period
 
 
@@ -6397,15 +6560,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### CorrelogramView.set_status
-
-
-**`CorrelogramView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -6453,6 +6607,15 @@ Show or hide all labels.
 **`CorrelogramView.toggle_normalization(self, checked)`**
 
 Change the normalization of the correlograms.
+
+---
+
+#### CorrelogramView.update_status
+
+
+**`CorrelogramView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -6672,6 +6835,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### FeatureView.set_dock_status
+
+
+**`FeatureView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### FeatureView.set_grid_dim
 
 
@@ -6702,15 +6874,6 @@ May be overriden.
 
 ---
 
-#### FeatureView.set_status
-
-
-**`FeatureView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
-
----
-
 #### FeatureView.show
 
 
@@ -6735,6 +6898,15 @@ When on, the view is automatically updated when the cluster selection changes.
 **`FeatureView.toggle_automatic_channel_selection(self, checked)`**
 
 Toggle the automatic selection of channels when the cluster selection changes.
+
+---
+
+#### FeatureView.update_status
+
+
+**`FeatureView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -6889,6 +7061,15 @@ Set the bin size in the histogram.
 
 ---
 
+#### FiringRateView.set_dock_status
+
+
+**`FiringRateView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### FiringRateView.set_n_bins
 
 
@@ -6908,15 +7089,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### FiringRateView.set_status
-
-
-**`FiringRateView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -6953,6 +7125,15 @@ Show the underlying canvas.
 **`FiringRateView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### FiringRateView.update_status
+
+
+**`FiringRateView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -7114,6 +7295,15 @@ Set the bin size in the histogram.
 
 ---
 
+#### HistogramView.set_dock_status
+
+
+**`HistogramView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### HistogramView.set_n_bins
 
 
@@ -7133,15 +7323,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### HistogramView.set_status
-
-
-**`HistogramView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -7178,6 +7359,15 @@ Show the underlying canvas.
 **`HistogramView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### HistogramView.update_status
+
+
+**`HistogramView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -7332,6 +7522,15 @@ Set the bin size in the histogram.
 
 ---
 
+#### ISIView.set_dock_status
+
+
+**`ISIView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### ISIView.set_n_bins
 
 
@@ -7351,15 +7550,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### ISIView.set_status
-
-
-**`ISIView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -7396,6 +7586,15 @@ Show the underlying canvas.
 **`ISIView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ISIView.update_status
+
+
+**`ISIView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -7523,6 +7722,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### ManualClusteringView.set_dock_status
+
+
+**`ManualClusteringView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### ManualClusteringView.set_state
 
 
@@ -7533,15 +7741,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### ManualClusteringView.set_status
-
-
-**`ManualClusteringView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -7560,6 +7759,16 @@ Show the underlying canvas.
 **`ManualClusteringView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ManualClusteringView.update_status
+
+
+**`ManualClusteringView.update_status(self)`**
+
+May call `self.set_dock_status()` to update the view's status in the dock title bar.
+To override.
 
 ---
 
@@ -7678,6 +7887,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### ProbeView.set_dock_status
+
+
+**`ProbeView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### ProbeView.set_state
 
 
@@ -7688,15 +7906,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### ProbeView.set_status
-
-
-**`ProbeView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -7715,6 +7924,16 @@ Show the underlying canvas.
 **`ProbeView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ProbeView.update_status
+
+
+**`ProbeView.update_status(self)`**
+
+May call `self.set_dock_status()` to update the view's status in the dock title bar.
+To override.
 
 ---
 
@@ -7884,6 +8103,15 @@ Set the shown clusters, which can be filtered and in any order (from top to bott
 
 ---
 
+#### RasterView.set_dock_status
+
+
+**`RasterView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### RasterView.set_spike_clusters
 
 
@@ -7903,15 +8131,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### RasterView.set_status
-
-
-**`RasterView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -7948,6 +8167,16 @@ Update the order of all clusters.
 **`RasterView.update_color(self, selected_clusters=None)`**
 
 Update the color of the spikes, depending on the selected clustersd.
+
+---
+
+#### RasterView.update_status
+
+
+**`RasterView.update_status(self)`**
+
+May call `self.set_dock_status()` to update the view's status in the dock title bar.
+To override.
 
 ---
 
@@ -8106,6 +8335,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### ScatterView.set_dock_status
+
+
+**`ScatterView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### ScatterView.set_state
 
 
@@ -8116,15 +8354,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### ScatterView.set_status
-
-
-**`ScatterView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -8143,6 +8372,16 @@ Show the underlying canvas.
 **`ScatterView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ScatterView.update_status
+
+
+**`ScatterView.update_status(self)`**
+
+May call `self.set_dock_status()` to update the view's status in the dock title bar.
+To override.
 
 ---
 
@@ -8444,6 +8683,15 @@ Sort by a given variable.
 **`SimilarityView.view_source(self, callback=None)`**
 
 View the HTML source of the widget.
+
+---
+
+#### SimilarityView.debouncer
+
+
+**`SimilarityView.debouncer`**
+
+Widget debouncer.
 
 ---
 
@@ -8974,6 +9222,15 @@ Update the cluster ids when their identity or order has changed.
 
 ---
 
+#### TemplateView.set_dock_status
+
+
+**`TemplateView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### TemplateView.set_spike_clusters
 
 
@@ -8993,15 +9250,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### TemplateView.set_status
-
-
-**`TemplateView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -9038,6 +9286,16 @@ Update the order of the clusters.
 **`TemplateView.update_color(self, selected_clusters=None)`**
 
 Update the color of the clusters, taking the selected clusters into account.
+
+---
+
+#### TemplateView.update_status
+
+
+**`TemplateView.update_status(self)`**
+
+May call `self.set_dock_status()` to update the view's status in the dock title bar.
+To override.
 
 ---
 
@@ -9269,7 +9527,7 @@ Callback function when clusters are selected. May be overriden.
 #### TraceView.plot
 
 
-**`TraceView.plot(self, update_traces=True, update_waveforms=True, change_status=True)`**
+**`TraceView.plot(self, update_traces=True, update_waveforms=True)`**
 
 Update the view with the current cluster selection.
 
@@ -9294,10 +9552,19 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### TraceView.set_dock_status
+
+
+**`TraceView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### TraceView.set_interval
 
 
-**`TraceView.set_interval(self, interval=None, change_status=True)`**
+**`TraceView.set_interval(self, interval=None)`**
 
 Display the traces and spikes in a given interval.
 
@@ -9313,15 +9580,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### TraceView.set_status
-
-
-**`TraceView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -9385,6 +9643,15 @@ Toggle between showing all spikes or selected spikes.
 **`TraceView.toggle_show_labels(self, checked)`**
 
 Toggle the display of the channel ids.
+
+---
+
+#### TraceView.update_status
+
+
+**`TraceView.update_status(self)`**
+
+Update the status text in the dock title bar.
 
 ---
 
@@ -9699,6 +9966,15 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
+#### WaveformView.set_dock_status
+
+
+**`WaveformView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
 #### WaveformView.set_state
 
 
@@ -9709,15 +9985,6 @@ Set the view state.
 The passed object is the persisted `self.state` bunch.
 
 May be overriden.
-
----
-
-#### WaveformView.set_status
-
-
-**`WaveformView.set_status(self, message=None)`**
-
-Set the status bar message in the GUI.
 
 ---
 
@@ -9781,6 +10048,15 @@ Whether to show the channel ids or not.
 **`WaveformView.toggle_waveform_overlap(self, checked)`**
 
 Toggle the overlap of the waveforms.
+
+---
+
+#### WaveformView.update_status
+
+
+**`WaveformView.update_status(self, suffix='')`**
+
+Update the status text in the dock title bar.
 
 ---
 

@@ -37,9 +37,10 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Add multiple views of the same type
     * Closable views
     * Toggle automatic update of views upon cluster selection
+    * Easily take screenshots of individual views
+    * Control bar at the top of every view, with customizable text and buttons (screenshot, toggle auto update, etc.)
     * Axes (in most views)
     * Higher-quality text with OpenGL (multichannel signed distance field with antialiasing for small font sizes)
-    * PNG screenshot
     * Control+mouse wheel to change the scaling (in most views)
     * Change the number of "best" channels in the user configuration file
 * **Trace view**:

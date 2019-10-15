@@ -75,7 +75,13 @@ TITLE_BAR_STYLESHEET = '''
 
 
 class DockWidget(QDockWidget):
-    """QDockWidget that raises the `close_dock_widget` event when closing."""
+    """A dock widget with a custom title bar.
+
+    The title bar has a status text at the middle, and a group of buttons on the right.
+    By default, the buttons on the right are screenshot and close. New buttons can be added
+    in this group, from right to left.
+
+    """
 
     def __init__(self, *args, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
@@ -94,12 +100,36 @@ class DockWidget(QDockWidget):
     def add_button(
             self, callback=None, text=None, icon=None, checkable=False,
             checked=False, event=None, name=None):
-        """Add a button to the dock title bar, to the right."""
+        """Add a button to the dock title bar, to the right.
+
+        Parameters
+        ----------
+
+        callback : function
+            Callback function when the button is clicked.
+        text : str
+            Text of the button.
+        icon : str
+            Fontawesome icon of the button specified as a unicode string with 4 hexadecimal
+            characters.
+        checkable : boolean
+            Whether the button is checkable.
+        checked : boolean
+            Whether the checkable button is initially checked.
+        event : str
+            Name of the event that is externally raised when the status of the button is changed.
+            This is used to synchronize the button's checked status when the value changes
+            via another mean than clicking on the button.
+        name : str
+            Name of the button.
+
+        """
         if callback is None:
             return partial(
                 self.add_button, text=text, icon=icon, name=name,
                 checkable=checkable, checked=checked, event=event)
 
+        assert name
         button = QPushButton(chr(int(icon, 16)) if icon else text)
         button.setFont(self._font)
         button.setCheckable(checkable)
@@ -118,7 +148,6 @@ class DockWidget(QDockWidget):
             def on_state_changed(sender, checked):
                 button.setChecked(checked)
 
-        assert name
         assert name not in self._dock_widgets
         self._dock_widgets[name] = button
         self._buttons_layout.addWidget(button)
@@ -126,10 +155,25 @@ class DockWidget(QDockWidget):
         return button
 
     def add_checkbox(self, callback=None, text=None, checked=False, name=None):
-        """Add a checkbox to the dock title bar, to the right."""
+        """Add a checkbox to the dock title bar, to the right.
+
+        Parameters
+        ----------
+
+        callback : function
+            Callback function when the checkbox is clicked.
+        text : str
+            Text of the checkbox.
+        checked : boolean
+            Whether the checkbox is initially checked.
+        name : str
+            Name of the button.
+
+        """
         if callback is None:
             return partial(self.add_checkbox, text=text, checked=checked, name=name)
 
+        assert name
         checkbox = QCheckBox(text)
         checkbox.setLayoutDirection(2)
         checkbox.setToolTip(name)
@@ -140,7 +184,6 @@ class DockWidget(QDockWidget):
             def on_state_changed(state):
                 return callback(state == Qt.Checked)
 
-        assert name
         assert name not in self._dock_widgets
         self._dock_widgets[name] = checkbox
         self._buttons_layout.addWidget(checkbox)
@@ -161,6 +204,8 @@ class DockWidget(QDockWidget):
         self._status.setText(text)
 
     def _default_buttons(self):
+        """Create the default buttons on the right."""
+
         # Close button.
         @self.add_button(name='close', text='✕')
         def on_close(e):  # pragma: no cover
@@ -178,8 +223,8 @@ class DockWidget(QDockWidget):
             else:
                 make_screenshot(self.view)
 
-    def create_title_bar(self):
-        """Create a title bar."""
+    def _create_title_bar(self):
+        """Create the title bar."""
         self._title_bar = QWidget(self)
         self._layout = QHBoxLayout(self._title_bar)
 
@@ -243,7 +288,7 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
         Qt.BottomDockWidgetArea
     )
 
-    dock.create_title_bar()
+    dock._create_title_bar()
 
     return dock
 
