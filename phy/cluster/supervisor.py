@@ -492,7 +492,7 @@ class ActionCreator(object):
                     w, 'move_%s_to_%s' % (which, group),
                     method_name='move',
                     method_args=(group, which),
-                    submenu='Move to %s' % which,
+                    submenu='Move %s to' % which,
                     docstring='Move %s to %s.' % (which, group))
         self.edit_actions.separator()
 
