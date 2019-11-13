@@ -149,7 +149,10 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     def get_best_channels(self, cluster_id):
         """Return the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
-        return self.model.get_template(template_id).channel_ids
+        template = self.model.get_template(template_id)
+        if not template:
+            return [0]
+        return template.channel_ids
 
     def template_similarity(self, cluster_id):
         """Return the list of similar clusters to a given cluster."""
@@ -165,14 +168,15 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
             temp_j = np.nonzero(self.get_template_counts(cj))[0]
             return float(np.max(sims[temp_j]))
 
-        out = [(cj, _sim_ij(cj))
-               for cj in self.supervisor.clustering.cluster_ids]
+        out = [(cj, _sim_ij(cj)) for cj in self.supervisor.clustering.cluster_ids]
         # NOTE: hard-limit to 100 for performance reasons.
         return sorted(out, key=itemgetter(1), reverse=True)[:100]
 
     def get_template_amplitude(self, template_id):
         """Return the maximum amplitude of a template's waveforms across all channels."""
         waveforms = self.model.get_template_waveforms(template_id)
+        if waveforms is None:
+            return 0
         assert waveforms.ndim == 2  # shape: (n_samples, n_channels)
         return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
 
@@ -189,10 +193,12 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 def template_gui(params_path, **kwargs):  # pragma: no cover
     """Launch the Template GUI."""
     # Create a `phy.log` log file with DEBUG level.
-    _add_log_file(Path(params_path).parent / 'phy.log')
+    p = Path(params_path)
+    dir_path = p.parent
+    _add_log_file(dir_path / 'phy.log')
 
     create_app()
-    controller = TemplateController(**get_template_params(params_path), **kwargs)
+    controller = TemplateController(model=load_model(params_path), dir_path=dir_path, **kwargs)
     gui = controller.create_gui()
     gui.show()
     run_app()
