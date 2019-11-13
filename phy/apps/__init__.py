@@ -127,6 +127,7 @@ def _gui_command(f):
 @click.option('-d', '--dtype', type=str)
 @click.option('-n', '--n-channels', type=int)
 @click.option('-h', '--offset', type=int)
+@click.option('-f', '--fortran', type=bool, is_flag=True)
 @_gui_command
 @click.pass_context
 def cli_trace_gui(ctx, dat_path, **kwargs):
@@ -134,6 +135,7 @@ def cli_trace_gui(ctx, dat_path, **kwargs):
     from .trace.gui import trace_gui
     with capture_exceptions():
         kwargs['n_channels_dat'] = kwargs.pop('n_channels')
+        kwargs['order'] = 'F' if kwargs.pop('fortran', None) else None
         trace_gui(dat_path, **kwargs)
 
 

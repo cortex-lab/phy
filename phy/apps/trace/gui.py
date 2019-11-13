@@ -59,6 +59,7 @@ def create_trace_gui(dat_path, **kwargs):
 
     dtype = np.dtype(kwargs['dtype'])
     offset = int(kwargs['offset'] or 0)
+    order = kwargs.get('order', None)
 
     # Memmap the raw data file.
     data = load_raw_data(
@@ -66,6 +67,7 @@ def create_trace_gui(dat_path, **kwargs):
         n_channels_dat=n_channels_dat,
         dtype=dtype,
         offset=offset,
+        order=order,
     )
 
     duration = data.shape[0] / sample_rate
@@ -108,6 +110,8 @@ def trace_gui(dat_path, **kwargs):  # pragma: no cover
         The number of columns in the raw data file.
     dtype : str
         The NumPy data type of the raw binary file.
+    order : str
+        Order of the data file: `C` or `F` (Fortran).
 
     """
 
