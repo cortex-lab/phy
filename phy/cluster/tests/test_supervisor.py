@@ -336,7 +336,6 @@ def test_supervisor_color(qtbot, supervisor):
     supervisor.view_actions.color_field_n_spikes()
     supervisor.view_actions.toggle_categorical_colormap(False)
     supervisor.view_actions.toggle_logarithmic_colormap(True)
-    supervisor.view_actions.toggle_spike_reorder(True)
 
 
 def test_supervisor_select_2(qtbot, supervisor):

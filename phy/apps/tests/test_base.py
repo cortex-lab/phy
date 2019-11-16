@@ -345,6 +345,8 @@ class BaseControllerTests(object):
         self.assertEqual(s.cluster_ids, self.selected)
         self.assertTrue(s.colormap is not None)
         self.assertTrue(s.color_field is not None)
+        self.supervisor.view_actions.toggle_spike_reorder(True)
+        self.supervisor.view_actions.switch_raw_data_filter()
 
 
 class GlobalViewsTests(object):
