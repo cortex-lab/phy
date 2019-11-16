@@ -18,7 +18,6 @@ from phylib.utils.color import selected_cluster_color
 from phylib.utils.geometry import _get_boxes
 from phy.plot import get_linear_x
 from phy.plot.interact import Boxed
-from phy.plot.transform import NDC
 from phy.plot.visuals import PlotVisual, TextVisual, LineVisual, _min, _max
 from .base import ManualClusteringView, ScalingMixin
 
@@ -121,7 +120,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.channel_ids = None
         self.filtered_tags = ()
         self.wave_duration = 0.  # updated in the plotting method
-        self.data_bounds = NDC
+        self.data_bounds = None
         self.sample_rate = sample_rate
         self._status_suffix = ''
         assert sample_rate > 0., "The sample rate must be provided to the waveform view."
@@ -221,6 +220,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         nw = n_spikes_clu * n_channels
         wave = wave.reshape((nw, n_samples))
 
+        assert self.data_bounds is not None
         self.waveform_visual.add_batch_data(
             x=t, y=wave, color=bunch.color, masks=masks, box_index=box_index,
             data_bounds=self.data_bounds)
@@ -317,7 +317,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.box_size = np.array(self.canvas.boxed.box_size)
         self._update_boxes()
 
-        self.data_bounds = self._get_data_bounds(bunchs)
+        self.data_bounds = self.data_bounds or self._get_data_bounds(bunchs)
 
         self.waveform_visual.reset_batch()
         self.line_visual.reset_batch()
