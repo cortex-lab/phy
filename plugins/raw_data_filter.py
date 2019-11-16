@@ -4,8 +4,7 @@ Use Alt+R in the GUI to toggle the filter.
 
 """
 
-import numpy as np
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, filtfilt
 
 from phy import IPlugin
 
@@ -16,8 +15,4 @@ class RawDataFilterPlugin(IPlugin):
 
         @controller.raw_data_filter.add_filter
         def high_pass(arr, axis=0):
-            arr = lfilter(b, a, arr, axis=axis)
-            arr = np.flip(arr, axis=axis)
-            arr = lfilter(b, a, arr, axis=axis)
-            arr = np.flip(arr, axis=axis)
-            return arr
+            return filtfilt(b, a, arr, axis=axis)
