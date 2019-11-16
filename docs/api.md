@@ -8972,15 +8972,6 @@ Use a logarithmic transform or not for the colormap.
 
 ---
 
-#### Supervisor.toggle_spike_reorder
-
-
-**`Supervisor.toggle_spike_reorder(self, checked)`**
-
-Toggle spike time reordering.
-
----
-
 #### Supervisor.undo
 
 
@@ -10371,6 +10362,15 @@ Create an IPython View.
 
 ---
 
+#### BaseController.create_misc_actions
+
+
+**`BaseController.create_misc_actions(self, gui)`**
+
+
+
+---
+
 #### BaseController.create_probe_view
 
 
@@ -10908,6 +10908,15 @@ Create the GUI.
 **`TemplateController.create_ipython_view(self)`**
 
 Create an IPython View.
+
+---
+
+#### TemplateController.create_misc_actions
+
+
+**`TemplateController.create_misc_actions(self, gui)`**
+
+
 
 ---
 
@@ -11526,6 +11535,15 @@ Create the GUI.
 **`KwikController.create_ipython_view(self)`**
 
 Create an IPython View.
+
+---
+
+#### KwikController.create_misc_actions
+
+
+**`KwikController.create_misc_actions(self, gui)`**
+
+
 
 ---
 

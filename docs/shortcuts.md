@@ -30,7 +30,6 @@ Keyboard shortcuts for Clustering
 - redo                                     ctrl+shift+z, ctrl+y
 - reset                                    ctrl+alt+space
 - split                                    k
-- toggle_spike_reorder                     ctrl+r
 - undo                                     ctrl+z
 - unselect_similar                         backspace
 
@@ -41,6 +40,12 @@ Snippets for Clustering
 - select                                   :c
 - sort                                     :s
 - split                                    :k
+
+Keyboard shortcuts for BaseController
+- switch_raw_data_filter                   alt+r
+- toggle_spike_reorder                     ctrl+r
+
+Snippets for BaseController
 
 Keyboard shortcuts for GUI
 - about                                    ?

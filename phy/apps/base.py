@@ -809,6 +809,7 @@ class BaseController(object):
         'toggle_spike_reorder': 'ctrl+r',
         'switch_raw_data_filter': 'alt+r',
     }
+    default_snippets = {}
 
     def __init__(
             self, dir_path=None, config_dir=None, model=None,

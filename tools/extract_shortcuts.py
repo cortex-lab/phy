@@ -1,6 +1,7 @@
 from pathlib import Path
 import re
 
+from phy.apps.base import BaseController
 from phy.cluster import views
 from phy.cluster.supervisor import ActionCreator
 from phy.gui.actions import _show_shortcuts, _show_snippets
@@ -30,7 +31,6 @@ for cls in view_classes:
 
 
 # Insert the shortcuts in the Markdown files.
-
 pattern = re.compile(r'```text\nKeyboard shortcuts for (\w+)\n([^`]+)\n```')
 docs_dir = Path(__file__).parent.parent / 'docs/'
 files = docs_dir.glob('*.md')
@@ -47,12 +47,12 @@ for file in files:
 
 
 # All shortcuts
-
 supervisor_shortcuts = _get_shortcuts(ActionCreator).replace('ActionCreator', 'Clustering')
+base_shortcuts = _get_shortcuts(BaseController)
 gui_shortcuts = _get_shortcuts(GUI)
 
 all_shortcuts = (
-    supervisor_shortcuts + gui_shortcuts +
+    supervisor_shortcuts + base_shortcuts + gui_shortcuts +
     ''.join(_get_shortcuts(cls) for cls in view_classes))
 
 pattern = re.compile(r'```text\nAll keyboard shortcuts\n([^`]+)\n```')
