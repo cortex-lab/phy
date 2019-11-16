@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from phylib import _add_log_file
-from phylib.io.model import TemplateModel, get_template_params, load_model
+from phylib.io.model import TemplateModel, load_model
 from phylib.utils import Bunch, connect
 
 from phy.cluster.views import ScatterView
