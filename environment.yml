@@ -1,6 +1,6 @@
 name: phy2
 dependencies:
-  - python
+  - python=3.7
   - pip
   - numpy
   - matplotlib
