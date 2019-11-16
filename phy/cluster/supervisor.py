@@ -426,7 +426,6 @@ class ActionCreator(object):
         'previous_best': 'up',
 
         # Misc.
-        'toggle_spike_reorder': 'ctrl+r',
         'undo': 'ctrl+z',
         'redo': ('ctrl+shift+z', 'ctrl+y'),
     }
@@ -566,9 +565,6 @@ class ActionCreator(object):
         logarithmic = state.get('color_selector', Bunch()).get('logarithmic', None)
         self.add(w, 'toggle_logarithmic_colormap', checkable=True, checked=logarithmic is True)
 
-        self.view_actions.separator()
-
-        self.add(w, 'toggle_spike_reorder', checkable=True, checked=False)
         self.view_actions.separator()
 
 
@@ -1183,11 +1179,6 @@ class Supervisor(object):
     def is_dirty(self):
         """Return whether there are any pending changes."""
         return self._is_dirty if self._is_dirty in (False, True) else len(self._global_history) > 1
-
-    def toggle_spike_reorder(self, checked):
-        """Toggle spike time reordering."""
-        logger.info("%s spike time reordering.", 'Enable' if checked else 'Disable')
-        emit('toggle_spike_reorder', self, checked)
 
     def undo(self):
         """Undo the last action."""

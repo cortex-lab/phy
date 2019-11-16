@@ -15,6 +15,7 @@ from pathlib import Path
 import shutil
 
 import numpy as np
+from scipy.signal import butter, lfilter
 
 from phylib import _add_log_file
 from phylib.io.array import Selector, _flatten
@@ -87,8 +88,23 @@ class RawDataFilter(object):
         self._filters = {'raw': lambda x, axis=None: x}
         self._current_filter = 'raw'
 
-    def add_filter(self, fun, name=None):
+    def add_default_filter(self, sample_rate):
+        b, a = butter(3, 150.0 / sample_rate * 2.0, 'high')
+
+        @self.add_filter
+        def high_pass(arr, axis=0):
+            arr = lfilter(b, a, arr, axis=axis)
+            arr = np.flip(arr, axis=axis)
+            arr = lfilter(b, a, arr, axis=axis)
+            arr = np.flip(arr, axis=axis)
+            return arr
+
+        self._current_filter = 'high_pass'
+
+    def add_filter(self, fun=None, name=None):
         """Add a raw data filter."""
+        if fun is None:
+            return partial(self.add_filter, name=name)
         name = name or fun.__name__
         logger.debug("Add filter `%s`.", name)
         self._filters[name] = fun
@@ -201,7 +217,8 @@ class WaveformMixin(object):
             data=data,
             channel_ids=channel_ids,
             channel_labels=channel_labels,
-            channel_positions=pos[channel_ids])
+            channel_positions=pos[channel_ids],
+        )
 
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
@@ -789,6 +806,7 @@ class BaseController(object):
     )
 
     default_shortcuts = {
+        'toggle_spike_reorder': 'ctrl+r',
         'switch_raw_data_filter': 'alt+r',
     }
 
@@ -814,6 +832,7 @@ class BaseController(object):
 
         # Raw data filter.
         self.raw_data_filter = RawDataFilter()
+        self.raw_data_filter.add_default_filter(self.model.sample_rate)
 
         # Map view names to method creating new views. Other views can be added by plugins.
         self._set_view_creator()
@@ -1461,6 +1480,35 @@ class BaseController(object):
             if gui.view_count.get(view_name, 0) == 0:
                 gui.create_and_add_view(view_name)
 
+    def create_misc_actions(self, gui):
+
+        # Toggle spike reorder.
+        @gui.view_actions.add(
+            shortcut=self.default_shortcuts['toggle_spike_reorder'],
+            checkable=True, checked=False)
+        def toggle_spike_reorder(checked):
+            """Toggle spike time reordering."""
+            logger.info("%s spike time reordering.", 'Enable' if checked else 'Disable')
+            emit('toggle_spike_reorder', self, checked)
+
+        # Action to switch the raw data filter inthe trace and waveform views.
+        @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
+        def switch_raw_data_filter():
+            """Switch the raw data filter."""
+            filter_name = self.raw_data_filter.next_filter()
+            # Update the trace view.
+            for v in gui.list_views(TraceView):
+                if v.auto_update:
+                    v.plot()
+                    v.update_status()
+            # Update the waveform view.
+            for v in gui.list_views(WaveformView):
+                if v.auto_update:
+                    v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
+                    v.update_status(suffix=filter_name)
+
+        gui.view_actions.separator()
+
     def create_gui(self, default_views=None, **kwargs):
         """Create the GUI.
 
@@ -1491,22 +1539,9 @@ class BaseController(object):
 
         # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
-
+        self.create_misc_actions(gui)
         gui.set_default_actions()
         gui.create_views()
-
-        @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
-        def switch_raw_data_filter():
-            """Switch the raw data filter."""
-            filter_name = self.raw_data_filter.next_filter()
-            # Update the trace view.
-            for v in gui.list_views(TraceView):
-                v.plot()
-                v.update_status()
-            # Update the waveform view.
-            for v in gui.list_views(WaveformView):
-                v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
-                v.update_status(suffix=filter_name)
 
         # Show selected clusters when adding new views in the GUI.
         @connect(sender=gui)
