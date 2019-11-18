@@ -345,8 +345,8 @@ class BaseControllerTests(object):
         self.assertEqual(s.cluster_ids, self.selected)
         self.assertTrue(s.colormap is not None)
         self.assertTrue(s.color_field is not None)
-        self.supervisor.view_actions.toggle_spike_reorder(True)
-        self.supervisor.view_actions.switch_raw_data_filter()
+        self.gui.view_actions.toggle_spike_reorder(True)
+        self.gui.view_actions.switch_raw_data_filter()
 
 
 class GlobalViewsTests(object):
@@ -435,7 +435,7 @@ class MockControllerFTests(BaseControllerTests, unittest.TestCase):
         self.assertEqual(self.selected[:2], [n + 1, n + 2])
 
     def test_feature_view_toggle_spike_reorder(self):
-        self.supervisor.toggle_spike_reorder(True)
+        self.gui.view_actions.toggle_spike_reorder(True)
 
     def test_select_feature(self):
         self.next()
