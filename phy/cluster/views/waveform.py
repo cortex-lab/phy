@@ -162,6 +162,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def _get_data_bounds(self, bunchs):
+        if 'waveforms' in self.waveforms:
+            bunchs = [
+                self.waveforms['waveforms'](cluster_id)
+                for cluster_id in self.cluster_ids
+            ]
         m = min(_min(b.data) for b in bunchs)
         M = max(_max(b.data) for b in bunchs)
         return [-1, m, +1, M]
