@@ -59,7 +59,7 @@ class PlotCanvas(BaseCanvas):
 
     def set_layout(
             self, layout=None, shape=None, n_plots=None, origin=None,
-            box_bounds=None, box_pos=None, box_size=None, has_clip=True):
+            box_pos=None, has_clip=True):
         """Set the plot layout: grid, boxed, stacked, or None."""
 
         self.layout = layout
@@ -72,8 +72,8 @@ class PlotCanvas(BaseCanvas):
             self.interact = self.grid
 
         elif layout == 'boxed':
-            self.n_plots = len(box_bounds) if box_bounds is not None else len(box_pos)
-            self.boxed = Boxed(box_bounds=box_bounds, box_pos=box_pos, box_size=box_size)
+            self.n_plots = len(box_pos)
+            self.boxed = Boxed(box_pos=box_pos)
             self.boxed.attach(self)
             self.interact = self.boxed
 
@@ -260,9 +260,7 @@ class PlotCanvasMpl(object):
         self.figure = plt.figure()
         self.subplots()
 
-    def set_layout(
-            self, layout=None, shape=None, n_plots=None, origin=None,
-            box_bounds=None, box_pos=None, box_size=None):
+    def set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_pos=None):
 
         self.layout = layout
 
@@ -272,11 +270,8 @@ class PlotCanvasMpl(object):
             self._current_box_index = (0, 0)
 
         elif layout == 'boxed':  # pragma: no cover
-            self.n_plots = (len(box_bounds)
-                            if box_bounds is not None else len(box_pos))
-            # self.boxed = Boxed(box_bounds=box_bounds,
-            #                    box_pos=box_pos,
-            #                    box_size=box_size)
+            self.n_plots = len(box_pos)
+            # self.boxed = Boxed(box_pos=box_pos)
             # TODO
             raise NotImplementedError()
 

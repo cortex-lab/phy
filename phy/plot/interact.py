@@ -11,7 +11,7 @@ import logging
 import numpy as np
 
 from phylib.io.array import _in_polygon
-from phylib.utils.geometry import _get_boxes, _get_box_pos_size
+from phylib.utils.geometry import get_non_overlapping_boxes
 
 from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC
@@ -159,25 +159,14 @@ class Grid(BaseLayout):
 class Boxed(BaseLayout):
     """Layout showing plots in rectangles at arbitrary positions. Used by the waveform view.
 
-    The boxes can be specified from their corner coordinates, or from their centers and
-    optional sizes. If the sizes are not specified, they will be computed automatically.
-    An iterative algorithm is used to find the largest box size that will not make them overlap.
+    The boxes are specified via their center positions and optional sizes, in which case
+    an iterative algorithm is used to find the largest box size that will not make them overlap.
 
     Constructor
     ----------
 
-    box_bounds : array-like
-        A (n, 4) array where each row contains the `(xmin, ymin, xmax, ymax)`
-        bounds of every box, in normalized device coordinates.
-
-        Note: the box bounds need to be contained within [-1, 1] at all times,
-        otherwise an error will be raised. This is to prevent silent clipping
-        of the values when they are passed to a gloo Texture2D.
-
     box_pos : array-like (2D, shape[1] == 2)
         Position of the centers of the boxes.
-    box_size : array-like (2D, shape[1] == 2)
-        Size of the boxes.
 
     box_var : str
         Name of the GLSL variable with the box index.
@@ -197,26 +186,14 @@ class Boxed(BaseLayout):
     active_box = 0
     _scaling = (1., 1.)
 
-    def __init__(
-            self, box_bounds=None, box_pos=None, box_size=None, box_var=None,
-            keep_aspect_ratio=True):
+    def __init__(self, box_pos=None, box_var=None, keep_aspect_ratio=False):
         super(Boxed, self).__init__(box_var=box_var)
         self._key_pressed = None
         self.keep_aspect_ratio = keep_aspect_ratio
 
-        # Find the box bounds if only the box positions are passed.
-        if box_bounds is None:
-            assert box_pos is not None
-            # This will find a good box size automatically if it is not
-            # specified.
-            box_bounds = _get_boxes(
-                box_pos, size=box_size, keep_aspect_ratio=self.keep_aspect_ratio,
-                margin=self.margin)
+        self.global_scale = (1., 1.)
+        self.update_boxes(box_pos)
 
-        self._box_bounds = np.atleast_2d(box_bounds)
-        assert self._box_bounds.shape[1] == 4
-
-        self.gpu_transforms.add(Scale(lambda: self._scaling, gpu_var='u_box_scaling'))
         self.gpu_transforms.add(Range(
             NDC, lambda: self.box_bounds[self.active_box],
             from_gpu_var='vec4(-1, -1, 1, 1)', to_gpu_var='box_bounds'))
@@ -228,30 +205,38 @@ class Boxed(BaseLayout):
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
             attribute float {};
-            uniform sampler2D u_box_bounds;
+            uniform sampler2D u_box_pos;
             uniform float n_boxes;
-            uniform vec2 u_box_scaling;
+            uniform vec2 u_box_size;
+            uniform vec2 u_global_scale;
             """.format(self.box_var), 'header', origin=self)
         canvas.inserter.insert_vert("""
             // Fetch the box bounds for the current box (`box_var`).
-            vec4 box_bounds = fetch_texture({}, u_box_bounds, n_boxes);
-            box_bounds = (2 * box_bounds - 1);  // See hack in Python.
+            vec2 box_pos = fetch_texture({}, u_box_pos, n_boxes).xy;
+            box_pos = (2 * box_pos - 1);  // from [0, 1] (texture) to [-1, 1] (NDC)
+            box_pos = box_pos * u_global_scale;
+            vec4 box_bounds = vec4(box_pos - u_box_size, box_pos + u_box_size);
             """.format(self.box_var), 'before_transforms', origin=self)
 
     def update_visual(self, visual):
         """Update a visual."""
         super(Boxed, self).update_visual(visual)
-        # Signal bounds (positions).
-        box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
-        box_bounds = box_bounds.astype(np.float32)
-        if 'u_box_bounds' in visual.program:
-            visual.program['u_box_bounds'] = box_bounds
+        box_pos = _get_texture(self.box_pos, (0, 0), self.n_boxes, [-1, 1])
+        box_pos = box_pos.astype(np.float32)
+        if 'u_box_pos' in visual.program:
+            logger.debug("Update visual with interact Boxed.")
+            visual.program['u_box_pos'] = box_pos
             visual.program['n_boxes'] = self.n_boxes
-            visual.program['u_box_scaling'] = self._scaling
+            visual.program['u_box_size'] = self.box_size
+            visual.program['u_global_scale'] = self.global_scale
+
+    def update_boxes(self, box_pos):
+        """Update the box positions and automatically-computed size."""
+        self.box_pos, self.box_size = get_non_overlapping_boxes(box_pos)
 
     def add_boxes(self, canvas):
         """Show the boxes borders."""
-        n_boxes = len(self.box_bounds)
+        n_boxes = len(self.box_pos)
         a = 1 + .05
 
         pos = np.array([[-a, -a, +a, -a],
@@ -280,38 +265,8 @@ class Boxed(BaseLayout):
     @property
     def box_bounds(self):
         """Bounds of the boxes."""
-        return self._box_bounds
-
-    @box_bounds.setter
-    def box_bounds(self, val):
-        self._box_bounds = np.atleast_2d(val)
-        assert self._box_bounds.shape[1] == 4
-        self.update()
-
-    @property
-    def box_pos(self):
-        """Position of the box centers."""
-        box_pos, _ = _get_box_pos_size(self._box_bounds)
-        return box_pos
-
-    @box_pos.setter
-    def box_pos(self, val):
-        self.box_bounds = _get_boxes(
-            val, size=self.box_size, margin=self.margin,
-            keep_aspect_ratio=self.keep_aspect_ratio)
-
-    @property
-    def box_size(self):
-        """Sizes of the boxes."""
-        _, box_size = _get_box_pos_size(self._box_bounds)
-        return box_size
-
-    @box_size.setter
-    def box_size(self, val):
-        assert len(val) == 2
-        self.box_bounds = _get_boxes(
-            self.box_pos, size=val, margin=self.margin,
-            keep_aspect_ratio=self.keep_aspect_ratio)
+        bs = np.array(self.box_size)
+        return np.c_[self.box_pos - bs, self.box_pos + bs]
 
     def get_closest_box(self, pos):
         """Get the box closest to some position."""
@@ -322,14 +277,6 @@ class Boxed(BaseLayout):
         z = np.zeros_like(rmin)
         d = np.maximum(np.maximum(rmin - pos, z), pos - rmax)
         return np.argmin(np.linalg.norm(d, axis=1))
-
-    def update_boxes(self, box_pos, box_size):
-        """Set the box bounds from specified box positions and sizes."""
-        assert box_pos.shape == (self.n_boxes, 2)
-        assert len(box_size) == 2
-        self.box_bounds = _get_boxes(
-            box_pos, size=box_size, margin=self.margin,
-            keep_aspect_ratio=self.keep_aspect_ratio)
 
     # Scaling
     #--------------------------------------------------------------------------
@@ -371,8 +318,8 @@ class Stacked(Boxed):
     def __init__(self, n_boxes, box_var=None, origin=None):
         self._origin = origin or self._origin
         assert self._origin in ('top', 'bottom')
-        b = self.get_box_bounds(n_boxes)
-        super(Stacked, self).__init__(b, box_var=box_var, keep_aspect_ratio=False)
+        box_pos = self.get_box_pos(n_boxes)
+        super(Stacked, self).__init__(box_pos, box_var=box_var, keep_aspect_ratio=False)
 
     @property
     def n_boxes(self):
@@ -382,22 +329,13 @@ class Stacked(Boxed):
     @n_boxes.setter
     def n_boxes(self, n_boxes):
         if n_boxes >= 1:
-            self.box_bounds = self.get_box_bounds(n_boxes)
+            self.box_pos = self.get_box_pos(n_boxes)
 
-    def get_box_bounds(self, n_boxes):
+    def get_box_pos(self, n_boxes):
         """Return the box bounds for a given number of stacked boxes."""
-        # The margin must be in [-1, 1]
-        margin = .05
-        margin = np.clip(margin, -1, 1)
-        # Normalize the margin.
-        margin = 2. * margin / float(n_boxes)
-
         # Signal bounds.
-        b = np.zeros((n_boxes, 4))
-        b[:, 0] = -1
-        b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
-        b[:, 2] = 1
-        b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
+        b = np.zeros((n_boxes, 2))
+        b[:, 1] = np.linspace(-1, 1, n_boxes)
         if self._origin == 'top':
             b = b[::-1, :]
         return b
@@ -411,7 +349,7 @@ class Stacked(Boxed):
     @origin.setter
     def origin(self, value):
         self._origin = value
-        self.box_bounds = self.get_box_bounds(self.n_boxes)
+        self.box_pos = self.get_box_pos(self.n_boxes)
 
     def attach(self, canvas):
         """Attach the stacked interact to a canvas."""
@@ -422,7 +360,7 @@ class Stacked(Boxed):
             attribute float {};
             uniform float n_boxes;
             uniform bool u_top_origin;
-            uniform vec2 u_box_scaling;
+            uniform vec2 u_box_size;
             """.format(self.box_var), 'header', origin=self)
         canvas.inserter.insert_vert("""
             float margin = .1 / n_boxes;
@@ -440,7 +378,7 @@ class Stacked(Boxed):
         BaseLayout.update_visual(self, visual)
         if 'n_boxes' in visual.program:
             visual.program['n_boxes'] = self.n_boxes
-            visual.program['u_box_scaling'] = self._scaling
+            visual.program['u_box_size'] = self._scaling
             visual.program['u_top_origin'] = self._origin == 'top'
 
 

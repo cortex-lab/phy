@@ -5,6 +5,7 @@ vec3 hsv_to_rgb(vec3 c)
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+
 vec3 rgb_to_hsv(vec3 c)
 {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -16,9 +17,11 @@ vec3 rgb_to_hsv(vec3 c)
     return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
 
+
 vec4 fetch_texture(float index, sampler2D texture, float size) {
     return texture2D(texture, vec2(index / (size - 1.), .5));
 }
+
 
 vec4 filled(float distance, float linewidth, float antialias, vec4 bg_color)
 {
@@ -54,6 +57,7 @@ vec4 apply_mask(vec4 color, float mask) {
     hsv.z *= (1. + mask) * .5;
     return vec4(hsv_to_rgb(hsv), color.a);
 }
+
 
 float get_depth(float mask, float mask_max) {
     // NOTE: we assume that mask = mask + clu_idx.

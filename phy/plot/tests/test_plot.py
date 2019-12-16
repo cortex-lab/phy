@@ -105,16 +105,15 @@ def test_plot_boxed(qtbot, canvas):
     c = canvas
 
     n = 3
-    b = np.zeros((n, 4))
-    b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 2. / 3., n)
-    b[:, 2] = b[:, 3] = np.linspace(-1. + 2. / 3., 1., n)
-    c.set_layout('boxed', box_bounds=b)
+    b = np.zeros((n, 2))
+    b[:, 0] = np.linspace(-1., 1., n)
+    b[:, 1] = np.linspace(-1., 1., n)
+    c.set_layout('boxed', box_pos=b)
 
     t = get_linear_x(1, 1000).ravel()
     c[0].scatter(pos=np.random.rand(100, 2))
     c[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
-    c[2].hist(np.random.rand(5, 10),
-              color=np.random.uniform(.4, .9, size=(5, 4)))
+    c[2].hist(np.random.rand(5, 10), color=np.random.uniform(.4, .9, size=(5, 4)))
 
 
 def test_plot_uplot(qtbot, canvas):
