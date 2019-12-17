@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phylib.utils.color import selected_cluster_color
-from phylib.utils.geometry import _get_boxes
+from phylib.utils.geometry import get_non_overlapping_boxes
 from phy.plot.visuals import ScatterVisual
 from .base import ManualClusteringView
 
@@ -24,17 +24,9 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 def _get_pos_data_bounds(positions):
-
-    boxes = _get_boxes(positions, keep_aspect_ratio=False)
-    xmin, ymin = boxes[:, :2].min(axis=0)
-    xmax, ymax = boxes[:, 2:].max(axis=0)
-
-    x = boxes[:, [0, 2]].mean(axis=1)
-    y = boxes[:, [1, 3]].mean(axis=1)
-    positions = np.c_[x, y]
-
-    # x, y = positions.T
-    # xmin, ymin, xmax, ymax = x.min(), y.min(), x.max(), y.max()
+    positions, _ = get_non_overlapping_boxes(positions)
+    x, y = positions.T
+    xmin, ymin, xmax, ymax = x.min(), y.min(), x.max(), y.max()
     w = xmax - xmin
     h = ymax - ymin
     k = .05

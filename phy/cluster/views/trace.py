@@ -146,7 +146,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         self.do_show_labels = True
         self.show_all_spikes = False
-        self._scaling = 1.
 
         self.get_spike_times = spike_times
 
@@ -198,10 +197,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.text_visual = TextVisual()
         _fix_coordinate_in_visual(self.text_visual, 'x')
         self.canvas.add_visual(self.text_visual)
-
-        # Make a copy of the initial box pos and size. We'll apply the scaling
-        # to these quantities.
-        self.box_size = np.array(self.canvas.stacked.box_size)
 
         # Initial interval.
         self._interval = None
@@ -532,24 +527,21 @@ class TraceView(ScalingMixin, ManualClusteringView):
     # Scaling
     # -------------------------------------------------------------------------
 
-    def _apply_scaling(self):
-        self.canvas.layout.scaling = (self.canvas.layout.scaling[0], self._scaling)
-
     @property
     def scaling(self):
         """Scaling of the channel boxes."""
-        return self._scaling
+        return self.stacked._box_scaling[1]
 
     @scaling.setter
     def scaling(self, value):
-        self._scaling = value
-        self._apply_scaling()
+        self.stacked._box_scaling = (self.stacked._box_scaling[0], value)
 
     def _get_scaling_value(self):
         return self.scaling
 
     def _set_scaling_value(self, value):
         self.scaling = value
+        self.stacked.update()
 
     # Spike selection
     # -------------------------------------------------------------------------

@@ -528,7 +528,7 @@ class LassoMixin(object):
             logger.warning("Empty lasso.")
             return np.array([])
         pos = np.vstack(pos)
-        pos = range_transform(self.data_bounds, NDC, pos)
+        pos = range_transform([self.data_bounds], [NDC], pos)
         spike_ids = np.concatenate(spike_ids)
 
         # Find lassoed spikes.

@@ -81,7 +81,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         if cluster_ids is not None:
             self.set_cluster_ids(cluster_ids)
 
-        self.canvas.set_layout('grid', box_bounds=[[-1, -1, +1, +1]], has_clip=False)
+        self.canvas.set_layout('grid', has_clip=False)
         self.canvas.enable_axes()
         self.templates = templates
 

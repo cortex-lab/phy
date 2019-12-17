@@ -285,6 +285,10 @@ class Boxed(BaseLayout):
         self._box_scaling = (self._box_scaling[0] * cw, self._box_scaling[1] * ch)
         self.update()
 
+    @property
+    def box_scaling(self):
+        return self._box_scaling
+
     def expand_box_width(self):
         return self._increment_box_scaling(cw=self._scaling_param_increment)
 
@@ -303,6 +307,10 @@ class Boxed(BaseLayout):
     def _increment_layout_scaling(self, cw=1., ch=1.):
         self._layout_scaling = (self._layout_scaling[0] * cw, self._layout_scaling[1] * ch)
         self.update()
+
+    @property
+    def layout_scaling(self):
+        return self._layout_scaling
 
     def expand_layout_width(self):
         return self._increment_layout_scaling(cw=self._scaling_param_increment)
@@ -394,7 +402,10 @@ class Stacked(Boxed):
             float u = (u_top_origin ? (n_boxes - 1. - {bv}) : {bv}) / max(1., n_boxes - 1.);
             float y0 = -1 + u * (a + 1);
             float y1 = b + u * (1 - b);
-
+            float ym = .5 * (y0 + y1);
+            float yh = u_box_size.y * (y1 - ym);
+            y0 = ym - yh;
+            y1 = ym + yh;
             vec4 box_bounds = vec4(-1., y0, +1., y1);
         """.format(bv=self.box_var), 'before_transforms', origin=self)
 

@@ -100,7 +100,9 @@ def test_trace_view_1(qtbot, tempdir, gui):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    ac(v.stacked.box_size, (1., .19), atol=1e-3)
+    v.stacked.add_boxes(v.canvas)
+
+    ac(v.stacked.box_size, (.950, .165), atol=1e-3)
     v.set_interval((.375, .625))
     assert v.time == .5
     qtbot.wait(1)

@@ -15,9 +15,7 @@ import numpy as np
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phylib.utils.color import selected_cluster_color
-from phylib.utils.geometry import _get_boxes
 from phy.plot import get_linear_x
-from phy.plot.interact import Boxed
 from phy.plot.visuals import PlotVisual, TextVisual, LineVisual, _min, _max
 from .base import ManualClusteringView, ScalingMixin
 
@@ -28,13 +26,11 @@ logger = logging.getLogger(__name__)
 # Waveform view
 # -----------------------------------------------------------------------------
 
-def _get_box_bounds(bunchs, channel_ids):
+def _get_box_pos(bunchs, channel_ids):
     cp = {}
     for d in bunchs:
         cp.update({cid: pos for cid, pos in zip(d.channel_ids, d.channel_positions)})
-    box_pos = np.stack([cp[cid] for cid in channel_ids])
-    bounds = _get_boxes(box_pos, margin=Boxed.margin)
-    return bounds
+    return np.stack([cp[cid] for cid in channel_ids])
 
 
 def _get_clu_offsets(bunchs):
@@ -131,14 +127,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.local_state_attrs += ('box_scaling', 'probe_scaling')
 
         # Box and probe scaling.
-        self.canvas.set_layout('boxed', box_bounds=[[-1, -1, +1, +1]])
-
-        self._box_scaling = (1., 1.)
-        self._probe_scaling = (1., 1.)
-
-        self.box_pos = np.array(self.canvas.boxed.box_pos)
-        self.box_size = np.array(self.canvas.boxed.box_size)
-        self._update_boxes()
+        self.canvas.set_layout('boxed', box_pos=np.zeros((1, 2)))
 
         # Ensure waveforms is a dictionary, even if there is a single waveforms type.
         waveforms = waveforms or {}
@@ -312,10 +301,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Update the box bounds as a function of the selected channels.
         if channel_ids:
-            self.canvas.boxed.box_bounds = _get_box_bounds(bunchs, channel_ids)
-        self.box_pos = np.array(self.canvas.boxed.box_pos)
-        self.box_size = np.array(self.canvas.boxed.box_size)
-        self._update_boxes()
+            self.canvas.boxed.update_boxes(_get_box_pos(bunchs, channel_ids))
 
         self.data_bounds = self.data_bounds or self._get_data_bounds(bunchs)
 
@@ -385,81 +371,56 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     # Box scaling
     # -------------------------------------------------------------------------
 
-    def _update_boxes(self):
-        self.canvas.boxed.update_boxes(
-            self.box_pos * self.probe_scaling, self.box_size)
-
-    def _apply_box_scaling(self):
-        self.canvas.layout.scaling = self._box_scaling
-
-    @property
-    def box_scaling(self):
-        """Scaling of the channel boxes."""
-        return self._box_scaling
-
-    @box_scaling.setter
-    def box_scaling(self, value):
-        assert len(value) == 2
-        self._box_scaling = value
-        self._apply_box_scaling()
-
     def widen(self):
         """Increase the horizontal scaling of the waveforms."""
-        w, h = self._box_scaling
-        self._box_scaling = (w * self._scaling_param_increment, h)
-        self._apply_box_scaling()
+        self.boxed.expand_box_width()
 
     def narrow(self):
         """Decrease the horizontal scaling of the waveforms."""
-        w, h = self._box_scaling
-        self._box_scaling = (w / self._scaling_param_increment, h)
-        self._apply_box_scaling()
+        self.boxed.shrink_box_width()
+
+    @property
+    def box_scaling(self):
+        return self.boxed._box_scaling
+
+    @box_scaling.setter
+    def box_scaling(self, value):
+        self.boxed._box_scaling = value
 
     def _get_scaling_value(self):
-        return self._box_scaling[1]
+        return self.boxed._box_scaling[1]
 
     def _set_scaling_value(self, value):
-        w, h = self._box_scaling
-        self.box_scaling = (w, value)
-        self._update_boxes()
+        w, h = self.boxed._box_scaling
+        self.boxed._box_scaling = (w, value)
+        self.boxed.update()
 
     # Probe scaling
     # -------------------------------------------------------------------------
 
     @property
     def probe_scaling(self):
-        """Scaling of the entire probe."""
-        return self._probe_scaling
+        return self.boxed._layout_scaling
 
     @probe_scaling.setter
     def probe_scaling(self, value):
-        assert len(value) == 2
-        self._probe_scaling = value
-        self._update_boxes()
+        self.boxed._layout_scaling = value
 
     def extend_horizontally(self):
         """Increase the horizontal scaling of the probe."""
-        w, h = self._probe_scaling
-        self._probe_scaling = (w * self._scaling_param_increment, h)
-        self._update_boxes()
+        self.boxed.expand_layout_width()
 
     def shrink_horizontally(self):
         """Decrease the horizontal scaling of the waveforms."""
-        w, h = self._probe_scaling
-        self._probe_scaling = (w / self._scaling_param_increment, h)
-        self._update_boxes()
+        self.boxed.shrink_layout_width()
 
     def extend_vertically(self):
         """Increase the vertical scaling of the waveforms."""
-        w, h = self._probe_scaling
-        self._probe_scaling = (w, h * self._scaling_param_increment)
-        self._update_boxes()
+        self.boxed.expand_layout_height()
 
     def shrink_vertically(self):
         """Decrease the vertical scaling of the waveforms."""
-        w, h = self._probe_scaling
-        self._probe_scaling = (w, h / self._scaling_param_increment)
-        self._update_boxes()
+        self.boxed.shrink_layout_height()
 
     # Navigation
     # -------------------------------------------------------------------------
