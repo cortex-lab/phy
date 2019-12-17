@@ -16,7 +16,7 @@ from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phylib.utils.color import selected_cluster_color
 from phy.plot import get_linear_x
-from phy.plot.visuals import PlotVisual, TextVisual, LineVisual, _min, _max
+from phy.plot.visuals import PlotVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
@@ -85,6 +85,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     _default_position = 'right'
     ax_color = (.75, .75, .75, 1.)
+    tick_size = 5.
     cluster_ids = ()
 
     default_shortcuts = {
@@ -141,11 +142,15 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
 
-        self.waveform_visual = PlotVisual()
-        self.canvas.add_visual(self.waveform_visual)
-
         self.line_visual = LineVisual()
         self.canvas.add_visual(self.line_visual)
+
+        self.tick_visual = UniformScatterVisual(
+            marker='vbar', color=self.ax_color, size=self.tick_size)
+        self.canvas.add_visual(self.tick_visual)
+
+        self.waveform_visual = PlotVisual()
+        self.canvas.add_visual(self.waveform_visual)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -215,15 +220,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             data_bounds=self.data_bounds)
 
         # Waveform axes.
-        if self.overlap and bunch.index > 0:
-            # When overlapping, only show the axes for the first cluster.
-            return
-
-        _, m, _, M = self.data_bounds
-        mm = max(abs(m), abs(M)) or 1.
-        ax_db = (-1, m / mm, +1, M / mm)
+        # --------------
 
         # Horizontal y=0 lines.
+        ax_db = self.data_bounds
         a, b = _overlap_transform(
             np.array([-1, 1]), offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         box_index = _index_of(channel_ids_loc, self.channel_ids)
@@ -240,23 +240,19 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Vertical ticks every millisecond.
         steps = np.arange(np.round(self.wave_duration * 1000))
-        n = len(steps)
         # A vline every millisecond.
         x = .001 * steps
         # Scale to [-1, 1], same coordinates as the waveform points.
         x = -1 + 2 * x / self.wave_duration
         # Take overlap into account.
         x = _overlap_transform(x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
-        # Generate the (N, 4) array for LineVisual.
-        lpos = np.c_[x, np.zeros(n), x, -.25 * np.ones(n)]
-        lpos = np.tile(lpos, (len(channel_ids_loc), 1))
+        x = np.tile(x, len(channel_ids_loc))
         # Generate the box index.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
-        box_index = np.repeat(box_index, n * 2)
-        assert lpos.size // 2 == box_index.size
-        self.line_visual.add_batch_data(
-            pos=lpos,
-            color=self.ax_color,
+        box_index = np.repeat(box_index, x.size // len(box_index))
+        assert x.size == box_index.size
+        self.tick_visual.add_batch_data(
+            x=x, y=np.zeros_like(x),
             data_bounds=ax_db,
             box_index=box_index,
         )
@@ -299,7 +295,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             channel_labels.update({
                 channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)})
 
-        # Update the box bounds as a function of the selected channels.
+        # Update the Boxed box positions as a function of the selected channels.
         if channel_ids:
             self.canvas.boxed.update_boxes(_get_box_pos(bunchs, channel_ids))
 
@@ -307,8 +303,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         self.waveform_visual.reset_batch()
         self.line_visual.reset_batch()
+        self.tick_visual.reset_batch()
         for bunch in bunchs:
             self._plot_cluster(bunch)
+        self.canvas.update_visual(self.tick_visual)
         self.canvas.update_visual(self.line_visual)
         self.canvas.update_visual(self.waveform_visual)
 

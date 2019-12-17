@@ -224,7 +224,7 @@ class Boxed(BaseLayout):
         box_pos = _get_texture(self.box_pos, (0, 0), self.n_boxes, [-1, 1])
         box_pos = box_pos.astype(np.float32)
         if 'u_box_pos' in visual.program:
-            logger.debug("Update visual with interact Boxed.")
+            logger.log(5, "Update visual with interact Boxed.")
             visual.program['u_box_pos'] = box_pos
             visual.program['n_boxes'] = self.n_boxes
             visual.program['u_box_size'] = np.array(self.box_size) * np.array(self._box_scaling)

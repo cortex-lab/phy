@@ -181,20 +181,22 @@ class WaveformMixin(object):
         If `channel_id` is not specified, the returned amplitudes may be null.
 
         """
+        # Spikes not kept get an amplitude of zero.
+        out = np.zeros(len(spike_ids))
         # The cluster assignments of the requested spikes.
         spike_clusters = self.supervisor.clustering.spike_clusters[spike_ids]
         # Only keep spikes from clusters on the "best" channel.
         to_keep = np.in1d(spike_clusters, self.get_clusters_on_channel(channel_id))
         # WARNING: extracting raw waveforms is long!
-        waveforms = self.model.get_waveforms(spike_ids[to_keep], [channel_id])[..., 0]
-        assert waveforms.ndim == 2  # shape: (n_spikes_kept, n_samples)
-        # Filter the waveforms.
-        waveforms = self.raw_data_filter.apply(waveforms, axis=1)
-        # Amplitudes of the kept spikes.
-        amplitudes = waveforms.max(axis=1) - waveforms.min(axis=1)
-        # Spikes not kept get an amplitude of zero.
-        out = np.zeros(len(spike_ids))
-        out[to_keep] = amplitudes
+        waveforms = self.model.get_waveforms(spike_ids[to_keep], [channel_id])
+        if waveforms is not None:
+            waveforms = waveforms[..., 0]
+            assert waveforms.ndim == 2  # shape: (n_spikes_kept, n_samples)
+            # Filter the waveforms.
+            waveforms = self.raw_data_filter.apply(waveforms, axis=1)
+            # Amplitudes of the kept spikes.
+            amplitudes = waveforms.max(axis=1) - waveforms.min(axis=1)
+            out[to_keep] = amplitudes
         assert np.all(out >= 0)
         return out
 
