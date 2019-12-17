@@ -386,7 +386,7 @@ class Attribute(Variable):
         log.log(5, "GPU: Updating %s" % self.name)
 
         if self.data is None or self.data.size == 0:
-            log.warning("Data is empty for %s" % self.name)
+            log.debug("Data is empty for %s" % self.name)
             return
         else:
             log.log(5, "data shape is %s" % self.data.shape)

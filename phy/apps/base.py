@@ -176,7 +176,11 @@ class WaveformMixin(object):
 
     def get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs):
         """Return the maximum amplitude of the raw waveforms on the best channel of
-        the first selected cluster."""
+        the first selected cluster.
+
+        If `channel_id` is not specified, the returned amplitudes may be null.
+
+        """
         # The cluster assignments of the requested spikes.
         spike_clusters = self.supervisor.clustering.spike_clusters[spike_ids]
         # Only keep spikes from clusters on the "best" channel.
