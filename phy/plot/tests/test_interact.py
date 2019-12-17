@@ -141,10 +141,20 @@ def test_boxed_1(qtbot, canvas):
 
     boxed = Boxed(box_pos=b)
     _create_visual(qtbot, canvas, boxed, box_index)
+    boxed.add_boxes(canvas)
 
     ac(boxed.box_pos[:, 0], 0, atol=1e-9)
     assert boxed.box_size[0] >= .9
     assert boxed.box_size[1] >= .05
+
+    boxed.expand_box_width()
+    boxed.shrink_box_width()
+    boxed.expand_box_height()
+    boxed.shrink_box_height()
+    boxed.expand_layout_width()
+    boxed.shrink_layout_width()
+    boxed.expand_layout_height()
+    boxed.shrink_layout_height()
 
     # qtbot.stop()
 

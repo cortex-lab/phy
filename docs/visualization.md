@@ -280,6 +280,8 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 ![image](https://user-images.githubusercontent.com/1942359/58951569-bf3d8b00-8791-11e9-969b-9327a4f58811.png)
 
+You can switch the origin (top or bottom) with the `alt+o` shortcut.
+
 #### Keyboard shortcuts
 
 ```text

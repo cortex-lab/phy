@@ -167,7 +167,6 @@ class Boxed(BaseLayout):
 
     box_pos : array-like (2D, shape[1] == 2)
         Position of the centers of the boxes.
-
     box_var : str
         Name of the GLSL variable with the box index.
     keep_aspect_ratio : boolean
@@ -184,14 +183,15 @@ class Boxed(BaseLayout):
     margin = .1
     n_dims = 1
     active_box = 0
-    _scaling = (1., 1.)
+    _box_scaling = (1., 1.)
+    _layout_scaling = (1., 1.)
+    _scaling_param_increment = 1.1
 
     def __init__(self, box_pos=None, box_var=None, keep_aspect_ratio=False):
         super(Boxed, self).__init__(box_var=box_var)
         self._key_pressed = None
         self.keep_aspect_ratio = keep_aspect_ratio
 
-        self.global_scale = (1., 1.)
         self.update_boxes(box_pos)
 
         self.gpu_transforms.add(Range(
@@ -208,13 +208,13 @@ class Boxed(BaseLayout):
             uniform sampler2D u_box_pos;
             uniform float n_boxes;
             uniform vec2 u_box_size;
-            uniform vec2 u_global_scale;
+            uniform vec2 u_layout_scaling;
             """.format(self.box_var), 'header', origin=self)
         canvas.inserter.insert_vert("""
             // Fetch the box bounds for the current box (`box_var`).
             vec2 box_pos = fetch_texture({}, u_box_pos, n_boxes).xy;
             box_pos = (2 * box_pos - 1);  // from [0, 1] (texture) to [-1, 1] (NDC)
-            box_pos = box_pos * u_global_scale;
+            box_pos = box_pos * u_layout_scaling;
             vec4 box_bounds = vec4(box_pos - u_box_size, box_pos + u_box_size);
             """.format(self.box_var), 'before_transforms', origin=self)
 
@@ -227,8 +227,8 @@ class Boxed(BaseLayout):
             logger.debug("Update visual with interact Boxed.")
             visual.program['u_box_pos'] = box_pos
             visual.program['n_boxes'] = self.n_boxes
-            visual.program['u_box_size'] = self.box_size
-            visual.program['u_global_scale'] = self.global_scale
+            visual.program['u_box_size'] = np.array(self.box_size) * np.array(self._box_scaling)
+            visual.program['u_layout_scaling'] = self._layout_scaling
 
     def update_boxes(self, box_pos):
         """Update the box positions and automatically-computed size."""
@@ -278,18 +278,43 @@ class Boxed(BaseLayout):
         d = np.maximum(np.maximum(rmin - pos, z), pos - rmax)
         return np.argmin(np.linalg.norm(d, axis=1))
 
-    # Scaling
+    # Box scaling
     #--------------------------------------------------------------------------
 
-    @property
-    def scaling(self):
-        """Return the grid scaling."""
-        return self._scaling
-
-    @scaling.setter
-    def scaling(self, value):
-        self._scaling = value
+    def _increment_box_scaling(self, cw=1., ch=1.):
+        self._box_scaling = (self._box_scaling[0] * cw, self._box_scaling[1] * ch)
         self.update()
+
+    def expand_box_width(self):
+        return self._increment_box_scaling(cw=self._scaling_param_increment)
+
+    def shrink_box_width(self):
+        return self._increment_box_scaling(cw=1. / self._scaling_param_increment)
+
+    def expand_box_height(self):
+        return self._increment_box_scaling(ch=self._scaling_param_increment)
+
+    def shrink_box_height(self):
+        return self._increment_box_scaling(ch=1. / self._scaling_param_increment)
+
+    # Layout scaling
+    #--------------------------------------------------------------------------
+
+    def _increment_layout_scaling(self, cw=1., ch=1.):
+        self._layout_scaling = (self._layout_scaling[0] * cw, self._layout_scaling[1] * ch)
+        self.update()
+
+    def expand_layout_width(self):
+        return self._increment_layout_scaling(cw=self._scaling_param_increment)
+
+    def shrink_layout_width(self):
+        return self._increment_layout_scaling(cw=1. / self._scaling_param_increment)
+
+    def expand_layout_height(self):
+        return self._increment_layout_scaling(ch=self._scaling_param_increment)
+
+    def shrink_layout_height(self):
+        return self._increment_layout_scaling(ch=1. / self._scaling_param_increment)
 
 
 class Stacked(Boxed):
@@ -378,7 +403,7 @@ class Stacked(Boxed):
         BaseLayout.update_visual(self, visual)
         if 'n_boxes' in visual.program:
             visual.program['n_boxes'] = self.n_boxes
-            visual.program['u_box_size'] = self._scaling
+            visual.program['u_box_size'] = self._box_scaling
             visual.program['u_top_origin'] = self._origin == 'top'
 
 
