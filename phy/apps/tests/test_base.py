@@ -128,7 +128,7 @@ def _mock_controller(tempdir, cls):
 # Base classes
 #------------------------------------------------------------------------------
 
-class BaseControllerTests(object):
+class MinimalControllerTests(object):
 
     # Methods to override
     #--------------------------------------------------------------------------
@@ -277,6 +277,19 @@ class BaseControllerTests(object):
         # to avoid side-effects and spurious dependencies between tests.
         reset()
 
+    # Minimal test methods
+    #--------------------------------------------------------------------------
+
+    def test_minimal_01(self):
+        """Select one cluster."""
+        self.next_best()
+        self.assertEqual(len(self.selected), 1)
+        self.next()
+        self.assertEqual(len(self.selected), 2)
+
+
+class BaseControllerTests(MinimalControllerTests):
+
     # Common test methods
     #--------------------------------------------------------------------------
 
@@ -369,7 +382,7 @@ class GlobalViewsTests(object):
 # Mock test cases
 #------------------------------------------------------------------------------
 
-class MockControllerTests(BaseControllerTests, GlobalViewsTests, unittest.TestCase):
+class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.TestCase):
     """Empty mock controller."""
 
     @classmethod
@@ -384,7 +397,7 @@ class MockControllerTests(BaseControllerTests, GlobalViewsTests, unittest.TestCa
         mouse_click(self.qtbot, view.canvas, (10, 10), modifiers=('Control',))
 
 
-class MockControllerWTests(BaseControllerTests, unittest.TestCase):
+class MockControllerWTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with waveforms."""
 
     @classmethod
@@ -415,7 +428,7 @@ class MockControllerWTests(BaseControllerTests, unittest.TestCase):
         mouse_click(self.qtbot, fv.canvas, (x, y), button='Left', modifiers=('Control',))
 
 
-class MockControllerFTests(BaseControllerTests, unittest.TestCase):
+class MockControllerFTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with features."""
 
     @classmethod
@@ -448,7 +461,7 @@ class MockControllerFTests(BaseControllerTests, unittest.TestCase):
         mouse_click(self.qtbot, fv.canvas, (x, y), button='Right', modifiers=('Alt',))
 
 
-class MockControllerTTests(GlobalViewsTests, BaseControllerTests, unittest.TestCase):
+class MockControllerTTests(GlobalViewsTests, MinimalControllerTests, unittest.TestCase):
     """Mock controller with traces."""
 
     @classmethod
@@ -467,7 +480,7 @@ class MockControllerTTests(GlobalViewsTests, BaseControllerTests, unittest.TestC
         mouse_click(self.qtbot, self.trace_view.canvas, (150, 100), modifiers=('Shift',))
 
 
-class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
+class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with templates."""
 
     @classmethod
@@ -494,7 +507,7 @@ class MockControllerTmpTests(BaseControllerTests, unittest.TestCase):
         self.split()
 
 
-class MockControllerFullTests(BaseControllerTests, unittest.TestCase):
+class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with all views."""
     @classmethod
     def get_controller(cls, tempdir):

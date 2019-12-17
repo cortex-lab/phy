@@ -17,7 +17,7 @@ from phylib.io.model import load_model, get_template_params
 from phylib.io.tests.conftest import _make_dataset
 from phylib.utils.testing import captured_output
 
-from phy.apps.tests.test_base import BaseControllerTests, GlobalViewsTests
+from phy.apps.tests.test_base import MinimalControllerTests, BaseControllerTests, GlobalViewsTests
 from ..gui import (
     template_describe, TemplateController, TemplateFeatureView)
 
@@ -189,7 +189,12 @@ def plugin_names():
 def _make_plugin_test_case(plugin_name):
     """Generate a special test class with a plugin attached to the controller."""
 
-    class TemplateControllerPluginTests(TemplateControllerDenseTests):
+    class TemplateControllerPluginTests(MinimalControllerTests, unittest.TestCase):
+
+        @classmethod
+        def _create_dataset(cls, tempdir):
+            return _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+
         @classmethod
         def get_controller(cls, tempdir):
             cls._dataset = cls._create_dataset(tempdir)
