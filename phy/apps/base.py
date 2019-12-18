@@ -944,11 +944,11 @@ class BaseController(object):
     def _set_cluster_metrics(self):
         """Set the cluster metrics dictionary with some default metrics."""
         self.cluster_metrics = {}  # dictionary {name: function cluster_id => value}, for plugins
-        self.cluster_metrics['channel'] = self.get_best_channel_label
+        self.cluster_metrics['ch'] = self.get_best_channel_label
         if getattr(self.model, 'channel_shanks', None) is not None:
-            self.cluster_metrics['shank'] = self.get_channel_shank
+            self.cluster_metrics['sh'] = self.get_channel_shank
         self.cluster_metrics['depth'] = self.get_probe_depth
-        self.cluster_metrics['firing_rate'] = self.get_mean_firing_rate
+        self.cluster_metrics['fr'] = self.get_mean_firing_rate
 
     def _set_similarity_functions(self):
         """Set the `similarity_functions` dictionary that maps similarity names to functions
@@ -1155,7 +1155,7 @@ class BaseController(object):
 
     def get_mean_firing_rate(self, cluster_id):
         """Return the mean firing rate of a cluster."""
-        return "%.1f spk/s" % (self.supervisor.n_spikes(cluster_id) / max(1, self.model.duration))
+        return "%.2f" % (self.supervisor.n_spikes(cluster_id) / max(1, self.model.duration))
 
     def get_best_channel(self, cluster_id):
         """Return the best channel id of a given cluster. This is the first channel returned
