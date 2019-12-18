@@ -57,24 +57,55 @@ def _try_get_opengl_canvas(view):
 # Dock widget
 # -----------------------------------------------------------------------------
 
-TITLE_BAR_STYLESHEET = '''
+DOCK_TITLE_STYLESHEET = '''
     * {
-        padding: 5px;
+        padding: 0;
+        margin: 0;
         border: 0;
+        background: #232426;
+        color: white;
+    }
+
+    QPushButton {
+        padding: 4px;
+        margin: 0 1px;
+    }
+
+    QCheckBox {
+        padding: 2px 4px;
+        margin: 0 1px;
+    }
+
+    QLabel {
+        padding: 3px;
     }
 
     QPushButton:hover, QCheckBox:hover {
-        background: #ddd;
+        background: #323438;
     }
 
     QPushButton:pressed {
-        background: #ccc;
+        background: #53575e;
     }
 
     QPushButton:checked {
-        background: #bbb;
+        background: #4e5157;
+    }
+'''
+
+
+DOCK_STATUS_STYLESHEET = '''
+    * {
+        padding: 0;
+        margin: 0;
+        border: 0;
+        background: black;
+        color: white;
     }
 
+    QLabel {
+        padding: 3px;
+    }
 '''
 
 
@@ -156,7 +187,7 @@ class DockWidget(QDockWidget):
 
         assert name not in self._dock_widgets
         self._dock_widgets[name] = button
-        self._buttons_layout.addWidget(button)
+        self._buttons_layout.addWidget(button, 1)
 
         return button
 
@@ -193,7 +224,7 @@ class DockWidget(QDockWidget):
 
         assert name not in self._dock_widgets
         self._dock_widgets[name] = checkbox
-        self._buttons_layout.addWidget(checkbox)
+        self._buttons_layout.addWidget(checkbox, 1)
 
         return checkbox
 
@@ -204,12 +235,11 @@ class DockWidget(QDockWidget):
     @property
     def status(self):
         """Current status text of the title bar."""
-        return self._status.currentMessage()
+        return self._status.text()
 
     def set_status(self, text):
         """Set the status text of the widget."""
-        print("text")
-        self._status.showMessage(text)
+        self._status.setText(text)
 
     def _default_buttons(self):
         """Create the default buttons on the right."""
@@ -231,27 +261,15 @@ class DockWidget(QDockWidget):
             else:
                 make_screenshot(self.view)
 
-    def _create_status_bar(self):
-        # Dock has requested widget and status bar.
-        widget_container = QWidget(self)
-        widget_layout = QVBoxLayout(widget_container)
-        widget_layout.setContentsMargins(0, 0, 0, 0)
-
-        widget_layout.addWidget(self._widget)
-
-        self._status = QStatusBar(widget_container)
-        self._status.setMaximumHeight(25)
-        widget_layout.addWidget(self._status)
-
-        widget_container.setLayout(widget_layout)
-        self.setWidget(widget_container)
-
     def _create_title_bar(self):
         """Create the title bar."""
         self._title_bar = QWidget(self)
-        self._layout = QHBoxLayout(self._title_bar)
 
-        self._title_bar.setStyleSheet(TITLE_BAR_STYLESHEET)
+        self._layout = QHBoxLayout(self._title_bar)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+
+        self._title_bar.setStyleSheet(DOCK_TITLE_STYLESHEET)
 
         # Left part of the bar.
         # ---------------------
@@ -259,12 +277,6 @@ class DockWidget(QDockWidget):
         # Widget name.
         label = QLabel(self.windowTitle())
         self._layout.addWidget(label)
-
-        self._layout.addStretch(1)
-
-        # # Widget status text.
-        # self._status = QLabel('')
-        # self._layout.addWidget(self._status)
 
         # Space.
         # ------
@@ -277,6 +289,7 @@ class DockWidget(QDockWidget):
         self._buttons_layout = QHBoxLayout(self._buttons)
         self._buttons_layout.setDirection(1)
         self._buttons_layout.setContentsMargins(0, 0, 0, 0)
+        self._buttons_layout.setSpacing(0)
         self._buttons.setLayout(self._buttons_layout)
 
         # Add the default buttons.
@@ -284,9 +297,26 @@ class DockWidget(QDockWidget):
 
         # Layout margin.
         self._layout.addWidget(self._buttons)
-        self._layout.setContentsMargins(0, 0, 0, 0)
         self._title_bar.setLayout(self._layout)
         self.setTitleBarWidget(self._title_bar)
+
+    def _create_status_bar(self):
+        # Dock has requested widget and status bar.
+        widget_container = QWidget(self)
+        widget_layout = QVBoxLayout(widget_container)
+        widget_layout.setContentsMargins(0, 0, 0, 0)
+        widget_layout.setSpacing(0)
+
+        widget_layout.addWidget(self._widget, 100)
+
+        # Widget status text.
+        self._status = QLabel('')
+        self._status.setMaximumHeight(20)
+        self._status.setStyleSheet(DOCK_STATUS_STYLESHEET)
+        widget_layout.addWidget(self._status, 1)
+
+        widget_container.setLayout(widget_layout)
+        self.setWidget(widget_container)
 
 
 def _create_dock_widget(widget, name, closable=True, floatable=True):
