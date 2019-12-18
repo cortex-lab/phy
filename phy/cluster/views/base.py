@@ -181,6 +181,7 @@ class ManualClusteringView(object):
             self.canvas.update()
             emit('is_busy', self, False)
             self._lock = None
+            self.update_status()
 
         # Start the task on the thread pool, and let the OpenGL canvas know that we're
         # starting to record all OpenGL calls instead of executing them immediately.
@@ -194,8 +195,6 @@ class ManualClusteringView(object):
             # This is for OpenGL views, without threading.
             worker.run()
             self._lock = None
-
-        self.update_status()
 
     def on_cluster(self, up):
         """Callback function when a clustering action occurs. May be overriden.

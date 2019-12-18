@@ -838,7 +838,7 @@ class Supervisor(object):
             emit('select', self, self.selected, **kwargs)
         if cluster_ids:
             self.cluster_view.scroll_to(cluster_ids[-1])
-        self.cluster_view.dock.set_status(', '.join(map(str, cluster_ids)))
+        self.cluster_view.dock.set_status('clusters: %s' % ', '.join(map(str, cluster_ids)))
 
     def _similar_selected(self, sender, obj):
         """When clusters are selected in the similarity view, register the action in the history
@@ -853,7 +853,7 @@ class Supervisor(object):
         emit('select', self, self.selected, **kwargs)
         if similar:
             self.similarity_view.scroll_to(similar[-1])
-        self.similarity_view.dock.set_status(', '.join(map(str, similar)))
+        self.similarity_view.dock.set_status('similar clusters: %s' % ', '.join(map(str, similar)))
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""

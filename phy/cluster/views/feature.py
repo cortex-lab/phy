@@ -392,7 +392,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         if self.channel_ids is None:
             return
         channel_labels = [self.channel_labels[ch] for ch in self.channel_ids[:2]]
-        self.set_dock_status(', '.join(channel_labels))
+        self.set_dock_status('channels: %s' % ', '.join(channel_labels))
 
     # Dimension selection
     # -------------------------------------------------------------------------
