@@ -29,12 +29,38 @@ Several users have reported display issues on Windows 10, especially on computer
 * Check that your screen is connected to your NVIDIA GPU and not the integrated one.
 * Enable the discrete NVIDIA GPU (see [this user's advice](https://github.com/cortex-lab/phy/issues/922#issuecomment-561673363))
 
-### Deleting the `.phy` and `~/.phy` subdirectories.
 
-The cache directories might sometimes cause problems. Deleting them may help. You can also use the `--clear-cache` and `--clear-state` options to the `phy` command.
+### Issues with the GUI layout or the views
 
-phy uses two user directories to store user parameters and cache:
+phy saves the GUI layout and view options (called **GUI state**) in two directories:
+
+* **Global GUI state**: `~/.phy/TemplateGUI/state.json` for the Template GUI (common to all datasets)
+* **Local GUI state**: `.phy/state.json` (within your data directory)
+
+If you want to reset the default GUI layout and view options, delete these two files, or run the GUI with the `--clear-state` option which will delete these files for you:
+
+```
+phy template-gui params.py --clear-state
+```
+
+You can also safely delete the `.phy` and `~/.phy` directories which only contain the GUI state and the cache, or use the `--clear-cache` option which will delete these directories for you:
+
+```
+phy template-gui params.py --clear-cache
+```
+
+More details:
 
 * `.phy`: subdirectory inside the data directory. This subdirectory contains the cache that is used to make phy faster. You can always safely delete it: the cache will be automatically reconstructed the next time you launch the GUI. The only drawback is that performance will be a bit worse when you first select clusters in the GUI.
 
 * `~/.phy`: (`~` is your home directory) this directory contains your custom plugins and user preferences for the GUI. If you delete it, you will lose the layout configuration of the GUI (which will be automatically reset the next time you open the GUI) and your user preferences. More specifically, the GUI parameters are found in `~/.phy/TemplateGUI/state.json` for the Template GUI, and so on.
+
+
+## Error "No module named PyQt5.sip"
+
+If you receive the error: `No module named PyQt5.sip`, try to run the following commands in your conda environment (solution found by Claire Ward):
+
+```
+pip uninstall pyqt5 pyqt5-tools
+pip install pyqt5 pyqt5-tools pyqt5.sip
+```

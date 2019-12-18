@@ -37,22 +37,3 @@ pip install git+https://github.com/cortex-lab/phylib.git
 cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
-
-## Troubleshooting
-
-*  If you receive the error: `No module named PyQt5.sip`, try to run the following commands in your conda environment (solution found by Claire Ward):
-
-```
-pip uninstall pyqt5 pyqt5-tools
-pip install pyqt5 pyqt5-tools pyqt5.sip
-```
-
-
-## How to reset the GUI configuration
-
-This might be useful if the organization of the views in the GUI is incorrect.
-
-Run `phy` with the `--clear-state` option. Alternatively, delete both files:
-
-* **Global GUI state**: `~/.phy/TemplateGUI/state.json` (common to all datasets)
-* **Local GUI state**: `.phy/state.json` (within your data directory)
