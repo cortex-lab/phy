@@ -89,7 +89,7 @@ DOCK_TITLE_STYLESHEET = '''
     }
 
     QPushButton:checked {
-        background: #4e5157;
+        background: #6c717a;
     }
 '''
 
@@ -289,7 +289,7 @@ class DockWidget(QDockWidget):
         self._buttons_layout = QHBoxLayout(self._buttons)
         self._buttons_layout.setDirection(1)
         self._buttons_layout.setContentsMargins(0, 0, 0, 0)
-        self._buttons_layout.setSpacing(0)
+        self._buttons_layout.setSpacing(1)
         self._buttons.setLayout(self._buttons_layout)
 
         # Add the default buttons.
@@ -311,7 +311,7 @@ class DockWidget(QDockWidget):
 
         # Widget status text.
         self._status = QLabel('')
-        self._status.setMaximumHeight(20)
+        self._status.setMaximumHeight(30)
         self._status.setStyleSheet(DOCK_STATUS_STYLESHEET)
         widget_layout.addWidget(self._status, 1)
 
