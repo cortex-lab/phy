@@ -658,10 +658,15 @@ class TraceMixin(object):
             v.on_select()
 
         @connect
+        def on_amplitude_click(sender, time):
+            v.go_to(time)
+
+        @connect
         def on_close_view(sender, view):
             if view == v:
                 unconnect(on_spike_click)
                 unconnect(on_color_mapping_changed)
+                unconnect(on_amplitude_click)
 
         return v
 

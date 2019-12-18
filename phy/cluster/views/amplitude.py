@@ -13,6 +13,7 @@ import numpy as np
 
 from phylib.utils.color import selected_cluster_color, add_alpha
 from phylib.utils._types import _as_array
+from phylib.utils.event import emit
 
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
 from .histogram import _compute_histogram
@@ -64,6 +65,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         'previous_amplitude_type': 'shift+a',
         'select_x_dim': 'alt+left click',
         'select_y_dim': 'alt+right click',
+        'select_time': 'shift+click',
     }
 
     def __init__(self, amplitudes=None, amplitude_name=None, duration=None):
@@ -204,3 +206,10 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def previous_amplitude_type(self):
         """Switch to the previous amplitude type."""
         self._change_amplitude_type(-1)
+
+    def on_mouse_click(self, e):
+        """Select a time from the amplitude view to display in the trace view."""
+        if 'Shift' in e.modifiers:
+            mouse_pos = self.canvas.panzoom.window_to_ndc(e.pos)
+            time = Range(NDC, self.data_bounds).apply(mouse_pos)[0][0]
+            emit('amplitude_click', self, time=time)
