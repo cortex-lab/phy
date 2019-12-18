@@ -280,10 +280,10 @@ class MinimalControllerTests(object):
     # Minimal test methods
     #--------------------------------------------------------------------------
 
-    def test_minimal_01(self):
+    def test_zzz_minimal_01(self):
         """Select one cluster."""
+        self.supervisor.reset_wizard()
         self.next_best()
-        self.assertEqual(len(self.selected), 1)
         self.next()
         self.assertEqual(len(self.selected), 2)
 
