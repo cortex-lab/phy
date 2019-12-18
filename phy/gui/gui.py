@@ -12,7 +12,7 @@ from functools import partial
 import logging
 
 from .qt import (
-    QApplication, QWidget, QDockWidget, QHBoxLayout, QPushButton, QLabel, QCheckBox,
+    QApplication, QWidget, QDockWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QCheckBox,
     QFontDatabase, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _static_abs_path,
     _wait, prompt, show_box, screenshot as make_screenshot)
 from .state import GUIState, _gui_state_path, _get_default_state_path
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
-# GUI main window
+# GUI utils
 # -----------------------------------------------------------------------------
 
 def _try_get_matplotlib_canvas(view):
@@ -53,9 +53,13 @@ def _try_get_opengl_canvas(view):
     return view
 
 
+# -----------------------------------------------------------------------------
+# Dock widget
+# -----------------------------------------------------------------------------
+
 TITLE_BAR_STYLESHEET = '''
     * {
-        padding: 10px;
+        padding: 5px;
         border: 0;
     }
 
@@ -83,7 +87,7 @@ class DockWidget(QDockWidget):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, widget=None, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
         # Load the font awesome font.
         font_id = QFontDatabase.addApplicationFont(str(_static_abs_path('fa-solid-900.ttf')))
@@ -91,6 +95,7 @@ class DockWidget(QDockWidget):
         font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
         self._font = font_db.font(font_family, None, 8)
         self._dock_widgets = {}
+        self._widget = widget
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
@@ -199,11 +204,12 @@ class DockWidget(QDockWidget):
     @property
     def status(self):
         """Current status text of the title bar."""
-        return self._status.text()
+        return self._status.currentMessage()
 
     def set_status(self, text):
         """Set the status text of the widget."""
-        self._status.setText(text)
+        print("text")
+        self._status.showMessage(text)
 
     def _default_buttons(self):
         """Create the default buttons on the right."""
@@ -225,6 +231,21 @@ class DockWidget(QDockWidget):
             else:
                 make_screenshot(self.view)
 
+    def _create_status_bar(self):
+        # Dock has requested widget and status bar.
+        widget_container = QWidget(self)
+        widget_layout = QVBoxLayout(widget_container)
+        widget_layout.setContentsMargins(0, 0, 0, 0)
+
+        widget_layout.addWidget(self._widget)
+
+        self._status = QStatusBar(widget_container)
+        self._status.setMaximumHeight(25)
+        widget_layout.addWidget(self._status)
+
+        widget_container.setLayout(widget_layout)
+        self.setWidget(widget_container)
+
     def _create_title_bar(self):
         """Create the title bar."""
         self._title_bar = QWidget(self)
@@ -241,9 +262,9 @@ class DockWidget(QDockWidget):
 
         self._layout.addStretch(1)
 
-        # Widget status text.
-        self._status = QLabel('')
-        self._layout.addWidget(self._status)
+        # # Widget status text.
+        # self._status = QLabel('')
+        # self._layout.addWidget(self._status)
 
         # Space.
         # ------
@@ -270,10 +291,9 @@ class DockWidget(QDockWidget):
 
 def _create_dock_widget(widget, name, closable=True, floatable=True):
     """Create a dock widget wrapping any Qt widget."""
-    dock = DockWidget()
+    dock = DockWidget(widget=widget)
     dock.setObjectName(name)
     dock.setWindowTitle(name)
-    dock.setWidget(widget)
 
     # Set gui widget options.
     options = QDockWidget.DockWidgetMovable
@@ -291,6 +311,7 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
     )
 
     dock._create_title_bar()
+    dock._create_status_bar()
 
     return dock
 
@@ -320,6 +341,10 @@ def _remove_duplicates(seq):
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
 
+
+# -----------------------------------------------------------------------------
+# GUI main window
+# -----------------------------------------------------------------------------
 
 class GUI(QMainWindow):
     """A Qt main window containing docking widgets. This class derives from `QMainWindow`.
