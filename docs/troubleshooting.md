@@ -43,7 +43,7 @@ If you want to reset the default GUI layout and view options, delete these two f
 phy template-gui params.py --clear-state
 ```
 
-You can also safely delete the `.phy` and `~/.phy` directories which only contain the GUI state and the cache, or use the `--clear-cache` option which will delete these directories for you:
+You can also safely delete the `.phy` subdirectory which only contain the local GUI state and the data-specific cache, or use the `--clear-cache` option which will delete this directory for you:
 
 ```
 phy template-gui params.py --clear-cache
