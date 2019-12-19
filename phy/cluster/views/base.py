@@ -133,7 +133,8 @@ class ManualClusteringView(object):
         # Decide whether the view should react to the select event or not.
         if not self.auto_update:
             return
-        if sender.__class__.__name__ != 'Supervisor':
+        # Only the Supervisor and some specific views can trigger a proper select event.
+        if sender.__class__.__name__ in ('ClusterView', 'SimilarityView'):
             return
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
@@ -378,7 +379,8 @@ class BaseGlobalView(object):
         # instead of relying on the BaseManualClustering callback.
         if not self.auto_update:
             return
-        if sender.__class__.__name__ != 'Supervisor':
+        # Only the Supervisor and some specific views can trigger a proper select event.
+        if sender.__class__.__name__ in ('ClusterView', 'SimilarityView'):
             return
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
