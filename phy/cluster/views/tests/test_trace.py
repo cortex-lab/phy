@@ -192,7 +192,7 @@ def test_trace_view_1(qtbot, tempdir, gui):
     _clicked = []
 
     @connect(sender=v)
-    def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None, key=None):
+    def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None, key=None):
         _clicked.append((channel_id, spike_id, cluster_id))
 
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))

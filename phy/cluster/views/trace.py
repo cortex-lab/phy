@@ -564,8 +564,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
             # Get the closest spike id.
             times, spike_ids, spike_clusters, channel_ids = zip(*wt)
             i = np.argmin(np.abs(np.array(times) - mouse_time))
-            # Raise the spike_click event.
+            # Raise the select_spike event.
             spike_id = spike_ids[i]
             cluster_id = spike_clusters[i]
-            emit('spike_click', self, channel_id=channel_id,
+            emit('select_spike', self, channel_id=channel_id,
                  spike_id=spike_id, cluster_id=cluster_id)

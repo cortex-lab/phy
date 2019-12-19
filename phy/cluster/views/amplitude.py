@@ -212,4 +212,4 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         if 'Shift' in e.modifiers:
             mouse_pos = self.canvas.panzoom.window_to_ndc(e.pos)
             time = Range(NDC, self.data_bounds).apply(mouse_pos)[0][0]
-            emit('amplitude_click', self, time=time)
+            emit('select_time', self, time)

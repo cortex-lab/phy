@@ -67,9 +67,9 @@ def test_feature_view(qtbot, gui, n_channels):
     v.increase_marker_size()
     v.decrease_marker_size()
 
-    v.on_channel_click(channel_id=3, button='Left', key=None)
-    v.on_channel_click(channel_id=3, button='Right', key=None)
-    v.on_channel_click(channel_id=3, button='Right', key=2)
+    v.on_select_channel(channel_id=3, button='Left', key=None)
+    v.on_select_channel(channel_id=3, button='Right', key=None)
+    v.on_select_channel(channel_id=3, button='Right', key=2)
     v.clear_channels()
     v.toggle_automatic_channel_selection(True)
 
@@ -77,7 +77,7 @@ def test_feature_view(qtbot, gui, n_channels):
     _l = []
 
     @connect(sender=v)
-    def on_feature_click(sender, dim=None, channel_id=None, pc=None):
+    def on_select_feature(sender, dim=None, channel_id=None, pc=None):
         _l.append((dim, channel_id, pc))
 
     for i, j, dim_x, dim_y in v._iter_subplots():

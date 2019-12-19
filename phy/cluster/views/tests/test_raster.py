@@ -22,9 +22,10 @@ from . import _stop_and_close
 #------------------------------------------------------------------------------
 
 def test_raster_0(qtbot, gui):
-    spike_times = np.arange(4)
-    spike_clusters = np.arange(4)
-    cluster_ids = np.arange(4)
+    n = 5
+    spike_times = np.arange(n)
+    spike_clusters = np.arange(n)
+    cluster_ids = np.arange(n)
 
     cluster_meta = Bunch(fields=('group',), get=lambda f, cl: cl % 4)
     cluster_metrics = {'quality': lambda c: 3. - c}
@@ -52,16 +53,26 @@ def test_raster_0(qtbot, gui):
     v.increase_marker_size()
     v.decrease_marker_size()
 
-    # Simulate channel selection.
+    # Simulate cluster selection.
     _clicked = []
 
+    w, h = v.canvas.get_size()
+
     @connect(sender=v)
-    def on_cluster_click(sender, cluster_id=None, button=None):
-        _clicked.append((cluster_id, button))
+    def on_select(sender, cluster_ids):
+        _clicked.append(cluster_ids)
 
-    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
+    @connect(sender=v)
+    def on_select_more(sender, cluster_ids):
+        _clicked.append(cluster_ids)
 
-    assert _clicked == [(1, 'Left')]
+    mouse_click(qtbot, v.canvas, pos=(w / 2, 0.), button='Left', modifiers=('Control',))
+    assert len(_clicked) == 1
+    assert _clicked == [[0]]
+
+    mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Shift',))
+    assert len(_clicked) == 2
+    assert _clicked == [[0], [2]]
 
     _stop_and_close(qtbot, v)
 

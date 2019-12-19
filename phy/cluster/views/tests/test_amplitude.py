@@ -9,7 +9,7 @@
 import numpy as np
 
 from phylib.io.mock import artificial_spike_samples
-from phylib.utils import Bunch
+from phylib.utils import Bunch, connect
 
 from phy.plot.tests import mouse_click
 from ..amplitude import AmplitudeView
@@ -77,6 +77,17 @@ def test_amplitude_view_2(qtbot, gui):
     v.previous_amplitude_type()
 
     v.set_state(v.state)
+
+    w, h = v.canvas.get_size()
+
+    _times = []
+
+    @connect(sender=v)
+    def on_select_time(sender, time):
+        _times.append(time)
+    mouse_click(qtbot, v.canvas, (w / 2, h / 2), modifiers=('Shift',))
+    assert len(_times) == 1
+    assert _times == [.5]
 
     # Split without selection.
     spike_ids = v.on_request_split()

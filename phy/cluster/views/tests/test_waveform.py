@@ -92,7 +92,7 @@ def test_waveform_view(qtbot, tempdir, gui):
     _clicked = []
 
     @connect(sender=v)
-    def on_channel_click(sender, channel_id=None, button=None, key=None):
+    def on_select_channel(sender, channel_id=None, button=None, key=None):
         _clicked.append((channel_id, button, key))
 
     key_press(qtbot, v.canvas, '2')

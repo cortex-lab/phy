@@ -154,6 +154,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.visual.set_box_index(box_index)
         self.canvas.stacked.n_boxes = self.n_clusters
         self._update_axes()
+        self.canvas.stacked.add_boxes(self.canvas)
         self.canvas.update()
 
     def attach(self, gui):
@@ -167,9 +168,12 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
     def on_mouse_click(self, e):
         """Select a cluster by clicking in the raster plot."""
         b = e.button
-        if 'Control' in e.modifiers:
+        if 'Control' in e.modifiers or 'Shift' in e.modifiers:
             # Get mouse position in NDC.
             cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
             cluster_id = self.all_cluster_ids[cluster_idx]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
-            emit('cluster_click', self, cluster_id, button=b)
+            if 'Shift' in e.modifiers:
+                emit('select_more', self, [cluster_id])
+            else:
+                emit('select', self, [cluster_id])

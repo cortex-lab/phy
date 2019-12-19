@@ -380,7 +380,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         self.actions.add(self.clear_channels)
         self.actions.separator()
 
-        connect(self.on_channel_click)
+        connect(self.on_select_channel)
         connect(self.on_request_split)
 
     def toggle_automatic_channel_selection(self, checked):
@@ -397,7 +397,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     # Dimension selection
     # -------------------------------------------------------------------------
 
-    def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
+    def on_select_channel(self, sender=None, channel_id=None, key=None, button=None):
         """Respond to the click on a channel from another view, and update the
         relevant subplots."""
         channels = self.channel_ids
@@ -452,7 +452,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
                 channel_pc = self._get_channel_and_pc(other_dim)
                 channel_id = channel_pc[0] if channel_pc is not None else None
                 logger.debug("Click on feature dim %s.", dim)
-            emit('feature_click', self, dim=dim, channel_id=channel_id, pc=pc)
+            emit('select_feature', self, dim=dim, channel_id=channel_id, pc=pc)
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""

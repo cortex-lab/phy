@@ -439,7 +439,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             channel_idx, _ = self.canvas.boxed.box_map(e.pos)
             channel_id = self.channel_ids[channel_idx]
             logger.debug("Click on channel_id %d with key %s and button %s.", channel_id, key, b)
-            emit('channel_click', self, channel_id=channel_id, key=key, button=b)
+            emit('select_channel', self, channel_id=channel_id, key=key, button=b)
 
     def next_waveforms_type(self):
         """Switch to the next waveforms type."""

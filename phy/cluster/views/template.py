@@ -232,7 +232,10 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
             (channel_idx, cluster_rel), _ = self.canvas.grid.box_map(e.pos)
             cluster_id = self.all_cluster_ids[cluster_rel]
             logger.debug("Click on cluster %d with button %s.", cluster_id, b)
-            emit('cluster_click', self, cluster_id, button=b, modifiers=e.modifiers)
+            if 'Shift' in e.modifiers:
+                emit('select_more', self, [cluster_id])
+            else:
+                emit('select', self, [cluster_id])
 
     # Scaling
     # -------------------------------------------------------------------------

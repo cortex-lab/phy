@@ -74,16 +74,25 @@ def test_template_view_1(qtbot, tempdir, gui):
 
     v.update_cluster_sort(cluster_ids[::-1])
 
-    # Simulate channel selection.
+    # Simulate cluster selection.
     _clicked = []
 
+    w, h = v.canvas.get_size()
+
     @connect(sender=v)
-    def on_cluster_click(sender, cluster_id=None, button=None, modifiers=None):
-        _clicked.append((cluster_id, button))
+    def on_select(sender, cluster_ids):
+        _clicked.append(cluster_ids)
 
-    mouse_click(qtbot, v.canvas, pos=(10., 10.), button='Left', modifiers=('Control',))
+    @connect(sender=v)
+    def on_select_more(sender, cluster_ids):
+        _clicked.append(cluster_ids)
 
-    assert _clicked == [(9, 'Left')]
+    mouse_click(qtbot, v.canvas, pos=(0, 0.), button='Left', modifiers=('Control',))
+    assert len(_clicked) == 1
+
+    mouse_click(qtbot, v.canvas, pos=(0, h / 2), button='Left', modifiers=('Shift',))
+    assert len(_clicked) == 2
+    assert _clicked == [[4], [9]]
 
     cluster_ids = np.arange(2, n_clusters + 2)
     v.set_cluster_ids(cluster_ids)
