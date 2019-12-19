@@ -236,6 +236,7 @@ class GLSLInserter(object):
             'before_transforms',
             'transforms',
             'after_transforms',
+            'end',
         )
         item = (shader_type, location, origin, glsl)
         if index is None:
@@ -345,6 +346,11 @@ class GLSLInserter(object):
 
         # Insert the GLSL snippet in the vertex shader.
         vertex = vs_regex.sub(indent(vs_insert), vertex)
+
+        # Insert snippets at the very end of the vertex shader.
+        i = vertex.rindex('}')
+        vertex = vertex[:i] + _get_glsl(
+            to_insert, 'vert', 'end', exclude_origins=exclude_origins) + '}\n'
 
         # Now, we make the replacements in the fragment shader.
         fs_regex = re.compile(r'(void main\(\)\s*\{)')
