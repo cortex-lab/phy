@@ -377,6 +377,7 @@ class Stacked(Boxed):
     def origin(self, value):
         self._origin = value
         self.update_boxes(self.get_box_pos(self.n_boxes))
+        self.update()
 
     def attach(self, canvas):
         """Attach the stacked interact to a canvas."""
