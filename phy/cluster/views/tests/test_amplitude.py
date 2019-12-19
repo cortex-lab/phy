@@ -46,6 +46,9 @@ def test_amplitude_view_1(qtbot, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
     v.on_select(cluster_ids=[0])
+
+    v.show_time_range((.499, .501))
+
     _stop_and_close(qtbot, v)
 
 
@@ -87,7 +90,7 @@ def test_amplitude_view_2(qtbot, gui):
         _times.append(time)
     mouse_click(qtbot, v.canvas, (w / 2, h / 2), modifiers=('Shift',))
     assert len(_times) == 1
-    assert _times == [.5]
+    assert np.allclose(_times[0], .5, atol=.01)
 
     # Split without selection.
     spike_ids = v.on_request_split()

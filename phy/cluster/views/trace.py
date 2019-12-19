@@ -350,6 +350,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
             emit('is_busy', self, True)
             self.plot(update_traces=True, update_waveforms=True)
             emit('is_busy', self, False)
+            emit('select_time_range', self, interval)
             self.update_status()
         else:
             self.plot(update_traces=False, update_waveforms=True)

@@ -18,7 +18,7 @@ from phylib.utils.event import emit
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
 from .histogram import _compute_histogram
 from phy.plot.transform import Rotate, Range, NDC
-from phy.plot.visuals import ScatterVisual, HistogramVisual
+from phy.plot.visuals import ScatterVisual, HistogramVisual, PatchVisual
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     # Alpha channel of the markers in the scatter plot.
     marker_alpha = 1.
+    time_range_color = (1., 1., 0., .25)
 
     # Number of bins in the histogram.
     n_bins = 100
@@ -85,7 +86,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         assert self.amplitude_name in amplitudes
 
         self.cluster_ids = ()
-        self.duration = duration or 1
+        self.duration = duration or 1.
 
         # Histogram visual.
         self.hist_visual = HistogramVisual()
@@ -94,6 +95,20 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             Rotate('ccw'),
         ])
         self.canvas.add_visual(self.hist_visual)
+
+        self.patch_visual = PatchVisual(primitive_type='triangle_fan')
+        self.patch_visual.inserter.insert_vert('''
+            const float MIN_INTERVAL_SIZE = 0.01;
+            uniform float u_interval_size;
+        ''', 'header')
+        self.patch_visual.inserter.insert_vert('''
+            gl_Position.y = pos_orig.y;
+
+            float w = max(MIN_INTERVAL_SIZE, u_interval_size * u_zoom.x);
+            gl_Position.x += w * (-1 + 2 * int(a_position.z == 0));
+
+        ''', 'after_transforms')
+        self.canvas.add_visual(self.patch_visual)
 
         # Scatter plot.
         self.visual = ScatterVisual()
@@ -120,6 +135,21 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
                 ignore_zeros=True,
             )
         return bunchs
+
+    def show_time_range(self, interval=(0, 0)):
+        start, end = interval
+        x0 = -1 + 2 * (start / self.duration)
+        x1 = -1 + 2 * (end / self.duration)
+        xm = .5 * (x0 + x1)
+        pos = np.array([
+            [xm, -1],
+            [xm, +1],
+            [xm, +1],
+            [xm, -1],
+        ])
+        self.patch_visual.program['u_interval_size'] = .5 * (x1 - x0)
+        self.patch_visual.set_data(pos=pos, color=self.time_range_color, depth=[0, 0, 1, 1])
+        self.canvas.update()
 
     def _plot_cluster(self, bunch):
         """Make the scatter plot."""
