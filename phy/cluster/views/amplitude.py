@@ -64,9 +64,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         'change_marker_size': 'ctrl+wheel',
         'next_amplitude_type': 'a',
         'previous_amplitude_type': 'shift+a',
-        'select_x_dim': 'alt+left click',
-        'select_y_dim': 'alt+right click',
-        'select_time': 'shift+click',
+        'select_x_dim': 'shift+left click',
+        'select_y_dim': 'shift+right click',
+        'select_time': 'alt+click',
     }
 
     def __init__(self, amplitudes=None, amplitude_name=None, duration=None):
@@ -239,7 +239,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def on_mouse_click(self, e):
         """Select a time from the amplitude view to display in the trace view."""
-        if 'Shift' in e.modifiers:
+        if 'Alt' in e.modifiers:
             mouse_pos = self.canvas.panzoom.window_to_ndc(e.pos)
             time = Range(NDC, self.data_bounds).apply(mouse_pos)[0][0]
             emit('select_time', self, time)
