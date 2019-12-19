@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QCheckBox,
-    QFontDatabase, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _static_abs_path,
+    QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _load_font,
     _wait, prompt, show_box, screenshot as make_screenshot)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
@@ -121,10 +121,7 @@ class DockWidget(QDockWidget):
     def __init__(self, *args, widget=None, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
         # Load the font awesome font.
-        font_id = QFontDatabase.addApplicationFont(str(_static_abs_path('fa-solid-900.ttf')))
-        font_db = QFontDatabase()
-        font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
-        self._font = font_db.font(font_family, None, 8)
+        self._font = _load_font('fa-solid-900.ttf')
         self._dock_widgets = {}
         self._widget = widget
 
@@ -168,7 +165,8 @@ class DockWidget(QDockWidget):
         name = name or getattr(callback, '__name__', None) or text
         assert name
         button = QPushButton(chr(int(icon, 16)) if icon else text)
-        button.setFont(self._font)
+        if self._font:
+            button.setFont(self._font)
         button.setCheckable(checkable)
         if checkable:
             button.setChecked(checked)

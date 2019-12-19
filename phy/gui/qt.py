@@ -194,6 +194,21 @@ def _debug_trace():  # pragma: no cover
     set_trace()
 
 
+_FONTS = {}
+
+
+def _load_font(name, size=8):
+    """Load a TTF font."""
+    if name in _FONTS:
+        return _FONTS[name]
+    font_id = QFontDatabase.addApplicationFont(str(_static_abs_path(name)))
+    font_db = QFontDatabase()
+    font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+    font = font_db.font(font_family, None, size)
+    _FONTS[name] = font
+    return font
+
+
 # -----------------------------------------------------------------------------
 # Public functions
 # -----------------------------------------------------------------------------
