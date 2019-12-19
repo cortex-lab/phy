@@ -57,6 +57,7 @@ class ManualClusteringView(object):
 
     def __init__(self, shortcuts=None, **kwargs):
         self._lock = None
+        self._closed = False
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -131,7 +132,7 @@ class ManualClusteringView(object):
 
     def on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs):
         # Decide whether the view should react to the select event or not.
-        if not self.auto_update:
+        if not self.auto_update or self._closed:
             return
         # Only the Supervisor and some specific views can trigger a proper select event.
         if sender.__class__.__name__ in ('ClusterView', 'SimilarityView'):
@@ -318,6 +319,8 @@ class ManualClusteringView(object):
     def close(self):
         """Close the underlying canvas."""
         self.canvas.close()
+        self._closed = True
+        unconnect(self)
         gc.collect()
 
 

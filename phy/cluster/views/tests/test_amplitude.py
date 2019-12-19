@@ -88,7 +88,7 @@ def test_amplitude_view_2(qtbot, gui):
     @connect(sender=v)
     def on_select_time(sender, time):
         _times.append(time)
-    mouse_click(qtbot, v.canvas, (w / 2, h / 2), modifiers=('Shift',))
+    mouse_click(qtbot, v.canvas, (w / 2, h / 2), modifiers=('Alt',))
     assert len(_times) == 1
     assert np.allclose(_times[0], .5, atol=.01)
 

@@ -185,6 +185,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         super(TraceView, self).__init__(**kwargs)
         self.state_attrs += ('origin', 'do_show_labels', 'show_all_spikes', 'auto_scale')
         self.local_state_attrs += ('interval', 'scaling',)
+        self._status_suffix = ''
 
         self.canvas.set_layout('stacked', n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
@@ -400,10 +401,11 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         self.set_interval()
 
-    def update_status(self):
+    def update_status(self, suffix=''):
         """Update the status text in the dock title bar."""
         a, b = self._interval
-        self.set_dock_status('[{:.2f}s - {:.2f}s]'.format(a, b))
+        self.set_dock_status('[{:.2f}s - {:.2f}s] {}'.format(a, b, suffix or self._status_suffix))
+        self._status_suffix = suffix or self._status_suffix
 
     # Origin
     # -------------------------------------------------------------------------

@@ -1512,7 +1512,7 @@ class BaseController(object):
             for v in gui.list_views(TraceView):
                 if v.auto_update:
                     v.plot()
-                    v.update_status()
+                    v.update_status(suffix=filter_name)
             # Update the waveform view.
             for v in gui.list_views(WaveformView):
                 if v.auto_update:
@@ -1569,7 +1569,7 @@ class BaseController(object):
         # Prompt save.
         @connect(sender=gui)
         def on_close(sender):
-            unconnect(on_add_view)
+            unconnect(on_add_view, self)
             # Show save prompt if an action was done.
             do_prompt_save = kwargs.get('do_prompt_save', True)
             if do_prompt_save and self.supervisor.is_dirty():  # pragma: no cover

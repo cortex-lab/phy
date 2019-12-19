@@ -1009,7 +1009,7 @@ class Supervisor(object):
         @connect(sender=gui)
         def on_close(e):
             gui.state['color_selector'] = self.color_selector.state
-            unconnect(on_is_busy)
+            unconnect(on_is_busy, self)
 
         @connect(sender=self.cluster_view)
         def on_ready(sender):

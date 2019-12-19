@@ -424,6 +424,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         logger.debug("Choose channels %d and %d in feature view.", *channels[:2])
         # Fix the channels temporarily.
         self.plot(fixed_channels=True)
+        self.update_status()
 
     def on_mouse_click(self, e):
         """Select a feature dimension by clicking on a box in the feature view."""
