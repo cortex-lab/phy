@@ -2681,28 +2681,14 @@ Return the concatenated data as a dictionary.
 
 Layout showing plots in rectangles at arbitrary positions. Used by the waveform view.
 
-The boxes can be specified from their corner coordinates, or from their centers and
-optional sizes. If the sizes are not specified, they will be computed automatically.
-An iterative algorithm is used to find the largest box size that will not make them overlap.
+The boxes are specified via their center positions and optional sizes, in which case
+an iterative algorithm is used to find the largest box size that will not make them overlap.
 
 **Constructor**
 
 
-* `box_bounds : array-like`
-    A (n, 4) array where each row contains the `(xmin, ymin, xmax, ymax)`
-    bounds of every box, in normalized device coordinates.
-
-    Note: the box bounds need to be contained within [-1, 1] at all times,
-    otherwise an error will be raised. This is to prevent silent clipping
-    of the values when they are passed to a gloo Texture2D.
-
-
 * `box_pos : array-like (2D, shape[1] == 2)`
     Position of the centers of the boxes.
-
-* `box_size : array-like (2D, shape[1] == 2)`
-    Size of the boxes.
-
 
 * `box_var : str`
     Name of the GLSL variable with the box index.
@@ -2744,6 +2730,42 @@ Get the box and local NDC coordinates from mouse position.
 
 ---
 
+#### Boxed.expand_box_height
+
+
+**`Boxed.expand_box_height(self)`**
+
+
+
+---
+
+#### Boxed.expand_box_width
+
+
+**`Boxed.expand_box_width(self)`**
+
+
+
+---
+
+#### Boxed.expand_layout_height
+
+
+**`Boxed.expand_layout_height(self)`**
+
+
+
+---
+
+#### Boxed.expand_layout_width
+
+
+**`Boxed.expand_layout_width(self)`**
+
+
+
+---
+
 #### Boxed.get_closest_box
 
 
@@ -2771,6 +2793,42 @@ Apply the layout transformation to a position array.
 
 ---
 
+#### Boxed.shrink_box_height
+
+
+**`Boxed.shrink_box_height(self)`**
+
+
+
+---
+
+#### Boxed.shrink_box_width
+
+
+**`Boxed.shrink_box_width(self)`**
+
+
+
+---
+
+#### Boxed.shrink_layout_height
+
+
+**`Boxed.shrink_layout_height(self)`**
+
+
+
+---
+
+#### Boxed.shrink_layout_width
+
+
+**`Boxed.shrink_layout_width(self)`**
+
+
+
+---
+
 #### Boxed.swap_active_box
 
 
@@ -2792,9 +2850,9 @@ Update all visuals in the attached canvas.
 #### Boxed.update_boxes
 
 
-**`Boxed.update_boxes(self, box_pos, box_size)`**
+**`Boxed.update_boxes(self, box_pos)`**
 
-Set the box bounds from specified box positions and sizes.
+Update the box positions and automatically-computed size.
 
 ---
 
@@ -2816,21 +2874,21 @@ Bounds of the boxes.
 
 ---
 
-#### Boxed.box_pos
+#### Boxed.box_scaling
 
 
-**`Boxed.box_pos`**
+**`Boxed.box_scaling`**
 
-Position of the box centers.
+
 
 ---
 
-#### Boxed.box_size
+#### Boxed.layout_scaling
 
 
-**`Boxed.box_size`**
+**`Boxed.layout_scaling`**
 
-Sizes of the boxes.
+
 
 ---
 
@@ -2840,15 +2898,6 @@ Sizes of the boxes.
 **`Boxed.n_boxes`**
 
 Total number of boxes.
-
----
-
-#### Boxed.scaling
-
-
-**`Boxed.scaling`**
-
-Return the grid scaling.
 
 ---
 
@@ -4201,7 +4250,7 @@ Add a standalone (no batch) scatter plot.
 #### PlotCanvas.set_layout
 
 
-**`PlotCanvas.set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_bounds=None, box_pos=None, box_size=None, has_clip=True)`**
+**`PlotCanvas.set_layout(self, layout=None, shape=None, n_plots=None, origin=None, box_pos=None, has_clip=True)`**
 
 Set the plot layout: grid, boxed, stacked, or None.
 
@@ -5568,6 +5617,15 @@ selected clusters (template view, raster view).
 
 ---
 
+#### AmplitudeView.on_mouse_click
+
+
+**`AmplitudeView.on_mouse_click(self, e)`**
+
+Select a time from the amplitude view to display in the trace view.
+
+---
+
 #### AmplitudeView.on_mouse_wheel
 
 
@@ -5669,6 +5727,15 @@ May be overriden.
 **`AmplitudeView.show(self)`**
 
 Show the underlying canvas.
+
+---
+
+#### AmplitudeView.show_time_range
+
+
+**`AmplitudeView.show_time_range(self, interval=(0, 0))`**
+
+
 
 ---
 
@@ -6728,16 +6795,6 @@ Increase the scaling parameter.
 
 ---
 
-#### FeatureView.on_channel_click
-
-
-**`FeatureView.on_channel_click(self, sender=None, channel_id=None, key=None, button=None)`**
-
-Respond to the click on a channel from another view, and update the
-relevant subplots.
-
----
-
 #### FeatureView.on_cluster
 
 
@@ -6786,6 +6843,16 @@ Return the spikes enclosed by the lasso.
 **`FeatureView.on_select(self, cluster_ids=None, **kwargs)`**
 
 Callback function when clusters are selected. May be overriden.
+
+---
+
+#### FeatureView.on_select_channel
+
+
+**`FeatureView.on_select_channel(self, sender=None, channel_id=None, key=None, button=None)`**
+
+Respond to the click on a channel from another view, and update the
+relevant subplots.
 
 ---
 
@@ -9455,6 +9522,24 @@ Increase the scaling parameter.
 
 ---
 
+#### TraceView.jump_left
+
+
+**`TraceView.jump_left(self)`**
+
+Jump to left.
+
+---
+
+#### TraceView.jump_right
+
+
+**`TraceView.jump_right(self)`**
+
+Jump to right.
+
+---
+
 #### TraceView.narrow
 
 
@@ -10065,7 +10150,7 @@ Increase the horizontal scaling of the waveforms.
 
 **`WaveformView.box_scaling`**
 
-Scaling of the channel boxes.
+
 
 ---
 
@@ -10092,7 +10177,7 @@ Whether to overlap the waveforms belonging to different clusters.
 
 **`WaveformView.probe_scaling`**
 
-Scaling of the entire probe.
+
 
 ---
 
@@ -10755,6 +10840,8 @@ Return the average of the spike raw amplitudes.
 Return the maximum amplitude of the raw waveforms on the best channel of
 the first selected cluster.
 
+If `channel_id` is not specified, the returned amplitudes may be null.
+
 ---
 
 ## phy.apps.template
@@ -11109,6 +11196,8 @@ Return part or all of spike ids belonging to a given cluster.
 Return the maximum amplitude of the raw waveforms on the best channel of
 the first selected cluster.
 
+If `channel_id` is not specified, the returned amplitudes may be null.
+
 ---
 
 #### TemplateController.get_spike_template_amplitudes
@@ -11379,6 +11468,15 @@ a TSV file.
 **`TemplateModel.save_spike_clusters(self, spike_clusters)`**
 
 Save the spike clusters.
+
+---
+
+#### TemplateModel.save_spike_waveforms
+
+
+**`TemplateModel.save_spike_waveforms(self, n_samples_waveforms=None, n_channels_max=None)`**
+
+Save all spike waveforms to a memmapped NumPy file.
 
 ---
 
@@ -11690,6 +11788,8 @@ Return part or all of spike ids belonging to a given cluster.
 
 Return the maximum amplitude of the raw waveforms on the best channel of
 the first selected cluster.
+
+If `channel_id` is not specified, the returned amplitudes may be null.
 
 ---
 

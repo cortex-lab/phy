@@ -297,6 +297,8 @@ Keyboard shortcuts for TraceView
 - go_to_previous_spike                     alt+pgup
 - go_to_start                              alt+home
 - increase                                 alt+up
+- jump_left                                shift+alt+left
+- jump_right                               shift+alt+right
 - narrow                                   alt++
 - select_spike                             ctrl+click
 - switch_origin                            alt+o
@@ -345,6 +347,7 @@ Keyboard shortcuts for AmplitudeView
 - change_marker_size                       ctrl+wheel
 - next_amplitude_type                      a
 - previous_amplitude_type                  shift+a
+- select_time                              shift+click
 - select_x_dim                             alt+left click
 - select_y_dim                             alt+right click
 
