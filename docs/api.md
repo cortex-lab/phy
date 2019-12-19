@@ -11478,6 +11478,8 @@ Save the spike clusters.
 
 Save all spike waveforms to a memmapped NumPy file.
 
+NOTE: this function is not used yet.
+
 ---
 
 #### TemplateModel.templates_amplitudes

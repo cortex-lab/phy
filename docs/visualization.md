@@ -339,6 +339,10 @@ This view supports splitting like in the feature view. When splitting, all spike
 
 Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel.
 
+#### Time range
+
+The time interval currenty displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+click` in the amplitude view: that will automatically change the time range in the trace view.
+
 #### Keyboard shortcuts
 
 ```text
@@ -347,9 +351,9 @@ Keyboard shortcuts for AmplitudeView
 - change_marker_size                       ctrl+wheel
 - next_amplitude_type                      a
 - previous_amplitude_type                  shift+a
-- select_time                              shift+click
-- select_x_dim                             alt+left click
-- select_y_dim                             alt+right click
+- select_time                              alt+click
+- select_x_dim                             shift+left click
+- select_y_dim                             shift+right click
 
 Snippets for AmplitudeView
 
