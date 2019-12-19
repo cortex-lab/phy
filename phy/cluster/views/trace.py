@@ -123,6 +123,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
         'increase': 'alt+up',
         'go_left': 'alt+left',
         'go_right': 'alt+right',
+        'jump_left': 'shift+alt+left',
+        'jump_right': 'shift+alt+right',
         'go_to_start': 'alt+home',
         'go_to_end': 'alt+end',
         'go_to': 'alt+t',
@@ -384,6 +386,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.actions.add(self.shift, prompt=True)
         self.actions.add(self.go_right)
         self.actions.add(self.go_left)
+        self.actions.add(self.jump_right)
+        self.actions.add(self.jump_left)
         self.actions.separator()
 
         self.actions.add(self.widen)
@@ -478,6 +482,18 @@ class TraceView(ScalingMixin, ManualClusteringView):
         """Go to left."""
         start, end = self._interval
         delay = (end - start) * .1
+        self.shift(-delay)
+
+    def jump_right(self):
+        """Jump to right."""
+        start, end = self._interval
+        delay = self.duration * .1
+        self.shift(delay)
+
+    def jump_left(self):
+        """Jump to left."""
+        start, end = self._interval
+        delay = self.duration * .1
         self.shift(-delay)
 
     def _jump_to_spike(self, delta=+1):

@@ -123,6 +123,12 @@ def test_trace_view_1(qtbot, tempdir, gui):
     ac(v.time, .150)
     qtbot.wait(1)
 
+    v.jump_left()
+    qtbot.wait(1)
+
+    v.jump_right()
+    qtbot.wait(1)
+
     v.go_to_next_spike()
     qtbot.wait(1)
 
