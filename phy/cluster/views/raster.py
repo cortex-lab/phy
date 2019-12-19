@@ -69,7 +69,18 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.canvas.set_layout('stacked', origin='top', n_plots=self.n_clusters, has_clip=False)
         self.canvas.enable_axes()
 
-        self.visual = ScatterVisual(marker='vbar')
+        self.visual = ScatterVisual(
+            marker='vbar', marker_scaling=' * vec2(1.0 * u_zoom.y, 1.0 / u_zoom.y)')
+        self.visual.inserter.insert_vert('''
+            varying float v_marker_scale;
+        ''', 'header')
+        self.visual.inserter.insert_frag('''
+            varying float v_marker_scale;
+        ''', 'header')
+        self.visual.inserter.insert_vert('''
+            gl_PointSize = a_size * u_zoom.y + 5.0;
+            v_marker_scale = u_zoom.y;
+        ''', 'end')
         self.canvas.add_visual(self.visual)
 
     # Data-related functions
@@ -154,7 +165,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.visual.set_box_index(box_index)
         self.canvas.stacked.n_boxes = self.n_clusters
         self._update_axes()
-        self.canvas.stacked.add_boxes(self.canvas)
+        # self.canvas.stacked.add_boxes(self.canvas)
         self.canvas.update()
 
     def attach(self, gui):
