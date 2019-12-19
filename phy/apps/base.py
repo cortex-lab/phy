@@ -256,7 +256,7 @@ class WaveformMixin(object):
         v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
 
         @connect(sender=v)
-        def on_channel_click(sender, channel_id=None, key=None, button=None):
+        def on_select_channel(sender, channel_id=None, key=None, button=None):
             # Update the Selection object with the channel id clicked in the waveform view.
             self.selection.channel_id = channel_id
             emit('selected_channel_changed', v)
@@ -278,7 +278,7 @@ class WaveformMixin(object):
         @connect
         def on_close_view(sender, view):
             if view == v:
-                unconnect(on_channel_click)
+                unconnect(on_select_channel)
                 unconnect(on_view_actions_created)
 
         return v
@@ -397,7 +397,7 @@ class FeatureMixin(object):
             view.plot()
 
         @connect(sender=view)
-        def on_feature_click(sender, dim=None, channel_id=None, pc=None):
+        def on_select_feature(sender, dim=None, channel_id=None, pc=None):
             # Update the Selection object with the channel id and PC clicked in the feature view.
             self.selection.channel_id = channel_id
             self.selection.feature_pc = pc
@@ -406,7 +406,7 @@ class FeatureMixin(object):
         @connect
         def on_close_view(sender, view_):
             if view == view_:
-                unconnect(on_feature_click)
+                unconnect(on_select_feature)
 
         return view
 
@@ -647,7 +647,7 @@ class TraceMixin(object):
         v.traces = _get_traces
 
         @connect(sender=v)
-        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
+        def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Update the global selection object.
             self.selection['spike_ids'] = [spike_id]
             # Select the corresponding cluster.
@@ -658,15 +658,15 @@ class TraceMixin(object):
             v.on_select()
 
         @connect
-        def on_amplitude_click(sender, time):
+        def on_select_time(sender, time):
             v.go_to(time)
 
         @connect
         def on_close_view(sender, view):
             if view == v:
-                unconnect(on_spike_click)
+                unconnect(on_select_spike)
                 unconnect(on_color_mapping_changed)
-                unconnect(on_amplitude_click)
+                unconnect(on_select_time)
 
         return v
 
@@ -1059,16 +1059,6 @@ class BaseController(object):
                 # are selected.
                 _update_plot()
 
-        @connect(sender=view)
-        def on_cluster_click(sender, cluster_id, key=None, button=None, modifiers=None):
-            """Select a cluster by clicking on it."""
-            cluster_ids = [cluster_id]
-            # If Shift was pressed during the cluster click, the selected clusters should remain
-            # selected in addition to the clicked cluster.
-            if 'Shift' in (modifiers or ()):
-                cluster_ids = self.supervisor.selected + cluster_ids
-            self.supervisor.select(cluster_ids)
-
         @connect(sender=self.supervisor.cluster_view)
         def on_table_sort(sender, cluster_ids):
             """Update the order of the clusters when the sort is changed in the cluster view."""
@@ -1126,10 +1116,10 @@ class BaseController(object):
         def on_close_view(sender, view_):
             """Unconnect all events when closing the view."""
             if view_ == view:
-                unconnect(on_cluster_click)
                 unconnect(on_table_sort)
                 unconnect(on_table_filter)
                 unconnect(on_color_mapping_changed)
+                unconnect(on_select)
                 unconnect(on_cluster)
                 unconnect(on_add_view)
                 unconnect(on_ready)
@@ -1560,6 +1550,11 @@ class BaseController(object):
         def on_add_view(sender, view):
             if isinstance(view, ManualClusteringView):
                 view.on_select(cluster_ids=self.supervisor.selected_clusters)
+
+        # Bind the `select_more` event to add clusters to the existing selection.
+        @connect
+        def on_select_more(sender, cluster_ids):
+            emit('select', sender, self.supervisor.selected + cluster_ids)
 
         # Prompt save.
         @connect(sender=gui)
