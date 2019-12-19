@@ -403,10 +403,15 @@ class FeatureMixin(object):
             self.selection.feature_pc = pc
             emit('selected_feature_changed', view)
 
+        connect(view.on_select_channel)
+        connect(view.on_request_split)
+
         @connect
         def on_close_view(sender, view_):
             if view == view_:
                 unconnect(on_select_feature)
+                unconnect(view.on_select_channel)
+                unconnect(view.on_request_split)
 
         return view
 
@@ -782,7 +787,7 @@ class BaseController(object):
     gui_version = 2
 
     # Number of spikes to show in the views.
-    n_spikes_amplitudes = 2500
+    n_spikes_amplitudes = 10000
 
     # Pairs (amplitude_type_name, method_name) where amplitude methods return spike amplitudes
     # of a given type.
@@ -1346,6 +1351,11 @@ class BaseController(object):
             if update_views and view.amplitude_name == 'raw' and len(cluster_ids):
                 # Update the channel used in the amplitude when the cluster selection changes.
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
+
+        @connect
+        def on_select_time_range(sender, interval):
+            # Show the time range in the amplitude view.
+            view.show_time_range(interval)
 
         @connect
         def on_close_view(sender, view_):
