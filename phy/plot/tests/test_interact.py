@@ -150,6 +150,8 @@ def test_boxed_1(qtbot, canvas):
     assert boxed.box_size[0] >= .9
     assert boxed.box_size[1] >= .05
 
+    assert boxed.box_bounds.shape == (n, 4)
+
     boxed.expand_box_width()
     boxed.shrink_box_width()
     boxed.expand_box_height()

@@ -37,6 +37,89 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 
 
 #------------------------------------------------------------------------------
+# Patch visual
+#------------------------------------------------------------------------------
+
+class PatchVisual(BaseVisual):
+    """Patch visual, displaying an arbitrary filled shape.
+
+    Constructor
+    -----------
+
+    marker : string (used for all points in the scatter visual)
+        Default: disc. Can be one of: arrow, asterisk, chevron, clover, club, cross, diamond,
+        disc, ellipse, hbar, heart, infinity, pin, ring, spade, square, tag, triangle, vbar
+
+    Parameters
+    ----------
+
+    x : array-like (1D)
+    y : array-like (1D)
+    pos : array-like (2D)
+    color : array-like (2D, shape[1] == 4)
+    primitive_type : str
+        triangles, triangle_fan, triangle_strip
+    depth : array-like (1D)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
+    default_color = DEFAULT_COLOR
+
+    def __init__(self, primitive_type='triangle_fan'):
+        super(PatchVisual, self).__init__()
+        self.set_shader('patch')
+        self.set_primitive_type(primitive_type)
+        self.set_data_range(NDC)
+
+    def vertex_count(self, x=None, y=None, pos=None, **kwargs):
+        """Number of vertices for the requested data."""
+        return y.size if y is not None else len(pos)
+
+    def validate(
+            self, x=None, y=None, pos=None, color=None, depth=None,
+            data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
+        if pos is None:
+            x, y = _get_pos(x, y)
+            pos = np.c_[x, y]
+        pos = np.asarray(pos)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        n = pos.shape[0]
+
+        # Validate the data.
+        color = _get_array(color, (n, 4), ScatterVisual.default_color, dtype=np.float32)
+        depth = _get_array(depth, (n, 1), 0)
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n
+
+        return Bunch(
+            pos=pos, color=color, depth=depth, data_bounds=data_bounds,
+            _n_items=n, _n_vertices=n)
+
+    def set_data(self, *args, **kwargs):
+        """Update the visual data."""
+        data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
+        if data.data_bounds is not None:
+            self.data_range.from_bounds = data.data_bounds
+            pos_tr = self.transforms.apply(data.pos)
+        else:
+            pos_tr = data.pos
+        pos_tr = np.c_[pos_tr, data.depth]
+        self.program['a_position'] = pos_tr.astype(np.float32)
+        self.program['a_color'] = data.color.astype(np.float32)
+        self.emit_visual_set_data()
+        return data
+
+    def set_color(self, color):
+        """Change the color of the markers."""
+        color = _get_array(color, (self.n_vertices, 4), PatchVisual.default_color)
+        self.program['a_color'] = color.astype(np.float32)
+
+
+#------------------------------------------------------------------------------
 # Scatter visuals
 #------------------------------------------------------------------------------
 

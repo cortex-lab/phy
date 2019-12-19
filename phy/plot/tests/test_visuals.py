@@ -12,8 +12,8 @@ import os
 import numpy as np
 
 from ..visuals import (
-    ScatterVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual, TextVisual,
-    ImageVisual, UniformPlotVisual, UniformScatterVisual)
+    ScatterVisual, PatchVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual,
+    TextVisual, ImageVisual, UniformPlotVisual, UniformScatterVisual)
 from ..transform import NDC, Rotate
 from phylib.utils.color import _random_color
 
@@ -67,6 +67,47 @@ def test_scatter_custom(qtbot, canvas_pz):
     s = 5 + 20 * np.random.rand(n)
 
     _test_visual(qtbot, canvas_pz, ScatterVisual(), pos=pos, color=c, size=s)
+
+
+#------------------------------------------------------------------------------
+# Test patch visual
+#------------------------------------------------------------------------------
+
+def test_patch_empty(qtbot, canvas):
+    _test_visual(qtbot, canvas, PatchVisual(), x=np.zeros(0), y=np.zeros(0))
+
+
+def test_patch_1(qtbot, canvas_pz):
+
+    n = 100
+    x = .2 * np.random.randn(n)
+    y = .2 * np.random.randn(n)
+
+    _test_visual(qtbot, canvas_pz, PatchVisual(), x=x, y=y, data_bounds='auto')
+
+
+def test_patch_2(qtbot, canvas_pz):
+
+    n = 100
+
+    # Random position.
+    pos = .2 * np.random.randn(n, 2)
+
+    # Random colors.
+    c = np.random.uniform(.4, .7, size=(n, 4))
+    c[:, -1] = .5
+
+    v = PatchVisual(primitive_type='triangles')
+    canvas_pz.add_visual(v)
+    v.set_data(pos=pos, color=c)
+    canvas_pz.show()
+    qtbot.waitForWindowShown(canvas_pz)
+    v.set_color((1, 1, 0, 1))
+    canvas_pz.update()
+    if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+        qtbot.stop()
+    v.close()
+    canvas_pz.close()
 
 
 #------------------------------------------------------------------------------
