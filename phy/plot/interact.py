@@ -11,7 +11,7 @@ import logging
 import numpy as np
 
 from phylib.io.array import _in_polygon
-from phylib.utils.geometry import get_non_overlapping_boxes
+from phylib.utils.geometry import get_non_overlapping_boxes, get_closest_box
 
 from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC
@@ -270,13 +270,7 @@ class Boxed(BaseLayout):
 
     def get_closest_box(self, pos):
         """Get the box closest to some position."""
-        pos = np.atleast_2d(pos)
-        x0, y0, x1, y1 = self.box_bounds.T
-        rmin = np.c_[x0, y0]
-        rmax = np.c_[x1, y1]
-        z = np.zeros_like(rmin)
-        d = np.maximum(np.maximum(rmin - pos, z), pos - rmax)
-        return np.argmin(np.linalg.norm(d, axis=1))
+        return get_closest_box(pos, self.box_pos, self.box_size)
 
     # Box scaling
     #--------------------------------------------------------------------------
@@ -362,7 +356,7 @@ class Stacked(Boxed):
     @n_boxes.setter
     def n_boxes(self, n_boxes):
         if n_boxes >= 1:
-            self.box_pos = self.get_box_pos(n_boxes)
+            self.update_boxes(self.get_box_pos(n_boxes))
 
     def get_box_pos(self, n_boxes):
         """Return the box bounds for a given number of stacked boxes."""
@@ -382,7 +376,7 @@ class Stacked(Boxed):
     @origin.setter
     def origin(self, value):
         self._origin = value
-        self.box_pos = self.get_box_pos(self.n_boxes)
+        self.update_boxes(self.get_box_pos(self.n_boxes))
 
     def attach(self, canvas):
         """Attach the stacked interact to a canvas."""
