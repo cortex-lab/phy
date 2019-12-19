@@ -204,6 +204,13 @@ def _make_plugin_test_case(plugin_name):
             """Check that the plugin has been attached."""
             self.assertTrue(plugin_name in self.controller.attached_plugins)
 
+        def test_a2_minimal(self):
+            """Select one cluster."""
+            self.supervisor.reset_wizard()
+            self.next_best()
+            self.next()
+            self.assertEqual(len(self.selected), 2)
+
     return TemplateControllerPluginTests
 
 

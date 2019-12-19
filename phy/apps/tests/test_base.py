@@ -277,16 +277,6 @@ class MinimalControllerTests(object):
         # to avoid side-effects and spurious dependencies between tests.
         reset()
 
-    # Minimal test methods
-    #--------------------------------------------------------------------------
-
-    def test_zzz_minimal_01(self):
-        """Select one cluster."""
-        self.supervisor.reset_wizard()
-        self.next_best()
-        self.next()
-        self.assertEqual(len(self.selected), 2)
-
 
 class BaseControllerTests(MinimalControllerTests):
 
