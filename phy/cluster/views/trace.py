@@ -347,7 +347,9 @@ class TraceView(ScalingMixin, ManualClusteringView):
         if interval != self._interval:
             logger.debug("Redraw the entire trace view.")
             self._interval = interval
+            emit('is_busy', self, True)
             self.plot(update_traces=True, update_waveforms=True)
+            emit('is_busy', self, False)
             self.update_status()
         else:
             self.plot(update_traces=False, update_waveforms=True)
