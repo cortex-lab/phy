@@ -230,15 +230,13 @@ def cli_alf_convert(ctx, subdirs, out_dir):
 # Waveform extraction
 #------------------------------------------------------------------------------
 
-# NOTE: not used yet and file format not yet decided
-# @phycli.command('extract-waveforms')
-# @click.argument('params-path', type=click.Path(exists=True))
-# @click.pass_context
-# def template_extract_waveforms(ctx, params_path):
-#     """Extract spike waveforms."""
-#     from phylib.io.model import load_model
+@phycli.command('extract-waveforms')
+@click.argument('params-path', type=click.Path(exists=True))
+@click.pass_context
+def template_extract_waveforms(ctx, params_path):  # pragma: no cover
+    """Extract spike waveforms."""
+    from phylib.io.model import load_model
 
-#     model = load_model(params_path)
-#     # _profile(builtins.__dict__['profile'], 'model.save_spike_waveforms()', globals(), locals())
-#     model.save_spike_waveforms()
-#     model.close()
+    model = load_model(params_path)
+    model.save_spike_waveforms()
+    model.close()
