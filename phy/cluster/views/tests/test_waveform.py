@@ -54,6 +54,7 @@ def test_waveform_view(qtbot, tempdir, gui):
     v.toggle_show_labels(True)
 
     v.next_waveforms_type()
+    v.previous_waveforms_type()
     v.toggle_mean_waveforms(True)
     v.toggle_mean_waveforms(False)
 

@@ -92,6 +92,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         'toggle_waveform_overlap': 'o',
         'toggle_show_labels': 'ctrl+l',
         'next_waveforms_type': 'w',
+        'previous_waveforms_type': 'shift+w',
         'toggle_mean_waveforms': 'm',
 
         # Box scaling.
@@ -158,7 +159,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def _get_data_bounds(self, bunchs):
         m = min(_min(b.data) for b in bunchs)
         M = max(_max(b.data) for b in bunchs)
-        return [-1, m, +1, M]
+        # Symmetrize on the y axis.
+        M = max(abs(m), abs(M))
+        return [-1, -M, +1, M]
 
     def get_clusters_data(self):
         if self.waveforms_type not in self.waveforms:
@@ -322,6 +325,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.actions.add(self.toggle_waveform_overlap, checkable=True, checked=self.overlap)
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(self.next_waveforms_type)
+        self.actions.add(self.previous_waveforms_type)
         self.actions.add(self.toggle_mean_waveforms, checkable=True)
         self.actions.separator()
 
@@ -449,6 +453,17 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             i = 0
         n = len(self.waveforms_types)
         self.waveforms_type = self.waveforms_types[(i + 1) % n]
+        logger.info("Switch to waveforms type %s.", self.waveforms_type)
+        self.plot()
+
+    def previous_waveforms_type(self):
+        """Switch to the previous waveforms type."""
+        if self.waveforms_type in self.waveforms_types:
+            i = self.waveforms_types.index(self.waveforms_type)
+        else:  # pragma: no cover
+            i = 0
+        n = len(self.waveforms_types)
+        self.waveforms_type = self.waveforms_types[(i - 1) % n]
         logger.info("Switch to waveforms type %s.", self.waveforms_type)
         self.plot()
 
