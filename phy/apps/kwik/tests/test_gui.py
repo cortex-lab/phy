@@ -82,7 +82,7 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
             self.qtbot.wait(250)
 
 
-class KwikControllerNKwikOnlyTests(BaseControllerTests, unittest.TestCase):
+class KwikControllerKwikOnlyTests(BaseControllerTests, unittest.TestCase):
     """Kwik controller with just the kwik file."""
 
     @classmethod

@@ -103,7 +103,7 @@ class RawDataFilter(object):
 
     def add_filter(self, fun=None, name=None):
         """Add a raw data filter."""
-        if fun is None:
+        if fun is None:  # pfragma: no cover
             return partial(self.add_filter, name=name)
         name = name or fun.__name__
         logger.debug("Add filter `%s`.", name)
@@ -663,6 +663,10 @@ class TraceMixin(object):
             v.on_select()
 
         @connect
+        def on_time_range_selected(sender, interval):
+            self.selection['selected_time_range'] = interval
+
+        @connect
         def on_select_time(sender, time):
             v.go_to(time)
 
@@ -671,6 +675,7 @@ class TraceMixin(object):
             if view == v:
                 unconnect(on_select_spike)
                 unconnect(on_color_mapping_changed)
+                unconnect(on_time_range_selected)
                 unconnect(on_select_time)
 
         return v
@@ -1353,14 +1358,17 @@ class BaseController(object):
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
 
         @connect
-        def on_select_time_range(sender, interval):
+        def on_time_range_selected(sender, interval):
             # Show the time range in the amplitude view.
             view.show_time_range(interval)
 
         @connect
         def on_close_view(sender, view_):
             if view == view_:
+                unconnect(on_toggle_spike_reorder)
                 unconnect(on_selected_channel_changed)
+                unconnect(on_select)
+                unconnect(on_time_range_selected)
 
         return view
 
@@ -1376,6 +1384,27 @@ class BaseController(object):
             cluster_color_selector=self.supervisor.color_selector,
         )
         self._attach_global_view(view)
+
+        @connect
+        def on_time_range_selected(sender, interval):
+            if view.auto_update:
+                # Show the time range in the raster view.
+                view.zoom_to_time_range(interval)
+
+        @connect(sender=view)
+        def on_view_ready(sender):
+            view.zoom_to_time_range(self.selection.get('selected_time_range', None))
+
+        @connect  # noqa
+        def on_view_ready(sender):
+            if sender.__class__.__name__ == 'TraceView':
+                view.zoom_to_time_range(sender.interval)
+
+        @connect
+        def on_close_view(sender, view_):
+            if view == view_:
+                unconnect(on_time_range_selected)
+                unconnect(on_view_ready)
         return view
 
     # Correlograms

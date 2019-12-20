@@ -150,7 +150,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         """Return the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
         template = self.model.get_template(template_id)
-        if not template:
+        if not template:  # pragma: no cover
             return [0]
         return template.channel_ids
 
@@ -175,7 +175,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     def get_template_amplitude(self, template_id):
         """Return the maximum amplitude of a template's waveforms across all channels."""
         waveforms = self.model.get_template_waveforms(template_id)
-        if waveforms is None:
+        if waveforms is None:  # pragma: no cover
             return 0
         assert waveforms.ndim == 2  # shape: (n_samples, n_channels)
         return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()

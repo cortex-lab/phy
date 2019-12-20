@@ -468,6 +468,7 @@ class MockControllerTTests(GlobalViewsTests, MinimalControllerTests, unittest.Te
         self.trace_view.actions.toggle_highlighted_spikes(True)
         mouse_click(self.qtbot, self.trace_view.canvas, (100, 100), modifiers=('Control',))
         mouse_click(self.qtbot, self.trace_view.canvas, (150, 100), modifiers=('Shift',))
+        emit('select_time', self, 0)
 
 
 class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
