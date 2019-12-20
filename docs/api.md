@@ -3730,6 +3730,15 @@ Attach this interact to a canvas.
 
 ---
 
+#### PanZoom.emit_update_events
+
+
+**`PanZoom.emit_update_events(self)`**
+
+Emit the pan and zoom events to update views after a pan zoom manual update.
+
+---
+
 #### PanZoom.get_range
 
 
@@ -8247,6 +8256,15 @@ To override.
 
 ---
 
+#### RasterView.zoom_to_time_range
+
+
+**`RasterView.zoom_to_time_range(self, interval)`**
+
+Zoom to a time interval.
+
+---
+
 #### RasterView.marker_size
 
 
@@ -9725,7 +9743,7 @@ Toggle the display of the channel ids.
 #### TraceView.update_status
 
 
-**`TraceView.update_status(self)`**
+**`TraceView.update_status(self, suffix='')`**
 
 Update the status text in the dock title bar.
 
