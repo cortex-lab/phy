@@ -340,7 +340,7 @@ class Stacked(Boxed):
 
     """
     margin = 0
-    _origin = 'top'
+    _origin = 'bottom'
 
     def __init__(self, n_boxes, box_var=None, origin=None):
         self._origin = origin or self._origin

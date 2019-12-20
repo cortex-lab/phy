@@ -17,6 +17,7 @@ from phylib.utils.color import _add_selected_clusters_colors
 
 from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin
 from phy.plot.visuals import ScatterVisual
+from phy.plot.transform import range_transform, NDC
 
 logger = logging.getLogger(__name__)
 
@@ -70,18 +71,15 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.canvas.enable_axes()
 
         self.visual = ScatterVisual(
-            marker='vbar', marker_scaling=' * vec2(1.0 * u_zoom.y, 1.0 / u_zoom.y)')
+            marker='vbar',
+            marker_scaling='''
+                point_size = point_size * vec2(.25 * u_zoom.y, 1.0 / u_zoom.y);
+        ''')
         self.visual.inserter.insert_vert('''
-            varying float v_marker_scale;
-        ''', 'header')
-        self.visual.inserter.insert_frag('''
-            varying float v_marker_scale;
-        ''', 'header')
-        self.visual.inserter.insert_vert('''
-            gl_PointSize = a_size * u_zoom.y + 5.0;
-            v_marker_scale = u_zoom.y;
+                gl_PointSize = a_size * u_zoom.y + 5.0;
         ''', 'end')
         self.canvas.add_visual(self.visual)
+        self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
 
     # Data-related functions
     # -------------------------------------------------------------------------
@@ -175,6 +173,20 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.actions.add(self.increase_marker_size)
         self.actions.add(self.decrease_marker_size)
         self.actions.separator()
+
+    def zoom_to_time_range(self, interval):
+        """Zoom to a time interval."""
+        if not interval:
+            return
+        t0, t1 = interval
+        w = .5 * (t1 - t0)  # half width
+        tm = .5 * (t0 + t1)
+        w = min(5, w)  # minimum 5s time range
+        t0, t1 = tm - w, tm + w
+        x0 = -1 + 2 * t0 / self.duration
+        x1 = -1 + 2 * t1 / self.duration
+        box = (x0, -1, x1, +1)
+        self.canvas.panzoom.set_range(box)
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking in the raster plot."""

@@ -236,21 +236,22 @@ class Axes(object):
             self.locator.set_view_bounds(canvas.panzoom.get_range())
             self.update_visuals()
 
-        @connect(sender=canvas.panzoom)
-        def on_zoom(sender, zoom):
-            zx, zy = zoom
-            ix, iy = _quant_zoom(zx), _quant_zoom(zy)
-            if (ix, iy) != self._last_log_zoom:
-                self._last_log_zoom = ix, iy
-                self.locator.set_view_bounds(canvas.panzoom.get_range())
-                self.update_visuals()
+        connect(lambda sender, *args: self._update_zoom, event='zoom', sender=canvas.panzoom)
+        connect(lambda sender, *args: self._update_pan, event='pan', sender=canvas.panzoom)
 
-        @connect(sender=canvas.panzoom)
-        def on_pan(sender, pan):
-            px, py = pan
-            zx, zy = canvas.panzoom.zoom
-            tx, ty = int(px * zx), int(py * zy)
-            if (tx, ty) != self._last_pan:
-                self._last_pan = tx, ty
-                self.locator.set_view_bounds(canvas.panzoom.get_range())
-                self.update_visuals()
+    def _update_zoom(self, zoom, force=False):
+        zx, zy = zoom
+        ix, iy = _quant_zoom(zx), _quant_zoom(zy)
+        if force or (ix, iy) != self._last_log_zoom:
+            self._last_log_zoom = ix, iy
+            self.locator.set_view_bounds(self._attached.panzoom.get_range())
+            self.update_visuals()
+
+    def _update_pan(self, pan, force=False):
+        px, py = pan
+        zx, zy = self._attached.panzoom.zoom
+        tx, ty = int(px * zx), int(py * zy)
+        if force or (tx, ty) != self._last_pan:
+            self._last_pan = tx, ty
+            self.locator.set_view_bounds(self._attached.panzoom.get_range())
+            self.update_visuals()

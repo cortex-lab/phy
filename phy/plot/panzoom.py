@@ -376,6 +376,7 @@ class PanZoom(object):
         if keep_aspect:
             zoom = zoom.min() * np.ones(2)
         self.set_pan_zoom(pan=pan, zoom=zoom)
+        self.emit_update_events()
 
     def get_range(self):
         """Return the bounds currently visible."""
@@ -383,6 +384,11 @@ class PanZoom(object):
         x0, y0 = -1. / z - p
         x1, y1 = +1. / z - p
         return (x0, y0, x1, y1)
+
+    def emit_update_events(self):
+        """Emit the pan and zoom events to update views after a pan zoom manual update."""
+        emit('pan', self, self.pan)
+        emit('zoom', self, self.zoom)
 
     # Event callbacks
     # -------------------------------------------------------------------------

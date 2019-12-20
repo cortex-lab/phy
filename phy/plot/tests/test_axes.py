@@ -31,6 +31,9 @@ def test_axes_1(qtbot, canvas_pz):
     c.panzoom.pan = (3, 3)
     g.reset_data_bounds(db)
 
+    g._update_zoom(c.panzoom.zoom)
+    g._update_pan(c.panzoom.pan)
+
     if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
         qtbot.stop()
     c.close()
