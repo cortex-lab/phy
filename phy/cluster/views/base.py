@@ -268,6 +268,8 @@ class ManualClusteringView(object):
         def _set_floating():
             self.dock.setFloating(False)
 
+        emit('view_ready', self)
+
     def set_dock_status(self, text):
         """Set the status in the dock title bar."""
         if hasattr(self, 'dock'):

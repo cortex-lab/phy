@@ -75,6 +75,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
         self.canvas.enable_axes()
         self.canvas.enable_lasso()
+
         # Ensure amplitudes is a dictionary, even if there is a single amplitude.
         if not isinstance(amplitudes, dict):
             amplitudes = {'amplitude': amplitudes}
@@ -113,6 +114,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # Scatter plot.
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
+        self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""

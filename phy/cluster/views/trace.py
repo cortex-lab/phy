@@ -206,6 +206,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.go_to(duration / 2.)
 
         self._waveform_times = []
+        self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
 
     @property
     def stacked(self):
@@ -353,7 +354,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
             emit('is_busy', self, True)
             self.plot(update_traces=True, update_waveforms=True)
             emit('is_busy', self, False)
-            emit('select_time_range', self, interval)
+            emit('time_range_selected', self, interval)
             self.update_status()
         else:
             self.plot(update_traces=False, update_waveforms=True)

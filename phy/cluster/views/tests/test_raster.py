@@ -72,7 +72,9 @@ def test_raster_0(qtbot, gui):
 
     mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Shift',))
     assert len(_clicked) == 2
-    assert _clicked == [[0], [2]]
+    assert _clicked[1][0] in (1, 2)
+
+    v.zoom_to_time_range((1., 3.))
 
     _stop_and_close(qtbot, v)
 

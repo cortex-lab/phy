@@ -17,7 +17,6 @@ from phylib.utils.color import _add_selected_clusters_colors
 
 from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin
 from phy.plot.visuals import ScatterVisual
-from phy.plot.transform import range_transform, NDC
 
 logger = logging.getLogger(__name__)
 
