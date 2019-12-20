@@ -52,7 +52,7 @@ def create_trace_gui(dat_path, **kwargs):
         params = get_template_params(str(dat_path))
         return create_trace_gui(next(iter(params.pop('dat_path'))), **params)
 
-    if dat_path.suffix == '.cbin':
+    if dat_path.suffix == '.cbin':  # pragma: no cover
         data = load_raw_data(path=dat_path)
         sample_rate = data.sample_rate
         n_channels_dat = data.shape[1]

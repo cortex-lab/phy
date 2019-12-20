@@ -103,7 +103,7 @@ class RawDataFilter(object):
 
     def add_filter(self, fun=None, name=None):
         """Add a raw data filter."""
-        if fun is None:  # pfragma: no cover
+        if fun is None:  # pragma: no cover
             return partial(self.add_filter, name=name)
         name = name or fun.__name__
         logger.debug("Add filter `%s`.", name)
@@ -1395,16 +1395,17 @@ class BaseController(object):
         def on_view_ready(sender):
             view.zoom_to_time_range(self.selection.get('selected_time_range', None))
 
-        @connect  # noqa
-        def on_view_ready(sender):
+        @connect(event='view_ready')
+        def on_view_ready_(sender):
             if sender.__class__.__name__ == 'TraceView':
                 view.zoom_to_time_range(sender.interval)
 
         @connect
-        def on_close_view(sender, view_):
+        def on_close_view(sender, view_):  # pragma: no cover
             if view == view_:
                 unconnect(on_time_range_selected)
                 unconnect(on_view_ready)
+
         return view
 
     # Correlograms
