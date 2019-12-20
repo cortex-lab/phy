@@ -33,7 +33,7 @@ def create_trace_gui(dat_path, **kwargs):
     ----------
 
     dat_path : str or Path
-        Path to the raw data file
+        Path to the raw data file.
     sample_rate : float
         The data sampling rate, in Hz.
     n_channels_dat : int
@@ -52,23 +52,28 @@ def create_trace_gui(dat_path, **kwargs):
         params = get_template_params(str(dat_path))
         return create_trace_gui(next(iter(params.pop('dat_path'))), **params)
 
-    sample_rate = float(kwargs['sample_rate'])
-    assert sample_rate > 0.
+    if dat_path.suffix == '.cbin':
+        data = load_raw_data(path=dat_path)
+        sample_rate = data.sample_rate
+        n_channels_dat = data.shape[1]
+    else:
+        sample_rate = float(kwargs['sample_rate'])
+        assert sample_rate > 0.
 
-    n_channels_dat = int(kwargs['n_channels_dat'])
+        n_channels_dat = int(kwargs['n_channels_dat'])
 
-    dtype = np.dtype(kwargs['dtype'])
-    offset = int(kwargs['offset'] or 0)
-    order = kwargs.get('order', None)
+        dtype = np.dtype(kwargs['dtype'])
+        offset = int(kwargs['offset'] or 0)
+        order = kwargs.get('order', None)
 
-    # Memmap the raw data file.
-    data = load_raw_data(
-        path=dat_path,
-        n_channels_dat=n_channels_dat,
-        dtype=dtype,
-        offset=offset,
-        order=order,
-    )
+        # Memmap the raw data file.
+        data = load_raw_data(
+            path=dat_path,
+            n_channels_dat=n_channels_dat,
+            dtype=dtype,
+            offset=offset,
+            order=order,
+        )
 
     duration = data.shape[0] / sample_rate
 
