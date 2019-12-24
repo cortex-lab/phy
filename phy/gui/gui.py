@@ -242,14 +242,16 @@ class DockWidget(QDockWidget):
     def _default_buttons(self):
         """Create the default buttons on the right."""
 
-        # Close button.
-        @self.add_button(name='close', text='✕')
-        def on_close(e):  # pragma: no cover
-            if show_box(
-                prompt(
-                    "Close %s?" % self.windowTitle(),
-                    buttons=['yes', 'no'], title='Close?')) == 'yes':
-                self.close()
+        # Only show the close button if the dock widget is closable.
+        if int(self.features()) % 2 == 1:
+            # Close button.
+            @self.add_button(name='close', text='✕')
+            def on_close(e):  # pragma: no cover
+                if show_box(
+                    prompt(
+                        "Close %s?" % self.windowTitle(),
+                        buttons=['yes', 'no'], title='Close?')) == 'yes':
+                    self.close()
 
         # Screenshot button.
         @self.add_button(name='screenshot', icon='f0c7')
