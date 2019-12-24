@@ -123,6 +123,8 @@ def test_visual_1(qtbot, canvas):
     canvas.update()
     qtbot.wait(5)
     v.show()
+    v.toggle()
+    v.toggle()
 
     assert canvas.get_visual('key') == v
     canvas.remove(v)
@@ -151,6 +153,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
                 (-1, -1, 1, 1), (-1.5, -1.5, 1.5, 1.5)))
             s = 'gl_Position.y += (1 + 1e-8 * u_window_size.x);'
             self.inserter.insert_vert(s, 'after_transforms')
+            self.inserter.add_varying('float', 'v_var', 'gl_Position.x')
 
         def set_data(self):
             self.n_vertices = 1000

@@ -6,6 +6,8 @@ https://github.com/Chlumsky/msdfgen
 uniform sampler2D u_tex;
 uniform vec4 u_color;
 uniform vec2 u_tex_size;
+uniform vec2 u_zoom;
+
 varying vec2 v_tex_coords;
 
 

@@ -133,6 +133,10 @@ class BaseVisual(object):
         """Show the visual."""
         self._hidden = False
 
+    def toggle(self):
+        """Toggle the visual visibility."""
+        self._hidden = not self._hidden
+
     def close(self):
         """Close the visual."""
         self.program._deactivate()
@@ -273,6 +277,12 @@ class GLSLInserter(object):
         """Insert a GLSL snippet into the fragment shader. See `insert_vert()`."""
         self._insert('frag', glsl, location, origin=origin, index=index)
 
+    def add_varying(self, vtype, name, value):
+        """Add a varying variable."""
+        self.insert_vert('varying %s %s;' % (vtype, name), 'header')
+        self.insert_frag('varying %s %s;' % (vtype, name), 'header')
+        self.insert_vert('%s = %s;' % (name, value), 'end')
+
     def add_gpu_transforms(self, tc):
         """Insert all GLSL snippets from a transform chain."""
         # Generate the transforms snippet.
@@ -351,6 +361,11 @@ class GLSLInserter(object):
         i = vertex.rindex('}')
         vertex = vertex[:i] + _get_glsl(
             to_insert, 'vert', 'end', exclude_origins=exclude_origins) + '}\n'
+
+        # Insert snippets at the very end of the vertex shader.
+        i = fragment.rindex('}')
+        fragment = fragment[:i] + _get_glsl(
+            to_insert, 'frag', 'end', exclude_origins=exclude_origins) + '}\n'
 
         # Now, we make the replacements in the fragment shader.
         fs_regex = re.compile(r'(void main\(\)\s*\{)')
