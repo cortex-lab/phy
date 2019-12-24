@@ -63,7 +63,16 @@ More details:
 * `~/.phy`: (`~` is your home directory) this directory contains your custom plugins and user preferences for the GUI. If you delete it, you will lose the layout configuration of the GUI (which will be automatically reset the next time you open the GUI) and your user preferences. More specifically, the GUI parameters are found in `~/.phy/TemplateGUI/state.json` for the Template GUI, and so on.
 
 
-## Error "No module named PyQt5.sip"
+### Scaling discrepancy between templates and waveforms
+
+There seems to be a scaling factor in the templates exported by KiloSort. Until this is fixed properly, a work-around is to add the following line to `params.py`:
+
+``` python
+template_scaling = 20.0  # or any other scaling factor
+```
+
+
+### Error "No module named PyQt5.sip"
 
 If you receive the error: `No module named PyQt5.sip`, try to run the following commands in your conda environment (solution found by Claire Ward):
 
