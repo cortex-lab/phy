@@ -17,7 +17,7 @@ from phylib.utils.event import emit
 
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
 from .histogram import _compute_histogram
-from phy.plot.transform import Rotate, Range, NDC
+from phy.plot.transform import Rotate, Scale, Translate, Range, NDC
 from phy.plot.visuals import ScatterVisual, HistogramVisual, PatchVisual
 
 logger = logging.getLogger(__name__)
@@ -93,10 +93,15 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.hist_visual = HistogramVisual()
         self.hist_visual.transforms.add([
             Range(NDC, (-1, -1, 1, -1 + 2 * self.histogram_scale)),
-            Rotate('ccw'),
+            Rotate('cw'),
+            Scale((1, -1)),
+            Translate((2, 0)),
         ])
         self.canvas.add_visual(self.hist_visual)
+        self.canvas.panzoom.zoom = self.canvas.panzoom._default_zoom = (.75, 1)
+        self.canvas.panzoom.pan = self.canvas.panzoom._default_pan = (-.25, 0)
 
+        # Yellow vertical bar showing the selected time interval.
         self.patch_visual = PatchVisual(primitive_type='triangle_fan')
         self.patch_visual.inserter.insert_vert('''
             const float MIN_INTERVAL_SIZE = 0.01;
@@ -105,7 +110,12 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.patch_visual.inserter.insert_vert('''
             gl_Position.y = pos_orig.y;
 
+            // The following is used to ensure that (1) the bar width increases with the zoom level
+            // but also (2) there is a minimum absolute width so that the bar remains visible
+            // at low zoom levels.
             float w = max(MIN_INTERVAL_SIZE, u_interval_size * u_zoom.x);
+            // HACK: the z coordinate is used to store 0 or 1, depending on whether the current
+            // vertex is on the left or right edge of the bar.
             gl_Position.x += w * (-1 + 2 * int(a_position.z == 0));
 
         ''', 'after_transforms')
@@ -114,7 +124,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         # Scatter plot.
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
-        self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
+        self.canvas.panzoom.set_constrain_bounds((-2, -2, +2, +2))
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""

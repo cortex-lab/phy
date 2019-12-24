@@ -54,19 +54,21 @@ def test_amplitude_view_1(qtbot, gui):
 
 def test_amplitude_view_2(qtbot, gui):
     n = 1000
+    st1 = artificial_spike_samples(n) / 20000.
+    st2 = artificial_spike_samples(n) / 20000.
     v = AmplitudeView(
         amplitudes={
             'amp1': lambda cluster_ids, load_all=False: [Bunch(
                 amplitudes=15 + np.random.randn(n),
                 spike_ids=np.arange(n),
-                spike_times=artificial_spike_samples(n) / 20000.
+                spike_times=st1,
             ) for c in cluster_ids],
             'amp2': lambda cluster_ids, load_all=False: [Bunch(
                 amplitudes=10 + np.random.randn(n),
                 spike_ids=np.arange(n),
-                spike_times=artificial_spike_samples(n) / 20000.
+                spike_times=st2,
             ) for c in cluster_ids],
-        })
+        }, duration=max(st1.max(), st2.max()))
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -88,7 +90,7 @@ def test_amplitude_view_2(qtbot, gui):
     @connect(sender=v)
     def on_select_time(sender, time):
         _times.append(time)
-    mouse_click(qtbot, v.canvas, (w / 2, h / 2), modifiers=('Alt',))
+    mouse_click(qtbot, v.canvas, (w / 3, h / 2), modifiers=('Alt',))
     assert len(_times) == 1
     assert np.allclose(_times[0], .5, atol=.01)
 
