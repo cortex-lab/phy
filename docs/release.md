@@ -27,7 +27,7 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Show histogram of amplitudes overlayed with the amplitudes
     * Support for multiple types of amplitudes (template waveform amplitude, raw waveform amplitude, feature amplitude)
     * Splitting is supported
-    * Shift+click in the amplitude view to center the trace view to a certain time
+    * Alt+click in the amplitude view to center the trace view to a certain time
     * Show the time interval currenty displayed in the trace view as a vertical yellow bar
 * **Correlogram view**:
     * Show horizontal line for the baseline firing rate, and a customizable vertical line for the refractory period
