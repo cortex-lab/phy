@@ -8,6 +8,13 @@ Here are a few tips if something goes wrong.
 Look at existing [GitHub issues](https://github.com/cortex-lab/phy/issues) to see if someone else had the same problem. If not, feel free to open a new issue by giving a descriptive title and a comprehensive description of the problem, including screenshots if needed.
 
 
+## Use the `--debug` option
+
+When calling the phy GUI from the command-line interface, append the `--debug` option to the command to get more complete error messages, e.g. `phy template-gui params.py --debug`
+
+Please copy and paste the full console output to the GitHub issue if requested.
+
+
 ## Sending your dataset to the main developer
 
 In some cases, the [main phy developer](https://cyrille.rossant.net/) will ask you to send him your dataset in order to identify and fix the problem. You should compress the whole folder, **excluding**:
