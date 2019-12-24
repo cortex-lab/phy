@@ -60,5 +60,5 @@ def test_manual_clustering_view_2(qtbot, gui):
     qtbot.wait(200)
     # qtbot.stop()
     v.canvas.close()
-    v.dock.close()
+    v.actions.close()
     qtbot.wait(100)

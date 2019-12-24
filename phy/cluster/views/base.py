@@ -239,6 +239,7 @@ class ManualClusteringView(object):
         self.actions.add(
             self.toggle_auto_update, checkable=True, checked=self.auto_update, show_shortcut=False)
         self.actions.add(self.screenshot, show_shortcut=False)
+        self.actions.add(self.close, show_shortcut=False)
         self.actions.separator()
 
         emit('view_actions_created', self)
@@ -252,6 +253,7 @@ class ManualClusteringView(object):
             if view != self:
                 return
             logger.debug("Close view %s.", self.name)
+            self._closed = True
             gui.remove_menu(self.name)
             unconnect(on_select)
             gui.state.update_view_state(self, self.state)
@@ -319,11 +321,13 @@ class ManualClusteringView(object):
         return self.canvas.show()
 
     def close(self):
-        """Close the underlying canvas."""
+        """Close the view."""
+        if hasattr(self, 'dock'):
+            return self.dock.close()
         self.canvas.close()
         self._closed = True
         unconnect(self)
-        gc.collect()
+        gc.collect(0)
 
 
 # -----------------------------------------------------------------------------
