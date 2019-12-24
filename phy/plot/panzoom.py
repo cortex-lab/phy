@@ -87,6 +87,7 @@ class PanZoom(object):
     """
 
     _default_zoom_coeff = 1.5
+    _default_pan = (0, 0)
     _default_zoom = 1.
     _default_wheel_coeff = .1
     _arrows = ('Left', 'Right', 'Up', 'Down')
@@ -427,7 +428,7 @@ class PanZoom(object):
 
     def reset(self):
         """Reset the view."""
-        self.pan = (0., 0.)
+        self.pan = self._default_pan
         self.zoom = self._default_zoom
         self.update()
 
