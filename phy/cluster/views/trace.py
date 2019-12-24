@@ -132,6 +132,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
         'go_to_previous_spike': 'alt+pgup',
         'narrow': 'alt++',
         'select_spike': 'ctrl+click',
+        'select_channel_pcA': 'shift+left click',
+        'select_channel_pcB': 'shift+right click',
         'switch_origin': 'alt+o',
         'toggle_highlighted_spikes': 'alt+s',
         'toggle_show_labels': 'alt+l',
@@ -591,3 +593,9 @@ class TraceView(ScalingMixin, ManualClusteringView):
             cluster_id = spike_clusters[i]
             emit('select_spike', self, channel_id=channel_id,
                  spike_id=spike_id, cluster_id=cluster_id)
+
+        if 'Shift' in e.modifiers:
+            # Get mouse position in NDC.
+            box_id, _ = self.canvas.stacked.box_map(e.pos)
+            channel_id = int(np.nonzero(self.channel_y_ranks == box_id)[0][0])
+            emit('select_channel', self, channel_id=channel_id, button=e.button)

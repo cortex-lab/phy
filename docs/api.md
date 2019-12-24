@@ -10041,6 +10041,15 @@ Update the view with the current cluster selection.
 
 ---
 
+#### WaveformView.previous_waveforms_type
+
+
+**`WaveformView.previous_waveforms_type(self)`**
+
+Switch to the previous waveforms type.
+
+---
+
 #### WaveformView.reset_scaling
 
 

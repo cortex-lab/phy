@@ -150,6 +150,8 @@ Keyboard shortcuts for TraceView
 - jump_left                                shift+alt+left
 - jump_right                               shift+alt+right
 - narrow                                   alt++
+- select_channel_pcA                       shift+left click
+- select_channel_pcB                       shift+right click
 - select_spike                             ctrl+click
 - switch_origin                            alt+o
 - toggle_highlighted_spikes                alt+s
@@ -168,6 +170,7 @@ Keyboard shortcuts for WaveformView
 - increase                                 ctrl+up
 - narrow                                   ctrl+left
 - next_waveforms_type                      w
+- previous_waveforms_type                  shift+w
 - shrink_horizontally                      shift+left
 - shrink_vertically                        shift+down
 - toggle_mean_waveforms                    m

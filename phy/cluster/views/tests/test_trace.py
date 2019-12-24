@@ -207,4 +207,16 @@ def test_trace_view_1(qtbot, tempdir, gui):
 
     assert len(_clicked[0]) == 3
 
+    # Simulate channel selection.
+    _clicked = []
+
+    @connect(sender=v)
+    def on_select_channel(sender, channel_id=None, button=None):
+        _clicked.append((channel_id, button))
+
+    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Shift',))
+    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Right', modifiers=('Shift',))
+
+    assert _clicked == [(2, 'Left'), (2, 'Right')]
+
     _stop_and_close(qtbot, v)
