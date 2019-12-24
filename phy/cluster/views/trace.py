@@ -201,6 +201,11 @@ class TraceView(ScalingMixin, ManualClusteringView):
 
         self.text_visual = TextVisual()
         _fix_coordinate_in_visual(self.text_visual, 'x')
+        self.text_visual.inserter.add_varying(
+            'float', 'v_discard',
+            'float((n_boxes >= 50 * u_zoom.y) && '
+            '(mod(int(a_box_index), int(n_boxes / (50 * u_zoom.y))) >= 1))')
+        self.text_visual.inserter.insert_frag('if (v_discard > 0) discard;', 'end')
         self.canvas.add_visual(self.text_visual)
 
         # Initial interval.
@@ -541,7 +546,8 @@ class TraceView(ScalingMixin, ManualClusteringView):
         """Toggle the display of the channel ids."""
         logger.debug("Set show labels to %s.", checked)
         self.do_show_labels = checked
-        self.set_interval()
+        self.text_visual.toggle()
+        self.canvas.update()
 
     def toggle_auto_scale(self, checked):
         """Toggle automatic scaling of the traces."""

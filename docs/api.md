@@ -2601,6 +2601,15 @@ Show the visual.
 
 ---
 
+#### BaseVisual.toggle
+
+
+**`BaseVisual.toggle(self)`**
+
+Toggle the visual visibility.
+
+---
+
 #### BaseVisual.validate
 
 
@@ -2916,6 +2925,15 @@ This class provides methods to specify the snippets to insert, and the
 **`GLSLInserter.add_gpu_transforms(self, tc)`**
 
 Insert all GLSL snippets from a transform chain.
+
+---
+
+#### GLSLInserter.add_varying
+
+
+**`GLSLInserter.add_varying(self, vtype, name, value)`**
+
+Add a varying variable.
 
 ---
 
@@ -3245,6 +3263,15 @@ Show the visual.
 
 ---
 
+#### HistogramVisual.toggle
+
+
+**`HistogramVisual.toggle(self)`**
+
+Toggle the visual visibility.
+
+---
+
 #### HistogramVisual.validate
 
 
@@ -3387,6 +3414,15 @@ Set the built-in vertex and fragment shader.
 **`ImageVisual.show(self)`**
 
 Show the visual.
+
+---
+
+#### ImageVisual.toggle
+
+
+**`ImageVisual.toggle(self)`**
+
+Toggle the visual visibility.
 
 ---
 
@@ -3624,6 +3660,15 @@ Set the built-in vertex and fragment shader.
 **`LineVisual.show(self)`**
 
 Show the visual.
+
+---
+
+#### LineVisual.toggle
+
+
+**`LineVisual.toggle(self)`**
+
+Toggle the visual visibility.
 
 ---
 
@@ -4498,6 +4543,15 @@ Show the visual.
 
 ---
 
+#### PlotVisual.toggle
+
+
+**`PlotVisual.toggle(self)`**
+
+Toggle the visual visibility.
+
+---
+
 #### PlotVisual.validate
 
 
@@ -4642,6 +4696,15 @@ Set the built-in vertex and fragment shader.
 **`PolygonVisual.show(self)`**
 
 Show the visual.
+
+---
+
+#### PolygonVisual.toggle
+
+
+**`PolygonVisual.toggle(self)`**
+
+Toggle the visual visibility.
 
 ---
 
@@ -4918,6 +4981,15 @@ Show the visual.
 
 ---
 
+#### ScatterVisual.toggle
+
+
+**`ScatterVisual.toggle(self)`**
+
+Toggle the visual visibility.
+
+---
+
 #### ScatterVisual.validate
 
 
@@ -5089,6 +5161,15 @@ Set the built-in vertex and fragment shader.
 **`TextVisual.show(self)`**
 
 Show the visual.
+
+---
+
+#### TextVisual.toggle
+
+
+**`TextVisual.toggle(self)`**
+
+Toggle the visual visibility.
 
 ---
 
@@ -5344,6 +5425,15 @@ Show the visual.
 
 ---
 
+#### UniformPlotVisual.toggle
+
+
+**`UniformPlotVisual.toggle(self)`**
+
+Toggle the visual visibility.
+
+---
+
 #### UniformPlotVisual.validate
 
 
@@ -5508,6 +5598,15 @@ Show the visual.
 
 ---
 
+#### UniformScatterVisual.toggle
+
+
+**`UniformScatterVisual.toggle(self)`**
+
+Toggle the visual visibility.
+
+---
+
 #### UniformScatterVisual.validate
 
 
@@ -5571,7 +5670,7 @@ Attach the view to the GUI.
 
 **`AmplitudeView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -6494,7 +6593,7 @@ Attach the view to the GUI.
 
 **`CorrelogramView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -6753,7 +6852,7 @@ Reset the current channels.
 
 **`FeatureView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -7025,7 +7124,7 @@ Attach the view to the GUI.
 
 **`FiringRateView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -7259,7 +7358,7 @@ Attach the view to the GUI.
 
 **`HistogramView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -7486,7 +7585,7 @@ Attach the view to the GUI.
 
 **`ISIView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -7731,7 +7830,7 @@ Perform the following:
 
 **`ManualClusteringView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -7896,7 +7995,7 @@ Perform the following:
 
 **`ProbeView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -8058,7 +8157,7 @@ Attach the view to the GUI.
 
 **`RasterView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -8310,7 +8409,7 @@ This view displays a scatter plot for all selected clusters.
 
 **`ScatterView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -9179,7 +9278,7 @@ This view shows all template waveforms of all clusters in a large grid of shape
 
 **`TemplateView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -9444,7 +9543,7 @@ Attach the view to the GUI.
 
 **`TraceView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
@@ -9912,7 +10011,7 @@ Attach the view to the GUI.
 
 **`WaveformView.close(self)`**
 
-Close the underlying canvas.
+Close the view.
 
 ---
 
