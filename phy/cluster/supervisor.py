@@ -9,7 +9,6 @@
 
 from functools import partial
 import inspect
-from itertools import chain
 import logging
 
 import numpy as np
@@ -19,7 +18,6 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 
 from phylib.utils import Bunch, emit, connect, unconnect
-from phylib.utils.color import ClusterColorSelector
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
@@ -470,7 +468,6 @@ class ActionCreator(object):
         # Create the actions.
         self._create_edit_actions(gui.state)
         self._create_select_actions(gui.state)
-        self._create_view_actions(gui.state)
 
     def _create_edit_actions(self, state):
         w = 'edit'
@@ -531,42 +528,6 @@ class ActionCreator(object):
         self.add(w, 'previous_best')
         self.select_actions.separator()
 
-    def _create_view_actions(self, state):
-        w = 'view'
-        cluster_labels_keys = getattr(self.supervisor, 'cluster_labels', {}).keys()
-        cluster_metrics_keys = getattr(self.supervisor, 'cluster_metrics', {}).keys()
-
-        # Change color field action.
-        for field in chain(
-                ('cluster', 'group', 'n_spikes'), cluster_labels_keys, cluster_metrics_keys):
-            self.add(
-                w, name='color_field_%s' % field.lower(),
-                method_name='change_color_field',
-                method_args=(field,),
-                docstring='Change color field to %s' % field,
-                alias='cf%s' % field.replace('_', '')[:2],
-                submenu='Change color field')
-
-        # Change color map action.
-        for colormap in ('categorical', 'cluster_group', 'diverging', 'linear', 'rainbow'):
-            self.add(
-                w, name='colormap_%s' % colormap.lower(),
-                method_name='change_colormap',
-                method_args=(colormap,),
-                docstring='Change colormap to %s' % colormap,
-                alias='cm%s' % colormap[:2],
-                submenu='Change colormap')
-
-        # Change colormap categorical or continous.
-        categorical = state.get('color_selector', Bunch()).get('categorical', None)
-        self.add(w, 'toggle_categorical_colormap', checkable=True, checked=categorical is True)
-
-        # Change colormap logarithmic.
-        logarithmic = state.get('color_selector', Bunch()).get('logarithmic', None)
-        self.add(w, 'toggle_logarithmic_colormap', checkable=True, checked=logarithmic is True)
-
-        self.view_actions.separator()
-
 
 # -----------------------------------------------------------------------------
 # Clustering GUI component
@@ -618,8 +579,6 @@ class Supervisor(object):
         When the Supervisor instance is attached to the GUI.
     * `request_split()`
         When the user requests to split (typically, a lasso has been drawn before).
-    * `color_mapping_changed()`
-        When the color mapping changed.
     * `save_clustering(spike_clusters, cluster_groups, *cluster_labels)`
         When the user wants to save the spike cluster assignments and the cluster metadata.
 
@@ -966,30 +925,12 @@ class Supervisor(object):
         gui.add_view(self.cluster_view, position='left', closable=False)
         gui.add_view(self.similarity_view, position='left', closable=False)
 
-        # Create the ClusterColorSelector instance.
-        # Pass the state variables: color_field, colormap, categorical, logarithmic
-        self.color_selector = ClusterColorSelector(
-            cluster_meta=self.cluster_meta,
-            cluster_metrics=self.cluster_metrics,
-            cluster_ids=self.clustering.cluster_ids,
-            **gui.state.get('color_selector', Bunch())
-        )
-
         # Create all supervisor actions (edit and view menu).
         self.action_creator.attach(gui)
         self.actions = self.action_creator.edit_actions  # clustering actions
         self.select_actions = self.action_creator.select_actions
         self.view_actions = self.action_creator.view_actions
         emit('attach_gui', self)
-
-        @connect(sender=self)
-        def on_cluster(sender, up):
-            # After a clustering action, get the cluster ids as shown
-            # in the cluster view, and update the color selector accordingly.
-            @self.cluster_view.get_ids
-            def _update(cluster_ids):
-                if cluster_ids is not None:
-                    self.color_selector.set_cluster_ids(cluster_ids)
 
         # Call supervisor.save() when the save/ctrl+s action is triggered in the GUI.
         @connect(sender=gui)
@@ -1008,7 +949,6 @@ class Supervisor(object):
 
         @connect(sender=gui)
         def on_close(e):
-            gui.state['color_selector'] = self.color_selector.state
             unconnect(on_is_busy, self)
 
         @connect(sender=self.cluster_view)
@@ -1148,30 +1088,6 @@ class Supervisor(object):
     def unselect_similar(self, callback=None):
         """Select only the clusters in the cluster view."""
         self.cluster_view.select(self.selected_clusters, callback=callback)
-
-    # Color mapping actions
-    # -------------------------------------------------------------------------
-
-    def change_color_field(self, color_field):
-        """Change the color field (the name of the cluster view column used for the selected
-        colormap)."""
-        self.color_selector.set_color_mapping(color_field=color_field)
-        emit('color_mapping_changed', self)
-
-    def change_colormap(self, colormap):
-        """Change the colormap."""
-        self.color_selector.set_color_mapping(colormap=colormap)
-        emit('color_mapping_changed', self)
-
-    def toggle_categorical_colormap(self, checked):
-        """Use a categorical or continuous colormap."""
-        self.color_selector.set_color_mapping(categorical=checked)
-        emit('color_mapping_changed', self)
-
-    def toggle_logarithmic_colormap(self, checked):
-        """Use a logarithmic transform or not for the colormap."""
-        self.color_selector.set_color_mapping(logarithmic=checked)
-        emit('color_mapping_changed', self)
 
     # Other actions
     # -------------------------------------------------------------------------

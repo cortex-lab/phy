@@ -331,13 +331,6 @@ def test_supervisor_select_1(qtbot, supervisor):
     supervisor.task_logger.show_history()
 
 
-def test_supervisor_color(qtbot, supervisor):
-    supervisor.view_actions.colormap_linear()
-    supervisor.view_actions.color_field_n_spikes()
-    supervisor.view_actions.toggle_categorical_colormap(False)
-    supervisor.view_actions.toggle_logarithmic_colormap(True)
-
-
 def test_supervisor_select_2(qtbot, supervisor):
     supervisor.select_actions.next_best()
     supervisor.block()
