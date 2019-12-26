@@ -767,3 +767,11 @@ def test_supervisor_nav(qtbot, supervisor):
     supervisor.select_actions.previous_best()
     supervisor.block()
     _assert_selected(supervisor, [30])
+
+    supervisor.select_actions.first()
+    qtbot.wait(100)
+    _assert_selected(supervisor, [30])
+
+    supervisor.select_actions.last()
+    qtbot.wait(100)
+    _assert_selected(supervisor, [1])

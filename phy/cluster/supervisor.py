@@ -416,6 +416,8 @@ class ActionCreator(object):
         'move_all_to_unsorted': 'ctrl+alt+u',
 
         # Wizard.
+        'first': 'home',
+        'last': 'end',
         'reset': 'ctrl+alt+space',
         'next': 'space',
         'previous': 'shift+space',
@@ -514,6 +516,10 @@ class ActionCreator(object):
                 w, 'sort_by_%s' % column.lower(), method_name='sort', method_args=(column,),
                 docstring='Sort by %s' % column,
                 submenu='Sort by', alias='s%s' % column.replace('_', '')[:2])
+
+        self.select_actions.separator()
+        self.add(w, 'first')
+        self.add(w, 'last')
 
         self.select_actions.separator()
 
@@ -1088,6 +1094,14 @@ class Supervisor(object):
     def unselect_similar(self, callback=None):
         """Select only the clusters in the cluster view."""
         self.cluster_view.select(self.selected_clusters, callback=callback)
+
+    def first(self, callback=None):
+        """Select the first cluster in the cluster view."""
+        self.cluster_view.first()
+
+    def last(self, callback=None):
+        """Select the last cluster in the cluster view."""
+        self.cluster_view.last()
 
     # Other actions
     # -------------------------------------------------------------------------
