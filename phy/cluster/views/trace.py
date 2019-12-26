@@ -46,30 +46,35 @@ def _iter_spike_waveforms(
     s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
     ns = n_samples_waveforms
     k = ns // 2
-    for i in range(a, b):
-        t = m.spike_times[i]
-        c = m.spike_clusters[i]
-        # Skip non-selected spikes if requested.
-        if (not show_all_spikes and c not in supervisor.selected):
-            continue
-        # cg = p.cluster_meta.get('group', c)
-        channel_ids = get_best_channels(c)
-        s = int(round(t * sr)) - s0
-        # Skip partial spikes.
-        if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
-            continue
-        # Extract the waveform.
-        wave = Bunch(
-            data=traces_interval[s - k:s + ns - k, channel_ids],
-            channel_ids=channel_ids,
-            start_time=(s + s0 - k) / sr,
-            spike_id=i,
-            spike_time=t,
-            spike_cluster=c,
-            select_index=p.selected.index(c) if c in p.selected else None,
-        )
-        assert wave.data.shape == (ns, len(channel_ids))
-        yield wave
+    for show_selected in (False, True):
+        for i in range(a, b):
+            t = m.spike_times[i]
+            c = m.spike_clusters[i]
+            is_selected = c in p.selected
+            # Show non selected spikes first, then selected spikes so that they appear on top.
+            if is_selected is not show_selected:
+                continue
+            # Skip non-selected spikes if requested.
+            if (not show_all_spikes and c not in supervisor.selected):
+                continue
+            # cg = p.cluster_meta.get('group', c)
+            channel_ids = get_best_channels(c)
+            s = int(round(t * sr)) - s0
+            # Skip partial spikes.
+            if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
+                continue
+            # Extract the waveform.
+            wave = Bunch(
+                data=traces_interval[s - k:s + ns - k, channel_ids],
+                channel_ids=channel_ids,
+                start_time=(s + s0 - k) / sr,
+                spike_id=i,
+                spike_time=t,
+                spike_cluster=c,
+                select_index=p.selected.index(c) if c in p.selected else None,
+            )
+            assert wave.data.shape == (ns, len(channel_ids))
+            yield wave
 
 
 class TraceView(ScalingMixin, ManualClusteringView):

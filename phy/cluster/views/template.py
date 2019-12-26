@@ -196,6 +196,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         # The argument passed to set_color() must have 1 row per vertex.
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
+        self.set_dock_status("Color scheme: %s" % self.color_schemes.current)
 
     def plot(self, **kwargs):
         """Make the template plot."""
@@ -230,7 +231,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
             if 'Shift' in e.modifiers:
                 emit('select_more', self, [cluster_id])
             else:
-                emit('select', self, [cluster_id])
+                emit('request_select', self, [cluster_id])
 
     # Scaling
     # -------------------------------------------------------------------------

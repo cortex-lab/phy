@@ -171,7 +171,7 @@ class ManualClusteringView(object):
         """Raise the `color_scheme_changed` event."""
         self.color_schemes._neighbor(dir=dir)
         name = self.color_schemes.current
-        logger.info("Changed color scheme to %s in %s.", name, self.__class__.__name__)
+        logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
         emit('color_scheme_changed', self, name)
 
     def next_color_scheme(self):
@@ -453,8 +453,6 @@ class BaseGlobalView(object):
 
     def on_select(self, sender=None, cluster_ids=(), **kwargs):
         # Decide whether the view should react to the select event or not.
-        # TODO: check if that works, otherwise make a specific @connect for this method
-        # instead of relying on the BaseManualClustering callback.
         if not self.auto_update:
             return
         # Only the Supervisor and some specific views can trigger a proper select event.

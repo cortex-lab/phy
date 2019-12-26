@@ -75,7 +75,7 @@ def test_template_view_1(qtbot, tempdir, gui):
     w, h = v.canvas.get_size()
 
     @connect(sender=v)
-    def on_select(sender, cluster_ids):
+    def on_request_select(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
     @connect(sender=v)

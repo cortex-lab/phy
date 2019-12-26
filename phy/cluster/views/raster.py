@@ -67,8 +67,13 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.visual = ScatterVisual(
             marker='vbar',
             marker_scaling='''
-                point_size = point_size * vec2(.25 * u_zoom.y, 1.0 / u_zoom.y);
-        ''')
+                point_size = v_size * u_zoom.y + 5.;
+                float width = 0.2;
+                float height = 0.5;
+                vec2 marker_size = point_size * vec2(width, height);
+                marker_size.x = clamp(marker_size.x, 1, 20);
+            ''',
+        )
         self.visual.inserter.insert_vert('''
                 gl_PointSize = a_size * u_zoom.y + 5.0;
         ''', 'end')
@@ -133,11 +138,12 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.canvas.update()
 
     def update_color(self, selected_clusters=None):
-        """Update the color of the spikes, depending on the selected clustersd."""
+        """Update the color of the spikes, depending on the selected clusters."""
         box_index = self._get_box_index()
         color = self._get_color(box_index, selected_clusters=selected_clusters)
         self.visual.set_color(color)
         self.canvas.update()
+        self.set_dock_status("Color scheme: %s" % self.color_schemes.current)
 
     def plot(self, **kwargs):
         """Make the raster plot."""
@@ -193,4 +199,4 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
             if 'Shift' in e.modifiers:
                 emit('select_more', self, [cluster_id])
             else:
-                emit('select', self, [cluster_id])
+                emit('request_select', self, [cluster_id])

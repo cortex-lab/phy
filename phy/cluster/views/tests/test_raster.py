@@ -50,7 +50,7 @@ def test_raster_0(qtbot, gui):
     w, h = v.canvas.get_size()
 
     @connect(sender=v)
-    def on_select(sender, cluster_ids):
+    def on_request_select(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
     @connect(sender=v)
