@@ -539,8 +539,6 @@ class TemplateMixin(object):
         # Get masks, related to the number of spikes per template which the cluster stems from.
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
-        # Get the mean amplitude for the cluster.
-        # mean_amp = self.get_amplitudes(cluster_id).mean()
         # Get all templates from which this cluster stems from.
         templates = [self.model.get_template(template_id) for template_id in template_ids]
         # Construct the waveforms array.
@@ -562,10 +560,8 @@ class TemplateMixin(object):
         out = {}
         for cluster_id in cluster_ids:
             waveforms = self._get_template_waveforms(cluster_id)
-            mean_amp = self.get_amplitudes(cluster_id).mean()
-            temp_amp = np.amax(np.abs(waveforms.data[0, :, 0]))
             out[cluster_id] = Bunch(
-                template=waveforms.data[0, ...] / temp_amp * mean_amp,
+                template=waveforms.data[0, ...],
                 channel_ids=waveforms.channel_ids,
             )
         return out
@@ -582,6 +578,16 @@ class TemplateMixin(object):
             channel_labels=self._get_channel_labels(),
         )
         self._attach_global_view(view)
+
+        @connect(sender=view)
+        def on_request_select(sender, cluster_ids):
+            self.supervisor.select(cluster_ids)
+
+        @connect
+        def on_close_view(sender, view_):  # pragma: no cover
+            if view == view_:
+                unconnect(on_request_select)
+
         return view
 
 
@@ -650,7 +656,8 @@ class TraceMixin(object):
 
         @connect(sender=v)
         def on_color_scheme_changed(sender, name):
-            v.on_select()
+            # Update the waveforms when the color scheme changes.
+            v.plot(update_traces=False, update_waveforms=True)
 
         @connect
         def on_time_range_selected(sender, interval):
@@ -1140,7 +1147,7 @@ class BaseController(object):
 
     def get_mean_firing_rate(self, cluster_id):
         """Return the mean firing rate of a cluster."""
-        return "%.2f" % (self.supervisor.n_spikes(cluster_id) / max(1, self.model.duration))
+        return self.supervisor.n_spikes(cluster_id) / max(1, self.model.duration)
 
     def get_best_channel(self, cluster_id):
         """Return the best channel id of a given cluster. This is the first channel returned
@@ -1364,26 +1371,31 @@ class BaseController(object):
         )
         self._attach_global_view(view)
 
-        @connect
-        def on_time_range_selected(sender, interval):
-            if view.auto_update:
-                # Show the time range in the raster view.
-                view.zoom_to_time_range(interval)
+        # @connect
+        # def on_time_range_selected(sender, interval):
+        #     if view.auto_update:
+        #         # Show the time range in the raster view.
+        #         view.zoom_to_time_range(interval)
+
+        # @connect(sender=view)
+        # def on_view_ready(sender):
+        #     view.zoom_to_time_range(self.selection.get('selected_time_range', None))
+
+        # @connect(event='view_ready')
+        # def on_view_ready_(sender):
+        #     if sender.__class__.__name__ == 'TraceView':
+        #         view.zoom_to_time_range(sender.interval)
 
         @connect(sender=view)
-        def on_view_ready(sender):
-            view.zoom_to_time_range(self.selection.get('selected_time_range', None))
-
-        @connect(event='view_ready')
-        def on_view_ready_(sender):
-            if sender.__class__.__name__ == 'TraceView':
-                view.zoom_to_time_range(sender.interval)
+        def on_request_select(sender, cluster_ids):
+            self.supervisor.select(cluster_ids)
 
         @connect
         def on_close_view(sender, view_):  # pragma: no cover
             if view == view_:
-                unconnect(on_time_range_selected)
-                unconnect(on_view_ready)
+                unconnect(on_request_select)
+                # unconnect(on_time_range_selected)
+                # unconnect(on_view_ready)
 
         return view
 
@@ -1532,20 +1544,33 @@ class BaseController(object):
 
     def _add_default_color_schemes(self, view):
         """Add the default color schemes to every view."""
-        group = partial(self.supervisor.cluster_meta.get, 'group')
+        group_colors = {
+            'noise': 0,
+            'mua': 1,
+            'good': 2,
+            None: 3,
+            'unsorted': 3,
+        }
+
+        def group_index(cluster_id):
+            group = self.supervisor.cluster_meta.get('group', cluster_id)
+            return group_colors[group]
+
         depth = self.supervisor.cluster_metrics['depth']
         fr = self.supervisor.cluster_metrics['fr']
         schemes = [
             ('blank', 'blank', 0, False, False),
             ('random', 'categorical', lambda cl: cl, True, False),
-            ('cluster_group', 'cluster_group', group, False, False),
+            ('cluster_group', 'cluster_group', group_index, True, False),
             ('depth', 'linear', depth, False, False),
             ('firing_rate', 'linear', fr, False, True),
         ]
         for name, colormap, fun, categorical, logarithmic in schemes:
             view.add_color_scheme(
-                name=name, fun=fun, colormap=colormap,
-                categorical=categorical, logarithmic=logarithmic)
+                name=name, fun=fun, cluster_ids=self.supervisor.clustering.cluster_ids,
+                colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+        # TODO: save current color scheme of each figure in GUI state
+        view.color_schemes.set('random')
 
     def create_gui(self, default_views=None, **kwargs):
         """Create the GUI.
@@ -1610,7 +1635,8 @@ class BaseController(object):
         # Bind the `select_more` event to add clusters to the existing selection.
         @connect
         def on_select_more(sender, cluster_ids):
-            emit('select', sender, self.supervisor.selected + cluster_ids)
+            # emit('select', sender, self.supervisor.selected + cluster_ids)
+            self.supervisor.select(self.supervisor.selected + cluster_ids)
 
         # Prompt save.
         @connect(sender=gui)

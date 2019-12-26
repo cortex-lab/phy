@@ -205,7 +205,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
-        bunchs = self.get_clusters_data()
+        bunchs = self.get_clusters_data(**kwargs)
         if not bunchs:
             return
         self.data_bounds = self._get_data_bounds(bunchs)

@@ -488,6 +488,7 @@ class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
     def test_split_template_amplitude(self):
         self.next()
         self.amplitude_view.amplitude_name = 'template'
+        self.controller.get_amplitudes(self.selected[0], load_all=True)
         self.amplitude_view.plot()
         self.lasso(self.amplitude_view)
         self.split()
