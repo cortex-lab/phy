@@ -13,7 +13,7 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from ..utils import (
-    _load_shader, _tesselate_histogram, BatchAccumulator
+    _load_shader, _tesselate_histogram, BatchAccumulator, _in_polygon
 )
 
 
@@ -48,3 +48,14 @@ def test_accumulator():
     assert tuple(b.data.keys()) == ('x', 'y')
     ae(b.data.x, x)
     ae(b.data.y, y)
+
+
+def test_in_polygon():
+    polygon = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
+    points = np.random.uniform(size=(100, 2), low=-1, high=1)
+    idx_expected = np.nonzero((points[:, 0] > 0) &
+                              (points[:, 1] > 0) &
+                              (points[:, 0] < 1) &
+                              (points[:, 1] < 1))[0]
+    idx = np.nonzero(_in_polygon(points, polygon))[0]
+    ae(idx, idx_expected)

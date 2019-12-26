@@ -10,12 +10,11 @@
 import logging
 import numpy as np
 
-from phylib.io.array import _in_polygon
 from phylib.utils.geometry import get_non_overlapping_boxes, get_closest_box
 
 from .base import BaseLayout
 from .transform import Scale, Range, Subplot, Clip, NDC
-from .utils import _get_texture
+from .utils import _get_texture, _in_polygon
 from .visuals import LineVisual, PolygonVisual
 
 logger = logging.getLogger(__name__)

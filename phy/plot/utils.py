@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from phylib.utils import Bunch
+from phylib.utils import Bunch, _as_array
 
 logger = logging.getLogger(__name__)
 
@@ -227,3 +227,16 @@ def _tesselate_histogram(hist):
     y[2::6] = y[3::6] = y[4::6] = hist
 
     return np.c_[x, y]
+
+
+def _in_polygon(points, polygon):
+    """Return the points that are inside a polygon."""
+    from matplotlib.path import Path
+    points = _as_array(points)
+    polygon = _as_array(polygon)
+    assert points.ndim == 2
+    assert polygon.ndim == 2
+    if len(polygon):
+        polygon = np.vstack((polygon, polygon[0]))
+    path = Path(polygon, closed=True)
+    return path.contains_points(points)

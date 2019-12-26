@@ -15,7 +15,7 @@ from ..visuals import (
     ScatterVisual, PatchVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual,
     TextVisual, ImageVisual, UniformPlotVisual, UniformScatterVisual)
 from ..transform import NDC, Rotate
-from phylib.utils.color import _random_color
+from phy.utils.color import _random_color
 
 
 #------------------------------------------------------------------------------
