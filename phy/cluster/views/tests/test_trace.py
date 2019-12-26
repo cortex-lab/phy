@@ -13,7 +13,6 @@ from phylib.io.mock import artificial_traces, artificial_spike_clusters
 from phylib.utils import Bunch, connect
 from phylib.utils.geometry import linear_positions
 from phy.plot.tests import mouse_click
-from phy.utils.color import ClusterColorSelector
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
 from . import _stop_and_close
@@ -32,7 +31,6 @@ def test_trace_view_0():
     st = np.linspace(0.1, .9, ns)
     sc = artificial_spike_clusters(ns, nc)
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
-    cs = ClusterColorSelector(cluster_ids=list(range(nc)))
 
     m = Bunch(spike_times=st, spike_clusters=sc, sample_rate=sr)
     s = Bunch(cluster_meta={}, selected=[0])
@@ -45,7 +43,7 @@ def test_trace_view_0():
             n_samples_waveforms=ns,
             show_all_spikes=True,
             get_best_channels=lambda cluster_id: ch,
-            color_selector=cs):
+    ):
         assert w
 
 
@@ -57,7 +55,6 @@ def test_trace_view_1(qtbot, tempdir, gui):
     st = np.linspace(0.1, .9, ns)
     sc = artificial_spike_clusters(ns, nc)
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
-    cs = ClusterColorSelector(cluster_ids=list(range(nc)))
 
     def get_traces(interval):
         out = Bunch(data=select_traces(traces, interval, sample_rate=sr),
@@ -72,10 +69,10 @@ def test_trace_view_1(qtbot, tempdir, gui):
             s = int(round(t * sr))
             d = Bunch(data=traces[s - k:s + k, :],
                       start_time=(s - k) / sr,
-                      color=cs.get(c, alpha=.5),
                       channel_ids=np.arange(5),
                       spike_id=i,
                       spike_cluster=c,
+                      select_index=0,
                       )
             out.waveforms.append(d)
         return out

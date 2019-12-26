@@ -37,13 +37,10 @@ def select_traces(traces, interval, sample_rate=None):
 
 def _iter_spike_waveforms(
         interval=None, traces_interval=None, model=None, supervisor=None,
-        n_samples_waveforms=None, get_best_channels=None, show_all_spikes=False,
-        color_selector=None,):
+        n_samples_waveforms=None, get_best_channels=None, show_all_spikes=False):
     """Iterate through the spike waveforms belonging in the current trace view."""
-
     m = model
     p = supervisor
-    cs = color_selector
     sr = m.sample_rate
     a, b = m.spike_times.searchsorted(interval)
     s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
@@ -61,21 +58,15 @@ def _iter_spike_waveforms(
         # Skip partial spikes.
         if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
             continue
-        # Choose cluster color.
-        if c in p.selected:  # pragma: no cover
-            i = p.selected.index(c)
-            color = selected_cluster_color(i, alpha=1)
-        else:
-            color = cs.get(c, alpha=1)
         # Extract the waveform.
         wave = Bunch(
             data=traces_interval[s - k:s + ns - k, channel_ids],
             channel_ids=channel_ids,
             start_time=(s + s0 - k) / sr,
-            color=color,
             spike_id=i,
             spike_time=t,
             spike_cluster=c,
+            select_index=p.selected.index(c) if c in p.selected else None,
         )
         assert wave.data.shape == (ns, len(channel_ids))
         yield wave
@@ -256,12 +247,18 @@ class TraceView(ScalingMixin, ManualClusteringView):
         t = bunch.start_time + self.dt * np.arange(n_samples)
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
+        # Determine the spike color.
+        i = bunch.select_index
+        c = bunch.spike_cluster
+        cs = self.color_schemes.get()
+        color = selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
+
         # The box index depends on the channel.
         box_index = self.channel_y_ranks[bunch.channel_ids]
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
         self.waveform_visual.add_batch_data(
             box_index=box_index,
-            x=t, y=bunch.data.T, color=bunch.color,
+            x=t, y=bunch.data.T, color=color,
             data_bounds=self.data_bounds,
         )
 
