@@ -136,6 +136,7 @@ def _make_cluster_group_colormap():
 
 """Built-in colormaps."""
 colormaps = Bunch(
+    blank=np.array([[.5, .5, .5]]),
     default=_make_default_colormap(),
     cluster_group=_make_cluster_group_colormap(),
     categorical=np.array(cc.glasbey_bw_minc_20_minl_30),
@@ -231,10 +232,7 @@ class ClusterColorSelector(object):
 
     def __init__(
             self, fun=None, colormap=None, categorical=None, logarithmic=None, cluster_ids=None):
-        self.cluster_ids = None
-        # Used to initialize the value range for the clusters.
-        assert cluster_ids is not None
-        self.cluster_ids = cluster_ids
+        self.cluster_ids = cluster_ids if cluster_ids is not None else ()
         self._fun = fun
         self.set_color_mapping(
             fun=fun, colormap=colormap, categorical=categorical, logarithmic=logarithmic)
@@ -270,8 +268,10 @@ class ClusterColorSelector(object):
         """Precompute the value range for all clusters."""
         self.cluster_ids = cluster_ids
         values = self.get_values(self.cluster_ids)
-        if values is not None:
+        if values is not None and len(values):
             self.vmin, self.vmax = values.min(), values.max()
+        else:  # pragma: no cover
+            self.vmin, self.vmax = 0, 1
 
     def map(self, values):
         """Convert values to colors using the selected colormap.
@@ -302,7 +302,7 @@ class ClusterColorSelector(object):
 
     def _get_cluster_value(self, cluster_id):
         """Return the field value for a given cluster."""
-        return self._fun(cluster_id) if self._fun else 0
+        return self._fun(cluster_id) if hasattr(self._fun, '__call__') else self._fun or 0
 
     def get(self, cluster_id, alpha=None):
         """Return the RGBA color of a single cluster."""
