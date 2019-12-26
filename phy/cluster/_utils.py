@@ -299,3 +299,50 @@ class ClusterMeta(object):
 
         emit('cluster', self, up)
         return up
+
+
+# -----------------------------------------------------------------------------
+# Property cycle
+# -----------------------------------------------------------------------------
+
+class RotatingProperty(object):
+    def __init__(self):
+        self._choices = {}
+        self._current = None
+
+    def add(self, name, value):
+        self._choices[name] = value
+        if self._current is None:
+            self._current = name
+
+    @property
+    def current(self):
+        return self._current
+
+    def get(self, name=None):
+        name = name or self._current
+        return self._choices.get(name, None)
+
+    def set(self, name):
+        if name in self._choices:
+            self._current = name
+        return self.get()
+
+    def _neighbor(self, dir=+1):
+        ks = list(self._choices.keys())
+        n = len(ks)
+        i = ks.index(self._current)
+        i += dir
+        if i == n:
+            i = 0
+        if i == -1:
+            i = n - 1
+        assert 0 <= i < len(self._choices)
+        self._current = ks[i]
+        return self.get()
+
+    def next(self):
+        return self._neighbor(+1)
+
+    def previous(self):
+        return self._neighbor(-1)

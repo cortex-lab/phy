@@ -10,7 +10,7 @@ import logging
 
 from pytest import raises
 
-from .._utils import (ClusterMeta, UpdateInfo,
+from .._utils import (ClusterMeta, UpdateInfo, RotatingProperty,
                       _update_cluster_selection, create_cluster_meta)
 
 logger = logging.getLogger(__name__)
@@ -194,3 +194,19 @@ def test_update_info():
     logger.debug(UpdateInfo(deleted=range(5), added=[5],
                             description='assign', history='undo'))
     logger.debug(UpdateInfo(metadata_changed=[2, 3], description='metadata'))
+
+
+def test_rotating_property():
+    rp = RotatingProperty()
+    rp.add('f1', 1)
+    rp.add('f2', 2)
+    rp.add('f3', 3)
+
+    assert rp.current == 'f1'
+    rp.next()
+    assert rp.current == 'f2'
+
+    rp.set('f3')
+    assert rp.get() == 3
+    assert rp.next() == 1
+    assert rp.previous() == 3
