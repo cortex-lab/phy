@@ -12,9 +12,9 @@ import os
 import numpy as np
 
 from ..visuals import (
-    ScatterVisual, PatchVisual, PlotVisual, HistogramVisual, LineVisual, PolygonVisual,
-    TextVisual, ImageVisual, UniformPlotVisual, UniformScatterVisual)
-from ..transform import NDC, Rotate
+    ScatterVisual, PatchVisual, PlotVisual, HistogramVisual, LineVisual, LineAggVisual,
+    PolygonVisual, TextVisual, ImageVisual, UniformPlotVisual, UniformScatterVisual)
+from ..transform import NDC, Rotate, range_transform
 from phy.utils.color import _random_color
 
 
@@ -305,6 +305,30 @@ def test_line_0(qtbot, canvas_pz):
     pos = np.c_[-np.ones(n), y, np.ones(n), y]
     color = np.random.uniform(.5, .9, (n, 4))
     _test_visual(qtbot, canvas_pz, LineVisual(), pos=pos, color=color, data_bounds=[-1, -1, 1, 1])
+
+
+#------------------------------------------------------------------------------
+# Test line aggvisual
+#------------------------------------------------------------------------------
+
+def _test_line_agg_empty(qtbot, canvas):
+    # TODO
+    pos = np.zeros((0, 4))
+    _test_visual(qtbot, canvas, LineAggVisual(), pos=pos)
+
+
+def test_line_agg_0(qtbot, canvas_pz):
+    n = 1024
+    T = np.linspace(0, 10 * 2 * np.pi, n)
+    R = np.linspace(0, .5, n)
+    P = np.zeros((n, 2), dtype=np.float64)
+    P[:, 0] = np.cos(T) * R
+    P[:, 1] = np.sin(T) * R
+    P = range_transform([NDC], [[0, 0, 1034, 1034]], P)
+
+    color = np.random.uniform(.5, .9, 4)
+    _test_visual(
+        qtbot, canvas_pz, LineAggVisual(), pos=P, color=color)
 
 
 #------------------------------------------------------------------------------

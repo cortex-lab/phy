@@ -83,6 +83,7 @@ class BaseVisual(object):
         self.n_vertices = 0
         self.program = None
         self._acc = BatchAccumulator()
+        self.index_buffer = None
 
     def emit_visual_set_data(self):
         """Emit canvas.visual_set_data event after data has been set in the visual."""
@@ -95,6 +96,7 @@ class BaseVisual(object):
         """Set the built-in vertex and fragment shader."""
         self.vertex_shader = _load_shader(name + '.vert')
         self.fragment_shader = _load_shader(name + '.frag')
+        self.geometry_shader = _load_shader(name + '.geom')
 
     def set_primitive_type(self, primitive_type):
         """Set the primitive type (points, lines, line_strip, line_fan, triangles)."""
@@ -111,7 +113,7 @@ class BaseVisual(object):
         # The program is built by the layout.
         if self.program is not None:
             # Draw the program.
-            self.program.draw(self.gl_primitive_type)
+            self.program.draw(self.gl_primitive_type, self.index_buffer)
         else:  # pragma: no cover
             logger.debug("Skipping drawing visual `%s` because the program "
                          "has not been built yet.", self)
@@ -608,8 +610,13 @@ class BaseCanvas(QOpenGLWindow):
         vs, fs = visual.vertex_shader, visual.fragment_shader
         vs, fs = v_inserter.insert_into_shaders(vs, fs, exclude_origins=exclude_origins)
 
+        # Geometry shader, if there is one.
+        gs = getattr(visual, 'geometry_shader', None)
+        if gs:
+            gs = gloo.GeometryShader(gs, 4, gl.GL_LINES_ADJACENCY_EXT, gl.GL_TRIANGLE_STRIP)
+
         # Finally, we create the visual's program.
-        visual.program = LazyProgram(vs, fs)
+        visual.program = LazyProgram(vs, fs, gs)
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
 

@@ -1018,6 +1018,142 @@ class LineVisual(BaseVisual):
 
 
 #------------------------------------------------------------------------------
+# Agg line visual
+#------------------------------------------------------------------------------
+
+def ortho(left, right, bottom, top, znear, zfar):
+    """Create orthographic projection matrix
+
+    Parameters
+    ----------
+    left : float
+        Left coordinate of the field of view.
+    right : float
+        Right coordinate of the field of view.
+    bottom : float
+        Bottom coordinate of the field of view.
+    top : float
+        Top coordinate of the field of view.
+    znear : float
+        Near coordinate of the field of view.
+    zfar : float
+        Far coordinate of the field of view.
+
+    Returns
+    -------
+    M : array
+        Orthographic projection matrix (4x4).
+    """
+    assert(right != left)
+    assert(bottom != top)
+    assert(znear != zfar)
+
+    M = np.zeros((4, 4), dtype=np.float32)
+    M[0, 0] = +2.0 / (right - left)
+    M[3, 0] = -(right + left) / float(right - left)
+    M[1, 1] = +2.0 / (top - bottom)
+    M[3, 1] = -(top + bottom) / float(top - bottom)
+    M[2, 2] = -2.0 / (zfar - znear)
+    M[3, 2] = -(zfar + znear) / float(zfar - znear)
+    M[3, 3] = 1.0
+    return M
+
+
+class LineAggVisual(BaseVisual):
+    """Line agg.
+
+    Parameters
+    ----------
+    pos : array-like (2D)
+    color : array-like (2D, shape[1] == 4)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
+
+    default_color = (.75, .75, .75, 1.)
+    _init_keywords = ('color',)
+
+    def __init__(self):
+        super(LineAggVisual, self).__init__()
+        self.set_shader('line_agg')
+        self.set_primitive_type('line_strip_adjacency_ext')
+        self.set_data_range(NDC)
+
+    def _get_index_buffer(self, P, closed=True):
+        if closed:
+            if np.allclose(P[0], P[1]):
+                I = (np.arange(len(P) + 2) - 1)
+                I[0], I[-1] = 0, len(P) - 1
+            else:
+                I = (np.arange(len(P) + 3) - 1)
+                I[0], I[-2], I[-1] = len(P) - 1, 0, 1
+        else:
+            I = (np.arange(len(P) + 2) - 1)
+            I[0], I[-1] = 0, len(P) - 1
+        return I
+
+    def validate(self, pos=None, color=None, line_width=10., data_bounds=None, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
+        assert pos is not None
+        pos = _as_array(pos)
+        pos = np.atleast_2d(pos)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+
+        line_width = np.clip(line_width, 5, 100)
+
+        # Color.
+        color = _get_array(color, (1, 4), self.default_color)
+
+        # By default, we assume that the coordinates are in NDC.
+        if data_bounds is None:
+            data_bounds = NDC
+        data_bounds = _get_data_bounds(data_bounds)
+        data_bounds = data_bounds.astype(np.float64)
+        # assert data_bounds.shape == (n_lines, 2)
+
+        return Bunch(
+            pos=pos, color=color, line_width=line_width, data_bounds=data_bounds,
+            _n_items=1, _n_vertices=self.vertex_count(pos=pos))
+
+    def vertex_count(self, pos=None, **kwargs):
+        """Number of vertices for the requested data."""
+        """Take the output of validate() as input."""
+        pos = np.atleast_2d(pos)
+        assert pos.shape[1] == 2
+        return pos.shape[0]
+
+    def set_data(self, *args, **kwargs):
+        """Update the visual data."""
+        data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
+
+        pos = data.pos
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        assert pos.dtype == np.float64
+
+        # Transform the positions.
+        self.data_range.from_bounds = data.data_bounds
+        pos_tr = self.transforms.apply(pos).astype(np.float32)
+
+        self.program['position'] = pos_tr
+        self.program['linewidth'] = data.line_width
+        self.program['antialias'] = 1.0
+        self.program['miter_limit'] = 4.0
+        self.program['color'] = data.color
+
+        self.index_buffer = self._get_index_buffer(pos_tr, closed=False)
+
+        self.emit_visual_set_data()
+        return data
+
+    def on_resize(self, width, height):
+        projection = ortho(0, width, 0, height, -1, +1)
+        self.program['projection'] = projection
+
+
+#------------------------------------------------------------------------------
 # Image visual
 #------------------------------------------------------------------------------
 
