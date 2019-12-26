@@ -482,6 +482,10 @@ class Table(HTMLWidget):
         """Select the first item."""
         self.eval_js('table.selectFirst();', callback=callback)
 
+    def last(self, callback=None):
+        """Select the last item."""
+        self.eval_js('table.selectLast();', callback=callback)
+
     def next(self, callback=None):
         """Select the next non-skipped row."""
         self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)

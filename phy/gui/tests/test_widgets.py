@@ -273,6 +273,12 @@ def test_table_nav_last(qtbot, table):
     _assert(table.get_selected, [0])
     _assert(table.get_previous_id, None)
 
+    table.first()
+    qtbot.wait(100)
+
+    table.last()
+    qtbot.wait(100)
+
 
 def test_table_nav_0(qtbot, table):
     table.select([4])
