@@ -9,7 +9,9 @@ This page presents the list of shortcuts and snippets in the template GUI. You c
 All keyboard shortcuts
 
 Keyboard shortcuts for Clustering
+- first                                    home
 - label                                    l
+- last                                     end
 - merge                                    g
 - move_all_to_good                         ctrl+alt+g
 - move_all_to_mua                          ctrl+alt+m
@@ -58,8 +60,8 @@ Snippets for GUI
 
 Keyboard shortcuts for AmplitudeView
 - change_marker_size                       ctrl+wheel
-- next_amplitude_type                      a
-- previous_amplitude_type                  shift+a
+- next_amplitudes_type                     a
+- previous_amplitudes_type                 shift+a
 - select_time                              alt+click
 - select_x_dim                             shift+left click
 - select_y_dim                             shift+right click

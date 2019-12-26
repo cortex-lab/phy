@@ -352,8 +352,8 @@ The time interval currenty displayed in the trace view is shown as a vertical ye
 Keyboard shortcuts for AmplitudeView
 
 - change_marker_size                       ctrl+wheel
-- next_amplitude_type                      a
-- previous_amplitude_type                  shift+a
+- next_amplitudes_type                     a
+- previous_amplitudes_type                 shift+a
 - select_time                              alt+click
 - select_x_dim                             shift+left click
 - select_y_dim                             shift+right click

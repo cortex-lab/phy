@@ -829,7 +829,7 @@ In this example, we simply display the template waveform on the peak channel of 
 
 import numpy as np
 
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 
 from phy import IPlugin
 from phy.cluster.views import ManualClusteringView
