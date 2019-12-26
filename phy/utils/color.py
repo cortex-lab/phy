@@ -125,18 +125,17 @@ def _make_default_colormap():
 
 def _make_cluster_group_colormap():
     """Return cluster group colormap."""
-    # Rows are sorted by increasing alphabetical order (all lowercase).
     return np.array([
-        [0.75, 0.75, 0.75],  # '' (None = '' = unsorted)
-        [0.5254, 0.8196, 0.42745],  # good
-        [0.5, 0.5, 0.5],  # mua
         [0.4, 0.4, 0.4],  # noise
+        [0.5, 0.5, 0.5],  # mua
+        [0.5254, 0.8196, 0.42745],  # good
+        [0.75, 0.75, 0.75],  # '' (None = '' = unsorted)
     ])
 
 
 """Built-in colormaps."""
 colormaps = Bunch(
-    blank=np.array([[.5, .5, .5]]),
+    blank=np.array([[.75, .75, .75]]),
     default=_make_default_colormap(),
     cluster_group=_make_cluster_group_colormap(),
     categorical=np.array(cc.glasbey_bw_minc_20_minl_30),
@@ -308,14 +307,17 @@ class ClusterColorSelector(object):
         """Return the RGBA color of a single cluster."""
         assert self.cluster_ids is not None
         assert self._colormap is not None
-        val = self._get_cluster_value(cluster_id)
-        col = tuple(self.map(np.array(_categorize([val])))[0].tolist())
+        val = [self._get_cluster_value(cluster_id)]
+        if self._categorical:
+            val = _categorize(val)
+        col = tuple(self.map(np.array(val))[0].tolist())
         return add_alpha(col, alpha=alpha)
 
     def get_values(self, cluster_ids):
         """Get the values of clusters for the selected color field.."""
         values = [self._get_cluster_value(cluster_id) for cluster_id in cluster_ids]
-        values = _categorize(values)
+        if self._categorical:
+            values = _categorize(values)
         return np.array(values)
 
     def get_colors(self, cluster_ids, alpha=1.):
