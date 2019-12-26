@@ -172,7 +172,7 @@ class ScatterVisual(BaseVisual):
         'vbar',
     )
 
-    def __init__(self, marker=None, marker_scaling=''):
+    def __init__(self, marker=None, marker_scaling=None):
         super(ScatterVisual, self).__init__()
 
         # Set the marker type.
@@ -180,6 +180,7 @@ class ScatterVisual(BaseVisual):
         assert self.marker in self._supported_markers
 
         self.set_shader('scatter')
+        marker_scaling = marker_scaling or 'float marker_size = v_size;'
         self.fragment_shader = self.fragment_shader.replace('%MARKER_SCALING', marker_scaling)
         self.fragment_shader = self.fragment_shader.replace('%MARKER', self.marker)
         self.set_primitive_type('points')
