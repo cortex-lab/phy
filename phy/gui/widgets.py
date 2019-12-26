@@ -17,7 +17,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from .qt import (
     WebView, QObject, QWebChannel, pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
 from phylib.utils import emit, connect
-from phylib.utils.color import colormaps, _is_bright
+from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
 from phylib.utils._types import _is_integer
 

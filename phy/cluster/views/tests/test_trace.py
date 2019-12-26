@@ -11,9 +11,9 @@ from numpy.testing import assert_allclose as ac
 
 from phylib.io.mock import artificial_traces, artificial_spike_clusters
 from phylib.utils import Bunch, connect
-from phylib.utils.color import ClusterColorSelector
 from phylib.utils.geometry import linear_positions
 from phy.plot.tests import mouse_click
+from phy.utils.color import ClusterColorSelector
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
 from . import _stop_and_close

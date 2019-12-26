@@ -13,7 +13,7 @@ import numpy as np
 
 from phylib.io.array import _index_of
 from phylib.utils import emit
-from phylib.utils.color import _add_selected_clusters_colors
+from phy.utils.color import _add_selected_clusters_colors
 
 from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin
 from phy.plot.visuals import ScatterVisual
@@ -37,8 +37,6 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         An `(n_spikes,)` array with the spike-cluster assignments.
     cluster_ids : array-like
         The list of all clusters to show initially.
-    cluster_color_selector : ClusterColorSelector
-        The object managing the color mapping.
 
     """
 
@@ -51,9 +49,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         'select_cluster': 'ctrl+click',
     }
 
-    def __init__(
-            self, spike_times, spike_clusters, cluster_ids=None, cluster_color_selector=None,
-            **kwargs):
+    def __init__(self, spike_times, spike_clusters, cluster_ids=None, **kwargs):
         self.spike_times = spike_times
         self.n_spikes = len(spike_times)
         self.duration = spike_times[-1] * 1.01
@@ -61,8 +57,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
 
         assert len(spike_clusters) == self.n_spikes
         self.set_spike_clusters(spike_clusters)
-        self.set_cluster_ids(cluster_ids if cluster_ids is not None else None)
-        self.cluster_color_selector = cluster_color_selector
+        self.set_cluster_ids(cluster_ids)
 
         super(RasterView, self).__init__(**kwargs)
 
@@ -117,7 +112,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
 
     def _get_color(self, box_index, selected_clusters=None):
         """Return, for every spike, its color, based on its box index."""
-        cluster_colors = self.cluster_color_selector.get_colors(self.all_cluster_ids, alpha=.75)
+        cluster_colors = self.get_cluster_colors(self.all_cluster_ids, alpha=.75)
         # Selected cluster colors.
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(

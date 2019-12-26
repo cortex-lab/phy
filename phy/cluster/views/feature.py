@@ -13,7 +13,7 @@ import re
 import numpy as np
 
 from phylib.utils import Bunch, emit
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 from phy.plot.transform import Range
 from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
 from .base import ManualClusteringView, MarkerSizeMixin, ScalingMixin

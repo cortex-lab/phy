@@ -9,7 +9,7 @@
 import numpy as np
 
 from phylib.utils import emit
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color, colormaps
 from ..base import ManualClusteringView
 from . import _stop_and_close
 
@@ -56,6 +56,12 @@ def test_manual_clustering_view_2(qtbot, gui):
         pass
 
     emit('select', Supervisor(), cluster_ids=[0, 1])
+
+    v.add_color_scheme(
+        lambda cid: cid, name='myscheme', colormap=colormaps.rainbow, cluster_ids=[0, 1])
+    v.next_color_scheme()
+    v.previous_color_scheme()
+    assert v.get_cluster_colors([0, 1]).shape == (2, 4)
 
     qtbot.wait(200)
     # qtbot.stop()

@@ -10,7 +10,6 @@ import numpy as np
 
 from phylib.io.mock import artificial_waveforms
 from phylib.utils import Bunch, connect
-from phylib.utils.color import ClusterColorSelector
 
 from phy.plot.tests import mouse_click
 from ..template import TemplateView
@@ -54,15 +53,11 @@ def test_template_view_1(qtbot, tempdir, gui):
             channel_ids=np.arange(i, i + 2),
         ) for i in cluster_ids}
 
-    cluster_color_selector = ClusterColorSelector(cluster_ids=cluster_ids)
-
     class Supervisor(object):
         pass
     s = Supervisor()
 
-    v = TemplateView(
-        templates=get_templates, channel_ids=channel_ids, cluster_ids=cluster_ids,
-        cluster_color_selector=cluster_color_selector)
+    v = TemplateView(templates=get_templates, channel_ids=channel_ids, cluster_ids=cluster_ids)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -89,16 +84,16 @@ def test_template_view_1(qtbot, tempdir, gui):
 
     mouse_click(qtbot, v.canvas, pos=(0, 0.), button='Left', modifiers=('Control',))
     assert len(_clicked) == 1
+    assert _clicked[0] in ([4], [5])
 
     mouse_click(qtbot, v.canvas, pos=(0, h / 2), button='Left', modifiers=('Shift',))
     assert len(_clicked) == 2
-    assert _clicked == [[4], [9]]
+    assert _clicked[1] == [9]
 
     cluster_ids = np.arange(2, n_clusters + 2)
     v.set_cluster_ids(cluster_ids)
     v.plot()
 
-    cluster_color_selector.set_color_mapping(colormap='linear')
     v.update_color()
 
     v.increase()

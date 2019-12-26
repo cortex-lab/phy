@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phylib.utils.color import _add_selected_clusters_colors
+from phy.utils.color import _add_selected_clusters_colors
 from phylib.io.array import _index_of
 from phylib.utils import emit, Bunch
 
@@ -43,8 +43,6 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         Labels of all shown channels. By default, this is just the channel ids.
     cluster_ids : array-like
         The list of all clusters to show initially.
-    cluster_color_selector : ClusterColorSelector
-        The object managing the color mapping.
 
     """
     _default_position = 'right'
@@ -59,12 +57,10 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
 
     def __init__(
             self, templates=None, channel_ids=None, channel_labels=None,
-            cluster_ids=None, cluster_color_selector=None, **kwargs):
+            cluster_ids=None, **kwargs):
         super(TemplateView, self).__init__(**kwargs)
         self.state_attrs += ()
         self.local_state_attrs += ('scaling',)
-
-        self.cluster_color_selector = cluster_color_selector
 
         # Full list of channels.
         self.channel_ids = channel_ids
@@ -143,8 +139,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         self.cluster_idxs = np.argsort(self.all_cluster_ids)
         self.sorted_cluster_ids = self.all_cluster_ids[self.cluster_idxs]
         # Cluster colors, ordered by cluster id.
-        self.cluster_colors = self.cluster_color_selector.get_colors(
-            self.sorted_cluster_ids, alpha=.75)
+        self.cluster_colors = self.get_cluster_colors(self.sorted_cluster_ids, alpha=.75)
 
     def get_clusters_data(self, load_all=None):
         """Return all templates data."""

@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phylib.utils.color import selected_cluster_color, add_alpha
+from phy.utils.color import selected_cluster_color, add_alpha
 from phylib.utils._types import _as_array
 from phylib.utils.event import emit
 

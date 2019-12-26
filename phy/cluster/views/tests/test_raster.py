@@ -9,7 +9,6 @@
 import numpy as np
 
 from phylib.utils import Bunch, connect
-from phylib.utils.color import ClusterColorSelector
 from phylib.io.mock import artificial_spike_clusters, artificial_spike_samples
 
 from phy.plot.tests import mouse_click
@@ -27,18 +26,11 @@ def test_raster_0(qtbot, gui):
     spike_clusters = np.arange(n)
     cluster_ids = np.arange(n)
 
-    cluster_meta = Bunch(fields=('group',), get=lambda f, cl: cl % 4)
-    cluster_metrics = {'quality': lambda c: 3. - c}
-    c = ClusterColorSelector(
-        cluster_meta=cluster_meta,
-        cluster_metrics=cluster_metrics,
-        cluster_ids=cluster_ids)
-
     class Supervisor(object):
         pass
     s = Supervisor()
 
-    v = RasterView(spike_times, spike_clusters, cluster_color_selector=c)
+    v = RasterView(spike_times, spike_clusters)
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -47,7 +39,6 @@ def test_raster_0(qtbot, gui):
     v.plot()
 
     v.on_select(cluster_ids=[2], sender=s)
-    c.set_color_mapping('quality', 'categorical')
     v.plot()
 
     v.increase_marker_size()
@@ -86,32 +77,30 @@ def test_raster_1(qtbot, gui):
     spike_clusters = artificial_spike_clusters(ns, nc)
     cluster_ids = np.arange(4)
 
-    cluster_meta = Bunch(fields=('group',), get=lambda f, cl: cl % 4)
-    cluster_metrics = {'quality': lambda c: 100 - c}
-    c = ClusterColorSelector(
-        cluster_meta=cluster_meta,
-        cluster_metrics=cluster_metrics,
-        cluster_ids=cluster_ids)
+    v = RasterView(spike_times, spike_clusters)
 
-    class Supervisor(object):
-        pass
-    s = Supervisor()
+    @v.add_color_scheme(
+        name='group', cluster_ids=cluster_ids,
+        colormap='cluster_group', categorical=True)
+    def cg(cluster_id):
+        return cluster_id % 4
 
-    v = RasterView(spike_times, spike_clusters, cluster_color_selector=c)
+    v.add_color_scheme(
+        lambda cid: cid, name='random', cluster_ids=cluster_ids,
+        colormap='categorical', categorical=True)
+
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
     v.set_cluster_ids(cluster_ids)
     v.plot()
-    v.on_select(cluster_ids=[0], sender=s)
+    v.on_select(cluster_ids=[0])
 
     v.update_cluster_sort(np.arange(nc))
 
-    c.set_color_mapping('group', 'cluster_group')
-    v.update_color()
-
     v.set_cluster_ids(np.arange(0, nc, 2))
+    v.update_color()
     v.plot()
 
     _stop_and_close(qtbot, v)

@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 from phylib.utils.geometry import get_non_overlapping_boxes
 from phy.plot.visuals import ScatterVisual
 from .base import ManualClusteringView

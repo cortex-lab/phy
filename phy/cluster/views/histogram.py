@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phy.plot.visuals import HistogramVisual, PlotVisual, TextVisual
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)

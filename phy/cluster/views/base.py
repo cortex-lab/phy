@@ -15,9 +15,11 @@ import numpy as np
 
 from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils.geometry import range_transform
+from phy.cluster._utils import RotatingProperty
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, screenshot, thread_pool, Worker
 from phy.plot import PlotCanvas, NDC, extend_bounds
+from phy.utils.color import ClusterColorSelector
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,14 @@ class ManualClusteringView(object):
       view's global GUI state.
     - `self.local_state_attrs`: like above, but for the local GUI state (dataset-dependent).
 
+    Events raised:
+
+    - `view_actions_created`
+    - `view_ready`
+    - `is_busy`
+    - `color_scheme_changed`
+    - `toggle_auto_update`
+
     """
     default_shortcuts = {}
     default_snippets = {}
@@ -58,6 +68,7 @@ class ManualClusteringView(object):
     def __init__(self, shortcuts=None, **kwargs):
         self._lock = None
         self._closed = False
+        self.cluster_ids = ()
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -68,6 +79,10 @@ class ManualClusteringView(object):
 
         # List of attributes to save in the GUI view state.
         self.state_attrs = ('auto_update',)
+
+        # Color schemes.
+        self.color_schemes = RotatingProperty()
+        self.add_color_scheme(fun=0, name='blank', colormap='blank', categorical=True)
 
         # List of attributes to save in the local GUI state as well.
         self.local_state_attrs = ()
@@ -90,14 +105,6 @@ class ManualClusteringView(object):
         # Return the extended data_bounds if they
         return extend_bounds([_get_bunch_bounds(bunch) for bunch in bunchs])
 
-    def get_clusters_data(self, load_all=None):
-        """Return a list of Bunch instances, with attributes pos and spike_ids.
-
-        To override.
-
-        """
-        return
-
     def _plot_cluster(self, bunch):
         """Plot one cluster.
 
@@ -110,6 +117,14 @@ class ManualClusteringView(object):
         """Update the axes."""
         self.canvas.axes.reset_data_bounds(self.data_bounds)
 
+    def get_clusters_data(self, load_all=None):
+        """Return a list of Bunch instances, with attributes pos and spike_ids.
+
+        To override.
+
+        """
+        return
+
     def plot(self, **kwargs):  # pragma: no cover
         """Update the view with the current cluster selection."""
         bunchs = self.get_clusters_data()
@@ -118,6 +133,58 @@ class ManualClusteringView(object):
             self._plot_cluster(bunch)
         self._update_axes()
         self.canvas.update()
+
+    # -------------------------------------------------------------------------
+    # Color scheme methods
+    # -------------------------------------------------------------------------
+
+    def add_color_scheme(
+            self, fun=None, name=None, cluster_ids=None,
+            colormap=None, categorical=None, logarithmic=None):
+        """Add a color scheme to the view. Can be used as follows:
+
+        ```python
+        @connect
+        def on_add_view(gui, view):
+            view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
+        ```
+
+        """
+        if fun is None:
+            return partial(
+                self.add_color_scheme, name=name, cluster_ids=cluster_ids,
+                colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+        field = name or fun.__name__
+        cs = ClusterColorSelector(
+            fun, cluster_ids=cluster_ids,
+            colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+        self.color_schemes.add(field, cs)
+
+    def get_cluster_colors(self, cluster_ids, alpha=1.0):
+        """Return the cluster colors depending on the currently-selected color scheme."""
+        cs = self.color_schemes.get()
+        if cs is None:  # pragma: no cover
+            raise RuntimeError("Make sure that at least a color scheme is added.")
+        return cs.get_colors(cluster_ids, alpha=alpha)
+
+    def _neighbor_color_scheme(self, dir=+1):
+        """Raise the `color_scheme_changed` event."""
+        self.color_schemes._neighbor(dir=dir)
+        name = self.color_schemes.current
+        logger.info("Changed color scheme to %s in %s.", name, self.__class__.__name__)
+        emit('color_scheme_changed', self, name)
+
+    def next_color_scheme(self):
+        """Switch to the next color scheme."""
+        self._neighbor_color_scheme(+1)
+
+    def previous_color_scheme(self):
+        """Switch to the previous color scheme."""
+        self._neighbor_color_scheme(-1)
+
+    def update_color(self, selected_clusters=None):
+        """Update the cluster colors depending on the selected clusters. To be overriden."""
+        pass
 
     # -------------------------------------------------------------------------
     # Main public methods
@@ -240,6 +307,11 @@ class ManualClusteringView(object):
             self.toggle_auto_update, checkable=True, checked=self.auto_update, show_shortcut=False)
         self.actions.add(self.screenshot, show_shortcut=False)
         self.actions.add(self.close, show_shortcut=False)
+        self.actions.separator()
+
+        # Color scheme actions.
+        self.actions.add(self.next_color_scheme)
+        self.actions.add(self.previous_color_scheme)
         self.actions.separator()
 
         emit('view_actions_created', self)
@@ -377,9 +449,6 @@ class BaseGlobalView(object):
         pass
 
     def update_cluster_sort(self, cluster_ids):
-        pass
-
-    def update_color(self, selected_clusters=None):
         pass
 
     def on_select(self, sender=None, cluster_ids=(), **kwargs):

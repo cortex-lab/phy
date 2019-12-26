@@ -14,7 +14,7 @@ import numpy as np
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
 from phylib.utils import Bunch
-from phylib.utils.color import selected_cluster_color, _override_hsv, add_alpha
+from phy.utils.color import selected_cluster_color, _override_hsv, add_alpha
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)

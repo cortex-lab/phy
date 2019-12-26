@@ -12,7 +12,7 @@ import logging
 
 import numpy as np
 
-from phylib.utils.color import selected_cluster_color, spike_colors
+from phy.utils.color import selected_cluster_color, spike_colors
 from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
 from phy.plot.visuals import ScatterVisual
 

@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phylib.utils import Bunch, emit
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 from phy.plot.interact import Stacked
 from phy.plot.transform import NDC, Range, _fix_coordinate_in_visual
 from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual

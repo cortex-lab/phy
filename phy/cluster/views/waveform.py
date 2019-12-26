@@ -14,7 +14,7 @@ import numpy as np
 
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max
 from .base import ManualClusteringView, ScalingMixin
