@@ -927,14 +927,6 @@ class BaseController(object):
             view_name = 'Spike%sView' % name.title()
             self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
 
-        # Add checkbox for auto update.
-        @connect
-        def on_add_view(sender, view):
-            if isinstance(view, ManualClusteringView):
-                view.dock.add_button(
-                    name='auto_update', icon='f021', checkable=True, checked=view.auto_update,
-                    event='toggle_auto_update', callback=view.toggle_auto_update)
-
     def _set_cluster_metrics(self):
         """Set the cluster metrics dictionary with some default metrics."""
         self.cluster_metrics = {}  # dictionary {name: function cluster_id => value}, for plugins
@@ -1586,15 +1578,22 @@ class BaseController(object):
         # Set the raw data filter from the GUI state.
         self.raw_data_filter.set(self.raw_data_filter_name)
 
-        # Add default color schemes in each view.
+        # Initial actions when creating views.
         @connect(sender=gui)
         def on_add_view(sender, view):
             if isinstance(view, ManualClusteringView):
+                # Add default color schemes in each view.
                 self._add_default_color_schemes(view)
 
-        # Update base views cluster ids after clustering actions.
         @connect
         def on_view_ready(view):
+            if isinstance(view, ManualClusteringView):
+                # Add auto update button.
+                view.dock.add_button(
+                    name='auto_update', icon='f021', checkable=True, checked=view.auto_update,
+                    event='toggle_auto_update', callback=view.toggle_auto_update)
+
+            # Update base views cluster ids after clustering actions.
             if isinstance(view, BaseGlobalView):
                 @connect
                 def on_cluster(supervisor, up):
@@ -1613,8 +1612,8 @@ class BaseController(object):
         gui.create_views()
 
         # Show selected clusters when adding new views in the GUI.
-        @connect(sender=gui)  # noqa
-        def on_add_view(sender, view):
+        @connect(sender=gui, event='add_view')
+        def on_add_view_(sender, view):
             if isinstance(view, ManualClusteringView):
                 view.on_select(cluster_ids=self.supervisor.selected_clusters)
 
@@ -1628,6 +1627,9 @@ class BaseController(object):
         @connect(sender=gui)
         def on_close(sender):
             unconnect(on_add_view, self)
+            unconnect(on_view_ready, self)
+            unconnect(on_add_view_, self)
+            unconnect(on_select_more, self)
             # Show save prompt if an action was done.
             do_prompt_save = kwargs.get('do_prompt_save', True)
             if do_prompt_save and self.supervisor.is_dirty():  # pragma: no cover
