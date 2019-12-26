@@ -23,6 +23,7 @@ from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._misc import write_tsv
 
+from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views.base import ManualClusteringView, BaseGlobalView
 from phy.cluster.views import (
@@ -75,10 +76,10 @@ class StatusBarHandler(logging.Handler):
 # Raw data filtering
 #--------------------------------------------------------------------------
 
-class RawDataFilter(object):
+class RawDataFilter(RotatingProperty):
     def __init__(self):
-        self._filters = {'raw': lambda x, axis=None: x}
-        self._current_filter = 'raw'
+        super(RawDataFilter, self).__init__()
+        self.add('raw', lambda x, axis=None: x)
 
     def add_default_filter(self, sample_rate):
         b, a = butter(3, 150.0 / sample_rate * 2.0, 'high')
@@ -90,8 +91,7 @@ class RawDataFilter(object):
             arr = lfilter(b, a, arr, axis=axis)
             arr = np.flip(arr, axis=axis)
             return arr
-
-        self._current_filter = 'high_pass'
+        self.set('high_pass')
 
     def add_filter(self, fun=None, name=None):
         """Add a raw data filter."""
@@ -99,33 +99,14 @@ class RawDataFilter(object):
             return partial(self.add_filter, name=name)
         name = name or fun.__name__
         logger.debug("Add filter `%s`.", name)
-        self._filters[name] = fun
-
-    def set_filter(self, name):
-        """Set the raw data filter by specifying its name."""
-        if name in self._filters:
-            logger.debug("Setting raw data filter `%s`.", name)
-            self._current_filter = name
-            return name
-
-    @property
-    def current_filter(self):
-        """Return the current filter name."""
-        return self._current_filter
-
-    def next_filter(self):
-        """Switch to the next filter."""
-        k = list(self._filters.keys())
-        i = k.index(self._current_filter)
-        i = (i + 1) % len(self._filters)
-        return self.set_filter(k[i])
+        self.add(name, fun)
 
     def apply(self, arr, axis=None, name=None):
         """Filter raw data."""
-        self._current_filter = name or self._current_filter
-        fun = self._filters.get(self._current_filter, None)
+        self.set(name or self.current)
+        fun = self.get()
         if fun:
-            logger.log(5, "Applying filter `%s` to raw data.", self._current_filter)
+            logger.log(5, "Applying filter `%s` to raw data.", self.current)
             arrf = fun(arr, axis=axis)
             assert arrf.shape == arr.shape
             arr = arrf
@@ -222,7 +203,7 @@ class WaveformMixin(object):
         """Return a selection of waveforms for a cluster."""
         return self._get_waveforms_with_n_spikes(
             cluster_id, self.n_spikes_waveforms, self.batch_size_waveforms,
-            current_filter=self.raw_data_filter.current_filter)
+            current_filter=self.raw_data_filter.current)
 
     def _get_mean_waveforms(self, cluster_id, current_filter=None):
         """Get the mean waveform of a cluster on its best channels."""
@@ -314,14 +295,14 @@ class FeatureMixin(object):
         @connect
         def on_selected_feature_changed(sender):
             # Replot the amplitude view with the selected feature.
-            view.amplitude_name = 'feature'
+            view.amplitudes_type = 'feature'
             view.plot()
 
         @connect(sender=self.supervisor)
         def on_select(sender, cluster_ids, update_views=True):
             # Update the feature amplitude view when the cluster selection changes,
             # because the best channels change as well.
-            if update_views and view.amplitude_name == 'feature':
+            if update_views and view.amplitudes_type == 'feature':
                 view.plot()
 
         @connect
@@ -801,6 +782,7 @@ class BaseController(object):
     # Controller attributes to load/save in the GUI state.
     _state_params = (
         'n_spikes_amplitudes', 'n_spikes_correlograms',
+        'raw_data_filter_name',
     )
 
     # Methods that are cached in memory (and on disk) for performance.
@@ -1315,7 +1297,7 @@ class BaseController(object):
             return
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
-            amplitude_name=None,  # TODO: GUI state
+            amplitudes_type=None,  # TODO: GUI state
             duration=self.model.duration,
         )
 
@@ -1329,7 +1311,7 @@ class BaseController(object):
         def on_selected_channel_changed(sender):
             """Called when a channel is selected in the waveform view."""
             # Do nothing if the displayed amplitude does not depend on the channel.
-            if view.amplitude_name not in ('feature', 'raw'):
+            if view.amplitudes_type not in ('feature', 'raw'):
                 return
             # Otherwise, replot the amplitude view, which will use
             # Selection.selected_channel_id to use the requested channel in the computation of
@@ -1340,7 +1322,7 @@ class BaseController(object):
         def on_select(sender, cluster_ids, update_views=True):
             # Update the amplitude view when the cluster selection changes,
             # because the best channels change as well.
-            if update_views and view.amplitude_name == 'raw' and len(cluster_ids):
+            if update_views and view.amplitudes_type == 'raw' and len(cluster_ids):
                 # Update the channel used in the amplitude when the cluster selection changes.
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
 
@@ -1528,7 +1510,7 @@ class BaseController(object):
         @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
         def switch_raw_data_filter():
             """Switch the raw data filter."""
-            filter_name = self.raw_data_filter.next_filter()
+            filter_name = self.raw_data_filter.next()
             # Update the trace view.
             for v in gui.list_views(TraceView):
                 if v.auto_update:
@@ -1569,8 +1551,9 @@ class BaseController(object):
             view.add_color_scheme(
                 name=name, fun=fun, cluster_ids=self.supervisor.clustering.cluster_ids,
                 colormap=colormap, categorical=categorical, logarithmic=logarithmic)
-        # TODO: save current color scheme of each figure in GUI state
-        view.color_schemes.set('random')
+        # Default color scheme.
+        if not hasattr(view, 'color_scheme_name'):
+            view.color_schemes.set('random')
 
     def create_gui(self, default_views=None, **kwargs):
         """Create the GUI.
@@ -1599,6 +1582,9 @@ class BaseController(object):
         state_params = _concatenate_parents_attributes(self.__class__, '_state_params')
         for param in state_params:
             setattr(self, param, gui.state.get(param, getattr(self, param, None)))
+
+        # Set the raw data filter from the GUI state.
+        self.raw_data_filter.set(self.raw_data_filter_name)
 
         # Add default color schemes in each view.
         @connect(sender=gui)

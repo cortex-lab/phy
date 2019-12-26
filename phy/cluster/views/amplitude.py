@@ -15,10 +15,11 @@ from phy.utils.color import selected_cluster_color, add_alpha
 from phylib.utils._types import _as_array
 from phylib.utils.event import emit
 
-from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
-from .histogram import _compute_histogram
+from phy.cluster._utils import RotatingProperty
 from phy.plot.transform import Rotate, Scale, Translate, Range, NDC
 from phy.plot.visuals import ScatterVisual, HistogramVisual, PatchVisual
+from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
+from .histogram import _compute_histogram
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     -----------
 
     amplitudes : dict
-        Dictionary `{amplitude_name: function}`, for different types of amplitudes.
+        Dictionary `{amplitudes_type: function}`, for different types of amplitudes.
 
         Each function maps `cluster_ids` to a list
         `[Bunch(amplitudes, spike_ids, spike_times), ...]` for each cluster.
@@ -62,16 +63,16 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
-        'next_amplitude_type': 'a',
-        'previous_amplitude_type': 'shift+a',
+        'next_amplitudes_type': 'a',
+        'previous_amplitudes_type': 'shift+a',
         'select_x_dim': 'shift+left click',
         'select_y_dim': 'shift+right click',
         'select_time': 'alt+click',
     }
 
-    def __init__(self, amplitudes=None, amplitude_name=None, duration=None):
+    def __init__(self, amplitudes=None, amplitudes_type=None, duration=None):
         super(AmplitudeView, self).__init__()
-        self.state_attrs += ('amplitude_name',)
+        self.state_attrs += ('amplitudes_type',)
 
         self.canvas.enable_axes()
         self.canvas.enable_lasso()
@@ -81,10 +82,14 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             amplitudes = {'amplitude': amplitudes}
         assert amplitudes
         self.amplitudes = amplitudes
-        self.amplitude_names = list(amplitudes.keys())
-        # Current amplitude type.
-        self.amplitude_name = amplitude_name or self.amplitude_names[0]
-        assert self.amplitude_name in amplitudes
+
+        # Rotating property amplitudes types.
+        self.amplitudes_types = RotatingProperty()
+        for name, value in self.amplitudes.items():
+            self.amplitudes_types.add(name, value)
+        # Current amplitudes type.
+        self.amplitudes_types.set(amplitudes_type)
+        assert self.amplitudes_type in self.amplitudes
 
         self.cluster_ids = ()
         self.duration = duration or 1.
@@ -186,7 +191,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         if not load_all:
             # Add None cluster which means background spikes.
             cluster_ids = [None] + cluster_ids
-        bunchs = self.amplitudes[self.amplitude_name](cluster_ids, load_all=load_all) or ()
+        bunchs = self.amplitudes[self.amplitudes_type](cluster_ids, load_all=load_all) or ()
         # Add a pos attribute in bunchs in addition to x and y.
         for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
             spike_ids = _as_array(bunch.spike_ids)
@@ -222,32 +227,37 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
         self._update_axes()
         self.canvas.update()
+        self.update_status()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(AmplitudeView, self).attach(gui)
-        self.actions.add(self.next_amplitude_type, set_busy=True)
-        self.actions.add(self.previous_amplitude_type, set_busy=True)
+        self.actions.add(self.next_amplitudes_type, set_busy=True)
+        self.actions.add(self.previous_amplitudes_type, set_busy=True)
 
     def update_status(self):
         """Update the status text in the dock title bar."""
-        self.set_dock_status(self.amplitude_name)
+        self.set_dock_status(self.amplitudes_type)
 
-    def _change_amplitude_type(self, dir=+1):
-        i = self.amplitude_names.index(self.amplitude_name)
-        n = len(self.amplitude_names)
-        self.amplitude_name = self.amplitude_names[(i + dir) % n]
-        logger.debug("Switch to amplitude type: %s.", self.amplitude_name)
+    @property
+    def amplitudes_type(self):
+        return self.amplitudes_types.current
+
+    @amplitudes_type.setter
+    def amplitudes_type(self, value):
+        self.amplitudes_types.set(value)
+
+    def next_amplitudes_type(self):
+        """Switch to the next amplitudes type."""
+        self.amplitudes_types.next()
+        logger.debug("Switch to amplitudes type: %s.", self.amplitudes_types.current)
         self.plot()
-        self.update_status()
 
-    def next_amplitude_type(self):
-        """Switch to the next amplitude type."""
-        self._change_amplitude_type(+1)
-
-    def previous_amplitude_type(self):
-        """Switch to the previous amplitude type."""
-        self._change_amplitude_type(-1)
+    def previous_amplitudes_type(self):
+        """Switch to the previous amplitudes type."""
+        self.amplitudes_types.previous()
+        logger.debug("Switch to amplitudes type: %s.", self.amplitudes_types.current)
+        self.plot()
 
     def on_mouse_click(self, e):
         """Select a time from the amplitude view to display in the trace view."""

@@ -78,7 +78,7 @@ class ManualClusteringView(object):
         self._enable_threading = kwargs.get('enable_threading', True)
 
         # List of attributes to save in the GUI view state.
-        self.state_attrs = ('auto_update',)
+        self.state_attrs = ('auto_update', 'color_scheme')
 
         # Color schemes.
         self.color_schemes = RotatingProperty()
@@ -169,8 +169,7 @@ class ManualClusteringView(object):
 
     def _neighbor_color_scheme(self, dir=+1):
         """Raise the `color_scheme_changed` event."""
-        self.color_schemes._neighbor(dir=dir)
-        name = self.color_schemes.current
+        name = self.color_schemes._neighbor(dir=dir)
         logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
         emit('color_scheme_changed', self, name)
 
@@ -185,6 +184,14 @@ class ManualClusteringView(object):
     def update_color(self, selected_clusters=None):
         """Update the cluster colors depending on the selected clusters. To be overriden."""
         pass
+
+    @property
+    def color_scheme(self):
+        return self.color_schemes.current
+
+    @color_scheme.setter
+    def color_scheme(self, value):
+        self.color_schemes.set(value)
 
     # -------------------------------------------------------------------------
     # Main public methods
@@ -297,6 +304,10 @@ class ManualClusteringView(object):
 
         # Set the view state.
         self.set_state(gui.state.get_view_state(self))
+
+        # Set the current color scheme to the GUI state color scheme (automatically set
+        # in self.color_scheme).
+        self.color_schemes.set(self.color_scheme)
 
         self.actions = Actions(
             gui, name=self.name, menu='&View', submenu=self.name,

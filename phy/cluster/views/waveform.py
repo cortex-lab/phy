@@ -17,6 +17,7 @@ from phylib.utils import emit
 from phy.utils.color import selected_cluster_color
 from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max
+from phy.cluster._utils import RotatingProperty
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         The keys of the dictionary are called **waveform types**. The `next_waveforms_type`
         action cycles through all available waveform types. The key `waveforms` is mandatory.
-    waveform_type : str
+    waveforms_type : str
         Default key of the waveforms dictionary to plot initially.
 
     """
@@ -135,10 +136,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         waveforms = waveforms or {}
         waveforms = waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
         self.waveforms = waveforms
-        self.waveforms_types = list(waveforms.keys())
+
+        # Rotating property waveforms types.
+        self.waveforms_types = RotatingProperty()
+        for name, value in self.waveforms.items():
+            self.waveforms_types.add(name, value)
         # Current waveforms type.
-        self.waveforms_type = waveforms_type or self.waveforms_types[0]
-        assert self.waveforms_type in waveforms
+        self.waveforms_types.set(waveforms_type)
+        assert self.waveforms_type in self.waveforms
 
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
@@ -167,7 +172,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         if self.waveforms_type not in self.waveforms:
             return
         bunchs = [
-            self.waveforms[self.waveforms_type](cluster_id) for cluster_id in self.cluster_ids]
+            self.waveforms_types.get()(cluster_id) for cluster_id in self.cluster_ids]
         clu_offsets = _get_clu_offsets(bunchs)
         n_clu = max(clu_offsets) + 1
         # Offset depending on the overlap.
@@ -350,7 +355,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def update_status(self, suffix=''):
         """Update the status text in the dock title bar."""
-        self.set_dock_status('%s %s' % (self.waveforms_type, suffix or self._status_suffix))
+        self.set_dock_status(
+            '%s %s' % (self.waveforms_type, suffix or self._status_suffix))
         self._status_suffix = suffix or self._status_suffix
 
     # Overlap
@@ -445,35 +451,33 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             logger.debug("Click on channel_id %d with key %s and button %s.", channel_id, key, b)
             emit('select_channel', self, channel_id=channel_id, key=key, button=b)
 
+    @property
+    def waveforms_type(self):
+        return self.waveforms_types.current
+
+    @waveforms_type.setter
+    def waveforms_type(self, value):
+        self.waveforms_types.set(value)
+
     def next_waveforms_type(self):
         """Switch to the next waveforms type."""
-        if self.waveforms_type in self.waveforms_types:
-            i = self.waveforms_types.index(self.waveforms_type)
-        else:  # pragma: no cover
-            i = 0
-        n = len(self.waveforms_types)
-        self.waveforms_type = self.waveforms_types[(i + 1) % n]
+        self.waveforms_types.next()
         logger.info("Switch to waveforms type %s.", self.waveforms_type)
         self.plot()
 
     def previous_waveforms_type(self):
         """Switch to the previous waveforms type."""
-        if self.waveforms_type in self.waveforms_types:
-            i = self.waveforms_types.index(self.waveforms_type)
-        else:  # pragma: no cover
-            i = 0
-        n = len(self.waveforms_types)
-        self.waveforms_type = self.waveforms_types[(i - 1) % n]
+        self.waveforms_types.previous()
         logger.info("Switch to waveforms type %s.", self.waveforms_type)
         self.plot()
 
     def toggle_mean_waveforms(self, checked):
         """Switch to the `mean_waveforms` type, if it is available."""
-        if self.waveforms_type == 'mean_waveforms' and 'waveforms' in self.waveforms_types:
-            self.waveforms_type = 'waveforms'
+        if self.waveforms_type == 'mean_waveforms' and 'waveforms' in self.waveforms:
+            self.waveforms_types.set('waveforms')
             logger.info("Switch to raw waveforms.")
             self.plot()
-        elif 'mean_waveforms' in self.waveforms_types:
-            self.waveforms_type = 'mean_waveforms'
+        elif 'mean_waveforms' in self.waveforms:
+            self.waveforms_types.set('mean_waveforms')
             logger.info("Switch to mean waveforms.")
             self.plot()

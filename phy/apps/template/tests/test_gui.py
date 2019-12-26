@@ -95,8 +95,8 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
         """Change the amplitude type in the amplitude view."""
         self.next()
         for _ in range(4):
-            self.amplitude_view.next_amplitude_type()
-        self.amplitude_view.previous_amplitude_type()
+            self.amplitude_view.next_amplitudes_type()
+        self.amplitude_view.previous_amplitudes_type()
 
     def test_z1_close_reopen(self):
         cluster_ids = self.cluster_ids

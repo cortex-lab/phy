@@ -208,5 +208,5 @@ def test_rotating_property():
 
     rp.set('f3')
     assert rp.get() == 3
-    assert rp.next() == 1
-    assert rp.previous() == 3
+    assert rp.next() == 'f1'
+    assert rp.previous() == 'f3'

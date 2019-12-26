@@ -78,8 +78,8 @@ def test_amplitude_view_2(qtbot, gui):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    v.next_amplitude_type()
-    v.previous_amplitude_type()
+    v.next_amplitudes_type()
+    v.previous_amplitudes_type()
 
     v.set_state(v.state)
 

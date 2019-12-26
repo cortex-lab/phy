@@ -306,24 +306,29 @@ class ClusterMeta(object):
 # -----------------------------------------------------------------------------
 
 class RotatingProperty(object):
+    """A key-value property of a view that can switch between several predefined values."""
     def __init__(self):
         self._choices = {}
         self._current = None
 
     def add(self, name, value):
+        """Add a property key-value pair."""
         self._choices[name] = value
         if self._current is None:
             self._current = name
 
     @property
     def current(self):
+        """Current key."""
         return self._current
 
     def get(self, name=None):
+        """Get the current value."""
         name = name or self._current
         return self._choices.get(name, None)
 
     def set(self, name):
+        """Set the current key."""
         if name in self._choices:
             self._current = name
         return self.get()
@@ -339,10 +344,12 @@ class RotatingProperty(object):
             i = n - 1
         assert 0 <= i < len(self._choices)
         self._current = ks[i]
-        return self.get()
+        return self.current
 
     def next(self):
+        """Select the next key-value pair."""
         return self._neighbor(+1)
 
     def previous(self):
+        """Select the previous key-value pair."""
         return self._neighbor(-1)

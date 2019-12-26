@@ -402,7 +402,7 @@ class MockControllerWTests(MinimalControllerTests, unittest.TestCase):
         self.assertTrue(self.controller.get_mean_spike_raw_amplitudes(self.selected[0]) >= 0)
 
     def test_waveform_select_channel(self):
-        self.amplitude_view.amplitude_name = 'raw'
+        self.amplitude_view.amplitudes_type = 'raw'
 
         fv = self.waveform_view
         # Select channel in waveform view.
@@ -487,7 +487,7 @@ class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
 
     def test_split_template_amplitude(self):
         self.next()
-        self.amplitude_view.amplitude_name = 'template'
+        self.amplitude_view.amplitudes_type = 'template'
         self.controller.get_amplitudes(self.selected[0], load_all=True)
         self.amplitude_view.plot()
         self.lasso(self.amplitude_view)
@@ -514,8 +514,8 @@ class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
         self.gui.view_actions.switch_raw_data_filter()
         self.gui.view_actions.switch_raw_data_filter()
 
-        rdf.set_filter('diff')
-        assert rdf.current_filter == 'diff'
+        rdf.set('diff')
+        assert rdf.current == 'diff'
 
     def test_z1_close_all_views(self):
         self.next()
