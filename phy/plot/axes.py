@@ -236,8 +236,13 @@ class Axes(object):
             self.locator.set_view_bounds(canvas.panzoom.get_range())
             self.update_visuals()
 
-        connect(lambda sender, *args: self._update_zoom, event='zoom', sender=canvas.panzoom)
-        connect(lambda sender, *args: self._update_pan, event='pan', sender=canvas.panzoom)
+        @connect(sender=canvas.panzoom)
+        def on_zoom(sender, zoom):
+            return self._update_zoom(zoom)
+
+        @connect(sender=canvas.panzoom)
+        def on_pan(sender, pan):
+            return self._update_pan(pan)
 
     def _update_zoom(self, zoom, force=False):
         zx, zy = zoom
