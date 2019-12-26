@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from phylib.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color
 
 from phy import IPlugin
 from phy.cluster.views import ManualClusteringView
