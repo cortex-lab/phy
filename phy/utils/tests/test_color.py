@@ -10,12 +10,10 @@ import colorcet as cc
 import numpy as np
 from numpy.testing import assert_almost_equal as ae
 
-from phylib.utils import Bunch
 from ..color import (
     _is_bright, _random_bright_color, spike_colors, add_alpha, selected_cluster_color,
-    _override_hsv,
-    _hex_to_triplet, _continuous_colormap, _categorical_colormap, ClusterColorSelector,
-    colormaps, _add_selected_clusters_colors)
+    _override_hsv, _hex_to_triplet, _continuous_colormap, _categorical_colormap,
+    ClusterColorSelector, _add_selected_clusters_colors)
 
 
 #------------------------------------------------------------------------------

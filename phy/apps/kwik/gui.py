@@ -163,8 +163,6 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
                     )
                 self.supervisor.split(spike_ids, spike_clusters)
 
-            self.color_selector = supervisor.color_selector
-
         self.supervisor = supervisor
 
     def _get_masks(self, cluster_id):

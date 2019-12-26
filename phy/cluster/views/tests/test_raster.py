@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from phylib.utils import Bunch, connect
+from phylib.utils import connect
 from phylib.io.mock import artificial_spike_clusters, artificial_spike_samples
 
 from phy.plot.tests import mouse_click

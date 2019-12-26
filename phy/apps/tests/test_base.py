@@ -346,26 +346,19 @@ class BaseControllerTests(MinimalControllerTests):
     def test_common_11(self):
         s = self.controller.selection
         self.assertEqual(s.cluster_ids, self.selected)
-        self.assertTrue(s.colormap is not None)
-        self.assertTrue(s.color_field is not None)
         self.gui.view_actions.toggle_spike_reorder(True)
         self.gui.view_actions.switch_raw_data_filter()
 
 
 class GlobalViewsTests(object):
-    def test_global_sort_1(self):
-        cv = self.supervisor.cluster_view
-        emit('table_sort', cv, self.cluster_ids[::-1])
-
     def test_global_filter_1(self):
+        self.next()
         cv = self.supervisor.cluster_view
         emit('table_filter', cv, self.cluster_ids[::2])
 
-    def test_global_colormap_1(self):
-        self.next()
-        self.supervisor.view_actions.colormap_rainbow()
-        self.supervisor.view_actions.colormap_linear()
-        self.supervisor.toggle_categorical_colormap(False)
+    def test_global_sort_1(self):
+        cv = self.supervisor.cluster_view
+        emit('table_sort', cv, self.cluster_ids[::-1])
 
 
 #------------------------------------------------------------------------------
@@ -385,6 +378,7 @@ class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.Tes
     def test_create_raster_view(self):
         view = self.gui.create_and_add_view('RasterView')
         mouse_click(self.qtbot, view.canvas, (10, 10), modifiers=('Control',))
+        view.actions.next_color_scheme()
 
 
 class MockControllerWTests(MinimalControllerTests, unittest.TestCase):
@@ -469,6 +463,7 @@ class MockControllerTTests(GlobalViewsTests, MinimalControllerTests, unittest.Te
         mouse_click(self.qtbot, self.trace_view.canvas, (100, 100), modifiers=('Control',))
         mouse_click(self.qtbot, self.trace_view.canvas, (150, 100), modifiers=('Shift',))
         emit('select_time', self, 0)
+        self.trace_view.actions.next_color_scheme()
 
 
 class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):

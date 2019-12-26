@@ -24,7 +24,7 @@ from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._misc import write_tsv
 
 from phy.cluster.supervisor import Supervisor
-from phy.cluster.views.base import ManualClusteringView
+from phy.cluster.views.base import ManualClusteringView, BaseGlobalView
 from phy.cluster.views import (
     WaveformView, FeatureView, TraceView, CorrelogramView, AmplitudeView,
     ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView,
@@ -59,14 +59,6 @@ class Selection(Bunch):
     @property
     def cluster_ids(self):
         return self.controller.supervisor.selected
-
-    @property
-    def colormap(self):
-        return self.controller.supervisor.color_selector.state.colormap
-
-    @property
-    def color_field(self):
-        return self.controller.supervisor.color_selector.state.color_field
 
 
 class StatusBarHandler(logging.Handler):
@@ -588,7 +580,6 @@ class TemplateMixin(object):
             templates=self._get_all_templates,
             channel_ids=np.arange(self.model.n_channels),
             channel_labels=self._get_channel_labels(),
-            cluster_color_selector=self.supervisor.color_selector,
         )
         self._attach_global_view(view)
         return view
@@ -615,7 +606,6 @@ class TraceMixin(object):
             traces_interval=traces_interval,
             model=self.model,
             supervisor=self.supervisor,
-            color_selector=self.supervisor.color_selector,
             n_samples_waveforms=k,
             get_best_channels=gbc,
             show_all_spikes=show_all_spikes,
@@ -658,8 +648,8 @@ class TraceMixin(object):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
 
-        @connect(sender=self.supervisor)
-        def on_color_mapping_changed(sender):
+        @connect(sender=v)
+        def on_color_scheme_changed(sender, name):
             v.on_select()
 
         @connect
@@ -674,7 +664,7 @@ class TraceMixin(object):
         def on_close_view(sender, view):
             if view == v:
                 unconnect(on_select_spike)
-                unconnect(on_color_mapping_changed)
+                unconnect(on_color_scheme_changed)
                 unconnect(on_time_range_selected)
                 unconnect(on_select_time)
 
@@ -1084,10 +1074,11 @@ class BaseController(object):
             view.set_cluster_ids(cluster_ids)
             view.plot()
 
-        @connect(sender=self.supervisor)
-        def on_color_mapping_changed(sender):
-            """Update the cluster colors when the color mapping is updated."""
-            view.update_color(self.supervisor.selected_clusters)
+        @connect
+        def on_color_scheme_changed(sender, name):
+            """Update the cluster colors when the color scheme is updated."""
+            if sender == view:
+                view.update_color(self.supervisor.selected_clusters)
 
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
@@ -1097,18 +1088,7 @@ class BaseController(object):
                 if view.auto_update:
                     resort(is_async=False, up=up)
 
-        @connect
-        def on_select(sender, cluster_ids, **kwargs):
-            """Update the color of selected clusters."""
-            # Decide whether the view should react to the select event or not.
-            if not view.auto_update:
-                return
-            if sender.__class__.__name__ != 'Supervisor':
-                return
-            assert isinstance(cluster_ids, list)
-            if not cluster_ids:
-                return
-            view.update_color(selected_clusters=cluster_ids)
+        connect(view.on_select)
 
         @connect
         def on_add_view(sender, view_):
@@ -1126,10 +1106,10 @@ class BaseController(object):
         def on_close_view(sender, view_):
             """Unconnect all events when closing the view."""
             if view_ == view:
+                unconnect(view.on_select)
                 unconnect(on_table_sort)
                 unconnect(on_table_filter)
-                unconnect(on_color_mapping_changed)
-                unconnect(on_select)
+                unconnect(on_color_scheme_changed)
                 unconnect(on_cluster)
                 unconnect(on_add_view)
                 unconnect(on_ready)
@@ -1381,7 +1361,6 @@ class BaseController(object):
             self.model.spike_times,
             self.supervisor.clustering.spike_clusters,
             cluster_ids=self.supervisor.clustering.cluster_ids,
-            cluster_color_selector=self.supervisor.color_selector,
         )
         self._attach_global_view(view)
 
@@ -1551,6 +1530,23 @@ class BaseController(object):
 
         gui.view_actions.separator()
 
+    def _add_default_color_schemes(self, view):
+        """Add the default color schemes to every view."""
+        group = partial(self.supervisor.cluster_meta.get, 'group')
+        depth = self.supervisor.cluster_metrics['depth']
+        fr = self.supervisor.cluster_metrics['fr']
+        schemes = [
+            ('blank', 'blank', 0, False, False),
+            ('random', 'categorical', lambda cl: cl, True, False),
+            ('cluster_group', 'cluster_group', group, False, False),
+            ('depth', 'linear', depth, False, False),
+            ('firing_rate', 'linear', fr, False, True),
+        ]
+        for name, colormap, fun, categorical, logarithmic in schemes:
+            view.add_color_scheme(
+                name=name, fun=fun, colormap=colormap,
+                categorical=categorical, logarithmic=logarithmic)
+
     def create_gui(self, default_views=None, **kwargs):
         """Create the GUI.
 
@@ -1579,6 +1575,26 @@ class BaseController(object):
         for param in state_params:
             setattr(self, param, gui.state.get(param, getattr(self, param, None)))
 
+        # Add default color schemes in each view.
+        @connect(sender=gui)
+        def on_add_view(sender, view):
+            if isinstance(view, ManualClusteringView):
+                self._add_default_color_schemes(view)
+
+        # Update base views cluster ids after clustering actions.
+        @connect
+        def on_view_ready(view):
+            if isinstance(view, BaseGlobalView):
+                @connect
+                def on_cluster(supervisor, up):
+                    if isinstance(supervisor, Supervisor):
+                        # After a clustering action, get the cluster ids as shown
+                        # in the cluster view, and update the color selector accordingly.
+                        @supervisor.cluster_view.get_ids
+                        def _update(cluster_ids):
+                            if cluster_ids is not None:
+                                view.set_cluster_ids(cluster_ids)
+
         # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
         self.create_misc_actions(gui)
@@ -1586,7 +1602,7 @@ class BaseController(object):
         gui.create_views()
 
         # Show selected clusters when adding new views in the GUI.
-        @connect(sender=gui)
+        @connect(sender=gui)  # noqa
         def on_add_view(sender, view):
             if isinstance(view, ManualClusteringView):
                 view.on_select(cluster_ids=self.supervisor.selected_clusters)

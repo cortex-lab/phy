@@ -105,8 +105,6 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
                 s = supervisor.clustering.spikes_in_clusters(cluster_ids)
                 supervisor.actions.split(s, self.model.spike_templates[s])
 
-            self.color_selector = supervisor.color_selector
-
     def _set_similarity_functions(self):
         super(TemplateController, self)._set_similarity_functions()
         self.similarity_functions['template'] = self.template_similarity
