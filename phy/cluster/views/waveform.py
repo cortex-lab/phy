@@ -16,7 +16,8 @@ from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phy.utils.color import selected_cluster_color
 from phy.plot import get_linear_x
-from phy.plot.visuals import PlotVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max
+from phy.plot.visuals import (  # noqa
+    PlotVisual, PlotAggVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max)
 from phy.cluster._utils import RotatingProperty
 from .base import ManualClusteringView, ScalingMixin
 
@@ -155,6 +156,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             marker='vbar', color=self.ax_color, size=self.tick_size)
         self.canvas.add_visual(self.tick_visual)
 
+        # self.waveform_visual = PlotAggVisual()
         self.waveform_visual = PlotVisual()
         self.canvas.add_visual(self.waveform_visual)
 
@@ -213,9 +215,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Generate the box index (one number per channel).
         box_index = _index_of(channel_ids_loc, self.channel_ids)
-        box_index = np.repeat(box_index, n_samples)
         box_index = np.tile(box_index, n_spikes_clu)
-        assert box_index.shape == (n_spikes_clu * n_channels * n_samples,)
+        box_index = np.repeat(box_index, n_samples)
+        # box_index = np.repeat(box_index, 2 * (n_samples + 2))  # for PlotAggVisual
+        # assert box_index.size == n_spikes_clu * n_channels * 2 * (n_samples + 2)
+        assert box_index.size == n_spikes_clu * n_channels * n_samples
 
         # Generate the waveform array.
         wave = np.transpose(wave, (0, 2, 1))
@@ -224,7 +228,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         assert self.data_bounds is not None
         self.waveform_visual.add_batch_data(
-            x=t, y=wave, color=bunch.color, masks=masks, box_index=box_index,
+            x=t, y=wave, color=bunch.color, box_index=box_index,
             data_bounds=self.data_bounds)
 
         # Waveform axes.
