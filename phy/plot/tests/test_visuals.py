@@ -12,7 +12,8 @@ import os
 import numpy as np
 
 from ..visuals import (
-    ScatterVisual, PatchVisual, PlotVisual, HistogramVisual, LineVisual, LineAggVisual,
+    ScatterVisual, PatchVisual, PlotVisual, HistogramVisual, LineVisual,
+    LineAggGeomVisual, PlotAggVisual,
     PolygonVisual, TextVisual, ImageVisual, UniformPlotVisual, UniformScatterVisual)
 from ..transform import NDC, Rotate, range_transform
 from phy.utils.color import _random_color
@@ -308,16 +309,10 @@ def test_line_0(qtbot, canvas_pz):
 
 
 #------------------------------------------------------------------------------
-# Test line aggvisual
+# Test line agg geom
 #------------------------------------------------------------------------------
 
-def _test_line_agg_empty(qtbot, canvas):
-    # TODO
-    pos = np.zeros((0, 4))
-    _test_visual(qtbot, canvas, LineAggVisual(), pos=pos)
-
-
-def test_line_agg_0(qtbot, canvas_pz):
+def test_line_agg_geom_0(qtbot, canvas_pz):
     n = 1024
     T = np.linspace(0, 10 * 2 * np.pi, n)
     R = np.linspace(0, .5, n)
@@ -328,7 +323,43 @@ def test_line_agg_0(qtbot, canvas_pz):
 
     color = np.random.uniform(.5, .9, 4)
     _test_visual(
-        qtbot, canvas_pz, LineAggVisual(), pos=P, color=color)
+        qtbot, canvas_pz, LineAggGeomVisual(), pos=P, color=color)
+
+
+#------------------------------------------------------------------------------
+# Test plot agg
+#------------------------------------------------------------------------------
+
+def test_plot_agg_empty(qtbot, canvas_pz):
+    _test_visual(
+        qtbot, canvas_pz, PlotAggVisual(), y=[])
+
+
+def test_plot_agg_1(qtbot, canvas_pz):
+    t = np.linspace(-np.pi, np.pi, 8)
+    t = t[:-1]
+    x = .5 * np.cos(t)
+    y = .5 * np.sin(t)
+
+    _test_visual(
+        qtbot, canvas_pz, PlotAggVisual(), x=x, y=y, closed=True, data_bounds='auto')
+
+
+def test_plot_agg_2(qtbot, canvas_pz):
+    n_signals = 100
+    n_samples = 1000
+
+    x = np.linspace(-1., 1., n_samples)
+    y = np.sin(10 * x) * 0.1
+
+    x = np.tile(x, (n_signals, 1))
+    y = np.tile(y, (n_signals, 1))
+    y -= np.linspace(-1, 1, n_signals)[:, np.newaxis]
+
+    color = np.random.uniform(low=.5, high=.9, size=(n_signals, 4))
+
+    _test_visual(
+        qtbot, canvas_pz, PlotAggVisual(), x=x, y=y, color=color, data_bounds=NDC)
 
 
 #------------------------------------------------------------------------------

@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from .base import BaseVisual
+from .gloo import gl
 from .transform import NDC
 from .utils import (
     _tesselate_histogram, _get_texture, _get_array, _get_pos, _get_index)
@@ -1021,7 +1022,7 @@ class LineVisual(BaseVisual):
 # Agg line visual
 #------------------------------------------------------------------------------
 
-def ortho(left, right, bottom, top, znear, zfar):
+def ortho(left, right, bottom, top, znear, zfar):  # pragma: no cover
     """Create orthographic projection matrix
 
     Parameters
@@ -1059,8 +1060,10 @@ def ortho(left, right, bottom, top, znear, zfar):
     return M
 
 
-class LineAggVisual(BaseVisual):
-    """Line agg.
+class LineAggGeomVisual(BaseVisual):  # pragma: no cover
+    """[experimental] Line agg using geometry shader.
+
+    TODO: fix pan zoom which is currently broken because of viewport coordinate transform.
 
     Parameters
     ----------
@@ -1074,9 +1077,13 @@ class LineAggVisual(BaseVisual):
     _init_keywords = ('color',)
 
     def __init__(self):
-        super(LineAggVisual, self).__init__()
-        self.set_shader('line_agg')
+        super(LineAggGeomVisual, self).__init__()
+        self.set_shader('line_agg_geom')
         self.set_primitive_type('line_strip_adjacency_ext')
+        # Geometry shader params.
+        self.geometry_count = 4
+        self.geometry_in = gl.GL_LINES_ADJACENCY_EXT
+        self.geometry_out = gl.GL_TRIANGLE_STRIP
         self.set_data_range(NDC)
 
     def _get_index_buffer(self, P, closed=True):
@@ -1151,6 +1158,184 @@ class LineAggVisual(BaseVisual):
     def on_resize(self, width, height):
         projection = ortho(0, width, 0, height, -1, +1)
         self.program['projection'] = projection
+
+
+class PlotAggVisual(BaseVisual):
+    """Plot agg visual, with multiple line plots of various sizes and colors.
+
+    Parameters
+    ----------
+
+    x : array-like (1D), or list of 1D arrays for different plots
+    y : array-like (1D), or list of 1D arrays, for different plots
+    color : array-like (2D, shape[-1] == 4)
+    data_bounds : array-like (2D, shape[1] == 4)
+
+    """
+
+    default_color = DEFAULT_COLOR
+    default_line_width = 5.0
+    _noconcat = ('x', 'y')
+
+    def __init__(self):
+        super(PlotAggVisual, self).__init__()
+
+        self.set_shader('plot_agg')
+        self.set_primitive_type('triangle_strip')
+        self.set_data_range(NDC)
+
+    def validate(
+            self, x=None, y=None, color=None, data_bounds=None, line_width=None,
+            closed=False, **kwargs):
+        """Validate the requested data before passing it to set_data()."""
+
+        assert y is not None
+        y = np.atleast_2d(_as_array(y))
+        n_signals, n_samples = y.shape
+        if x is None:
+            x = np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+        x = np.atleast_2d(_as_array(x))
+
+        if isinstance(data_bounds, str) and data_bounds == 'auto':
+            xmin, xmax = x.min(axis=1), x.max(axis=1)
+            ymin, ymax = y.min(axis=1), y.max(axis=1)
+            data_bounds = np.c_[xmin, ymin, xmax, ymax]
+
+        color = _get_array(color, (n_signals, 4),
+                           PlotVisual.default_color,
+                           dtype=np.float32,
+                           )
+        assert color.shape == (n_signals, 4)
+
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_signals, 4)
+
+        if line_width is None:
+            line_width = self.default_line_width
+
+        return Bunch(
+            x=x, y=y, color=color, data_bounds=data_bounds, closed=closed,
+            line_width=line_width,
+            _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
+
+    def vertex_count(self, y=None, **kwargs):
+        """Number of vertices for the requested data."""
+        """Take the output of validate() as input."""
+        itemcount, itemsize = y.shape
+        if kwargs.get('closed', False):
+            return itemcount * 2 * (itemsize + 3)
+        else:
+            return itemcount * 2 * (itemsize + 2)
+
+    def set_data(self, *args, **kwargs):
+        """Update the visual data."""
+        data = self.validate(*args, **kwargs)
+        self.n_vertices = self.vertex_count(**data)
+
+        n_signals, n_samples = data.y.shape
+        n = data.y.size
+        self.n_signals = n_signals
+        self.n_samples = n_samples
+
+        if n_signals * n_samples == 0:
+            return data
+
+        # Generate the position array.
+        pos = np.c_[data.x.ravel(), data.y.ravel()]
+        assert pos.shape == (n, 2)
+
+        # Generate the color attribute.
+        color = data.color
+        assert color.shape == (n_signals, 4)
+        color = np.tile(color.reshape((n_signals, 1, 4)), (1, n_samples, 1))
+        assert color.shape == (n_signals, n_samples, 4)
+
+        # Transform the positions.
+        if data.data_bounds is not None:
+            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            self.data_range.from_bounds = data_bounds
+            pos = self.transforms.apply(pos)
+
+        itemsize = self.n_samples
+        itemcount = self.n_signals
+
+        pos = np.c_[pos, np.zeros((len(pos), 1))].astype(np.float32)
+        P = pos.reshape(itemcount, itemsize, 3)
+        closed = data.get('closed', False)
+        if closed:
+            a_prev = np.empty((itemcount, itemsize + 3, 3), dtype=np.float32)
+            a_curr = np.empty((itemcount, itemsize + 3, 3), dtype=np.float32)
+            a_next = np.empty((itemcount, itemsize + 3, 3), dtype=np.float32)
+            a_color = np.empty((itemcount, itemsize + 3, 4), dtype=np.float32)
+
+            a_prev[:, 2:-1, :] = P
+            a_prev[:, 1, :] = a_prev[:, -2, :]
+            a_curr[:, 1:-2, :] = P
+            a_curr[:, -2, :] = a_curr[:, 1, :]
+            a_color[:, 1:-2, :] = color
+            a_color[:, -2, :] = a_color[:, 1, :]
+            a_next[:, 0:-3, :] = P
+            a_next[:, -3, :] = a_next[:, 0, :]
+            a_next[:, -2, :] = a_next[:, 1, :]
+        else:
+            a_prev = np.empty((itemcount, itemsize + 2, 3), dtype=np.float32)
+            a_curr = np.empty((itemcount, itemsize + 2, 3), dtype=np.float32)
+            a_next = np.empty((itemcount, itemsize + 2, 3), dtype=np.float32)
+            a_color = np.empty((itemcount, itemsize + 2, 4), dtype=np.float32)
+
+            a_prev[:, 2:, :] = P
+            a_prev[:, 1, :] = a_prev[:, 2, :]
+            a_curr[:, 1:-1, :] = P
+            a_color[:, 1:-1, :] = color
+            a_next[:, :-2, :] = P
+            a_next[:, -2, :] = a_next[:, -3, :]
+
+        tmp = {}
+        for name in ('a_prev', 'a_curr', 'a_next', 'a_color'):
+            V = locals()[name]
+            assert V.ndim == 3
+            last_dim = V.shape[-1]
+            V[:, 0, ...] = V[:, 1, ...]
+            V[:, -1, ...] = V[:, -2, ...]
+            V = V.reshape((-1, last_dim))
+            V = np.repeat(V, 2, axis=0)
+            if closed:
+                V = V.reshape((itemcount, 2 * (itemsize + 3), V.shape[-1]))
+            else:
+                V = V.reshape((itemcount, 2 * (itemsize + 2), last_dim))
+            tmp[name] = V
+
+        a_prev = tmp['a_prev']
+        a_curr = tmp['a_curr']
+        a_next = tmp['a_next']
+        a_color = tmp['a_color']
+
+        N = itemcount * 2 * (itemsize + 2 + int(closed))
+
+        a_id = np.tile([1, -1], N // 2)
+        a_id = a_id.reshape(itemcount, 2 * (itemsize + 2 + int(closed)))
+        a_id[:, :2] = 2, -2
+        a_id[:, -2:] = 2, -2
+
+        assert a_prev.size == N * 3
+        assert a_curr.size == N * 3
+        assert a_next.size == N * 3
+        assert a_color.size == N * 4
+        assert a_id.size == N
+
+        self.program['a_prev'] = a_prev.astype(np.float32).ravel()
+        self.program['a_curr'] = a_curr.astype(np.float32).ravel()
+        self.program['a_next'] = a_next.astype(np.float32).ravel()
+        self.program['a_id'] = a_id.astype(np.float32).ravel()
+        self.program['a_color'] = a_color.astype(np.float32).ravel()
+
+        self.program['u_linewidth'] = data.line_width
+        self.program['u_antialias'] = 1.0
+
+        self.emit_visual_set_data()
+        return data
 
 
 #------------------------------------------------------------------------------
