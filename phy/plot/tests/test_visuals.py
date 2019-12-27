@@ -342,7 +342,7 @@ def test_plot_agg_1(qtbot, canvas_pz):
     y = .5 * np.sin(t)
 
     _test_visual(
-        qtbot, canvas_pz, PlotAggVisual(), x=x, y=y, closed=True, data_bounds='auto')
+        qtbot, canvas_pz, PlotAggVisual(closed=True), x=x, y=y, data_bounds='auto')
 
 
 def test_plot_agg_2(qtbot, canvas_pz):

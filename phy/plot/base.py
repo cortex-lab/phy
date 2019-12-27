@@ -233,12 +233,10 @@ class GLSLInserter(object):
         self._to_insert = []  # list of tuples (shader_type, location, origin, glsl)
         self._variables = []  # (varout, varin) pairs of vec2, obtained by parsing the shaders
         self._transform_regex = re.compile(r'([\S]+) = transform\(([\S]+)\);')
+        self._main_regex = re.compile(r'(void main\s*\([^\)]*\)\s*\{)')
 
     def _init_insert(self):
-        self.insert_vert('''
-            vec2 pos_orig = {{varin}};
-            vec2 {{varout}} = {{varin}};
-        ''', 'before_transforms', index=0)
+        self.insert_vert('vec2 {{varout}} = {{varin}};', 'before_transforms', index=0)
         self.insert_vert('gl_Position = vec4({{varout}}, 0., 1.);', 'after_transforms', index=0)
         self.insert_vert('varying vec2 v_{{varout}};\n', 'header', index=0)
         self.insert_frag('varying vec2 v_{{varout}};\n', 'header', index=0)
@@ -246,6 +244,7 @@ class GLSLInserter(object):
     def _insert(self, shader_type, glsl, location, origin=None, index=None):
         assert location in (
             'header',
+            'start',
             'before_transforms',
             'transforms',
             'after_transforms',
@@ -348,6 +347,11 @@ class GLSLInserter(object):
             return vertex, fragment
         assert self._variables
 
+        # Define pos_orig only once.
+        for varout, varin in self._variables:
+            if varout == 'gl_Position':
+                self.insert_vert('vec2 pos_orig = %s;' % varin, 'before_transforms', index=0)
+
         # Replace the variable placeholders.
         to_insert = []
         for (shader_type, location, origin, glsl) in self._to_insert:
@@ -374,6 +378,10 @@ class GLSLInserter(object):
             return indent(vs_insert).replace('{{varout}}', varout).replace('{{varin}}', varin)
         vertex = self._transform_regex.sub(repl, vertex)
 
+        # Insert snippets at the very start of the vertex shader.
+        vs_insert = r'\1\n' + get_vert(self._to_insert, 'start')
+        vertex = self._main_regex.sub(indent(vs_insert), vertex)
+
         # Insert snippets at the very end of the vertex shader.
         i = vertex.rindex('}')
         vertex = vertex[:i] + get_vert(to_insert, 'end') + '}\n'
@@ -383,10 +391,8 @@ class GLSLInserter(object):
         fragment = fragment[:i] + get_frag(to_insert, 'end') + '}\n'
 
         # Now, we make the replacements in the fragment shader.
-        fs_regex = re.compile(r'(void main\(\)\s*\{)')
-        # NOTE: we add the `void main(){` that was removed by the regex.
         fs_insert = r'\1\n' + get_frag(to_insert, 'before_transforms')
-        fragment = fs_regex.sub(indent(fs_insert), fragment)
+        fragment = self._main_regex.sub(indent(fs_insert), fragment)
 
         return vertex, fragment
 

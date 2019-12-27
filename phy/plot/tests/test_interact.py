@@ -164,6 +164,36 @@ def test_boxed_1(qtbot, canvas):
     # qtbot.stop()
 
 
+def test_boxed_2(qtbot, canvas):
+    from ..visuals import PlotAggVisual
+
+    n = 10
+    b = np.zeros((n, 2))
+    b[:, 1] = np.linspace(-1., 1., n)
+
+    box_index = np.repeat(np.arange(n), 2 * (N + 2), axis=0)
+
+    boxed = Boxed(box_pos=b)
+    c = canvas
+    boxed.attach(c)
+    PanZoom(aspect=None, constrain_bounds=NDC).attach(c)
+
+    t = np.linspace(-1, 1, N)
+    x = np.atleast_2d(t)
+    y = np.atleast_2d(.5 * np.sin(20 * t))
+
+    x = np.tile(x, (n, 1))
+    y = np.tile(y, (n, 1))
+
+    visual = PlotAggVisual()
+    c.add_visual(visual)
+    visual.set_data(x=x, y=y)
+    visual.set_box_index(box_index)
+
+    c.show()
+    qtbot.waitForWindowShown(c)
+
+
 #------------------------------------------------------------------------------
 # Test stacked
 #------------------------------------------------------------------------------

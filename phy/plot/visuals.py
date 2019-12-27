@@ -1177,16 +1177,17 @@ class PlotAggVisual(BaseVisual):
     default_line_width = 5.0
     _noconcat = ('x', 'y')
 
-    def __init__(self):
+    def __init__(self, line_width=None, closed=False):
         super(PlotAggVisual, self).__init__()
 
         self.set_shader('plot_agg')
         self.set_primitive_type('triangle_strip')
         self.set_data_range(NDC)
+        self.closed = closed
+        self.line_width = line_width or self.default_line_width
 
     def validate(
-            self, x=None, y=None, color=None, data_bounds=None, line_width=None,
-            closed=False, **kwargs):
+            self, x=None, y=None, color=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
@@ -1212,19 +1213,15 @@ class PlotAggVisual(BaseVisual):
             data_bounds = data_bounds.astype(np.float64)
             assert data_bounds.shape == (n_signals, 4)
 
-        if line_width is None:
-            line_width = self.default_line_width
-
         return Bunch(
-            x=x, y=y, color=color, data_bounds=data_bounds, closed=closed,
-            line_width=line_width,
+            x=x, y=y, color=color, data_bounds=data_bounds,
             _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
     def vertex_count(self, y=None, **kwargs):
         """Number of vertices for the requested data."""
         """Take the output of validate() as input."""
         itemcount, itemsize = y.shape
-        if kwargs.get('closed', False):
+        if self.closed:
             return itemcount * 2 * (itemsize + 3)
         else:
             return itemcount * 2 * (itemsize + 2)
@@ -1233,6 +1230,7 @@ class PlotAggVisual(BaseVisual):
         """Update the visual data."""
         data = self.validate(*args, **kwargs)
         self.n_vertices = self.vertex_count(**data)
+        closed = self.closed
 
         n_signals, n_samples = data.y.shape
         n = data.y.size
@@ -1263,8 +1261,7 @@ class PlotAggVisual(BaseVisual):
 
         pos = np.c_[pos, np.zeros((len(pos), 1))].astype(np.float32)
         P = pos.reshape(itemcount, itemsize, 3)
-        closed = data.get('closed', False)
-        if closed:
+        if self.closed:
             a_prev = np.empty((itemcount, itemsize + 3, 3), dtype=np.float32)
             a_curr = np.empty((itemcount, itemsize + 3, 3), dtype=np.float32)
             a_next = np.empty((itemcount, itemsize + 3, 3), dtype=np.float32)
@@ -1331,7 +1328,7 @@ class PlotAggVisual(BaseVisual):
         self.program['a_id'] = a_id.astype(np.float32).ravel()
         self.program['a_color'] = a_color.astype(np.float32).ravel()
 
-        self.program['u_linewidth'] = data.line_width
+        self.program['u_linewidth'] = self.line_width
         self.program['u_antialias'] = 1.0
 
         self.emit_visual_set_data()

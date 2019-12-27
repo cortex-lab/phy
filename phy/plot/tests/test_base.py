@@ -178,34 +178,6 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     # qtbot.stop()
 
 
-def _test_layout_1(qtbot, canvas):  # pragma: no cover
-    # NOTE: disabled as it fails with a segfault...
-
-    layout = BaseLayout()
-    layout.attach(canvas)
-    #layout.update()
-
-    class MyVisual(BaseVisual):
-        def __init__(self):
-            super(MyVisual, self).__init__()
-            self.set_shader('simple')
-            self.set_primitive_type('lines')
-
-        def set_data(self):
-            self.n_vertices = 2
-            self.program['a_position'] = [[-1, 0], [1, 0]]
-            self.program['u_color'] = [1, 1, 1, 1]
-            self.emit_visual_set_data()
-
-    v = MyVisual()
-    canvas.add_visual(v)
-    v.set_data()
-
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
-    layout.update()
-
-
 def test_canvas_lazy(qtbot, canvas):
     v = MyVisual()
     canvas.add_visual(v)
