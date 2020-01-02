@@ -252,9 +252,9 @@ This view shows the autocorrelograms and cross-correlograms between all pairs of
 
 Subplot at row i, column j, shows the cross-correlogram of selected cluster #i versus cluster #j.
 
-The baseline firing rate is shown. You can also display horizontal lines for the refractory period.
+The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
-The parameter `controller.n_spikes_correlograms=100000`, by default, specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
+The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
 
 *Note*: the central peak is artificially removed to avoid artifacts. Decrease the bin size (e.g. to 0.1 ms) if you need to visualize fine temporal structure.
 
