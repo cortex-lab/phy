@@ -1061,7 +1061,8 @@ def ortho(left, right, bottom, top, znear, zfar):  # pragma: no cover
 
 
 class LineAggGeomVisual(BaseVisual):  # pragma: no cover
-    """[experimental] Line agg using geometry shader.
+    """[experimental] Line agg using geometry shader. Not currently used. Uses non-standard
+    geometry shader extension, may only work on NVIDIA.
 
     TODO: fix pan zoom which is currently broken because of viewport coordinate transform.
 
@@ -1169,6 +1170,9 @@ class PlotAggVisual(BaseVisual):
     x : array-like (1D), or list of 1D arrays for different plots
     y : array-like (1D), or list of 1D arrays, for different plots
     color : array-like (2D, shape[-1] == 4)
+    depth : array-like (1D)
+    masks : array-like (1D)
+        Similar to an alpha channel, but for color saturation instead of transparency.
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
@@ -1187,7 +1191,7 @@ class PlotAggVisual(BaseVisual):
         self.line_width = line_width or self.default_line_width
 
     def validate(
-            self, x=None, y=None, color=None, data_bounds=None, **kwargs):
+            self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
@@ -1208,13 +1212,21 @@ class PlotAggVisual(BaseVisual):
                            )
         assert color.shape == (n_signals, 4)
 
+        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        # The mask is clu_idx + fractional mask
+        masks *= .99999
+        assert masks.shape == (n_signals, 1)
+
+        depth = _get_array(depth, (n_signals, 1), 0)
+        assert depth.shape == (n_signals, 1)
+
         if data_bounds is not None:
             data_bounds = _get_data_bounds(data_bounds, length=n_signals)
             data_bounds = data_bounds.astype(np.float64)
             assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(
-            x=x, y=y, color=color, data_bounds=data_bounds,
+            x=x, y=y, color=color, depth=depth, masks=masks, data_bounds=data_bounds,
             _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
 
     def vertex_count(self, y=None, **kwargs):
@@ -1309,10 +1321,11 @@ class PlotAggVisual(BaseVisual):
         a_next = tmp['a_next']
         a_color = tmp['a_color']
 
-        N = itemcount * 2 * (itemsize + 2 + int(closed))
+        n_vertices_per_item = 2 * (itemsize + 2 + int(closed))
+        N = itemcount * n_vertices_per_item
 
         a_id = np.tile([1, -1], N // 2)
-        a_id = a_id.reshape(itemcount, 2 * (itemsize + 2 + int(closed)))
+        a_id = a_id.reshape(itemcount, n_vertices_per_item)
         a_id[:, :2] = 2, -2
         a_id[:, -2:] = 2, -2
 
@@ -1322,11 +1335,22 @@ class PlotAggVisual(BaseVisual):
         assert a_color.size == N * 4
         assert a_id.size == N
 
+        # Masks.
+        masks = np.repeat(data.masks, n_vertices_per_item, axis=0)
+        assert masks.shape == (N, 1)
+
+        # Position and depth.
+        depth = np.repeat(data.depth, n_vertices_per_item, axis=0)
+        assert depth.shape == (N, 1)
+
         self.program['a_prev'] = a_prev.astype(np.float32).ravel()
         self.program['a_curr'] = a_curr.astype(np.float32).ravel()
         self.program['a_next'] = a_next.astype(np.float32).ravel()
         self.program['a_id'] = a_id.astype(np.float32).ravel()
         self.program['a_color'] = a_color.astype(np.float32).ravel()
+        self.program['a_mask'] = masks.astype(np.float32)
+        self.program['a_depth'] = depth.astype(np.float32).ravel()
+        self.program['u_mask_max'] = _max(masks)
 
         self.program['u_linewidth'] = self.line_width
         self.program['u_antialias'] = 1.0

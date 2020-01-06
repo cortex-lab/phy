@@ -357,9 +357,12 @@ def test_plot_agg_2(qtbot, canvas_pz):
     y -= np.linspace(-1, 1, n_signals)[:, np.newaxis]
 
     color = np.random.uniform(low=.5, high=.9, size=(n_signals, 4))
+    depth = np.random.uniform(low=0, high=1, size=n_signals)
+    masks = np.random.uniform(low=0, high=1, size=n_signals)
 
     _test_visual(
-        qtbot, canvas_pz, PlotAggVisual(), x=x, y=y, color=color, data_bounds=NDC)
+        qtbot, canvas_pz, PlotAggVisual(), x=x, y=y, color=color,
+        depth=depth, masks=masks, data_bounds=NDC)
 
 
 #------------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 // Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 // Distributed under the (new) BSD License.
 // -----------------------------------------------------------------------------
+#include "utils.glsl"
 
 // Externs
 // ------------------------------------
@@ -10,9 +11,12 @@ attribute vec3 a_curr;
 attribute vec3 a_next;
 attribute float a_id;
 attribute vec4 a_color;
+attribute float a_mask;
+attribute float a_depth;
 
 uniform float u_antialias;
 uniform float u_linewidth;
+uniform float u_mask_max;
 
 // Varyings
 // ------------------------------------
@@ -20,6 +24,8 @@ varying float v_antialias;
 varying float v_linewidth;
 varying float v_distance;
 varying vec4  v_color;
+
+varying float v_mask;
 
 vec2 NDC_to_viewport(vec4 position, vec2 viewport)
 {
@@ -96,4 +102,8 @@ void main (void)
 
     v_distance = w*id;
     gl_Position = viewport_to_NDC(P, u_window_size, curr_.z / curr_.w);
+
+    gl_Position.z = min(a_depth, get_depth(a_mask, u_mask_max));
+
+    v_mask = a_mask;
 }
