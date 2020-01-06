@@ -81,6 +81,14 @@ class KwikControllerTests(BaseControllerTests, unittest.TestCase):
             self.waveform_view.next_waveforms_type()
             self.qtbot.wait(250)
 
+    def test_kwik_amplitude_view(self):
+        if not self.amplitude_view:
+            return
+        self.next()
+        for _ in range(3):
+            self.amplitude_view.next_amplitudes_type()
+            self.qtbot.wait(250)
+
 
 class KwikControllerKwikOnlyTests(BaseControllerTests, unittest.TestCase):
     """Kwik controller with just the kwik file."""
