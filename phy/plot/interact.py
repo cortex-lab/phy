@@ -215,7 +215,7 @@ class Boxed(BaseLayout):
             box_pos = (2 * box_pos - 1);  // from [0, 1] (texture) to [-1, 1] (NDC)
             box_pos = box_pos * u_layout_scaling;
             vec4 box_bounds = vec4(box_pos - u_box_size, box_pos + u_box_size);
-            """.format(self.box_var), 'before_transforms', origin=self)
+            """.format(self.box_var), 'start', origin=self)
 
     def update_visual(self, visual):
         """Update a visual."""

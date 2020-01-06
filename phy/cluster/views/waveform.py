@@ -16,7 +16,8 @@ from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
 from phy.utils.color import selected_cluster_color
 from phy.plot import get_linear_x
-from phy.plot.visuals import PlotVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max
+from phy.plot.visuals import (  # noqa
+    PlotVisual, PlotAggVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max)
 from phy.cluster._utils import RotatingProperty
 from .base import ManualClusteringView, ScalingMixin
 
@@ -155,11 +156,22 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             marker='vbar', color=self.ax_color, size=self.tick_size)
         self.canvas.add_visual(self.tick_visual)
 
+        # Two types of visuals: thin raw line visual for normal waveforms, thick antialiased
+        # agg plot visual for mean and template waveforms.
+        self.waveform_agg_visual = PlotAggVisual()
         self.waveform_visual = PlotVisual()
+        self.canvas.add_visual(self.waveform_agg_visual)
         self.canvas.add_visual(self.waveform_visual)
 
     # Internal methods
     # -------------------------------------------------------------------------
+
+    @property
+    def _current_visual(self):
+        if self.waveforms_type == 'waveforms':
+            return self.waveform_visual
+        else:
+            return self.waveform_agg_visual
 
     def _get_data_bounds(self, bunchs):
         m = min(_min(b.data) for b in bunchs)
@@ -213,9 +225,17 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Generate the box index (one number per channel).
         box_index = _index_of(channel_ids_loc, self.channel_ids)
-        box_index = np.repeat(box_index, n_samples)
         box_index = np.tile(box_index, n_spikes_clu)
-        assert box_index.shape == (n_spikes_clu * n_channels * n_samples,)
+
+        # Find the correct number of vertices depending on the current waveform visual.
+        if self._current_visual == self.waveform_visual:
+            # PlotVisual
+            box_index = np.repeat(box_index, n_samples)
+            assert box_index.size == n_spikes_clu * n_channels * n_samples
+        else:
+            # PlotAggVisual
+            box_index = np.repeat(box_index, 2 * (n_samples + 2))
+            assert box_index.size == n_spikes_clu * n_channels * 2 * (n_samples + 2)
 
         # Generate the waveform array.
         wave = np.transpose(wave, (0, 2, 1))
@@ -223,7 +243,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         wave = wave.reshape((nw, n_samples))
 
         assert self.data_bounds is not None
-        self.waveform_visual.add_batch_data(
+        self._current_visual.add_batch_data(
             x=t, y=wave, color=bunch.color, masks=masks, box_index=box_index,
             data_bounds=self.data_bounds)
 
@@ -309,16 +329,24 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         self.data_bounds = self.data_bounds or self._get_data_bounds(bunchs)
 
-        self.waveform_visual.reset_batch()
+        self._current_visual.reset_batch()
         self.line_visual.reset_batch()
         self.tick_visual.reset_batch()
         for bunch in bunchs:
             self._plot_cluster(bunch)
         self.canvas.update_visual(self.tick_visual)
         self.canvas.update_visual(self.line_visual)
-        self.canvas.update_visual(self.waveform_visual)
+        self.canvas.update_visual(self._current_visual)
 
         self._plot_labels(channel_ids, len(self.cluster_ids), channel_labels)
+
+        # Only show the current waveform visual.
+        if self._current_visual == self.waveform_visual:
+            self.waveform_visual.show()
+            self.waveform_agg_visual.hide()
+        elif self._current_visual == self.waveform_agg_visual:
+            self.waveform_agg_visual.show()
+            self.waveform_visual.hide()
 
         self.canvas.update()
         self.update_status()

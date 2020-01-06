@@ -24,12 +24,14 @@ from . import _stop_and_close
 
 def test_waveform_view(qtbot, tempdir, gui):
     nc = 5
+    ns = 10
 
-    w = 10 + 100 * artificial_waveforms(10, 20, nc)
+    w = 10 + 100 * artificial_waveforms(ns, 20, nc)
 
     def get_waveforms(cluster_id):
         return Bunch(
             data=w,
+            masks=np.random.uniform(low=0., high=1., size=(ns, nc)),
             channel_ids=np.arange(nc),
             channel_labels=['%d' % (ch * 10) for ch in range(nc)],
             channel_positions=staggered_positions(nc))

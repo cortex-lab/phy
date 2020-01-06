@@ -17,11 +17,12 @@ from ..panzoom import PanZoom
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def canvas(qapp):
+def canvas(qapp, qtbot):
     c = BaseCanvas()
     yield c
     c.close()
-    #del c
+    del c
+    qtbot.wait(50)
 
 
 @fixture

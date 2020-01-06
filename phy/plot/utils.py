@@ -196,7 +196,10 @@ class BatchAccumulator(object):
 
 def _load_shader(filename):
     """Load a shader file."""
-    return (Path(__file__).parent / 'glsl' / filename).read_text()
+    path = Path(__file__).parent / 'glsl' / filename
+    if not path.exists():
+        return
+    return path.read_text()
 
 
 def _tesselate_histogram(hist):

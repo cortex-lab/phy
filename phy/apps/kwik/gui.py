@@ -52,6 +52,9 @@ class KwikModelGUI(KwikModel):
     def get_features(self, spike_ids, channel_ids):
         return self.all_features[spike_ids][:, channel_ids, :]
 
+    def get_waveforms(self, spike_ids, channel_ids):
+        return self.all_waveforms[spike_ids][:, channel_ids, :]
+
 
 class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
     """Controller for the Kwik GUI.
