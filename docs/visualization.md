@@ -81,19 +81,7 @@ Select quickly one or several cluster(s) by using **snippets**: for example, typ
 
 ![image](https://user-images.githubusercontent.com/1942359/58951169-bac4a280-8790-11e9-8e7b-5fa5410de152.png)
 
-##### Colormaps
-
 Selected clusters are assigned with a special color: blue for the first selected cluster, red for the second, yellow for the third, etc.
-
-In addition to this temporary color mapping, there is also a notion of global color map that assigns a (relatively) unique color to all clusters. This is especially useful in views that can display many spikes from many non-selected clusters at once: the Trace view (when the `toggle_highlighted_spikes` option is enabled), the Raster view, and the Template view.
-
-Several colormaps are provided by phy (linear, divergent, categorical...). You can choose which cluster attribute to use for the color mapping. For example, you can use a cluster color depending on the depth, the number of spikes, the waveform amplitude, etc.
-
-To display all clusters like in the cluster view (unsorted clusters are white, noise/mua clusters are gray, good clusters are green, selected clusters are in bright colors), use the following parameters:
-
-* Color field: group
-* Colormap: cluster group
-* Toggle categorical colormap
 
 
 #### Cluster table
@@ -485,3 +473,38 @@ For convenience, the following variables are available in the GUI:
 ![image](https://user-images.githubusercontent.com/1942359/58953022-96b79000-8795-11e9-9bdd-77523c1c099e.png)
 
 You can use matplotlib to make quick plots in the IPython view, although it is better to write a custom view properly if you need to reuse it (see the developer section in this documentation).
+
+
+## Color schemes
+
+Each view comes with a set of **color schemes** that attributes a color to each cluster (independently on whether it is selected or not), depending on some of its attributes like its depth, amplitude, firing rate, etc.
+
+The default color schemes are:
+
+* blank: uniform color for all clusters
+* random: random color for each cluster
+* cluster_group: good clusters are in green, others are in different levels of gray
+* depth: the cluster color depends on the probe depth
+* firing_rate: the cluster color depends on the firing rate
+
+A color scheme is defined by:
+
+* a name,
+* a function `cluster_id => value` that assigns a scalar value to every cluster. The value is then transformed into a color via the colormap,
+* a colormap, either the name of one of the builtin colormaps (see below), or a `N*3` array,
+* (optional) categorical, a boolean indicating whether the color map is categorical (one value = one color), or continuous (interpolation)
+* (optional) logarithmic, a boolean indicating wwhether the values used to compute the color map should be logarithmically transformed.
+
+The builtin colormaps are:
+
+* blank: uniform gray color
+* default: color of the selected clusters
+* cluster_group: green for good clusters, different levels of gray for the other groups
+* categorical: `glasbey_bw_minc_20_minl_30` (one different color per categorical value)
+* rainbow: `rainbow_bgyr_35_85_c73`
+* linear: `linear_wyor_100_45_c55`
+* diverging: `diverging_linear_bjy_30_90_c45`
+
+phy uses the [colorcet](https://colorcet.holoviz.org/) library to define the colormaps. You can also use it to define other colorcet colormaps, or define brand new colormap arrays.
+
+You can write a plugin to define your own color schemes.
