@@ -1,4 +1,4 @@
-"""Show how to create new actionis in the GUI.
+"""Show how to create new actions in the GUI.
 
 The first action just displays a message in the status bar.
 

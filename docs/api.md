@@ -2960,7 +2960,7 @@ Insert all GLSL snippets in a vertex and fragment shaders.
 The vertex shader typicall contains `gl_Position = transform(data_var_name);`
 which is automatically detected, and the GLSL transformations are inserted there.
 
-Snippets can contain `{{ var }}` placeholders for the transformed variable name.
+Snippets can contain `{{var}}` placeholders for the transformed variable name.
 
 ---
 
@@ -9571,6 +9571,15 @@ Attach to the GUI.
 Block until there are no pending actions.
 
 Only used in the automated testing suite.
+
+---
+
+#### Supervisor.clear_filter
+
+
+**`Supervisor.clear_filter(self)`**
+
+
 
 ---
 

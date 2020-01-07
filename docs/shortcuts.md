@@ -9,6 +9,7 @@ This page presents the list of shortcuts and snippets in the template GUI. You c
 All keyboard shortcuts
 
 Keyboard shortcuts for Clustering
+- clear_filter                             esc
 - first                                    home
 - label                                    l
 - last                                     end

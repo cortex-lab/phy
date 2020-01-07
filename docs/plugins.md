@@ -382,7 +382,7 @@ In this example, we create a new action in the file menu, with keyboard shortcut
 
 ```python
 # import from plugins/action_status_bar.py
-"""Show how to create new actionis in the GUI.
+"""Show how to create new actions in the GUI.
 
 The first action just displays a message in the status bar.
 
@@ -484,6 +484,32 @@ class ExampleCustomSplitPlugin(IPlugin):
 
                 # We split according to the labels.
                 controller.supervisor.actions.split(spike_ids, labels)
+
+```
+
+## Adding a new action
+
+In this example, we create a new snippet to filter clusters with a firing rate above than a specified threshold. For example, typing `:fr 10` displays only the clusters with a firing rate higher than 10 spk/s in the cluster view. Pressing `Esc` clears the filter.
+
+```python
+# import from plugins/filter_action.py
+"""Show how to create a filter snippet for the cluster view.
+
+Typing `:fr 10` automatically shows only the clusters that have a firing rate higher than 10 spk/s.
+
+"""
+
+from phy import IPlugin, connect
+
+
+class ExampleFilterFiringRatePlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        @connect
+        def on_gui_ready(sender, gui):
+            @gui.view_actions.add(alias='fr')  # corresponds to `:fr` snippet
+            def filter_firing_rate(rate):
+                """Filter clusters with the firing rate."""
+                controller.supervisor.filter('fr > %.1f' % float(rate))
 
 ```
 
