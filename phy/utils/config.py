@@ -70,7 +70,11 @@ def load_master_config(config_dir=None):
         logger.debug("Creating default phy config file at `%s`.", path)
         path.write_text(_default_config(config_dir=config_dir))
     assert path.exists()
-    return load_config(path)
+    try:
+        return load_config(path)
+    except Exception as e:  # pragma: no cover
+        logger.error(e)
+    return {}
 
 
 def save_config(path, config):

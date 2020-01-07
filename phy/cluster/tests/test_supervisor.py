@@ -415,6 +415,8 @@ def test_supervisor_filter(qtbot, supervisor):
     supervisor.cluster_view.get_ids(lambda cluster_ids: _cl.extend(cluster_ids))
     qtbot.wait(50)
     assert _cl == [20, 11, 10]
+    supervisor.clear_filter()
+    qtbot.wait(50)
 
 
 def test_supervisor_merge_1(qtbot, supervisor):

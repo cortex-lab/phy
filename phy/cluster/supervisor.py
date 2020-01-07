@@ -428,6 +428,8 @@ class ActionCreator(object):
         # Misc.
         'undo': 'ctrl+z',
         'redo': ('ctrl+shift+z', 'ctrl+y'),
+
+        'clear_filter': 'esc',
     }
 
     default_snippets = {
@@ -509,6 +511,7 @@ class ActionCreator(object):
         # Sort and filter
         self.add(w, 'filter', prompt=True, n_args=1)
         self.add(w, 'sort', prompt=True, n_args=1)
+        self.add(w, 'clear_filter')
 
         # Sort by:
         for column in getattr(self.supervisor, 'columns', ()):
@@ -885,6 +888,9 @@ class Supervisor(object):
     def filter(self, text):
         """Filter the clusters using a Javascript expression on the column names."""
         self.cluster_view.filter(text)
+
+    def clear_filter(self):
+        self.cluster_view.filter('')
 
     # Properties
     # -------------------------------------------------------------------------

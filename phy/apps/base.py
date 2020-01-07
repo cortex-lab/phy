@@ -1668,6 +1668,9 @@ class BaseController(object):
             # Remove the status bar handler when closing the GUI.
             logging.getLogger('phy').removeHandler(handler)
 
-        emit('gui_ready', self, gui)
+        try:
+            emit('gui_ready', self, gui)
+        except Exception as e:  # pragma: no cover
+            logger.error(e)
 
         return gui
