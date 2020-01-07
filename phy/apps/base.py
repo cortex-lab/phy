@@ -994,12 +994,12 @@ class BaseController(object):
     def _get_channel_labels(self, channel_ids=None):
         """Return the labels of a list of channels."""
         if channel_ids is None:
-            channel_labels = getattr(
-                self.model, 'channel_mapping', np.arange(self.model.n_channels))
-        elif not hasattr(self.model, 'channel_mapping'):
-            channel_labels = channel_ids
-        else:
+            channel_ids = np.arange(self.model.n_channels)
+        if (hasattr(self.model, 'channel_mapping') and
+                getattr(self.model, 'show_mapped_channels', True)):
             channel_labels = self.model.channel_mapping[channel_ids]
+        else:
+            channel_labels = channel_ids
         return ['%d' % ch for ch in channel_labels]
 
     # Internal view methods
