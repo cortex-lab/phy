@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 
+from phylib.io.array import _clip
 from phy.plot.visuals import HistogramVisual, PlotVisual, TextVisual
 from phy.utils.color import selected_cluster_color
 from .base import ManualClusteringView, ScalingMixin
@@ -26,7 +27,7 @@ def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, i
     """Compute the histogram of an array."""
     assert x_min <= x_max
     assert n_bins >= 0
-    n_bins = np.clip(n_bins, 2, 1e6)
+    n_bins = _clip(n_bins, 2, 1e6)
     bins = np.linspace(x_min, x_max, n_bins)
     if ignore_zeros:
         data = data[data != 0]
