@@ -100,7 +100,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             Range(NDC, (-1, -1, 1, -1 + 2 * self.histogram_scale)),
             Rotate('cw'),
             Scale((1, -1)),
-            Translate((2, 0)),
+            Translate((2.05, 0)),
         ])
         self.canvas.add_visual(self.hist_visual)
         self.canvas.panzoom.zoom = self.canvas.panzoom._default_zoom = (.75, 1)
