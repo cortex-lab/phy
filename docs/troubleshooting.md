@@ -72,6 +72,15 @@ template_scaling = 20.0  # or any other scaling factor
 ```
 
 
+### Channel label inconsistency
+
+The channel labels displayed in the views may be invalid. This may happen because the latest version of phy takes the `channel_map.npy` file into account when displaying the channel names in the views. If you want to disable this behavior, do the following:
+
+1. Add `show_mapped_channels = False` in your `params.py` file.
+2. Delete the `.phy` subdirectory within your data directory.
+3. Launch phy again.
+
+
 ### Error "No module named PyQt5.sip"
 
 If you receive the error: `No module named PyQt5.sip`, try to run the following commands in your conda environment (solution found by Claire Ward):
