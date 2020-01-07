@@ -17,7 +17,7 @@ from phylib.utils import Bunch, connect, unconnect, emit
 from phylib.utils.geometry import range_transform
 from phy.cluster._utils import RotatingProperty
 from phy.gui import Actions
-from phy.gui.qt import AsyncCaller, screenshot, thread_pool, Worker
+from phy.gui.qt import AsyncCaller, screenshot, screenshot_default_path, thread_pool, Worker
 from phy.plot import PlotCanvas, NDC, extend_bounds
 from phy.utils.color import ClusterColorSelector
 
@@ -378,7 +378,8 @@ class ManualClusteringView(object):
     def screenshot(self, dir=None):
         """Save a PNG screenshot of the view into a given directory. By default, the screenshots
         are saved in `~/.phy/screenshots/`."""
-        return screenshot(self.canvas, dir=dir)
+        path = screenshot_default_path(self, dir=dir)
+        return screenshot(self.canvas, path=path)
 
     @property
     def state(self):
