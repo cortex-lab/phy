@@ -95,7 +95,8 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         """Get the data bounds."""
         m = np.median([b.template.min() for b in bunchs])
         M = np.median([b.template.max() for b in bunchs])
-        return [-1, m, +1, M]
+        M = max(abs(m), abs(M))
+        return [-1, -M, +1, M]
 
     def _get_box_index(self, bunch):
         """Get the box_index array for a cluster."""
