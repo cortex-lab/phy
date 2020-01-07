@@ -74,7 +74,7 @@ def load_master_config(config_dir=None):
         return load_config(path)
     except Exception as e:  # pragma: no cover
         logger.error(e)
-    return {}
+        return {}
 
 
 def save_config(path, config):
