@@ -64,6 +64,7 @@ class ManualClusteringView(object):
     auto_update = True  # automatically update the view when the cluster selection changes
     _default_position = None
     plot_canvas_class = PlotCanvas
+    has_color_schemes = False  # whether this view class supports color schemes
 
     def __init__(self, shortcuts=None, **kwargs):
         self._lock = None
@@ -321,9 +322,10 @@ class ManualClusteringView(object):
         self.actions.separator()
 
         # Color scheme actions.
-        self.actions.add(self.next_color_scheme)
-        self.actions.add(self.previous_color_scheme)
-        self.actions.separator()
+        if self.has_color_schemes:
+            self.actions.add(self.next_color_scheme)
+            self.actions.add(self.previous_color_scheme)
+            self.actions.separator()
 
         emit('view_actions_created', self)
 

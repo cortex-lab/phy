@@ -108,6 +108,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
     _default_position = 'left'
     auto_update = True
     auto_scale = True
+    has_color_schemes = True
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.25

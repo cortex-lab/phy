@@ -47,6 +47,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
     """
     _default_position = 'right'
     _scaling = 1.
+    has_color_schemes = True
 
     default_shortcuts = {
         'change_template_size': 'ctrl+wheel',

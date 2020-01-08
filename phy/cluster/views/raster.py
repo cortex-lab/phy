@@ -41,6 +41,7 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
     """
 
     _default_position = 'right'
+    has_color_schemes = True
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',
