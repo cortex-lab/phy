@@ -45,6 +45,10 @@ class ProbeView(ManualClusteringView):
         An `(n_channels, 2)` array with the channel positions
     best_channels : function
         Maps `cluster_id` to the list of the best_channel_ids.
+    channel_labels : list
+        List of channel label strings.
+    dead_channels : list
+        List of dead channel ids.
 
     """
 
@@ -56,7 +60,12 @@ class ProbeView(ManualClusteringView):
     # Marker size of channels with selected clusters.
     selected_marker_size = 15
 
-    def __init__(self, positions=None, best_channels=None, channel_labels=None, **kwargs):
+    # Alpha value of the dead channels.
+    dead_channel_alpha = .25
+
+    def __init__(
+            self, positions=None, best_channels=None, channel_labels=None,
+            dead_channels=None, **kwargs):
         super(ProbeView, self).__init__(**kwargs)
 
         # Normalize positions.
@@ -68,25 +77,33 @@ class ProbeView(ManualClusteringView):
         self.best_channels = best_channels
 
         self.channel_labels = channel_labels or [str(ch) for ch in range(self.n_channels)]
+        self.dead_channels = dead_channels if dead_channels is not None else ()
 
         self.probe_visual = ScatterVisual()
         self.canvas.add_visual(self.probe_visual)
 
         # Probe visual.
+        color = np.ones((self.n_channels, 4))
+        color[:, :3] = .5
+        # Change alpha value for dead channels.
+        if len(self.dead_channels):
+            color[self.dead_channels, 3] = self.dead_channel_alpha
         self.probe_visual.set_data(
             pos=self.positions, data_bounds=self.data_bounds,
-            color=(.5, .5, .5, 1.), size=self.unselected_marker_size)
+            color=color, size=self.unselected_marker_size)
 
         # Cluster visual.
         self.cluster_visual = ScatterVisual()
         self.canvas.add_visual(self.cluster_visual)
 
         # Text visual
+        color[:] = 1
+        color[self.dead_channels, :3] = self.dead_channel_alpha * 2
         self.text_visual = TextVisual()
         self.canvas.add_visual(self.text_visual)
         self.text_visual.set_data(
             pos=self.positions, text=self.channel_labels, anchor=[0, -1],
-            data_bounds=self.data_bounds, color=(1, 1, 1, 1)
+            data_bounds=self.data_bounds, color=color
         )
 
     def _get_clu_positions(self, cluster_ids):
@@ -111,8 +128,9 @@ class ProbeView(ManualClusteringView):
                 # Translation.
                 t = .025 * w * (i - .5 * (n - 1))
                 x += t
+                alpha = 1.0 if channel_id not in self.dead_channels else self.dead_channel_alpha
                 clu_pos.append((x, y))
-                clu_colors.append(selected_cluster_color(clu_idx))
+                clu_colors.append(selected_cluster_color(clu_idx, alpha=alpha))
         return np.array(clu_pos), np.array(clu_colors)
 
     def on_select(self, cluster_ids=(), **kwargs):

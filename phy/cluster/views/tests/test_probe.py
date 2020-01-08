@@ -23,7 +23,7 @@ def test_probe_view(qtbot, gui):
     positions = staggered_positions(n)
     best_channels = lambda cluster_id: range(1, 9, 2)
 
-    v = ProbeView(positions=positions, best_channels=best_channels)
+    v = ProbeView(positions=positions, best_channels=best_channels, dead_channels=(3, 7, 12))
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
