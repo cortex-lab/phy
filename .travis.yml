@@ -15,7 +15,7 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda install python=3.7 pyyaml numpy scipy h5py pyqt cython numba
+  - conda install python=3.7 pyyaml numpy scipy h5py pyqt cython numba dask
   - pip install matplotlib sklearn umap-learn  # for plugins
   - pip install -r requirements.txt
   - pip install -r requirements-dev.txt

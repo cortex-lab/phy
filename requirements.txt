@@ -7,4 +7,5 @@ qtconsole
 tqdm
 joblib
 click
+mtscomp
 mkdocs==1.0.4
