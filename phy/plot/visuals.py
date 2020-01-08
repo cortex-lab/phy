@@ -810,7 +810,7 @@ class TextVisual(BaseVisual):
         return [FONT_MAP_CHARS.index(char) for char in s]
 
     def validate(
-            self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs):
+            self, pos=None, text=None, color=None, anchor=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
 
         if text is None:
@@ -827,6 +827,14 @@ class TextVisual(BaseVisual):
         n_text = pos.shape[0]
         assert len(text) == n_text
 
+        color = color if color is not None else self.default_color
+        color = np.atleast_2d(color)
+        if color.shape[0] == 1:
+            color = np.repeat(color, n_text, axis=0)
+        assert color.ndim == 2
+        assert color.shape[1] == 4
+        assert len(color) == n_text
+
         anchor = anchor if anchor is not None else (0., 0.)
         anchor = np.atleast_2d(anchor)
         if anchor.shape[0] == 1:
@@ -841,7 +849,7 @@ class TextVisual(BaseVisual):
         assert data_bounds.shape == (n_text, 4)
 
         return Bunch(
-            pos=pos, text=text, anchor=anchor, data_bounds=data_bounds,
+            pos=pos, text=text, anchor=anchor, data_bounds=data_bounds, color=color,
             _n_items=n_text, _n_vertices=self.vertex_count(text=text))
 
     def vertex_count(self, **kwargs):
@@ -881,15 +889,16 @@ class TextVisual(BaseVisual):
             a_glyph_index = np.concatenate([np.arange(n) for n in lengths])
         a_quad_index = np.arange(6)
 
-        a_anchor = data.anchor
-
         a_position = np.repeat(a_position, 6, axis=0)
         a_glyph_index = np.repeat(a_glyph_index, 6)
         a_quad_index = np.tile(a_quad_index, n_glyphs)
         a_char_index = np.repeat(a_char_index, 6)
 
-        a_anchor = np.repeat(a_anchor, lengths, axis=0)
+        a_anchor = np.repeat(data.anchor, lengths, axis=0)
         a_anchor = np.repeat(a_anchor, 6, axis=0)
+
+        a_color = np.repeat(data.color, lengths, axis=0)
+        a_color = np.repeat(a_color, 6, axis=0)
 
         a_lengths = np.repeat(lengths, lengths)
         a_lengths = np.repeat(a_lengths, 6)
@@ -910,9 +919,11 @@ class TextVisual(BaseVisual):
         assert a_quad_index.shape == (n_vertices,)  # 012345012345....
         assert a_char_index.shape == (n_vertices,)  # 67.67.67.67.67.67.97.97.97.97.97...
         assert a_anchor.shape == (n_vertices, 2)  # (1, 1), (1, 1), ...
+        assert a_color.shape == (n_vertices, 4)
         assert a_lengths.shape == (n_vertices,)  # 7777777777777777777...
 
         self.program['a_position'] = pos_tr.astype(np.float32)
+        self.program['a_color'] = a_color.astype(np.float32)
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
         self.program['a_quad_index'] = a_quad_index.astype(np.float32)
         self.program['a_char_index'] = a_char_index.astype(np.float32)

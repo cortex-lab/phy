@@ -9,6 +9,7 @@ uniform vec2 u_tex_size;
 uniform vec2 u_zoom;
 
 varying vec2 v_tex_coords;
+varying vec4 v_color;
 
 
 float median(float r, float g, float b) {
@@ -58,14 +59,11 @@ void main() {
     float alpha = get_alpha(v_tex_coords);
     alpha = supersample(alpha);
 
-    // NO CONTOUR
-    vec3 color = u_color.rgb;
-
     // CONTOUR -- does not work well with small font sizes
     // vec3 sample = texture2D(u_tex, v_tex_coords).rgb;
     // float sigDist = median(sample.r, sample.g, sample.b);
     // sigDist = exp(-20 * pow(sigDist - 1, 2));
     // color = mix(vec3(1, 1, 1), u_color.rgb, sigDist);
 
-    gl_FragColor = vec4(color * alpha, 1.);
+    gl_FragColor = vec4(v_color.rgb * alpha, v_color.a);
 }

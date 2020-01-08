@@ -1,5 +1,6 @@
 
 attribute vec2 a_position;  // text position
+attribute vec4 a_color;
 attribute float a_glyph_index;  // glyph index in the text
 attribute float a_quad_index;  // quad index in the glyph
 attribute float a_char_index;  // index of the glyph in the texture
@@ -9,9 +10,9 @@ attribute float a_lengths;
 // (1, -1) for upper left, (-1, -1) for upper right
 attribute vec2 a_anchor;
 
-uniform vec4 u_color;
 uniform vec2 u_glyph_size;  // (w, h)
 
+varying vec4 v_color;
 varying vec2 v_tex_coords;
 
 const float rows = 6;
@@ -54,4 +55,5 @@ void main() {
     vec2 duv = vec2(dx / cols, dy /rows);
 
     v_tex_coords = uv + duv;
+    v_color = a_color;
 }

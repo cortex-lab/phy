@@ -1,4 +1,6 @@
 
+// NOTE: NOT USED ANYMORE (see msdf.vert instead)
+
 attribute vec2 a_position;  // text position
 attribute float a_glyph_index;  // glyph index in the text
 attribute float a_quad_index;  // quad index in the glyph

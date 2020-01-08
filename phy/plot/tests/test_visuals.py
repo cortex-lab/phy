@@ -401,9 +401,11 @@ def test_text_1(qtbot, canvas_pz):
     text = [text[:n] for n in range(1, 11)]
 
     pos = np.c_[np.linspace(-.5, .5, 10), np.linspace(-.5, .5, 10)]
+    color = np.ones((10, 4))
+    color[:, 2] = 0
 
     _test_visual(
-        qtbot, canvas_pz, TextVisual(color=(0, 0, 1, 1), font_size=32), pos=pos, text=text)
+        qtbot, canvas_pz, TextVisual(font_size=32), pos=pos, text=text, color=color)
 
 
 def test_text_2(qtbot, canvas_pz):
