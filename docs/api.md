@@ -104,6 +104,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.cluster.SimilarityView](#phyclustersimilarityview)
 * [phy.cluster.Supervisor](#phyclustersupervisor)
 * [phy.cluster.TemplateView](#phyclustertemplateview)
+* [phy.cluster.TraceImageView](#phyclustertraceimageview)
 * [phy.cluster.TraceView](#phyclustertraceview)
 * [phy.cluster.UpdateInfo](#phyclusterupdateinfo)
 * [phy.cluster.WaveformView](#phyclusterwaveformview)
@@ -5166,7 +5167,7 @@ Toggle the visual visibility.
 #### TextVisual.validate
 
 
-**`TextVisual.validate(self, pos=None, text=None, anchor=None, data_bounds=None, **kwargs)`**
+**`TextVisual.validate(self, pos=None, text=None, color=None, anchor=None, data_bounds=None, **kwargs)`**
 
 Validate the requested data before passing it to set_data().
 
@@ -8407,6 +8408,12 @@ where the selected clusters belong.
 * `best_channels : function`
     Maps `cluster_id` to the list of the best_channel_ids.
 
+* `channel_labels : list`
+    List of channel label strings.
+
+* `dead_channels : list`
+    List of dead channel ids.
+
 ---
 
 #### ProbeView.add_color_scheme
@@ -10142,6 +10149,490 @@ GUI is closed. To be overriden.
 
 ---
 
+### phy.cluster.TraceImageView
+
+This view shows the raw traces as an image
+
+**Constructor**
+
+
+* `traces : function`
+    Maps a time interval `(t0, t1)` to a `Bunch(data, color, waveforms)` where
+    * `data` is an `(n_samples, n_channels)` array
+    * `waveforms` is a list of bunchs with the following attributes:
+        * `data`
+        * `color`
+        * `channel_ids`
+        * `start_time`
+
+
+* `sample_rate : float`
+
+* `duration : float`
+
+* `n_channels : int`
+
+* `channel_positions : array-like`
+    Positions of the channels, used for displaying the channels in the right y order
+
+* `channel_labels : list`
+    Labels of all shown channels. By default, this is just the channel ids.
+
+---
+
+#### TraceImageView.add_color_scheme
+
+
+**`TraceImageView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
+
+Add a color scheme to the view. Can be used as follows:
+
+```python
+@connect
+def on_add_view(gui, view):
+    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
+```
+
+---
+
+#### TraceImageView.attach
+
+
+**`TraceImageView.attach(self, gui)`**
+
+Attach the view to the GUI.
+
+---
+
+#### TraceImageView.close
+
+
+**`TraceImageView.close(self)`**
+
+Close the view.
+
+---
+
+#### TraceImageView.decrease
+
+
+**`TraceImageView.decrease(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### TraceImageView.get_cluster_colors
+
+
+**`TraceImageView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
+
+Return the cluster colors depending on the currently-selected color scheme.
+
+---
+
+#### TraceImageView.get_clusters_data
+
+
+**`TraceImageView.get_clusters_data(self, load_all=None)`**
+
+Return a list of Bunch instances, with attributes pos and spike_ids.
+
+To override.
+
+---
+
+#### TraceImageView.go_left
+
+
+**`TraceImageView.go_left(self)`**
+
+Go to left.
+
+---
+
+#### TraceImageView.go_right
+
+
+**`TraceImageView.go_right(self)`**
+
+Go to right.
+
+---
+
+#### TraceImageView.go_to
+
+
+**`TraceImageView.go_to(self, time)`**
+
+Go to a specific time (in seconds).
+
+---
+
+#### TraceImageView.go_to_end
+
+
+**`TraceImageView.go_to_end(self)`**
+
+Go to end of the recording.
+
+---
+
+#### TraceImageView.go_to_next_spike
+
+
+**`TraceImageView.go_to_next_spike(self)`**
+
+Jump to the next spike from the first selected cluster.
+
+---
+
+#### TraceImageView.go_to_previous_spike
+
+
+**`TraceImageView.go_to_previous_spike(self)`**
+
+Jump to the previous spike from the first selected cluster.
+
+---
+
+#### TraceImageView.go_to_start
+
+
+**`TraceImageView.go_to_start(self)`**
+
+Go to the start of the recording.
+
+---
+
+#### TraceImageView.increase
+
+
+**`TraceImageView.increase(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### TraceImageView.jump_left
+
+
+**`TraceImageView.jump_left(self)`**
+
+Jump to left.
+
+---
+
+#### TraceImageView.jump_right
+
+
+**`TraceImageView.jump_right(self)`**
+
+Jump to right.
+
+---
+
+#### TraceImageView.narrow
+
+
+**`TraceImageView.narrow(self)`**
+
+Decrease the interval size.
+
+---
+
+#### TraceImageView.next_color_scheme
+
+
+**`TraceImageView.next_color_scheme(self)`**
+
+Switch to the next color scheme.
+
+---
+
+#### TraceImageView.on_cluster
+
+
+**`TraceImageView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
+#### TraceImageView.on_mouse_click
+
+
+**`TraceImageView.on_mouse_click(self, e)`**
+
+Select a cluster by clicking on a spike.
+
+---
+
+#### TraceImageView.on_mouse_wheel
+
+
+**`TraceImageView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### TraceImageView.on_select
+
+
+**`TraceImageView.on_select(self, cluster_ids=None, **kwargs)`**
+
+Callback function when clusters are selected. May be overriden.
+
+---
+
+#### TraceImageView.on_select_threaded
+
+
+**`TraceImageView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
+#### TraceImageView.plot
+
+
+**`TraceImageView.plot(self, update_traces=True, **kwargs)`**
+
+Update the view with the current cluster selection.
+
+---
+
+#### TraceImageView.previous_color_scheme
+
+
+**`TraceImageView.previous_color_scheme(self)`**
+
+Switch to the previous color scheme.
+
+---
+
+#### TraceImageView.reset_scaling
+
+
+**`TraceImageView.reset_scaling(self)`**
+
+Reset the scaling to the default value.
+
+---
+
+#### TraceImageView.screenshot
+
+
+**`TraceImageView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### TraceImageView.set_dock_status
+
+
+**`TraceImageView.set_dock_status(self, text)`**
+
+Set the status in the dock title bar.
+
+---
+
+#### TraceImageView.set_interval
+
+
+**`TraceImageView.set_interval(self, interval=None)`**
+
+Display the traces and spikes in a given interval.
+
+---
+
+#### TraceImageView.set_state
+
+
+**`TraceImageView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### TraceImageView.shift
+
+
+**`TraceImageView.shift(self, delay)`**
+
+Shift the interval by a given delay (in seconds).
+
+---
+
+#### TraceImageView.show
+
+
+**`TraceImageView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### TraceImageView.switch_origin
+
+
+**`TraceImageView.switch_origin(self)`**
+
+Switch between top and bottom origin for the channels.
+
+---
+
+#### TraceImageView.toggle_auto_scale
+
+
+**`TraceImageView.toggle_auto_scale(self, checked)`**
+
+Toggle automatic scaling of the traces.
+
+---
+
+#### TraceImageView.toggle_auto_update
+
+
+**`TraceImageView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### TraceImageView.toggle_highlighted_spikes
+
+
+**`TraceImageView.toggle_highlighted_spikes(self, checked)`**
+
+Toggle between showing all spikes or selected spikes.
+
+---
+
+#### TraceImageView.toggle_show_labels
+
+
+**`TraceImageView.toggle_show_labels(self, checked)`**
+
+Toggle the display of the channel ids.
+
+---
+
+#### TraceImageView.update_color
+
+
+**`TraceImageView.update_color(self, selected_clusters=None)`**
+
+Update the cluster colors depending on the selected clusters. To be overriden.
+
+---
+
+#### TraceImageView.update_status
+
+
+**`TraceImageView.update_status(self, suffix='')`**
+
+Update the status text in the dock title bar.
+
+---
+
+#### TraceImageView.widen
+
+
+**`TraceImageView.widen(self)`**
+
+Increase the interval size.
+
+---
+
+#### TraceImageView.color_scheme
+
+
+**`TraceImageView.color_scheme`**
+
+
+
+---
+
+#### TraceImageView.half_duration
+
+
+**`TraceImageView.half_duration`**
+
+Half of the duration of the current interval.
+
+---
+
+#### TraceImageView.interval
+
+
+**`TraceImageView.interval`**
+
+Interval as `(tmin, tmax)`.
+
+---
+
+#### TraceImageView.origin
+
+
+**`TraceImageView.origin`**
+
+Whether to show the channels from top to bottom (`top` option, the default), or from
+bottom to top (`bottom`).
+
+---
+
+#### TraceImageView.scaling
+
+
+**`TraceImageView.scaling`**
+
+Scaling of the colormap vrange.
+
+---
+
+#### TraceImageView.stacked
+
+
+**`TraceImageView.stacked`**
+
+
+
+---
+
+#### TraceImageView.state
+
+
+**`TraceImageView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
+
+---
+
+#### TraceImageView.time
+
+
+**`TraceImageView.time`**
+
+Time at the center of the window.
+
+---
+
 ### phy.cluster.TraceView
 
 This view shows the raw traces along with spike waveforms.
@@ -11703,6 +12194,15 @@ Return the largest template associated to a cluster.
 
 ---
 
+#### TraceMixin.create_trace_image_view
+
+
+**`TraceMixin.create_trace_image_view(self)`**
+
+Create a trace image view.
+
+---
+
 #### TraceMixin.create_trace_view
 
 
@@ -11944,6 +12444,15 @@ Create a raster view.
 **`TemplateController.create_template_view(self)`**
 
 Create a template view.
+
+---
+
+#### TemplateController.create_trace_image_view
+
+
+**`TemplateController.create_trace_image_view(self)`**
+
+Create a trace image view.
 
 ---
 
@@ -12566,6 +13075,15 @@ Create a probe view.
 **`KwikController.create_raster_view(self)`**
 
 Create a raster view.
+
+---
+
+#### KwikController.create_trace_image_view
+
+
+**`KwikController.create_trace_image_view(self)`**
+
+Create a trace image view.
 
 ---
 

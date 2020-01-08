@@ -304,6 +304,40 @@ Snippets for TraceView
 ```
 
 
+### Trace image view
+
+This minimal trace view shows the raw data traces across all channels as a textured image.
+
+![image](https://user-images.githubusercontent.com/1942359/71995946-aae7d200-323b-11ea-8c01-85b218f5a467.png)
+
+You can switch the origin (top or bottom) with the `ctrl+alt+o` shortcut.
+
+#### Keyboard shortcuts
+
+```text
+Keyboard shortcuts for TraceImageView
+
+- change_trace_size                        ctrl+wheel
+- decrease                                 ctrl+alt+down
+- go_left                                  ctrl+alt+left
+- go_right                                 ctrl+alt+right
+- go_to                                    ctrl+alt+t
+- go_to_end                                ctrl+alt+end
+- go_to_start                              ctrl+alt+home
+- increase                                 ctrl+alt+up
+- jump_left                                ctrl+shift+alt+left
+- jump_right                               ctrl+shift+alt+right
+- narrow                                   ctrl+alt+shift++
+- switch_origin                            ctrl+alt+o
+- widen                                    ctrl+alt+shift+-
+
+Snippets for TraceImageView
+- go_to                                    :tig
+- shift                                    :tis
+
+```
+
+
 ### Amplitude view
 
 This view shows the amplitude of a selection of spikes belonging to the selected clusters, along with vertical histograms on the right.

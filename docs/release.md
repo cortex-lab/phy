@@ -12,6 +12,7 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Instantaneous firing rate
     * Write your own as a plugin
 * **Spike attributes views**: a scatter view is automatically created for every `spike_somename.npy` containing 1D or 2D values per spike
+* **Trace image view**: a minimal trace view that shows a big textured image `(n_channels_, n_samples)` instead of multiple polylines.
 * **IPython view**
 
 

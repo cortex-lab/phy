@@ -139,6 +139,25 @@ Keyboard shortcuts for TemplateView
 
 Snippets for TemplateView
 
+Keyboard shortcuts for TraceImageView
+- change_trace_size                        ctrl+wheel
+- decrease                                 ctrl+alt+down
+- go_left                                  ctrl+alt+left
+- go_right                                 ctrl+alt+right
+- go_to                                    ctrl+alt+t
+- go_to_end                                ctrl+alt+end
+- go_to_start                              ctrl+alt+home
+- increase                                 ctrl+alt+up
+- jump_left                                ctrl+shift+alt+left
+- jump_right                               ctrl+shift+alt+right
+- narrow                                   ctrl+alt+shift++
+- switch_origin                            ctrl+alt+o
+- widen                                    ctrl+alt+shift+-
+
+Snippets for TraceImageView
+- go_to                                    :tig
+- shift                                    :tis
+
 Keyboard shortcuts for TraceView
 - change_trace_size                        ctrl+wheel
 - decrease                                 alt+down
