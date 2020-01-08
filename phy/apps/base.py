@@ -1410,6 +1410,7 @@ class BaseController(object):
         return ProbeView(
             positions=self.model.channel_positions,
             best_channels=self.get_best_channels,
+            channel_labels=self._get_channel_labels(),
         )
 
     # Histogram views

@@ -13,7 +13,7 @@ import numpy as np
 
 from phy.utils.color import selected_cluster_color
 from phylib.utils.geometry import get_non_overlapping_boxes
-from phy.plot.visuals import ScatterVisual
+from phy.plot.visuals import ScatterVisual, TextVisual
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class ProbeView(ManualClusteringView):
     # Marker size of channels with selected clusters.
     selected_marker_size = 15
 
-    def __init__(self, positions=None, best_channels=None, **kwargs):
+    def __init__(self, positions=None, best_channels=None, channel_labels=None, **kwargs):
         super(ProbeView, self).__init__(**kwargs)
 
         # Normalize positions.
@@ -66,6 +66,8 @@ class ProbeView(ManualClusteringView):
 
         self.n_channels = positions.shape[0]
         self.best_channels = best_channels
+
+        self.channel_labels = channel_labels or [str(ch) for ch in range(self.n_channels)]
 
         self.probe_visual = ScatterVisual()
         self.canvas.add_visual(self.probe_visual)
@@ -78,6 +80,14 @@ class ProbeView(ManualClusteringView):
         # Cluster visual.
         self.cluster_visual = ScatterVisual()
         self.canvas.add_visual(self.cluster_visual)
+
+        # Text visual
+        self.text_visual = TextVisual()
+        self.canvas.add_visual(self.text_visual)
+        self.text_visual.set_data(
+            pos=self.positions, text=self.channel_labels, anchor=[0, -1],
+            data_bounds=self.data_bounds, color=(1, 1, 1, 1)
+        )
 
     def _get_clu_positions(self, cluster_ids):
         """Get the positions of the channels containing selected clusters."""
