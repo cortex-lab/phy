@@ -66,6 +66,7 @@ def test_template_view_1(qtbot, tempdir, gui):
 
     v.on_select(cluster_ids=[], sender=s)
     v.on_select(cluster_ids=[0], sender=s)
+    assert v.status
 
     v.update_cluster_sort(cluster_ids[::-1])
 

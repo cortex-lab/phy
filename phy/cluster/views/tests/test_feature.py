@@ -61,6 +61,8 @@ def test_feature_view(qtbot, gui, n_channels):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
+    assert v.status
+
     v.increase()
     v.decrease()
 

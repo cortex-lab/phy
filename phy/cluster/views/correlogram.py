@@ -253,10 +253,10 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.window_size = window_size
         self.update_status()
 
-    def update_status(self):
-        """Update the status text in the dock title bar."""
+    @property
+    def status(self):
         b, w = self.bin_size * 1000, self.window_size * 1000
-        self.set_dock_status('{:.1f} ms ({:.1f} ms)'.format(w, b))
+        return '{:.1f} ms ({:.1f} ms)'.format(w, b)
 
     def set_refractory_period(self, value):
         """Set the refractory period (in milliseconds)."""

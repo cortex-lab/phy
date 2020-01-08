@@ -144,7 +144,10 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         color = self._get_color(box_index, selected_clusters=selected_clusters)
         self.visual.set_color(color)
         self.canvas.update()
-        self.set_dock_status("Color scheme: %s" % self.color_schemes.current)
+
+    @property
+    def status(self):
+        return 'Color scheme: %s' % self.color_schemes.current
 
     def plot(self, **kwargs):
         """Make the raster plot."""

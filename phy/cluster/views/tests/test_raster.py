@@ -37,6 +37,7 @@ def test_raster_0(qtbot, gui):
 
     v.set_cluster_ids(cluster_ids)
     v.plot()
+    assert v.status
 
     v.on_select(cluster_ids=[2], sender=s)
     v.plot()

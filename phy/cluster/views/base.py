@@ -65,6 +65,7 @@ class ManualClusteringView(object):
     _default_position = None
     plot_canvas_class = PlotCanvas
     has_color_schemes = False  # whether this view class supports color schemes
+    ex_status = ''  # the GUI can update this to
 
     def __init__(self, shortcuts=None, **kwargs):
         self._lock = None
@@ -357,15 +358,14 @@ class ManualClusteringView(object):
 
         emit('view_ready', self)
 
-    def set_dock_status(self, text):
-        """Set the status in the dock title bar."""
-        if hasattr(self, 'dock'):
-            self.dock.set_status(text)
+    @property
+    def status(self):
+        """To be overriden."""
+        return ''
 
     def update_status(self):
-        """May call `self.set_dock_status()` to update the view's status in the dock title bar.
-        To override."""
-        pass
+        if hasattr(self, 'dock'):
+            self.dock.set_status('%s %s' % (self.status, self.ex_status))
 
     # -------------------------------------------------------------------------
     # Misc public methods

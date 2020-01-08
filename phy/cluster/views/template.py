@@ -198,7 +198,10 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         # The argument passed to set_color() must have 1 row per vertex.
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
-        self.set_dock_status("Color scheme: %s" % self.color_schemes.current)
+
+    @property
+    def status(self):
+        return 'Color scheme: %s' % self.color_schemes.current
 
     def plot(self, **kwargs):
         """Make the template plot."""

@@ -23,6 +23,10 @@ class MyView(ManualClusteringView):
         for i in range(len(self.cluster_ids)):
             self.canvas.scatter(pos=.25 * np.random.randn(100, 2), color=selected_cluster_color(i))
 
+    @property
+    def status(self):
+        return 'hello'
+
 
 def test_manual_clustering_view_1(qtbot, tempdir):
     v = MyView()
@@ -40,8 +44,6 @@ def test_manual_clustering_view_1(qtbot, tempdir):
 
     assert str(path).startswith(str(tempdir))
     assert path.exists()
-
-    v.set_dock_status("hello world")
 
     _stop_and_close(qtbot, v)
 

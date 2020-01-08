@@ -227,6 +227,7 @@ class WaveformMixin(object):
         if not waveforms_dict:
             return
         v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
+        v.ex_status = self.raw_data_filter.current
 
         @connect(sender=v)
         def on_select_channel(sender, channel_id=None, key=None, button=None):
@@ -627,6 +628,7 @@ class TraceMixin(object):
         def _get_traces(interval):
             return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
         v.traces = _get_traces
+        v.ex_status = self.raw_data_filter.current
 
         @connect(sender=v)
         def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None):
@@ -1534,12 +1536,14 @@ class BaseController(object):
             for v in gui.list_views(TraceView):
                 if v.auto_update:
                     v.plot()
-                    v.update_status(suffix=filter_name)
+                    v.ex_status = filter_name
+                    v.update_status()
             # Update the waveform view.
             for v in gui.list_views(WaveformView):
                 if v.auto_update:
                     v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
-                    v.update_status(suffix=filter_name)
+                    v.ex_status = filter_name
+                    v.update_status()
 
         gui.view_actions.separator()
 

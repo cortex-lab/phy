@@ -235,9 +235,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         self.actions.add(self.next_amplitudes_type, set_busy=True)
         self.actions.add(self.previous_amplitudes_type, set_busy=True)
 
-    def update_status(self):
-        """Update the status text in the dock title bar."""
-        self.set_dock_status(self.amplitudes_type)
+    @property
+    def status(self):
+        return self.amplitudes_type
 
     @property
     def amplitudes_type(self):

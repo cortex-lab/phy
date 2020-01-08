@@ -381,11 +381,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         """Layout instance."""
         return self.canvas.boxed
 
-    def update_status(self, suffix=''):
-        """Update the status text in the dock title bar."""
-        self.set_dock_status(
-            '%s %s' % (self.waveforms_type, suffix or self._status_suffix))
-        self._status_suffix = suffix or self._status_suffix
+    @property
+    def status(self):
+        return self.waveforms_type
 
     # Overlap
     # -------------------------------------------------------------------------
