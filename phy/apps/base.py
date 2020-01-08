@@ -27,7 +27,7 @@ from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views.base import ManualClusteringView, BaseGlobalView
 from phy.cluster.views import (
-    WaveformView, FeatureView, TraceView, CorrelogramView, AmplitudeView,
+    WaveformView, FeatureView, TraceView, TraceImageView, CorrelogramView, AmplitudeView,
     ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView,
     select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
@@ -574,7 +574,7 @@ class TemplateMixin(object):
 
 class TraceMixin(object):
 
-    _new_views = ('TraceView',)
+    _new_views = ('TraceView', 'TraceImageView')
 
     def _get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
@@ -658,9 +658,35 @@ class TraceMixin(object):
 
         return v
 
+    def create_trace_image_view(self):
+        """Create a trace image view."""
+        if self.model.traces is None:
+            return
+
+        v = TraceImageView(
+            traces=self._get_traces,
+            sample_rate=self.model.sample_rate,
+            duration=self.model.duration,
+            n_channels=self.model.n_channels,
+            channel_labels=self._get_channel_labels(),
+            channel_positions=self.model.channel_positions,
+        )
+
+        @connect
+        def on_select_time(sender, time):
+            v.go_to(time)
+
+        @connect
+        def on_close_view(sender, view):
+            if view == v:
+                unconnect(on_select_time)
+
+        return v
+
     def _set_view_creator(self):
         super(TraceMixin, self)._set_view_creator()
         self.view_creator['TraceView'] = self.create_trace_view
+        self.view_creator['TraceImageView'] = self.create_trace_image_view
 
 
 #------------------------------------------------------------------------------
