@@ -14,7 +14,7 @@ from phylib.utils import Bunch, connect
 from phylib.utils.geometry import linear_positions
 from phy.plot.tests import mouse_click
 
-from ..trace import TraceView, select_traces, _iter_spike_waveforms
+from ..trace import TraceView, TraceImageView, select_traces, _iter_spike_waveforms
 from . import _stop_and_close
 
 
@@ -22,7 +22,7 @@ from . import _stop_and_close
 # Test trace view
 #------------------------------------------------------------------------------
 
-def test_trace_view_0():
+def test_iter_spike_waveforms():
     nc = 5
     ns = 20
     sr = 2000.
@@ -215,5 +215,102 @@ def test_trace_view_1(qtbot, tempdir, gui):
     mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Right', modifiers=('Shift',))
 
     assert _clicked == [(2, 'Left'), (2, 'Right')]
+
+    _stop_and_close(qtbot, v)
+
+
+#------------------------------------------------------------------------------
+# Test trace imageview
+#------------------------------------------------------------------------------
+
+def test_trace_image_view_1(qtbot, tempdir, gui):
+    nc = 350
+    sr = 2000.
+    duration = 1.
+    traces = 10 * artificial_traces(int(round(duration * sr)), nc)
+
+    def get_traces(interval):
+        return Bunch(data=select_traces(traces, interval, sample_rate=sr),
+                     color=(.75, .75, .75, 1),
+                     )
+
+    v = TraceImageView(
+        traces=get_traces,
+        n_channels=nc,
+        sample_rate=sr,
+        duration=duration,
+        channel_positions=linear_positions(nc),
+    )
+    v.show()
+    qtbot.waitForWindowShown(v.canvas)
+    v.attach(gui)
+
+    v.set_interval((.375, .625))
+    assert v.time == .5
+    qtbot.wait(1)
+
+    v.go_to(.25)
+    assert v.time == .25
+    qtbot.wait(1)
+
+    v.go_to(-.5)
+    assert v.time == .125
+    qtbot.wait(1)
+
+    v.go_left()
+    assert v.time == .125
+    qtbot.wait(1)
+
+    v.go_right()
+    ac(v.time, .150)
+    qtbot.wait(1)
+
+    v.jump_left()
+    qtbot.wait(1)
+
+    v.jump_right()
+    qtbot.wait(1)
+
+    # Change interval size.
+    v.interval = (.25, .75)
+    ac(v.interval, (.25, .75))
+    qtbot.wait(1)
+
+    v.widen()
+    ac(v.interval, (.1875, .8125))
+    qtbot.wait(1)
+
+    v.narrow()
+    ac(v.interval, (.25, .75))
+    qtbot.wait(1)
+
+    v.go_to_start()
+    qtbot.wait(1)
+    assert v.interval[0] == 0
+
+    v.go_to_end()
+    qtbot.wait(1)
+    assert v.interval[1] == duration
+
+    # Widen the max interval.
+    v.set_interval((0, duration))
+    v.widen()
+    qtbot.wait(1)
+
+    v.toggle_auto_update(True)
+    assert v.do_show_labels
+    qtbot.wait(1)
+
+    # Change channel scaling.
+    v.decrease()
+    qtbot.wait(1)
+
+    v.increase()
+    qtbot.wait(1)
+
+    v.origin = 'bottom'
+    v.switch_origin()
+    # assert v.origin == 'top'
+    qtbot.wait(1)
 
     _stop_and_close(qtbot, v)

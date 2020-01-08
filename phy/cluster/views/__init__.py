@@ -16,5 +16,5 @@ from .probe import ProbeView  # noqa
 from .raster import RasterView  # noqa
 from .scatter import ScatterView  # noqa
 from .template import TemplateView  # noqa
-from .trace import TraceView, select_traces  # noqa
+from .trace import TraceView, TraceImageView, select_traces  # noqa
 from .waveform import WaveformView  # noqa

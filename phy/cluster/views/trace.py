@@ -12,10 +12,10 @@ import logging
 import numpy as np
 
 from phylib.utils import Bunch, emit
-from phy.utils.color import selected_cluster_color
+from phy.utils.color import selected_cluster_color, colormaps, _continuous_colormap, add_alpha
 from phy.plot.interact import Stacked
 from phy.plot.transform import NDC, Range, _fix_coordinate_in_visual
-from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual
+from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual, ImageVisual
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
@@ -185,10 +185,20 @@ class TraceView(ScalingMixin, ManualClusteringView):
         self.local_state_attrs += ('interval', 'scaling',)
         self._status_suffix = ''
 
+        # Visuals.
+        self._create_visuals()
+
+        # Initial interval.
+        self._interval = None
+        self.go_to(duration / 2.)
+
+        self._waveform_times = []
+        self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
+
+    def _create_visuals(self):
         self.canvas.set_layout('stacked', n_plots=self.n_channels)
         self.canvas.enable_axes(show_y=False)
 
-        # Visuals.
         self.trace_visual = UniformPlotVisual()
         self.canvas.add_visual(self.trace_visual)
 
@@ -203,13 +213,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
             '(mod(int(a_box_index), int(n_boxes / (50 * u_zoom.y))) >= 1))')
         self.text_visual.inserter.insert_frag('if (v_discard > 0) discard;', 'end')
         self.canvas.add_visual(self.text_visual)
-
-        # Initial interval.
-        self._interval = None
-        self.go_to(duration / 2.)
-
-        self._waveform_times = []
-        self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
 
     @property
     def stacked(self):
@@ -318,7 +321,7 @@ class TraceView(ScalingMixin, ManualClusteringView):
         return start, end
 
     def plot(self, update_traces=True, update_waveforms=True):
-        if update_waveforms or update_waveforms:
+        if update_waveforms:
             # Load the traces in the interval.
             traces = self.traces(self._interval)
 
@@ -607,3 +610,171 @@ class TraceView(ScalingMixin, ManualClusteringView):
             box_id, _ = self.canvas.stacked.box_map(e.pos)
             channel_id = int(np.nonzero(self.channel_y_ranks == box_id)[0][0])
             emit('select_channel', self, channel_id=channel_id, button=e.button)
+
+
+# -----------------------------------------------------------------------------
+# Trace Image view
+# -----------------------------------------------------------------------------
+
+class TraceImageView(TraceView):
+    """This view shows the raw traces as an image
+
+    Constructor
+    -----------
+
+    traces : function
+        Maps a time interval `(t0, t1)` to a `Bunch(data, color, waveforms)` where
+        * `data` is an `(n_samples, n_channels)` array
+        * `waveforms` is a list of bunchs with the following attributes:
+            * `data`
+            * `color`
+            * `channel_ids`
+            * `start_time`
+
+    sample_rate : float
+    duration : float
+    n_channels : int
+    channel_positions : array-like
+        Positions of the channels, used for displaying the channels in the right y order
+    channel_labels : list
+        Labels of all shown channels. By default, this is just the channel ids.
+
+    """
+    default_shortcuts = {
+        'change_trace_size': 'ctrl+wheel',
+        'decrease': 'ctrl+alt+down',
+        'increase': 'ctrl+alt+up',
+        'go_left': 'ctrl+alt+left',
+        'go_right': 'ctrl+alt+right',
+        'jump_left': 'ctrl+shift+alt+left',
+        'jump_right': 'ctrl+shift+alt+right',
+        'go_to_start': 'ctrl+alt+home',
+        'go_to_end': 'ctrl+alt+end',
+        'go_to': 'ctrl+alt+t',
+        'narrow': 'ctrl+alt+shift++',
+        'widen': 'ctrl+alt+shift+-',
+        'switch_origin': 'ctrl+alt+o',
+    }
+    default_snippets = {
+        'go_to': 'tig',
+        'shift': 'tis',
+    }
+
+    def __init__(self, **kwargs):
+        self._origin = 'bottom'
+        self._scaling = 1
+        self.vrange = (0, 1)
+
+        super(TraceImageView, self).__init__(**kwargs)
+
+        self.state_attrs += ('origin', 'auto_scale')
+        self.local_state_attrs += ('interval', 'scaling',)
+
+    def _create_visuals(self):
+        self.trace_visual = ImageVisual()
+        self.canvas.add_visual(self.trace_visual)
+
+    # Internal methods
+    # -------------------------------------------------------------------------
+
+    def _plot_traces(self, traces, color=None):
+        traces = traces.T
+        n_samples = traces.shape[1]
+        n_ch = self.n_channels
+        assert traces.shape == (n_ch, n_samples)
+
+        if self.origin == 'bottom':
+            traces = traces[::-1, ...]
+
+        vmin, vmax = self.vrange
+        image = _continuous_colormap(colormaps.diverging, traces, vmin=vmin, vmax=vmax)
+        image = add_alpha(image, alpha=1.)
+        self.trace_visual.set_data(image=image)
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    def plot(self, update_traces=True, **kwargs):
+        if update_traces:
+            logger.debug("Redraw the entire trace view.")
+            traces = self.traces(self._interval)
+
+            # Find the data bounds.
+            if self.auto_scale or self.vrange == (0, 1):
+                vmin = np.quantile(traces.data, self.trace_quantile)
+                vmax = np.quantile(traces.data, 1. - self.trace_quantile)
+            else:  # pragma: no cover
+                vmin, vmax = self.vrange
+
+            self.vrange = (vmin * self.scaling, vmax * self.scaling)
+
+            # Plot the traces.
+            self._plot_traces(
+                traces.data, color=traces.get('color', None))
+
+        self.canvas.update()
+
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+        ManualClusteringView.attach(self, gui)
+        # ScalingMixin.attach(self, gui)
+
+        # self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
+        # self.actions.add(self.toggle_auto_scale, checkable=True, checked=self.auto_scale)
+        self.actions.add(self.switch_origin)
+        self.actions.separator()
+
+        self.actions.add(self.go_to, prompt=True, prompt_default=lambda: str(self.time))
+        self.actions.separator()
+
+        self.actions.add(self.go_to_start)
+        self.actions.add(self.go_to_end)
+        self.actions.separator()
+
+        self.actions.add(self.shift, prompt=True)
+        self.actions.add(self.go_right)
+        self.actions.add(self.go_left)
+        self.actions.add(self.jump_right)
+        self.actions.add(self.jump_left)
+        self.actions.separator()
+
+        self.actions.add(self.widen)
+        self.actions.add(self.narrow)
+        self.actions.separator()
+
+        self.set_interval()
+
+    # Origin
+    # -------------------------------------------------------------------------
+
+    @property
+    def origin(self):
+        """Whether to show the channels from top to bottom (`top` option, the default), or from
+        bottom to top (`bottom`)."""
+        return self._origin
+
+    @origin.setter
+    def origin(self, value):
+        if value is None:
+            return
+        self._origin = value
+        self.plot(update_traces=True)
+
+    # Navigation
+    # -------------------------------------------------------------------------
+
+    @property
+    def scaling(self):
+        """Scaling of the colormap vrange."""
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
+
+    def _get_scaling_value(self):
+        return self.scaling
+
+    def _set_scaling_value(self, value):
+        self.scaling = value
+        self.plot(update_traces=True)
