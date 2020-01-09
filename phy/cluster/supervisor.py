@@ -470,17 +470,18 @@ class ActionCreator(object):
             gui, menu='&View', default_shortcuts=ds, default_snippets=dsp)
 
         # Create the actions.
-        self._create_edit_actions(gui.state)
-        self._create_select_actions(gui.state)
+        self._create_edit_actions()
+        self._create_select_actions()
+        self._create_toolbar(gui)
 
-    def _create_edit_actions(self, state):
+    def _create_edit_actions(self):
         w = 'edit'
-        self.add(w, 'undo', set_busy=True)
-        self.add(w, 'redo', set_busy=True)
+        self.add(w, 'undo', set_busy=True, icon='f0e2')
+        self.add(w, 'redo', set_busy=True, icon='f01e')
         self.edit_actions.separator()
 
         # Clustering.
-        self.add(w, 'merge', set_busy=True)
+        self.add(w, 'merge', set_busy=True, icon='f247')
         self.add(w, 'split', set_busy=True)
         self.edit_actions.separator()
 
@@ -500,7 +501,7 @@ class ActionCreator(object):
         self.add(w, 'label', prompt=True, n_args=2)
         self.edit_actions.separator()
 
-    def _create_select_actions(self, state):
+    def _create_select_actions(self):
         w = 'select'
 
         # Selection.
@@ -526,16 +527,28 @@ class ActionCreator(object):
 
         self.select_actions.separator()
 
-        self.add(w, 'reset_wizard')
+        self.add(w, 'reset_wizard', icon='f015')
         self.select_actions.separator()
 
-        self.add(w, 'next')
-        self.add(w, 'previous')
+        self.add(w, 'next', icon='f061')
+        self.add(w, 'previous', icon='f060')
         self.select_actions.separator()
 
-        self.add(w, 'next_best')
-        self.add(w, 'previous_best')
+        self.add(w, 'next_best', icon='f0a9')
+        self.add(w, 'previous_best', icon='f0a8')
         self.select_actions.separator()
+
+    def _create_toolbar(self, gui):
+        gui._toolbar.addAction(self.edit_actions.get('undo'))
+        gui._toolbar.addAction(self.edit_actions.get('redo'))
+        gui._toolbar.addSeparator()
+        gui._toolbar.addAction(self.select_actions.get('reset_wizard'))
+        gui._toolbar.addAction(self.select_actions.get('previous_best'))
+        gui._toolbar.addAction(self.select_actions.get('next_best'))
+        gui._toolbar.addAction(self.select_actions.get('previous'))
+        gui._toolbar.addAction(self.select_actions.get('next'))
+        gui._toolbar.addSeparator()
+        gui._toolbar.show()
 
 
 # -----------------------------------------------------------------------------

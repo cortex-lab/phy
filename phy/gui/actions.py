@@ -14,7 +14,7 @@ import re
 import sys
 import traceback
 
-from .qt import QKeySequence, QAction, QToolBar, require_qt, input_dialog, busy_cursor, _get_icon
+from .qt import QKeySequence, QAction, require_qt, input_dialog, busy_cursor, _get_icon
 from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)

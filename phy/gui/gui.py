@@ -483,8 +483,8 @@ class GUI(QMainWindow):
         self.setStatusBar(self._status_bar)
 
         # Toolbar.
-        self._toolbar = QToolBar(self)
-        self._toolbar.setObjectName('toolbar')
+        self._toolbar = QToolBar('Toolbar', self)
+        self._toolbar.setObjectName('Toolbar')
         self._toolbar.setIconSize(QSize(24, 24))
         self._toolbar.hide()
         self.addToolBar(self._toolbar)
@@ -519,7 +519,7 @@ class GUI(QMainWindow):
         """Create the default actions (file, views, help...)."""
 
         # File menu.
-        @self.file_actions.add
+        @self.file_actions.add(icon='f0c7', toolbar=True)
         def save():
             emit('request_save', self)
 
