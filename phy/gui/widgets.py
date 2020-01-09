@@ -15,8 +15,8 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
-    WebView, QObject, QWebChannel, QWidget, QVBoxLayout, QGridLayout,
-    QLabel, QLineEdit, QSlider, QCheckBox, QSpinBox, QDoubleSpinBox,
+    WebView, QObject, QWebChannel, QWidget, QGridLayout,
+    QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox,
     pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
