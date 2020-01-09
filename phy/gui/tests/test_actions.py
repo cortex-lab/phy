@@ -120,13 +120,18 @@ def test_actions_simple(actions):
 def test_actions_gui_menu(qtbot, gui, actions):
     qtbot.addWidget(gui)
 
-    @actions.add(shortcut='g', menu='&File')
+    @actions.add(shortcut='g', menu='&File', icon='f0c7', toolbar=True)
     def press():
-        pass
+        print("press")
 
-    actions.separator('File')
+    actions.separator('&File')
 
     gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    actions.get('press').trigger()
+
+    gui.close()
     # qtbot.stop()
 
 

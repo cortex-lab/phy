@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QCheckBox,
-    QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _load_font,
+    QToolBar, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _load_font,
     _wait, prompt, show_box, screenshot as make_screenshot)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
@@ -438,7 +438,7 @@ class GUI(QMainWindow):
 
         logger.debug("Creating GUI.")
 
-        self._set_name(name, str(subtitle))
+        self._set_name(name, str(subtitle or ''))
         position = position or (200, 200)
         size = size or (800, 600)
         self._set_pos_size(position, size)
@@ -481,6 +481,13 @@ class GUI(QMainWindow):
         self._lock_status = False
         self._status_bar = QStatusBar(self)
         self.setStatusBar(self._status_bar)
+
+        # Toolbar.
+        self._toolbar = QToolBar(self)
+        self._toolbar.setObjectName('toolbar')
+        self._toolbar.setIconSize(QSize(24, 24))
+        self._toolbar.hide()
+        self.addToolBar(self._toolbar)
 
         # Create and attach snippets.
         self.snippets = Snippets(self)

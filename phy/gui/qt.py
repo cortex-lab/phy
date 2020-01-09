@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps, partial
 import logging
+import os
+import os.path as op
 from pathlib import Path
 import sys
 from timeit import default_timer
@@ -34,20 +36,17 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           qInstallMessageHandler,
                           )
 from PyQt5.QtGui import (  # noqa
-    QKeySequence, QColor, QMouseEvent, QGuiApplication,
+    QKeySequence, QIcon, QColor, QMouseEvent, QGuiApplication,
     QFontDatabase, QWindow, QOpenGLWindow)
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       QWebEnginePage,
                                       # QWebSettings,
                                       )
 from PyQt5.QtWebChannel import QWebChannel  # noqa
-from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
-                             QMainWindow, QDockWidget, QWidget,
-                             QHBoxLayout, QVBoxLayout,
-                             QPushButton, QLabel, QCheckBox,
-                             QMessageBox, QApplication, QMenuBar,
-                             QInputDialog, QOpenGLWidget
-                             )
+from PyQt5.QtWidgets import (# noqa
+    QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar, QWidget, QHBoxLayout, QVBoxLayout,
+    QPushButton, QLabel, QCheckBox, QMessageBox, QApplication, QMenuBar,
+    QInputDialog, QOpenGLWidget)
 
 # Enable high DPI support.
 # BUG: uncommenting this create scaling bugs on high DPI screens
@@ -361,6 +360,68 @@ def is_high_dpi():
 
     """
     return screen_size()[0] > 3000
+
+
+def _get_icon(icon, size=64, color='black'):
+    """Get a QIcon from a font-awesome icon's hexadecimal code. Cache the PNG in the phy repo,
+    to be staged under version control so that users don't need to install PIL."""
+    hex_icon = chr(int(icon, 16))
+    # from https://github.com/Pythonity/icon-font-to-png/blob/master/icon_font_to_png/icon_font.py
+    static_dir = op.join(op.dirname(op.abspath(__file__)), 'static/icons/')
+    ttf_file = op.abspath(op.join(static_dir, '../fa-solid-900.ttf'))
+    output_path = op.join(static_dir, icon + '.png')
+
+    if not op.exists(output_path):  # pragma: no cover
+        # Ideally, this should only run on the developer's machine.
+        logger.debug("Saving icon `%s` using the PIL library.", output_path)
+        from PIL import Image, ImageDraw, ImageFont
+        org_size = size
+        size = max(150, size)
+
+        image = Image.new("RGBA", (size, size), color=(0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+
+        font = ImageFont.truetype(ttf_file, int(size))
+        width, height = draw.textsize(hex_icon, font=font)
+
+        draw.text(
+            (float(size - width) / 2, float(size - height) / 2), hex_icon, font=font, fill=color)
+
+        # Get bounding box
+        bbox = image.getbbox()
+
+        # Create an alpha mask
+        image_mask = Image.new("L", (size, size), 0)
+        draw_mask = ImageDraw.Draw(image_mask)
+
+        # Draw the icon on the mask
+        draw_mask.text(
+            (float(size - width) / 2, float(size - height) / 2), hex_icon, font=font, fill=255)
+
+        # Create a solid color image and apply the mask
+        icon_image = Image.new("RGBA", (size, size), color)
+        icon_image.putalpha(image_mask)
+
+        if bbox:
+            icon_image = icon_image.crop(bbox)
+
+        border_w = int((size - (bbox[2] - bbox[0])) / 2)
+        border_h = int((size - (bbox[3] - bbox[1])) / 2)
+
+        # Create output image
+        out_image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        out_image.paste(icon_image, (border_w, border_h))
+
+        # If necessary, scale the image to the target size
+        if org_size != size:
+            out_image = out_image.resize((org_size, org_size), Image.ANTIALIAS)
+
+        # Save file
+        os.makedirs(op.dirname(output_path), exist_ok=True)
+        out_image.save(output_path)
+
+    assert op.exists(output_path)
+    return QIcon(output_path)
 
 
 # -----------------------------------------------------------------------------

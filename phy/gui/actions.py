@@ -14,7 +14,7 @@ import re
 import sys
 import traceback
 
-from .qt import QKeySequence, QAction, require_qt, input_dialog, busy_cursor
+from .qt import QKeySequence, QAction, QToolBar, require_qt, input_dialog, busy_cursor, _get_icon
 from phylib.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -216,6 +216,8 @@ def _create_qaction(gui, **kwargs):
     action.setWhatsThis(docstring)
     action.setCheckable(kwargs.get('checkable', None))
     action.setChecked(kwargs.get('checked', None))
+    if kwargs.get('icon', None):
+        action.setIcon(_get_icon(kwargs['icon']))
     return action
 
 
@@ -262,7 +264,7 @@ class Actions(object):
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
-            set_busy=False, prompt_default=None, show_shortcut=True):
+            set_busy=False, prompt_default=None, show_shortcut=True, icon=None, toolbar=False):
         """Add an action with a keyboard shortcut.
 
         Parameters
@@ -300,6 +302,10 @@ class Actions(object):
             Whether the checkable action is initially checked or not.
         show_shortcut : boolean
             Whether to show the shortcut in the Help action that displays all GUI shortcuts.
+        icon : str
+            Hexadecimal code of the font-awesome icon.
+        toolbar : boolean
+            Whether to add the action to the toolbar.
 
         """
         param_names = sorted(inspect.signature(Actions.add).parameters)
@@ -344,6 +350,10 @@ class Actions(object):
         # Do not show private actions in the menu.
         if menu and not name.startswith('_'):
             self.gui.get_menu(menu).addAction(action)
+        # Add the action to the toolbar.
+        if toolbar:
+            self.gui._toolbar.show()
+            self.gui._toolbar.addAction(action)
         self._actions_dict[name] = action_obj
         # Register the alias -> name mapping.
         self._aliases[alias] = name
@@ -382,7 +392,7 @@ class Actions(object):
 
     def get(self, name):
         """Get a QAction instance from its name."""
-        return self._actions_dict[name].qaction
+        return self._actions_dict[name].qaction if name in self._actions_dict else None
 
     def run(self, name, *args):
         """Run an action as specified by its name."""
