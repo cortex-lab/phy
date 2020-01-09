@@ -44,8 +44,11 @@ from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       )
 from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (# noqa
-    QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar, QWidget, QHBoxLayout, QVBoxLayout,
-    QPushButton, QLabel, QCheckBox, QMessageBox, QApplication, QMenuBar,
+    QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar,
+    QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
+    QPushButton, QLabel, QCheckBox,
+    QLineEdit, QSlider, QSpinBox, QDoubleSpinBox,
+    QMessageBox, QApplication, QMenuBar,
     QInputDialog, QOpenGLWidget)
 
 # Enable high DPI support.

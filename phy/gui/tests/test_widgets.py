@@ -14,7 +14,7 @@ from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
 import phy
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table, Barrier, IPythonView
+from ..widgets import HTMLWidget, Table, Barrier, IPythonView, KeyValueWidget
 
 
 #------------------------------------------------------------------------------
@@ -150,6 +150,28 @@ def test_widget_javascript_debounce(qtbot, event_name):
     widget.close()
 
     phy.gui.qt.Debouncer.delay = 1
+
+
+#------------------------------------------------------------------------------
+# Test key value widget
+#------------------------------------------------------------------------------
+
+def test_key_value_1(qtbot):
+    widget = KeyValueWidget()
+    widget.show()
+
+    qtbot.addWidget(widget)
+    qtbot.waitForWindowShown(widget)
+
+    widget.add_pair("my text", "some text")
+    widget.add_pair("my float", 3.5)
+    widget.add_pair("my int", 3)
+    widget.add_pair("my bool", True)
+
+    assert isinstance(widget.to_dict(), dict)
+
+    # qtbot.stop()
+    widget.close()
 
 
 #------------------------------------------------------------------------------

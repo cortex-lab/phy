@@ -15,7 +15,9 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
-    WebView, QObject, QWebChannel, pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
+    WebView, QObject, QWebChannel, QWidget, QVBoxLayout, QGridLayout,
+    QLabel, QLineEdit, QSlider, QCheckBox, QSpinBox, QDoubleSpinBox,
+    pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
@@ -553,3 +555,58 @@ class Table(HTMLWidget):
     def get_current_sort(self, callback=None):
         """Get the current sort as a tuple `(name, dir)`."""
         self.eval_js('table._currentSort()', callback=callback)
+
+
+# -----------------------------------------------------------------------------
+# KeyValueWidget
+# -----------------------------------------------------------------------------
+
+class KeyValueWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(KeyValueWidget, self).__init__(*args, **kwargs)
+        self._items = []
+        self._layout = QGridLayout(self)
+
+    def add_pair(self, name, default=None, vtype=None):
+        if vtype is None and default is not None:
+            vtype = type(default).__name__
+        if vtype == 'str':
+            widget = QLineEdit(self)
+            widget.setText(default or '')
+        elif vtype == 'int':
+            widget = QSpinBox(self)
+            widget.setValue(default or 0)
+        elif vtype == 'float':
+            widget = QDoubleSpinBox(self)
+            widget.setValue(default or 0)
+        elif vtype == 'bool':
+            widget = QCheckBox(self)
+            widget.setChecked(default is True)
+        else:  # pragma: no cover
+            raise ValueError("Not supported vtype: %s." % vtype)
+
+        widget.setMaximumWidth(400)
+
+        label = QLabel(name, self)
+        label.setMaximumWidth(100)
+
+        row = len(self._items)
+        self._layout.addWidget(label, row, 0)
+        self._layout.addWidget(widget, row, 1)
+        self.setLayout(self._layout)
+        self._items.append((name, vtype, default, widget))
+
+    def get(self, name):
+        for name_, vtype, default, widget in self._items:
+            if name_ == name:
+                if vtype == 'str':
+                    return str(widget.text())
+                elif vtype == 'int':
+                    return int(widget.text())
+                elif vtype == 'float':
+                    return float(widget.text().replace(',', '.'))
+                elif vtype == 'bool':
+                    return bool(widget.isChecked())
+
+    def to_dict(self):
+        return {item[0]: self.get(item[0]) for item in self._items}
