@@ -466,8 +466,6 @@ class ActionCreator(object):
             gui, menu='&Edit', default_shortcuts=ds, default_snippets=dsp)
         self.select_actions = Actions(
             gui, menu='Sele&ct', default_shortcuts=ds, default_snippets=dsp)
-        self.view_actions = Actions(
-            gui, menu='&View', default_shortcuts=ds, default_snippets=dsp)
 
         # Create the actions.
         self._create_edit_actions()
@@ -954,7 +952,7 @@ class Supervisor(object):
         self.action_creator.attach(gui)
         self.actions = self.action_creator.edit_actions  # clustering actions
         self.select_actions = self.action_creator.select_actions
-        self.view_actions = self.action_creator.view_actions
+        self.view_actions = gui.view_actions
         emit('attach_gui', self)
 
         # Call supervisor.save() when the save/ctrl+s action is triggered in the GUI.

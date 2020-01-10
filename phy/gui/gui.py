@@ -254,7 +254,7 @@ class DockWidget(QDockWidget):
                     self.close()
 
         # Screenshot button.
-        @self.add_button(name='screenshot', icon='f0c7')
+        @self.add_button(name='screenshot', icon='f030')
         def on_screenshot(e):  # pragma: no cover
             if hasattr(self.view, 'screenshot'):
                 self.view.screenshot()
@@ -421,6 +421,7 @@ class GUI(QMainWindow):
         'exit': 'ctrl+q',
     }
     default_snippets = {}
+    has_save_action = True
 
     def __init__(
             self, position=None, size=None, name=None, subtitle=None, view_creator=None,
@@ -453,8 +454,6 @@ class GUI(QMainWindow):
         self._menus = {}
         ds = self.default_shortcuts
         self.file_actions = Actions(self, name='File', menu='&File', default_shortcuts=ds)
-        self.edit_actions = Actions(self, name='Edit', menu='&Edit', default_shortcuts=ds)
-        self.select_actions = Actions(self, name='Select', menu='Sele&ct', default_shortcuts=ds)
         self.view_actions = Actions(self, name='View', menu='&View', default_shortcuts=ds)
         self.help_actions = Actions(self, name='Help', menu='&Help', default_shortcuts=ds)
 
@@ -519,9 +518,10 @@ class GUI(QMainWindow):
         """Create the default actions (file, views, help...)."""
 
         # File menu.
-        @self.file_actions.add(icon='f0c7', toolbar=True)
-        def save():
-            emit('request_save', self)
+        if self.has_save_action:
+            @self.file_actions.add(icon='f0c7', toolbar=True)
+            def save():
+                emit('request_save', self)
 
         @self.file_actions.add
         def exit():
