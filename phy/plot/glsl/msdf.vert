@@ -5,6 +5,7 @@ attribute float a_glyph_index;  // glyph index in the text
 attribute float a_quad_index;  // quad index in the glyph
 attribute float a_char_index;  // index of the glyph in the texture
 attribute float a_lengths;
+attribute float a_string_index;  // index of the string
 
 // (1, 1) for lower left, (-1, 1) for lower right,
 // (1, -1) for upper left, (-1, -1) for upper right

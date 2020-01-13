@@ -870,6 +870,7 @@ class TextVisual(BaseVisual):
 
         # Concatenate all strings.
         text = data.text
+        n_text = len(text)
         lengths = list(map(len, text))
         assert isinstance(text, list)
         text = ''.join(text)
@@ -903,6 +904,9 @@ class TextVisual(BaseVisual):
         a_lengths = np.repeat(lengths, lengths)
         a_lengths = np.repeat(a_lengths, 6)
 
+        a_string_index = np.repeat(np.arange(n_text), lengths)
+        a_string_index = np.repeat(a_string_index, 6)
+
         n_vertices = n_glyphs * 6
 
         # Transform the positions.
@@ -921,6 +925,7 @@ class TextVisual(BaseVisual):
         assert a_anchor.shape == (n_vertices, 2)  # (1, 1), (1, 1), ...
         assert a_color.shape == (n_vertices, 4)
         assert a_lengths.shape == (n_vertices,)  # 7777777777777777777...
+        assert a_string_index.shape == (n_vertices,)  # 000000000000000111111111111...
 
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_color'] = a_color.astype(np.float32)
@@ -929,6 +934,7 @@ class TextVisual(BaseVisual):
         self.program['a_char_index'] = a_char_index.astype(np.float32)
         self.program['a_anchor'] = a_anchor.astype(np.float32)
         self.program['a_lengths'] = a_lengths.astype(np.float32)
+        self.program['a_string_index'] = a_string_index.astype(np.float32)
 
         self.program['u_glyph_size'] = glyph_size
         self.program['u_color'] = self.color
