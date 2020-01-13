@@ -594,12 +594,16 @@ class KeyValueWidget(QWidget):
         elif vtype == 'multiline':
             widget = QPlainTextEdit(self)
             widget.setPlainText(default or '')
-            widget.setMaximumHeight(200)
+            widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
+            widget.setMinimum(-1e9)
+            widget.setMaximum(+1e9)
             widget.setValue(default or 0)
         elif vtype == 'float':
             widget = QDoubleSpinBox(self)
+            widget.setMinimum(-1e9)
+            widget.setMaximum(+1e9)
             widget.setValue(default or 0)
         elif vtype == 'bool':
             widget = QCheckBox(self)
@@ -610,7 +614,7 @@ class KeyValueWidget(QWidget):
         widget.setMaximumWidth(400)
 
         label = QLabel(name, self)
-        label.setMaximumWidth(100)
+        label.setMaximumWidth(150)
 
         row = len(self._items)
         self._layout.addWidget(label, row, 0)

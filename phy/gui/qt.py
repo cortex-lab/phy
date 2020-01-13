@@ -45,7 +45,7 @@ from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
 from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (# noqa
     QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar,
-    QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
+    QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea,
     QPushButton, QLabel, QCheckBox, QPlainTextEdit,
     QLineEdit, QSlider, QSpinBox, QDoubleSpinBox,
     QMessageBox, QApplication, QMenuBar,
