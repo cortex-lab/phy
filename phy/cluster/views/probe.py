@@ -13,7 +13,6 @@ import numpy as np
 
 from phy.utils.color import selected_cluster_color
 from phylib.utils.geometry import get_non_overlapping_boxes
-from phy.plot.transform import _fix_coordinate_in_visual
 from phy.plot.visuals import ScatterVisual, TextVisual
 from .base import ManualClusteringView
 
@@ -101,12 +100,11 @@ class ProbeView(ManualClusteringView):
         color[:] = 1
         color[self.dead_channels, :3] = self.dead_channel_alpha * 2
         self.text_visual = TextVisual()
-        _fix_coordinate_in_visual(self.text_visual, 'x')
         self.text_visual.inserter.insert_vert('uniform float n_channels;', 'header')
         self.text_visual.inserter.add_varying(
             'float', 'v_discard',
-            'float((n_channels >= 50 * u_zoom.y) && '
-            '(mod(int(a_string_index), int(n_channels / (50 * u_zoom.y))) >= 1))')
+            'float((n_channels >= 200 * u_zoom.y) && '
+            '(mod(int(a_string_index), int(n_channels / (200 * u_zoom.y))) >= 1))')
         self.text_visual.inserter.insert_frag('if (v_discard > 0) discard;', 'end')
         self.canvas.add_visual(self.text_visual)
         self.text_visual.set_data(
