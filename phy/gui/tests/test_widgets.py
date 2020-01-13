@@ -164,11 +164,18 @@ def test_key_value_1(qtbot):
     qtbot.waitForWindowShown(widget)
 
     widget.add_pair("my text", "some text")
+    widget.add_pair("my text multiline", "some\ntext", 'multiline')
     widget.add_pair("my float", 3.5)
     widget.add_pair("my int", 3)
     widget.add_pair("my bool", True)
+    widget.add_pair("my list", [1, 5])
 
-    assert isinstance(widget.to_dict(), dict)
+    widget.get_widget('my bool').setChecked(False)
+    widget.get_widget('my list[0]').setValue(2)
+
+    assert widget.to_dict() == {
+        'my text': 'some text', 'my text multiline': 'some\ntext',
+        'my float': 3.5, 'my int': 3, 'my bool': False, 'my list': [2, 5]}
 
     # qtbot.stop()
     widget.close()

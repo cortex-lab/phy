@@ -9,4 +9,4 @@ from .qt import (
 )
 from .gui import GUI, GUIState, DockWidget
 from .actions import Actions, Snippets
-from .widgets import HTMLWidget, HTMLBuilder, Table, IPythonView
+from .widgets import HTMLWidget, HTMLBuilder, Table, IPythonView, KeyValueWidget

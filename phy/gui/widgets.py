@@ -15,7 +15,7 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
-    WebView, QObject, QWebChannel, QWidget, QGridLayout,
+    WebView, QObject, QWebChannel, QWidget, QGridLayout, QPlainTextEdit,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox,
     pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
 from phylib.utils import emit, connect
@@ -562,17 +562,39 @@ class Table(HTMLWidget):
 # -----------------------------------------------------------------------------
 
 class KeyValueWidget(QWidget):
+    """A Qt widget that displays a simple form where each field has a name, a type, and accept
+    user input."""
     def __init__(self, *args, **kwargs):
         super(KeyValueWidget, self).__init__(*args, **kwargs)
         self._items = []
         self._layout = QGridLayout(self)
 
     def add_pair(self, name, default=None, vtype=None):
+        """Add a key-value pair.
+
+        Parameters
+        ----------
+
+        name : str
+        default : object
+        vtype : str
+            Can be 'str' (text box), 'int' (spin box), 'float' (spin box), 'bool' (checkbox),
+            'mutiline' (text edit for multiline str), or 'list' (several widgets).
+        """
+        if isinstance(default, list):
+            # Take lists into account.
+            for i, value in enumerate(default):
+                self.add_pair('%s[%d]' % (name, i), default=value, vtype=vtype)
+            return
         if vtype is None and default is not None:
             vtype = type(default).__name__
         if vtype == 'str':
             widget = QLineEdit(self)
             widget.setText(default or '')
+        elif vtype == 'multiline':
+            widget = QPlainTextEdit(self)
+            widget.setPlainText(default or '')
+            widget.setMaximumHeight(200)
         elif vtype == 'int':
             widget = QSpinBox(self)
             widget.setValue(default or 0)
@@ -596,11 +618,37 @@ class KeyValueWidget(QWidget):
         self.setLayout(self._layout)
         self._items.append((name, vtype, default, widget))
 
-    def get(self, name):
+    @property
+    def names(self):
+        """List of field names."""
+        return sorted(
+            set(i[0] if '[' not in i[0] else i[0][:i[0].index('[')] for i in self._items))
+
+    def get_widget(self, name):
+        """Get the widget of a field."""
+        for name_, vtype, default, widget in self._items:
+            if name == name_:
+                return widget
+
+    def get_value(self, name):
+        """Get the default or user-entered value of a field."""
+        # Detect if the requested name is a list type.
+        names = set(i[0] for i in self._items)
+        if '%s[0]' % name in names:
+            out = []
+            i = 0
+            namei = '%s[%d]' % (name, i)
+            while namei in names:
+                out.append(self.get_value(namei))
+                i += 1
+                namei = '%s[%d]' % (name, i)
+            return out
         for name_, vtype, default, widget in self._items:
             if name_ == name:
                 if vtype == 'str':
                     return str(widget.text())
+                elif vtype == 'multiline':
+                    return str(widget.toPlainText())
                 elif vtype == 'int':
                     return int(widget.text())
                 elif vtype == 'float':
@@ -608,5 +656,10 @@ class KeyValueWidget(QWidget):
                 elif vtype == 'bool':
                     return bool(widget.isChecked())
 
+    def attach(self, gui):  # pragma: no cover
+        """Add the view to a GUI."""
+        gui.add_view(self)
+
     def to_dict(self):
-        return {item[0]: self.get(item[0]) for item in self._items}
+        """Return the key-value mapping dictionary as specified by the user inputs and defaults."""
+        return {name: self.get_value(name) for name in self.names}

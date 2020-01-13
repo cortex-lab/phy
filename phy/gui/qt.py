@@ -46,7 +46,7 @@ from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (# noqa
     QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar,
     QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
-    QPushButton, QLabel, QCheckBox,
+    QPushButton, QLabel, QCheckBox, QPlainTextEdit,
     QLineEdit, QSlider, QSpinBox, QDoubleSpinBox,
     QMessageBox, QApplication, QMenuBar,
     QInputDialog, QOpenGLWidget)
