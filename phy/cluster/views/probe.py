@@ -66,7 +66,10 @@ class ProbeView(ManualClusteringView):
     def __init__(
             self, positions=None, best_channels=None, channel_labels=None,
             dead_channels=None, **kwargs):
+        self.do_show_labels = True
+
         super(ProbeView, self).__init__(**kwargs)
+        self.state_attrs += ('do_show_labels',)
 
         # Normalize positions.
         assert positions.ndim == 2
@@ -112,6 +115,7 @@ class ProbeView(ManualClusteringView):
             data_bounds=self.data_bounds, color=color
         )
         self.text_visual.program['n_channels'] = self.n_channels
+        self.canvas.update()
 
     def _get_clu_positions(self, cluster_ids):
         """Get the positions of the channels containing selected clusters."""
@@ -148,4 +152,19 @@ class ProbeView(ManualClusteringView):
         pos, colors = self._get_clu_positions(cluster_ids)
         self.cluster_visual.set_data(
             pos=pos, color=colors, size=self.selected_marker_size, data_bounds=self.data_bounds)
+        self.canvas.update()
+
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+        super(ProbeView, self).attach(gui)
+        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
+
+        if not self.do_show_labels:
+            self.text_visual.hide()
+
+    def toggle_show_labels(self, checked):
+        """Toggle the display of the channel ids."""
+        logger.debug("Set show labels to %s.", checked)
+        self.do_show_labels = checked
+        self.text_visual._hidden = not checked
         self.canvas.update()

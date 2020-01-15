@@ -24,6 +24,7 @@ def test_probe_view(qtbot, gui):
     best_channels = lambda cluster_id: range(1, 9, 2)
 
     v = ProbeView(positions=positions, best_channels=best_channels, dead_channels=(3, 7, 12))
+    v.do_show_labels = False
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -31,9 +32,12 @@ def test_probe_view(qtbot, gui):
     class Supervisor(object):
         pass
 
+    v.toggle_show_labels(True)
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     emit('select', Supervisor(), cluster_ids=[0, 2])
+
+    v.toggle_show_labels(False)
 
     _stop_and_close(qtbot, v)
