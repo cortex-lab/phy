@@ -1559,7 +1559,7 @@ class BaseController(object):
 
         def group_index(cluster_id):
             group = self.supervisor.cluster_meta.get('group', cluster_id)
-            return group_colors[group]
+            return group_colors.get(group, 0)  # TODO: better handling of colors for custom groups
 
         depth = self.supervisor.cluster_metrics['depth']
         fr = self.supervisor.cluster_metrics['fr']
