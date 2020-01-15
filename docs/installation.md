@@ -24,7 +24,7 @@ Minimal installation instructions (to be completed):
 2. Open a terminal and type:
 
 ```bash
-conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython -y
+conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
 conda activate phy2
 pip install colorcet pyopengl qtconsole requests traitlets tqdm joblib click mkdocs
 pip install git+https://github.com/cortex-lab/phy.git@dev

@@ -6,6 +6,7 @@ recursive-include phy/electrode/probes *.prb
 recursive-include phy/plot/glsl *.vert *.frag *.glsl
 recursive-include phy/plot/static *.npy *.gz *.txt
 recursive-include phy/cluster/static *.html *.css
-recursive-include phy/gui/static *.html *.css *.js *.ttf
+recursive-include phy/gui/static *.html *.css *.js *.ttf *.png
+recursive-include phy/gui/static/icons *.html *.css *.js *.ttf *.png
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]

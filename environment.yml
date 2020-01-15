@@ -9,6 +9,7 @@ dependencies:
   - pyqt
   - dask
   - cython
+  - pillow
   - pip:
     - colorcet
     - pyopengl

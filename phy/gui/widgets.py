@@ -594,6 +594,7 @@ class KeyValueWidget(QWidget):
         elif vtype == 'multiline':
             widget = QPlainTextEdit(self)
             widget.setPlainText(default or '')
+            widget.setMinimumHeight(200)
             widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
