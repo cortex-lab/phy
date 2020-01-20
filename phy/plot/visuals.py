@@ -1195,7 +1195,7 @@ class PlotAggVisual(BaseVisual):
     """
 
     default_color = DEFAULT_COLOR
-    default_line_width = 5.0
+    default_line_width = 3.0
     _noconcat = ('x', 'y')
 
     def __init__(self, line_width=None, closed=False):
