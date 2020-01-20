@@ -350,7 +350,7 @@ You can toggle between different types of amplitudes by pressing `a`:
 
 * `template`: the template amplitudes (stored in `amplitudes.npy`, multiplied by the template waveform maximum amplitude on the peak channel)
 * `raw`: the raw spike waveform maximum amplitude on the peak channel (at the moment, extracted on the fly from the raw data file, so this is slow).
-* `feature`: the spike amplitude on a specific dimension, by default the first PC component on the peak channel. The dimension can be changed from the feature view with `alt+left click` (x axis) and `alt+right click` (y axis).
+* `feature`: the spike amplitude on a specific dimension, by default the first PC component on the peak channel. The dimension can be changed from the feature view with `control+left click` (x axis) and `control+right click` (y axis).
 
 #### Number of spikes.
 
