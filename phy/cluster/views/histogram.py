@@ -28,7 +28,7 @@ def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, i
     assert x_min <= x_max
     assert n_bins >= 0
     n_bins = _clip(n_bins, 2, 1e6)
-    bins = np.linspace(x_min, x_max, n_bins)
+    bins = np.linspace(float(x_min), float(x_max), n_bins)
     if ignore_zeros:
         data = data[data != 0]
     histogram, _ = np.histogram(data, bins=bins)
