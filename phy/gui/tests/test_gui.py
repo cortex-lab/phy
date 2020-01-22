@@ -225,6 +225,7 @@ def test_gui_menu(qtbot, gui):
     @gui.file_actions.add(menu='Submenu')
     def my_action():
         pass
+    gui.get_menu('&Edit', '&File')
 
 
 def test_gui_status_message(gui):

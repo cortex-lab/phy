@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QCheckBox,
-    QToolBar, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _load_font,
+    QMenu, QToolBar, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _load_font,
     _wait, prompt, show_box, screenshot as make_screenshot)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
@@ -724,10 +724,15 @@ class GUI(QMainWindow):
     # Menu bar
     # -------------------------------------------------------------------------
 
-    def get_menu(self, name):
+    def get_menu(self, name, insert_before=None):
         """Get or create a menu."""
         if name not in self._menus:
-            self._menus[name] = self.menuBar().addMenu(name)
+            menu = QMenu(name)
+            if not insert_before:
+                self.menuBar().addMenu(menu)
+            else:
+                self.menuBar().insertMenu(self.get_menu(insert_before).menuAction(), menu)
+            self._menus[name] = menu
         return self._menus[name]
 
     def get_submenu(self, menu, name):

@@ -247,7 +247,7 @@ class Actions(object):
 
     """
     def __init__(
-            self, gui, name=None, menu=None, submenu=None,
+            self, gui, name=None, menu=None, submenu=None, insert_menu_before=None,
             default_shortcuts=None, default_snippets=None):
         self._actions_dict = {}
         self._aliases = {}
@@ -255,12 +255,13 @@ class Actions(object):
         self._default_snippets = default_snippets or {}
         self.name = name
         self.menu = menu
+        self.insert_menu_before = insert_menu_before
         self.submenu = submenu
         self.gui = gui
         gui.actions.append(self)
         # Create the menu when creating the Actions instance.
         if menu:
-            gui.get_menu(menu)
+            gui.get_menu(menu, insert_menu_before)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
