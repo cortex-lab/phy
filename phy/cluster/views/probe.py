@@ -74,6 +74,7 @@ class ProbeView(ManualClusteringView):
         # Normalize positions.
         assert positions.ndim == 2
         assert positions.shape[1] == 2
+        positions = positions.astype(np.float32)
         self.positions, self.data_bounds = _get_pos_data_bounds(positions)
 
         self.n_channels = positions.shape[0]
