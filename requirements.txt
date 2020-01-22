@@ -1,4 +1,4 @@
-git+https://github.com/cortex-lab/phylib
+phylib
 colorcet
 pyopengl
 requests
@@ -8,4 +8,4 @@ tqdm
 joblib
 click
 mtscomp
-mkdocs==1.0.4
+mkdocs
