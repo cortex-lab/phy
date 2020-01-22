@@ -458,7 +458,7 @@ class ExampleCustomSplitPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-            @gui.edit_actions.add(shortcut='s')
+            @controller.supervisor.edit_actions.add(shortcut='s')
             def custom_split():
                 """Split using the K-means clustering algorithm on the template amplitudes
                 of the first cluster."""

@@ -48,6 +48,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.HTMLBuilder](#phyguihtmlbuilder)
 * [phy.gui.HTMLWidget](#phyguihtmlwidget)
 * [phy.gui.IPythonView](#phyguiipythonview)
+* [phy.gui.KeyValueWidget](#phyguikeyvaluewidget)
 * [phy.gui.Snippets](#phyguisnippets)
 * [phy.gui.Table](#phyguitable)
 * [phy.gui.Worker](#phyguiworker)
@@ -768,7 +769,7 @@ This class attaches to a GUI and implements the following features:
 #### Actions.add
 
 
-**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True)`**
+**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True, icon=None, toolbar=False)`**
 
 Add an action with a keyboard shortcut.
 
@@ -820,6 +821,12 @@ Add an action with a keyboard shortcut.
 
 * `show_shortcut : boolean`
     Whether to show the shortcut in the Help action that displays all GUI shortcuts.
+
+* `icon : str`
+    Hexadecimal code of the font-awesome icon.
+
+* `toolbar : boolean`
+    Whether to add the action to the toolbar.
 
 ---
 
@@ -1597,6 +1604,78 @@ Start the IPython kernel.
 **`IPythonView.stop(self)`**
 
 Stop the kernel.
+
+---
+
+### phy.gui.KeyValueWidget
+
+A Qt widget that displays a simple form where each field has a name, a type, and accept
+user input.
+
+---
+
+#### KeyValueWidget.add_pair
+
+
+**`KeyValueWidget.add_pair(self, name, default=None, vtype=None)`**
+
+Add a key-value pair.
+
+**Parameters**
+
+
+* `name : str`
+
+* `default : object`
+
+* `vtype : str`
+    Can be 'str' (text box), 'int' (spin box), 'float' (spin box), 'bool' (checkbox),
+    'mutiline' (text edit for multiline str), or 'list' (several widgets).
+
+---
+
+#### KeyValueWidget.attach
+
+
+**`KeyValueWidget.attach(self, gui)`**
+
+Add the view to a GUI.
+
+---
+
+#### KeyValueWidget.get_value
+
+
+**`KeyValueWidget.get_value(self, name)`**
+
+Get the default or user-entered value of a field.
+
+---
+
+#### KeyValueWidget.get_widget
+
+
+**`KeyValueWidget.get_widget(self, name)`**
+
+Get the widget of a field.
+
+---
+
+#### KeyValueWidget.to_dict
+
+
+**`KeyValueWidget.to_dict(self)`**
+
+Return the key-value mapping dictionary as specified by the user inputs and defaults.
+
+---
+
+#### KeyValueWidget.names
+
+
+**`KeyValueWidget.names`**
+
+List of field names.
 
 ---
 
@@ -5840,15 +5919,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### AmplitudeView.set_dock_status
-
-
-**`AmplitudeView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### AmplitudeView.set_state
 
 
@@ -5903,7 +5973,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`AmplitudeView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -5941,6 +6011,15 @@ Size of the spike markers, in pixels.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### AmplitudeView.status
+
+
+**`AmplitudeView.status`**
+
+
 
 ---
 
@@ -6818,15 +6897,6 @@ Example: `1`
 
 ---
 
-#### CorrelogramView.set_dock_status
-
-
-**`CorrelogramView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### CorrelogramView.set_refractory_period
 
 
@@ -6910,7 +6980,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`CorrelogramView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -6930,6 +7000,15 @@ Update the status text in the dock title bar.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### CorrelogramView.status
+
+
+**`CorrelogramView.status`**
+
+
 
 ---
 
@@ -7181,15 +7260,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### FeatureView.set_dock_status
-
-
-**`FeatureView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### FeatureView.set_grid_dim
 
 
@@ -7261,7 +7331,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`FeatureView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -7290,6 +7360,15 @@ Size of the spike markers, in pixels.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### FeatureView.status
+
+
+**`FeatureView.status`**
+
+
 
 ---
 
@@ -7467,15 +7546,6 @@ Set the bin size in the histogram.
 
 ---
 
-#### FiringRateView.set_dock_status
-
-
-**`FiringRateView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### FiringRateView.set_n_bins
 
 
@@ -7548,7 +7618,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`FiringRateView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -7577,6 +7647,15 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### FiringRateView.status
+
+
+**`FiringRateView.status`**
+
+
 
 ---
 
@@ -7761,15 +7840,6 @@ Set the bin size in the histogram.
 
 ---
 
-#### HistogramView.set_dock_status
-
-
-**`HistogramView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### HistogramView.set_n_bins
 
 
@@ -7842,7 +7912,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`HistogramView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -7871,6 +7941,15 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### HistogramView.status
+
+
+**`HistogramView.status`**
+
+
 
 ---
 
@@ -8048,15 +8127,6 @@ Set the bin size in the histogram.
 
 ---
 
-#### ISIView.set_dock_status
-
-
-**`ISIView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### ISIView.set_n_bins
 
 
@@ -8129,7 +8199,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`ISIView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -8158,6 +8228,15 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ISIView.status
+
+
+**`ISIView.status`**
+
+
 
 ---
 
@@ -8316,15 +8395,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### ManualClusteringView.set_dock_status
-
-
-**`ManualClusteringView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### ManualClusteringView.set_state
 
 
@@ -8370,8 +8440,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`ManualClusteringView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -8391,6 +8460,15 @@ To override.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ManualClusteringView.status
+
+
+**`ManualClusteringView.status`**
+
+To be overriden.
 
 ---
 
@@ -8437,14 +8515,6 @@ def on_add_view(gui, view):
 **`ProbeView.attach(self, gui)`**
 
 Attach the view to the GUI.
-
-Perform the following:
-
-- Add the view to the GUI.
-- Update the view's attribute from the GUI state
-- Add the default view actions (auto_update, screenshot)
-- Bind the on_select() method to the select event raised by the supervisor.
-  This runs on a background thread not to block the GUI thread.
 
 ---
 
@@ -8547,15 +8617,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### ProbeView.set_dock_status
-
-
-**`ProbeView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### ProbeView.set_state
 
 
@@ -8587,6 +8648,15 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
+#### ProbeView.toggle_show_labels
+
+
+**`ProbeView.toggle_show_labels(self, checked)`**
+
+Toggle the display of the channel ids.
+
+---
+
 #### ProbeView.update_color
 
 
@@ -8601,8 +8671,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`ProbeView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -8622,6 +8691,15 @@ To override.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ProbeView.status
+
+
+**`ProbeView.status`**
+
+To be overriden.
 
 ---
 
@@ -8820,15 +8898,6 @@ Set the shown clusters, which can be filtered and in any order (from top to bott
 
 ---
 
-#### RasterView.set_dock_status
-
-
-**`RasterView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### RasterView.set_spike_clusters
 
 
@@ -8892,8 +8961,7 @@ Update the color of the spikes, depending on the selected clusters.
 
 **`RasterView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -8931,6 +8999,15 @@ Size of the spike markers, in pixels.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### RasterView.status
+
+
+**`RasterView.status`**
+
+
 
 ---
 
@@ -9112,15 +9189,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### ScatterView.set_dock_status
-
-
-**`ScatterView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### ScatterView.set_state
 
 
@@ -9166,8 +9234,7 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 **`ScatterView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -9196,6 +9263,15 @@ Size of the spike markers, in pixels.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ScatterView.status
+
+
+**`ScatterView.status`**
+
+To be overriden.
 
 ---
 
@@ -10044,15 +10120,6 @@ Update the cluster ids when their identity or order has changed.
 
 ---
 
-#### TemplateView.set_dock_status
-
-
-**`TemplateView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### TemplateView.set_spike_clusters
 
 
@@ -10116,8 +10183,7 @@ Update the color of the clusters, taking the selected clusters into account.
 
 **`TemplateView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -10146,6 +10212,15 @@ Return the grid scaling.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### TemplateView.status
+
+
+**`TemplateView.status`**
+
+
 
 ---
 
@@ -10438,15 +10513,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### TraceImageView.set_dock_status
-
-
-**`TraceImageView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### TraceImageView.set_interval
 
 
@@ -10544,9 +10610,9 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 #### TraceImageView.update_status
 
 
-**`TraceImageView.update_status(self, suffix='')`**
+**`TraceImageView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -10621,6 +10687,15 @@ Scaling of the colormap vrange.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### TraceImageView.status
+
+
+**`TraceImageView.status`**
+
+
 
 ---
 
@@ -10927,15 +11002,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### TraceView.set_dock_status
-
-
-**`TraceView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### TraceView.set_interval
 
 
@@ -11033,9 +11099,9 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 #### TraceView.update_status
 
 
-**`TraceView.update_status(self, suffix='')`**
+**`TraceView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -11110,6 +11176,15 @@ Scaling of the channel boxes.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### TraceView.status
+
+
+**`TraceView.status`**
+
+
 
 ---
 
@@ -11410,15 +11485,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### WaveformView.set_dock_status
-
-
-**`WaveformView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### WaveformView.set_state
 
 
@@ -11507,9 +11573,9 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 #### WaveformView.update_status
 
 
-**`WaveformView.update_status(self, suffix='')`**
+**`WaveformView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -11574,6 +11640,15 @@ Whether to overlap the waveforms belonging to different clusters.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### WaveformView.status
+
+
+**`WaveformView.status`**
+
+
 
 ---
 
