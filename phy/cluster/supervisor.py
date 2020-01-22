@@ -463,9 +463,11 @@ class ActionCreator(object):
         ds = self.default_shortcuts
         dsp = self.default_snippets
         self.edit_actions = Actions(
-            gui, menu='&Edit', default_shortcuts=ds, default_snippets=dsp)
+            gui, menu='&Edit', insert_menu_before='&View',
+            default_shortcuts=ds, default_snippets=dsp)
         self.select_actions = Actions(
-            gui, menu='Sele&ct', default_shortcuts=ds, default_snippets=dsp)
+            gui, menu='Sele&ct', insert_menu_before='&View',
+            default_shortcuts=ds, default_snippets=dsp)
 
         # Create the actions.
         self._create_edit_actions()
