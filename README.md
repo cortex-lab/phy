@@ -8,7 +8,9 @@
 
 [**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites (mostly [Neuropixels probes](https://www.ucl.ac.uk/neuropixels/)).
 
-[![phy 2.0a1 screenshot](https://user-images.githubusercontent.com/1942359/61941399-b00bda00-af97-11e9-92d9-5b7308ed25ac.png)](https://user-images.githubusercontent.com/1942359/61941399-b00bda00-af97-11e9-92d9-5b7308ed25ac.png)
+[![phy 2.0b1 screenshot](https://user-images.githubusercontent.com/1942359/72895319-5b1a0800-3d1d-11ea-865e-26b09e9f4239.png)](https://user-images.githubusercontent.com/1942359/72895319-5b1a0800-3d1d-11ea-865e-26b09e9f4239.png)
+
+
 
 
 ## Links
@@ -36,11 +38,16 @@ pip install -e .
 
 ## Credits
 
-**phy** is developed by [Cyrille Rossant](http://cyrille.rossant.net).
+**phy** is developed by [Cyrille Rossant](http://cyrille.rossant.net) in the [Cortex Lab](https://www.ucl.ac.uk/cortexlab/) at UCL (led by [Kenneth Harris](https://www.ucl.ac.uk/biosciences/people/harris-kenneth) and [Matteo Carandini](https://www.carandinilab.net/)).
 
-Past and present contributors include:
+Contributors to the repository are:
 
-* [Shabnam Kadir](https://iris.ucl.ac.uk/iris/browse/profile?upi=SKADI56)
+* [Alessio Buccino](https://github.com/alejoe91)
+* [Michael Economo](https://github.com/mswallac)
+* [Cedric Gestes](https://github.com/cgestes)
 * [Dan Goodman](http://thesamovar.net/)
 * [Max Hunter](https://iris.ucl.ac.uk/iris/browse/profile?upi=MLDHU99)
-* [Kenneth Harris](https://iris.ucl.ac.uk/iris/browse/profile?upi=KDHAR02)
+* [Shabnam Kadir](https://iris.ucl.ac.uk/iris/browse/profile?upi=SKADI56)
+* [Christopher Nolan](https://github.com/crnolan)
+* [Martin Spacek](http://mspacek.github.io/)
+* [Nick Steinmetz](http://www.nicksteinmetz.com/)

@@ -7,7 +7,8 @@ phy works better on computers with sufficient RAM, a recent graphics card, and a
 
 ## Dependencies
 
-Main dependencies are NumPy, SciPy, PyQt5, pyopengl, joblib. The full list of dependencies is available in the `environment.yml` file.
+Main dependencies are NumPy, SciPy, PyQt5, matplotlib, pyopengl, joblib. The full list of dependencies is available in the `environment.yml` file.
+
 
 ## Upgrading from phy 1 to phy 2
 
@@ -17,7 +18,7 @@ Main dependencies are NumPy, SciPy, PyQt5, pyopengl, joblib. The full list of de
 
 ## Instructions
 
-Minimal installation instructions (to be completed):
+Minimal installation instructions (to be completed once a proper release of phy is done):
 
 1. Install [Anaconda](https://www.anaconda.com/distribution/#download-section).
 
@@ -26,9 +27,7 @@ Minimal installation instructions (to be completed):
 ```bash
 conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
 conda activate phy2
-pip install colorcet pyopengl qtconsole requests traitlets tqdm joblib click mkdocs
-pip install git+https://github.com/cortex-lab/phy.git@dev
-pip install git+https://github.com/cortex-lab/phylib.git
+pip install git+https://github.com/cortex-lab/phy.git
 ```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):

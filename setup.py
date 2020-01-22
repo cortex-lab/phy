@@ -38,6 +38,10 @@ with open(filename, 'r') as f:
     version = re.search(r"__version__ = '([^']+)'", f.read()).group(1)
 
 
+with open('requirements.txt') as f:
+    require = [x.strip() for x in f.readlines() if not x.startswith('git+')]
+
+
 setup(
     name='phy',
     version=version,
@@ -58,6 +62,7 @@ setup(
             'phy = phy.apps:phycli'
         ],
     },
+    install_requires=require,
     include_package_data=True,
     keywords='phy,data analysis,electrophysiology,neuroscience',
     classifiers=[
