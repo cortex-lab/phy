@@ -1564,7 +1564,7 @@ class BaseController(object):
         depth = self.supervisor.cluster_metrics['depth']
         fr = self.supervisor.cluster_metrics['fr']
         schemes = [
-            ('blank', 'blank', 0, False, False),
+            # ('blank', 'blank', 0, False, False),
             ('random', 'categorical', lambda cl: cl, True, False),
             ('cluster_group', 'cluster_group', group_index, True, False),
             ('depth', 'linear', depth, False, False),
