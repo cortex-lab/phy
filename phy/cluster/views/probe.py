@@ -63,11 +63,11 @@ class ProbeView(ManualClusteringView):
     # Alpha value of the dead channels.
     dead_channel_alpha = .25
 
+    do_show_labels = False
+
     def __init__(
             self, positions=None, best_channels=None, channel_labels=None,
             dead_channels=None, **kwargs):
-        self.do_show_labels = True
-
         super(ProbeView, self).__init__(**kwargs)
         self.state_attrs += ('do_show_labels',)
 

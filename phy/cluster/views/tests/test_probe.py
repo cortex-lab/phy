@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 from phylib.utils.geometry import staggered_positions
 from phylib.utils import emit
 
@@ -21,6 +23,7 @@ def test_probe_view(qtbot, gui):
 
     n = 50
     positions = staggered_positions(n)
+    positions = positions.astype(np.int32)
     best_channels = lambda cluster_id: range(1, 9, 2)
 
     v = ProbeView(positions=positions, best_channels=best_channels, dead_channels=(3, 7, 12))

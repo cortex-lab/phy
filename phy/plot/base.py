@@ -691,7 +691,7 @@ class BaseCanvas(QOpenGLWindow):
                 if size != self._size:
                     visual.on_resize(*size)
                 # Do not draw if there are no vertices.
-                if not visual._hidden and visual.n_vertices > 0:
+                if not visual._hidden and visual.n_vertices > 0 and size[0] > 10 and size[1] > 10:
                     logger.log(5, "Draw visual `%s`.", visual)
                     visual.on_draw()
             self._size = size
