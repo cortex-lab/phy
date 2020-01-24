@@ -557,6 +557,10 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         logger.debug("Set auto scale to %s.", checked)
         self.auto_scale = checked
 
+    def update_color(self):
+        """Update the view when the color scheme changes."""
+        self.plot(update_traces=False, update_waveforms=True)
+
     # Scaling
     # -------------------------------------------------------------------------
 

@@ -245,6 +245,8 @@ def test_trace_image_view_1(qtbot, tempdir, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
+    v.update_color()
+
     v.set_interval((.375, .625))
     assert v.time == .5
     qtbot.wait(1)

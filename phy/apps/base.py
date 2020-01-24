@@ -628,11 +628,6 @@ class TraceMixin(object):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
 
-        @connect(sender=v)
-        def on_color_scheme_changed(sender, name):
-            # Update the waveforms when the color scheme changes.
-            v.plot(update_traces=False, update_waveforms=True)
-
         @connect
         def on_time_range_selected(sender, interval):
             self.selection['selected_time_range'] = interval
@@ -645,7 +640,6 @@ class TraceMixin(object):
         def on_close_view(sender, view):
             if view == v:
                 unconnect(on_select_spike)
-                unconnect(on_color_scheme_changed)
                 unconnect(on_time_range_selected)
                 unconnect(on_select_time)
 

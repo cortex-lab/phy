@@ -167,7 +167,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         if self.size_log_scale:
             size = np.log(1.0 + size - size.min())
         m, M = size.min(), size.max()
-        size = (size - m) / (M - m)  # size is in [0, 1]
+        size = (size - m) / ((M - m) or 1.0)  # size is in [0, 1]
         ms, Ms = self._min_marker_size, self._max_marker_size
         size = ms + size * (Ms - ms)  # now, size is in [ms, Ms]
         self.marker_sizes = size
@@ -296,8 +296,8 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
             return
         b = e.button
         pos = self.canvas.window_to_ndc(e.pos)
-        pos = range_transform([NDC], [self.data_bounds], [pos])[0]
-        cluster_rel = np.argmin(((self.marker_positions - pos) ** 2).sum(axis=1))
+        marker_pos = range_transform([self.data_bounds], [NDC], self.marker_positions)
+        cluster_rel = np.argmin(((marker_pos - pos) ** 2).sum(axis=1))
         cluster_id = self.all_cluster_ids[cluster_rel]
         logger.debug("Click on cluster %d with button %s.", cluster_id, b)
         if 'Shift' in e.modifiers:
