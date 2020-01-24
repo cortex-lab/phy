@@ -29,7 +29,7 @@
 Use these instructions if you're a **developer** who wants to contribute to phy. Assuming you have a scientific Python distribution like Anaconda with the most important dependencies installed (NumPy, SciPy, matplotlib, IPython, PyQt5...), do **in a fresh environment** (and NOT in an environment that already has phy 1.x installed):
 
 ```bash
-git clone -b dev https://github.com/cortex-lab/phy.git
+git clone https://github.com/cortex-lab/phy.git
 cd phy
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
