@@ -171,7 +171,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
             colors = _add_selected_clusters_colors(selected_clusters, self.all_cluster_ids, colors)
         self.marker_colors = colors
 
-    # Plotting functions
+    # Marker size
     # -------------------------------------------------------------------------
 
     @property
@@ -189,6 +189,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     def _set_marker_size(self):
         self.visual.set_marker_size(self.marker_sizes * self._marker_size)
+
+    # Plotting functions
+    # -------------------------------------------------------------------------
 
     def update_color(self):
         """Update the cluster colors depending on the selected clusters. To be overriden."""
@@ -212,6 +215,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self._update_labels()
         self.prepare_data()
         self.plot()
+
+    # Misc functions
+    # -------------------------------------------------------------------------
 
     def attach(self, gui):
         """Attach the GUI."""
@@ -251,6 +257,10 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.prepare_data()
         self.plot()
         self.canvas.update()
+
+    @property
+    def status(self):
+        return 'Size: %s. Color scheme: %s.' % (self.size, self.color_schemes.current)
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking on its template waveform."""

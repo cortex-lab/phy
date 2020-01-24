@@ -53,6 +53,7 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     v.actions.get('Toggle log scale for y_axis').trigger()
     v.actions.get('Toggle log scale for size').trigger()
     v.increase_marker_size()
+    assert v.status
 
     # Simulate cluster selection.
     _clicked = []
