@@ -77,7 +77,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     def get_cluster_data(self, cluster_id):
         """Return the data of one cluster."""
         data = self.cluster_info(cluster_id)
-        return {k: data[v] for k, v in self.bindings.items()}
+        return {k: data.get(v, 0.) for k, v in self.bindings.items()}
 
     def get_clusters_data(self, cluster_ids):
         """Return the data of a set of clusters, as a dictionary {cluster_id: Bunch}."""

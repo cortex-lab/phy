@@ -8,6 +8,7 @@
 # -----------------------------------------------------------------------------
 
 from .base import ManualClusteringView  # noqa
+from .cluscatter import ClusterScatterView  # noqa
 from .amplitude import AmplitudeView  # noqa
 from .correlogram import CorrelogramView  # noqa
 from .feature import FeatureView  # noqa

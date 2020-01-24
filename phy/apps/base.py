@@ -25,10 +25,10 @@ from phylib.utils._misc import write_tsv
 
 from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
-from phy.cluster.views.base import ManualClusteringView, BaseGlobalView
+from phy.cluster.views.base import ManualClusteringView, BaseGlobalView, BaseColorView
 from phy.cluster.views import (
     WaveformView, FeatureView, TraceView, TraceImageView, CorrelogramView, AmplitudeView,
-    ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView,
+    ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView, ClusterScatterView,
     select_traces)
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import GUI
@@ -561,14 +561,14 @@ class TemplateMixin(object):
         )
         self._attach_global_view(view)
 
-        @connect(sender=view)
-        def on_request_select(sender, cluster_ids):
-            self.supervisor.select(cluster_ids)
+        # @connect(sender=view)
+        # def on_request_select(sender, cluster_ids):
+        #     self.supervisor.select(cluster_ids)
 
-        @connect
-        def on_close_view(sender, view_):  # pragma: no cover
-            if view == view_:
-                unconnect(on_request_select)
+        # @connect
+        # def on_close_view(sender, view_):  # pragma: no cover
+        #     if view == view_:
+        #         unconnect(on_request_select)
 
         return view
 
@@ -830,7 +830,8 @@ class BaseController(object):
 
     # Views to load by default.
     _new_views = (
-        'CorrelogramView', 'AmplitudeView', 'ISIView', 'FiringRateView', 'ProbeView',
+        'ClusterScatterView', 'CorrelogramView', 'AmplitudeView',
+        'ISIView', 'FiringRateView', 'ProbeView',
     )
 
     default_shortcuts = {
@@ -942,6 +943,7 @@ class BaseController(object):
 
         """
         self.view_creator = {
+            'ClusterScatterView': self.create_cluster_scatter_view,
             'CorrelogramView': self.create_correlogram_view,
             'ISIView': self._make_histogram_view(ISIView, self._get_isi),
             'FiringRateView': self._make_histogram_view(FiringRateView, self._get_firing_rate),
@@ -1083,12 +1085,6 @@ class BaseController(object):
             view.set_cluster_ids(cluster_ids)
             view.plot()
 
-        @connect
-        def on_color_scheme_changed(sender, name):
-            """Update the cluster colors when the color scheme is updated."""
-            if sender == view:
-                view.update_color(self.supervisor.selected_clusters)
-
         @connect(sender=self.supervisor)
         def on_cluster(sender, up):
             """Update the view after a clustering action."""
@@ -1118,7 +1114,6 @@ class BaseController(object):
                 unconnect(view.on_select)
                 unconnect(on_table_sort)
                 unconnect(on_table_filter)
-                unconnect(on_color_scheme_changed)
                 unconnect(on_cluster)
                 unconnect(on_add_view)
                 unconnect(on_ready)
@@ -1315,6 +1310,9 @@ class BaseController(object):
             for name in sorted(self._get_amplitude_functions())}
         if not amplitudes_dict:
             return
+        # HACK: Put raw amplitude at the end as it's very slow currently.
+        if 'raw' in amplitudes_dict:
+            amplitudes_dict['raw'] = amplitudes_dict.pop('raw')
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitudes_type=None,  # TODO: GUI state
@@ -1361,6 +1359,29 @@ class BaseController(object):
 
         return view
 
+    # Cluster scatter view
+    # -------------------------------------------------------------------------
+
+    def create_cluster_scatter_view(self):
+        """Create a cluster scatter view."""
+        view = ClusterScatterView(
+            cluster_ids=self.supervisor.clustering.cluster_ids,
+            cluster_info=self.supervisor.get_cluster_info,
+            bindings={'x_axis': 'fr', 'y_axis': 'depth', 'size': 'amp'},
+        )
+        self._attach_global_view(view)
+
+        # @connect(sender=view)
+        # def on_request_select(sender, cluster_ids):
+        #     self.supervisor.select(cluster_ids)
+
+        # @connect
+        # def on_close_view(sender, view_):  # pragma: no cover
+        #     if view == view_:
+        #         unconnect(on_request_select)
+
+        return view
+
     # Raster view
     # -------------------------------------------------------------------------
 
@@ -1388,16 +1409,16 @@ class BaseController(object):
         #     if sender.__class__.__name__ == 'TraceView':
         #         view.zoom_to_time_range(sender.interval)
 
-        @connect(sender=view)
-        def on_request_select(sender, cluster_ids):
-            self.supervisor.select(cluster_ids)
+        # @connect(sender=view)
+        # def on_request_select(sender, cluster_ids):
+        #     self.supervisor.select(cluster_ids)
 
-        @connect
-        def on_close_view(sender, view_):  # pragma: no cover
-            if view == view_:
-                unconnect(on_request_select)
-                # unconnect(on_time_range_selected)
-                # unconnect(on_view_ready)
+        # @connect
+        # def on_close_view(sender, view_):  # pragma: no cover
+        #     if view == view_:
+        #         unconnect(on_request_select)
+        #         unconnect(on_time_range_selected)
+        #         unconnect(on_view_ready)
 
         return view
 
@@ -1612,7 +1633,7 @@ class BaseController(object):
         # Initial actions when creating views.
         @connect(sender=gui)
         def on_add_view(sender, view):
-            if isinstance(view, ManualClusteringView):
+            if isinstance(view, BaseColorView):
                 # Add default color schemes in each view.
                 self._add_default_color_schemes(view)
 
@@ -1651,8 +1672,11 @@ class BaseController(object):
         # Bind the `select_more` event to add clusters to the existing selection.
         @connect
         def on_select_more(sender, cluster_ids):
-            # emit('select', sender, self.supervisor.selected + cluster_ids)
             self.supervisor.select(self.supervisor.selected + cluster_ids)
+
+        @connect
+        def on_request_select(sender, cluster_ids):
+            self.supervisor.select(cluster_ids)
 
         # Prompt save.
         @connect(sender=gui)
@@ -1661,6 +1685,7 @@ class BaseController(object):
             unconnect(on_view_ready, self)
             unconnect(on_add_view_, self)
             unconnect(on_select_more, self)
+            unconnect(on_request_select, self)
             # Show save prompt if an action was done.
             do_prompt_save = kwargs.get('do_prompt_save', True)
             if do_prompt_save and self.supervisor.is_dirty():  # pragma: no cover
