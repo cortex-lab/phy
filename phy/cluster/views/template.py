@@ -17,7 +17,7 @@ from phylib.utils import emit, Bunch
 
 from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual
-from .base import ManualClusteringView, BaseGlobalView, ScalingMixin
+from .base import ManualClusteringView, BaseGlobalView, ScalingMixin, BaseColorView
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Template view
 # -----------------------------------------------------------------------------
 
-class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
+class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows all template waveforms of all clusters in a large grid of shape
     `(n_channels, n_clusters)`.
 
@@ -47,7 +47,6 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
     """
     _default_position = 'right'
     _scaling = 1.
-    has_color_schemes = True
 
     default_shortcuts = {
         'change_template_size': 'ctrl+wheel',

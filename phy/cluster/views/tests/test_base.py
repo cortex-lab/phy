@@ -10,7 +10,7 @@ import numpy as np
 
 from phylib.utils import emit
 from phy.utils.color import selected_cluster_color, colormaps
-from ..base import ManualClusteringView
+from ..base import BaseColorView, ManualClusteringView
 from . import _stop_and_close
 
 
@@ -18,7 +18,7 @@ from . import _stop_and_close
 # Test manual clustering view
 #------------------------------------------------------------------------------
 
-class MyView(ManualClusteringView):
+class MyView(BaseColorView, ManualClusteringView):
     def plot(self, **kwargs):
         for i in range(len(self.cluster_ids)):
             self.canvas.scatter(pos=.25 * np.random.randn(100, 2), color=selected_cluster_color(i))

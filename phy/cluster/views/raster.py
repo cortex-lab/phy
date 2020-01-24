@@ -15,7 +15,7 @@ from phylib.io.array import _index_of
 from phylib.utils import emit
 from phy.utils.color import _add_selected_clusters_colors
 
-from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin
+from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin, BaseColorView
 from phy.plot.visuals import ScatterVisual
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Raster view
 # -----------------------------------------------------------------------------
 
-class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
+class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows a raster plot of all clusters.
 
     Constructor
@@ -41,7 +41,6 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
     """
 
     _default_position = 'right'
-    has_color_schemes = True
 
     default_shortcuts = {
         'change_marker_size': 'ctrl+wheel',

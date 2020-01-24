@@ -17,7 +17,7 @@ from phylib.utils import emit, Bunch, connect
 
 from phy.plot import get_linear_x
 from phy.plot.visuals import ScatterVisual
-from .base import ManualClusteringView, BaseGlobalView, ScalingMixin
+from .base import ManualClusteringView, BaseGlobalView, ScalingMixin, BaseColorView
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Template view
 # -----------------------------------------------------------------------------
 
-class ClusterScatterView(ScalingMixin, BaseGlobalView, ManualClusteringView):
+class ClusterScatterView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows all clusters in a customizable scatter plot.
 
     Constructor
@@ -42,7 +42,6 @@ class ClusterScatterView(ScalingMixin, BaseGlobalView, ManualClusteringView):
     _default_position = 'right'
     _scaling = 1.
     _default_alpha = .75
-    has_color_schemes = True
 
     default_shortcuts = {
         'next_color_scheme': 'b'
