@@ -48,6 +48,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.HTMLBuilder](#phyguihtmlbuilder)
 * [phy.gui.HTMLWidget](#phyguihtmlwidget)
 * [phy.gui.IPythonView](#phyguiipythonview)
+* [phy.gui.KeyValueWidget](#phyguikeyvaluewidget)
 * [phy.gui.Snippets](#phyguisnippets)
 * [phy.gui.Table](#phyguitable)
 * [phy.gui.Worker](#phyguiworker)
@@ -90,6 +91,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.cluster.select_traces](#phyclusterselect_traces)
 * [phy.cluster.AmplitudeView](#phyclusteramplitudeview)
 * [phy.cluster.ClusterMeta](#phyclusterclustermeta)
+* [phy.cluster.ClusterScatterView](#phyclusterclusterscatterview)
 * [phy.cluster.ClusterView](#phyclusterclusterview)
 * [phy.cluster.Clustering](#phyclusterclustering)
 * [phy.cluster.CorrelogramView](#phyclustercorrelogramview)
@@ -768,7 +770,7 @@ This class attaches to a GUI and implements the following features:
 #### Actions.add
 
 
-**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True)`**
+**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True, icon=None, toolbar=False)`**
 
 Add an action with a keyboard shortcut.
 
@@ -820,6 +822,12 @@ Add an action with a keyboard shortcut.
 
 * `show_shortcut : boolean`
     Whether to show the shortcut in the Help action that displays all GUI shortcuts.
+
+* `icon : str`
+    Hexadecimal code of the font-awesome icon.
+
+* `toolbar : boolean`
+    Whether to add the action to the toolbar.
 
 ---
 
@@ -1597,6 +1605,78 @@ Start the IPython kernel.
 **`IPythonView.stop(self)`**
 
 Stop the kernel.
+
+---
+
+### phy.gui.KeyValueWidget
+
+A Qt widget that displays a simple form where each field has a name, a type, and accept
+user input.
+
+---
+
+#### KeyValueWidget.add_pair
+
+
+**`KeyValueWidget.add_pair(self, name, default=None, vtype=None)`**
+
+Add a key-value pair.
+
+**Parameters**
+
+
+* `name : str`
+
+* `default : object`
+
+* `vtype : str`
+    Can be 'str' (text box), 'int' (spin box), 'float' (spin box), 'bool' (checkbox),
+    'mutiline' (text edit for multiline str), or 'list' (several widgets).
+
+---
+
+#### KeyValueWidget.attach
+
+
+**`KeyValueWidget.attach(self, gui)`**
+
+Add the view to a GUI.
+
+---
+
+#### KeyValueWidget.get_value
+
+
+**`KeyValueWidget.get_value(self, name)`**
+
+Get the default or user-entered value of a field.
+
+---
+
+#### KeyValueWidget.get_widget
+
+
+**`KeyValueWidget.get_widget(self, name)`**
+
+Get the widget of a field.
+
+---
+
+#### KeyValueWidget.to_dict
+
+
+**`KeyValueWidget.to_dict(self)`**
+
+Return the key-value mapping dictionary as specified by the user inputs and defaults.
+
+---
+
+#### KeyValueWidget.names
+
+
+**`KeyValueWidget.names`**
+
+List of field names.
 
 ---
 
@@ -5647,21 +5727,6 @@ This view displays an amplitude plot for all selected clusters.
 
 ---
 
-#### AmplitudeView.add_color_scheme
-
-
-**`AmplitudeView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
-
----
-
 #### AmplitudeView.attach
 
 
@@ -5689,15 +5754,6 @@ Decrease the scaling parameter.
 
 ---
 
-#### AmplitudeView.get_cluster_colors
-
-
-**`AmplitudeView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### AmplitudeView.get_clusters_data
 
 
@@ -5722,15 +5778,6 @@ Increase the scaling parameter.
 **`AmplitudeView.next_amplitudes_type(self)`**
 
 Switch to the next amplitudes type.
-
----
-
-#### AmplitudeView.next_color_scheme
-
-
-**`AmplitudeView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -5812,15 +5859,6 @@ Switch to the previous amplitudes type.
 
 ---
 
-#### AmplitudeView.previous_color_scheme
-
-
-**`AmplitudeView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### AmplitudeView.reset_marker_size
 
 
@@ -5837,15 +5875,6 @@ Reset the scaling to the default value.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
-
----
-
-#### AmplitudeView.set_dock_status
-
-
-**`AmplitudeView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -5889,21 +5918,12 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### AmplitudeView.update_color
-
-
-**`AmplitudeView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### AmplitudeView.update_status
 
 
 **`AmplitudeView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -5911,15 +5931,6 @@ Update the status text in the dock title bar.
 
 
 **`AmplitudeView.amplitudes_type`**
-
-
-
----
-
-#### AmplitudeView.color_scheme
-
-
-**`AmplitudeView.color_scheme`**
 
 
 
@@ -5941,6 +5952,15 @@ Size of the spike markers, in pixels.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### AmplitudeView.status
+
+
+**`AmplitudeView.status`**
+
+
 
 ---
 
@@ -6067,6 +6087,408 @@ Undo the last metadata change.
 **`ClusterMeta.fields`**
 
 List of fields.
+
+---
+
+### phy.cluster.ClusterScatterView
+
+This view shows all clusters in a customizable scatter plot.
+
+**Constructor**
+
+
+* `cluster_ids : array-like`
+cluster_info: function
+    Maps cluster_id => Bunch() with attributes.
+bindings: dict
+    Maps plot dimension to cluster attributes.
+
+---
+
+#### ClusterScatterView.add_color_scheme
+
+
+**`ClusterScatterView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
+
+Add a color scheme to the view. Can be used as follows:
+
+```python
+@connect
+def on_add_view(gui, view):
+    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
+```
+
+---
+
+#### ClusterScatterView.attach
+
+
+**`ClusterScatterView.attach(self, gui)`**
+
+Attach the GUI.
+
+---
+
+#### ClusterScatterView.change_bindings
+
+
+**`ClusterScatterView.change_bindings(self, **kwargs)`**
+
+Change the bindings.
+
+---
+
+#### ClusterScatterView.close
+
+
+**`ClusterScatterView.close(self)`**
+
+Close the view.
+
+---
+
+#### ClusterScatterView.decrease_marker_size
+
+
+**`ClusterScatterView.decrease_marker_size(self)`**
+
+Decrease the scaling parameter.
+
+---
+
+#### ClusterScatterView.get_cluster_colors
+
+
+**`ClusterScatterView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
+
+Return the cluster colors depending on the currently-selected color scheme.
+
+---
+
+#### ClusterScatterView.get_cluster_data
+
+
+**`ClusterScatterView.get_cluster_data(self, cluster_id)`**
+
+Return the data of one cluster.
+
+---
+
+#### ClusterScatterView.get_clusters_data
+
+
+**`ClusterScatterView.get_clusters_data(self, cluster_ids)`**
+
+Return the data of a set of clusters, as a dictionary {cluster_id: Bunch}.
+
+---
+
+#### ClusterScatterView.increase_marker_size
+
+
+**`ClusterScatterView.increase_marker_size(self)`**
+
+Increase the scaling parameter.
+
+---
+
+#### ClusterScatterView.next_color_scheme
+
+
+**`ClusterScatterView.next_color_scheme(self)`**
+
+Switch to the next color scheme.
+
+---
+
+#### ClusterScatterView.on_cluster
+
+
+**`ClusterScatterView.on_cluster(self, up)`**
+
+Callback function when a clustering action occurs. May be overriden.
+
+Note: this method is called *before* on_select() so as to give a chance to the view
+to update itself before the selection of the new clusters.
+
+This method is mostly only useful to views that show all clusters and not just the
+selected clusters (template view, raster view).
+
+---
+
+#### ClusterScatterView.on_mouse_click
+
+
+**`ClusterScatterView.on_mouse_click(self, e)`**
+
+Select a cluster by clicking on its template waveform.
+
+---
+
+#### ClusterScatterView.on_mouse_wheel
+
+
+**`ClusterScatterView.on_mouse_wheel(self, e)`**
+
+Change the scaling with the wheel.
+
+---
+
+#### ClusterScatterView.on_select
+
+
+**`ClusterScatterView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
+
+
+
+---
+
+#### ClusterScatterView.on_select_threaded
+
+
+**`ClusterScatterView.on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs)`**
+
+
+
+---
+
+#### ClusterScatterView.plot
+
+
+**`ClusterScatterView.plot(self, **kwargs)`**
+
+Make the scatter plot.
+
+---
+
+#### ClusterScatterView.prepare_color
+
+
+**`ClusterScatterView.prepare_color(self)`**
+
+Compute the marker colors.
+
+---
+
+#### ClusterScatterView.prepare_data
+
+
+**`ClusterScatterView.prepare_data(self)`**
+
+Prepare the marker position, size, and color from the cluster information.
+
+---
+
+#### ClusterScatterView.prepare_position
+
+
+**`ClusterScatterView.prepare_position(self)`**
+
+Compute the marker positions.
+
+---
+
+#### ClusterScatterView.prepare_size
+
+
+**`ClusterScatterView.prepare_size(self)`**
+
+Compute the marker sizes.
+
+---
+
+#### ClusterScatterView.previous_color_scheme
+
+
+**`ClusterScatterView.previous_color_scheme(self)`**
+
+Switch to the previous color scheme.
+
+---
+
+#### ClusterScatterView.reset_marker_size
+
+
+**`ClusterScatterView.reset_marker_size(self)`**
+
+Reset the scaling to the default value.
+
+---
+
+#### ClusterScatterView.screenshot
+
+
+**`ClusterScatterView.screenshot(self, dir=None)`**
+
+Save a PNG screenshot of the view into a given directory. By default, the screenshots
+are saved in `~/.phy/screenshots/`.
+
+---
+
+#### ClusterScatterView.set_cluster_ids
+
+
+**`ClusterScatterView.set_cluster_ids(self, all_cluster_ids)`**
+
+Update the cluster data by specifying the list of all cluster ids.
+
+---
+
+#### ClusterScatterView.set_fields
+
+
+**`ClusterScatterView.set_fields(self)`**
+
+
+
+---
+
+#### ClusterScatterView.set_size
+
+
+**`ClusterScatterView.set_size(self, field)`**
+
+Set the dimension for the marker size.
+
+---
+
+#### ClusterScatterView.set_spike_clusters
+
+
+**`ClusterScatterView.set_spike_clusters(self, spike_clusters)`**
+
+
+
+---
+
+#### ClusterScatterView.set_state
+
+
+**`ClusterScatterView.set_state(self, state)`**
+
+Set the view state.
+
+The passed object is the persisted `self.state` bunch.
+
+May be overriden.
+
+---
+
+#### ClusterScatterView.set_x_axis
+
+
+**`ClusterScatterView.set_x_axis(self, field)`**
+
+Set the dimension for the x axis.
+
+---
+
+#### ClusterScatterView.set_y_axis
+
+
+**`ClusterScatterView.set_y_axis(self, field)`**
+
+Set the dimension for the y axis.
+
+---
+
+#### ClusterScatterView.show
+
+
+**`ClusterScatterView.show(self)`**
+
+Show the underlying canvas.
+
+---
+
+#### ClusterScatterView.toggle_auto_update
+
+
+**`ClusterScatterView.toggle_auto_update(self, checked)`**
+
+When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### ClusterScatterView.toggle_log_scale
+
+
+**`ClusterScatterView.toggle_log_scale(self, dim, checked)`**
+
+Toggle logarithmic scaling for one of the dimensions.
+
+---
+
+#### ClusterScatterView.update_cluster_sort
+
+
+**`ClusterScatterView.update_cluster_sort(self, cluster_ids)`**
+
+
+
+---
+
+#### ClusterScatterView.update_color
+
+
+**`ClusterScatterView.update_color(self)`**
+
+Update the cluster colors depending on the selected clusters. To be overriden.
+
+---
+
+#### ClusterScatterView.update_status
+
+
+**`ClusterScatterView.update_status(self)`**
+
+
+
+---
+
+#### ClusterScatterView.bindings
+
+
+**`ClusterScatterView.bindings`**
+
+
+
+---
+
+#### ClusterScatterView.color_scheme
+
+
+**`ClusterScatterView.color_scheme`**
+
+Current color scheme.
+
+---
+
+#### ClusterScatterView.marker_size
+
+
+**`ClusterScatterView.marker_size`**
+
+Size of the spike markers, in pixels.
+
+---
+
+#### ClusterScatterView.state
+
+
+**`ClusterScatterView.state`**
+
+View state, a Bunch instance automatically persisted in the GUI state when the
+GUI is closed. To be overriden.
+
+---
+
+#### ClusterScatterView.status
+
+
+**`ClusterScatterView.status`**
+
+
 
 ---
 
@@ -6648,21 +7070,6 @@ of cluster pairs.
 
 ---
 
-#### CorrelogramView.add_color_scheme
-
-
-**`CorrelogramView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
-
----
-
 #### CorrelogramView.attach
 
 
@@ -6690,15 +7097,6 @@ Decrease the window size.
 
 ---
 
-#### CorrelogramView.get_cluster_colors
-
-
-**`CorrelogramView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### CorrelogramView.get_clusters_data
 
 
@@ -6716,15 +7114,6 @@ To override.
 **`CorrelogramView.increase(self)`**
 
 Increase the window size.
-
----
-
-#### CorrelogramView.next_color_scheme
-
-
-**`CorrelogramView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -6779,15 +7168,6 @@ Update the view with the current cluster selection.
 
 ---
 
-#### CorrelogramView.previous_color_scheme
-
-
-**`CorrelogramView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### CorrelogramView.reset_scaling
 
 
@@ -6815,15 +7195,6 @@ are saved in `~/.phy/screenshots/`.
 Set the correlogram bin size (in milliseconds).
 
 Example: `1`
-
----
-
-#### CorrelogramView.set_dock_status
-
-
-**`CorrelogramView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -6896,28 +7267,10 @@ Change the normalization of the correlograms.
 
 ---
 
-#### CorrelogramView.update_color
-
-
-**`CorrelogramView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### CorrelogramView.update_status
 
 
 **`CorrelogramView.update_status(self)`**
-
-Update the status text in the dock title bar.
-
----
-
-#### CorrelogramView.color_scheme
-
-
-**`CorrelogramView.color_scheme`**
 
 
 
@@ -6930,6 +7283,15 @@ Update the status text in the dock title bar.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### CorrelogramView.status
+
+
+**`CorrelogramView.status`**
+
+
 
 ---
 
@@ -6955,21 +7317,6 @@ component features. This view keeps track of which channels are currently shown.
 
 * `attributes : dict`
     Maps an attribute name to a 1D array with `n_spikes` numbers (for example, spike times).
-
----
-
-#### FeatureView.add_color_scheme
-
-
-**`FeatureView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
 
 ---
 
@@ -7018,15 +7365,6 @@ Decrease the scaling parameter.
 
 ---
 
-#### FeatureView.get_cluster_colors
-
-
-**`FeatureView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### FeatureView.get_clusters_data
 
 
@@ -7053,15 +7391,6 @@ Increase the scaling parameter.
 **`FeatureView.increase_marker_size(self)`**
 
 Increase the scaling parameter.
-
----
-
-#### FeatureView.next_color_scheme
-
-
-**`FeatureView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -7144,15 +7473,6 @@ Update the view with the selected clusters.
 
 ---
 
-#### FeatureView.previous_color_scheme
-
-
-**`FeatureView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### FeatureView.reset_marker_size
 
 
@@ -7178,15 +7498,6 @@ Reset the scaling to the default value.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
-
----
-
-#### FeatureView.set_dock_status
-
-
-**`FeatureView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -7247,28 +7558,10 @@ Toggle the automatic selection of channels when the cluster selection changes.
 
 ---
 
-#### FeatureView.update_color
-
-
-**`FeatureView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### FeatureView.update_status
 
 
 **`FeatureView.update_status(self)`**
-
-Update the status text in the dock title bar.
-
----
-
-#### FeatureView.color_scheme
-
-
-**`FeatureView.color_scheme`**
 
 
 
@@ -7293,24 +7586,18 @@ GUI is closed. To be overriden.
 
 ---
 
-### phy.cluster.FiringRateView
+#### FeatureView.status
 
-Histogram view showing the time-dependent firing rate.
+
+**`FeatureView.status`**
+
+
 
 ---
 
-#### FiringRateView.add_color_scheme
+### phy.cluster.FiringRateView
 
-
-**`FiringRateView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
+Histogram view showing the time-dependent firing rate.
 
 ---
 
@@ -7341,15 +7628,6 @@ Decrease the scaling parameter.
 
 ---
 
-#### FiringRateView.get_cluster_colors
-
-
-**`FiringRateView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### FiringRateView.get_clusters_data
 
 
@@ -7367,15 +7645,6 @@ To override.
 **`FiringRateView.increase(self)`**
 
 Increase the scaling parameter.
-
----
-
-#### FiringRateView.next_color_scheme
-
-
-**`FiringRateView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -7430,15 +7699,6 @@ Update the view with the selected clusters.
 
 ---
 
-#### FiringRateView.previous_color_scheme
-
-
-**`FiringRateView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### FiringRateView.reset_scaling
 
 
@@ -7464,15 +7724,6 @@ are saved in `~/.phy/screenshots/`.
 **`FiringRateView.set_bin_size(self, bin_size)`**
 
 Set the bin size in the histogram.
-
----
-
-#### FiringRateView.set_dock_status
-
-
-**`FiringRateView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -7534,21 +7785,12 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### FiringRateView.update_color
-
-
-**`FiringRateView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### FiringRateView.update_status
 
 
 **`FiringRateView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -7558,15 +7800,6 @@ Update the status text in the dock title bar.
 **`FiringRateView.bin_size`**
 
 Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
-
----
-
-#### FiringRateView.color_scheme
-
-
-**`FiringRateView.color_scheme`**
-
-
 
 ---
 
@@ -7580,6 +7813,15 @@ GUI is closed. To be overriden.
 
 ---
 
+#### FiringRateView.status
+
+
+**`FiringRateView.status`**
+
+
+
+---
+
 ### phy.cluster.HistogramView
 
 This view displays a histogram for every selected cluster, along with a possible plot
@@ -7590,21 +7832,6 @@ and some text. To be overriden.
 
 * `cluster_stat : function`
     Maps `cluster_id` to `Bunch(data (1D array), plot (1D array), text)`.
-
----
-
-#### HistogramView.add_color_scheme
-
-
-**`HistogramView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
 
 ---
 
@@ -7635,15 +7862,6 @@ Decrease the scaling parameter.
 
 ---
 
-#### HistogramView.get_cluster_colors
-
-
-**`HistogramView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### HistogramView.get_clusters_data
 
 
@@ -7661,15 +7879,6 @@ To override.
 **`HistogramView.increase(self)`**
 
 Increase the scaling parameter.
-
----
-
-#### HistogramView.next_color_scheme
-
-
-**`HistogramView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -7724,15 +7933,6 @@ Update the view with the selected clusters.
 
 ---
 
-#### HistogramView.previous_color_scheme
-
-
-**`HistogramView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### HistogramView.reset_scaling
 
 
@@ -7758,15 +7958,6 @@ are saved in `~/.phy/screenshots/`.
 **`HistogramView.set_bin_size(self, bin_size)`**
 
 Set the bin size in the histogram.
-
----
-
-#### HistogramView.set_dock_status
-
-
-**`HistogramView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -7828,21 +8019,12 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### HistogramView.update_color
-
-
-**`HistogramView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### HistogramView.update_status
 
 
 **`HistogramView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -7852,15 +8034,6 @@ Update the status text in the dock title bar.
 **`HistogramView.bin_size`**
 
 Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
-
----
-
-#### HistogramView.color_scheme
-
-
-**`HistogramView.color_scheme`**
-
-
 
 ---
 
@@ -7874,24 +8047,18 @@ GUI is closed. To be overriden.
 
 ---
 
-### phy.cluster.ISIView
+#### HistogramView.status
 
-Histogram view showing the interspike intervals.
+
+**`HistogramView.status`**
+
+
 
 ---
 
-#### ISIView.add_color_scheme
+### phy.cluster.ISIView
 
-
-**`ISIView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
+Histogram view showing the interspike intervals.
 
 ---
 
@@ -7922,15 +8089,6 @@ Decrease the scaling parameter.
 
 ---
 
-#### ISIView.get_cluster_colors
-
-
-**`ISIView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### ISIView.get_clusters_data
 
 
@@ -7948,15 +8106,6 @@ To override.
 **`ISIView.increase(self)`**
 
 Increase the scaling parameter.
-
----
-
-#### ISIView.next_color_scheme
-
-
-**`ISIView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -8011,15 +8160,6 @@ Update the view with the selected clusters.
 
 ---
 
-#### ISIView.previous_color_scheme
-
-
-**`ISIView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### ISIView.reset_scaling
 
 
@@ -8045,15 +8185,6 @@ are saved in `~/.phy/screenshots/`.
 **`ISIView.set_bin_size(self, bin_size)`**
 
 Set the bin size in the histogram.
-
----
-
-#### ISIView.set_dock_status
-
-
-**`ISIView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -8115,21 +8246,12 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### ISIView.update_color
-
-
-**`ISIView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### ISIView.update_status
 
 
 **`ISIView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -8142,15 +8264,6 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 
 ---
 
-#### ISIView.color_scheme
-
-
-**`ISIView.color_scheme`**
-
-
-
----
-
 #### ISIView.state
 
 
@@ -8158,6 +8271,15 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ISIView.status
+
+
+**`ISIView.status`**
+
+
 
 ---
 
@@ -8180,23 +8302,7 @@ Events raised:
 - `view_actions_created`
 - `view_ready`
 - `is_busy`
-- `color_scheme_changed`
 - `toggle_auto_update`
-
----
-
-#### ManualClusteringView.add_color_scheme
-
-
-**`ManualClusteringView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
 
 ---
 
@@ -8226,15 +8332,6 @@ Close the view.
 
 ---
 
-#### ManualClusteringView.get_cluster_colors
-
-
-**`ManualClusteringView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### ManualClusteringView.get_clusters_data
 
 
@@ -8243,15 +8340,6 @@ Return the cluster colors depending on the currently-selected color scheme.
 Return a list of Bunch instances, with attributes pos and spike_ids.
 
 To override.
-
----
-
-#### ManualClusteringView.next_color_scheme
-
-
-**`ManualClusteringView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -8297,15 +8385,6 @@ Update the view with the current cluster selection.
 
 ---
 
-#### ManualClusteringView.previous_color_scheme
-
-
-**`ManualClusteringView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### ManualClusteringView.screenshot
 
 
@@ -8313,15 +8392,6 @@ Switch to the previous color scheme.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
-
----
-
-#### ManualClusteringView.set_dock_status
-
-
-**`ManualClusteringView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -8356,29 +8426,10 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### ManualClusteringView.update_color
-
-
-**`ManualClusteringView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### ManualClusteringView.update_status
 
 
 **`ManualClusteringView.update_status(self)`**
-
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
-
----
-
-#### ManualClusteringView.color_scheme
-
-
-**`ManualClusteringView.color_scheme`**
 
 
 
@@ -8391,6 +8442,15 @@ To override.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ManualClusteringView.status
+
+
+**`ManualClusteringView.status`**
+
+To be overriden.
 
 ---
 
@@ -8416,35 +8476,12 @@ where the selected clusters belong.
 
 ---
 
-#### ProbeView.add_color_scheme
-
-
-**`ProbeView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
-
----
-
 #### ProbeView.attach
 
 
 **`ProbeView.attach(self, gui)`**
 
 Attach the view to the GUI.
-
-Perform the following:
-
-- Add the view to the GUI.
-- Update the view's attribute from the GUI state
-- Add the default view actions (auto_update, screenshot)
-- Bind the on_select() method to the select event raised by the supervisor.
-  This runs on a background thread not to block the GUI thread.
 
 ---
 
@@ -8457,15 +8494,6 @@ Close the view.
 
 ---
 
-#### ProbeView.get_cluster_colors
-
-
-**`ProbeView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### ProbeView.get_clusters_data
 
 
@@ -8474,15 +8502,6 @@ Return the cluster colors depending on the currently-selected color scheme.
 Return a list of Bunch instances, with attributes pos and spike_ids.
 
 To override.
-
----
-
-#### ProbeView.next_color_scheme
-
-
-**`ProbeView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -8528,15 +8547,6 @@ Update the view with the current cluster selection.
 
 ---
 
-#### ProbeView.previous_color_scheme
-
-
-**`ProbeView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### ProbeView.screenshot
 
 
@@ -8544,15 +8554,6 @@ Switch to the previous color scheme.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
-
----
-
-#### ProbeView.set_dock_status
-
-
-**`ProbeView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -8587,12 +8588,12 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### ProbeView.update_color
+#### ProbeView.toggle_show_labels
 
 
-**`ProbeView.update_color(self, selected_clusters=None)`**
+**`ProbeView.toggle_show_labels(self, checked)`**
 
-Update the cluster colors depending on the selected clusters. To be overriden.
+Toggle the display of the channel ids.
 
 ---
 
@@ -8600,16 +8601,6 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 
 
 **`ProbeView.update_status(self)`**
-
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
-
----
-
-#### ProbeView.color_scheme
-
-
-**`ProbeView.color_scheme`**
 
 
 
@@ -8622,6 +8613,15 @@ To override.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ProbeView.status
+
+
+**`ProbeView.status`**
+
+To be overriden.
 
 ---
 
@@ -8820,15 +8820,6 @@ Set the shown clusters, which can be filtered and in any order (from top to bott
 
 ---
 
-#### RasterView.set_dock_status
-
-
-**`RasterView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### RasterView.set_spike_clusters
 
 
@@ -8881,7 +8872,7 @@ Update the order of all clusters.
 #### RasterView.update_color
 
 
-**`RasterView.update_color(self, selected_clusters=None)`**
+**`RasterView.update_color(self)`**
 
 Update the color of the spikes, depending on the selected clusters.
 
@@ -8892,8 +8883,7 @@ Update the color of the spikes, depending on the selected clusters.
 
 **`RasterView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -8911,7 +8901,7 @@ Zoom to a time interval.
 
 **`RasterView.color_scheme`**
 
-
+Current color scheme.
 
 ---
 
@@ -8934,6 +8924,15 @@ GUI is closed. To be overriden.
 
 ---
 
+#### RasterView.status
+
+
+**`RasterView.status`**
+
+
+
+---
+
 ### phy.cluster.ScatterView
 
 This view displays a scatter plot for all selected clusters.
@@ -8943,21 +8942,6 @@ This view displays a scatter plot for all selected clusters.
 
 * `coords : function`
     Maps `cluster_ids` to a list `[Bunch(x, y, spike_ids, data_bounds), ...]` for each cluster.
-
----
-
-#### ScatterView.add_color_scheme
-
-
-**`ScatterView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
 
 ---
 
@@ -8988,15 +8972,6 @@ Decrease the scaling parameter.
 
 ---
 
-#### ScatterView.get_cluster_colors
-
-
-**`ScatterView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### ScatterView.get_clusters_data
 
 
@@ -9012,15 +8987,6 @@ Return a list of Bunch instances, with attributes pos and spike_ids.
 **`ScatterView.increase_marker_size(self)`**
 
 Increase the scaling parameter.
-
----
-
-#### ScatterView.next_color_scheme
-
-
-**`ScatterView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -9084,15 +9050,6 @@ Update the view with the current cluster selection.
 
 ---
 
-#### ScatterView.previous_color_scheme
-
-
-**`ScatterView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### ScatterView.reset_marker_size
 
 
@@ -9109,15 +9066,6 @@ Reset the scaling to the default value.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
-
----
-
-#### ScatterView.set_dock_status
-
-
-**`ScatterView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -9152,29 +9100,10 @@ When on, the view is automatically updated when the cluster selection changes.
 
 ---
 
-#### ScatterView.update_color
-
-
-**`ScatterView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### ScatterView.update_status
 
 
 **`ScatterView.update_status(self)`**
-
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
-
----
-
-#### ScatterView.color_scheme
-
-
-**`ScatterView.color_scheme`**
 
 
 
@@ -9196,6 +9125,15 @@ Size of the spike markers, in pixels.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### ScatterView.status
+
+
+**`ScatterView.status`**
+
+To be overriden.
 
 ---
 
@@ -9605,6 +9543,15 @@ Filter the clusters using a Javascript expression on the column names.
 **`Supervisor.first(self, callback=None)`**
 
 Select the first cluster in the cluster view.
+
+---
+
+#### Supervisor.get_cluster_info
+
+
+**`Supervisor.get_cluster_info(self, cluster_id, exclude=())`**
+
+Return the data associated to a given cluster.
 
 ---
 
@@ -10044,15 +9991,6 @@ Update the cluster ids when their identity or order has changed.
 
 ---
 
-#### TemplateView.set_dock_status
-
-
-**`TemplateView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### TemplateView.set_spike_clusters
 
 
@@ -10105,7 +10043,7 @@ Update the order of the clusters.
 #### TemplateView.update_color
 
 
-**`TemplateView.update_color(self, selected_clusters=None)`**
+**`TemplateView.update_color(self)`**
 
 Update the color of the clusters, taking the selected clusters into account.
 
@@ -10116,8 +10054,7 @@ Update the color of the clusters, taking the selected clusters into account.
 
 **`TemplateView.update_status(self)`**
 
-May call `self.set_dock_status()` to update the view's status in the dock title bar.
-To override.
+
 
 ---
 
@@ -10126,7 +10063,7 @@ To override.
 
 **`TemplateView.color_scheme`**
 
-
+Current color scheme.
 
 ---
 
@@ -10146,6 +10083,15 @@ Return the grid scaling.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### TemplateView.status
+
+
+**`TemplateView.status`**
+
+
 
 ---
 
@@ -10438,15 +10384,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### TraceImageView.set_dock_status
-
-
-**`TraceImageView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### TraceImageView.set_interval
 
 
@@ -10535,7 +10472,7 @@ Toggle the display of the channel ids.
 #### TraceImageView.update_color
 
 
-**`TraceImageView.update_color(self, selected_clusters=None)`**
+**`TraceImageView.update_color(self)`**
 
 Update the cluster colors depending on the selected clusters. To be overriden.
 
@@ -10544,9 +10481,9 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 #### TraceImageView.update_status
 
 
-**`TraceImageView.update_status(self, suffix='')`**
+**`TraceImageView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -10564,7 +10501,7 @@ Increase the interval size.
 
 **`TraceImageView.color_scheme`**
 
-
+Current color scheme.
 
 ---
 
@@ -10621,6 +10558,15 @@ Scaling of the colormap vrange.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### TraceImageView.status
+
+
+**`TraceImageView.status`**
+
+
 
 ---
 
@@ -10927,15 +10873,6 @@ are saved in `~/.phy/screenshots/`.
 
 ---
 
-#### TraceView.set_dock_status
-
-
-**`TraceView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
-
----
-
 #### TraceView.set_interval
 
 
@@ -11024,7 +10961,7 @@ Toggle the display of the channel ids.
 #### TraceView.update_color
 
 
-**`TraceView.update_color(self, selected_clusters=None)`**
+**`TraceView.update_color(self)`**
 
 Update the cluster colors depending on the selected clusters. To be overriden.
 
@@ -11033,9 +10970,9 @@ Update the cluster colors depending on the selected clusters. To be overriden.
 #### TraceView.update_status
 
 
-**`TraceView.update_status(self, suffix='')`**
+**`TraceView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -11053,7 +10990,7 @@ Increase the interval size.
 
 **`TraceView.color_scheme`**
 
-
+Current color scheme.
 
 ---
 
@@ -11110,6 +11047,15 @@ Scaling of the channel boxes.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### TraceView.status
+
+
+**`TraceView.status`**
+
+
 
 ---
 
@@ -11197,21 +11143,6 @@ following the probe geometry.
 
 ---
 
-#### WaveformView.add_color_scheme
-
-
-**`WaveformView.add_color_scheme(self, fun=None, name=None, cluster_ids=None, colormap=None, categorical=None, logarithmic=None)`**
-
-Add a color scheme to the view. Can be used as follows:
-
-```python
-@connect
-def on_add_view(gui, view):
-    view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-```
-
----
-
 #### WaveformView.attach
 
 
@@ -11257,15 +11188,6 @@ Increase the vertical scaling of the waveforms.
 
 ---
 
-#### WaveformView.get_cluster_colors
-
-
-**`WaveformView.get_cluster_colors(self, cluster_ids, alpha=1.0)`**
-
-Return the cluster colors depending on the currently-selected color scheme.
-
----
-
 #### WaveformView.get_clusters_data
 
 
@@ -11292,15 +11214,6 @@ Increase the scaling parameter.
 **`WaveformView.narrow(self)`**
 
 Decrease the horizontal scaling of the waveforms.
-
----
-
-#### WaveformView.next_color_scheme
-
-
-**`WaveformView.next_color_scheme(self)`**
-
-Switch to the next color scheme.
 
 ---
 
@@ -11373,15 +11286,6 @@ Update the view with the current cluster selection.
 
 ---
 
-#### WaveformView.previous_color_scheme
-
-
-**`WaveformView.previous_color_scheme(self)`**
-
-Switch to the previous color scheme.
-
----
-
 #### WaveformView.previous_waveforms_type
 
 
@@ -11407,15 +11311,6 @@ Reset the scaling to the default value.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
-
----
-
-#### WaveformView.set_dock_status
-
-
-**`WaveformView.set_dock_status(self, text)`**
-
-Set the status in the dock title bar.
 
 ---
 
@@ -11495,21 +11390,12 @@ Toggle the overlap of the waveforms.
 
 ---
 
-#### WaveformView.update_color
-
-
-**`WaveformView.update_color(self, selected_clusters=None)`**
-
-Update the cluster colors depending on the selected clusters. To be overriden.
-
----
-
 #### WaveformView.update_status
 
 
-**`WaveformView.update_status(self, suffix='')`**
+**`WaveformView.update_status(self)`**
 
-Update the status text in the dock title bar.
+
 
 ---
 
@@ -11540,15 +11426,6 @@ Layout instance.
 
 ---
 
-#### WaveformView.color_scheme
-
-
-**`WaveformView.color_scheme`**
-
-
-
----
-
 #### WaveformView.overlap
 
 
@@ -11574,6 +11451,15 @@ Whether to overlap the waveforms belonging to different clusters.
 
 View state, a Bunch instance automatically persisted in the GUI state when the
 GUI is closed. To be overriden.
+
+---
+
+#### WaveformView.status
+
+
+**`WaveformView.status`**
+
+
 
 ---
 
@@ -11805,6 +11691,15 @@ To be called before creating a GUI.
 **`BaseController.create_amplitude_view(self)`**
 
 Create the amplitude view.
+
+---
+
+#### BaseController.create_cluster_scatter_view
+
+
+**`BaseController.create_cluster_scatter_view(self)`**
+
+Create a cluster scatter view.
 
 ---
 
@@ -12356,6 +12251,15 @@ To be called before creating a GUI.
 **`TemplateController.create_amplitude_view(self)`**
 
 
+
+---
+
+#### TemplateController.create_cluster_scatter_view
+
+
+**`TemplateController.create_cluster_scatter_view(self)`**
+
+Create a cluster scatter view.
 
 ---
 
@@ -13005,6 +12909,15 @@ To be called before creating a GUI.
 **`KwikController.create_amplitude_view(self)`**
 
 
+
+---
+
+#### KwikController.create_cluster_scatter_view
+
+
+**`KwikController.create_cluster_scatter_view(self)`**
+
+Create a cluster scatter view.
 
 ---
 
