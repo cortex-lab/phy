@@ -561,15 +561,6 @@ class TemplateMixin(object):
         )
         self._attach_global_view(view)
 
-        # @connect(sender=view)
-        # def on_request_select(sender, cluster_ids):
-        #     self.supervisor.select(cluster_ids)
-
-        # @connect
-        # def on_close_view(sender, view_):  # pragma: no cover
-        #     if view == view_:
-        #         unconnect(on_request_select)
-
         return view
 
 
@@ -1371,15 +1362,6 @@ class BaseController(object):
         )
         self._attach_global_view(view)
 
-        # @connect(sender=view)
-        # def on_request_select(sender, cluster_ids):
-        #     self.supervisor.select(cluster_ids)
-
-        # @connect
-        # def on_close_view(sender, view_):  # pragma: no cover
-        #     if view == view_:
-        #         unconnect(on_request_select)
-
         return view
 
     # Raster view
@@ -1393,32 +1375,6 @@ class BaseController(object):
             cluster_ids=self.supervisor.clustering.cluster_ids,
         )
         self._attach_global_view(view)
-
-        # @connect
-        # def on_time_range_selected(sender, interval):
-        #     if view.auto_update:
-        #         # Show the time range in the raster view.
-        #         view.zoom_to_time_range(interval)
-
-        # @connect(sender=view)
-        # def on_view_ready(sender):
-        #     view.zoom_to_time_range(self.selection.get('selected_time_range', None))
-
-        # @connect(event='view_ready')
-        # def on_view_ready_(sender):
-        #     if sender.__class__.__name__ == 'TraceView':
-        #         view.zoom_to_time_range(sender.interval)
-
-        # @connect(sender=view)
-        # def on_request_select(sender, cluster_ids):
-        #     self.supervisor.select(cluster_ids)
-
-        # @connect
-        # def on_close_view(sender, view_):  # pragma: no cover
-        #     if view == view_:
-        #         unconnect(on_request_select)
-        #         unconnect(on_time_range_selected)
-        #         unconnect(on_view_ready)
 
         return view
 

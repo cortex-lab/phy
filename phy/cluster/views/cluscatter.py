@@ -43,12 +43,15 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     _default_alpha = .75
     _min_marker_size = 5.0
     _max_marker_size = 30.0
+    _dims = ('x_axis', 'y_axis', 'size')
 
     # NOTE: this is not the actual marker size, but a scaling factor for the normal marker size.
     _marker_size = 1.
     _default_marker_size = 1.
 
-    logarithmic_size = False
+    x_axis_log_scale = False
+    y_axis_log_scale = False
+    size_log_scale = False
 
     default_shortcuts = {
     }
@@ -56,13 +59,18 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     def __init__(
             self, cluster_ids=None, cluster_info=None, bindings=None, **kwargs):
         super(ClusterScatterView, self).__init__(**kwargs)
-        self.state_attrs += ()
-        self.local_state_attrs += ('scaling',)
+        self.state_attrs += (
+            'scaling',
+            'x_axis', 'y_axis', 'size',
+            'x_axis_log_scale', 'y_axis_log_scale', 'size_log_scale',
+        )
+        self.local_state_attrs += ()
 
         self.canvas.enable_axes()
         self.cluster_info = cluster_info
-        self.bindings = bindings
-        assert set(('x_axis', 'y_axis', 'size')) <= set(bindings.keys())
+        assert set(self._dims) <= set(bindings.keys())
+        self.__dict__.update(bindings)  # update self.x_axis, y_axis, size
+        assert self.bindings == bindings
 
         # Full list of clusters.
         if cluster_ids is not None:
@@ -73,6 +81,10 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     # Data access
     # -------------------------------------------------------------------------
+
+    @property
+    def bindings(self):
+        return {k: getattr(self, k) for k in self._dims}
 
     def get_cluster_data(self, cluster_id):
         """Return the data of one cluster."""
@@ -106,11 +118,17 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         # Get the list of fields returned by cluster_info.
         self.fields = sorted(self.cluster_info(self.all_cluster_ids[0]).keys())
 
-        # Create the x, y, size, colors arrays.
+        # Create the x array.
         x = np.array(
             [self.cluster_data[cluster_id]['x_axis'] for cluster_id in self.all_cluster_ids])
+        if self.x_axis_log_scale:
+            x = np.log(1.0 + x - x.min())
+
+        # Create the y array.
         y = np.array(
             [self.cluster_data[cluster_id]['y_axis'] for cluster_id in self.all_cluster_ids])
+        if self.y_axis_log_scale:
+            y = np.log(1.0 + y - y.min())
 
         self.marker_positions = np.c_[x, y]
 
@@ -123,7 +141,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
             [self.cluster_data[cluster_id]['size'] for cluster_id in self.all_cluster_ids])
 
         # Normalize the marker size.
-        if self.logarithmic_size:
+        if self.size_log_scale:
             size = np.log(1.0 + size - size.min())
         m, M = size.min(), size.max()
         size = (size - m) / (M - m)  # size is in [0, 1]
@@ -175,7 +193,8 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     def change_bindings(self, **kwargs):
         """Change the bindings."""
-        self.bindings.update(kwargs)
+        assert set(kwargs.keys()) <= set(self._dims)
+        self.__dict__.update(kwargs)
         self.prepare_data()
         self.plot()
 
@@ -188,29 +207,40 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
                 self.change_bindings(**{dim: name})
             return callback
 
+        def _make_log_toggle(dim):
+            def callback(checked):
+                self.toggle_log_scale(dim, checked)
+            return callback
+
         # Change the bindings.
-        for dim in ('x_axis', 'y_axis', 'size'):
-            gui.get_submenu(self.name, 'Change %s' % dim)
+        for dim in self._dims:
+            submenu = 'Change %s' % dim
+            gui.get_submenu(self.name, submenu)
+
+            # Change to every cluster info.
             for name in self.fields:
                 self.actions.add(
                     _make_action(dim, name),
-                    name="Change %s to %s" % (dim, name), submenu='Change %s' % dim)
+                    name="Change %s to %s" % (dim, name), submenu=submenu)
 
-        # Toggle logarithmic size.
-        self.actions.add(
-            self.toggle_logarithmic_size, checkable=True, checked=self.logarithmic_size)
+            # Toggle logarithmic scale.
+            self.actions.separator(menu=submenu)
+            self.actions.add(
+                _make_log_toggle(dim), checkable=True, submenu=submenu,
+                name='Toggle log scale for %s' % dim,
+                checked=getattr(self, '%s_log_scale' % dim))
 
-        self.actions.separator()
-
-    def toggle_logarithmic_size(self, checked):
-        """Toggle logarithmic scaling for marker size."""
-        self.logarithmic_size = checked
-        self.prepare_size()
-        self._set_marker_size()
+    def toggle_log_scale(self, dim, checked):
+        """Toggle logarithmic scaling for one of the dimensions."""
+        setattr(self, '%s_log_scale' % dim, checked)
+        self.prepare_data()
+        self.plot()
         self.canvas.update()
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking on its template waveform."""
+        if 'Control' not in e.modifiers:
+            return
         b = e.button
         pos = self.canvas.window_to_ndc(e.pos)
         pos = range_transform([NDC], [self.data_bounds], [pos])[0]
