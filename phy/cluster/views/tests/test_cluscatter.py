@@ -49,9 +49,14 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     v.on_select(s, list(np.arange(100)))
 
     v.actions.change_x_axis_to_fet1()
+    v.set_x_axis('fet1')
+    v.set_y_axis('fet2')
+    v.set_size('fet3')
+
     v.actions.get('Toggle log scale for x_axis').trigger()
     v.actions.get('Toggle log scale for y_axis').trigger()
     v.actions.get('Toggle log scale for size').trigger()
+
     v.increase_marker_size()
     assert v.status
 

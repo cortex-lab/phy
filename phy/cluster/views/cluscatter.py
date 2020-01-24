@@ -54,6 +54,15 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     size_log_scale = False
 
     default_shortcuts = {
+        'change_marker_size': 'alt+wheel',
+        'select_cluster': 'ctrl+click',
+        'select_more': 'ctrl+shift+click',
+    }
+
+    default_snippets = {
+        'set_x_axis': 'csx',
+        'set_y_axis': 'csy',
+        'set_size': 'css',
     }
 
     def __init__(
@@ -210,11 +219,25 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     def change_bindings(self, **kwargs):
         """Change the bindings."""
+        # Ensure the specified fields are valid.
+        kwargs = {k: v for k, v in kwargs.items() if v in self.fields}
         assert set(kwargs.keys()) <= set(self._dims)
         self.__dict__.update(kwargs)
         self._update_labels()
         self.prepare_data()
         self.plot()
+
+    def set_x_axis(self, field):
+        """Set the dimension for the x axis."""
+        self.change_bindings(x_axis=field)
+
+    def set_y_axis(self, field):
+        """Set the dimension for the y axis."""
+        self.change_bindings(y_axis=field)
+
+    def set_size(self, field):
+        """Set the dimension for the marker size."""
+        self.change_bindings(size=field)
 
     # Misc functions
     # -------------------------------------------------------------------------
@@ -242,7 +265,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
             for name in self.fields:
                 self.actions.add(
                     _make_action(dim, name),
-                    name="Change %s to %s" % (dim, name), submenu=submenu)
+                    name='Change %s to %s' % (dim, name), submenu=submenu)
 
             # Toggle logarithmic scale.
             self.actions.separator(menu=submenu)
@@ -250,6 +273,11 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
                 _make_log_toggle(dim), checkable=True, submenu=submenu,
                 name='Toggle log scale for %s' % dim,
                 checked=getattr(self, '%s_log_scale' % dim))
+
+        self.actions.separator()
+        self.actions.add(self.set_x_axis, prompt=True, prompt_default=lambda: self.x_axis)
+        self.actions.add(self.set_y_axis, prompt=True, prompt_default=lambda: self.y_axis)
+        self.actions.add(self.set_size, prompt=True, prompt_default=lambda: self.size)
 
     def toggle_log_scale(self, dim, checked):
         """Toggle logarithmic scaling for one of the dimensions."""
