@@ -15,7 +15,7 @@ from phy.utils.color import _add_selected_clusters_colors
 from phylib.utils import emit
 
 from phy.plot.transform import range_transform, NDC
-from phy.plot.visuals import ScatterVisual
+from phy.plot.visuals import ScatterVisual, TextVisual
 from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin, BaseColorView
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,15 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
 
+        self.label_visual = TextVisual()
+        self.canvas.add_visual(self.label_visual, exclude_origins=(self.canvas.panzoom,))
+        self._update_labels()
+
+    def _update_labels(self):
+        self.label_visual.set_data(
+            pos=[[0, -1], [1, 0]], text=[self.x_axis, self.y_axis],
+            anchor=[[0, 3], [-3, 0]])
+
     # Data access
     # -------------------------------------------------------------------------
 
@@ -105,6 +114,11 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     # Data preparation
     # -------------------------------------------------------------------------
 
+    def set_fields(self):
+        data = self.cluster_info(self.all_cluster_ids[0])
+        self.fields = sorted(data.keys())
+        self.fields = [f for f in self.fields if not isinstance(data[f], str)]
+
     def prepare_data(self):
         """Prepare the marker position, size, and color from the cluster information."""
         self.prepare_position()
@@ -116,17 +130,17 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.cluster_data = self.get_clusters_data(self.all_cluster_ids)
 
         # Get the list of fields returned by cluster_info.
-        self.fields = sorted(self.cluster_info(self.all_cluster_ids[0]).keys())
+        self.set_fields()
 
         # Create the x array.
         x = np.array(
-            [self.cluster_data[cluster_id]['x_axis'] for cluster_id in self.all_cluster_ids])
+            [self.cluster_data[cluster_id]['x_axis'] or 0 for cluster_id in self.all_cluster_ids])
         if self.x_axis_log_scale:
             x = np.log(1.0 + x - x.min())
 
         # Create the y array.
         y = np.array(
-            [self.cluster_data[cluster_id]['y_axis'] for cluster_id in self.all_cluster_ids])
+            [self.cluster_data[cluster_id]['y_axis'] or 0 for cluster_id in self.all_cluster_ids])
         if self.y_axis_log_scale:
             y = np.log(1.0 + y - y.min())
 
@@ -195,6 +209,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         """Change the bindings."""
         assert set(kwargs.keys()) <= set(self._dims)
         self.__dict__.update(kwargs)
+        self._update_labels()
         self.prepare_data()
         self.plot()
 

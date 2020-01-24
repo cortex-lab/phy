@@ -30,7 +30,7 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     def cluster_info(cluster_id):
         return Bunch({
             'fet1': np.random.randn(),
-            'fet2': np.random.randn(),
+            'fet2': np.exp(20 * np.random.randn()),
             'fet3': np.random.uniform(low=5, high=20)
         })
 
@@ -48,7 +48,7 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
 
     v.on_select(s, list(np.arange(100)))
 
-    v.actions.change_y_axis_to_fet3()
+    v.actions.change_x_axis_to_fet1()
     v.actions.get('Toggle log scale for x_axis').trigger()
     v.actions.get('Toggle log scale for y_axis').trigger()
     v.actions.get('Toggle log scale for size').trigger()
