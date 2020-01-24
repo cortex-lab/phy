@@ -238,8 +238,8 @@ class ScatterVisual(BaseVisual):
 
     def set_marker_size(self, marker_size):
         """Change the size of the markers."""
-        assert marker_size > 0
         size = _get_array(marker_size, (self.n_vertices, 1))
+        assert np.all(size > 0)
         self.program['a_size'] = size.astype(np.float32)
 
 

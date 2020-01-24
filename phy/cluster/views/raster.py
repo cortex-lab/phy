@@ -137,10 +137,10 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         self.visual.set_box_index(self._get_box_index())
         self.canvas.update()
 
-    def update_color(self, selected_clusters=None):
+    def update_color(self):
         """Update the color of the spikes, depending on the selected clusters."""
         box_index = self._get_box_index()
-        color = self._get_color(box_index, selected_clusters=selected_clusters)
+        color = self._get_color(box_index, selected_clusters=self.cluster_ids)
         self.visual.set_color(color)
         self.canvas.update()
 

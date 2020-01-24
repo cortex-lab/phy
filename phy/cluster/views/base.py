@@ -400,15 +400,12 @@ class BaseGlobalView(object):
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
-        self.update_color(selected_clusters=cluster_ids)
+        self.cluster_ids = cluster_ids  # selected clusters
+        self.update_color()
 
 
 class BaseColorView(object):
-    """
-    Events raised
-    -------------
-
-    - `color_scheme_changed`
+    """Provide facilities to add and select color schemes in the view.
     """
     def __init__(self, *args, **kwargs):
         super(BaseColorView, self).__init__(*args, **kwargs)
@@ -448,10 +445,9 @@ class BaseColorView(object):
         return cs.get_colors(cluster_ids, alpha=alpha)
 
     def _neighbor_color_scheme(self, dir=+1):
-        """Raise the `color_scheme_changed` event."""
         name = self.color_schemes._neighbor(dir=dir)
         logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
-        emit('color_scheme_changed', self, name)
+        self.update_color()
 
     def next_color_scheme(self):
         """Switch to the next color scheme."""
@@ -461,7 +457,7 @@ class BaseColorView(object):
         """Switch to the previous color scheme."""
         self._neighbor_color_scheme(-1)
 
-    def update_color(self, selected_clusters=None):
+    def update_color(self):
         """Update the cluster colors depending on the selected clusters. To be overriden."""
         pass
 
@@ -474,6 +470,7 @@ class BaseColorView(object):
     def color_scheme(self, value):
         """Change the current color scheme."""
         self.color_schemes.set(value)
+        self.update_color()
 
     def attach(self, gui):
         super(BaseColorView, self).attach(gui)
