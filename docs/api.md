@@ -10474,7 +10474,7 @@ Toggle the display of the channel ids.
 
 **`TraceImageView.update_color(self)`**
 
-Update the cluster colors depending on the selected clusters. To be overriden.
+Update the view when the color scheme changes.
 
 ---
 
@@ -10963,7 +10963,7 @@ Toggle the display of the channel ids.
 
 **`TraceView.update_color(self)`**
 
-Update the cluster colors depending on the selected clusters. To be overriden.
+Update the view when the color scheme changes.
 
 ---
 
