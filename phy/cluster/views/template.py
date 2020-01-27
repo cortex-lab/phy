@@ -17,7 +17,7 @@ from phylib.utils import emit, Bunch
 
 from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual
-from .base import ManualClusteringView, BaseGlobalView, ScalingMixin
+from .base import ManualClusteringView, BaseGlobalView, ScalingMixin, BaseColorView
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Template view
 # -----------------------------------------------------------------------------
 
-class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
+class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows all template waveforms of all clusters in a large grid of shape
     `(n_channels, n_clusters)`.
 
@@ -47,7 +47,6 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
     """
     _default_position = 'right'
     _scaling = 1.
-    has_color_schemes = True
 
     default_shortcuts = {
         'change_template_size': 'ctrl+wheel',
@@ -179,7 +178,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         self.visual.set_box_index(box_index)
         self.canvas.update()
 
-    def update_color(self, selected_clusters=None):
+    def update_color(self):
         """Update the color of the clusters, taking the selected clusters into account."""
         # This method is only used when the view has been plotted at least once,
         # such that self._cluster_box_index has been filled.
@@ -189,6 +188,7 @@ class TemplateView(ScalingMixin, BaseGlobalView, ManualClusteringView):
         self.set_cluster_ids(self.all_cluster_ids)
         # Selected cluster colors.
         cluster_colors = self.cluster_colors
+        selected_clusters = self.cluster_ids
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
                 selected_clusters, self.sorted_cluster_ids, cluster_colors)

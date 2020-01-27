@@ -15,7 +15,7 @@ from phylib.io.array import _index_of
 from phylib.utils import emit
 from phy.utils.color import _add_selected_clusters_colors
 
-from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin
+from .base import ManualClusteringView, BaseGlobalView, MarkerSizeMixin, BaseColorView
 from phy.plot.visuals import ScatterVisual
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Raster view
 # -----------------------------------------------------------------------------
 
-class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
+class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows a raster plot of all clusters.
 
     Constructor
@@ -41,10 +41,9 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
     """
 
     _default_position = 'right'
-    has_color_schemes = True
 
     default_shortcuts = {
-        'change_marker_size': 'ctrl+wheel',
+        'change_marker_size': 'alt+wheel',
         'decrease_marker_size': 'ctrl+shift+-',
         'increase_marker_size': 'ctrl+shift++',
         'select_cluster': 'ctrl+click',
@@ -138,10 +137,10 @@ class RasterView(MarkerSizeMixin, BaseGlobalView, ManualClusteringView):
         self.visual.set_box_index(self._get_box_index())
         self.canvas.update()
 
-    def update_color(self, selected_clusters=None):
+    def update_color(self):
         """Update the color of the spikes, depending on the selected clusters."""
         box_index = self._get_box_index()
-        color = self._get_color(box_index, selected_clusters=selected_clusters)
+        color = self._get_color(box_index, selected_clusters=self.cluster_ids)
         self.visual.set_color(color)
         self.canvas.update()
 

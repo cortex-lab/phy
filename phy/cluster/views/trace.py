@@ -16,7 +16,7 @@ from phy.utils.color import selected_cluster_color, colormaps, _continuous_color
 from phy.plot.interact import Stacked
 from phy.plot.transform import NDC, Range, _fix_coordinate_in_visual
 from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual, ImageVisual
-from .base import ManualClusteringView, ScalingMixin
+from .base import ManualClusteringView, ScalingMixin, BaseColorView
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def _iter_spike_waveforms(
             yield wave
 
 
-class TraceView(ScalingMixin, ManualClusteringView):
+class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     """This view shows the raw traces along with spike waveforms.
 
     Constructor
@@ -108,7 +108,6 @@ class TraceView(ScalingMixin, ManualClusteringView):
     _default_position = 'left'
     auto_update = True
     auto_scale = True
-    has_color_schemes = True
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.25
@@ -557,6 +556,10 @@ class TraceView(ScalingMixin, ManualClusteringView):
         """Toggle automatic scaling of the traces."""
         logger.debug("Set auto scale to %s.", checked)
         self.auto_scale = checked
+
+    def update_color(self):
+        """Update the view when the color scheme changes."""
+        self.plot(update_traces=False, update_waveforms=True)
 
     # Scaling
     # -------------------------------------------------------------------------

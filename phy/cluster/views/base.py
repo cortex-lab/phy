@@ -55,7 +55,6 @@ class ManualClusteringView(object):
     - `view_actions_created`
     - `view_ready`
     - `is_busy`
-    - `color_scheme_changed`
     - `toggle_auto_update`
 
     """
@@ -64,7 +63,6 @@ class ManualClusteringView(object):
     auto_update = True  # automatically update the view when the cluster selection changes
     _default_position = None
     plot_canvas_class = PlotCanvas
-    has_color_schemes = False  # whether this view class supports color schemes
     ex_status = ''  # the GUI can update this to
 
     def __init__(self, shortcuts=None, **kwargs):
@@ -80,11 +78,7 @@ class ManualClusteringView(object):
         self._enable_threading = kwargs.get('enable_threading', True)
 
         # List of attributes to save in the GUI view state.
-        self.state_attrs = ('auto_update', 'color_scheme')
-
-        # Color schemes.
-        self.color_schemes = RotatingProperty()
-        self.add_color_scheme(fun=0, name='blank', colormap='blank', categorical=True)
+        self.state_attrs = ('auto_update',)
 
         # List of attributes to save in the local GUI state as well.
         self.local_state_attrs = ()
@@ -135,65 +129,6 @@ class ManualClusteringView(object):
             self._plot_cluster(bunch)
         self._update_axes()
         self.canvas.update()
-
-    # -------------------------------------------------------------------------
-    # Color scheme methods
-    # -------------------------------------------------------------------------
-
-    def add_color_scheme(
-            self, fun=None, name=None, cluster_ids=None,
-            colormap=None, categorical=None, logarithmic=None):
-        """Add a color scheme to the view. Can be used as follows:
-
-        ```python
-        @connect
-        def on_add_view(gui, view):
-            view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
-        ```
-
-        """
-        if fun is None:
-            return partial(
-                self.add_color_scheme, name=name, cluster_ids=cluster_ids,
-                colormap=colormap, categorical=categorical, logarithmic=logarithmic)
-        field = name or fun.__name__
-        cs = ClusterColorSelector(
-            fun, cluster_ids=cluster_ids,
-            colormap=colormap, categorical=categorical, logarithmic=logarithmic)
-        self.color_schemes.add(field, cs)
-
-    def get_cluster_colors(self, cluster_ids, alpha=1.0):
-        """Return the cluster colors depending on the currently-selected color scheme."""
-        cs = self.color_schemes.get()
-        if cs is None:  # pragma: no cover
-            raise RuntimeError("Make sure that at least a color scheme is added.")
-        return cs.get_colors(cluster_ids, alpha=alpha)
-
-    def _neighbor_color_scheme(self, dir=+1):
-        """Raise the `color_scheme_changed` event."""
-        name = self.color_schemes._neighbor(dir=dir)
-        logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
-        emit('color_scheme_changed', self, name)
-
-    def next_color_scheme(self):
-        """Switch to the next color scheme."""
-        self._neighbor_color_scheme(+1)
-
-    def previous_color_scheme(self):
-        """Switch to the previous color scheme."""
-        self._neighbor_color_scheme(-1)
-
-    def update_color(self, selected_clusters=None):
-        """Update the cluster colors depending on the selected clusters. To be overriden."""
-        pass
-
-    @property
-    def color_scheme(self):
-        return self.color_schemes.current
-
-    @color_scheme.setter
-    def color_scheme(self, value):
-        self.color_schemes.set(value)
 
     # -------------------------------------------------------------------------
     # Main public methods
@@ -307,10 +242,6 @@ class ManualClusteringView(object):
         # Set the view state.
         self.set_state(gui.state.get_view_state(self))
 
-        # Set the current color scheme to the GUI state color scheme (automatically set
-        # in self.color_scheme).
-        self.color_schemes.set(self.color_scheme)
-
         self.actions = Actions(
             gui, name=self.name, menu='&View', submenu=self.name,
             default_shortcuts=shortcuts, default_snippets=self.default_snippets)
@@ -321,12 +252,6 @@ class ManualClusteringView(object):
         self.actions.add(self.screenshot, show_shortcut=False)
         self.actions.add(self.close, show_shortcut=False)
         self.actions.separator()
-
-        # Color scheme actions.
-        if self.has_color_schemes:
-            self.actions.add(self.next_color_scheme)
-            self.actions.add(self.previous_color_scheme)
-            self.actions.separator()
 
         emit('view_actions_created', self)
 
@@ -475,7 +400,88 @@ class BaseGlobalView(object):
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
-        self.update_color(selected_clusters=cluster_ids)
+        self.cluster_ids = cluster_ids  # selected clusters
+        self.update_color()
+
+
+class BaseColorView(object):
+    """Provide facilities to add and select color schemes in the view.
+    """
+    def __init__(self, *args, **kwargs):
+        super(BaseColorView, self).__init__(*args, **kwargs)
+        self.state_attrs += ('color_scheme',)
+
+        # Color schemes.
+        self.color_schemes = RotatingProperty()
+        self.add_color_scheme(fun=0, name='blank', colormap='blank', categorical=True)
+
+    def add_color_scheme(
+            self, fun=None, name=None, cluster_ids=None,
+            colormap=None, categorical=None, logarithmic=None):
+        """Add a color scheme to the view. Can be used as follows:
+
+        ```python
+        @connect
+        def on_add_view(gui, view):
+            view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
+        ```
+
+        """
+        if fun is None:
+            return partial(
+                self.add_color_scheme, name=name, cluster_ids=cluster_ids,
+                colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+        field = name or fun.__name__
+        cs = ClusterColorSelector(
+            fun, cluster_ids=cluster_ids,
+            colormap=colormap, categorical=categorical, logarithmic=logarithmic)
+        self.color_schemes.add(field, cs)
+
+    def get_cluster_colors(self, cluster_ids, alpha=1.0):
+        """Return the cluster colors depending on the currently-selected color scheme."""
+        cs = self.color_schemes.get()
+        if cs is None:  # pragma: no cover
+            raise RuntimeError("Make sure that at least a color scheme is added.")
+        return cs.get_colors(cluster_ids, alpha=alpha)
+
+    def _neighbor_color_scheme(self, dir=+1):
+        name = self.color_schemes._neighbor(dir=dir)
+        logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
+        self.update_color()
+
+    def next_color_scheme(self):
+        """Switch to the next color scheme."""
+        self._neighbor_color_scheme(+1)
+
+    def previous_color_scheme(self):
+        """Switch to the previous color scheme."""
+        self._neighbor_color_scheme(-1)
+
+    def update_color(self):
+        """Update the cluster colors depending on the selected clusters. To be overriden."""
+        pass
+
+    @property
+    def color_scheme(self):
+        """Current color scheme."""
+        return self.color_schemes.current
+
+    @color_scheme.setter
+    def color_scheme(self, value):
+        """Change the current color scheme."""
+        self.color_schemes.set(value)
+        self.update_color()
+
+    def attach(self, gui):
+        super(BaseColorView, self).attach(gui)
+        # Set the current color scheme to the GUI state color scheme (automatically set
+        # in self.color_scheme).
+        self.color_schemes.set(self.color_scheme)
+
+        # Color scheme actions.
+        self.actions.add(self.next_color_scheme)
+        self.actions.add(self.previous_color_scheme)
+        self.actions.separator()
 
 
 class BaseWheelMixin(object):

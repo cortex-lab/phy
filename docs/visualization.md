@@ -132,9 +132,40 @@ Interactivity in all graphical views:
 * **Zoom**: right-click and drag, mouse wheel
 * **Reset pan and zoom**: double-click
 * **Increase or decrease scaling**: control+wheel (only in some views).
-    * Scatter plots: change the marker size
     * Histograms: change the range on the x axis
     * Waveform, template, trace views: change the y scaling
+* **Increase or decrease marker scaling**: alt+wheel (only in some views).
+    * Scatter plots: change the marker size
+
+
+### Cluster scatter view
+
+This view shows all clusters in a scatter plot. The x axis, y axis, marker size, and color are computed depending on four customizable fields among the columns in the cluster view. By default, the bindings are as follows:
+
+* x axis: firing rate (log scale)
+* y axis: depth
+* marker size: template amplitude (if available)
+* color: cluster id
+
+You can select a cluster by control+clicking on it, and add a cluster to the selection by control+shift+clicking on it.
+
+![screenshot_2020-01-22-13-44-40](https://user-images.githubusercontent.com/1942359/73083549-aeca5400-3ecb-11ea-93de-0351731a727d.png)
+
+#### Keyboard shortcuts
+
+```text
+Keyboard shortcuts for ClusterScatterView
+
+- change_marker_size                       alt+wheel
+- select_cluster                           ctrl+click
+- select_more                              ctrl+shift+click
+
+Snippets for ClusterScatterView
+- set_size                                 :css
+- set_x_axis                               :csx
+- set_y_axis                               :csy
+
+```
 
 
 ### Waveform view
@@ -342,6 +373,8 @@ Snippets for TraceImageView
 
 This view shows the amplitude of a selection of spikes belonging to the selected clusters, along with vertical histograms on the right.
 
+**NOTE**: at the moment, **the `raw` amplitude type is extremely slow** as individual spike waveforms need to be fetched on demand from the raw data.
+
 ![image](https://user-images.githubusercontent.com/1942359/59875055-13568b00-93a0-11e9-923e-b069d3d78130.png)
 
 #### Different types of amplitudes
@@ -436,7 +469,7 @@ Select a cluster with **Control+click**.
 ```text
 Keyboard shortcuts for RasterView
 
-- change_marker_size                       ctrl+wheel
+- change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
 - select_cluster                           ctrl+click

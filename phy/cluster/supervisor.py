@@ -733,15 +733,17 @@ class Supervisor(object):
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
         data = [
-            dict(similarity='%.3f' % s, **self._get_cluster_info(c))
+            dict(similarity='%.3f' % s, **self.get_cluster_info(c))
             for c, s in sim if c in clusters_set]
         return data
 
-    def _get_cluster_info(self, cluster_id, exclude=()):
+    def get_cluster_info(self, cluster_id, exclude=()):
         """Return the data associated to a given cluster."""
         out = {'id': cluster_id}
+        # Cluster metrics.
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
+        # Cluster meta.
         for key in self.cluster_meta.fields:
             # includes group
             out[key] = self.cluster_meta.get(key, cluster_id)
@@ -779,7 +781,7 @@ class Supervisor(object):
     def _clusters_added(self, cluster_ids):
         """Update the cluster and similarity views when new clusters are created."""
         logger.log(5, "Clusters added: %s", cluster_ids)
-        data = [self._get_cluster_info(cluster_id) for cluster_id in cluster_ids]
+        data = [self.get_cluster_info(cluster_id) for cluster_id in cluster_ids]
         self.cluster_view.add(data)
         self.similarity_view.add(data)
 
@@ -911,7 +913,7 @@ class Supervisor(object):
     @property
     def cluster_info(self):
         """The cluster view table as a list of per-cluster dictionaries."""
-        return [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+        return [self.get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
     @property
     def all_cluster_ids(self):

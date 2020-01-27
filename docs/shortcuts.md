@@ -69,6 +69,16 @@ Keyboard shortcuts for AmplitudeView
 
 Snippets for AmplitudeView
 
+Keyboard shortcuts for ClusterScatterView
+- change_marker_size                       alt+wheel
+- select_cluster                           ctrl+click
+- select_more                              ctrl+shift+click
+
+Snippets for ClusterScatterView
+- set_size                                 :css
+- set_x_axis                               :csx
+- set_y_axis                               :csy
+
 Keyboard shortcuts for CorrelogramView
 - change_window_size                       ctrl+wheel
 
@@ -119,7 +129,7 @@ Keyboard shortcuts for ProbeView
 Snippets for ProbeView
 
 Keyboard shortcuts for RasterView
-- change_marker_size                       ctrl+wheel
+- change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
 - select_cluster                           ctrl+click
