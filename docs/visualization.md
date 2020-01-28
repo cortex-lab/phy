@@ -419,7 +419,7 @@ This view supports splitting like in the feature view. When splitting, all spike
 
 #### Background spikes
 
-Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel.
+Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel. The gray spikes come from all clusters that have some signal on the first selected cluster's peak channel, and not necessarily those for which the best channel corresponds exactly to that channel.
 
 #### Time range
 

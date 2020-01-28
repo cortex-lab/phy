@@ -782,6 +782,9 @@ class BaseController(object):
     gui_name = 'BaseGUI'
     gui_version = 2
 
+    # Default value of the 'show_mapped_channels' param if it is not set in params.py.
+    default_show_mapped_channels = True
+
     # Number of spikes to show in the views.
     n_spikes_amplitudes = 10000
 
@@ -1011,7 +1014,7 @@ class BaseController(object):
         if channel_ids is None:
             channel_ids = np.arange(self.model.n_channels)
         if (hasattr(self.model, 'channel_mapping') and
-                getattr(self.model, 'show_mapped_channels', True)):
+                getattr(self.model, 'show_mapped_channels', self.default_show_mapped_channels)):
             channel_labels = self.model.channel_mapping[channel_ids]
         else:
             channel_labels = channel_ids
