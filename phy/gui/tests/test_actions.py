@@ -58,7 +58,7 @@ def test_show_shortcuts(qapp):
         'test_3': 'ctrl+z',
     }
     with captured_output() as (stdout, stderr):
-        _show_shortcuts(shortcuts, 'test')
+        _show_shortcuts(shortcuts)
     assert 'ctrl+a, shift+b' in stdout.getvalue()
     assert 'ctrl+z' in stdout.getvalue()
 
@@ -68,12 +68,12 @@ def test_show_snippets():
         'test_1 (note)': 't1',
     }
     with captured_output() as (stdout, stderr):
-        _show_snippets(snippets, 'test')
+        _show_snippets(snippets)
     assert ':t1' in stdout.getvalue()
 
 
 def test_actions_default_shortcuts(gui):
-    actions = Actions(gui, default_shortcuts={'my_action': 'a'})
+    actions = Actions(gui, default_shortcuts={'my_action': 'a'}, name='actions')
     actions.add(lambda: None, name='my_action')
     assert actions.shortcuts['my_action'] == 'a'
 

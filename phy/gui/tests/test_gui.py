@@ -127,7 +127,7 @@ def test_gui_creator(tempdir, qtbot):
     class MyCanvas(BaseCanvas):
         def __init__(self, *args, **kwargs):
             super(MyCanvas, self).__init__(*args, **kwargs)
-            self.actions = Actions(gui, menu='MyCanvas')
+            self.actions = Actions(gui, menu='MyCanvas', name='actions')
 
         def attach(self, gui):
             gui.add_view(self)

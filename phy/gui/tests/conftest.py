@@ -30,7 +30,7 @@ def gui(tempdir, qtbot):
 
 @yield_fixture
 def actions(gui):
-    yield Actions(gui)
+    yield Actions(gui, name='actions')
 
 
 @yield_fixture

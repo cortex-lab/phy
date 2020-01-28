@@ -114,30 +114,39 @@ def _get_qkeysequence(shortcut):
     return sequence
 
 
-def _show_shortcuts(shortcuts, name=None):
+def _show_shortcuts(shortcuts):
     """Display shortcuts."""
-    name = name or ''
-    print('')
-    if name:
-        name = ' for ' + name
-    print('Keyboard shortcuts' + name)
-    for name in sorted(shortcuts):
-        shortcut = _get_shortcut_string(shortcuts[name])
-        if not name.startswith('_'):
-            print('- {0:<40} {1:s}'.format(name, shortcut))
+    out = []
+    for n in sorted(shortcuts):
+        shortcut = _get_shortcut_string(shortcuts[n])
+        if not n.startswith('_') and not shortcut.startswith('-'):
+            out.append('- {0:<40} {1:s}'.format(n, shortcut))
+    if out:
+        print('Keyboard shortcuts')
+        print('\n'.join(out))
+        print('')
 
 
-def _show_snippets(snippets, name=None):
+def _show_snippets(snippets):
     """Display snippets."""
-    name = name or ''
-    print('')
-    if name:
-        name = ' for ' + name
-    print('Snippets' + name)
-    for name in sorted(snippets):
-        snippet = snippets[name]
-        if not name.startswith('_'):
-            print('- {0:<40} :{1:s}'.format(name, snippet))
+    out = []
+    for n in sorted(snippets):
+        snippet = snippets[n]
+        if not n.startswith('_'):
+            out.append('- {0:<40} :{1:s}'.format(n, snippet))
+    if out:
+        print('Snippets')
+        print('\n'.join(out))
+        print('')
+
+
+def show_shortcuts_snippets(actions):
+    """Show the shortcuts and snippets of an Actions instance."""
+    print(actions.name)
+    print('-' * len(actions.name))
+    print()
+    _show_shortcuts(actions.shortcuts)
+    _show_snippets(actions._default_snippets)
 
 
 # -----------------------------------------------------------------------------
@@ -253,6 +262,7 @@ class Actions(object):
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
         self._default_snippets = default_snippets or {}
+        assert name
         self.name = name
         self.menu = menu
         self.submenu = submenu
@@ -484,12 +494,7 @@ class Actions(object):
 
     def show_shortcuts(self):
         """Display all shortcuts in the console."""
-        gui_name = self.gui.name
-        actions_name = self.name
-        name = ('{} - {}'.format(gui_name, actions_name)
-                if actions_name else gui_name)
-        _show_shortcuts(self.shortcuts, name)
-        _show_snippets(self._default_snippets, name)
+        show_shortcuts_snippets(self)
 
     def __contains__(self, name):
         """Whether the Actions group contains a specified action."""
