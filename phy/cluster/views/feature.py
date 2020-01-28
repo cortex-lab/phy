@@ -97,7 +97,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     feature_scaling = 1.
 
     default_shortcuts = {
-        'change_marker_size': 'ctrl+wheel',
+        'change_marker_size': 'alt+wheel',
         'increase': 'ctrl++',
         'decrease': 'ctrl+-',
         'add_lasso_point': 'ctrl+click',

@@ -51,7 +51,8 @@ def test_manual_clustering_view_1(qtbot, tempdir):
 def test_manual_clustering_view_2(qtbot, gui):
     v = MyView()
     v.canvas.show()
-    # qtbot.addWidget(v.canvas)
+    v.add_color_scheme(
+        lambda cid: cid, name='myscheme', colormap=colormaps.rainbow, cluster_ids=[0, 1])
     v.attach(gui)
 
     class Supervisor(object):
@@ -59,8 +60,7 @@ def test_manual_clustering_view_2(qtbot, gui):
 
     emit('select', Supervisor(), cluster_ids=[0, 1])
 
-    v.add_color_scheme(
-        lambda cid: cid, name='myscheme', colormap=colormaps.rainbow, cluster_ids=[0, 1])
+    v.actions.get('Change color scheme to myscheme').trigger()
     v.next_color_scheme()
     v.previous_color_scheme()
     assert v.get_cluster_colors([0, 1]).shape == (2, 4)

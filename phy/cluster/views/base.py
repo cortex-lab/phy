@@ -243,7 +243,7 @@ class ManualClusteringView(object):
         self.set_state(gui.state.get_view_state(self))
 
         self.actions = Actions(
-            gui, name=self.name, menu='&View', submenu=self.name,
+            gui, name=self.name, view=self,
             default_shortcuts=shortcuts, default_snippets=self.default_snippets)
 
         # Freeze and unfreeze the view when selecting clusters.
@@ -467,10 +467,11 @@ class BaseColorView(object):
         return self.color_schemes.current
 
     @color_scheme.setter
-    def color_scheme(self, value):
+    def color_scheme(self, color_scheme):
         """Change the current color scheme."""
-        self.color_schemes.set(value)
+        self.color_schemes.set(color_scheme)
         self.update_color()
+        self.update_status()
 
     def attach(self, gui):
         super(BaseColorView, self).attach(gui)
@@ -479,6 +480,17 @@ class BaseColorView(object):
         self.color_schemes.set(self.color_scheme)
 
         # Color scheme actions.
+        def _make_color_scheme_action(cs):
+            def callback():
+                self.color_scheme = cs
+            return callback
+
+        for cs in self.color_schemes.keys():
+            name = 'Change color scheme to %s' % cs
+            self.actions.add(
+                _make_color_scheme_action(cs), show_shortcut=False,
+                name=name, view_submenu='Change color scheme')
+
         self.actions.add(self.next_color_scheme)
         self.actions.add(self.previous_color_scheme)
         self.actions.separator()

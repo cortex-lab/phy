@@ -62,7 +62,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     histogram_scale = .25
 
     default_shortcuts = {
-        'change_marker_size': 'ctrl+wheel',
+        'change_marker_size': 'alt+wheel',
         'next_amplitudes_type': 'a',
         'previous_amplitudes_type': 'shift+a',
         'select_x_dim': 'shift+left click',

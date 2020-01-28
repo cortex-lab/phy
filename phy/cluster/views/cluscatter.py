@@ -161,7 +161,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     def prepare_size(self):
         """Compute the marker sizes."""
         size = np.array(
-            [self.cluster_data[cluster_id]['size'] for cluster_id in self.all_cluster_ids])
+            [self.cluster_data[cluster_id]['size'] or 1. for cluster_id in self.all_cluster_ids])
 
         # Normalize the marker size.
         if self.size_log_scale:
@@ -224,6 +224,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         assert set(kwargs.keys()) <= set(self._dims)
         self.__dict__.update(kwargs)
         self._update_labels()
+        self.update_status()
         self.prepare_data()
         self.plot()
 
@@ -258,20 +259,19 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
         # Change the bindings.
         for dim in self._dims:
-            submenu = 'Change %s' % dim
-            gui.get_submenu(self.name, submenu)
+            view_submenu = 'Change %s' % dim
 
             # Change to every cluster info.
             for name in self.fields:
                 self.actions.add(
-                    _make_action(dim, name),
-                    name='Change %s to %s' % (dim, name), submenu=submenu)
+                    _make_action(dim, name), show_shortcut=False,
+                    name='Change %s to %s' % (dim, name), view_submenu=view_submenu)
 
             # Toggle logarithmic scale.
-            self.actions.separator(menu=submenu)
+            self.actions.separator(view_submenu=view_submenu)
             self.actions.add(
-                _make_log_toggle(dim), checkable=True, submenu=submenu,
-                name='Toggle log scale for %s' % dim,
+                _make_log_toggle(dim), checkable=True, view_submenu=view_submenu,
+                name='Toggle log scale for %s' % dim, show_shortcut=False,
                 checked=getattr(self, '%s_log_scale' % dim))
 
         self.actions.separator()

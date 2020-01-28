@@ -37,7 +37,7 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     _default_position = 'right'
 
     default_shortcuts = {
-        'change_marker_size': 'ctrl+wheel',
+        'change_marker_size': 'alt+wheel',
     }
 
     def __init__(self, coords=None, **kwargs):

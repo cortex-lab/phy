@@ -322,6 +322,9 @@ class RotatingProperty(object):
         """Current key."""
         return self._current
 
+    def keys(self):
+        return list(self._choices)
+
     def get(self, name=None):
         """Get the current value."""
         name = name or self._current
