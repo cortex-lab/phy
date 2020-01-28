@@ -550,7 +550,6 @@ class GUI(QMainWindow):
         for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
                 partial(self.create_and_add_view, view_name),
-                submenu='&New view',
                 name='Add %s' % view_name,
                 docstring="Add %s" % view_name,
                 show_shortcut=False)
