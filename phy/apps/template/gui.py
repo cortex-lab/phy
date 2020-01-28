@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 class TemplateFeatureView(ScatterView):
     """Scatter view showing the template features."""
-    pass
 
 
 #------------------------------------------------------------------------------

@@ -770,7 +770,7 @@ This class attaches to a GUI and implements the following features:
 #### Actions.add
 
 
-**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True, icon=None, toolbar=False)`**
+**`Actions.add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None, docstring=None, menu=None, submenu=None, view=None, view_submenu=None, verbose=True, checkable=False, checked=False, set_busy=False, prompt_default=None, show_shortcut=True, icon=None, toolbar=False)`**
 
 Add an action with a keyboard shortcut.
 
@@ -813,6 +813,12 @@ Add an action with a keyboard shortcut.
 * `submenu : str`
     The name of the submenu where the action should be added. It is automatically created
     if it doesn't exist.
+
+* `view : QWidget`
+    A view that belongs to the GUI, if the actions are to be added to the view's menu bar.
+
+* `view_submenu : str`
+    The name of a submenu in the view menu.
 
 * `checkable : boolean`
     Whether the action is checkable (toggle on/off).
@@ -888,7 +894,7 @@ Run an action as specified by its name.
 #### Actions.separator
 
 
-**`Actions.separator(self, menu=None)`**
+**`Actions.separator(self, **kwargs)`**
 
 Add a separator.
 
@@ -896,7 +902,18 @@ Add a separator.
 
 
 * `menu : str`
-    The menu that will contain the separator, or the Actions menu by default.
+    The name of the menu where the separator should be added. It is automatically created
+    if it doesn't exist.
+
+* `submenu : str`
+    The name of the submenu where the separator should be added. It is automatically
+    created if it doesn't exist.
+
+* `view : QWidget`
+    A view that belongs to the GUI, if the separator is to be added to the view's menu bar.
+
+* `view_submenu : str`
+    The name of a submenu in the view menu.
 
 ---
 

@@ -8,7 +8,10 @@ This page presents the list of shortcuts and snippets in the template GUI. You c
 ```text
 All keyboard shortcuts
 
-Keyboard shortcuts for Clustering
+Clustering
+-------------
+
+Keyboard shortcuts
 - clear_filter                             esc
 - first                                    home
 - label                                    l
@@ -36,7 +39,7 @@ Keyboard shortcuts for Clustering
 - undo                                     ctrl+z
 - unselect_similar                         backspace
 
-Snippets for Clustering
+Snippets
 - filter                                   :f
 - label                                    :l
 - merge                                    :g
@@ -44,112 +47,136 @@ Snippets for Clustering
 - sort                                     :s
 - split                                    :k
 
-Keyboard shortcuts for BaseController
+BaseController
+--------------
+
+Keyboard shortcuts
 - switch_raw_data_filter                   alt+r
 - toggle_spike_reorder                     ctrl+r
 
-Snippets for BaseController
+GUI
+---
 
-Keyboard shortcuts for GUI
+Keyboard shortcuts
 - about                                    ?
 - enable_snippet_mode                      :
 - exit                                     ctrl+q
 - save                                     ctrl+s
 - show_all_shortcuts                       h
 
-Snippets for GUI
+AmplitudeView
+-------------
 
-Keyboard shortcuts for AmplitudeView
-- change_marker_size                       ctrl+wheel
+Keyboard shortcuts
+- change_marker_size                       alt+wheel
 - next_amplitudes_type                     a
 - previous_amplitudes_type                 shift+a
 - select_time                              alt+click
 - select_x_dim                             shift+left click
 - select_y_dim                             shift+right click
 
-Snippets for AmplitudeView
+ClusterScatterView
+------------------
 
-Keyboard shortcuts for ClusterScatterView
+Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - select_cluster                           ctrl+click
 - select_more                              ctrl+shift+click
 
-Snippets for ClusterScatterView
+Snippets
 - set_size                                 :css
 - set_x_axis                               :csx
 - set_y_axis                               :csy
 
-Keyboard shortcuts for CorrelogramView
+CorrelogramView
+---------------
+
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for CorrelogramView
+Snippets
 - set_bin                                  :cb
 - set_refractory_period                    :cr
 - set_window                               :cw
 
-Keyboard shortcuts for FeatureView
+FeatureView
+-----------
+
+Keyboard shortcuts
 - add_lasso_point                          ctrl+click
-- change_marker_size                       ctrl+wheel
+- change_marker_size                       alt+wheel
 - decrease                                 ctrl+-
 - increase                                 ctrl++
 - stop_lasso                               ctrl+right click
 - toggle_automatic_channel_selection       c
 
-Snippets for FeatureView
+FiringRateView
+--------------
 
-Keyboard shortcuts for FiringRateView
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for FiringRateView
+Snippets
 - set_bin_size (s)                         :frb
 - set_n_bins                               :frn
 - set_x_max (s)                            :frmax
 - set_x_min (s)                            :frmin
 
-Keyboard shortcuts for HistogramView
+HistogramView
+-------------
+
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for HistogramView
+Snippets
 - set_bin_size (s)                         :hb
 - set_n_bins                               :hn
 - set_x_max (s)                            :hmax
 - set_x_min (s)                            :hmin
 
-Keyboard shortcuts for ISIView
+ISIView
+-------
+
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for ISIView
+Snippets
 - set_bin_size (ms)                        :isib
 - set_n_bins                               :isin
 - set_x_max (ms)                           :isimax
 - set_x_min (ms)                           :isimin
 
-Keyboard shortcuts for ProbeView
+ProbeView
+---------
 
-Snippets for ProbeView
+RasterView
+----------
 
-Keyboard shortcuts for RasterView
+Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
 - select_cluster                           ctrl+click
 
-Snippets for RasterView
+ScatterView
+-----------
 
-Keyboard shortcuts for ScatterView
-- change_marker_size                       ctrl+wheel
+Keyboard shortcuts
+- change_marker_size                       alt+wheel
 
-Snippets for ScatterView
+TemplateView
+------------
 
-Keyboard shortcuts for TemplateView
+Keyboard shortcuts
 - change_template_size                     ctrl+wheel
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
 - select_cluster                           ctrl+click
 
-Snippets for TemplateView
+TraceImageView
+--------------
 
-Keyboard shortcuts for TraceImageView
+Keyboard shortcuts
 - change_trace_size                        ctrl+wheel
 - decrease                                 ctrl+alt+down
 - go_left                                  ctrl+alt+left
@@ -164,11 +191,14 @@ Keyboard shortcuts for TraceImageView
 - switch_origin                            ctrl+alt+o
 - widen                                    ctrl+alt+shift+-
 
-Snippets for TraceImageView
+Snippets
 - go_to                                    :tig
 - shift                                    :tis
 
-Keyboard shortcuts for TraceView
+TraceView
+---------
+
+Keyboard shortcuts
 - change_trace_size                        ctrl+wheel
 - decrease                                 alt+down
 - go_left                                  alt+left
@@ -190,11 +220,14 @@ Keyboard shortcuts for TraceView
 - toggle_show_labels                       alt+l
 - widen                                    alt+-
 
-Snippets for TraceView
+Snippets
 - go_to                                    :tg
 - shift                                    :ts
 
-Keyboard shortcuts for WaveformView
+WaveformView
+------------
+
+Keyboard shortcuts
 - change_box_size                          ctrl+wheel
 - decrease                                 ctrl+down
 - extend_horizontally                      shift+right
@@ -210,8 +243,9 @@ Keyboard shortcuts for WaveformView
 - toggle_waveform_overlap                  o
 - widen                                    ctrl+right
 
-Snippets for WaveformView
+Snippets
 - change_n_spikes_waveforms                :wn
+
 
 ```
 

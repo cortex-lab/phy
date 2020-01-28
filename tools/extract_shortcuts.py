@@ -17,8 +17,11 @@ view_classes = [getattr(views, name) for name in view_names]
 
 def _get_shortcuts(cls):
     with captured_output() as (stdout, stderr):
-        _show_shortcuts(cls.default_shortcuts, cls.__name__)
-        _show_snippets(cls.default_snippets, cls.__name__)
+        print(cls.__name__)
+        print('-' * len(cls.__name__))
+        print()
+        _show_shortcuts(cls.default_shortcuts)
+        _show_snippets(cls.default_snippets)
     return stdout.getvalue()
 
 
@@ -55,7 +58,7 @@ all_shortcuts = (
     supervisor_shortcuts + base_shortcuts + gui_shortcuts +
     ''.join(_get_shortcuts(cls) for cls in view_classes))
 
-pattern = re.compile(r'```text\nAll keyboard shortcuts\n([^`]+)\n```')
+pattern = re.compile(r'```text\nAll keyboard shortcuts\n\n([^`]+)\n```')
 shortcuts_file = docs_dir / 'shortcuts.md'
 contents = shortcuts_file.read_text()
 m = pattern.search(contents)

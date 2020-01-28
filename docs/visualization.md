@@ -156,14 +156,18 @@ You can select a cluster by control+clicking on it, and add a cluster to the sel
 ```text
 Keyboard shortcuts for ClusterScatterView
 
+------------------
+
+Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - select_cluster                           ctrl+click
 - select_more                              ctrl+shift+click
 
-Snippets for ClusterScatterView
+Snippets
 - set_size                                 :css
 - set_x_axis                               :csx
 - set_y_axis                               :csy
+
 
 ```
 
@@ -185,6 +189,9 @@ You can show: spike waveforms, mean spike waveforms, or template waveforms (`tog
 ```text
 Keyboard shortcuts for WaveformView
 
+------------
+
+Keyboard shortcuts
 - change_box_size                          ctrl+wheel
 - decrease                                 ctrl+down
 - extend_horizontally                      shift+right
@@ -200,8 +207,9 @@ Keyboard shortcuts for WaveformView
 - toggle_waveform_overlap                  o
 - widen                                    ctrl+right
 
-Snippets for WaveformView
+Snippets
 - change_n_spikes_waveforms                :wn
+
 
 ```
 
@@ -233,14 +241,16 @@ The documentation provides a plugin example showing how to customize the subplot
 ```text
 Keyboard shortcuts for FeatureView
 
+-----------
+
+Keyboard shortcuts
 - add_lasso_point                          ctrl+click
-- change_marker_size                       ctrl+wheel
+- change_marker_size                       alt+wheel
 - decrease                                 ctrl+-
 - increase                                 ctrl++
 - stop_lasso                               ctrl+right click
 - toggle_automatic_channel_selection       c
 
-Snippets for FeatureView
 
 ```
 
@@ -257,9 +267,11 @@ This view is only active when exactly two clusters are selected. It shows the `t
 ```text
 Keyboard shortcuts for ScatterView
 
-- change_marker_size                       ctrl+wheel
+-----------
 
-Snippets for ScatterView
+Keyboard shortcuts
+- change_marker_size                       alt+wheel
+
 
 ```
 
@@ -284,12 +296,16 @@ The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies 
 ```text
 Keyboard shortcuts for CorrelogramView
 
+---------------
+
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for CorrelogramView
+Snippets
 - set_bin                                  :cb
 - set_refractory_period                    :cr
 - set_window                               :cw
+
 
 ```
 
@@ -307,6 +323,9 @@ You can switch the origin (top or bottom) with the `alt+o` shortcut.
 ```text
 Keyboard shortcuts for TraceView
 
+---------
+
+Keyboard shortcuts
 - change_trace_size                        ctrl+wheel
 - decrease                                 alt+down
 - go_left                                  alt+left
@@ -328,9 +347,10 @@ Keyboard shortcuts for TraceView
 - toggle_show_labels                       alt+l
 - widen                                    alt+-
 
-Snippets for TraceView
+Snippets
 - go_to                                    :tg
 - shift                                    :ts
+
 
 ```
 
@@ -348,6 +368,9 @@ You can switch the origin (top or bottom) with the `ctrl+alt+o` shortcut.
 ```text
 Keyboard shortcuts for TraceImageView
 
+--------------
+
+Keyboard shortcuts
 - change_trace_size                        ctrl+wheel
 - decrease                                 ctrl+alt+down
 - go_left                                  ctrl+alt+left
@@ -362,9 +385,10 @@ Keyboard shortcuts for TraceImageView
 - switch_origin                            ctrl+alt+o
 - widen                                    ctrl+alt+shift+-
 
-Snippets for TraceImageView
+Snippets
 - go_to                                    :tig
 - shift                                    :tis
+
 
 ```
 
@@ -406,14 +430,16 @@ The time interval currenty displayed in the trace view is shown as a vertical ye
 ```text
 Keyboard shortcuts for AmplitudeView
 
-- change_marker_size                       ctrl+wheel
+-------------
+
+Keyboard shortcuts
+- change_marker_size                       alt+wheel
 - next_amplitudes_type                     a
 - previous_amplitudes_type                 shift+a
 - select_time                              alt+click
 - select_x_dim                             shift+left click
 - select_y_dim                             shift+right click
 
-Snippets for AmplitudeView
 
 ```
 
@@ -432,26 +458,34 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 ```text
 Keyboard shortcuts for ISIView
 
+-------
+
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for ISIView
+Snippets
 - set_bin_size (ms)                        :isib
 - set_n_bins                               :isin
 - set_x_max (ms)                           :isimax
 - set_x_min (ms)                           :isimin
+
 
 ```
 
 ```text
 Keyboard shortcuts for FiringRateView
 
+--------------
+
+Keyboard shortcuts
 - change_window_size                       ctrl+wheel
 
-Snippets for FiringRateView
+Snippets
 - set_bin_size (s)                         :frb
 - set_n_bins                               :frn
 - set_x_max (s)                            :frmax
 - set_x_min (s)                            :frmin
+
 
 ```
 
@@ -469,12 +503,14 @@ Select a cluster with **Control+click**.
 ```text
 Keyboard shortcuts for RasterView
 
+----------
+
+Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
 - select_cluster                           ctrl+click
 
-Snippets for RasterView
 
 ```
 
@@ -492,12 +528,14 @@ Select a cluster with **Control+click**.
 ```text
 Keyboard shortcuts for TemplateView
 
+------------
+
+Keyboard shortcuts
 - change_template_size                     ctrl+wheel
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
 - select_cluster                           ctrl+click
 
-Snippets for TemplateView
 
 ```
 
@@ -520,9 +558,11 @@ You can split clusters by drawing polygons in the spike attribute views, as in t
 ```text
 Keyboard shortcuts for ScatterView
 
-- change_marker_size                       ctrl+wheel
+-----------
 
-Snippets for ScatterView
+Keyboard shortcuts
+- change_marker_size                       alt+wheel
+
 
 ```
 
