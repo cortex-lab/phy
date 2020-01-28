@@ -124,7 +124,7 @@ def test_actions_gui_menu(qtbot, gui, actions):
     def press():
         print("press")
 
-    actions.separator('&File')
+    actions.separator(menu='&File')
 
     gui.show()
     qtbot.waitForWindowShown(gui)

@@ -13,7 +13,7 @@ import logging
 
 from .qt import (
     QApplication, QWidget, QDockWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QCheckBox,
-    QMenu, QToolBar, QStatusBar, QMainWindow, QMessageBox, Qt, QSize, _load_font,
+    QMenu, QToolBar, QStatusBar, QMainWindow, QMessageBox, Qt, QPoint, QSize, _load_font,
     _wait, prompt, show_box, screenshot as make_screenshot)
 from .state import GUIState, _gui_state_path, _get_default_state_path
 from .actions import Actions, Snippets
@@ -51,6 +51,10 @@ def _try_get_opengl_canvas(view):
     elif isinstance(getattr(view, 'canvas', None), BaseCanvas):
         return QWidget.createWindowContainer(view.canvas)
     return view
+
+
+def _widget_position(widget):  # pragma: no cover
+    return widget.parentWidget().mapToGlobal(widget.geometry().topLeft())
 
 
 # -----------------------------------------------------------------------------
@@ -261,6 +265,19 @@ class DockWidget(QDockWidget):
             else:
                 make_screenshot(self.view)
 
+        # View menu button.
+        @self.add_button(name='view_menu', icon='f0c9')
+        def on_view_menu(e):  # pragma: no cover
+            # Display the view menu.
+            button = self._dock_widgets['view_menu']
+            x = _widget_position(button).x()
+            y = _widget_position(self._widget).y()
+            self._menu.exec(QPoint(x, y))
+
+    def _create_menu(self):
+        """Create the contextual menu for this view."""
+        self._menu = QMenu("%s menu" % self.objectName(), self)
+
     def _create_title_bar(self):
         """Create the title bar."""
         self._title_bar = QWidget(self)
@@ -340,6 +357,7 @@ def _create_dock_widget(widget, name, closable=True, floatable=True):
         Qt.BottomDockWidgetArea
     )
 
+    dock._create_menu()
     dock._create_title_bar()
     dock._create_status_bar()
 

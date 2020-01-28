@@ -247,25 +247,55 @@ class Actions(object):
 
     """
     def __init__(
-            self, gui, name=None, menu=None, submenu=None, insert_menu_before=None,
-            default_shortcuts=None, default_snippets=None):
+            self, gui, name=None, menu=None, submenu=None, view=None,
+            insert_menu_before=None, default_shortcuts=None, default_snippets=None):
         self._actions_dict = {}
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
         self._default_snippets = default_snippets or {}
         self.name = name
         self.menu = menu
-        self.insert_menu_before = insert_menu_before
         self.submenu = submenu
+        self.view = view
+        self.view_submenu = None
+        self.insert_menu_before = insert_menu_before
+        self._view_submenus = {}
         self.gui = gui
         gui.actions.append(self)
         # Create the menu when creating the Actions instance.
         if menu:
             gui.get_menu(menu, insert_menu_before)
 
+    def _get_menu(self, menu=None, submenu=None, view=None, view_submenu=None):
+        """Return the QMenu depending on a combination of keyword arguments."""
+        # Defaults.
+        menu = menu or self.menu
+        submenu = submenu or self.submenu
+        view = view or self.view
+        view_submenu = view_submenu or self.view_submenu
+
+        # If the action is a view action, it should be added to the view's menu in the dock widget.
+        if view:
+            if view_submenu and view_submenu not in self._view_submenus:
+                self._view_submenus[view_submenu] = view.dock._menu.addMenu(view_submenu)
+            if view_submenu:
+                return self._view_submenus[view_submenu]
+            else:
+                return view.dock._menu
+
+        # Create the submenu if there is one.
+        if submenu:
+            # Create the submenu.
+            self.gui.get_submenu(menu, submenu)
+            # Make sure the action gets added to the submenu.
+            menu = submenu
+        if menu:
+            return self.gui.get_menu(menu)
+
     def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
-            docstring=None, menu=None, submenu=None, verbose=True, checkable=False, checked=False,
-            set_busy=False, prompt_default=None, show_shortcut=True, icon=None, toolbar=False):
+            docstring=None, menu=None, submenu=None, view=None, view_submenu=None, verbose=True,
+            checkable=False, checked=False, set_busy=False, prompt_default=None,
+            show_shortcut=True, icon=None, toolbar=False):
         """Add an action with a keyboard shortcut.
 
         Parameters
@@ -297,6 +327,10 @@ class Actions(object):
         submenu : str
             The name of the submenu where the action should be added. It is automatically created
             if it doesn't exist.
+        view : QWidget
+            A view that belongs to the GUI, if the actions are to be added to the view's menu bar.
+        view_submenu : str
+            The name of a submenu in the view menu.
         checkable : boolean
             Whether the action is checkable (toggle on/off).
         checked : boolean
@@ -339,22 +373,20 @@ class Actions(object):
         if verbose and not name.startswith('_'):
             logger.log(5, "Add action `%s` (%s).", name, _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
-        # Add the action to the menu.
-        menu = menu or self.menu
-        submenu = submenu or self.submenu
-        # Create the submenu if there is one.
-        if submenu:
-            # Create the submenu.
-            self.gui.get_submenu(menu, submenu)
-            # Make sure the action gets added to the submenu.
-            menu = submenu
+
         # Do not show private actions in the menu.
-        if menu and not name.startswith('_'):
-            self.gui.get_menu(menu).addAction(action)
+        if not name.startswith('_'):
+            # Find the menu in which the action should be added.
+            qmenu = self._get_menu(
+                menu=menu, submenu=submenu, view=view, view_submenu=view_submenu)
+            if qmenu:
+                qmenu.addAction(action)
+
         # Add the action to the toolbar.
         if toolbar:
             self.gui._toolbar.show()
             self.gui._toolbar.addAction(action)
+
         self._actions_dict[name] = action_obj
         # Register the alias -> name mapping.
         self._aliases[alias] = name
@@ -363,17 +395,25 @@ class Actions(object):
         if callback:
             setattr(self, name.lower().replace(' ', '_').replace(':', ''), callback)
 
-    def separator(self, menu=None):
+    def separator(self, **kwargs):
         """Add a separator.
 
         Parameters
         ----------
 
         menu : str
-            The menu that will contain the separator, or the Actions menu by default.
+            The name of the menu where the separator should be added. It is automatically created
+            if it doesn't exist.
+        submenu : str
+            The name of the submenu where the separator should be added. It is automatically
+            created if it doesn't exist.
+        view : QWidget
+            A view that belongs to the GUI, if the separator is to be added to the view's menu bar.
+        view_submenu : str
+            The name of a submenu in the view menu.
 
         """
-        self.gui.get_menu(menu or self.submenu or self.menu).addSeparator()
+        self._get_menu(**kwargs).addSeparator()
 
     def disable(self, name=None):
         """Disable all actions, or only one if a name is passed."""

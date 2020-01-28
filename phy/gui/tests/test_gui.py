@@ -219,6 +219,26 @@ def test_gui_dock_widget_1(qtbot, gui):
     v.dock.get_widget('c1').click()
 
 
+def test_gui_view_action(qtbot, gui):
+    gui.show()
+
+    v = _create_canvas()
+    gui.add_view(v)
+
+    actions = gui.view_actions
+
+    @actions.add(view=v)
+    def my_action_1():
+        pass
+
+    @actions.add(view=v, view_submenu='view submenu')
+    def my_action_2():
+        pass
+
+    actions.my_action_1()
+    actions.my_action_2()
+
+
 def test_gui_menu(qtbot, gui):
     gui.get_menu('&File')
     gui.get_submenu('&File', 'Submenu')
