@@ -1,10 +1,11 @@
 # Release notes
 
-Current version is phy v2.0a1 (alpha 1). There may be further new features for v2.0.
+Current version is phy v2.0b1 (beta 1).
 
 
 ## New views
 
+* **Cluster scatter view**: a scatter plot of all clusters, on two user-defined dimensions (for example, depth vs firing rate). The marker size and colors can also depend on two additional user-defined dimensions.
 * **Raster view**: spike trains of all clusters
 * **Template view**: template waveforms of all clusters
 * **Cluster statistics views** (histograms):
@@ -13,7 +14,7 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Write your own as a plugin
 * **Spike attributes views**: a scatter view is automatically created for every `spike_somename.npy` containing 1D or 2D values per spike
 * **Trace image view**: a minimal trace view that shows a big textured image `(n_channels_, n_samples)` instead of multiple polylines.
-* **IPython view**
+* **IPython view**: interact with the GUI and the data programmatically.
 
 
 ## New features
@@ -34,11 +35,13 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Show horizontal line for the baseline firing rate, and a customizable vertical line for the refractory period
 * **Waveform view**:
     * Change the number of waveforms directly from the GUI
+    * Higher-quality thicker mean and template waveforms
 * **Feature view**:
     * One can now change the specification of the subplots in a plugin
 * **All views**:
     * Add multiple views of the same type
     * Closable views
+    * View menu
     * Toggle automatic update of views upon cluster selection
     * Easily take screenshots of individual views
     * Control bar at the top of every view, with customizable text and buttons (screenshot, toggle auto update, etc.)
@@ -50,7 +53,9 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
     * Auto-update by default
 * **Trace view, raster view, template view**:
     * Customizable color mapping for clusters based on any cluster metrics or labels
-* **Template dataset**
+* **Probe view**:
+    * Channel labels
+* **Template model**
     * Support **multiple raw data files** (virtually concatenated)
     * Support for **multiple channel shanks**: add a `channel_shanks.npy` file with shape `(n_channels,` ), with the shank integer index of every channel.
 
@@ -64,6 +69,7 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
 * More efficient probe view
 * Slightly different gray colors for noise and MUA clusters in the cluster view
 * Menu reorganization
+* Toolbar with icons
 * Bug fixes with cluster labels
 * New `plugins/` folder in the repository, with many plugin examples
 * Documentation rewritten from scratch, with many examples
@@ -77,3 +83,9 @@ Current version is phy v2.0a1 (alpha 1). There may be further new features for v
 * Dropped the phy-contrib repository
 * Created a small phylib dependency with I/O code and non-graphical utilities, used by ibllib
 * Moved the phy GitHub repository from kwikteam to cortex-lab organization
+
+
+## [coming soon] Upcoming features
+
+* Support for events: PSTH view, trial-based raster plots, etc.
+* More efficient GPU-based plotting
