@@ -218,7 +218,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # since we add the relative cluster index. We need to ensure
         # that the masks is never 1.0, otherwise it is interpreted as
         # 0.
-        masks *= .99999
+        eps = .001
+        masks = eps + (1 - 2 * eps) * masks
         # NOTE: we add the cluster index which is used for the
         # computation of the depth on the GPU.
         masks += bunch.index
