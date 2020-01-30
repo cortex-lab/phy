@@ -10,6 +10,8 @@ import colorcet as cc
 import numpy as np
 from numpy.testing import assert_almost_equal as ae
 
+from pytest import raises
+
 from ..color import (
     _is_bright, _random_bright_color, spike_colors, add_alpha, selected_cluster_color,
     _override_hsv, _hex_to_triplet, _continuous_colormap, _categorical_colormap,
@@ -67,8 +69,7 @@ def test_spike_colors():
     ae(colors[1], colors[2])
 
 
-def test_cluster_color_selector():
-    # Mock ClusterMeta instance, with 'fields' property and get(field, cluster) function.
+def test_cluster_color_selector_1():
     cluster_ids = [1, 2, 3]
     c = ClusterColorSelector(lambda cid: cid * .1, cluster_ids=cluster_ids)
 
@@ -79,6 +80,27 @@ def test_cluster_color_selector():
         c.set_color_mapping(colormap=colormap)
         colors = c.get_colors(cluster_ids)
         assert colors.shape == (3, 4)
+
+
+def test_cluster_color_selector_2():
+    cluster_ids = [2, 3, 5, 7]
+    c = ClusterColorSelector(
+        lambda cid: cid, cluster_ids=cluster_ids, colormap='categorical', categorical=True)
+
+    c2 = c.get_colors([2])
+    c3 = c.get_colors([3])
+    c7 = c.get_colors([7])
+    c2_ = c.get_colors([2])
+    ae(c2, c2_)
+
+    c.set_cluster_ids([3, 7, 11])
+    c3_ = c.get_colors([3])
+    c7_ = c.get_colors([7])
+    ae(c3, c3_)
+    ae(c7, c7_)
+
+    with raises(AssertionError):
+        ae(c2, c3)
 
 
 def test_cluster_color_group():

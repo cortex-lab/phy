@@ -175,6 +175,7 @@ def spike_colors(spike_clusters, cluster_ids):
 
 def _add_selected_clusters_colors(selected_clusters, cluster_ids, cluster_colors=None):
     """Take an array with colors of clusters as input, and add colors of selected clusters."""
+    assert np.all(np.isin(selected_clusters, cluster_ids))
     # Find the index of the selected clusters within the self.cluster_ids.
     clu_idx = _index_of(selected_clusters, cluster_ids)
     # Get the colors of the selected clusters.
