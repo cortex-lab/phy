@@ -122,6 +122,8 @@ class DockWidget(QDockWidget):
 
     """
 
+    confirm_before_close_view = False
+
     def __init__(self, *args, widget=None, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
         # Load the font awesome font.
@@ -251,7 +253,7 @@ class DockWidget(QDockWidget):
             # Close button.
             @self.add_button(name='close', text='✕')
             def on_close(e):  # pragma: no cover
-                if show_box(
+                if not self.confirm_before_close_view or show_box(
                     prompt(
                         "Close %s?" % self.windowTitle(),
                         buttons=['yes', 'no'], title='Close?')) == 'yes':
