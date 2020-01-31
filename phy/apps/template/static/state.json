@@ -1,88 +1,95 @@
 {
-  "AmplitudeView": {
-    "amplitude_name": "feature",
-    "auto_update": true,
-    "marker_size": 5.0
-  },
-  "ClusterView": {
-    "current_sort": [
-      "n_spikes", "desc"
-    ]
-  },
-  "CorrelogramView": {
-    "auto_update": true,
-    "bin_size": 0.001,
-    "refractory_period": 0.002,
-    "uniform_normalization": false,
-    "window_size": 0.05
-  },
-  "FeatureView": {
-    "auto_update": true,
-    "fixed_channels": false,
-    "marker_size": 5.0
-  },
-  "FiringRateView": {
-    "auto_update": true,
-    "n_bins": 200
-  },
-  "ISIView": {
-    "auto_update": true,
-    "n_bins": 50,
-    "x_max": 0.05,
-    "x_min": 0
-  },
-  "ProbeView": {
-    "auto_update": true
-  },
-  "TemplateFeatureView": {
-    "auto_update": true,
-    "marker_size": 5.0
-  },
-  "TraceView": {
-    "auto_update": true,
-    "do_show_labels": true,
-    "origin": null,
-    "scaling": 1,
-    "show_all_spikes": false
-  },
-  "WaveformView": {
-    "auto_update": true,
-    "box_scaling": [
-      1, 1
-    ],
-    "do_show_labels": true,
-    "overlap": false,
-    "probe_scaling": [
-      1, 1
-    ]
-  },
-  "batch_size_waveforms": 10,
-  "color_selector": {
-    "categorical": true,
-    "color_field": "cluster",
-    "colormap": "categorical",
-    "logarithmic": false
-  },
-  "geometry_state": {
-    "geometry": {
-      "__qbytearray__": "QWRuUXl3QUNBQUFBQUFBQUFBQUFJQUFBRHY4QUFBaEdBQUFBQUFBQUFDQUFBQTcvQUFBSVJnQUFBQUFBQUFBQUR3QT0="
+    "AmplitudeView": {
+      "amplitudes_type": "template",
+      "auto_update": true,
+      "marker_size": 5.0
     },
-    "state": {
-      "__qbytearray__": "QUFBQS93QUFBQUQ5QUFBQUFnQUFBQUFBQUFaWkFBQUg0ZndCQUFBQUFmd0FBQUFBQUFBR1dRQUFBUDBBLy8vLy9BSUFBQUFDL0FBQUFDTUFBQVpWQUFBQVVBRC8vLy84QVFBQUFBTDhBQUFBQUFBQUF4SUFBQUEvQVAvLy8vd0NBQUFBQXZzQUFBQVdBRU1BYkFCMUFITUFkQUJsQUhJQVZnQnBBR1VBZHdFQUFBQWpBQUFFRUFBQUFDSUEvLy8vK3dBQUFCd0FVd0JwQUcwQWFRQnNBR0VBY2dCcEFIUUFlUUJXQUdrQVpRQjNBUUFBQkQ4QUFBSTVBQUFBSWdELy8vLzdBQUFBR0FCWEFHRUFkZ0JsQUdZQWJ3QnlBRzBBVmdCcEFHVUFkd0VBQUFNZUFBQURPd0FBQUZRQS8vLy8vQUFBQm9RQUFBR0FBQUFBV1FELy8vLzhBUUFBQUFMN0FBQUFIZ0JEQUc4QWNnQnlBR1VBYkFCdkFHY0FjZ0JoQUcwQVZnQnBBR1VBZHdFQUFBQUFBQUFEbVFBQUFGUUEvLy8vL0FBQUE2VUFBQUswQUFBQW5RRC8vLy82QUFBQUFBSUFBQUFDK3dBQUFBNEFTUUJUQUVrQVZnQnBBR1VBZHdFQUFBQUEvLy8vL3dBQUFDSUEvLy8vK3dBQUFCd0FSZ0JwQUhJQWFRQnVBR2NBVWdCaEFIUUFaUUJXQUdrQVpRQjNBUUFBQm9RQUFBR0FBQUFBSWdELy8vOEFBQUFCQUFBSW13QUFCK0g4QVFBQUFBUDhBQUFHWlFBQUJINEFBQUNkQVAvLy8vd0NBQUFBQXZ3QUFBQWpBQUFFdlFBQUFGa0JBQUEyK2dBQUFBQUNBQUFBQXZzQUFBQVdBRVlBWlFCaEFIUUFkUUJ5QUdVQVZnQnBBR1VBZHdFQUFBQlJBQUFIc3dBQUFDSUEvLy8vK3dBQUFDWUFWQUJsQUcwQWNBQnNBR0VBZEFCbEFFWUFaUUJoQUhRQWRRQnlBR1VBVmdCcEFHVUFkd0VBQUFBQS8vLy8vd0FBQUNJQS8vLy8rd0FBQUJvQVFRQnRBSEFBYkFCcEFIUUFkUUJrQUdVQVZnQnBBR1VBZHdFQUFBVHNBQUFER0FBQUFDSUEvLy8vK3dBQUFCSUFWQUJ5QUdFQVl3QmxBRllBYVFCbEFIY0JBQUFLN3dBQUE1d0FBQUJVQVAvLy8vc0FBQUFTQUZBQWNnQnZBR0lBWlFCV0FHa0FaUUIzQVFBQURwY0FBQUJwQUFBQVZBRC8vLzhBQUFBQUFBQUg0UUFBQUFRQUFBQUVBQUFBQ0FBQUFBajhBQUFBQUE9PQ=="
+    "ClusterScatterView": {
+      "auto_update": true,
+      "color_scheme": "firing_rate",
+      "marker_size": 1.0,
+      "size": "fr",
+      "size_log_scale": true,
+      "x_axis": "amp",
+      "x_axis_log_scale": false,
+      "y_axis": "depth",
+      "y_axis_log_scale": false
+    },
+    "ClusterView": {
+      "current_sort": [
+        "n_spikes",
+        "desc"
+      ]
+    },
+    "CorrelogramView": {
+      "auto_update": true,
+      "bin_size": 0.001,
+      "refractory_period": 0.002,
+      "uniform_normalization": false,
+      "window_size": 0.05
+    },
+    "FeatureView": {
+      "auto_update": true,
+      "feature_scaling": 1.0,
+      "fixed_channels": false,
+      "marker_size": 2.0
+    },
+    "FiringRateView": {
+      "auto_update": true,
+      "n_bins": 200,
+      "x_min": 4.36176
+    },
+    "GUI_VERSION": 2,
+    "ISIView": {
+      "auto_update": true,
+      "n_bins": 50,
+      "x_max": 0.05,
+      "x_min": 0.0
+    },
+    "ProbeView": {
+      "auto_update": true,
+      "do_show_labels": false
+    },
+    "TemplateFeatureView": {
+      "auto_update": true,
+      "marker_size": 5.0
+    },
+    "TraceView": {
+      "auto_scale": true,
+      "auto_update": true,
+      "color_scheme": "depth",
+      "do_show_labels": true,
+      "origin": "bottom",
+      "show_all_spikes": true
+    },
+    "WaveformView": {
+      "auto_update": true,
+      "do_show_labels": true,
+      "overlap": false,
+      "waveforms_type": "waveforms"
+    },
+    "batch_size_waveforms": 10,
+    "geometry_state": {
+      "geometry": {
+        "__qbytearray__": "QWRuUXl3QUNBQUFBQUFkbUFBQUVQd0FBRHY4QUFBaFNBQUFIYVFBQUJEOEFBQTcvQUFBSVVnQUFBQUVBQUFBQUR3QT0="
+      },
+      "state": {
+        "__qbytearray__": "QUFBQS93QUFBQUQ5QUFBQUFnQUFBQUFBQUFHS0FBQUR2L3dCQUFBQUFmd0FBQUFBQUFBQmlnQUFBUUVBLy8vLy9BSUFBQUFEK3dBQUFDUUFRd0JzQUhVQWN3QjBBR1VBY2dCVEFHTUFZUUIwQUhRQVpRQnlBRllBYVFCbEFIY0JBQUFBUGdBQUFQNEFBQUF4QVAvLy8vc0FBQUFXQUVNQWJBQjFBSE1BZEFCbEFISUFWZ0JwQUdVQWR3RUFBQUZEQUFBQmFBQUFBREFBLy8vLyt3QUFBQndBVXdCcEFHMEFhUUJzQUdFQWNnQnBBSFFBZVFCV0FHa0FaUUIzQVFBQUFySUFBQUZMQUFBQUx3RC8vLzhBQUFBQkFBQUdCZ0FBQTcvOEFRQUFBQVQ4QUFBQmtRQUFBWlFBQUFEZUFQLy8vL3dDQUFBQUF2c0FBQUFZQUZjQVlRQjJBR1VBWmdCdkFISUFiUUJXQUdrQVpRQjNBUUFBQUQ0QUFBTGRBQUFBTVFELy8vLzdBQUFBR2dCQkFHMEFjQUJzQUdrQWRBQjFBR1FBWlFCV0FHa0FaUUIzQVFBQUF5SUFBQURiQUFBQU1RRC8vLy84QUFBRExBQUFBYlFBQUFHSEFQLy8vL3dDQUFBQUJQc0FBQUFXQUVZQVpRQmhBSFFBZFFCeUFHVUFWZ0JwQUdVQWR3RUFBQUErQUFBQlpnQUFBREVBLy8vLyt3QUFBQ1lBVkFCbEFHMEFjQUJzQUdFQWRBQmxBRVlBWlFCaEFIUUFkUUJ5QUdVQVZnQnBBR1VBZHdFQUFBR3JBQUFBNWdBQUFERUEvLy8vK3dBQUFCNEFRd0J2QUhJQWNnQmxBR3dBYndCbkFISUFZUUJ0QUZZQWFRQmxBSGNCQUFBQ21BQUFBTU1BQUFBeEFQLy8vL3dBQUFOaUFBQUFtd0FBQURFQS8vLy8vQUVBQUFBQyt3QUFBQTRBU1FCVEFFa0FWZ0JwQUdVQWR3RUFBQU1zQUFBQXRnQUFBS01BLy8vLyt3QUFBQndBUmdCcEFISUFhUUJ1QUdjQVVnQmhBSFFBWlFCV0FHa0FaUUIzQVFBQUEra0FBQUQzQUFBQTNRRC8vLy83QUFBQUVnQlVBSElBWVFCakFHVUFWZ0JwQUdVQWR3RUFBQVRuQUFBQjdnQUFBYjRBLy8vLyt3QUFBQklBVUFCeUFHOEFZZ0JsQUZZQWFRQmxBSGNCQUFBRzNBQUFBTHNBQUFDN0FQLy8vd0FBQUFBQUFBTy9BQUFBQkFBQUFBUUFBQUFJQUFBQUNQd0FBQUFCQUFBQUFnQUFBQUVBQUFBT0FGUUFid0J2QUd3QVlnQmhBSElCQUFBQUFQLy8vLzhBQUFBQUFBQUFBQT09"
+      }
+    },
+    "n_spikes_waveforms": 100,
+    "view_count": {
+      "AmplitudeView": 1,
+      "ClusterScatterView": 1,
+      "ClusterView": 1,
+      "CorrelogramView": 1,
+      "FeatureView": 1,
+      "FiringRateView": 1,
+      "ISIView": 1,
+      "ProbeView": 1,
+      "SimilarityView": 1,
+      "TemplateFeatureView": 1,
+      "TraceView": 1,
+      "WaveformView": 1
     }
-  },
-  "n_spikes_waveforms": 100,
-  "view_count": {
-    "AmplitudeView": 1,
-    "ClusterView": 1,
-    "CorrelogramView": 1,
-    "FeatureView": 1,
-    "FiringRateView": 1,
-    "ISIView": 1,
-    "ProbeView": 1,
-    "SimilarityView": 1,
-    "TemplateFeatureView": 1,
-    "TraceView": 1,
-    "WaveformView": 1
   }
-}
