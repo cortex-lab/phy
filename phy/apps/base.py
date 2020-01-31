@@ -1370,14 +1370,6 @@ class BaseController(object):
             view.set_cluster_ids(np.sort(cluster_ids))
             view.plot()
 
-        @connect(sender=self.supervisor)
-        def on_cluster(sender, up):
-            """Update the view after a clustering action."""
-            if up.added:
-                _update()
-
-        connect(view.on_select)
-
         @connect
         def on_add_view(sender, view_):
             """Populate the view when it is added to the GUI."""
@@ -1394,8 +1386,7 @@ class BaseController(object):
         def on_close_view(sender, view_):
             """Unconnect all events when closing the view."""
             if view_ == view:
-                unconnect(view.on_select)
-                unconnect(on_cluster)
+                unconnect(on_table_filter)
                 unconnect(on_add_view)
                 unconnect(on_ready)
 
@@ -1570,6 +1561,7 @@ class BaseController(object):
             None: 3,
             'unsorted': 3,
         }
+        logger.debug("Adding default color schemes to %s.", view)
 
         def group_index(cluster_id):
             group = self.supervisor.cluster_meta.get('group', cluster_id)

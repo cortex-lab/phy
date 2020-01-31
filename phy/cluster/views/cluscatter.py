@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phy.utils.color import _add_selected_clusters_colors
-from phylib.utils import emit, connect
+from phylib.utils import emit, connect, unconnect
 
 from phy.plot.transform import range_transform, NDC
 from phy.plot.visuals import ScatterVisual, TextVisual
@@ -305,6 +305,14 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
             ind = self.canvas.lasso.in_polygon(pos)
             cluster_ids = self.all_cluster_ids[ind]
             emit("request_select", self, list(cluster_ids))
+
+        @connect
+        def on_close_view(sender, view_):
+            """Unconnect all events when closing the view."""
+            if view_ == self:
+                unconnect(self.on_select)
+                unconnect(self.on_cluster)
+                unconnect(on_lasso_updated)
 
     def on_select(self, *args, **kwargs):
         super(ClusterScatterView, self).on_select(*args, **kwargs)
