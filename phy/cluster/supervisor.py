@@ -916,7 +916,7 @@ class Supervisor(object):
         return [self.get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
     @property
-    def all_cluster_ids(self):
+    def shown_cluster_ids(self):
         """The sorted list of cluster ids as they are currently shown in the cluster view."""
         b = Barrier()
         self.cluster_view.get_ids(callback=b(1))
