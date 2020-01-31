@@ -15,7 +15,7 @@ from pytest import raises
 from ..color import (
     _is_bright, _random_bright_color, spike_colors, add_alpha, selected_cluster_color,
     _override_hsv, _hex_to_triplet, _continuous_colormap, _categorical_colormap,
-    ClusterColorSelector, _add_selected_clusters_colors)
+    _selected_cluster_idx, ClusterColorSelector, _add_selected_clusters_colors)
 
 
 #------------------------------------------------------------------------------
@@ -123,7 +123,7 @@ def test_cluster_color_log():
     assert colors.shape == (3, 4)
 
 
-def test_add_selected_clusters_colors():
+def test_add_selected_clusters_colors_1():
     cluster_colors = np.tile(np.c_[np.arange(3)], (1, 3))
     cluster_colors = add_alpha(cluster_colors)
     cluster_colors_sel = _add_selected_clusters_colors([1], [0, 1, 3], cluster_colors)
@@ -132,3 +132,18 @@ def test_add_selected_clusters_colors():
     # Cluster at index 0 is selected, should be in blue.
     r, g, b, _ = cluster_colors_sel[1]
     assert b > g > r
+
+
+def test_add_selected_clusters_colors_2():
+    selected_clusters, cluster_ids = [5, 3, 2], [12, 7, 5, 2, 1]
+    clu_idx, cmap_idx = _selected_cluster_idx(selected_clusters, cluster_ids)
+    ae(clu_idx, [2, 3])
+    ae(cmap_idx, [0, 2])
+
+    cluster_colors = np.c_[np.arange(5), np.zeros((5, 3))]
+    cluster_colors_sel = _add_selected_clusters_colors(
+        selected_clusters, cluster_ids, cluster_colors)
+
+    ae(cluster_colors_sel[[0, 1, 4]], cluster_colors[[0, 1, 4]])
+    ae(cluster_colors_sel[2], selected_cluster_color(0))
+    ae(cluster_colors_sel[3], selected_cluster_color(2))

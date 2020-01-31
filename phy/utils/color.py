@@ -73,6 +73,15 @@ def _override_hsv(rgb, h=None, s=None, v=None):
 # Colormap utilities
 #------------------------------------------------------------------------------
 
+def _selected_cluster_idx(selected_clusters, cluster_ids):
+    selected_clusters = np.asarray(selected_clusters)
+    cluster_ids = np.asarray(cluster_ids)
+    kept = np.isin(selected_clusters, cluster_ids)
+    clu_idx = _index_of(selected_clusters[kept], cluster_ids)
+    cmap_idx = np.arange(len(selected_clusters))[kept]
+    return clu_idx, cmap_idx
+
+
 def _continuous_colormap(colormap, values, vmin=None, vmax=None):
     """Convert values into colors given a specified continuous colormap."""
     assert values is not None
@@ -91,12 +100,12 @@ def _continuous_colormap(colormap, values, vmin=None, vmax=None):
     return colormap[i, :]
 
 
-def _categorical_colormap(colormap, values, vmin=None, vmax=None):
+def _categorical_colormap(colormap, values, vmin=None, vmax=None, categorize=None):
     """Convert values into colors given a specified categorical colormap."""
     assert np.issubdtype(values.dtype, np.integer)
     assert colormap.shape[1] == 3
     n = colormap.shape[0]
-    if vmin is None and vmax is None:
+    if categorize is True or (categorize is None and vmin is None and vmax is None):
         # Find unique values and keep the order.
         _, idx = np.unique(values, return_index=True)
         lookup = values[np.sort(idx)]
@@ -175,11 +184,11 @@ def spike_colors(spike_clusters, cluster_ids):
 
 def _add_selected_clusters_colors(selected_clusters, cluster_ids, cluster_colors=None):
     """Take an array with colors of clusters as input, and add colors of selected clusters."""
-    assert np.all(np.isin(selected_clusters, cluster_ids))
-    # Find the index of the selected clusters within the self.cluster_ids.
-    clu_idx = _index_of(selected_clusters, cluster_ids)
-    # Get the colors of the selected clusters.
-    colormap = _categorical_colormap(colormaps.default, clu_idx)
+    # clu_idx contains the index of the selected clusters within cluster_ids
+    # cmap_idx contains 0, 1, 2... as the colormap index, but without the selected clusters
+    # that are missing in cluster_ids.
+    clu_idx, cmap_idx = _selected_cluster_idx(selected_clusters, cluster_ids)
+    colormap = _categorical_colormap(colormaps.default, cmap_idx, categorize=False)
     # Inject those colors in cluster_colors.
     cluster_colors[clu_idx] = add_alpha(colormap, 1)
     return cluster_colors
