@@ -6221,7 +6221,7 @@ Switch to the next color scheme.
 #### ClusterScatterView.on_cluster
 
 
-**`ClusterScatterView.on_cluster(self, up)`**
+**`ClusterScatterView.on_cluster(self, sender, up)`**
 
 Callback function when a clustering action occurs. May be overriden.
 
@@ -6254,9 +6254,9 @@ Change the scaling with the wheel.
 #### ClusterScatterView.on_select
 
 
-**`ClusterScatterView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
+**`ClusterScatterView.on_select(self, *args, **kwargs)`**
 
-
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -6450,7 +6450,16 @@ Toggle logarithmic scaling for one of the dimensions.
 
 **`ClusterScatterView.update_color(self)`**
 
-Update the cluster colors depending on the selected clusters. To be overriden.
+Update the cluster colors depending on the current color scheme.
+
+---
+
+#### ClusterScatterView.update_select_color
+
+
+**`ClusterScatterView.update_select_color(self)`**
+
+Update the cluster colors after the cluster selection changes.
 
 ---
 
@@ -8776,9 +8785,9 @@ Change the scaling with the wheel.
 #### RasterView.on_select
 
 
-**`RasterView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
+**`RasterView.on_select(self, *args, **kwargs)`**
 
-
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -8892,6 +8901,15 @@ Update the order of all clusters.
 **`RasterView.update_color(self)`**
 
 Update the color of the spikes, depending on the selected clusters.
+
+---
+
+#### RasterView.update_select_color
+
+
+**`RasterView.update_select_color(self)`**
+
+Update the cluster colors after the cluster selection changes.
 
 ---
 
@@ -9746,15 +9764,6 @@ Select only the clusters in the cluster view.
 
 ---
 
-#### Supervisor.all_cluster_ids
-
-
-**`Supervisor.all_cluster_ids`**
-
-The sorted list of cluster ids as they are currently shown in the cluster view.
-
----
-
 #### Supervisor.cluster_info
 
 
@@ -9797,6 +9806,15 @@ Selected clusters in the cluster view only.
 **`Supervisor.selected_similar`**
 
 Selected clusters in the similarity view only.
+
+---
+
+#### Supervisor.shown_cluster_ids
+
+
+**`Supervisor.shown_cluster_ids`**
+
+The sorted list of cluster ids as they are currently shown in the cluster view.
 
 ---
 
@@ -9947,9 +9965,9 @@ Change the scaling with the wheel.
 #### TemplateView.on_select
 
 
-**`TemplateView.on_select(self, sender=None, cluster_ids=(), **kwargs)`**
+**`TemplateView.on_select(self, *args, **kwargs)`**
 
-
+Callback function when clusters are selected. May be overriden.
 
 ---
 
@@ -10063,6 +10081,15 @@ Update the order of the clusters.
 **`TemplateView.update_color(self)`**
 
 Update the color of the clusters, taking the selected clusters into account.
+
+---
+
+#### TemplateView.update_select_color
+
+
+**`TemplateView.update_select_color(self)`**
+
+Update the cluster colors after the cluster selection changes.
 
 ---
 
@@ -10492,6 +10519,15 @@ Toggle the display of the channel ids.
 **`TraceImageView.update_color(self)`**
 
 Update the view when the color scheme changes.
+
+---
+
+#### TraceImageView.update_select_color
+
+
+**`TraceImageView.update_select_color(self)`**
+
+Update the cluster colors after the cluster selection changes.
 
 ---
 
@@ -10981,6 +11017,15 @@ Toggle the display of the channel ids.
 **`TraceView.update_color(self)`**
 
 Update the view when the color scheme changes.
+
+---
+
+#### TraceView.update_select_color
+
+
+**`TraceView.update_select_color(self)`**
+
+Update the cluster colors after the cluster selection changes.
 
 ---
 

@@ -60,7 +60,7 @@ The GUI is made of several parts:
     * Graphical views
 * Status bar (bottom)
 
-[![Template GUI](https://user-images.githubusercontent.com/1942359/58665615-90f32200-8331-11e9-8403-9961c13b8f17.png)](https://user-images.githubusercontent.com/1942359/58665615-90f32200-8331-11e9-8403-9961c13b8f17.png)
+[![Template GUI](https://user-images.githubusercontent.com/1942359/72895319-5b1a0800-3d1d-11ea-865e-26b09e9f4239.png)](https://user-images.githubusercontent.com/1942359/72895319-5b1a0800-3d1d-11ea-865e-26b09e9f4239.png)
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
@@ -126,6 +126,10 @@ Graphical views constitute the most important part of the GUI. They represent di
 
 Views can be resized, moved around, tabbed in the GUI. You can close views that you don't need, you can add new views. You can also add multiple views of the same type. You can disable automatic updating of any view upon cluster selection.
 
+The **view bar** is displayed at the top of every view. The **view buttons** are at the top right of every view, in the view bar. There are buttons to close the view, to make a screenshot of the view (saved in `~/.phy/screenshots`), to display the **view menu** that is specific to every view, and to toggle the automatic update of the view when selecting new clusters
+
+![screenshot_2020-01-30-14-33-47](https://user-images.githubusercontent.com/1942359/73454051-93e55d00-436d-11ea-991b-e0587c8081fd.png)
+
 Interactivity in all graphical views:
 
 * **Pan**: left-click and drag
@@ -142,12 +146,12 @@ Interactivity in all graphical views:
 
 This view shows all clusters in a scatter plot. The x axis, y axis, marker size, and color are computed depending on four customizable fields among the columns in the cluster view. By default, the bindings are as follows:
 
-* x axis: firing rate (log scale)
+* x axis: waveform amplitude
 * y axis: depth
-* marker size: template amplitude (if available)
+* marker size: firing rate (log scale)
 * color: cluster id
 
-You can select a cluster by control+clicking on it, and add a cluster to the selection by control+shift+clicking on it.
+You can select a cluster by clicking on it, and add a cluster to the selection by shift+clicking on it. You can change the color scheme mapping with `shift+wheel`. You can select multiple clusters by drawing a lasso with ctrl+click.
 
 ![screenshot_2020-01-22-13-44-40](https://user-images.githubusercontent.com/1942359/73083549-aeca5400-3ecb-11ea-93de-0351731a727d.png)
 
@@ -159,9 +163,12 @@ Keyboard shortcuts for ClusterScatterView
 ------------------
 
 Keyboard shortcuts
+- add_to_lasso                             control+left click
 - change_marker_size                       alt+wheel
-- select_cluster                           ctrl+click
-- select_more                              ctrl+shift+click
+- clear_lasso                              control+right click
+- select_cluster                           click
+- select_more                              shift+click
+- switch_color_scheme                      shift+wheel
 
 Snippets
 - set_size                                 :css
@@ -342,6 +349,7 @@ Keyboard shortcuts
 - select_channel_pcA                       shift+left click
 - select_channel_pcB                       shift+right click
 - select_spike                             ctrl+click
+- switch_color_scheme                      shift+wheel
 - switch_origin                            alt+o
 - toggle_highlighted_spikes                alt+s
 - toggle_show_labels                       alt+l
@@ -509,7 +517,9 @@ Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
-- select_cluster                           ctrl+click
+- select_cluster                           click
+- select_more                              shift+click
+- switch_color_scheme                      shift+wheel
 
 
 ```
@@ -534,7 +544,9 @@ Keyboard shortcuts
 - change_template_size                     ctrl+wheel
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
-- select_cluster                           ctrl+click
+- select_cluster                           click
+- select_more                              shift+click
+- switch_color_scheme                      shift+wheel
 
 
 ```

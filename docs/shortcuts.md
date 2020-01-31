@@ -79,9 +79,12 @@ ClusterScatterView
 ------------------
 
 Keyboard shortcuts
+- add_to_lasso                             control+left click
 - change_marker_size                       alt+wheel
-- select_cluster                           ctrl+click
-- select_more                              ctrl+shift+click
+- clear_lasso                              control+right click
+- select_cluster                           click
+- select_more                              shift+click
+- switch_color_scheme                      shift+wheel
 
 Snippets
 - set_size                                 :css
@@ -156,7 +159,9 @@ Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
-- select_cluster                           ctrl+click
+- select_cluster                           click
+- select_more                              shift+click
+- switch_color_scheme                      shift+wheel
 
 ScatterView
 -----------
@@ -171,7 +176,9 @@ Keyboard shortcuts
 - change_template_size                     ctrl+wheel
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
-- select_cluster                           ctrl+click
+- select_cluster                           click
+- select_more                              shift+click
+- switch_color_scheme                      shift+wheel
 
 TraceImageView
 --------------
@@ -215,6 +222,7 @@ Keyboard shortcuts
 - select_channel_pcA                       shift+left click
 - select_channel_pcB                       shift+right click
 - select_spike                             ctrl+click
+- switch_color_scheme                      shift+wheel
 - switch_origin                            alt+o
 - toggle_highlighted_spikes                alt+s
 - toggle_show_labels                       alt+l
