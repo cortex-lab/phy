@@ -52,10 +52,10 @@ class ManualClusteringView(object):
 
     Events raised:
 
-    - `view_actions_created`
-    - `view_ready`
-    - `is_busy`
-    - `toggle_auto_update`
+    - `view_attached(view, gui)`: this is the event to connect to if you write a plugin that
+      needs to modify a view.
+    - `is_busy(view)`
+    - `toggle_auto_update(view)`
 
     """
     default_shortcuts = {}
@@ -229,7 +229,6 @@ class ManualClusteringView(object):
         - Update the view's attribute from the GUI state
         - Add the default view actions (auto_update, screenshot)
         - Bind the on_select() method to the select event raised by the supervisor.
-          This runs on a background thread not to block the GUI thread.
 
         """
 
@@ -253,16 +252,12 @@ class ManualClusteringView(object):
         self.actions.add(self.close, show_shortcut=False)
         self.actions.separator()
 
-        emit('view_actions_created', self)
-
         on_select = partial(self.on_select_threaded, gui=gui)
         connect(on_select, event='select')
 
         # Save the view state in the GUI state.
-        @connect(sender=gui)
-        def on_close_view(sender, view):
-            if view != self:
-                return
+        @connect(view=self)
+        def on_close_view(view_, gui):
             logger.debug("Close view %s.", self.name)
             self._closed = True
             gui.remove_menu(self.name)
@@ -281,7 +276,7 @@ class ManualClusteringView(object):
         def _set_floating():
             self.dock.setFloating(False)
 
-        emit('view_ready', self)
+        emit('view_attached', self, gui)
 
     @property
     def status(self):
@@ -426,7 +421,7 @@ class BaseColorView(BaseWheelMixin):
 
         ```python
         @connect
-        def on_add_view(gui, view):
+        def on_view_attached(gui, view):
             view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
         ```
 
