@@ -74,10 +74,9 @@ class IPythonView(RichJupyterWidget):
         except ImportError:  # pragma: no cover
             pass
 
-        @connect
-        def on_close_view(sender, view):
-            if view == self:
-                self.stop()
+        @connect(sender=self)
+        def on_close_view(view, gui):
+            self.stop()
 
     def stop(self):
         """Stop the kernel."""

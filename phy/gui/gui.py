@@ -430,10 +430,9 @@ class GUI(QMainWindow):
     Events
     ------
 
-    close
-    show
-    add_view
-    close_view
+    close(gui)
+    show(gui)
+    close_view(view, gui)
 
     """
 
@@ -737,10 +736,9 @@ class GUI(QMainWindow):
         @connect(sender=dock)
         def on_close_dock_widget(sender):
             self._views.remove(view)
-            emit('close_view', self, view)
+            emit('close_view', view, self)
 
         dock.show()
-        emit('add_view', self, view)
         logger.log(5, "Add %s to GUI.", name)
         return dock
 

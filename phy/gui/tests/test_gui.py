@@ -90,9 +90,9 @@ def test_gui_1(tempdir, qtbot):
 
     assert isinstance(gui.dialog("Hello"), QMessageBox)
 
-    view = gui.add_view(_create_canvas(), floating=True, closable=True)
+    dock_view = gui.add_view(_create_canvas(), floating=True, closable=True)
     gui.add_view(_create_canvas())
-    view.setFloating(False)
+    dock_view.setFloating(False)
     gui.show()
 
     assert gui.get_view(BaseCanvas)
@@ -102,15 +102,15 @@ def test_gui_1(tempdir, qtbot):
     # closed.
     _close = []
 
-    @connect(sender=view)
+    @connect(sender=dock_view)
     def on_close_dock_widget(sender):
         _close.append(0)
 
-    @connect(sender=gui)
-    def on_close_view(gui, v):
+    @connect(sender=dock_view.view)
+    def on_close_view(view_, gui):
         _close.append(1)
 
-    view.close()
+    dock_view.close()
     assert _close == [1, 0]
 
     gui.close()
