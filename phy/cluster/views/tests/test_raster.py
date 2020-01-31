@@ -58,7 +58,7 @@ def test_raster_0(qtbot, gui):
     def on_select_more(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
-    mouse_click(qtbot, v.canvas, pos=(w / 2, 0.), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w / 2, 0.), button='Left', modifiers=())
     assert len(_clicked) == 1
     assert _clicked == [[0]]
 

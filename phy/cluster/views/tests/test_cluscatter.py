@@ -88,11 +88,18 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     def on_select_more(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
-    mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=())
     assert len(_clicked) == 1
 
     mouse_click(
-        qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Control', 'Shift',))
+        qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Shift',))
     assert len(_clicked) == 2
+
+    mouse_click(qtbot, v.canvas, pos=(w * .3, h * .3), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * .7, h * .3), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * .7, h * .7), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * .3, h * .7), button='Left', modifiers=('Control',))
+
+    assert len(v.cluster_ids) >= 1
 
     _stop_and_close(qtbot, v)
