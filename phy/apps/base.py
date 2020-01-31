@@ -226,36 +226,35 @@ class WaveformMixin(object):
         waveforms_dict = self._get_waveforms_dict()
         if not waveforms_dict:
             return
-        v = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
-        v.ex_status = self.raw_data_filter.current
+        view = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
+        view.ex_status = self.raw_data_filter.current
 
-        @connect(sender=v)
+        @connect(sender=view)
         def on_select_channel(sender, channel_id=None, key=None, button=None):
             # Update the Selection object with the channel id clicked in the waveform view.
             self.selection.channel_id = channel_id
-            emit('selected_channel_changed', v)
+            emit('selected_channel_changed', view)
 
         # Add extra actions.
-        @connect(sender=v)
-        def on_view_actions_created(sender):
+        @connect(sender=view)
+        def on_view_attached(view_, gui):
             # NOTE: this callback function is called in WaveformView.attach().
 
-            @v.actions.add(
+            @view.actions.add(
                 alias='wn', prompt=True, prompt_default=lambda: str(self.n_spikes_waveforms))
             def change_n_spikes_waveforms(n_spikes_waveforms):
                 """Change the number of spikes displayed in the waveform view."""
                 self.n_spikes_waveforms = n_spikes_waveforms
-                v.plot()
+                view.plot()
 
-            v.actions.separator()
+            view.actions.separator()
 
-        @connect
-        def on_close_view(sender, view):
-            if view == v:
-                unconnect(on_select_channel)
-                unconnect(on_view_actions_created)
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_select_channel)
+            unconnect(on_view_attached)
 
-        return v
+        return view
 
 
 class FeatureMixin(object):
@@ -306,11 +305,10 @@ class FeatureMixin(object):
             if update_views and view.amplitudes_type == 'feature':
                 view.plot()
 
-        @connect
-        def on_close_view(sender, view_):
-            if view == view_:
-                unconnect(on_selected_feature_changed)
-                unconnect(on_select)
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_selected_feature_changed)
+            unconnect(on_select)
 
         return view
 
@@ -380,12 +378,12 @@ class FeatureMixin(object):
         connect(view.on_select_channel)
         connect(view.on_request_split)
 
-        @connect
-        def on_close_view(sender, view_):
-            if view == view_:
-                unconnect(on_select_feature)
-                unconnect(view.on_select_channel)
-                unconnect(view.on_request_split)
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_toggle_spike_reorder)
+            unconnect(on_select_feature)
+            unconnect(view.on_select_channel)
+            unconnect(view.on_request_split)
 
         return view
 
@@ -605,7 +603,7 @@ class TraceMixin(object):
         if self.model.traces is None:
             return
 
-        v = TraceView(
+        view = TraceView(
             traces=self._get_traces,
             spike_times=self._trace_spike_times,
             sample_rate=self.model.sample_rate,
@@ -617,11 +615,11 @@ class TraceMixin(object):
 
         # Update the get_traces() function with show_all_spikes.
         def _get_traces(interval):
-            return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
-        v.traces = _get_traces
-        v.ex_status = self.raw_data_filter.current
+            return self._get_traces(interval, show_all_spikes=view.show_all_spikes)
+        view.traces = _get_traces
+        view.ex_status = self.raw_data_filter.current
 
-        @connect(sender=v)
+        @connect(sender=view)
         def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Update the global selection object.
             self.selection['spike_ids'] = [spike_id]
@@ -634,23 +632,22 @@ class TraceMixin(object):
 
         @connect
         def on_select_time(sender, time):
-            v.go_to(time)
+            view.go_to(time)
 
-        @connect
-        def on_close_view(sender, view):
-            if view == v:
-                unconnect(on_select_spike)
-                unconnect(on_time_range_selected)
-                unconnect(on_select_time)
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_select_spike)
+            unconnect(on_time_range_selected)
+            unconnect(on_select_time)
 
-        return v
+        return view
 
     def create_trace_image_view(self):
         """Create a trace image view."""
         if self.model.traces is None:
             return
 
-        v = TraceImageView(
+        view = TraceImageView(
             traces=self._get_traces,
             sample_rate=self.model.sample_rate,
             duration=self.model.duration,
@@ -661,14 +658,13 @@ class TraceMixin(object):
 
         @connect
         def on_select_time(sender, time):
-            v.go_to(time)
+            view.go_to(time)
 
-        @connect
-        def on_close_view(sender, view):
-            if view == v:
-                unconnect(on_select_time)
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_select_time)
 
-        return v
+        return view
 
     def _set_view_creator(self):
         super(TraceMixin, self)._set_view_creator()
@@ -1083,28 +1079,25 @@ class BaseController(object):
 
         connect(view.on_select)
 
-        @connect
-        def on_add_view(sender, view_):
-            """Populate the view when it is added to the GUI."""
-            if view_ == view:
-                # Plot the view when adding it to the existing GUI.
-                resort()
+        @connect(sender=view)
+        def on_view_attached(view_, gui):
+            # Populate the view when it is added to the GUI.
+            resort()
 
         @connect(sender=self.supervisor.cluster_view)
         def on_ready(sender):
             """Populate the view at startup, as soon as the cluster view has been loaded."""
             resort()
 
-        @connect
-        def on_close_view(sender, view_):
+        @connect(sender=view)
+        def on_close_view(view_, gui):
             """Unconnect all events when closing the view."""
-            if view_ == view:
-                unconnect(view.on_select)
-                unconnect(on_table_sort)
-                unconnect(on_table_filter)
-                unconnect(on_cluster)
-                unconnect(on_add_view)
-                unconnect(on_ready)
+            unconnect(on_table_sort)
+            unconnect(on_table_filter)
+            unconnect(on_cluster)
+            unconnect(view.on_select)
+            unconnect(on_view_attached)
+            unconnect(on_ready)
 
     # Saving methods
     # -------------------------------------------------------------------------
@@ -1337,13 +1330,12 @@ class BaseController(object):
             # Show the time range in the amplitude view.
             view.show_time_range(interval)
 
-        @connect
-        def on_close_view(sender, view_):
-            if view == view_:
-                unconnect(on_toggle_spike_reorder)
-                unconnect(on_selected_channel_changed)
-                unconnect(on_select)
-                unconnect(on_time_range_selected)
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_toggle_spike_reorder)
+            unconnect(on_selected_channel_changed)
+            unconnect(on_select)
+            unconnect(on_time_range_selected)
 
         return view
 
@@ -1370,25 +1362,22 @@ class BaseController(object):
             view.set_cluster_ids(np.sort(cluster_ids))
             view.plot()
 
-        @connect
-        def on_add_view(sender, view_):
-            """Populate the view when it is added to the GUI."""
-            if view_ == view:
-                # Plot the view when adding it to the existing GUI.
-                _update()
+        @connect(sender=view)
+        def on_view_attached(view_, gui):
+            # Plot the view when adding it to the existing GUI.
+            _update()
 
         @connect(sender=self.supervisor.cluster_view)
         def on_ready(sender):
             """Populate the view at startup, as soon as the cluster view has been loaded."""
             _update()
 
-        @connect
-        def on_close_view(sender, view_):
+        @connect(sender=view)
+        def on_close_view(view_, gui):
             """Unconnect all events when closing the view."""
-            if view_ == view:
-                unconnect(on_table_filter)
-                unconnect(on_add_view)
-                unconnect(on_ready)
+            unconnect(on_table_filter)
+            unconnect(on_view_attached)
+            unconnect(on_ready)
 
         return view
 
@@ -1616,43 +1605,29 @@ class BaseController(object):
         self.raw_data_filter.set(self.raw_data_filter_name)
 
         # Initial actions when creating views.
-        @connect(sender=gui)
-        def on_add_view(sender, view):
+        @connect
+        def on_view_attached(view, gui_):
+            if gui_ != gui:
+                return
+
+            # Add default color schemes in each view.
             if isinstance(view, BaseColorView):
-                # Add default color schemes in each view.
                 self._add_default_color_schemes(view)
 
-        @connect
-        def on_view_ready(view):
             if isinstance(view, ManualClusteringView):
                 # Add auto update button.
                 view.dock.add_button(
                     name='auto_update', icon='f021', checkable=True, checked=view.auto_update,
                     event='toggle_auto_update', callback=view.toggle_auto_update)
 
-            # # Update base views cluster ids after clustering actions.
-            # if isinstance(view, BaseGlobalView):
-            #     @connect
-            #     def on_cluster(supervisor, up):
-            #         if isinstance(supervisor, Supervisor):
-            #             # After a clustering action, get the cluster ids as shown
-            #             # in the cluster view, and update the color selector accordingly.
-            #             @supervisor.cluster_view.get_ids
-            #             def _update(cluster_ids):
-            #                 if cluster_ids is not None:
-            #                     view.set_cluster_ids(cluster_ids)
+                # Show selected clusters when adding new views in the GUI.
+                view.on_select(cluster_ids=self.supervisor.selected_clusters)
 
         # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
         self.create_misc_actions(gui)
         gui.set_default_actions()
         gui.create_views()
-
-        # Show selected clusters when adding new views in the GUI.
-        @connect(sender=gui, event='add_view')
-        def on_add_view_(sender, view):
-            if isinstance(view, ManualClusteringView):
-                view.on_select(cluster_ids=self.supervisor.selected_clusters)
 
         # Bind the `select_more` event to add clusters to the existing selection.
         @connect
@@ -1666,9 +1641,7 @@ class BaseController(object):
         # Prompt save.
         @connect(sender=gui)
         def on_close(sender):
-            unconnect(on_add_view, self)
-            unconnect(on_view_ready, self)
-            unconnect(on_add_view_, self)
+            unconnect(on_view_attached, self)
             unconnect(on_select_more, self)
             unconnect(on_request_select, self)
             # Show save prompt if an action was done.

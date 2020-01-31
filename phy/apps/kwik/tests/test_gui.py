@@ -31,7 +31,9 @@ def _kwik_controller(tempdir, kwik_only=False):
         # Copy the dataset to a temporary directory.
         shutil.copy(loc_path, tempdir / loc_path.name)
     kwik_path = tempdir / 'hybrid_10sec.kwik'
-    return KwikController(kwik_path, channel_group=0, clear_cache=True, enable_threading=False)
+    return KwikController(
+        kwik_path, channel_group=0, config_dir=tempdir / 'config',
+        clear_cache=True, enable_threading=False)
 
 
 def test_kwik_describe(qtbot, tempdir):

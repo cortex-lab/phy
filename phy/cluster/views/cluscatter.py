@@ -345,8 +345,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.update_select_color()
 
     def on_cluster(self, sender, up):
-        self.set_cluster_ids(up.all_cluster_ids)
-        self.plot()
+        if 'all_cluster_ids' in up:
+            self.set_cluster_ids(up.all_cluster_ids)
+            self.plot()
 
     @property
     def status(self):
