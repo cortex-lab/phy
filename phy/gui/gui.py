@@ -123,7 +123,7 @@ class DockWidget(QDockWidget):
     """
 
     confirm_before_close_view = False
-    max_status_length = 48
+    max_status_length = 64
 
     def __init__(self, *args, widget=None, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
