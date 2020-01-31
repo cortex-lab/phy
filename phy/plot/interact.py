@@ -10,6 +10,7 @@
 import logging
 import numpy as np
 
+from phylib.utils import emit
 from phylib.utils.geometry import get_non_overlapping_boxes, get_closest_box
 
 from .base import BaseLayout
@@ -499,6 +500,7 @@ class Lasso(object):
                 if layout:
                     layout.active_box = self.box
                 self.add(pos)  # call update_lasso_visual
+                emit("lasso_updated", self.canvas, self.polygon)
             else:
                 self.clear()
                 self.box = None
