@@ -417,7 +417,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     @property
     def status(self):
         a, b = self._interval
-        return '[{:.2f}s - {:.2f}s]'.format(a, b)
+        return '[{:.2f}s - {:.2f}s]. Color scheme: {}.'.format(a, b, self.color_scheme)
 
     # Origin
     # -------------------------------------------------------------------------

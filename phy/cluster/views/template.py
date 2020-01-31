@@ -53,7 +53,8 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         'switch_color_scheme': 'shift+wheel',
         'decrease': 'ctrl+alt+-',
         'increase': 'ctrl+alt++',
-        'select_cluster': 'ctrl+click',
+        'select_cluster': 'click',
+        'select_more': 'shift+click',
     }
 
     def __init__(
@@ -230,19 +231,6 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         super(TemplateView, self).on_select(*args, **kwargs)
         self.update_color()
 
-    def on_mouse_click(self, e):
-        """Select a cluster by clicking on its template waveform."""
-        b = e.button
-        if 'Control' in e.modifiers or 'Shift' in e.modifiers:
-            # Get mouse position in NDC.
-            (channel_idx, cluster_rel), _ = self.canvas.grid.box_map(e.pos)
-            cluster_id = self.all_cluster_ids[cluster_rel]
-            logger.debug("Click on cluster %d with button %s.", cluster_id, b)
-            if 'Shift' in e.modifiers:
-                emit('select_more', self, [cluster_id])
-            else:
-                emit('request_select', self, [cluster_id])
-
     # Scaling
     # -------------------------------------------------------------------------
 
@@ -262,3 +250,20 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
     @scaling.setter
     def scaling(self, value):
         self._scaling = value
+
+    # Interactivity
+    # -------------------------------------------------------------------------
+
+    def on_mouse_click(self, e):
+        """Select a cluster by clicking on its template waveform."""
+        if 'Control' in e.modifiers:
+            return
+        b = e.button
+        # Get mouse position in NDC.
+        (channel_idx, cluster_rel), _ = self.canvas.grid.box_map(e.pos)
+        cluster_id = self.all_cluster_ids[cluster_rel]
+        logger.debug("Click on cluster %d with button %s.", cluster_id, b)
+        if 'Shift' in e.modifiers:
+            emit('select_more', self, [cluster_id])
+        else:
+            emit('request_select', self, [cluster_id])

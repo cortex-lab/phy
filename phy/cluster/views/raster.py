@@ -47,7 +47,8 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         'switch_color_scheme': 'shift+wheel',
         'decrease_marker_size': 'ctrl+shift+-',
         'increase_marker_size': 'ctrl+shift++',
-        'select_cluster': 'ctrl+click',
+        'select_cluster': 'click',
+        'select_more': 'shift+click',
     }
 
     def __init__(self, spike_times, spike_clusters, cluster_ids=None, **kwargs):
@@ -147,7 +148,7 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     @property
     def status(self):
-        return 'Color scheme: %s' % self.color_schemes.current
+        return 'Color scheme: %s' % self.color_scheme
 
     def plot(self, **kwargs):
         """Make the raster plot."""
@@ -196,15 +197,19 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         box = (x0, -1, x1, +1)
         self.canvas.panzoom.set_range(box)
 
+    # Interactivity
+    # -------------------------------------------------------------------------
+
     def on_mouse_click(self, e):
         """Select a cluster by clicking in the raster plot."""
+        if 'Control' in e.modifiers:
+            return
         b = e.button
-        if 'Control' in e.modifiers or 'Shift' in e.modifiers:
-            # Get mouse position in NDC.
-            cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
-            cluster_id = self.all_cluster_ids[cluster_idx]
-            logger.debug("Click on cluster %d with button %s.", cluster_id, b)
-            if 'Shift' in e.modifiers:
-                emit('select_more', self, [cluster_id])
-            else:
-                emit('request_select', self, [cluster_id])
+        # Get mouse position in NDC.
+        cluster_idx, _ = self.canvas.stacked.box_map(e.pos)
+        cluster_id = self.all_cluster_ids[cluster_idx]
+        logger.debug("Click on cluster %d with button %s.", cluster_id, b)
+        if 'Shift' in e.modifiers:
+            emit('select_more', self, [cluster_id])
+        else:
+            emit('request_select', self, [cluster_id])

@@ -450,7 +450,7 @@ class BaseColorView(BaseWheelMixin):
 
     def _neighbor_color_scheme(self, dir=+1):
         name = self.color_schemes._neighbor(dir=dir)
-        logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
+        logger.debug("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
         self.update_color()
         self.update_select_color()
         self.update_status()

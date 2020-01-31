@@ -56,8 +56,10 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     default_shortcuts = {
         'change_marker_size': 'alt+wheel',
         'switch_color_scheme': 'shift+wheel',
-        'select_cluster': 'ctrl+click',
-        'select_more': 'ctrl+shift+click',
+        'select_cluster': 'click',
+        'select_more': 'shift+click',
+        'add_to_lasso': 'control+left click',
+        'clear_lasso': 'control+right click',
     }
 
     default_snippets = {
@@ -77,6 +79,8 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.local_state_attrs += ()
 
         self.canvas.enable_axes()
+        self.canvas.enable_lasso()
+
         self.cluster_info = cluster_info
         assert set(self._dims) <= set(bindings.keys())
         self.__dict__.update(bindings)  # update self.x_axis, y_axis, size
@@ -293,6 +297,15 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         connect(self.on_select)
         connect(self.on_cluster)
 
+        @connect(sender=self.canvas)
+        def on_lasso_updated(sender, polygon):
+            if len(polygon) < 3:
+                return
+            pos = range_transform([self.data_bounds], [NDC], self.marker_positions)
+            ind = self.canvas.lasso.in_polygon(pos)
+            cluster_ids = self.all_cluster_ids[ind]
+            emit("request_select", self, list(cluster_ids))
+
     def on_select(self, *args, **kwargs):
         super(ClusterScatterView, self).on_select(*args, **kwargs)
         self.update_select_color()
@@ -319,11 +332,14 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     @property
     def status(self):
-        return 'Size: %s. Color scheme: %s.' % (self.size, self.color_schemes.current)
+        return 'Size: %s. Color scheme: %s.' % (self.size, self.color_scheme)
+
+    # Interactivity
+    # -------------------------------------------------------------------------
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking on its template waveform."""
-        if 'Control' not in e.modifiers:
+        if 'Control' in e.modifiers:
             return
         b = e.button
         pos = self.canvas.window_to_ndc(e.pos)
