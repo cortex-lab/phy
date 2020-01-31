@@ -480,6 +480,8 @@ class TemplateMixin(object):
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
         """Return the template amplitudes multiplied by the spike's amplitude."""
+        if self.model.amplitudes is None:
+            return np.zeros(len(spike_ids))
         amplitudes = self.model.amplitudes[spike_ids]
         return amplitudes
 
