@@ -123,6 +123,7 @@ class DockWidget(QDockWidget):
     """
 
     confirm_before_close_view = False
+    max_status_length = 48
 
     def __init__(self, *args, widget=None, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
@@ -243,6 +244,9 @@ class DockWidget(QDockWidget):
 
     def set_status(self, text):
         """Set the status text of the widget."""
+        n = self.max_status_length
+        if len(text) >= n:
+            text = text[:n // 2] + ' ... ' + text[-n // 2:]
         self._status.setText(text)
 
     def _default_buttons(self):

@@ -74,8 +74,8 @@ def _override_hsv(rgb, h=None, s=None, v=None):
 #------------------------------------------------------------------------------
 
 def _selected_cluster_idx(selected_clusters, cluster_ids):
-    selected_clusters = np.asarray(selected_clusters)
-    cluster_ids = np.asarray(cluster_ids)
+    selected_clusters = np.asarray(selected_clusters, dtype=np.int32)
+    cluster_ids = np.asarray(cluster_ids, dtype=np.int32)
     kept = np.isin(selected_clusters, cluster_ids)
     clu_idx = _index_of(selected_clusters[kept], cluster_ids)
     cmap_idx = np.arange(len(selected_clusters))[kept]
