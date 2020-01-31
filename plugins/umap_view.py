@@ -15,7 +15,7 @@ class WaveformUMAPView(ScatterView):
     pass
 
 
-class WaveformUMAPPlugin(IPlugin):
+class ExampleWaveformUMAPPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def coords(cluster_ids):
             """Must return a Bunch object with pos, spike_ids, spike_clusters."""

@@ -85,6 +85,14 @@ Current version is phy v2.0b1 (beta 1).
 * Moved the phy GitHub repository from kwikteam to cortex-lab organization
 
 
+## Notes for plugin maintainers
+
+The following changes may affect phy plugins:
+
+* The `add_view` and `view_actions_created` events have been removed.
+* You should now use the new event `view_attached(view, gui)` that is emitted when a view is attached to the GUI.
+
+
 ## [coming soon] Upcoming features
 
 * Support for events: PSTH view, trial-based raster plots, etc.

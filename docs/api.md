@@ -1138,10 +1138,9 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
 
 **Events**
 
-close
-show
-add_view
-close_view
+close(gui)
+show(gui)
+close_view(view, gui)
 
 ---
 
@@ -6131,7 +6130,7 @@ Add a color scheme to the view. Can be used as follows:
 
 ```python
 @connect
-def on_add_view(gui, view):
+def on_view_attached(gui, view):
     view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
 ```
 
@@ -8325,10 +8324,10 @@ Typical property objects:
 
 Events raised:
 
-- `view_actions_created`
-- `view_ready`
-- `is_busy`
-- `toggle_auto_update`
+- `view_attached(view, gui)`: this is the event to connect to if you write a plugin that
+  needs to modify a view.
+- `is_busy(view)`
+- `toggle_auto_update(view)`
 
 ---
 
@@ -8345,7 +8344,6 @@ Perform the following:
 - Update the view's attribute from the GUI state
 - Add the default view actions (auto_update, screenshot)
 - Bind the on_select() method to the select event raised by the supervisor.
-  This runs on a background thread not to block the GUI thread.
 
 ---
 
@@ -8678,7 +8676,7 @@ Add a color scheme to the view. Can be used as follows:
 
 ```python
 @connect
-def on_add_view(gui, view):
+def on_view_attached(gui, view):
     view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
 ```
 
@@ -9860,7 +9858,7 @@ Add a color scheme to the view. Can be used as follows:
 
 ```python
 @connect
-def on_add_view(gui, view):
+def on_view_attached(gui, view):
     view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
 ```
 
@@ -10179,7 +10177,7 @@ Add a color scheme to the view. Can be used as follows:
 
 ```python
 @connect
-def on_add_view(gui, view):
+def on_view_attached(gui, view):
     view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
 ```
 
@@ -10677,7 +10675,7 @@ Add a color scheme to the view. Can be used as follows:
 
 ```python
 @connect
-def on_add_view(gui, view):
+def on_view_attached(gui, view):
     view.add_color_scheme(c.get_depth, name='depth', colormap='linear')
 ```
 

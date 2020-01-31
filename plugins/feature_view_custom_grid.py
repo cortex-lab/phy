@@ -18,9 +18,8 @@ def my_grid():
 
 class ExampleCustomFeatureViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         @connect
-        def on_add_view(gui, view):
+        def on_view_attached(view, gui):
             if isinstance(view, FeatureView):
                 # We change the specification of the subplots here.
                 view.set_grid_dim(my_grid())

@@ -39,15 +39,13 @@ def on_eventname(sender, arg):
 4. Look at the plugin examples. They are good starting points to port your plugins. For example, there are example plugins for changing the number of spikes in the views, implementing custom recluster actions, adding custom matplotlib views, using custom cluster metrics and statistics, etc.
 
 
-### How to use the plugins
+### How to use a plugin
 
-1. Clone the phy repository :  `git clone https://github.com/cortex-lab/phy`
-2. Edit `~/.phy/phy_config.py`, specify the plugins directory and the plugin names to load:
+1. Create a Python file in `~/.phy/plugins/` and copy-paste the code from [a plugin example on the GitHub repository](https://github.com/cortex-lab/phy/tree/beta/plugins)
+2. Edit `~/.phy/phy_config.py`, and specify the plugin names to load in the GUI:
 
 ```python
-c = get_config()
-c.Plugins.dirs = ['/path/to/phy/plugins']  # local path to the `plugins` subdirectory in the phy repo
-c.TemplateGUI.plugins = ['ExampleSimilarityPlugin']  # list of plugin names ti load in the TemplateGUI
+c.TemplateGUI.plugins = ['ExampleClusterStatsPlugin']  # list of plugin names to load in the TemplateGUI
 ```
 
 
@@ -526,10 +524,10 @@ from phy import IPlugin, connect
 from phy.cluster.views import WaveformView
 
 
-class CustomButtonPlugin(IPlugin):
+class ExampleCustomButtonPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
-        def on_add_view(gui, view):
+        def on_view_attached(view, gui):
             if isinstance(view, WaveformView):
 
                 # view.dock is a DockWidget instance, it has methods such as add_button(),
@@ -619,9 +617,8 @@ from phy.gui.widgets import IPythonView
 
 class ExampleIPythonViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         @connect
-        def on_add_view(gui, view):
+        def on_view_attached(view, gui):
             # This is called whenever a new view is added to the GUI.
             if isinstance(view, IPythonView):
                 # We inject the first WaveformView of the GUI to the IPython console.
@@ -661,9 +658,8 @@ def my_grid():
 
 class ExampleCustomFeatureViewPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         @connect
-        def on_add_view(gui, view):
+        def on_view_attached(view, gui):
             if isinstance(view, FeatureView):
                 # We change the specification of the subplots here.
                 view.set_grid_dim(my_grid())
@@ -680,18 +676,18 @@ In this example, we show how to add a custom color scheme to a view by showing c
 """Show how to add a custom color scheme to a view."""
 
 from phy import IPlugin, connect
-from phy.cluster.views import TemplateView
+from phy.cluster.views import ClusterScatterView
 
 
 class ExampleColorSchemePlugin(IPlugin):
     def attach_to_controller(self, controller):
         # Initial actions when creating views.
         @connect
-        def on_add_view(sender, view):
+        def on_view_attached(view, gui):
             # We need the initial list of cluster ids to initialize the color map.
             cluster_ids = controller.supervisor.clustering.cluster_ids
 
-            if isinstance(view, TemplateView):
+            if isinstance(view, ClusterScatterView):
                 # Each view has a set of color schemes among which one can cycle through in
                 # the GUI.
                 view.add_color_scheme(
@@ -733,7 +729,7 @@ class WaveformUMAPView(ScatterView):
     pass
 
 
-class WaveformUMAPPlugin(IPlugin):
+class ExampleWaveformUMAPPlugin(IPlugin):
     def attach_to_controller(self, controller):
         def coords(cluster_ids):
             """Must return a Bunch object with pos, spike_ids, spike_clusters."""
@@ -790,7 +786,7 @@ from scipy.signal import butter, filtfilt
 from phy import IPlugin
 
 
-class RawDataFilterPlugin(IPlugin):
+class ExampleRawDataFilterPlugin(IPlugin):
     def attach_to_controller(self, controller):
         b, a = butter(3, 150.0 / controller.model.sample_rate * 2.0, 'high')
 

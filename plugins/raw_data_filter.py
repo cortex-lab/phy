@@ -9,7 +9,7 @@ from scipy.signal import butter, filtfilt
 from phy import IPlugin
 
 
-class RawDataFilterPlugin(IPlugin):
+class ExampleRawDataFilterPlugin(IPlugin):
     def attach_to_controller(self, controller):
         b, a = butter(3, 150.0 / controller.model.sample_rate * 2.0, 'high')
 

@@ -4,10 +4,10 @@ from phy import IPlugin, connect
 from phy.cluster.views import WaveformView
 
 
-class CustomButtonPlugin(IPlugin):
+class ExampleCustomButtonPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
-        def on_add_view(gui, view):
+        def on_view_attached(view, gui):
             if isinstance(view, WaveformView):
 
                 # view.dock is a DockWidget instance, it has methods such as add_button(),
