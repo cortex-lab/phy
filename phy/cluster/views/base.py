@@ -345,6 +345,11 @@ class ManualClusteringView(object):
 # Mixins for manual clustering views
 # -----------------------------------------------------------------------------
 
+class BaseWheelMixin(object):
+    def on_mouse_wheel(self, e):
+        pass
+
+
 class BaseGlobalView(object):
     """A view that shows all clusters instead of the selected clusters.
 
@@ -401,10 +406,9 @@ class BaseGlobalView(object):
         if not cluster_ids:
             return
         self.cluster_ids = cluster_ids  # selected clusters
-        self.update_color()
 
 
-class BaseColorView(object):
+class BaseColorView(BaseWheelMixin):
     """Provide facilities to add and select color schemes in the view.
     """
     def __init__(self, *args, **kwargs):
@@ -448,6 +452,8 @@ class BaseColorView(object):
         name = self.color_schemes._neighbor(dir=dir)
         logger.info("Switch to `%s` color scheme in %s.", name, self.__class__.__name__)
         self.update_color()
+        self.update_select_color()
+        self.update_status()
 
     def next_color_scheme(self):
         """Switch to the next color scheme."""
@@ -458,7 +464,11 @@ class BaseColorView(object):
         self._neighbor_color_scheme(-1)
 
     def update_color(self):
-        """Update the cluster colors depending on the selected clusters. To be overriden."""
+        """Update the cluster colors depending on the current color scheme. To be overriden."""
+        pass
+
+    def update_select_color(self):
+        """Update the cluster colors after the cluster selection changes."""
         pass
 
     @property
@@ -469,6 +479,7 @@ class BaseColorView(object):
     @color_scheme.setter
     def color_scheme(self, color_scheme):
         """Change the current color scheme."""
+        logger.debug("Set color scheme to %s.", color_scheme)
         self.color_schemes.set(color_scheme)
         self.update_color()
         self.update_status()
@@ -495,10 +506,14 @@ class BaseColorView(object):
         self.actions.add(self.previous_color_scheme)
         self.actions.separator()
 
-
-class BaseWheelMixin(object):
-    def on_mouse_wheel(self, e):
-        pass
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Change the scaling with the wheel."""
+        super(BaseColorView, self).on_mouse_wheel(e)
+        if e.modifiers == ('Shift',):
+            if e.delta > 0:
+                self.next_color_scheme()
+            elif e.delta < 0:
+                self.previous_color_scheme()
 
 
 class ScalingMixin(BaseWheelMixin):

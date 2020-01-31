@@ -273,6 +273,7 @@ class Clustering(object):
         # OPTIM: we update spikes_per_cluster manually.
         new_spc = _spikes_per_cluster(new_spike_clusters, spike_ids)
         self._update_cluster_ids(to_remove=old_clusters, to_add=new_spc)
+        up.all_cluster_ids = self.cluster_ids
         return up
 
     def _do_merge(self, spike_ids, cluster_ids, to):
@@ -297,6 +298,7 @@ class Clustering(object):
         # Update the list of non-empty cluster ids.
         # OPTIM: we update spikes_per_cluster manually.
         self._update_cluster_ids(to_remove=cluster_ids, to_add={to: spike_ids})
+        up.all_cluster_ids = self.cluster_ids
         return up
 
     def merge(self, cluster_ids, to=None):

@@ -7,8 +7,9 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from numpy.random import RandomState
 
-from phylib.utils import Bunch, connect
+from phylib.utils import Bunch, connect, emit
 
 from phy.plot.tests import mouse_click
 from ..cluscatter import ClusterScatterView
@@ -21,16 +22,17 @@ from . import _stop_and_close
 
 def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     n_clusters = 1000
-    cluster_ids = np.arange(n_clusters)
+    cluster_ids = np.arange(n_clusters)[2::3]
 
     class Supervisor(object):
         pass
     s = Supervisor()
 
     def cluster_info(cluster_id):
+        np.random.seed(cluster_id)
         return Bunch({
             'fet1': np.random.randn(),
-            'fet2': np.exp(20 * np.random.randn()),
+            'fet2': np.random.randn(),
             'fet3': np.random.uniform(low=5, high=20)
         })
 
@@ -38,7 +40,7 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
 
     v = ClusterScatterView(cluster_info=cluster_info, cluster_ids=cluster_ids, bindings=bindings)
     v.add_color_scheme(
-        lambda cluster_id: np.random.rand(), name='depth',
+        lambda cluster_id: RandomState(cluster_id).rand(), name='depth',
         colormap='linear', cluster_ids=cluster_ids)
     v.show()
     v.plot()
@@ -46,7 +48,20 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
-    v.on_select(s, list(np.arange(100)))
+    @connect(sender=v)
+    def on_request_select(sender, cluster_ids):
+        v.on_select(sender, cluster_ids)
+
+    @connect(sender=v)
+    def on_select_more(sender, cluster_ids):
+        v.on_select(sender, list(np.concatenate((v.cluster_ids, cluster_ids))))
+
+    v.on_select(s, list(cluster_ids[1::50]))
+
+    up = Bunch(all_cluster_ids=cluster_ids[3::20])
+    emit('cluster', s, up)
+
+    v.on_select(s, list(cluster_ids[3::40]))
 
     v.actions.change_x_axis_to_fet1()
     v.set_x_axis('fet1')
@@ -65,11 +80,11 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
 
     w, h = v.canvas.get_size()
 
-    @connect(sender=v)
+    @connect(sender=v)  # noqa
     def on_request_select(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
-    @connect(sender=v)
+    @connect(sender=v)  # noqa
     def on_select_more(sender, cluster_ids):
         _clicked.append(cluster_ids)
 

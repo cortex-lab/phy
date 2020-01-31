@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phy.utils.color import _add_selected_clusters_colors
-from phylib.utils import emit
+from phylib.utils import emit, connect
 
 from phy.plot.transform import range_transform, NDC
 from phy.plot.visuals import ScatterVisual, TextVisual
@@ -55,6 +55,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     default_shortcuts = {
         'change_marker_size': 'alt+wheel',
+        'switch_color_scheme': 'shift+wheel',
         'select_cluster': 'ctrl+click',
         'select_more': 'ctrl+shift+click',
     }
@@ -80,6 +81,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         assert set(self._dims) <= set(bindings.keys())
         self.__dict__.update(bindings)  # update self.x_axis, y_axis, size
         assert self.bindings == bindings
+
+        # Size range computed initially so that it doesn't change during the course of the session.
+        self._size_min = self._size_max = None
 
         # Full list of clusters.
         if cluster_ids is not None:
@@ -118,7 +122,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.all_cluster_ids = all_cluster_ids
         if len(all_cluster_ids) == 0:
             return
-        self.prepare_data()
+        self.prepare_position()
+        self.prepare_size()
+        self.prepare_color()
 
     # Data preparation
     # -------------------------------------------------------------------------
@@ -163,10 +169,15 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         size = np.array(
             [self.cluster_data[cluster_id]['size'] or 1. for cluster_id in self.all_cluster_ids])
 
-        # Normalize the marker size.
+        # Log scale for the size.
         if self.size_log_scale:
             size = np.log(1.0 + size - size.min())
-        m, M = size.min(), size.max()
+            self._size_min = None
+        # Find the size range.
+        if self._size_min is None:
+            self._size_min, self._size_max = size.min(), size.max()
+        m, M = self._size_min, self._size_max
+        # Normalize the marker size.
         size = (size - m) / ((M - m) or 1.0)  # size is in [0, 1]
         ms, Ms = self._min_marker_size, self._max_marker_size
         size = ms + size * (Ms - ms)  # now, size is in [ms, Ms]
@@ -175,9 +186,6 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     def prepare_color(self):
         """Compute the marker colors."""
         colors = self.get_cluster_colors(self.all_cluster_ids, self._default_alpha)
-        selected_clusters = self.cluster_ids
-        if selected_clusters is not None and len(selected_clusters) > 0:
-            colors = _add_selected_clusters_colors(selected_clusters, self.all_cluster_ids, colors)
         self.marker_colors = colors
 
     # Marker size
@@ -203,7 +211,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     # -------------------------------------------------------------------------
 
     def update_color(self):
-        """Update the cluster colors depending on the selected clusters. To be overriden."""
+        """Update the cluster colors depending on the current color scheme."""
         self.prepare_color()
         self.visual.set_color(self.marker_colors)
         self.canvas.update()
@@ -222,6 +230,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         # Ensure the specified fields are valid.
         kwargs = {k: v for k, v in kwargs.items() if v in self.fields}
         assert set(kwargs.keys()) <= set(self._dims)
+        # Reset the size scaling.
+        if 'size' in kwargs:
+            self._size_min = self._size_max = None
         self.__dict__.update(kwargs)
         self._update_labels()
         self.update_status()
@@ -278,6 +289,26 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.actions.add(self.set_x_axis, prompt=True, prompt_default=lambda: self.x_axis)
         self.actions.add(self.set_y_axis, prompt=True, prompt_default=lambda: self.y_axis)
         self.actions.add(self.set_size, prompt=True, prompt_default=lambda: self.size)
+
+        connect(self.on_select)
+        connect(self.on_cluster)
+
+    def on_select(self, *args, **kwargs):
+        super(ClusterScatterView, self).on_select(*args, **kwargs)
+        self.update_select_color()
+
+    def update_select_color(self):
+        """Update the cluster colors after the cluster selection changes."""
+        selected_clusters = self.cluster_ids
+        if selected_clusters is not None and len(selected_clusters) > 0:
+            colors = _add_selected_clusters_colors(
+                selected_clusters, self.all_cluster_ids, self.marker_colors.copy())
+            self.visual.set_color(colors)
+            self.canvas.update()
+
+    def on_cluster(self, sender, up):
+        self.set_cluster_ids(up.all_cluster_ids)
+        self.plot()
 
     def toggle_log_scale(self, dim, checked):
         """Toggle logarithmic scaling for one of the dimensions."""
