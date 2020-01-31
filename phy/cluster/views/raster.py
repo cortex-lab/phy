@@ -44,6 +44,7 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     default_shortcuts = {
         'change_marker_size': 'alt+wheel',
+        'switch_color_scheme': 'shift+wheel',
         'decrease_marker_size': 'ctrl+shift+-',
         'increase_marker_size': 'ctrl+shift++',
         'select_cluster': 'ctrl+click',
@@ -176,6 +177,10 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         self.actions.add(self.increase_marker_size)
         self.actions.add(self.decrease_marker_size)
         self.actions.separator()
+
+    def on_select(self, *args, **kwargs):
+        super(RasterView, self).on_select(*args, **kwargs)
+        self.update_color()
 
     def zoom_to_time_range(self, interval):
         """Zoom to a time interval."""

@@ -50,6 +50,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
 
     default_shortcuts = {
         'change_template_size': 'ctrl+wheel',
+        'switch_color_scheme': 'shift+wheel',
         'decrease': 'ctrl+alt+-',
         'increase': 'ctrl+alt++',
         'select_cluster': 'ctrl+click',
@@ -224,6 +225,10 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         self._apply_scaling()
         self.canvas.axes.reset_data_bounds((0, 0, n_clusters, self.n_channels))
         self.canvas.update()
+
+    def on_select(self, *args, **kwargs):
+        super(TemplateView, self).on_select(*args, **kwargs)
+        self.update_color()
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking on its template waveform."""
