@@ -25,7 +25,7 @@ from phylib.utils._misc import write_tsv
 
 from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
-from phy.cluster.views.base import ManualClusteringView, BaseGlobalView, BaseColorView
+from phy.cluster.views.base import ManualClusteringView, BaseColorView
 from phy.cluster.views import (
     WaveformView, FeatureView, TraceView, TraceImageView, CorrelogramView, AmplitudeView,
     ScatterView, ProbeView, RasterView, TemplateView, ISIView, FiringRateView, ClusterScatterView,
@@ -1047,7 +1047,7 @@ class BaseController(object):
             def _update_plot():
                 # The call to all_cluster_ids blocks until the cluster view JavaScript returns
                 # the cluster ids.
-                view.set_cluster_ids(self.supervisor.all_cluster_ids)
+                view.set_cluster_ids(self.supervisor.shown_cluster_ids)
                 # Replot the view entirely.
                 view.plot()
             if is_async:
@@ -1355,9 +1355,49 @@ class BaseController(object):
         view = ClusterScatterView(
             cluster_ids=self.supervisor.clustering.cluster_ids,
             cluster_info=self.supervisor.get_cluster_info,
-            bindings={'x_axis': 'fr', 'y_axis': 'depth', 'size': 'amp'},
+            bindings={'x_axis': 'amp', 'y_axis': 'depth', 'size': 'fr'},
         )
-        self._attach_global_view(view)
+
+        def _update():
+            view.set_cluster_ids(self.supervisor.clustering.cluster_ids)
+            view.plot()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_table_filter(sender, cluster_ids):
+            """Update the order of the clusters when a filtering is applied on the cluster view."""
+            if not view.auto_update or cluster_ids is None or not len(cluster_ids):
+                return
+            view.set_cluster_ids(np.sort(cluster_ids))
+            view.plot()
+
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            """Update the view after a clustering action."""
+            if up.added:
+                _update()
+
+        connect(view.on_select)
+
+        @connect
+        def on_add_view(sender, view_):
+            """Populate the view when it is added to the GUI."""
+            if view_ == view:
+                # Plot the view when adding it to the existing GUI.
+                _update()
+
+        @connect(sender=self.supervisor.cluster_view)
+        def on_ready(sender):
+            """Populate the view at startup, as soon as the cluster view has been loaded."""
+            _update()
+
+        @connect
+        def on_close_view(sender, view_):
+            """Unconnect all events when closing the view."""
+            if view_ == view:
+                unconnect(view.on_select)
+                unconnect(on_cluster)
+                unconnect(on_add_view)
+                unconnect(on_ready)
 
         return view
 
@@ -1598,17 +1638,17 @@ class BaseController(object):
                     name='auto_update', icon='f021', checkable=True, checked=view.auto_update,
                     event='toggle_auto_update', callback=view.toggle_auto_update)
 
-            # Update base views cluster ids after clustering actions.
-            if isinstance(view, BaseGlobalView):
-                @connect
-                def on_cluster(supervisor, up):
-                    if isinstance(supervisor, Supervisor):
-                        # After a clustering action, get the cluster ids as shown
-                        # in the cluster view, and update the color selector accordingly.
-                        @supervisor.cluster_view.get_ids
-                        def _update(cluster_ids):
-                            if cluster_ids is not None:
-                                view.set_cluster_ids(cluster_ids)
+            # # Update base views cluster ids after clustering actions.
+            # if isinstance(view, BaseGlobalView):
+            #     @connect
+            #     def on_cluster(supervisor, up):
+            #         if isinstance(supervisor, Supervisor):
+            #             # After a clustering action, get the cluster ids as shown
+            #             # in the cluster view, and update the color selector accordingly.
+            #             @supervisor.cluster_view.get_ids
+            #             def _update(cluster_ids):
+            #                 if cluster_ids is not None:
+            #                     view.set_cluster_ids(cluster_ids)
 
         # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
