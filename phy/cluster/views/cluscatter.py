@@ -49,6 +49,9 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     _marker_size = 1.
     _default_marker_size = 1.
 
+    x_axis = ''
+    y_axis = ''
+    size = ''
     x_axis_log_scale = False
     y_axis_log_scale = False
     size_log_scale = False
@@ -81,24 +84,24 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         self.canvas.enable_axes()
         self.canvas.enable_lasso()
 
+        bindings = bindings or {}
         self.cluster_info = cluster_info
-        assert set(self._dims) <= set(bindings.keys())
-        self.__dict__.update(bindings)  # update self.x_axis, y_axis, size
-        assert self.bindings == bindings
+        # update self.x_axis, y_axis, size
+        self.__dict__.update({(k, v) for k, v in bindings.items() if k in self._dims})
 
         # Size range computed initially so that it doesn't change during the course of the session.
         self._size_min = self._size_max = None
 
         # Full list of clusters.
-        if cluster_ids is not None:
-            self.set_cluster_ids(cluster_ids)
+        self.all_cluster_ids = cluster_ids
 
         self.visual = ScatterVisual()
         self.canvas.add_visual(self.visual)
 
         self.label_visual = TextVisual()
         self.canvas.add_visual(self.label_visual, exclude_origins=(self.canvas.panzoom,))
-        self._update_labels()
+
+        self.marker_positions = self.marker_colors = self.marker_sizes = None
 
     def _update_labels(self):
         self.label_visual.set_data(
@@ -153,13 +156,13 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
         # Create the x array.
         x = np.array(
-            [self.cluster_data[cluster_id]['x_axis'] or 0 for cluster_id in self.all_cluster_ids])
+            [self.cluster_data[cluster_id]['x_axis'] or 0. for cluster_id in self.all_cluster_ids])
         if self.x_axis_log_scale:
             x = np.log(1.0 + x - x.min())
 
         # Create the y array.
         y = np.array(
-            [self.cluster_data[cluster_id]['y_axis'] or 0 for cluster_id in self.all_cluster_ids])
+            [self.cluster_data[cluster_id]['y_axis'] or 0. for cluster_id in self.all_cluster_ids])
         if self.y_axis_log_scale:
             y = np.log(1.0 + y - y.min())
 
@@ -222,6 +225,8 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     def plot(self, **kwargs):
         """Make the scatter plot."""
+        if self.marker_positions is None:
+            self.prepare_data()
         self.visual.set_data(
             pos=self.marker_positions, color=self.marker_colors,
             size=self.marker_sizes * self._marker_size,  # marker size scaling factor
@@ -313,6 +318,10 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
                 unconnect(self.on_select)
                 unconnect(self.on_cluster)
                 unconnect(on_lasso_updated)
+
+        if self.all_cluster_ids is not None:
+            self.set_cluster_ids(self.all_cluster_ids)
+        self._update_labels()
 
     def on_select(self, *args, **kwargs):
         super(ClusterScatterView, self).on_select(*args, **kwargs)

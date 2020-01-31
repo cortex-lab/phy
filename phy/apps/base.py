@@ -1355,7 +1355,7 @@ class BaseController(object):
         view = ClusterScatterView(
             cluster_ids=self.supervisor.clustering.cluster_ids,
             cluster_info=self.supervisor.get_cluster_info,
-            bindings={'x_axis': 'amp', 'y_axis': 'depth', 'size': 'fr'},
+            # bindings={'x_axis': 'amp', 'y_axis': 'depth', 'size': 'fr'},
         )
 
         def _update():
