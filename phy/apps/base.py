@@ -1520,7 +1520,7 @@ class BaseController(object):
             checkable=True, checked=False)
         def toggle_spike_reorder(checked):
             """Toggle spike time reordering."""
-            logger.info("%s spike time reordering.", 'Enable' if checked else 'Disable')
+            logger.debug("%s spike time reordering.", 'Enable' if checked else 'Disable')
             emit('toggle_spike_reorder', self, checked)
 
         # Action to switch the raw data filter inthe trace and waveform views.
@@ -1552,7 +1552,7 @@ class BaseController(object):
             None: 3,
             'unsorted': 3,
         }
-        logger.debug("Adding default color schemes to %s.", view)
+        logger.debug("Adding default color schemes to %s.", view.name)
 
         def group_index(cluster_id):
             group = self.supervisor.cluster_meta.get('group', cluster_id)
