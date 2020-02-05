@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import shutil
 
+import dask.array as da
 import numpy as np
 from scipy.signal import butter, lfilter
 
@@ -186,7 +187,15 @@ class WaveformMixin(object):
             [cluster_id], n_spikes_waveforms, batch_size_waveforms)
         channel_ids = self.get_best_channels(cluster_id)
         channel_labels = self._get_channel_labels(channel_ids)
+        # # Get all spikes from the cluster, will be selected below depending on the chunks.
+        # spike_ids = self.supervisor.clustering.spikes_per_cluster[cluster_id]
+        # spike_times = self.model.spike_times[spike_ids]
+        # # Subselection to minimize the number of chunks to load.
+        # spike_ids = spike_ids[select_spikes_from_chunked(
+        #     spike_times, self.model.traces.chunk_bounds, n_spikes_waveforms)]
         data = self.model.get_waveforms(spike_ids, channel_ids)
+        if isinstance(data, da.Array):  # pragma: no cover
+            data = data.compute()
         assert data.ndim == 3  # n_spikes, n_samples, n_channels
         # data = data - data.mean() if data is not None else None
         # Filter the waveforms.

@@ -9,6 +9,7 @@
 
 import logging
 
+import dask.array as da
 import numpy as np
 
 from phylib.utils import Bunch, emit
@@ -32,6 +33,8 @@ def select_traces(traces, interval, sample_rate=None):
     i, j = int(i), int(j)
     traces = traces[i:j, :]
     traces = traces - np.median(traces, axis=0)
+    if isinstance(traces, da.Array):  # pragma: no cover
+        traces = traces.compute()
     return traces
 
 

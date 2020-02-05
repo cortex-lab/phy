@@ -99,6 +99,7 @@ def phycli(ctx):
     """Interactive visualization and manual spike sorting of large-scale ephys data."""
     add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phy'))
     add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('phylib'))
+    add_default_handler(level='DEBUG' if DEBUG else 'INFO', logger=logging.getLogger('mtscomp'))
 
 
 #------------------------------------------------------------------------------
