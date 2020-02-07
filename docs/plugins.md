@@ -1,6 +1,6 @@
 # Plugin examples
 
-In this section, we give a few examples of plugins.
+In this section, we give many examples of plugins.
 
 ## Getting started
 
@@ -34,14 +34,14 @@ def on_eventname(sender, arg):
 
 2. Some controller methods have been renamed. See the [API documentation](api.md) for more details.
 
-3. Make sure the deprecated package `phycontrib` is not loaded anywhere in your pluginsn which could lead to conflicts. You should even make sure it is not installed in your phy2 environment.
+3. Make sure the deprecated package `phycontrib` is not loaded anywhere in your plugins, which could lead to conflicts. You should even make sure it is not installed in your phy2 environment.
 
 4. Look at the plugin examples. They are good starting points to port your plugins. For example, there are example plugins for changing the number of spikes in the views, implementing custom recluster actions, adding custom matplotlib views, using custom cluster metrics and statistics, etc.
 
 
 ### How to use a plugin
 
-1. Create a Python file in `~/.phy/plugins/` and copy-paste the code from [a plugin example on the GitHub repository](https://github.com/cortex-lab/phy/tree/beta/plugins)
+1. Create a Python file in `~/.phy/plugins/` and copy-paste the code from [a plugin example on the GitHub repository](https://github.com/cortex-lab/phy/tree/master/plugins)
 2. Edit `~/.phy/phy_config.py`, and specify the plugin names to load in the GUI:
 
 ```python
@@ -865,7 +865,7 @@ For increased performance, all built-in views in phy are not based on matplotlib
 
 In phy, OpenGL views are written on top of a thin layer, a fork of `glumpy.gloo` (object-oriented interface to OpenGL). On top of that, the `phy.plot` module proposes a minimal plotting API. This interface is complex as it suffers from the limitations of OpenGL. As such, writing custom OpenGL views for phy is not straightforward.
 
-Here, we give a minimal example of a plugin implementing a custom OpenGL view. There is no in-depth documentation at the moment. If you need a really specific view, send me (Cyrille Rossant) an email at `myfirstname.mylastname@gmail.com`.
+Here, we give a minimal example of a plugin implementing a custom OpenGL view. There is no in-depth documentation at the moment.
 
 ### Example
 

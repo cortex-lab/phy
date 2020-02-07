@@ -1,16 +1,14 @@
 # Interactive visualization of ephys data
 
-phy provides two GUIs:
+Currently, phy provides two GUIs:
 
-* the **Template GUI** for KiloSort/SpykingCircus datasets.
-* the **Kwik GUI** for Kwik datasets, obtained with the klusta spike-sorting program.
+* the **Template GUI** for [**KiloSort**](https://github.com/MouseLand/Kilosort2/)/[**SpykingCircus**](https://spyking-circus.readthedocs.io/) datasets.
+* the **Kwik GUI** for Kwik datasets, obtained with the [**klusta**](https://github.com/kwikteam/klusta/) spike-sorting program (not actively maintained).
 
-These GUIs let you visualize ephys data that has already been spike-sorted. You can also refine the clustering manually if needed. Finally, you can use the GUI as a platform for interactive ephys data analysis. The **IPython view** lets you interact with the data interactively from within the GUI.
+These GUIs let you visualize ephys data that has already been spike-sorted. You can also refine the clustering manually if needed. You can also use the GUI as a platform for interactive ephys data analysis. The **IPython view** lets you interact with the data interactively from within the GUI.
 
 
 ## Opening a dataset in the GUI
-
-*Note*: there will be a simpler procedure to open the GUI on Windows in a future version.
 
 To open the GUI on a given dataset, you need to use the command-line from the directory containing your dataset.
 
@@ -54,13 +52,15 @@ Type `phy kwik-gui filename.kwik` in the directory that contains the `filename.k
 The GUI is made of several parts:
 
 * Menu bar (top)
+* Toolbar (buttons with icons)
 * Dock widgets (main window)
     * Cluster view
     * Similarity view
-    * Graphical views
+    * IPython view (optional)
+    * Many graphical views
 * Status bar (bottom)
 
-[![Template GUI](https://user-images.githubusercontent.com/1942359/72895319-5b1a0800-3d1d-11ea-865e-26b09e9f4239.png)](https://user-images.githubusercontent.com/1942359/72895319-5b1a0800-3d1d-11ea-865e-26b09e9f4239.png)
+[![Template GUI](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
@@ -117,7 +117,7 @@ You can filter the list of clusters shown in the cluster view, in the `filter` t
 
 The similarity view is very similar to the cluster view. It has an additional column: the **similarity**. It represents the similarity to clusters selected in the cluster view. As such, its contents change every time the cluster selection changes in the cluster view. By default, clusters in the similarity view are sorted by decreasing similarity.
 
-The similarity score is obtained from the `similar_templates.npy` file.
+The similarity score is obtained from the `similar_templates.npy` file, which is computed by the spike sorting algorithm (e.g. KiloSort).
 
 
 ## Graphical views
@@ -149,7 +149,6 @@ This view shows all clusters in a scatter plot. The x axis, y axis, marker size,
 * x axis: waveform amplitude
 * y axis: depth
 * marker size: firing rate (log scale)
-* color: cluster id
 
 You can select a cluster by clicking on it, and add a cluster to the selection by shift+clicking on it. You can change the color scheme mapping with `shift+wheel`. You can select multiple clusters by drawing a lasso with ctrl+click.
 
@@ -229,9 +228,9 @@ Background spikes from all clusters are shown in grey.
 
 The parameter `controller.n_spikes_features=2500`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the feature view. The parameter `controller.n_spikes_features_background=1000`, by default, specifies the maximum number of spikes to pick for the background features. These background spikes are uniformly spaced in time across the entire recording, and across all clusters indistinctively.
 
-![image](https://user-images.githubusercontent.com/1942359/58951435-6bcb3d00-8791-11e9-89e6-d2a901ee5c56.png)
+![image](https://user-images.githubusercontent.com/1942359/74033685-fdd9b400-49b6-11ea-8b18-4492ec4f4cc0.png)
 
-The default subplot organization of the feature view is (x and y for each of the 4x4 subplots, 0 refers to first selected channel, 1 refers to second select channel):
+The default subplot organization of the feature view is (x,y for each of the 4x4 subplots, 0 refers to first selected channel, 1 refers to second select channel):
 
 ```text
 time,0A 1A,0A   0B,0A   1B,0A
@@ -413,7 +412,7 @@ This view shows the amplitude of a selection of spikes belonging to the selected
 
 You can toggle between different types of amplitudes by pressing `a`:
 
-* `template`: the template amplitudes (stored in `amplitudes.npy`, multiplied by the template waveform maximum amplitude on the peak channel)
+* `template`: the template amplitudes (stored in `amplitudes.npy`)
 * `raw`: the raw spike waveform maximum amplitude on the peak channel (at the moment, extracted on the fly from the raw data file, so this is slow).
 * `feature`: the spike amplitude on a specific dimension, by default the first PC component on the peak channel. The dimension can be changed from the feature view with `control+left click` (x axis) and `control+right click` (y axis).
 
@@ -596,7 +595,7 @@ You can use matplotlib to make quick plots in the IPython view, although it is b
 
 ## Color schemes
 
-Each view comes with a set of **color schemes** that attributes a color to each cluster (independently on whether it is selected or not), depending on some of its attributes like its depth, amplitude, firing rate, etc.
+Some views come with a set of **color schemes** that attributes a color to each cluster (independently on whether it is selected or not), depending on some of its attributes like its depth, amplitude, firing rate, etc.
 
 The default color schemes are:
 

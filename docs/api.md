@@ -12096,7 +12096,7 @@ Return the average of the spike template amplitudes.
 
 **`TemplateMixin.get_spike_template_amplitudes(self, spike_ids, **kwargs)`**
 
-Return the template amplitudes multiplied by the spike's amplitude.
+Return the spike template amplitudes as stored in `amplitudes.npy`.
 
 ---
 
@@ -12582,7 +12582,7 @@ If `channel_id` is not specified, the returned amplitudes may be null.
 
 **`TemplateController.get_spike_template_amplitudes(self, spike_ids, **kwargs)`**
 
-Return the template amplitudes multiplied by the spike's amplitude.
+Return the spike template amplitudes as stored in `amplitudes.npy`.
 
 ---
 

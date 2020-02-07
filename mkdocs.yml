@@ -3,7 +3,6 @@ pages:
 - Getting started:
   - Introduction: 'index.md'
   - Release notes: 'release.md'
-  - Installation: 'installation.md'
   - Troubleshooting: 'troubleshooting.md'
 - User guide:
   - Terminology: 'terminology.md'

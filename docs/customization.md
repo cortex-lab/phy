@@ -116,7 +116,7 @@ The main objects used in phy are the following.
 
 ### TemplateController
 
-This is the main object, that holds together the model (access to the data), the views, and the manual clustering logic.
+This is the main object, that holds together the model (access to the data), the views, and the manual clustering logic. It defines a method to create and display the GUI.
 
 ### TemplateModel
 
@@ -207,6 +207,8 @@ Remember the generic form of event emission: `emit(event_name, sender, argument)
 * `emit('color_mapping_changed', supervisor)`: when a different color mapping is selected.
 
 #### UpdateInfo instance
+
+This is an object that stores information relevant to a clustering action (merge, split, move, label, undo, redo...). It is passed as an argument to the `cluster(up)` event.
 
 This class derives from `phy.Bunch`, which itself derives from the Python built-in `dict` type. It is a dictionary with an extra `a.b` syntax that is more convenient than `a["b"]`.
 

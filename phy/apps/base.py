@@ -488,7 +488,7 @@ class TemplateMixin(object):
         self.cluster_metrics['amp'] = self.get_cluster_amplitude
 
     def get_spike_template_amplitudes(self, spike_ids, **kwargs):
-        """Return the template amplitudes multiplied by the spike's amplitude."""
+        """Return the spike template amplitudes as stored in `amplitudes.npy`."""
         if self.model.amplitudes is None:
             return np.zeros(len(spike_ids))
         amplitudes = self.model.amplitudes[spike_ids]

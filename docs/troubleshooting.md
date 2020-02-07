@@ -22,8 +22,6 @@ In some cases, the [main phy developer](https://cyrille.rossant.net/) will ask y
 1. the `.phy` subdirectory, not needed, and
 2. the raw data if it is too big.
 
-If you don't include the raw data in the compressed archive, please let the developer know the exact filename and file size (in bytes) of the raw data file(s).
-
 Use a service like Dropbox, Google Drive, or Transfernow to send the archive to the developer.
 
 
@@ -36,13 +34,15 @@ Several users have reported display issues on Windows 10, especially on computer
 * Check that your screen is connected to your NVIDIA GPU and not the integrated one.
 * Enable the discrete NVIDIA GPU (see [this user's advice](https://github.com/cortex-lab/phy/issues/922#issuecomment-561673363))
 
+This issue may be fixed in a future release.
+
 
 ### Issues with the GUI layout or the views
 
 phy saves the GUI layout and view options (called **GUI state**) in two directories:
 
 * **Global GUI state**: `~/.phy/TemplateGUI/state.json` for the Template GUI (common to all datasets)
-* **Local GUI state**: `.phy/state.json` (within your data directory)
+* **Local GUI state**: `.phy/state.json` (just for a given dataset, inside your data directory)
 
 If you want to reset the default GUI layout and view options, delete these two files, or run the GUI with the `--clear-state` option which will delete these files for you:
 
@@ -60,7 +60,7 @@ More details:
 
 * `.phy`: subdirectory inside the data directory. This subdirectory contains the cache that is used to make phy faster. You can always safely delete it: the cache will be automatically reconstructed the next time you launch the GUI. The only drawback is that performance will be a bit worse when you first select clusters in the GUI.
 
-* `~/.phy`: (`~` is your home directory) this directory contains your custom plugins and user preferences for the GUI. If you delete it, you will lose the layout configuration of the GUI (which will be automatically reset the next time you open the GUI) and your user preferences. More specifically, the GUI parameters are found in `~/.phy/TemplateGUI/state.json` for the Template GUI, and so on.
+* `~/.phy`: (`~` is your home directory) this directory contains your custom plugins and user preferences for the GUI. If you delete it, you will lose the layout configuration of the GUI (which will be automatically reset the next time you open the GUI) and your user preferences (`~/.phy/phy_config.py`). More specifically, the GUI parameters are found in `~/.phy/TemplateGUI/state.json` for the Template GUI, and so on.
 
 
 ### Scaling discrepancy between templates and waveforms
