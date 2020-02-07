@@ -34,7 +34,7 @@ Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow 
     ```bash
     conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
     conda activate phy2
-    pip install phy --upgrade
+    pip install phy --pre --upgrade
     ```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
