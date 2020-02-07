@@ -31,18 +31,18 @@ Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow 
 
 2. Open a terminal and type:
 
-```bash
-conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
-conda activate phy2
-pip install phy
-```
+    ```bash
+    conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
+    conda activate phy2
+    pip install phy --upgrade
+    ```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
 
-```bash
-cd path/to/my/spikesorting/output
-phy template-gui params.py
-```
+    ```bash
+    cd path/to/my/spikesorting/output
+    phy template-gui params.py
+    ```
 
 
 ### Upgrading from phy 1 to phy 2

@@ -11,14 +11,4 @@ dependencies:
   - cython
   - pillow
   - pip:
-    - colorcet
-    - pyopengl
-    - qtconsole
-    - requests
-    - traitlets
-    - tqdm
-    - joblib
-    - click
-    - mkdocs==1.0.4
-    - git+https://github.com/cortex-lab/phy.git@dev
-    - git+https://github.com/cortex-lab/phylib.git
+    - phy
