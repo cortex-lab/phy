@@ -16,7 +16,7 @@ lint:
 
 # Test everything except apps.
 test: lint
-	py.test --cov-report= --cov=phy phy --ignore=phy/apps/ --cov-append
+	py.test -xvvs --cov-report= --cov=phy phy --ignore=phy/apps/ --cov-append
 	coverage report --omit */phy/apps/*,*/phy/plot/gloo/*
 
 # Test just the apps.

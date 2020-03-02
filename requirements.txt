@@ -1,7 +1,6 @@
 colorcet
 pyopengl
 requests
-traitlets
 qtconsole
 tqdm
 joblib

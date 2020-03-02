@@ -10,6 +10,7 @@ dependencies:
   - dask
   - cython
   - pillow
+  - sklearn
   - pip:
     - colorcet
     - pyopengl
