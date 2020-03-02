@@ -204,6 +204,7 @@ class TaskLogger(object):
         assert name
         logger.log(
             5, "Log %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
+        args = [a.tolist() if isinstance(a, np.ndarray) else a for a in args]
         task = (sender, name, args, kwargs, output)
         # Avoid successive duplicates (even if sender is different).
         if not self._history or self._history[-1][1:] != task[1:]:
