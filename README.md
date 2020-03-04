@@ -65,7 +65,18 @@ pip install -e .
 
 ### Troubleshooting
 
+* [See a list of common issues.](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [Raise a GitHub issue.](https://github.com/cortex-lab/phy/issues)
+
+
+## Running phy from a Python script
+
+In addition to launching phy from the terminal with the `phy` command, you can also launch it from a Python script or an IPython terminal. This may be useful when debugging or profiling. Here's a code example to copy-paste in a new `launch.py` text file within your data directory:
+
+```
+from phy.apps.template import template_gui
+template_gui("params.py")
+```
 
 
 ## Credits
