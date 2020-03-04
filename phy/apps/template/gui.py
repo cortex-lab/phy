@@ -82,7 +82,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     def _get_waveforms_dict(self):
         waveforms_dict = super(TemplateController, self)._get_waveforms_dict()
         # Remove waveforms and mean_waveforms if there is no raw data file.
-        if self.model.traces is None:
+        if self.model.traces is None and self.model.spike_waveforms is None:
             waveforms_dict.pop('waveforms', None)
             waveforms_dict.pop('mean_waveforms', None)
         return waveforms_dict

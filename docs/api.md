@@ -11708,6 +11708,10 @@ in order to work with the BaseController:
 * `spike_times : array-like`
     Spike times, in seconds, shape `(n_spikes,)`.
 
+* `spike_waveforms : Bunch`
+    Extracted raw waveforms for a subset of the spikes.
+    Should have attributes spike_ids, spike_channels, waveforms.
+
 * `traces : array-like`
     Array (can be virtual/memmapped) of shape `(n_samples_total, n_channels)` with the
     raw data. The trace view is shown if this object is not None.
@@ -12820,15 +12824,6 @@ Return spike waveforms on specified channels.
 
 ---
 
-#### TemplateModel.save_mean_waveforms
-
-
-**`TemplateModel.save_mean_waveforms(self, mean_waveforms)`**
-
-Save the mean waveforms as a single array.
-
----
-
 #### TemplateModel.save_metadata
 
 
@@ -12848,14 +12843,12 @@ Save the spike clusters.
 
 ---
 
-#### TemplateModel.save_spike_waveforms
+#### TemplateModel.save_spikes_subset_waveforms
 
 
-**`TemplateModel.save_spike_waveforms(self, n_samples_waveforms=None, n_channels_max=None)`**
+**`TemplateModel.save_spikes_subset_waveforms(self, max_n_spikes_per_template=None, max_n_channels=None)`**
 
-Save all spike waveforms to a memmapped NumPy file.
 
-NOTE: this function is not used yet.
 
 ---
 

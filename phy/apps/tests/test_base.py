@@ -60,6 +60,7 @@ class MyModel(object):
     spike_times = artificial_spike_samples(n_spikes) / sample_rate
     spike_times_reordered = artificial_spike_samples(n_spikes) / sample_rate
     duration = spike_times[-1]
+    spike_waveforms = None
     traces = artificial_traces(int(sample_rate * duration), n_channels)
 
     def _get_some_channels(self, offset, size):

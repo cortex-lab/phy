@@ -605,8 +605,8 @@ class GUI(QMainWindow):
 
     def show(self):
         """Show the window."""
-        emit('show', self)
         super(GUI, self).show()
+        emit('show', self)
 
     # Views
     # -------------------------------------------------------------------------

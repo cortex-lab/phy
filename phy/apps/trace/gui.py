@@ -8,11 +8,8 @@
 #------------------------------------------------------------------------------
 
 import logging
-from pathlib import Path
 
-import numpy as np
-
-from phylib.io.model import load_raw_data
+from phylib.io.traces import get_ephys_reader
 from phylib.utils import Bunch
 
 from phy.apps.template import get_template_params
@@ -26,13 +23,13 @@ logger = logging.getLogger(__name__)
 # Trace GUI
 #------------------------------------------------------------------------------
 
-def create_trace_gui(dat_path, **kwargs):
+def create_trace_gui(obj, **kwargs):
     """Create the Trace GUI.
 
     Parameters
     ----------
 
-    dat_path : str or Path
+    obj : str or Path
         Path to the raw data file.
     sample_rate : float
         The data sampling rate, in Hz.
@@ -40,60 +37,39 @@ def create_trace_gui(dat_path, **kwargs):
         The number of columns in the raw data file.
     dtype : str
         The NumPy data type of the raw binary file.
+    offset : int
+        The header offset in bytes.
 
     """
 
     gui_name = 'TraceGUI'
 
-    dat_path = Path(dat_path)
-
     # Support passing a params.py file.
-    if dat_path.suffix == '.py':
-        params = get_template_params(str(dat_path))
+    if str(obj).endswith('.py'):
+        params = get_template_params(str(obj))
         return create_trace_gui(next(iter(params.pop('dat_path'))), **params)
 
-    if dat_path.suffix == '.cbin':  # pragma: no cover
-        data = load_raw_data(path=dat_path)
-        sample_rate = data.sample_rate
-        n_channels_dat = data.shape[1]
-    else:
-        sample_rate = float(kwargs['sample_rate'])
-        assert sample_rate > 0.
-
-        n_channels_dat = int(kwargs['n_channels_dat'])
-
-        dtype = np.dtype(kwargs['dtype'])
-        offset = int(kwargs['offset'] or 0)
-        order = kwargs.get('order', None)
-
-        # Memmap the raw data file.
-        data = load_raw_data(
-            path=dat_path,
-            n_channels_dat=n_channels_dat,
-            dtype=dtype,
-            offset=offset,
-            order=order,
-        )
-
-    duration = data.shape[0] / sample_rate
+    kwargs = {
+        k: v for k, v in kwargs.items()
+        if k in ('sample_rate', 'n_channels_dat', 'dtype', 'offset')}
+    traces = get_ephys_reader(obj, **kwargs)
 
     create_app()
-    gui = GUI(name=gui_name, subtitle=dat_path.resolve(), enable_threading=False)
-
+    gui = GUI(name=gui_name, subtitle=obj.resolve(), enable_threading=False)
     gui.set_default_actions()
 
     def _get_traces(interval):
         return Bunch(
             data=select_traces(
-                data, interval, sample_rate=sample_rate))
+                traces, interval, sample_rate=traces.sample_rate))
 
     # TODO: load channel information
 
     view = TraceView(
         traces=_get_traces,
-        n_channels=n_channels_dat,
-        sample_rate=sample_rate,
-        duration=duration,
+        n_channels=traces.n_channels,
+        sample_rate=traces.sample_rate,
+        duration=traces.duration,
         enable_threading=False,
     )
     view.attach(gui)
@@ -101,13 +77,13 @@ def create_trace_gui(dat_path, **kwargs):
     return gui
 
 
-def trace_gui(dat_path, **kwargs):  # pragma: no cover
+def trace_gui(obj, **kwargs):  # pragma: no cover
     """Launch the Trace GUI.
 
     Parameters
     ----------
 
-    dat_path : str or Path
+    obj : str or Path
         Path to the raw data file
     sample_rate : float
         The data sampling rate, in Hz.
@@ -120,7 +96,7 @@ def trace_gui(dat_path, **kwargs):  # pragma: no cover
 
     """
 
-    gui = create_trace_gui(dat_path, **kwargs)
+    gui = create_trace_gui(obj, **kwargs)
     gui.show()
     run_app()
     gui.close()
