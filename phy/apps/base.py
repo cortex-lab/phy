@@ -185,7 +185,7 @@ class WaveformMixin(object):
         # Only keep spikes from the spike waveforms selection if needed.
         spike_ids = self.selector.select_spikes(
             [cluster_id], n_spikes_waveforms, batch_size_waveforms,
-            spike_ids_subset=self.model.spike_waveforms.spike_ids
+            subset=self.model.spike_waveforms.spike_ids
             if self.model.spike_waveforms is not None else None)
         channel_ids = self.get_best_channels(cluster_id)
         channel_labels = self._get_channel_labels(channel_ids)
