@@ -80,6 +80,7 @@ def test_amplitude_view_2(qtbot, gui):
 
     v.next_amplitudes_type()
     v.previous_amplitudes_type()
+    v.actions.change_amplitudes_type_to_amp2()
 
     v.set_state(v.state)
 

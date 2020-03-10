@@ -235,6 +235,20 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(AmplitudeView, self).attach(gui)
+
+        # Amplitude type actions.
+        def _make_amplitude_action(a):
+            def callback():
+                self.amplitudes_type = a
+                self.plot()
+            return callback
+
+        for a in self.amplitudes_types.keys():
+            name = 'Change amplitudes type to %s' % a
+            self.actions.add(
+                _make_amplitude_action(a), show_shortcut=False,
+                name=name, view_submenu='Change amplitudes type')
+
         self.actions.add(self.next_amplitudes_type, set_busy=True)
         self.actions.add(self.previous_amplitudes_type, set_busy=True)
 
