@@ -293,6 +293,8 @@ The horizontal line shows the baseline firing rate. Vertical lines show the refr
 
 The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
 
+You can dynamically change the window size and bin size with control+mouse wheel and shift+mouse wheel.
+
 *Note*: the central peak is artificially removed to avoid artifacts. Decrease the bin size (e.g. to 0.1 ms) if you need to visualize fine temporal structure.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951508-9c12db80-8791-11e9-8cac-a6ca1ba7da9d.png)
@@ -305,6 +307,7 @@ Keyboard shortcuts for CorrelogramView
 ---------------
 
 Keyboard shortcuts
+- change_bin_size                          shift+wheel
 - change_window_size                       ctrl+wheel
 
 Snippets

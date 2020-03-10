@@ -95,6 +95,7 @@ CorrelogramView
 ---------------
 
 Keyboard shortcuts
+- change_bin_size                          shift+wheel
 - change_window_size                       ctrl+wheel
 
 Snippets
