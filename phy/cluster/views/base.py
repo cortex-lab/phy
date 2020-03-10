@@ -64,6 +64,7 @@ class ManualClusteringView(object):
     _default_position = None
     plot_canvas_class = PlotCanvas
     ex_status = ''  # the GUI can update this to
+    max_n_clusters = 0  # By default, show all clusters.
 
     def __init__(self, shortcuts=None, **kwargs):
         self._lock = None
@@ -150,6 +151,9 @@ class ManualClusteringView(object):
             return
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
+            return
+        # Maximum number of clusters that can be displayed in the view, for performance reasons.
+        if self.max_n_clusters and len(cluster_ids) > self.max_n_clusters:
             return
 
         # The lock is used so that two different background threads do not access the same

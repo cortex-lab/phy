@@ -39,6 +39,9 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     """
 
+    # Do not show too many clusters.
+    max_n_clusters = 20
+
     _default_position = 'left'
     cluster_ids = ()
 

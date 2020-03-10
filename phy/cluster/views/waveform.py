@@ -85,6 +85,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     """
 
+    # Do not show too many clusters.
+    max_n_clusters = 8
+
     _default_position = 'right'
     ax_color = (.75, .75, .75, 1.)
     tick_size = 5.
