@@ -284,8 +284,7 @@ def test_supervisor_busy(qtbot, supervisor):
     assert supervisor._is_busy
 
     # The action fails while the supervisor is busy.
-    with raises(RuntimeError):
-        emit('action', supervisor.action_creator, 'merge')
+    emit('action', supervisor.action_creator, 'merge')
 
     emit('is_busy', o, False)
     assert not supervisor._is_busy

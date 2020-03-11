@@ -845,7 +845,11 @@ class Supervisor(object):
         # The GUI should not be busy when calling a new action.
         if 'select' not in name and self._is_busy:
             logger.log(5, "The GUI is busy, waiting before calling the action.")
-            _block(lambda: not self._is_busy)
+            try:
+                _block(lambda: not self._is_busy)
+            except RuntimeError:
+                logger.warning("The GUI is busy, could not execute `%s`.", name)
+                return
         # Enqueue the requested action.
         self.task_logger.enqueue(self, name, *args)
         # Perform the action (which calls self.<name>(...)).
