@@ -1118,9 +1118,12 @@ class BaseController(object):
 
     def _save_cluster_info(self):
         """Save all the contents of the cluster view into `cluster_info.tsv`."""
+        cluster_info = self.supervisor.cluster_info.copy()
+        # NOTE: rename 'id' to 'cluster_id' for consistency with other tsv files.
+        cluster_info['cluster_id'] = cluster_info.pop('id')
         write_tsv(
-            self.dir_path / 'cluster_info.tsv', self.supervisor.cluster_info,
-            first_field='id', exclude_fields=('is_masked',), n_significant_figures=8)
+            self.dir_path / 'cluster_info.tsv', cluster_info,
+            first_field='cluster_id', exclude_fields=('is_masked',), n_significant_figures=8)
 
     # Model methods
     # -------------------------------------------------------------------------
