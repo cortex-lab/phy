@@ -18,10 +18,12 @@ from . import _stop_and_close
 #------------------------------------------------------------------------------
 
 def test_histogram_view_0(qtbot, gui):
+    data = np.random.uniform(low=0, high=10, size=5000)
+    # plot = .1 * np.random.uniform(low=0, high=.5, size=1000)
     v = HistogramView(
         cluster_stat=lambda cluster_id: Bunch(
-            data=np.random.uniform(low=0, high=10, size=500),
-            plot=np.random.uniform(low=0, high=.5, size=100),
+            data=data,
+            # plot=plot,
             text='this is:\ncluster %d' % cluster_id,
         )
     )

@@ -59,7 +59,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
-        'change_bin_size': 'shift+wheel',
+        'change_bin_size': 'alt+wheel',
     }
 
     default_snippets = {
@@ -296,5 +296,5 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     def on_mouse_wheel(self, e):  # pragma: no cover
         """Change the scaling with the wheel."""
         super(CorrelogramView, self).on_mouse_wheel(e)
-        if e.modifiers == ('Shift',):
+        if e.modifiers == ('Alt',):
             self.set_bin(1000 * self.bin_size * 1.1 ** e.delta)

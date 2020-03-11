@@ -12,7 +12,7 @@ import logging
 import numpy as np
 
 from phylib.io.array import _clip
-from phy.plot.visuals import HistogramVisual, PlotVisual, TextVisual
+from phy.plot.visuals import HistogramVisual, TextVisual
 from phy.utils.color import selected_cluster_color
 from .base import ManualClusteringView, ScalingMixin
 
@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 # Histogram view
 # -----------------------------------------------------------------------------
 
-def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, ignore_zeros=False):
+def _compute_histogram(
+        data, x_max=None, x_min=None, n_bins=None, normalize=True, ignore_zeros=False):
     """Compute the histogram of an array."""
     assert x_min <= x_max
     assert n_bins >= 0
@@ -35,8 +36,14 @@ def _compute_histogram(data, x_max=None, x_min=0, n_bins=None, normalize=True, i
     if not normalize:
         return histogram
     # Normalize by the integral of the histogram.
-    hist_sum = histogram.sum() * bins[1]
+    hist_sum = histogram.sum() * (bins[1] - bins[0])
     return histogram / (hist_sum or 1.)
+
+
+def _first_not_null(*l):
+    for x in l:
+        if x is not None:
+            return x
 
 
 class HistogramView(ScalingMixin, ManualClusteringView):
@@ -59,6 +66,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
     # Number of bins in the histogram.
     n_bins = 100
+
+    # Step on the x axis when changing the histogram range with the mouse wheel.
+    x_delta = .01  # in seconds
 
     # Minimum value on the x axis (determines the range of the histogram)
     # If None, then `data.min()` is used.
@@ -101,8 +111,8 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         self.visual = HistogramVisual()
         self.canvas.add_visual(self.visual)
 
-        self.plot_visual = PlotVisual()
-        self.canvas.add_visual(self.plot_visual)
+        # self.plot_visual = PlotVisual()
+        # self.canvas.add_visual(self.plot_visual)
 
         self.text_visual = TextVisual(color=(1., 1., 1., 1.))
         self.canvas.add_visual(self.text_visual)
@@ -116,14 +126,14 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         self.visual.add_batch_data(
             hist=bunch.histogram, ylim=bunch.ylim, color=bunch.color, box_index=bunch.index)
 
-        # Plot.
-        plot = bunch.get('plot', None)
-        if plot is not None:
-            x = np.linspace(self.x_min, self.x_max, len(plot))
-            self.plot_visual.add_batch_data(
-                x=x, y=plot, color=(1, 1, 1, 1), data_bounds=self.data_bounds,
-                box_index=bunch.index,
-            )
+        # # Plot.
+        # plot = bunch.get('plot', None)
+        # if plot is not None:
+        #     x = np.linspace(self.x_min, self.x_max, len(plot))
+        #     self.plot_visual.add_batch_data(
+        #         x=x, y=plot, color=(1, 1, 1, 1), data_bounds=self.data_bounds,
+        #         box_index=bunch.index,
+        #     )
 
         text = bunch.get('text', None)
         if not text:
@@ -144,9 +154,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
                 continue
             bmin, bmax = bunch.data.min(), bunch.data.max()
             # Update self.x_max if it was not set before.
-            self.x_min = self.x_min or bunch.get('x_min', None) or bmin
-            self.x_max = self.x_max or bunch.get('x_max', None) or bmax
-            self.x_min = min(self.x_min, self.x_max)
+            self.x_min = _first_not_null(self.x_min, bunch.get('x_min', None), bmin)
+            self.x_max = _first_not_null(self.x_max, bunch.get('x_max', None), bmax)
+            self.x_min, self.x_max = sorted((self.x_min, self.x_max))
             assert self.x_min is not None
             assert self.x_max is not None
             assert self.x_min <= self.x_max
@@ -175,12 +185,12 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         self.canvas.stacked.n_boxes = len(self.cluster_ids)
 
         self.visual.reset_batch()
-        self.plot_visual.reset_batch()
+        # self.plot_visual.reset_batch()
         self.text_visual.reset_batch()
         for bunch in bunchs:
             self._plot_cluster(bunch)
         self.canvas.update_visual(self.visual)
-        self.canvas.update_visual(self.plot_visual)
+        # self.canvas.update_visual(self.plot_visual)
         self.canvas.update_visual(self.text_visual)
 
         self._update_axes()
@@ -253,7 +263,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         if x_min == self.x_max:
             return
         self.x_min = x_min
-        logger.debug("Change x min to %s for %s.", x_min, self.__class__.__name__)
+        logger.log(5, "Change x min to %s for %s.", x_min, self.__class__.__name__)
         self.plot()
 
     def set_x_max(self, x_max):
@@ -264,8 +274,22 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         if x_max == self.x_min:
             return
         self.x_max = x_max
-        logger.debug("Change x max to %s for %s.", x_max, self.__class__.__name__)
+        logger.log(5, "Change x max to %s for %s.", x_max, self.__class__.__name__)
         self.plot()
+
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Change the scaling with the wheel."""
+        super(HistogramView, self).on_mouse_wheel(e)
+        if e.modifiers == ('Shift',):
+            self.x_min *= 1.1 ** e.delta
+            self.x_min = min(self.x_min, self.x_max)
+            if self.x_min < self.x_max:
+                self.plot()
+        elif e.modifiers == ('Alt',):
+            self.n_bins *= 1.05 ** e.delta
+            self.n_bins = int(self.n_bins)
+            self.n_bins = max(2, self.n_bins)
+            self.plot()
 
 
 class ISIView(HistogramView):
