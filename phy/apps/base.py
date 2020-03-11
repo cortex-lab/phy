@@ -1462,7 +1462,7 @@ class BaseController(object):
         """Return the firing rate data of a cluster."""
         st = self.get_spike_times(cluster_id)
         dur = self.model.duration
-        return Bunch(data=st, x_max=dur)
+        return Bunch(data=st, x_min=0, x_max=dur)
 
     # Spike attributes views
     # -------------------------------------------------------------------------

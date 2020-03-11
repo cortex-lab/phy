@@ -847,7 +847,7 @@ class Supervisor(object):
             logger.log(5, "The GUI is busy, waiting before calling the action.")
             try:
                 _block(lambda: not self._is_busy)
-            except RuntimeError:
+            except Exception:
                 logger.warning("The GUI is busy, could not execute `%s`.", name)
                 return
         # Enqueue the requested action.

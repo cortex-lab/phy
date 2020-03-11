@@ -37,7 +37,7 @@
     "FiringRateView": {
       "auto_update": true,
       "n_bins": 200,
-      "x_min": 4.36176
+      "x_min": 0
     },
     "GUI_VERSION": 2,
     "ISIView": {
