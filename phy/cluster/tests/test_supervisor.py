@@ -8,7 +8,7 @@
 
 #from contextlib import contextmanager
 
-from pytest import yield_fixture, fixture, raises
+from pytest import yield_fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
