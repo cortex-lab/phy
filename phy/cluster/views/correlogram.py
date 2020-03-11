@@ -297,7 +297,4 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         """Change the scaling with the wheel."""
         super(CorrelogramView, self).on_mouse_wheel(e)
         if e.modifiers == ('Shift',):
-            if e.delta > 0:
-                self.set_bin(1000 * self.bin_size * 1.1)
-            else:
-                self.set_bin(1000 * self.bin_size / 1.1)
+            self.set_bin(1000 * self.bin_size * 1.1 ** e.delta)

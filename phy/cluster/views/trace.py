@@ -58,7 +58,7 @@ def _iter_spike_waveforms(
             if (not show_all_spikes and c not in supervisor.selected):
                 continue
             # cg = p.cluster_meta.get('group', c)
-            channel_ids = get_best_channels(c)
+            channel_ids, channel_amps = get_best_channels(c)
             s = int(round(t * sr)) - s0
             # Skip partial spikes.
             if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
@@ -71,6 +71,7 @@ def _iter_spike_waveforms(
                 spike_id=i,
                 spike_time=t,
                 spike_cluster=c,
+                channel_amps=channel_amps,  # for each of the channel_ids, the relative amp
                 select_index=p.selected.index(c) if c in p.selected else None,
             )
             assert wave.data.shape == (ns, len(channel_ids))
@@ -113,6 +114,8 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     scaling_coeff_x = 1.25
     trace_quantile = .01  # quantile for auto-scaling
     default_trace_color = (.5, .5, .5, 1)
+    trace_color_0 = (.353, .161, .443)
+    trace_color_1 = (.133, .404, .396)
     default_shortcuts = {
         'change_trace_size': 'ctrl+wheel',
         'switch_color_scheme': 'shift+wheel',
@@ -200,6 +203,11 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         self.canvas.enable_axes(show_y=False)
 
         self.trace_visual = UniformPlotVisual()
+        # Gradient of color for the traces.
+        if self.trace_color_0 and self.trace_color_1:
+            self.trace_visual.inserter.insert_frag(
+                'gl_FragColor.rgb = mix(vec3%s, vec3%s, (v_signal_index / %d));' % (
+                    self.trace_color_0, self.trace_color_1, self.n_channels), 'end')
         self.canvas.add_visual(self.trace_visual)
 
         self.waveform_visual = PlotVisual()
@@ -260,6 +268,14 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         c = bunch.spike_cluster
         cs = self.color_schemes.get()
         color = selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
+
+        # We could tweak the color of each spike waveform depending on the template amplitude
+        # on each of its best channels.
+        # channel_amps = bunch.get('channel_amps', None)
+        # if channel_amps is not None:
+        #     color = np.tile(color, (n_channels, 1))
+        #     assert color.shape == (n_channels, 4)
+        #     color[:, 3] = channel_amps
 
         # The box index depends on the channel.
         box_index = self.channel_y_ranks[bunch.channel_ids]
@@ -326,7 +342,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             traces = self.traces(self._interval)
 
         if update_traces:
-            logger.debug("Redraw the entire trace view.")
+            logger.log(5, "Redraw the entire trace view.")
             start, end = self._interval
 
             # Find the data bounds.
@@ -361,7 +377,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         interval = self._restrict_interval(interval)
 
         if interval != self._interval:
-            logger.debug("Redraw the entire trace view.")
+            logger.log(5, "Redraw the entire trace view.")
             self._interval = interval
             emit('is_busy', self, True)
             self.plot(update_traces=True, update_waveforms=True)
@@ -500,13 +516,11 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
     def jump_right(self):
         """Jump to right."""
-        start, end = self._interval
         delay = self.duration * .1
         self.shift(delay)
 
     def jump_left(self):
         """Jump to left."""
-        start, end = self._interval
         delay = self.duration * .1
         self.shift(-delay)
 
@@ -614,6 +628,14 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             channel_id = int(np.nonzero(self.channel_y_ranks == box_id)[0][0])
             emit('select_channel', self, channel_id=channel_id, button=e.button)
 
+    def on_mouse_wheel(self, e):  # pragma: no cover
+        """Scroll through the data with alt+wheel."""
+        super(TraceView, self).on_mouse_wheel(e)
+        if e.modifiers == ('Alt',):
+            start, end = self._interval
+            delay = e.delta * (end - start) * .1
+            self.shift(-delay)
+
 
 # -----------------------------------------------------------------------------
 # Trace Image view
@@ -699,7 +721,7 @@ class TraceImageView(TraceView):
 
     def plot(self, update_traces=True, **kwargs):
         if update_traces:
-            logger.debug("Redraw the entire trace view.")
+            logger.log(5, "Redraw the entire trace view.")
             traces = self.traces(self._interval)
 
             # Find the data bounds.

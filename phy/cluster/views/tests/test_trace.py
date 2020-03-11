@@ -42,7 +42,7 @@ def test_iter_spike_waveforms():
             supervisor=s,
             n_samples_waveforms=ns,
             show_all_spikes=True,
-            get_best_channels=lambda cluster_id: ch,
+            get_best_channels=lambda cluster_id: (ch, np.ones(nc)),
     ):
         assert w
 
@@ -57,9 +57,10 @@ def test_trace_view_1(qtbot, tempdir, gui):
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
 
     def get_traces(interval):
-        out = Bunch(data=select_traces(traces, interval, sample_rate=sr),
-                    color=(.75, .75, .75, 1),
-                    )
+        out = Bunch(
+            data=select_traces(traces, interval, sample_rate=sr),
+            color=(.75, .75, .75, 1),
+        )
         a, b = st.searchsorted(interval)
         out.waveforms = []
         k = 20
@@ -67,13 +68,14 @@ def test_trace_view_1(qtbot, tempdir, gui):
             t = st[i]
             c = sc[i]
             s = int(round(t * sr))
-            d = Bunch(data=traces[s - k:s + k, :],
-                      start_time=(s - k) / sr,
-                      channel_ids=np.arange(5),
-                      spike_id=i,
-                      spike_cluster=c,
-                      select_index=0,
-                      )
+            d = Bunch(
+                data=traces[s - k:s + k, :],
+                start_time=(s - k) / sr,
+                channel_ids=np.arange(5),
+                spike_id=i,
+                spike_cluster=c,
+                select_index=0,
+            )
             out.waveforms.append(d)
         return out
 
