@@ -571,26 +571,22 @@ class TemplateMixin(object):
 class TraceMixin(object):
 
     _new_views = ('TraceView', 'TraceImageView')
+    waveform_duration = 1.0  # in milliseconds
 
     def _get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
-        k = self.model.n_samples_waveforms
         traces_interval = select_traces(
             self.model.traces, interval, sample_rate=self.model.sample_rate)
         # Filter the loaded traces.
         traces_interval = self.raw_data_filter.apply(traces_interval, axis=0)
         out = Bunch(data=traces_interval)
-
-        def gbc(cluster_id):
-            return self.get_best_channels(cluster_id)
-
         out.waveforms = list(_iter_spike_waveforms(
             interval=interval,
             traces_interval=traces_interval,
             model=self.model,
             supervisor=self.supervisor,
-            n_samples_waveforms=k,
-            get_best_channels=gbc,
+            n_samples_waveforms=int(round(1e-3 * self.waveform_duration * self.model.sample_rate)),
+            get_best_channels=self.get_channel_amplitudes,
             show_all_spikes=show_all_spikes,
         ))
         return out
@@ -1153,6 +1149,13 @@ class BaseController(object):
             "This method should be overriden and return a non-empty list of best channels.")
         return []
 
+    def get_channel_amplitudes(self, cluster_id):  # pragma: no cover
+        """Return the best channels of a given cluster along with their relative amplitudes.
+        To be overriden."""
+        logger.warning(
+            "This method should be overriden.")
+        return []
+
     def get_channel_shank(self, cluster_id):
         """Return the shank of a cluster's best channel, if the channel_shanks array is available.
         """
@@ -1251,10 +1254,6 @@ class BaseController(object):
         """
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
-        if name == 'raw' and n is not None:
-            # HACK: currently extracting waveforms is very slow, we should probably save
-            # a spike_waveforms.npy and spike_waveforms_ind.npy arrays.
-            n //= 5
         # Find the first cluster, used to determine the best channels.
         first_cluster = next(cluster_id for cluster_id in cluster_ids if cluster_id is not None)
         # Best channels of the first cluster.
@@ -1300,9 +1299,9 @@ class BaseController(object):
             for name in sorted(self._get_amplitude_functions())}
         if not amplitudes_dict:
             return
-        # HACK: Put raw amplitude at the end as it's very slow currently.
-        if 'raw' in amplitudes_dict:
-            amplitudes_dict['raw'] = amplitudes_dict.pop('raw')
+        # TEMPORARY HACK: disable raw amplitudes as long as they're too slow to compute.
+        if len(amplitudes_dict) > 1 and 'raw' in amplitudes_dict:
+            del amplitudes_dict['raw']
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitudes_type=None,  # TODO: GUI state

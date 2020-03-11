@@ -218,6 +218,11 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
             channel_ids = channel_ids[:4]
         return channel_ids
 
+    def get_channel_amplitudes(self, cluster_id):
+        """Return the channel amplitudes of the best channels of a given cluster."""
+        channel_ids = self.get_best_channels(cluster_id)
+        return channel_ids, np.ones(len(channel_ids))
+
     def on_save_clustering(self, sender, spike_clusters, groups, *labels):
         """Save the modified data."""
         groups = {c: g.title() for c, g in groups.items()}

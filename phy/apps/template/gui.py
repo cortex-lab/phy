@@ -151,6 +151,16 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
             return [0]
         return template.channel_ids
 
+    def get_channel_amplitudes(self, cluster_id):
+        """Return the channel amplitudes of the best channels of a given cluster."""
+        template_id = self.get_template_for_cluster(cluster_id)
+        template = self.model.get_template(template_id, amplitude_threshold=.5)
+        if not template:  # pragma: no cover
+            return [0], [0.]
+        m, M = template.amplitude.min(), template.amplitude.max()
+        d = (M - m) if m < M else 1.0
+        return template.channel_ids, (template.amplitude - m) / d
+
     def template_similarity(self, cluster_id):
         """Return the list of similar clusters to a given cluster."""
         # Templates of the cluster.

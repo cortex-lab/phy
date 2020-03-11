@@ -92,6 +92,9 @@ class MyController(BaseController):
     def get_best_channels(self, cluster_id):
         return self.model._get_some_channels(cluster_id, 5)
 
+    def get_channel_amplitudes(self, cluster_id):
+        return self.model._get_some_channels(cluster_id, 5), np.ones(5)
+
 
 class MyControllerW(WaveformMixin, MyController):
     """With waveform view."""

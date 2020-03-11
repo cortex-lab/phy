@@ -119,6 +119,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     default_shortcuts = {
         'change_trace_size': 'ctrl+wheel',
         'switch_color_scheme': 'shift+wheel',
+        'navigate': 'alt+wheel',
         'decrease': 'alt+down',
         'increase': 'alt+up',
         'go_left': 'alt+left',
