@@ -12,6 +12,7 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
+  - echo $TRAVIS_BRANCH
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
@@ -19,7 +20,7 @@ install:
   - pip install matplotlib sklearn umap-learn  # for plugins
   - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
-  - if [ "${TRAVIS_BRANCH}" == "dev"]; then  # use phylib@dev on phy@dev branch
+  - if [ $TRAVIS_BRANCH == 'dev']; then  # use phylib@dev on phy@dev branch
      pip install git+https://github.com/cortex-lab/phylib.git@dev --upgrade
     fi;
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
