@@ -268,9 +268,11 @@ class GLSLInserter(object):
             Where to insert the GLSL code. Can be:
 
             * `header`: declaration of GLSL variables
+            * `start`: start of the function
             * `before_transforms`: just before the transforms in the vertex shader
             * `transforms`: where the GPU transforms are applied in the vertex shader
             * `after_transforms`: just after the GPU transforms
+            * `end`: end of the function
 
         origin : Interact
             The interact object that adds this GLSL snippet. Should be discared by

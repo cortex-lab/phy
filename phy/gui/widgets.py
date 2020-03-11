@@ -47,8 +47,11 @@ class IPythonView(RichJupyterWidget):
         self.kernel = self.kernel_manager.kernel
         self.shell = self.kernel.shell
 
-        self.kernel_client = self.kernel_manager.client()
-        self.kernel_client.start_channels()
+        try:
+            self.kernel_client = self.kernel_manager.client()
+            self.kernel_client.start_channels()
+        except Exception as e:  # pragma: no cover
+            logger.error("Could not start IPython kernel: %s.", str(e))
 
         self.set_default_style('linux')
         self.exit_requested.connect(self.stop)
@@ -56,7 +59,10 @@ class IPythonView(RichJupyterWidget):
     def inject(self, **kwargs):
         """Inject variables into the IPython namespace."""
         logger.debug("Injecting variables into the kernel: %s.", ', '.join(kwargs.keys()))
-        self.kernel.shell.push(kwargs)
+        try:
+            self.kernel.shell.push(kwargs)
+        except Exception as e:  # pragma: no cover
+            logger.error("Could not inject variables to the IPython kernel: %s.", str(e))
 
     def attach(self, gui, **kwargs):
         """Add the view to the GUI, start the kernel, and inject the specified variables."""
@@ -81,8 +87,11 @@ class IPythonView(RichJupyterWidget):
     def stop(self):
         """Stop the kernel."""
         logger.debug("Stopping the kernel.")
-        self.kernel_client.stop_channels()
-        self.kernel_manager.shutdown_kernel()
+        try:
+            self.kernel_client.stop_channels()
+            self.kernel_manager.shutdown_kernel()
+        except Exception as e:  # pragma: no cover
+            logger.error("Could not stop the IPython kernel: %s.", str(e))
 
 
 # -----------------------------------------------------------------------------
