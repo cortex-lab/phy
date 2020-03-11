@@ -220,6 +220,7 @@ Keyboard shortcuts
 - jump_left                                shift+alt+left
 - jump_right                               shift+alt+right
 - narrow                                   alt++
+- navigate                                 alt+wheel
 - select_channel_pcA                       shift+left click
 - select_channel_pcB                       shift+right click
 - select_spike                             ctrl+click

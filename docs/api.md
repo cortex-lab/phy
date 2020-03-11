@@ -3078,9 +3078,11 @@ Insert a GLSL snippet into the vertex shader.
     Where to insert the GLSL code. Can be:
 
     * `header`: declaration of GLSL variables
+    * `start`: start of the function
     * `before_transforms`: just before the transforms in the vertex shader
     * `transforms`: where the GPU transforms are applied in the vertex shader
     * `after_transforms`: just after the GPU transforms
+    * `end`: end of the function
 
 
 * `origin : Interact`
@@ -10367,7 +10369,7 @@ Select a cluster by clicking on a spike.
 
 **`TraceImageView.on_mouse_wheel(self, e)`**
 
-Change the scaling with the wheel.
+Scroll through the data with alt+wheel.
 
 ---
 
@@ -10865,7 +10867,7 @@ Select a cluster by clicking on a spike.
 
 **`TraceView.on_mouse_wheel(self, e)`**
 
-Change the scaling with the wheel.
+Scroll through the data with alt+wheel.
 
 ---
 
@@ -11865,6 +11867,16 @@ Return the best channels of a given cluster. To be overriden.
 
 ---
 
+#### BaseController.get_channel_amplitudes
+
+
+**`BaseController.get_channel_amplitudes(self, cluster_id)`**
+
+Return the best channels of a given cluster along with their relative amplitudes.
+To be overriden.
+
+---
+
 #### BaseController.get_channel_shank
 
 
@@ -12488,6 +12500,15 @@ Return the best channels of a given cluster.
 
 ---
 
+#### TemplateController.get_channel_amplitudes
+
+
+**`TemplateController.get_channel_amplitudes(self, cluster_id)`**
+
+Return the channel amplitudes of the best channels of a given cluster.
+
+---
+
 #### TemplateController.get_channel_shank
 
 
@@ -12764,7 +12785,7 @@ Return sparse features for given spikes.
 #### TemplateModel.get_template
 
 
-**`TemplateModel.get_template(self, template_id, channel_ids=None)`**
+**`TemplateModel.get_template(self, template_id, channel_ids=None, amplitude_threshold=None)`**
 
 Get data about a template.
 
@@ -13105,6 +13126,15 @@ Return the channel label of the best channel, for display in the cluster view.
 **`KwikController.get_best_channels(self, cluster_id)`**
 
 Get the best channels of a given cluster.
+
+---
+
+#### KwikController.get_channel_amplitudes
+
+
+**`KwikController.get_channel_amplitudes(self, cluster_id)`**
+
+Return the channel amplitudes of the best channels of a given cluster.
 
 ---
 
