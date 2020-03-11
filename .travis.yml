@@ -19,9 +19,7 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
   # use phylib@dev on phy@dev branch
-  - if [ $TRAVIS_BRANCH == "dev"]; then
-     pip install git+https://github.com/cortex-lab/phylib.git@dev --upgrade
-    ; fi
+  - if [ $TRAVIS_BRANCH == "dev" ]; then pip install git+https://github.com/cortex-lab/phylib.git@dev --upgrade ; fi
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
   - pip install -e .
 before_script:
