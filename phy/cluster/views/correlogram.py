@@ -13,6 +13,7 @@ import numpy as np
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
+from phylib.io.array import _clip
 from phylib.utils import Bunch
 from phy.utils.color import selected_cluster_color, _override_hsv, add_alpha
 from .base import ManualClusteringView, ScalingMixin
@@ -250,8 +251,10 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         """Set the bin and window sizes (in seconds)."""
         bin_size = bin_size or self.bin_size
         window_size = window_size or self.window_size
-        assert 1e-6 < bin_size < 1e3
-        assert 1e-6 < window_size < 1e3
+        bin_size = _clip(bin_size, 1e-6, 1e3)
+        window_size = _clip(window_size, 1e-6, 1e3)
+        assert 1e-6 <= bin_size <= 1e3
+        assert 1e-6 <= window_size <= 1e3
         assert bin_size < window_size
         self.bin_size = bin_size
         self.window_size = window_size
@@ -264,7 +267,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     def set_refractory_period(self, value):
         """Set the refractory period (in milliseconds)."""
-        self.refractory_period = np.clip(value, .1, 100) * 1e-3
+        self.refractory_period = _clip(value, .1, 100) * 1e-3
         self.plot()
 
     def set_bin(self, bin_size):
@@ -297,4 +300,5 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         """Change the scaling with the wheel."""
         super(CorrelogramView, self).on_mouse_wheel(e)
         if e.modifiers == ('Alt',):
-            self.set_bin(1000 * self.bin_size * 1.1 ** e.delta)
+            self._set_bin_window(bin_size=self.bin_size * 1.1 ** e.delta)
+            self.plot()

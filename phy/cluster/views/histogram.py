@@ -286,7 +286,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             if self.x_min < self.x_max:
                 self.plot()
         elif e.modifiers == ('Alt',):
-            self.n_bins *= 1.05 ** e.delta
+            self.n_bins /= 1.05 ** e.delta
             self.n_bins = int(self.n_bins)
             self.n_bins = max(2, self.n_bins)
             self.plot()
@@ -294,6 +294,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
 
 class ISIView(HistogramView):
     """Histogram view showing the interspike intervals."""
+    x_min = 0
     x_max = .05  # window size is 50 ms by default
     n_bins = int(x_max / .001)  # by default, 1 bin = 1 ms
     alias_char = 'isi'  # provide `:isisn` (set number of bins) and `:isim` (set max bin) snippets
@@ -316,6 +317,7 @@ class FiringRateView(HistogramView):
     n_bins = 200
     alias_char = 'fr'
     bin_unit = 's'
+    x_min = 0
 
     _state_attrs = ('n_bins', 'x_min')
     _local_state_attrs = ('x_max',)  # depends on the duration of the dataset
