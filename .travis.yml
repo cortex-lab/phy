@@ -21,7 +21,7 @@ install:
   # use phylib@dev on phy@dev branch
   - if [ $TRAVIS_BRANCH == "dev"]; then
      pip install git+https://github.com/cortex-lab/phylib.git@dev --upgrade
-    fi;
+    ; fi
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
   - pip install -e .
 before_script:
