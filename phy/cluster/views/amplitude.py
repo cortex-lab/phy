@@ -138,9 +138,13 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
         """Compute the data bounds."""
         if not bunchs:  # pragma: no cover
             return (0, 0, self.duration, 1)
-        m = min(np.quantile(bunch.amplitudes, 1 - self.quantile) for bunch in bunchs)
+        m = min(
+            np.quantile(bunch.amplitudes, 1 - self.quantile)
+            for bunch in bunchs if len(bunch.amplitudes))
         m = min(0, m)  # ensure ymin <= 0
-        M = max(np.quantile(bunch.amplitudes, self.quantile) for bunch in bunchs)
+        M = max(
+            np.quantile(bunch.amplitudes, self.quantile)
+            for bunch in bunchs if len(bunch.amplitudes))
         return (0, m, self.duration, M)
 
     def _add_histograms(self, bunchs):
@@ -174,6 +178,8 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def _plot_cluster(self, bunch):
         """Make the scatter plot."""
         ms = self._marker_size
+        if not len(bunch.histogram):
+            return
 
         # Histogram in the background.
         self.hist_visual.add_batch_data(
