@@ -9,6 +9,12 @@
 
 [**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites (mostly [Neuropixels probes](https://www.ucl.ac.uk/neuropixels/)).
 
+Phy provides two GUIs:
+
+* **Template GUI** (recommanded): for datasets sorted with KiloSort and Spyking Circus,
+* **Kwik GUI** (legacy): for datasets sorted with klusta and klustakwik2.
+
+
 [![phy 2.0b1 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
 
 
@@ -35,6 +41,8 @@ Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow 
 conda create -n phy2 python pip numpy matplotlib scipy sklearn h5py pyqt cython pillow -y
 conda activate phy2
 pip install phy
+# Only if you plan to use the Kwik GUI:
+# pip install klusta klustakwik2
 ```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
