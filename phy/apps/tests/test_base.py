@@ -57,7 +57,8 @@ class MyModel(object):
     amplitudes = np.random.normal(size=n_spikes, loc=1, scale=.1)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_templates = spike_clusters
-    spike_times = artificial_spike_samples(n_spikes) / sample_rate
+    spike_samples = artificial_spike_samples(n_spikes)
+    spike_times = spike_samples / sample_rate
     spike_times_reordered = artificial_spike_samples(n_spikes) / sample_rate
     duration = spike_times[-1]
     spike_waveforms = None

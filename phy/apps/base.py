@@ -18,7 +18,7 @@ import numpy as np
 from scipy.signal import butter, lfilter
 
 from phylib import _add_log_file
-from phylib.io.array import Selector, _flatten
+from phylib.io.array import SpikeSelector, _flatten
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, emit, connect, unconnect
 from phylib.utils._misc import write_tsv
@@ -160,7 +160,6 @@ class WaveformMixin(object):
         spike_clusters = self.supervisor.clustering.spike_clusters[spike_ids]
         # Only keep spikes from clusters on the "best" channel.
         to_keep = np.in1d(spike_clusters, self.get_clusters_on_channel(channel_id))
-        # WARNING: extracting raw waveforms is long!
         waveforms = self.model.get_waveforms(spike_ids[to_keep], [channel_id])
         if waveforms is not None:
             waveforms = waveforms[..., 0]
@@ -179,20 +178,31 @@ class WaveformMixin(object):
         return np.mean(self.get_spike_raw_amplitudes(spike_ids))
 
     def _get_waveforms_with_n_spikes(
-            self, cluster_id, n_spikes_waveforms, batch_size_waveforms, current_filter=None):
+            self, cluster_id, n_spikes_waveforms, current_filter=None):
+
         # HACK: we pass self.raw_data_filter.current_filter so that it is cached properly.
         pos = self.model.channel_positions
-        # Only keep spikes from the spike waveforms selection if needed.
-        spike_ids = self.selector.select_spikes(
-            [cluster_id], n_spikes_waveforms, batch_size_waveforms,
-            spike_ids_subset=self.model.spike_waveforms.spike_ids
-            if self.model.spike_waveforms is not None else None)
+
+        # Only keep spikes from the spike waveforms selection.
+        if self.model.spike_waveforms is not None:
+            subset_spikes = self.model.spike_waveforms.spike_ids
+            spike_ids = self.selector(
+                n_spikes_waveforms, [cluster_id], subset_spikes=subset_spikes)
+        # Or keep spikes from a subset of the chunks for performance reasons (decompression will
+        # happen on the fly here).
+        else:
+            spike_ids = self.selector(n_spikes_waveforms, [cluster_id], subset_chunks=True)
+
+        # Get the best channels.
         channel_ids = self.get_best_channels(cluster_id)
         channel_labels = self._get_channel_labels(channel_ids)
+
+        # Load the waveforms, either from the raw data directly, or from the _phy_spikes* files.
         data = self.model.get_waveforms(spike_ids, channel_ids)
         if data is not None:
             data = data - np.median(data, axis=1)[:, np.newaxis, :]
         assert data.ndim == 3  # n_spikes, n_samples, n_channels
+
         # Filter the waveforms.
         if data is not None:
             data = self.raw_data_filter.apply(data, axis=1)
@@ -206,8 +216,7 @@ class WaveformMixin(object):
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         return self._get_waveforms_with_n_spikes(
-            cluster_id, self.n_spikes_waveforms, self.batch_size_waveforms,
-            current_filter=self.raw_data_filter.current)
+            cluster_id, self.n_spikes_waveforms, current_filter=self.raw_data_filter.current)
 
     def _get_mean_waveforms(self, cluster_id, current_filter=None):
         """Get the mean waveform of a cluster on its best channels."""
@@ -749,6 +758,8 @@ class BaseController(object):
         Map attribute names to spike attributes, arrays of shape `(n_spikes,)`.
     spike_clusters : array-like
         Initial spike-cluster assignments, shape `(n_spikes,)`.
+    spike_samples : array-like
+        Spike samples, in samples, shape `(n_spikes,)`.
     spike_times : array-like
         Spike times, in seconds, shape `(n_spikes,)`.
     spike_waveforms : Bunch
@@ -795,6 +806,10 @@ class BaseController(object):
     )
 
     n_spikes_correlograms = 100000
+
+    # Number of raw data chunks to keep when loading waveforms from raw data (mostly useful
+    # when using compressed dataset, as random access triggers expensive decompression).
+    n_chunks_kept = 20
 
     # Controller attributes to load/save in the GUI state.
     _state_params = (
@@ -998,9 +1013,21 @@ class BaseController(object):
 
     def _set_selector(self):
         """Set the Selector instance."""
+
         def spikes_per_cluster(cluster_id):
-            return self.supervisor.clustering.spikes_per_cluster.get(cluster_id, [0])
-        self.selector = Selector(spikes_per_cluster)
+            return self.supervisor.clustering.spikes_per_cluster.get(
+                cluster_id, np.array([], dtype=np.int64))
+
+        try:
+            chunk_bounds = self.model.traces.chunk_bounds
+        except AttributeError:
+            chunk_bounds = [0.0, self.model.spike_samples[-1] + 1]
+
+        self.selector = SpikeSelector(
+            get_spikes_per_cluster=spikes_per_cluster,
+            spike_times=self.model.spike_samples,  # NOTE: chunk_bounds is in samples, not seconds
+            chunk_bounds=chunk_bounds,
+            n_chunks_kept=self.n_chunks_kept)
 
     def _cache_methods(self):
         """Cache methods as specified in `self._memcached` and `self._cached`."""
@@ -1118,9 +1145,10 @@ class BaseController(object):
 
     def _save_cluster_info(self):
         """Save all the contents of the cluster view into `cluster_info.tsv`."""
+        # HACK: rename id to cluster_id for consistency in the cluster_info.tsv file.
         cluster_info = self.supervisor.cluster_info.copy()
-        # NOTE: rename 'id' to 'cluster_id' for consistency with other tsv files.
-        cluster_info['cluster_id'] = cluster_info.pop('id')
+        for d in cluster_info:
+            d['cluster_id'] = d.pop('id')
         write_tsv(
             self.dir_path / 'cluster_info.tsv', cluster_info,
             first_field='cluster_id', exclude_fields=('is_masked',), n_significant_figures=8)
@@ -1202,9 +1230,9 @@ class BaseController(object):
     # Public spike methods
     # -------------------------------------------------------------------------
 
-    def get_spike_ids(self, cluster_id, n=None):
+    def get_spike_ids(self, cluster_id, n=None, **kwargs):
         """Return part or all of spike ids belonging to a given cluster."""
-        return self.selector.select_spikes([cluster_id], n)
+        return self.selector(n, [cluster_id], **kwargs)
 
     def get_spike_times(self, cluster_id, n=None):
         """Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`."""
@@ -1267,21 +1295,34 @@ class BaseController(object):
         other_clusters = self.get_clusters_on_channel(channel_id)
         # Get the amplitude method.
         f = self._get_amplitude_functions()[name]
+        # Take spikes from the waveform selection if we're loading the raw amplitudes,
+        # or by minimzing the number of chunks to load if fetching waveforms directly
+        # from the raw data.
+        # Otherwise we load the spikes randomly from the whole dataset.
+        subset_chunks = subset_spikes = None
+        if name == 'raw':
+            if self.model.spike_waveforms is not None:
+                subset_spikes = self.model.spike_waveforms.spike_ids
+            else:
+                subset_chunks = True
+        # Go through each cluster in order to select spikes from each.
         for cluster_id in cluster_ids:
             if cluster_id is not None:
                 # Cluster spikes.
-                spike_ids = self.get_spike_ids(cluster_id, n=n)
+                spike_ids = self.get_spike_ids(
+                    cluster_id, n=n, subset_spikes=subset_spikes, subset_chunks=subset_chunks)
             else:
                 # Background spikes.
-                spike_ids = self.selector.select_spikes(other_clusters, n)
+                spike_ids = self.selector(
+                    n, other_clusters, subset_spikes=subset_spikes, subset_chunks=subset_chunks)
+            # Get the spike times.
             spike_times = self._get_spike_times_reordered(spike_ids)
-            if name == 'feature':
-                # Retrieve the feature PC selected in the feature view.
-                channel_id = self.selection.get('channel_id', channel_id)
-            elif name == 'raw':
-                # Retrieve the channel selected in the waveform view.
+            if name in ('feature', 'raw'):
+                # Retrieve the feature PC selected in the feature view
+                # or the channel selected in the waveform view.
                 channel_id = self.selection.get('channel_id', channel_id)
             pc = self.selection.get('feature_pc', None)
+            # Call the spike amplitude getter function.
             amplitudes = f(
                 spike_ids, channel_ids=channel_ids, channel_id=channel_id, pc=pc,
                 first_cluster=first_cluster)
@@ -1302,7 +1343,8 @@ class BaseController(object):
             for name in sorted(self._get_amplitude_functions())}
         if not amplitudes_dict:
             return
-        # TEMPORARY HACK: disable raw amplitudes as long as they're too slow to compute.
+        # NOTE: we disable raw amplitudes for now as they're either too slow to load,
+        # or they're loaded from a small part of the dataset which is not very useful.
         if len(amplitudes_dict) > 1 and 'raw' in amplitudes_dict:
             del amplitudes_dict['raw']
         view = AmplitudeView(
@@ -1411,8 +1453,7 @@ class BaseController(object):
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
         """Return the cross- and auto-correlograms of a set of clusters."""
-        spike_ids = self.selector.select_spikes(
-            cluster_ids, self.n_spikes_correlograms, subset='random')
+        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(
@@ -1421,8 +1462,7 @@ class BaseController(object):
 
     def _get_correlograms_rate(self, cluster_ids, bin_size):
         """Return the baseline firing rate of the cross- and auto-correlograms of clusters."""
-        spike_ids = self.selector.select_spikes(
-            cluster_ids, self.n_spikes_correlograms, subset='random')
+        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return firing_rate(
             sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration)

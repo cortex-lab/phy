@@ -152,7 +152,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
                 """Relaunch KlustaKwik on the selected clusters."""
                 # Selected clusters.
                 cluster_ids = supervisor.selected
-                spike_ids = self.selector.select_spikes(cluster_ids)
+                spike_ids = self.selector(None, cluster_ids)
                 logger.info("Running KlustaKwik on %d spikes.", len(spike_ids))
 
                 # Run KK2 in a temporary directory to avoid side effects.
@@ -169,8 +169,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         self.supervisor = supervisor
 
     def _get_masks(self, cluster_id):
-        spike_ids = self.selector.select_spikes(
-            [cluster_id], self.n_spikes_waveforms, self.batch_size_waveforms)
+        spike_ids = self.selector(self.n_spikes_waveforms, [cluster_id])
         if self.model.all_masks is None:
             return np.ones((self.n_spikes_waveforms, self.model.n_channels))
         return self.model.all_masks[spike_ids]
@@ -181,8 +180,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         pos = self.model.channel_positions
-        spike_ids = self.selector.select_spikes(
-            [cluster_id], self.n_spikes_waveforms, self.batch_size_waveforms)
+        spike_ids = self.selector(self.n_spikes_waveforms, [cluster_id])
         data = self.model.all_waveforms[spike_ids]
         mm = self._get_mean_masks(cluster_id)
         mw = np.mean(data, axis=0)
