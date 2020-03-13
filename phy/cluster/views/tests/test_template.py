@@ -83,11 +83,11 @@ def test_template_view_1(qtbot, tempdir, gui):
     def on_select_more(sender, cluster_ids):
         _clicked.append(cluster_ids)
 
-    mouse_click(qtbot, v.canvas, pos=(0, 0.), button='Left', modifiers=())
+    mouse_click(qtbot, v.canvas, pos=(0, 0.), button='Left', modifiers=('Control',))
     assert len(_clicked) == 1
     assert _clicked[0] in ([4], [5])
 
-    mouse_click(qtbot, v.canvas, pos=(0, h / 2), button='Left', modifiers=('Shift',))
+    mouse_click(qtbot, v.canvas, pos=(0, h / 2), button='Left', modifiers=('Control', 'Shift',))
     assert len(_clicked) == 2
     assert _clicked[1] == [9]
 

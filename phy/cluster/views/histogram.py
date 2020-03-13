@@ -33,7 +33,7 @@ def _compute_histogram(
     if ignore_zeros:
         data = data[data != 0]
     histogram, _ = np.histogram(data, bins=bins)
-    if not normalize:
+    if not normalize:  # pragma: no cover
         return histogram
     # Normalize by the integral of the histogram.
     hist_sum = histogram.sum() * (bins[1] - bins[0])
