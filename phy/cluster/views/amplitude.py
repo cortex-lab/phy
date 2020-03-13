@@ -155,7 +155,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
                 x_min=self.data_bounds[1],
                 x_max=self.data_bounds[3],
                 n_bins=self.n_bins,
-                normalize=False,
+                normalize=True,
                 ignore_zeros=True,
             )
         return bunchs
