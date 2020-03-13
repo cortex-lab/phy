@@ -53,7 +53,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         'switch_color_scheme': 'shift+wheel',
         'decrease': 'ctrl+alt+-',
         'increase': 'ctrl+alt++',
-        'select_cluster': 'click',
+        'select_cluster': 'ctrl+click',
         'select_more': 'shift+click',
     }
 
@@ -256,7 +256,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking on its template waveform."""
-        if 'Control' in e.modifiers:
+        if 'Control' not in e.modifiers:
             return
         b = e.button
         # Get mouse position in NDC.

@@ -160,7 +160,7 @@ Keyboard shortcuts
 - change_marker_size                       alt+wheel
 - decrease_marker_size                     ctrl+shift+-
 - increase_marker_size                     ctrl+shift++
-- select_cluster                           click
+- select_cluster                           ctrl+click
 - select_more                              shift+click
 - switch_color_scheme                      shift+wheel
 
@@ -177,7 +177,7 @@ Keyboard shortcuts
 - change_template_size                     ctrl+wheel
 - decrease                                 ctrl+alt+-
 - increase                                 ctrl+alt++
-- select_cluster                           click
+- select_cluster                           ctrl+click
 - select_more                              shift+click
 - switch_color_scheme                      shift+wheel
 

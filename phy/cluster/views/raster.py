@@ -47,7 +47,7 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         'switch_color_scheme': 'shift+wheel',
         'decrease_marker_size': 'ctrl+shift+-',
         'increase_marker_size': 'ctrl+shift++',
-        'select_cluster': 'click',
+        'select_cluster': 'ctrl+click',
         'select_more': 'shift+click',
     }
 
@@ -202,7 +202,7 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     def on_mouse_click(self, e):
         """Select a cluster by clicking in the raster plot."""
-        if 'Control' in e.modifiers:
+        if 'Control' not in e.modifiers:
             return
         b = e.button
         # Get mouse position in NDC.

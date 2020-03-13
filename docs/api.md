@@ -11707,6 +11707,9 @@ in order to work with the BaseController:
 * `spike_clusters : array-like`
     Initial spike-cluster assignments, shape `(n_spikes,)`.
 
+* `spike_samples : array-like`
+    Spike samples, in samples, shape `(n_spikes,)`.
+
 * `spike_times : array-like`
     Spike times, in seconds, shape `(n_spikes,)`.
 
@@ -11916,7 +11919,7 @@ Return the depth of a cluster.
 #### BaseController.get_spike_ids
 
 
-**`BaseController.get_spike_ids(self, cluster_id, n=None)`**
+**`BaseController.get_spike_ids(self, cluster_id, n=None, **kwargs)`**
 
 Return part or all of spike ids belonging to a given cluster.
 
@@ -12584,7 +12587,7 @@ Return the features for the specified channel and PC.
 #### TemplateController.get_spike_ids
 
 
-**`TemplateController.get_spike_ids(self, cluster_id, n=None)`**
+**`TemplateController.get_spike_ids(self, cluster_id, n=None, **kwargs)`**
 
 Return part or all of spike ids belonging to a given cluster.
 
@@ -13195,7 +13198,7 @@ Return the features for the specified channel and PC.
 #### KwikController.get_spike_ids
 
 
-**`KwikController.get_spike_ids(self, cluster_id, n=None)`**
+**`KwikController.get_spike_ids(self, cluster_id, n=None, **kwargs)`**
 
 Return part or all of spike ids belonging to a given cluster.
 
