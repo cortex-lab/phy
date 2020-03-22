@@ -15,6 +15,7 @@ import numpy as np
 
 from phylib import _add_log_file
 from phylib.io.model import TemplateModel, load_model
+from phylib.io.traces import MtscompEphysReader
 from phylib.utils import Bunch, connect
 
 from phy.cluster.views import ScatterView
@@ -204,8 +205,15 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
     dir_path = p.parent
     _add_log_file(dir_path / 'phy.log')
 
+    model = load_model(params_path)
+    # Automatically export spike waveforms when using compressed raw ephys.
+    if model.spike_waveforms is None and isinstance(model.traces, MtscompEphysReader):
+        # TODO: customizable values below.
+        model.save_spikes_subset_waveforms(
+            max_n_spikes_per_template=500, max_n_channels=16)
+
     create_app()
-    controller = TemplateController(model=load_model(params_path), dir_path=dir_path, **kwargs)
+    controller = TemplateController(model=model, dir_path=dir_path, **kwargs)
     gui = controller.create_gui()
     gui.show()
     run_app()
