@@ -28,7 +28,7 @@ from .utils.plugin import IPlugin, get_plugin, discover_plugins
 
 __author__ = 'Cyrille Rossant'
 __email__ = 'cyrille.rossant at gmail.com'
-__version__ = '2.0b1'
+__version__ = '2.0b2.dev'
 __version_git__ = __version__ + _git_version()
 
 

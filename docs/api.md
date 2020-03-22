@@ -12758,6 +12758,16 @@ Return the most relevant channels of a cluster.
 
 ---
 
+#### TemplateModel.get_cluster_mean_waveforms
+
+
+**`TemplateModel.get_cluster_mean_waveforms(self, cluster_id)`**
+
+Return the mean template waveforms of a cluster, as a weighted average of the
+template waveforms from which the cluster originates from.
+
+---
+
 #### TemplateModel.get_cluster_spike_waveforms
 
 
@@ -12800,6 +12810,15 @@ Get data about a template.
 **`TemplateModel.get_template_channels(self, template_id)`**
 
 Return the most relevant channels of a template.
+
+---
+
+#### TemplateModel.get_template_counts
+
+
+**`TemplateModel.get_template_counts(self, cluster_id)`**
+
+Return a histogram of the number of spikes in each template for a given cluster.
 
 ---
 

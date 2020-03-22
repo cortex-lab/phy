@@ -14,5 +14,6 @@ pages:
 - Developer guide:
   - Customization: 'customization.md'
   - Plugin examples: 'plugins.md'
+  - Data analysis: 'analysis.md'
   - API documentation: 'api.md'
 theme: readthedocs
