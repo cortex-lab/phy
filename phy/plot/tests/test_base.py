@@ -7,13 +7,18 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
+
 import numpy as np
 from pytest import yield_fixture
 
-from ..base import BaseVisual, GLSLInserter
+from ..base import BaseVisual, GLSLInserter, gloo
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)
 from . import mouse_click, mouse_drag, mouse_press, key_press, key_release
+from phy.gui.qt import QOpenGLWindow
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -187,3 +192,38 @@ def test_canvas_lazy(qtbot, canvas):
     qtbot.waitForWindowShown(canvas)
 
     assert len(list(canvas.iter_update_queue())) == 2
+
+
+def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
+    try:
+        from memory_profiler import memory_usage
+    except ImportError:  # pragma: no cover
+        logger.warning("Skip test depending on unavailable memory_profiler module.")
+        return
+
+    class TestCanvas(QOpenGLWindow):
+        def paintGL(self):
+            gloo.clear()
+            program.draw('points')
+
+    program = gloo.Program(vertex_shader_nohook, fragment_shader)
+
+    canvas = TestCanvas()
+    canvas.show()
+    qtbot.waitForWindowShown(canvas)
+
+    def f():
+        for _ in range(100):
+            program['a_position'] = (-1 + 2 * np.random.rand(100_000, 2)).astype(np.float32)
+            canvas.update()
+            qtbot.wait(1)
+
+    mem = memory_usage(f)
+    usage = max(mem) - min(mem)
+    print(usage)
+
+    # NOTE: this test is failing currently because of a memory leak of
+    # unknown origin
+    # assert usage < 10
+
+    canvas.close()
