@@ -222,8 +222,9 @@ def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
     usage = max(mem) - min(mem)
     print(usage)
 
-    # NOTE: this test is failing currently because of a memory leak of
-    # unknown origin
+    # NOTE: this test is failing currently because of a memory leak in the the gloo module.
+    # Recreating a buffer at every cluster selection causes a memory leak, once should ideally
+    # use a single large buffer and reuse that, even if the buffer's content is actually smaller.
     # assert usage < 10
 
     canvas.close()
