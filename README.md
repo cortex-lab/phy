@@ -37,13 +37,13 @@ Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow 
 
 2. Open a terminal and type:
 
-```bash
-conda create -n phy2 python pip numpy matplotlib scipy sklearn h5py pyqt cython pillow -y
-conda activate phy2
-pip install phy
-# Only if you plan to use the Kwik GUI:
-# pip install klusta klustakwik2
-```
+    ```bash
+    conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
+    conda activate phy2
+    pip install phy --pre --upgrade
+    # Only if you plan to use the Kwik GUI:
+    # pip install klusta klustakwik2
+    ```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
 
@@ -77,7 +77,18 @@ pip install -e .
 
 ### Troubleshooting
 
+* [See a list of common issues.](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [Raise a GitHub issue.](https://github.com/cortex-lab/phy/issues)
+
+
+## Running phy from a Python script
+
+In addition to launching phy from the terminal with the `phy` command, you can also launch it from a Python script or an IPython terminal. This may be useful when debugging or profiling. Here's a code example to copy-paste in a new `launch.py` text file within your data directory:
+
+```
+from phy.apps.template import template_gui
+template_gui("params.py")
+```
 
 
 ## Credits

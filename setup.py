@@ -42,19 +42,27 @@ with open('requirements.txt') as f:
     require = [x.strip() for x in f.readlines() if not x.startswith('git+')]
 
 
+# Only add PyQt5 dependency if it is not already installed in the conda environment.
+try:
+    import PyQt5
+except ImportError:
+    require.append('PyQt5')
+
+
 setup(
     name='phy',
     version=version,
     license="BSD",
     description='Interactive visualization and manual spike sorting of large-scale ephys data',
     long_description=readme,
+    long_description_content_type="text/markdown",
     author='Cyrille Rossant (cortex-lab/UCL/IBL)',
-    author_email='cyrille.rossant at gmail.com',
+    author_email='cyrille.rossant+pypi@gmail.com',
     url='https://phy.cortexlab.net',
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy': ['*.vert', '*.frag', '*.glsl', '*.npy', '*.gz', '*.txt',
+        'phy': ['*.vert', '*.frag', '*.glsl', '*.npy', '*.gz', '*.txt', '*.json',
                 '*.html', '*.css', '*.js', '*.prb', '*.ttf', '*.png'],
     },
     entry_points={

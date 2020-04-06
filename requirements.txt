@@ -1,3 +1,12 @@
+phylib
+mtscomp
+numpy
+matplotlib
+scipy
+h5py
+dask
+cython
+pillow
 colorcet
 pyopengl
 requests
@@ -6,5 +15,3 @@ tqdm
 joblib
 click
 mkdocs
-phylib
-mtscomp
