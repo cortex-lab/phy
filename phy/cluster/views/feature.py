@@ -287,7 +287,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
     def _set_scaling_value(self, value):
         self.feature_scaling = value
-        self.plot()
+        self.plot(fixed_channels=True)
 
     # Public methods
     # -------------------------------------------------------------------------
