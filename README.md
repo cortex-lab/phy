@@ -52,6 +52,10 @@ cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
 
+### Dealing with the error `ModuleNotFoundError: No module named 'PyQt5.QtWebEngineWidget`
+
+In some environments, you might get an error message related to QtWebEngineWidget. Run the command `pip install PyQtWebEngine` and try launching phy again. This command should not run if the error message doesn't appear, as it could break the PyQt5 installation.
+
 
 ### Upgrading from phy 1 to phy 2
 
