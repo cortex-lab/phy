@@ -29,12 +29,12 @@ Use a service like Dropbox, Google Drive, or Transfernow to send the archive to 
 
 ### Graphic issue on Windows 10
 
-Several users have reported display issues on Windows 10, especially on computers with a dual graphics chipset (e.g. integrated Intel GPU, and discrete NVIDIA GPU). phy works best on NVIDIA GPUs. If you have this problem:
+Several users have reported display issues on Windows 10, especially on computers with a dual graphics chipset (e.g. integrated Intel GPU, and discrete NVIDIA GPU). phy works best on dedicated GPUs like NVIDIA cards. If you have this problem:
 
-* Check that your screen is connected to your NVIDIA GPU and not the integrated one.
+* Check that your screen is physically connected to your NVIDIA GPU and not the integrated one.
 * Enable the discrete NVIDIA GPU (see [this user's advice](https://github.com/cortex-lab/phy/issues/922#issuecomment-561673363))
 
-This issue may be fixed in a future release.
+**Update (06/04/2020)**: a newer Intel Graphics driver version may fix the issue. See [this comment](https://github.com/cortex-lab/phy/issues/957#issuecomment-609498355).
 
 
 ### Issues with the GUI layout or the views
