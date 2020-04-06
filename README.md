@@ -37,13 +37,13 @@ Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow 
 
 2. Open a terminal and type:
 
-    ```bash
-    conda create -n phy2 python pip numpy matplotlib scipy h5py pyqt cython pillow -y
-    conda activate phy2
-    pip install phy --pre --upgrade
-    # Only if you plan to use the Kwik GUI:
-    # pip install klusta klustakwik2
-    ```
+```bash
+conda create -n phy2 python pip numpy matplotlib scipy sklearn h5py pyqt cython pillow -y
+conda activate phy2
+pip install phy --pre --upgrade
+# Only if you plan to use the Kwik GUI:
+# pip install klusta klustakwik2
+```
 
 3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
 
