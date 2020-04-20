@@ -16,6 +16,7 @@ import numpy as np
 
 from phylib.stats.clusters import get_waveform_amplitude
 from phylib.utils import Bunch, connect
+from phylib.utils.geometry import linear_positions
 
 from phy.utils.context import Context
 from phy.gui import create_app, run_app
@@ -120,8 +121,12 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         kwik_path = kwargs.get('kwik_path')
         _backup(kwik_path)
         kwargs = {k: v for k, v in kwargs.items() if k in ('clustering', 'channel_group')}
-
-        return KwikModelGUI(str(kwik_path), **kwargs)
+        model = KwikModelGUI(str(kwik_path), **kwargs)
+        # HACK: handle badly formed channel positions
+        if model.channel_positions.ndim == 1:  # pragma: no cover
+            logger.warning("Unable to read the channel positions, generating mock ones.")
+            model.probe.positions = linear_positions(len(model.channel_positions))
+        return model
 
     def _set_supervisor(self):
         """Create the Supervisor instance."""
