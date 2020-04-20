@@ -38,7 +38,7 @@ Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow 
 2. Open a terminal and type:
 
 ```bash
-conda create -n phy2 python pip numpy matplotlib scipy scikit-learn h5py pyqt cython pillow -y
+conda create -n phy2 python=3.7 pip numpy matplotlib scipy scikit-learn h5py pyqt cython pillow -y
 conda activate phy2
 pip install phy --pre --upgrade
 # Only if you plan to use the Kwik GUI:

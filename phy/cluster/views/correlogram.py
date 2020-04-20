@@ -121,7 +121,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             b.correlogram = ccg[i, j, :]
             if not self.uniform_normalization:
                 # Normalization row per row.
-                m = ccg[i, :, :].max()
+                m = ccg[i, j, :].max()
             b.firing_rate = fr[i, j] if fr is not None else None
             b.data_bounds = (0, 0, n_bins, m)
             b.pair_index = i, j
