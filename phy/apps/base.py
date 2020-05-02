@@ -366,13 +366,22 @@ class FeatureMixin(object):
         if cluster_id is not None and channel_ids is None:
             channel_ids = self.get_best_channels(cluster_id)
         return self._get_spike_features(spike_ids, channel_ids)
-
+    
+    def get_amplitudes(self, cluster_id, load_all=False):
+        """Return the spike amplitudes found in `amplitudes.npy`, for a given cluster."""
+        spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
+        channel_ids = self.get_best_channels(cluster_id)
+        channel_labels = self._get_channel_labels(channel_ids)
+        data=self.model.amplitudes[spike_ids]
+        return Bunch(data=data, spike_ids=spike_ids, channel_ids=channel_ids, channel_labels=channel_labels)
+    
     def create_feature_view(self):
         if self.model.features is None:
             return
         view = FeatureView(
             features=self._get_features,
-            attributes={'time': self._get_feature_view_spike_times}
+            attributes={'time': self._get_feature_view_spike_times,
+                        'amplitudes':self.get_amplitudes}
         )
 
         @connect
@@ -455,7 +464,7 @@ class TemplateMixin(object):
         if getattr(self.model, 'template_features', None) is not None:
             out['template_feature'] = self.get_spike_template_features
         return out
-
+    
     def get_amplitudes(self, cluster_id, load_all=False):
         """Return the spike amplitudes found in `amplitudes.npy`, for a given cluster."""
         spike_ids = self._get_amplitude_spike_ids(cluster_id, load_all=load_all)
@@ -480,7 +489,7 @@ class TemplateMixin(object):
         waveforms = self.model.get_template(template_id).template
         assert waveforms.ndim == 2  # shape: (n_samples, n_channels)
         return (waveforms.max(axis=0) - waveforms.min(axis=0)).max()
-
+    
     def get_cluster_amplitude(self, cluster_id):
         """Return the amplitude of the best template of a cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
