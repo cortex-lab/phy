@@ -32,7 +32,7 @@ def _get_default_grid():
     time,0A 1A,0A   0B,0A   1B,0A
     0A,1A   time,1A 0B,1A   1B,1A
     0A,0B   1A,0B   time,0B 1B,0B
-    0A,1B   1A,1B   0B,1B   time,1B
+    time,amplitudes   1A,1B   0B,1B   time,1B
     """.strip()
     return [[_ for _ in re.split(' +', line.strip())] for line in s.splitlines()]
 
@@ -211,10 +211,11 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         """Return the min/max of an axis."""
         if dim in self.attributes:
             # Attribute: specified lim, or compute the min/max.
-            vmin, vmax = bunch.get('lim', (0, 0))
-            assert vmin is not None
-            assert vmax is not None
-            return vmin, vmax
+            if 'lim' in bunch.keys():
+                vmin, vmax = bunch.get('lim', (0, 0))
+                assert vmin is not None
+                assert vmax is not None
+                return vmin, vmax
         return (-self._lim, +self._lim)
 
     def _plot_points(self, bunch, clu_idx=None):
@@ -472,7 +473,12 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
         for cluster_id in self.cluster_ids:
             # Load all spikes.
-            bunch = self.features(cluster_id, channel_ids=self.channel_ids, load_all=True)
+            if dim_y=='amplitudes':
+                bunch = self.attributes[dim_y](cluster_id, load_all=True)
+            else:
+                bunch = self.features(cluster_id,
+                                      channel_ids=self.channel_ids,
+                                      load_all=True)
             px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id, load_all=True)
             py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id, load_all=True)
             points = np.c_[px.data, py.data]
