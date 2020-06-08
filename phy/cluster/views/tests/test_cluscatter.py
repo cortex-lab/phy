@@ -84,7 +84,7 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     def on_request_select(sender, cluster_ids):  # noqa
         _clicked.append(cluster_ids)
 
-    @connect(sender=v)
+    @connect(sender=v)  # noqa
     def on_select_more(sender, cluster_ids):  # noqa
         _clicked.append(cluster_ids)
 
