@@ -246,6 +246,7 @@ def test_gui_view_action(qtbot, gui):
 def test_gui_menu(qtbot, gui):
     gui.get_menu('&File')
     gui.get_submenu('&File', 'Submenu')
+
     @gui.file_actions.add(menu='Submenu')
     def my_action():
         pass

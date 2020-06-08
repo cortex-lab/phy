@@ -276,6 +276,7 @@ class ManualClusteringView(object):
 
         # HACK: Fix bug on macOS where docked OpenGL widgets were not displayed at startup.
         self._set_floating = AsyncCaller(delay=5)
+
         @self._set_floating.set
         def _set_floating():
             self.dock.setFloating(False)

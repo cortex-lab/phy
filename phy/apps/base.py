@@ -1713,7 +1713,7 @@ class BaseController(object):
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)  # noqa
-        def on_close(sender):
+        def on_close(sender):  # noqa
 
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.

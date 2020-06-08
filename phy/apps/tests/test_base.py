@@ -507,6 +507,7 @@ class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
 
     def test_filter(self):
         rdf = self.controller.raw_data_filter
+
         @rdf.add_filter
         def diff(arr, axis=0):  # pragma: no cover
             out = np.zeros_like(arr)

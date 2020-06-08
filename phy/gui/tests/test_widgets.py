@@ -340,6 +340,7 @@ def test_table_sort(qtbot, table):
     _assert(table.get_selected, [6])
 
     _l = []
+
     @connect(sender=table)
     def on_table_sort(sender, row_ids):
         _l.append(row_ids)

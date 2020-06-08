@@ -674,7 +674,7 @@ class Supervisor(object):
             emit('cluster', self, up)
 
         @connect(sender=self.cluster_meta)  # noqa
-        def on_cluster(sender, up):
+        def on_cluster(sender, up):  # noqa
             emit('cluster', self, up)
 
         connect(self._save_new_cluster_id, event='cluster', sender=self)
@@ -974,6 +974,7 @@ class Supervisor(object):
         self._is_busy = False
         # Collect all busy events from the views, and sets the GUI as busy
         # if at least one view is busy.
+
         @connect
         def on_is_busy(sender, is_busy):
             self._busy[sender] = is_busy

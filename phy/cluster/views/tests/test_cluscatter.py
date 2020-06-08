@@ -81,11 +81,11 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     w, h = v.canvas.get_size()
 
     @connect(sender=v)  # noqa
-    def on_request_select(sender, cluster_ids):
+    def on_request_select(sender, cluster_ids):  # noqa
         _clicked.append(cluster_ids)
 
     @connect(sender=v)  # noqa
-    def on_select_more(sender, cluster_ids):
+    def on_select_more(sender, cluster_ids):  # noqa
         _clicked.append(cluster_ids)
 
     mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=())
