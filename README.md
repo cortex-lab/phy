@@ -68,11 +68,15 @@ In some environments, you might get an error message related to QtWebEngineWidge
 To install the development version of phy in a fresh environment, do:
 
 ```bash
-git clone https://github.com/cortex-lab/phy.git
+git clone git@github.com:cortex-lab/phy.git
 cd phy
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 pip install -e .
+cd ..
+git clone git@github.com:cortex-lab/phylib.git
+cd phylib
+pip install -e . --upgrade
 ```
 
 ### Troubleshooting
