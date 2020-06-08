@@ -95,6 +95,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         super(TemplateController, self)._set_supervisor()
 
         supervisor = self.supervisor
+
         @connect(sender=supervisor)
         def on_attach_gui(sender):
             @supervisor.actions.add(shortcut='shift+ctrl+k', set_busy=True)
