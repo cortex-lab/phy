@@ -129,7 +129,7 @@ def test_global_history():
     gh.action(h1)
     gh.add_to_current_action(h2)
 
-    assert gh.redo() is ()
+    assert gh.redo() == ()
     assert gh.undo() == ('h1 third', 'h2 third')
     assert gh.undo() == ('h1 second', 'h2 second')
     assert gh.undo() == ('h2 first',)

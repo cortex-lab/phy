@@ -156,7 +156,7 @@ def test_clustering_descendants_merge():
     up = clustering.merge([2, 3])
     new = up.added[0]
     assert new == 8
-    assert up.descendants == [(2, 8), (3, 8)]
+    assert set(up.descendants) == set([(2, 8), (3, 8)])
 
     with raises(ValueError):
         up = clustering.merge([2, 8])
@@ -164,7 +164,7 @@ def test_clustering_descendants_merge():
     up = clustering.merge([5, 8])
     new = up.added[0]
     assert new == 9
-    assert up.descendants == [(5, 9), (8, 9)]
+    assert set(up.descendants) == set([(5, 9), (8, 9)])
 
 
 def test_clustering_descendants_split():
@@ -182,7 +182,7 @@ def test_clustering_descendants_split():
     up = clustering.split([0])
     assert up.deleted == [2]
     assert up.added == [8, 9]
-    assert up.descendants == [(2, 8), (2, 9)]
+    assert set(up.descendants) == set([(2, 8), (2, 9)])
     ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
 
     # Undo.
@@ -196,21 +196,21 @@ def test_clustering_descendants_split():
     up = clustering.redo()
     assert up.deleted == [2]
     assert up.added == [8, 9]
-    assert up.descendants == [(2, 8), (2, 9)]
+    assert set(up.descendants) == set([(2, 8), (2, 9)])
     ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
 
     # Second split: just replace cluster 8 by 10 (1 spike in it).
     up = clustering.split([0])
     assert up.deleted == [8]
     assert up.added == [10]
-    assert up.descendants == [(8, 10)]
+    assert set(up.descendants) == set([(8, 10)])
     ae(clustering.spike_clusters, [10, 5, 3, 9, 7, 5, 9])
 
     # Undo again.
     up = clustering.undo()
     assert up.deleted == [10]
     assert up.added == [8]
-    assert up.descendants == [(10, 8)]
+    assert set(up.descendants) == set([(10, 8)])
     ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
 
 
