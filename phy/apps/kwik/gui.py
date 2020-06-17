@@ -42,7 +42,7 @@ def _backup(path):
     path_backup = str(path) + '.bak'
     if not Path(path_backup).exists():
         logger.info("Backup `%s`.", path_backup)
-        shutil.copy(path, path_backup)
+        shutil.copy(str(path), str(path_backup))
 
 
 class KwikModelGUI(KwikModel):
