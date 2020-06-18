@@ -186,6 +186,12 @@ class ManualClusteringView(object):
         # them here, in the main GUI thread.
         @worker.signals.finished.connect
         def finished():
+            # HACK: work-around for https://github.com/cortex-lab/phy/issues/1016
+            try:
+                self
+            except NameError as e:  # pragma: no cover
+                logger.warning(str(e))
+                return
             # When the task has finished in the thread pool, we recover all program
             # updates of the view, and we execute them on the GPU.
             if isinstance(self.canvas, PlotCanvas):
