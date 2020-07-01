@@ -64,6 +64,7 @@ class Selection(Bunch):
 
 class StatusBarHandler(logging.Handler):
     """Logging handler that displays messages in the status bar of a GUI."""
+
     def __init__(self, gui):
         self.gui = gui
         super(StatusBarHandler, self).__init__()
@@ -382,7 +383,8 @@ class FeatureMixin(object):
         return self._get_spike_features(spike_ids, channel_ids)
 
     def create_feature_view(self):
-        if self.model.features is None:
+        if self.model.features is None and self.model.spike_waveforms is None:
+            # NOTE: we can still construct the feature view when there are spike waveforms.
             return
         view = FeatureView(
             features=self._get_features,

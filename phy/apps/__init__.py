@@ -234,14 +234,14 @@ def cli_alf_convert(ctx, subdirs, out_dir):
 @phycli.command('extract-waveforms')
 @click.argument('params-path', type=click.Path(exists=True))
 @click.argument('n_spikes_per_cluster', type=int, default=500)
-@click.argument('--max-n-channels', type=int, default=16)
+@click.option('--nc', type=int, default=16)
 @click.pass_context
 def template_extract_waveforms(
-        ctx, params_path, n_spikes_per_cluster, max_n_channels=None):  # pragma: no cover
+        ctx, params_path, n_spikes_per_cluster, nc=None):  # pragma: no cover
     """Extract spike waveforms."""
     from phylib.io.model import load_model
 
     model = load_model(params_path)
     model.save_spikes_subset_waveforms(
-        max_n_spikes_per_template=n_spikes_per_cluster, max_n_channels=max_n_channels)
+        max_n_spikes_per_template=n_spikes_per_cluster, max_n_channels=nc)
     model.close()
