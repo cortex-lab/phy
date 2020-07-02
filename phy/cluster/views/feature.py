@@ -218,6 +218,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         return (-self._lim, +self._lim)
 
     def _plot_points(self, bunch, clu_idx=None):
+        if not bunch:
+            return
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
         for i, j, dim_x, dim_y in self._iter_subplots():
             px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
@@ -278,6 +280,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         self.canvas.update_visual(self.line_visual)
 
     def _get_lim(self, bunchs):
+        if not bunchs:  # pragma: no cover
+            return 1
         m, M = min(bunch.data.min() for bunch in bunchs), max(bunch.data.max() for bunch in bunchs)
         M = max(abs(m), abs(M))
         return M
@@ -303,15 +307,18 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         # choose the first cluster's best channels.
         c = self.channel_ids if fixed_channels else None
         bunchs = [self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids]
+        bunchs = [b for b in bunchs if b]
+        if not bunchs:  # pragma: no cover
+            return []
         for cluster_id, bunch in zip(self.cluster_ids, bunchs):
             bunch.cluster_id = cluster_id
 
         # Choose the channels based on the first selected cluster.
-        channel_ids = list(bunchs[0].channel_ids) if bunchs else []
+        channel_ids = list(bunchs[0].get('channel_ids', [])) if bunchs else []
         common_channels = list(channel_ids)
         # Intersection (with order kept) of channels belonging to all clusters.
         for bunch in bunchs:
-            common_channels = [c for c in bunch.channel_ids if c in common_channels]
+            common_channels = [c for c in bunch.get('channel_ids', []) if c in common_channels]
         # The selected channels will be (1) the channels common to all clusters, followed
         # by (2) remaining channels from the first cluster (excluding those already selected
         # in (1)).
@@ -328,9 +335,9 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         # Channel labels.
         self.channel_labels = {}
         for d in bunchs:
-            chl = d.get('channel_labels', ['%d' % ch for ch in d.channel_ids])
+            chl = d.get('channel_labels', ['%d' % ch for ch in d.get('channel_ids', [])])
             self.channel_labels.update({
-                channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)})
+                channel_id: chl[i] for i, channel_id in enumerate(d.get('channel_ids', []))})
 
         return bunchs
 
@@ -346,6 +353,9 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
         # Get the clusters data.
         bunchs = self.get_clusters_data(fixed_channels=fixed_channels)
+        bunchs = [b for b in bunchs if b]
+        if not bunchs:
+            return
         self._lim = self._get_lim(bunchs)
 
         # Get the background data.
@@ -473,6 +483,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         for cluster_id in self.cluster_ids:
             # Load all spikes.
             bunch = self.features(cluster_id, channel_ids=self.channel_ids, load_all=True)
+            if not bunch:
+                continue
             px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id, load_all=True)
             py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id, load_all=True)
             points = np.c_[px.data, py.data]
