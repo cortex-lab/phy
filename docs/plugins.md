@@ -4,6 +4,28 @@ In this section, we give many examples of plugins.
 
 ## Getting started
 
+### How to use a plugin
+
+1. Create a `myplugins.py` file in `~/.phy/plugins/` and copy-paste the code from [a plugin example on the GitHub repository](https://github.com/cortex-lab/phy/tree/master/plugins)
+2. Edit `~/.phy/phy_config.py`, and specify the plugin names to load in the GUI:
+
+```python
+c.TemplateGUI.plugins = ['ExampleClusterStatsPlugin']  # list of plugin names to load in the TemplateGUI
+```
+
+The exact name of `myplugins.py` doesn't matter, since all Python scripts found in the plugin directories are automatically loaded by phy.
+
+**Note**: there are three different concepts:
+
+1. **Plugin directories**: the `~/.phy/phy_config.py` file contains a line like `c.Plugins.dirs = [r'~/.phy/plugins']` which is a list of directories that contain one or more **plugin files**.
+2. **Plugin files**: a plugin file is any Python script that is found in the plugin directories. It contains one or more definitions of **plugin classes**.
+3. **Plugin classes**: it is a Python class deriving from `IPlugin` which implements the logic of a plugin.
+
+The `~/.phy/phy_config` file defines (1) the paths to the plugin directories (`c.Plugins.dirs`), and (2) the list of all plugin class names that needs to be loaded, and that are implemented in plugin files found in the plugin directories (`c.TemplateGUI.plugins`).
+
+The idea is that one could *install* many plugins by putting the code in a plugin directory, but may not want to *activate* all of them every time.
+
+
 ### How to upgrade plugins from phy 1.0
 
 Here are some things to know if you want to upgrade plugins to the latest v2.0 version of phy.
@@ -37,16 +59,6 @@ def on_eventname(sender, arg):
 3. Make sure the deprecated package `phycontrib` is not loaded anywhere in your plugins, which could lead to conflicts. You should even make sure it is not installed in your phy2 environment.
 
 4. Look at the plugin examples. They are good starting points to port your plugins. For example, there are example plugins for changing the number of spikes in the views, implementing custom recluster actions, adding custom matplotlib views, using custom cluster metrics and statistics, etc.
-
-
-### How to use a plugin
-
-1. Create a Python file in `~/.phy/plugins/` and copy-paste the code from [a plugin example on the GitHub repository](https://github.com/cortex-lab/phy/tree/master/plugins)
-2. Edit `~/.phy/phy_config.py`, and specify the plugin names to load in the GUI:
-
-```python
-c.TemplateGUI.plugins = ['ExampleClusterStatsPlugin']  # list of plugin names to load in the TemplateGUI
-```
 
 
 ## Hello world
