@@ -330,7 +330,16 @@ class FeatureMixin(object):
         """Return some or all spikes belonging to a given cluster."""
         if cluster_id is None:
             spike_ids = self.get_background_spike_ids(self.n_spikes_features_background)
-        else:
+        # Compute features on the fly from spike waveforms.
+        elif self.model.features is None and self.model.spike_waveforms is not None:
+            spike_ids = self.get_spike_ids(cluster_id)
+            assert len(spike_ids)
+            spike_ids = np.intersect1d(spike_ids, self.model.spike_waveforms.spike_ids)
+            if len(spike_ids) == 0:
+                logger.debug("empty spikes for cluster %s", str(cluster_id))
+            return spike_ids
+        # Retrieve features from the self.model.features array.
+        elif self.model.features is not None:
             # Load all spikes from the cluster if load_all is True.
             n = self.n_spikes_features if not load_all else None
             spike_ids = self.get_spike_ids(cluster_id, n=n)
@@ -342,6 +351,8 @@ class FeatureMixin(object):
     def _get_feature_view_spike_times(self, cluster_id=None, load_all=False):
         """Return the times of some or all spikes belonging to a given cluster."""
         spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
+        if len(spike_ids) == 0:
+            return
         spike_times = self._get_spike_times_reordered(spike_ids)
         return Bunch(
             data=spike_times,
@@ -349,6 +360,7 @@ class FeatureMixin(object):
             lim=(0., self.model.duration))
 
     def _get_spike_features(self, spike_ids, channel_ids):
+        assert len(spike_ids)
         data = self.model.get_features(spike_ids, channel_ids)
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         # Replace NaN values by zeros.
@@ -362,6 +374,8 @@ class FeatureMixin(object):
     def _get_features(self, cluster_id=None, channel_ids=None, load_all=False):
         """Return the features of a given cluster on specified channels."""
         spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
+        if len(spike_ids) == 0:
+            return Bunch()
         # Use the best channels only if a cluster is specified and
         # channels are not specified.
         if cluster_id is not None and channel_ids is None:
