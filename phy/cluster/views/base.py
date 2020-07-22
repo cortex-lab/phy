@@ -266,8 +266,10 @@ class ManualClusteringView(object):
         connect(on_select, event='select')
 
         # Save the view state in the GUI state.
-        @connect(view=self)
+        @connect
         def on_close_view(view_, gui):
+            if view_ != self:
+                return
             logger.debug("Close view %s.", self.name)
             self._closed = True
             gui.remove_menu(self.name)
