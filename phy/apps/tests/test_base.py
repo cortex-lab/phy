@@ -523,6 +523,19 @@ class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
         rdf.set('diff')
         assert rdf.current == 'diff'
 
+    def test_y1_close_view(self):
+        s = self.selected
+        self.next_best()
+        assert s != self.selected
+        fv = self.gui.get_view(FeatureView)
+        wv = self.gui.get_view(WaveformView)
+        assert self.selected == wv.cluster_ids
+        fv.dock.close()
+        s = self.selected
+        self.next_best()
+        assert s != self.selected
+        assert self.selected == wv.cluster_ids
+
     def test_z1_close_all_views(self):
         self.next()
 
