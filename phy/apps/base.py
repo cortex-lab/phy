@@ -296,7 +296,9 @@ class FeatureMixin(object):
         if self.model.features is None:
             return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
-        features = self._get_spike_features(spike_ids, [channel_id]).data
+        features = self._get_spike_features(spike_ids, [channel_id]).get('data', None)
+        if features is None:  # pragma: no cover
+            return
         assert features.shape[0] == len(spike_ids)
         logger.log(5, "Show channel %s and PC %s in amplitude view.", channel_id, pc)
         return features[:, 0, pc or 0]
@@ -360,7 +362,8 @@ class FeatureMixin(object):
             lim=(0., self.model.duration))
 
     def _get_spike_features(self, spike_ids, channel_ids):
-        assert len(spike_ids)
+        if len(spike_ids) == 0:  # pragma: no cover
+            return Bunch()
         data = self.model.get_features(spike_ids, channel_ids)
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         # Replace NaN values by zeros.
@@ -374,7 +377,7 @@ class FeatureMixin(object):
     def _get_features(self, cluster_id=None, channel_ids=None, load_all=False):
         """Return the features of a given cluster on specified channels."""
         spike_ids = self._get_feature_view_spike_ids(cluster_id, load_all=load_all)
-        if len(spike_ids) == 0:
+        if len(spike_ids) == 0:  # pragma: no cover
             return Bunch()
         # Use the best channels only if a cluster is specified and
         # channels are not specified.
@@ -383,7 +386,7 @@ class FeatureMixin(object):
         return self._get_spike_features(spike_ids, channel_ids)
 
     def create_feature_view(self):
-        if self.model.features is None and self.model.spike_waveforms is None:
+        if self.model.features is None and getattr(self.model, 'spike_waveforms', None) is None:
             # NOTE: we can still construct the feature view when there are spike waveforms.
             return
         view = FeatureView(
