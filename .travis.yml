@@ -18,9 +18,12 @@ install:
   - pip install matplotlib sklearn umap-learn  # for plugins
   - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
+
   # use phylib@X on phy@X branch
-  - if [ $TRAVIS_BRANCH == "master" ]; then pip install git+https://github.com/cortex-lab/phylib.git@master --upgrade ; fi
-  - if [ $TRAVIS_BRANCH == "dev" ]; then pip install git+https://github.com/cortex-lab/phylib.git@dev --upgrade ; fi
+  # - if [ $TRAVIS_BRANCH == "master" ]; then pip install git+https://github.com/cortex-lab/phylib.git@master --upgrade ; fi
+  # - if [ $TRAVIS_BRANCH == "dev" ]; then pip install git+https://github.com/cortex-lab/phylib.git@dev --upgrade ; fi
+  - pip install git+https://github.com/cortex-lab/phylib.git@$TRAVIS_BRANCH --upgrade
+
   - pip install git+https://github.com/kwikteam/klusta.git git+https://github.com/kwikteam/klustakwik2.git
   - pip install -e .
 before_script:
