@@ -17,7 +17,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from .qt import (
     WebView, QObject, QWebChannel, QWidget, QGridLayout, QPlainTextEdit,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox,
-    pyqtSlot, _static_abs_path, _block, is_high_dpi, Debouncer)
+    pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
@@ -408,23 +408,6 @@ class Table(HTMLWidget):
 
         b = self.builder
         b.set_body_src('index.html')
-
-        if is_high_dpi():  # pragma: no cover
-            b.add_style('''
-
-                /* This is for high-dpi displays. */
-                body {
-                    transform: scale(2);
-                    transform-origin: 0 0;
-                    overflow-y: scroll;
-                    /*overflow-x: hidden;*/
-                }
-
-                input.filter {
-                    width: 50% !important;
-                }
-
-            ''')
 
         b.add_style(_color_styles())
 

@@ -51,6 +51,10 @@ th.sort { cursor: pointer; }
 }
 
 #table th {
+    position: -webkit-sticky;
+    position: sticky;
+    top: -0px;  /* 0px if you don't have a navbar, but something is required */
+    background: black;
     padding: 5px 5px 5px 5px;
 }
 
