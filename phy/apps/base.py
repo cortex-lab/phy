@@ -1312,6 +1312,8 @@ class BaseController(object):
         channel_id = channel_ids[0]
         # All clusters appearing on the first cluster's peak channel.
         other_clusters = self.get_clusters_on_channel(channel_id)
+        # Remove slected clusters from other_clusters to prevent them from being included in grey dots/histogram
+        other_clusters = [e for e in other_clusters if e not in cluster_ids]
         # Get the amplitude method.
         f = self._get_amplitude_functions()[name]
         # Take spikes from the waveform selection if we're loading the raw amplitudes,
