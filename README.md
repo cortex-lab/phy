@@ -11,7 +11,7 @@
 
 Phy provides two GUIs:
 
-* **Template GUI** (recommanded): for datasets sorted with KiloSort and Spyking Circus,
+* **Template GUI** (recommended): for datasets sorted with KiloSort and Spyking Circus,
 * **Kwik GUI** (legacy): for datasets sorted with klusta and klustakwik2.
 
 
