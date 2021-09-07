@@ -10,7 +10,7 @@ from pickle import dump, load
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import fixture, fixture
+from pytest import fixture
 
 from phylib.io.array import write_array, read_array
 from ..context import Context, _fullname

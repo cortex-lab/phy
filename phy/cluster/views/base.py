@@ -210,11 +210,14 @@ class ManualClusteringView(object):
         # starting to record all OpenGL calls instead of executing them immediately.
         # This is what we call the "lazy" mode.
         emit('is_busy', self, True)
-        if getattr(gui, '_enable_threading', True):
+
+        # HACK: disable threading mechanism for now
+        # if getattr(gui, '_enable_threading', True):
+        if 0:   # pragma: no cover
             # This is only for OpenGL views.
             self.canvas.set_lazy(True)
             thread_pool().start(worker)
-        else:  # pragma: no cover
+        else:
             # This is for OpenGL views, without threading.
             worker.run()
             self._lock = None
@@ -419,6 +422,7 @@ class BaseGlobalView(object):
 class BaseColorView(BaseWheelMixin):
     """Provide facilities to add and select color schemes in the view.
     """
+
     def __init__(self, *args, **kwargs):
         super(BaseColorView, self).__init__(*args, **kwargs)
         self.state_attrs += ('color_scheme',)

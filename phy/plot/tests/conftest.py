@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import fixture, fixture
+from pytest import fixture
 
 from ..base import BaseCanvas
 from ..panzoom import PanZoom
