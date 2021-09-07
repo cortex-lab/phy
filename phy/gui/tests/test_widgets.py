@@ -8,7 +8,7 @@
 
 from functools import partial
 from pathlib import Path
-from pytest import yield_fixture, mark
+from pytest import fixture, mark
 
 from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
@@ -37,7 +37,7 @@ def _wait_until_table_ready(qtbot, table):
     b.wait()
 
 
-@yield_fixture
+@fixture
 def table(qtbot):
     columns = ["id", "count"]
     data = [{"id": i,

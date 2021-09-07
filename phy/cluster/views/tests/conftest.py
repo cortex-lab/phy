@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import fixture
 
 from phy.gui import GUI
 
@@ -15,7 +15,7 @@ from phy.gui import GUI
 # Utilities and fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def gui(tempdir, qtbot):
     gui = GUI(position=(200, 200), size=(800, 600), config_dir=tempdir)
     gui.set_default_actions()

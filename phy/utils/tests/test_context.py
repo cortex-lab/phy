@@ -10,7 +10,7 @@ from pickle import dump, load
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import fixture, yield_fixture
+from pytest import fixture, fixture
 
 from phylib.io.array import write_array, read_array
 from ..context import Context, _fullname
@@ -26,7 +26,7 @@ def context(tempdir):
     return ctx
 
 
-@yield_fixture
+@fixture
 def temp_phy_config_dir(tempdir):
     """Use a temporary phy user directory."""
     import phy.utils.context

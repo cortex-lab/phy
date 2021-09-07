@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import fixture, yield_fixture
+from pytest import fixture, fixture
 
 from ..base import BaseCanvas
 from ..panzoom import PanZoom
@@ -16,7 +16,7 @@ from ..panzoom import PanZoom
 # Utilities and fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def canvas(qapp, qtbot):
     c = BaseCanvas()
     yield c

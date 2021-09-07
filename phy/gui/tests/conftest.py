@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import fixture
 
 from ..actions import Actions, Snippets
 from ..gui import GUI
@@ -16,7 +16,7 @@ from ..gui import GUI
 # Utilities and fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def gui(tempdir, qtbot):
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
     gui.set_default_actions()
@@ -28,11 +28,11 @@ def gui(tempdir, qtbot):
     del gui
 
 
-@yield_fixture
+@fixture
 def actions(gui):
     yield Actions(gui, name='actions')
 
 
-@yield_fixture
+@fixture
 def snippets(gui):
     yield Snippets(gui)

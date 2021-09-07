@@ -6,14 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import fixture
 
 
 #------------------------------------------------------------------------------
 # Common fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def temp_config_dir(tempdir):
     """NOTE: the user directory should be loaded with:
 

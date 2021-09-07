@@ -10,7 +10,7 @@
 import os
 
 from numpy.testing import assert_allclose as ac
-from pytest import yield_fixture
+from pytest import fixture
 
 from . import mouse_drag, key_press
 from ..base import BaseVisual
@@ -34,7 +34,7 @@ class MyTestVisual(BaseVisual):
         self.emit_visual_set_data()
 
 
-@yield_fixture
+@fixture
 def panzoom(qtbot, canvas_pz):
     c = canvas_pz
     visual = MyTestVisual()

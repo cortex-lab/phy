@@ -9,7 +9,7 @@
 
 from textwrap import dedent
 
-from pytest import yield_fixture, raises
+from pytest import fixture, raises
 
 from ..plugin import (IPluginRegistry,
                       IPlugin,
@@ -24,7 +24,7 @@ from phylib.utils._misc import write_text
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def no_native_plugins():
     # Save the plugins.
     plugins = IPluginRegistry.plugins

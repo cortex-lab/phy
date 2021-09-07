@@ -8,7 +8,7 @@
 
 #from contextlib import contextmanager
 
-from pytest import yield_fixture, fixture
+from pytest import fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
@@ -34,7 +34,7 @@ qInstallMessageHandler(handler)
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def gui(tempdir, qtbot):
     # NOTE: mock patch show box exec_
     _supervisor._show_box = lambda _: _

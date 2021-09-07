@@ -10,7 +10,7 @@
 import logging
 
 import numpy as np
-from pytest import yield_fixture
+from pytest import fixture
 
 from ..base import BaseVisual, GLSLInserter, gloo
 from ..transform import (subplot_bounds, Translate, Scale, Range,
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def vertex_shader_nohook():
     yield """
         attribute vec2 a_position;
@@ -35,7 +35,7 @@ def vertex_shader_nohook():
         """
 
 
-@yield_fixture
+@fixture
 def vertex_shader():
     yield """
         attribute vec2 a_position;
@@ -46,7 +46,7 @@ def vertex_shader():
         """
 
 
-@yield_fixture
+@fixture
 def fragment_shader():
     yield """
             void main() {
