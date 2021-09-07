@@ -28,10 +28,10 @@ test-full: test test-apps
 	coverage report --omit */phy/plot/gloo/*
 
 doc:
-	python tools/api.py && python tools/extract_shortcuts.py && python tools/plugins_doc.py
+	python3 tools/api.py && python tools/extract_shortcuts.py && python tools/plugins_doc.py
 
 build:
-	python setup.py sdist --formats=zip
+	python3 setup.py sdist --formats=zip
 
 upload:
-	python setup.py sdist --formats=zip upload
+	twine upload dist/*

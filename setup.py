@@ -38,9 +38,9 @@ with open(filename, 'r') as f:
     version = re.search(r"__version__ = '([^']+)'", f.read()).group(1)
 
 
-with open('requirements.txt') as f:
+filename = op.join(curdir, 'requirements.txt')
+with open(filename, 'r') as f:
     require = [x.strip() for x in f.readlines() if not x.startswith('git+')]
-
 
 # Only add PyQt5 dependency if it is not already installed in the conda environment.
 try:

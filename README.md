@@ -20,6 +20,7 @@ Phy provides two GUIs:
 
 ## What's new
 
+* [7 Sep 2021] Release of phy 2.0 beta 5, with some install and bug fixes
 * [7 Feb 2020] Release of phy 2.0 beta 1, with many new views, new features, various improvements and bug fixes...
 
 
@@ -33,15 +34,13 @@ Phy provides two GUIs:
 
 Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow if the data is on an HDD).
 
-1. Install the latest version of [Anaconda 64-bit with Python 3](https://www.anaconda.com/distribution/#download-section).
+1. You need a recent Python distribution.
 
 2. Open a terminal and type:
 
 ```bash
-conda create -n phy2 python=3.7 pip numpy matplotlib scipy scikit-learn h5py pyqt cython pillow -y
-conda activate phy2
 pip install phy --pre --upgrade
-# Only if you plan to use the Kwik GUI:
+# If you plan to use the Kwik GUI, type the following without the leading hash # character:
 # pip install klusta klustakwik2
 ```
 
@@ -52,6 +51,33 @@ cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
 
+### Dependencies
+
+For your information, here are the Python dependencies of phy  (as found in `requirements.txt`):
+
+```
+phylib
+mtscomp
+numpy
+matplotlib
+scipy
+h5py
+dask
+cython
+pillow
+colorcet
+pyopengl
+requests
+qtconsole
+tqdm
+joblib
+click
+mkdocs
+PyQtWebEngine
+```
+
+
+
 ### Dealing with the error `ModuleNotFoundError: No module named 'PyQt5.QtWebEngineWidget`
 
 In some environments, you might get an error message related to QtWebEngineWidget. Run the command `pip install PyQtWebEngine` and try launching phy again. This command should not run if the error message doesn't appear, as it could break the PyQt5 installation.
@@ -59,7 +85,7 @@ In some environments, you might get an error message related to QtWebEngineWidge
 
 ### Upgrading from phy 1 to phy 2
 
-* Do not install phy 1 and phy 2 in the same conda environment.
+* Do not install phy 1 and phy 2 in the same Python environment.
 * It is recommended to delete `~/.phy/*GUI/state.json` when upgrading.
 
 
@@ -97,7 +123,7 @@ template_gui("params.py")
 
 ## Credits
 
-**phy** is developed and maintained by [Cyrille Rossant](http://cyrille.rossant.net).
+**phy** is developed and maintained by [Cyrille Rossant](https://cyrille.rossant.net).
 
 * [International Brain Laboratory](https://internationalbrainlab.org)
 * [Cortex Lab (UCL)](https://www.ucl.ac.uk/cortexlab/) ([Kenneth Harris](https://www.ucl.ac.uk/biosciences/people/harris-kenneth) and [Matteo Carandini](https://www.carandinilab.net/)).
