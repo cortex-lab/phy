@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import logging
+import os
 
 from pytest import raises
 
@@ -70,6 +71,19 @@ def test_gui_noapp(tempdir):
     if not QApplication.instance():
         with raises(RuntimeError):  # pragma: no cover
             GUI(config_dir=tempdir)
+
+
+def test_gui_0(tempdir, qtbot):
+
+    gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
+    gui.set_default_actions()
+    qtbot.addWidget(gui)
+    gui.show()
+
+    if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
+        qtbot.stop()
+
+    gui.close()
 
 
 def test_gui_1(tempdir, qtbot):
