@@ -35,6 +35,9 @@ class IPythonView(RichJupyterWidget):
 
     def __init__(self, *args, **kwargs):
         super(IPythonView, self).__init__(*args, **kwargs)
+        title = "IPython widget"
+        self.setWindowTitle(title)
+        self.setObjectName(title)
 
     def start_kernel(self):
         """Start the IPython kernel."""
@@ -391,8 +394,8 @@ class KeyValueWidget(QWidget):
             widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
-            widget.setMinimum(-1e9)
-            widget.setMaximum(+1e9)
+            widget.setMinimum(int(-1e9))
+            widget.setMaximum(int(+1e9))
             widget.setValue(default or 0)
         elif vtype == 'float':
             widget = QDoubleSpinBox(self)

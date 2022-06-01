@@ -75,7 +75,7 @@ def test_gui_noapp(tempdir):
 
 def test_gui_0(tempdir, qtbot):
 
-    gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
+    gui = GUI(position=(200, 100), size=(800, 600), config_dir=tempdir)
     gui.set_default_actions()
     qtbot.addWidget(gui)
     gui.show()
