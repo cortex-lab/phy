@@ -11,6 +11,7 @@ try:  # pragma: no cover
     from collections.abc import Mapping  # noqa
 except ImportError:  # pragma: no cover
     from collections import Mapping  # noqa
+
 from copy import deepcopy
 import inspect
 import json
@@ -19,6 +20,7 @@ from pathlib import Path
 import shutil
 
 from phylib.utils import Bunch, _bunchify, load_json, save_json
+from phylib.utils._misc import _CustomEncoder, _json_custom_hook
 from phy.utils import ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
@@ -99,8 +101,15 @@ def _get_local_data(d, local_keys):
 
 def _get_global_data(d, local_keys):
     """Remove the local keys from the GUI state."""
-    # d = deepcopy(_filter_nested_dict(d))  # remove private fields
-    d = deepcopy(_filter_nested_dict(d))
+    # remove private fields
+    d = _filter_nested_dict(d)
+
+    # HACK: deepcopy of QByteArray seems to crash on Python 3.10
+    # We convert to JSON and back to remove the QByteArray
+    dj = json.dumps(d, cls=_CustomEncoder)
+    d = json.loads(dj)
+
+    d = deepcopy(d)
     for key in local_keys:
         key1, key2 = key.split('.')
         # Remove that key.
@@ -133,6 +142,7 @@ class GUIState(Bunch):
         in the local state, and not the global state.
 
     """
+
     def __init__(
             self, path=None, local_path=None, default_state_path=None, local_keys=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
