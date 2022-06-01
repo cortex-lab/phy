@@ -38,12 +38,7 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
 from PyQt5.QtGui import (  # noqa
     QKeySequence, QIcon, QColor, QMouseEvent, QGuiApplication,
     QFontDatabase, QWindow, QOpenGLWindow)
-from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
-                                      QWebEnginePage,
-                                      # QWebSettings,
-                                      )
-from PyQt5.QtWebChannel import QWebChannel  # noqa
-from PyQt5.QtWidgets import (# noqa
+from PyQt5.QtWidgets import (  # noqa
     QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar,
     QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea,
     QPushButton, QLabel, QCheckBox, QPlainTextEdit,
@@ -160,7 +155,7 @@ def _wait_signal(signal, timeout=None):
     loop.exec_()
 
 
-_DEFAULT_TIMEOUT = 5  # in seconds
+_DEFAULT_TIMEOUT = 2  # in seconds
 
 
 def _block(until_true, timeout=None):
@@ -172,8 +167,7 @@ def _block(until_true, timeout=None):
 
     while not until_true() and (default_timer() - t0 < timeout):
         app = QApplication.instance()
-        app.processEvents(QEventLoop.AllEvents,
-                          int(timeout * 1000))
+        app.processEvents(QEventLoop.AllEvents, int(timeout * 1000))
     if not until_true():
         logger.error("Timeout in _block().")
         # NOTE: make sure we remove any busy cursor.
@@ -260,6 +254,7 @@ def message_box(message, title='Message', level=None):  # pragma: no cover
 
 class QtDialogLogger(logging.Handler):
     """Display a message box for all errors."""
+
     def emit(self, record):  # pragma: no cover
         msg = self.format(record)
         message_box(msg, title='An error has occurred', level='critical')
@@ -436,48 +431,6 @@ def _static_abs_path(rel_path):
     return Path(__file__).parent / 'static' / rel_path
 
 
-class WebPage(QWebEnginePage):
-    """A Qt web page widget."""
-    _raise_on_javascript_error = False
-
-    def javaScriptConsoleMessage(self, level, msg, line, source):
-        super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
-        msg = "[JS:L%02d] %s" % (line, msg)
-        f = (partial(logger.log, 5), logger.warning, logger.error)[level]
-        if self._raise_on_javascript_error and level >= 2:
-            raise RuntimeError(msg)
-        f(msg)
-
-
-class WebView(QWebEngineView):
-    """A generic HTML widget."""
-
-    def __init__(self, *args):
-        super(WebView, self).__init__(*args)
-        self.html = None
-        assert isinstance(self.window(), QWidget)
-        self._page = WebPage(self)
-        self.setPage(self._page)
-        self.move(100, 100)
-        self.resize(400, 400)
-
-    def set_html(self, html, callback=None):
-        """Set the HTML code."""
-        self._callback = callback
-        self.loadFinished.connect(self._loadFinished)
-        static_dir = str(Path(__file__).parent / 'static') + '/'
-        base_url = QUrl().fromLocalFile(static_dir)
-        self.page().setHtml(html, base_url)
-
-    def _callable(self, data):
-        self.html = data
-        if self._callback:
-            self._callback(self.html)
-
-    def _loadFinished(self, result):
-        self.page().toHtml(self._callable)
-
-
 # -----------------------------------------------------------------------------
 # Threading
 # -----------------------------------------------------------------------------
@@ -515,6 +468,7 @@ class Worker(QRunnable):
     **kwargs : function keyword arguments
 
     """
+
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
         self.fn = fn
@@ -628,6 +582,7 @@ class Debouncer(object):
 
 class AsyncCaller(object):
     """Call a Python function after a delay."""
+
     def __init__(self, delay=10):
         self._delay = delay
         self._timer = None

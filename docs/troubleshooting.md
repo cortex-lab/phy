@@ -81,16 +81,6 @@ The channel labels displayed in the views may be invalid. This may happen becaus
 3. Launch phy again.
 
 
-### Error "No module named 'PyQt5.QtWebEngineWidgets'"
-
-Do:
-
-```
-pip install PyQtWebEngine
-```
-
-**Note**: make sure that PyQt5 is installed either with conda (default), or with pip, but not with both. Otherwise, conflicts may occur.
-
 
 ### Error "No module named PyQt5.sip"
 

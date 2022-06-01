@@ -45,8 +45,6 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.DockWidget](#phyguidockwidget)
 * [phy.gui.GUI](#phyguigui)
 * [phy.gui.GUIState](#phyguiguistate)
-* [phy.gui.HTMLBuilder](#phyguihtmlbuilder)
-* [phy.gui.HTMLWidget](#phyguihtmlwidget)
 * [phy.gui.IPythonView](#phyguiipythonview)
 * [phy.gui.KeyValueWidget](#phyguikeyvaluewidget)
 * [phy.gui.Snippets](#phyguisnippets)
@@ -1430,157 +1428,6 @@ Update the state of a view instance.
 
 ---
 
-### phy.gui.HTMLBuilder
-
-Build an HTML widget.
-
----
-
-#### HTMLBuilder.add_header
-
-
-**`HTMLBuilder.add_header(self, s)`**
-
-Add HTML headers.
-
----
-
-#### HTMLBuilder.add_script
-
-
-**`HTMLBuilder.add_script(self, s)`**
-
-Add Javascript code.
-
----
-
-#### HTMLBuilder.add_script_src
-
-
-**`HTMLBuilder.add_script_src(self, filename)`**
-
-Add a link to a Javascript file.
-
----
-
-#### HTMLBuilder.add_style
-
-
-**`HTMLBuilder.add_style(self, s)`**
-
-Add a CSS style.
-
----
-
-#### HTMLBuilder.add_style_src
-
-
-**`HTMLBuilder.add_style_src(self, filename)`**
-
-Add a link to a stylesheet URL.
-
----
-
-#### HTMLBuilder.set_body
-
-
-**`HTMLBuilder.set_body(self, body)`**
-
-Set the HTML body of the widget.
-
----
-
-#### HTMLBuilder.set_body_src
-
-
-**`HTMLBuilder.set_body_src(self, filename)`**
-
-Set the path to an HTML file containing the body of the widget.
-
----
-
-#### HTMLBuilder.html
-
-
-**`HTMLBuilder.html`**
-
-Return the reconstructed HTML code of the widget.
-
----
-
-### phy.gui.HTMLWidget
-
-An HTML widget that is displayed with Qt, with Javascript support and Python-Javascript
-interactions capabilities. These interactions are asynchronous in Qt5, which requires
-extensive use of callback functions in Python, as well as synchronization primitives
-for unit tests.
-
-**Constructor**
-
-
-* `parent : Widget`
-
-* `title : window title`
-
-* `debounce_events : list-like`
-    The list of event names, raised by the underlying HTML widget, that should be debounced.
-
----
-
-#### HTMLWidget.build
-
-
-**`HTMLWidget.build(self, callback=None)`**
-
-Rebuild the HTML code of the widget.
-
----
-
-#### HTMLWidget.eval_js
-
-
-**`HTMLWidget.eval_js(self, expr, callback=None)`**
-
-Evaluate a Javascript expression.
-
-**Parameters**
-
-
-* `expr : str`
-    A Javascript expression.
-
-* `callback : function`
-    A Python function that is called once the Javascript expression has been
-    evaluated. It takes as input the output of the Javascript expression.
-
----
-
-#### HTMLWidget.set_html
-
-
-**`HTMLWidget.set_html(self, html, callback=None)`**
-
-Set the HTML code.
-
----
-
-#### HTMLWidget.view_source
-
-
-**`HTMLWidget.view_source(self, callback=None)`**
-
-View the HTML source of the widget.
-
----
-
-#### HTMLWidget.debouncer
-
-
-**`HTMLWidget.debouncer`**
-
-Widget debouncer.
-
----
 
 ### phy.gui.IPythonView
 
@@ -1780,7 +1627,7 @@ the end.
 
 ### phy.gui.Table
 
-A sortable table with support for selection. Derives from HTMLWidget.
+A sortable table with support for selection.
 
 This table uses the following Javascript implementation: https://github.com/kwikteam/tablejs
 This Javascript class builds upon ListJS: https://listjs.com/

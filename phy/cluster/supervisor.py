@@ -20,7 +20,7 @@ from .clustering import Clustering
 from phylib.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
-from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
+from phy.gui.widgets import Table, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +295,7 @@ class ClusterView(Table):
 
     def __init__(self, *args, data=None, columns=(), sort=None):
         # NOTE: debounce select events.
-        HTMLWidget.__init__(
+        Table.__init__(
             self, *args, title=self.__class__.__name__, debounce_events=('select',))
         self._set_styles()
         self._reset_table(data=data, columns=columns, sort=sort)

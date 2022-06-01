@@ -14,7 +14,7 @@ from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
 import phy
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table, Barrier, IPythonView, KeyValueWidget
+from ..widgets import Table, Barrier, IPythonView, KeyValueWidget
 
 
 #------------------------------------------------------------------------------
@@ -54,102 +54,6 @@ def table(qtbot):
     yield table
 
     table.close()
-
-
-#------------------------------------------------------------------------------
-# Test widgets
-#------------------------------------------------------------------------------
-
-def test_widget_empty(qtbot):
-    widget = HTMLWidget()
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    widget.close()
-
-
-def test_widget_html(qtbot):
-    widget = HTMLWidget()
-    widget.builder.add_style('html, body, p {background-color: purple;}')
-    path = Path(__file__).parent.parent / 'static/styles.css'
-    widget.builder.add_style_src(path)
-    widget.builder.add_header('<!-- comment -->')
-    widget.builder.set_body('Hello world!')
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    _block(lambda: 'Hello world!' in str(widget.html))
-
-    _out = []
-
-    widget.view_source(lambda x: _out.append(x))
-    _block(lambda: _out[0].startswith('<head>') if _out else None)
-
-    # qtbot.stop()
-    widget.close()
-
-
-def test_widget_javascript_1(qtbot):
-    widget = HTMLWidget()
-    widget.builder.add_script('var number = 1;')
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    _block(lambda: widget.html is not None)
-
-    _out = []
-
-    def _callback(res):
-        _out.append(res)
-
-    widget.eval_js('number', _callback)
-    _block(lambda: _out == [1])
-
-    # Test logging from JS.
-    with captured_logging('phy.gui') as buf:
-        widget.eval_js('console.warn("hello world!");')
-        _block(lambda: 'hello world!' in buf.getvalue().lower())
-
-    # qtbot.stop()
-    widget.close()
-
-
-@mark.parametrize("event_name", ('select', 'nodebounce'))
-def test_widget_javascript_debounce(qtbot, event_name):
-    phy.gui.qt.Debouncer.delay = 300
-
-    widget = HTMLWidget(debounce_events=('select',))
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    _block(lambda: widget.html is not None)
-
-    event_code = lambda i: r'''
-    var event = new CustomEvent("phy_event", {detail: {name: '%s', data: {'i': %s}}});
-    document.dispatchEvent(event);
-    ''' % (event_name, i)
-
-    _l = []
-
-    def f(sender, *args):
-        _l.append(args)
-    connect(f, sender=widget, event=event_name)
-
-    for i in range(5):
-        widget.eval_js(event_code(i))
-        qtbot.wait(10)
-    qtbot.wait(500)
-
-    assert len(_l) == (2 if event_name == 'select' else 5)
-
-    # qtbot.stop()
-    widget.close()
-
-    phy.gui.qt.Debouncer.delay = 1
 
 
 #------------------------------------------------------------------------------

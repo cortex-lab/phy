@@ -15,4 +15,3 @@ tqdm
 joblib
 click
 mkdocs
-PyQtWebEngine
