@@ -287,7 +287,7 @@ def test_lasso_grid(qtbot, canvas):
     qtbot.wait(20)
 
     def _ctrl_click(x, y, button='left'):
-        mouse_click(qtbot, canvas, (x, y), button=button, modifiers=('Control',))
+        mouse_click(qtbot, canvas, (int(x), int(y)), button=button, modifiers=('Control',))
 
     # Square selection in the right panel.
     w, h = canvas.get_size()
