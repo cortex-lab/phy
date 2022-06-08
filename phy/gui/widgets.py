@@ -105,40 +105,6 @@ def _uniq(seq):
     return [int(x) for x in seq if not (x in seen or seen_add(x))]
 
 
-# class Barrier(object):
-#     """Implement a synchronization barrier."""
-
-#     def __init__(self):
-#         self._keys = []
-#         self._results = {}
-#         self._callback_after_all = None
-
-#     def _callback(self, key, *args, **kwargs):
-#         self._results[key] = (args, kwargs)
-#         if self._callback_after_all and self.have_all_finished():
-#             self._callback_after_all()
-
-#     def __call__(self, key):
-#         self._keys.append(key)
-#         return partial(self._callback, key)
-
-#     def have_all_finished(self):
-#         """Whether all tasks have finished."""
-#         return set(self._keys) == set(self._results.keys())
-
-#     def wait(self):
-#         """Wait until all tasks have finished."""
-#         _block(self.have_all_finished)
-
-#     def after_all_finished(self, callback):
-#         """Specify the callback function to call after all tasks have finished."""
-#         self._callback_after_all = callback
-
-#     def result(self, key):
-#         """Return the result of a task specified by its key."""
-#         return self._results.get(key, None)
-
-
 # -----------------------------------------------------------------------------
 # Table
 # -----------------------------------------------------------------------------
@@ -163,23 +129,30 @@ def _color_styles():
 class Table(QTableWidget):
     """A sortable table with support for selection."""
 
-    _ready = False
+    _data = None  # keep a dictionary mapping id to a dictionary {column: value}
+    _mask_name = None  # name of the boolean field indicating whether an item is masked
+    _sort = None
 
-    def __init__(self, *args, columns=None, data=None, sort=None, title=''):
+    def __init__(self, *args, columns=None, data=None, sort=None, title='', mask_name='is_masked'):
         super(QTableWidget, self).__init__(0, 0, *args)
         self.setWindowTitle('Table')
+        self._data = {}
+        self._mask_name = mask_name
         self._init_table(columns=columns, data=data, sort=sort)
+
+    # Adding items
+    # ---------------------------------------------------------------------------------------------
 
     def _init_table(self, columns=None, data=None, sort=None):
         """Build the table."""
 
         columns = columns or ['id']
         assert 'id' in columns
-        columns.remove('id')
+        assert columns.index('id') == 0  # HACK: used when converting row_idx <=> id
+        # columns.remove('id')  # NOTE: keep the id column to enable sort by id
 
         data = data or []
 
-        self.data = data
         self.columns = columns
 
         emit('pre_build', self)
@@ -195,9 +168,8 @@ class Table(QTableWidget):
         # Set column names.
         self.setHorizontalHeaderLabels(columns)
 
-        # # Set row ids.
-        # ids = [str(row_dict['id']) for row_dict in data]
-        # self.setVerticalHeaderLabels(ids)
+        # Hide vertical header.
+        # self.verticalHeader().setVisible(False)
 
         # Set the rows.
         self.add(data)
@@ -205,9 +177,21 @@ class Table(QTableWidget):
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
         connect(event='ready', sender=self, func=lambda *args: self._set_ready())
 
+        # Event when the sorting changes.
+        header = self.horizontalHeader()
+
+        @header.sortIndicatorChanged.connect
+        def sort_changed(col_idx, order):
+            emit('table_sort', self, self.get_ids())
+
     def add(self, data):
         """Add objects to the table."""
+
+        self.setSortingEnabled(False)
+
         data = data or []
+        self._data.update({d['id']: d for d in data})
+
         flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
         # Previous row count.
@@ -232,24 +216,44 @@ class Table(QTableWidget):
                 item.setFlags(flags)
                 self.setItem(row_idx, col_idx, item)
 
+        self.setSortingEnabled(True)
+        self.resizeColumnsToContents()
+
+    # Internal util functions
+    # ---------------------------------------------------------------------------------------------
+
     def _get_value(self, id, col_name):
         """Return the value of an item."""
+        # row_idx = self._id2row(id)
+        # assert col_name in self.columns
+        # col_idx = self.columns.index(col_name)
+        # item = self.item(row_idx, col_idx)
+        # assert item
+        # return item.text()
+        return self._data.get(id, {}).get(col_name, None)
+
+    def _set_value(self, id, col_name, value):
+        """Set the value of an item."""
+        self._data.get(id, {})[col_name] = value
+
+        # Find the row and column index of the corresponding item.
         row_idx = self._id2row(id)
-        assert col_name in self.columns
         col_idx = self.columns.index(col_name)
+
+        # Set the item's text.
         item = self.item(row_idx, col_idx)
         assert item
-        return item.text()
+        item.setText(str(value))
 
     def _row2id(self, row_idx):
         assert row_idx is not None
         assert row_idx >= 0
-        row = self.verticalHeaderItem(row_idx)
-        if row:
-            return int(row.text())
-        else:
+        item = self.item(row_idx, 0)
+        if not item:
             raise ValueError(f"Row {row_idx} not found.")
             return -1
+        id = int(item.text())
+        return id
 
     def _id2row(self, id):
         assert id is not None
@@ -264,9 +268,24 @@ class Table(QTableWidget):
         assert row_idx >= 0
         return [self.item(row_idx, col_idx) for col_idx in range(self.columnCount())]
 
+    def _hide_row(self, row_idx):
+        for item in self._row_items(row_idx):
+            item.hide()
+
+    def _show_row(self, row_idx):
+        for item in self._row_items(row_idx):
+            item.show()
+
+    def _is_masked(self, id):
+        """Return whether an item is masked or not."""
+        return self._data.get(id, {}).get(self._mask_name, False)
+
+    # Selection
+    # ---------------------------------------------------------------------------------------------
+
     def get_selected(self):
         """Get the currently selected rows."""
-        return [self._row2id(item.row()) for item in self.selectedItems()]
+        return _uniq([self._row2id(item.row()) for item in self.selectedItems()])
 
     def select(self, ids, **kwargs):
         """Select some rows in the table from Python."""
@@ -274,8 +293,15 @@ class Table(QTableWidget):
         assert all(_is_integer(_) for _ in ids)
         rows = [self._id2row(id) for id in ids]
         items = _flatten([self._row_items(row) for row in rows])
+        self.clearSelection()
         for item in items:
             item.setSelected(True)
+
+        # Emit an event.
+        emit('select', self, ids)
+
+    # Scrolling
+    # ---------------------------------------------------------------------------------------------
 
     def scroll_to(self, id):
         """Scroll until a given row is visible."""
@@ -284,79 +310,148 @@ class Table(QTableWidget):
         assert items
         self.scrollToItem(items[0], QAbstractItemView.PositionAtCenter)
 
-    #
+    # TODO: update values, update the Qt items, and the self._data dictionary
+    # TODO: keep clicked selection order
+    # TODO: click on a column to sort by it
+
+    # Wizard
+    # ---------------------------------------------------------------------------------------------
+
+    def get_next_id(self, id=None):
+        """Return the next unmasked id after the specified id."""
+        row_idx = self._id2row(id) if id is not None else -1
+        # Go through all items after the specified id.
+        for row_idx in range(row_idx + 1, self.rowCount()):
+            nid = self._row2id(row_idx)
+            if not self._is_masked(nid):
+                return nid
+        return None
+
+    def get_previous_id(self, id=None):
+        """Return the previous unmasked id before the specified id."""
+        row_idx = self._id2row(id) if id is not None else self.rowCount() - 1
+        # Go through all items after the specified id.
+        for row_idx in range(row_idx - 1, -1, -1):
+            nid = self._row2id(row_idx)
+            if not self._is_masked(nid):
+                return nid
+        return None
+
+    def first(self):
+        """Select the first item."""
+        self.select([self.get_next_id()])
+
+    def last(self):
+        """Select the last item."""
+        self.select([self.get_previous_id()])
+
+    def next(self):
+        """Select the next non-skipped row."""
+        sel = self.get_selected()
+        if not sel:
+            return self.first()
+        # First selected item.
+        id = sel[0]
+        # Find the next unmasked id.
+        nid = self.get_next_id(id)
+        # Select it.
+        if nid is not None:
+            self.select([nid])
+
+    def previous(self):
+        """Select the previous non-skipped row."""
+        sel = self.get_selected()
+        if not sel:
+            return self.last()
+        # First selected item.
+        id = sel[0]
+        # Find the previous unmasked id.
+        nid = self.get_previous_id(id)
+        # Select it.
+        if nid is not None:
+            self.select([nid])
+
+    def get_ids(self):
+        """Get the list of ids."""
+        return [self._row2id(row_idx) for row_idx in range(self.rowCount())]
+
+    def filter(self, text=''):
+        """Filter the view with a Python expression."""
+        for col in self.columns:
+            text = text.replace(col, f'row_dict["{col}"]')
+        logger.log(10, "Filter table with `%s`.", text)
+
+        # All ids.
+        ids = self.get_ids()
+
+        # Ids to keep.
+        kept = [id for id in ids if eval(text, {'row_dict': self._data[id]})]
+
+        # Emit an event.
+        emit('table_filter', self, kept)
+
+        # Ids to filter out.
+        to_hide = set(ids) - set(kept)
+
+        # Hide rows.
+        for id in to_hide:
+            self._hide_row(self._id2row(id))
+
+        # Show the others.
+        for id in kept:
+            self._show_row(self._id2row(id))
+
+    # Sorting
+    # ---------------------------------------------------------------------------------------------
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
-        self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
-
-    def filter(self, text=''):
-        """Filter the view with a Javascript expression."""
-        logger.log(5, "Filter table with `%s`.", text)
-        self.eval_js('table.filter_("{}", true);'.format(text))
-
-    def get_ids(self):
-        """Get the list of ids."""
-        self.eval_js('table._getIds();', callback=callback)
-
-    def get_next_id(self):
-        """Get the next non-skipped row id."""
-        self.eval_js('table.getSiblingId(undefined, "next");', callback=callback)
-
-    def get_previous_id(self):
-        """Get the previous non-skipped row id."""
-        self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
-
-    def first(self):
-        """Select the first item."""
-        self.eval_js('table.selectFirst();', callback=callback)
-
-    def last(self):
-        """Select the last item."""
-        self.eval_js('table.selectLast();', callback=callback)
-
-    def next(self):
-        """Select the next non-skipped row."""
-        self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)
-
-    def previous(self):
-        """Select the previous non-skipped row."""
-        self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
-
-    def set_busy(self, busy):
-        """Set the busy state of the GUI."""
-        self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
-
-    def get(self, id):
-        """Get the object given its id."""
-        self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
-
-    def change(self, objects):
-        """Change some objects."""
-        if not objects:
-            return
-        self.eval_js('table.change_({});'.format(dumps(objects)))
-
-    def remove(self, ids):
-        """Remove some objects from their ids."""
-        if not ids:
-            return
-        self.eval_js('table.remove_({});'.format(dumps(ids)))
-
-    def remove_all(self):
-        """Remove all rows in the table."""
-        self.eval_js('table.removeAll();')
-
-    def remove_all_and_add(self, objects):
-        """Remove all rows in the table and add new objects."""
-        if not objects:
-            return self.remove_all()
-        self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
+        self._sort = (name, sort_dir)
+        assert name in self.columns
+        col_idx = self.columns.index(name)
+        order = Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder
+        self.sortItems(col_idx)
 
     def get_current_sort(self):
         """Get the current sort as a tuple `(name, dir)`."""
-        self.eval_js('table._currentSort()', callback=callback)
+        return self._sort
+
+    # Filtering
+    # ---------------------------------------------------------------------------------------------
+
+    def get(self, id):
+        """Get the object given its id."""
+        self.eval_js('table.get("id", {})[0]["_values"]'.format(id))
+
+    # Update functions
+    # ---------------------------------------------------------------------------------------------
+
+    def change(self, objects):
+        """Change some objects."""
+        self.setSortingEnabled(False)
+
+        for row_dict in objects:
+            id = row_dict['id']
+            for col_name, value in row_dict.items():
+                self._set_value(id, col_name, value)
+
+        self.setSortingEnabled(True)
+
+    def remove(self, ids):
+        """Remove some objects from their ids."""
+        for id in ids:
+            row_idx = self._id2row(id)
+            self.removeRow(row_idx)
+
+    def remove_all(self):
+        """Remove all rows in the table."""
+        self.clear()
+
+    def remove_all_and_add(self, objects):
+        """Remove all rows in the table and add new objects."""
+        self.remove_all()
+        self.add(objects)
 
 
 # -----------------------------------------------------------------------------
