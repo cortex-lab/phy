@@ -109,8 +109,8 @@ def test_ipython_view_2(qtbot, tempdir):
     view.show()
 
     view.attach(gui)  # start the kernel and inject the GUI
-
     gui.show()
+
     view.dock.close()
     qtbot.wait(10)
     gui.close()
@@ -121,7 +121,7 @@ def test_ipython_view_2(qtbot, tempdir):
 # Test table
 #------------------------------------------------------------------------------
 
-def test_barrier_1(qtbot, table):
+def _test_barrier_1(qtbot, table):
     table.select([1])
 
     b = Barrier()
@@ -140,8 +140,17 @@ def test_barrier_1(qtbot, table):
 
 def test_table_empty_1(qtbot):
     table = Table()
-    _wait_until_table_ready(qtbot, table)
-    assert table.debouncer
+    table.show()
+
+    table.close()
+
+
+def test_table_init_1(qtbot):
+    table = Table(data=[{'id': 0, 'a': 'b'}], columns=['id', 'a'])
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+
     table.close()
 
 
@@ -150,6 +159,8 @@ def test_table_invalid_column(qtbot):
     table.show()
     qtbot.addWidget(table)
     qtbot.waitForWindowShown(table)
+
+    qtbot.stop()
     table.close()
 
 

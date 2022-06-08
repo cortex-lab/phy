@@ -15,7 +15,7 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
-    QObject, QWidget, QGridLayout, QPlainTextEdit,
+    QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox,
     pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
@@ -159,88 +159,45 @@ def _color_styles():
         for i, (r, g, b) in enumerate(colormaps.default * 255))
 
 
-class Table(QWidget):
-    # TODO
-    """A sortable table with support for selection.
-
-    This table uses the following Javascript implementation: https://github.com/kwikteam/tablejs
-    This Javascript class builds upon ListJS: https://listjs.com/
-
-    """
+class Table(QTableWidget):
+    """A sortable table with support for selection."""
 
     _ready = False
 
-    def __init__(
-            self, *args, columns=None, value_names=None, data=None, sort=None, title='',
-            debounce_events=()):
-        super(Table, self).__init__(*args, title=title, debounce_events=debounce_events)
-        self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
+    def __init__(self, *args, columns=None, data=None, sort=None, title=''):
+        super(QTableWidget, self).__init__(0, 0, *args)
+        self.setWindowTitle('Table')
+        self._init_table(columns=columns, data=data, sort=sort)
 
-    def eval_js(self, expr, callback=None):
-        """Evaluate a Javascript expression.
-
-        The `table` Javascript variable can be used to interact with the underlying Javascript
-        table.
-
-        The table has sortable columns, a filter text box, support for single and multi selection
-        of rows. Rows can be skippable (used for ignored clusters in phy).
-
-        The table can raise Javascript events that are relayed to Python. Objects are
-        transparently serialized and deserialized in JSON. Basic types (numbers, strings, lists)
-        are transparently converted between Python and Javascript.
-
-        Parameters
-        ----------
-
-        expr : str
-            A Javascript expression.
-        callback : function
-            A Python function that is called once the Javascript expression has been
-            evaluated. It takes as input the output of the Javascript expression.
-
-        """
-        # Avoid JS errors when the table is not yet fully loaded.
-        expr = 'if (typeof table !== "undefined") ' + expr
-        return super(Table, self).eval_js(expr, callback=callback)
-
-    def _init_table(self, columns=None, value_names=None, data=None, sort=None):
+    def _init_table(self, columns=None, data=None, sort=None):
         """Build the table."""
 
         columns = columns or ['id']
-        value_names = value_names or columns
         data = data or []
-
-        b = self.builder
-        b.set_body_src('index.html')
-
-        b.add_style(_color_styles())
 
         self.data = data
         self.columns = columns
-        self.value_names = value_names
 
         emit('pre_build', self)
 
-        data_json = dumps(self.data)
-        columns_json = dumps(self.columns)
-        value_names_json = dumps(self.value_names)
-        sort_json = dumps(sort)
+        # Fill in the table.
+        self.clearContents()
+        n_cols = len(columns)
+        n_rows = len(data)
 
-        b.body += '''
-        <script>
-            var data = %s;
+        # Set table size.
+        self.setColumnCount(n_cols)
+        self.setRowCount(n_rows)
 
-            var options = {
-              valueNames: %s,
-              columns: %s,
-              sort: %s,
-            };
+        # Set column names.
+        for col_idx, col_name in enumerate(columns):
+            self.setHorizontalHeaderItem(col_idx, QTableWidgetItem(str(col_name)))
 
-            var table = new Table('table', options, data);
-
-        </script>
-        ''' % (data_json, value_names_json, columns_json, sort_json)
-        self.build(lambda html: emit('ready', self))
+        # Set the rows.
+        for row_idx, row_dict in enumerate(data):
+            for col_idx, col_name in enumerate(columns):
+                s = str(row_dict.get(col_name, ''))
+                self.setItem(row_idx, col_idx, QTableWidgetItem(s))
 
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
         connect(event='ready', sender=self, func=lambda *args: self._set_ready())
