@@ -42,7 +42,7 @@ from PyQt5.QtWidgets import (  # noqa
     QAction, QStatusBar, QMainWindow, QDockWidget, QToolBar,
     QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QScrollArea,
     QPushButton, QLabel, QCheckBox, QPlainTextEdit, QTableWidget,
-    QTableWidgetItem,
+    QTableWidgetItem, QAbstractItemView,
     QLineEdit, QSlider, QSpinBox, QDoubleSpinBox,
     QMessageBox, QApplication, QMenu, QMenuBar,
     QInputDialog, QOpenGLWidget)

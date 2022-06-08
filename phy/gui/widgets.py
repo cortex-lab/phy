@@ -16,7 +16,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
     QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
-    QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt,
+    QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt, QAbstractItemView,
     pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
@@ -191,40 +191,77 @@ class Table(QTableWidget):
 
         # Set table size.
         self.setColumnCount(n_cols)
-        self.setRowCount(n_rows)
 
         # Set column names.
         self.setHorizontalHeaderLabels(columns)
 
-        # Set row ids.
-        ids = [str(row_dict['id']) for row_dict in data]
-        self.setVerticalHeaderLabels(ids)
+        # # Set row ids.
+        # ids = [str(row_dict['id']) for row_dict in data]
+        # self.setVerticalHeaderLabels(ids)
 
         # Set the rows.
+        self.add(data)
+
+        connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
+        connect(event='ready', sender=self, func=lambda *args: self._set_ready())
+
+    def add(self, data):
+        """Add objects to the table."""
+        data = data or []
         flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        for row_idx, row_dict in enumerate(data):
-            for col_idx, col_name in enumerate(columns):
+
+        # Previous row count.
+        prev_n_rows = self.rowCount()
+
+        # New row count.
+        new_n_rows = prev_n_rows + len(data)
+        self.setRowCount(new_n_rows)
+
+        for row_rel_idx, row_dict in enumerate(data):
+            row_idx = row_rel_idx + prev_n_rows
+
+            # Set the row id.
+            id = row_dict['id']
+            assert id >= 0
+            self.setVerticalHeaderItem(row_idx, QTableWidgetItem(str(id)))
+
+            # Set the columns.
+            for col_idx, col_name in enumerate(self.columns):
                 s = str(row_dict.get(col_name, ''))
                 item = QTableWidgetItem(s)
                 item.setFlags(flags)
                 self.setItem(row_idx, col_idx, item)
 
-        connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
-        connect(event='ready', sender=self, func=lambda *args: self._set_ready())
+    def _get_value(self, id, col_name):
+        """Return the value of an item."""
+        row_idx = self._id2row(id)
+        assert col_name in self.columns
+        col_idx = self.columns.index(col_name)
+        item = self.item(row_idx, col_idx)
+        assert item
+        return item.text()
 
     def _row2id(self, row_idx):
+        assert row_idx is not None
+        assert row_idx >= 0
         row = self.verticalHeaderItem(row_idx)
         if row:
             return int(row.text())
         else:
+            raise ValueError(f"Row {row_idx} not found.")
             return -1
 
     def _id2row(self, id):
+        assert id is not None
+        assert id >= 0
         for row_idx in range(self.rowCount()):
             if self._row2id(row_idx) == id:
                 return row_idx
+        raise ValueError(f"Item with id {id} not found in the table.")
 
     def _row_items(self, row_idx):
+        assert row_idx is not None
+        assert row_idx >= 0
         return [self.item(row_idx, col_idx) for col_idx in range(self.columnCount())]
 
     def get_selected(self):
@@ -239,6 +276,13 @@ class Table(QTableWidget):
         items = _flatten([self._row_items(row) for row in rows])
         for item in items:
             item.setSelected(True)
+
+    def scroll_to(self, id):
+        """Scroll until a given row is visible."""
+        row_idx = self._id2row(id)
+        items = self._row_items(row_idx)
+        assert items
+        self.scrollToItem(items[0], QAbstractItemView.PositionAtCenter)
 
     #
 
@@ -280,10 +324,6 @@ class Table(QTableWidget):
         """Select the previous non-skipped row."""
         self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
 
-    def scroll_to(self, id):
-        """Scroll until a given row is visible."""
-        self.eval_js('table._scrollTo({});'.format(id))
-
     def set_busy(self, busy):
         """Set the busy state of the GUI."""
         self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
@@ -291,12 +331,6 @@ class Table(QTableWidget):
     def get(self, id):
         """Get the object given its id."""
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
-
-    def add(self, objects):
-        """Add objects object to the table."""
-        if not objects:
-            return
-        self.eval_js('table.add_({});'.format(dumps(objects)))
 
     def change(self, objects):
         """Change some objects."""

@@ -8,7 +8,7 @@
 
 from functools import partial
 from pathlib import Path
-from pytest import fixture, mark
+from pytest import fixture, mark, raises
 
 from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
@@ -20,22 +20,6 @@ from ..widgets import Table, IPythonView, KeyValueWidget
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
-
-# def _assert(f, expected):
-#     _out = []
-#     f(lambda x: _out.append(x))
-#     _block(lambda: _out == [expected])
-
-
-# def _wait_until_table_ready(qtbot, table):
-#     b = Barrier()
-#     connect(b(1), event='ready', sender=table)
-
-#     table.show()
-#     qtbot.addWidget(table)
-#     qtbot.waitForWindowShown(table)
-#     b.wait()
-
 
 @fixture
 def table(qtbot):
@@ -49,8 +33,7 @@ def table(qtbot):
         columns=columns,
         data=data)
     table.show()
-    # value_names=['id', 'count', {'data': ['is_masked']}],
-    # _wait_until_table_ready(qtbot, table)
+    assert table.columnCount() == 1
 
     yield table
 
@@ -122,23 +105,6 @@ def test_ipython_view_2(qtbot, tempdir):
 # Test table
 #------------------------------------------------------------------------------
 
-# def _test_barrier_1(qtbot, table):
-#     table.select([1])
-
-#     b = Barrier()
-#     table.get_selected(b(1))
-#     table.get_next_id(b(2))
-#     assert not b.have_all_finished()
-
-#     @b.after_all_finished
-#     def after():
-#         assert b.result(1)[0][0] == [1]
-#         assert b.result(2)[0][0] == 4
-
-#     b.wait()
-#     assert b.result(1) and b.result(2)
-
-
 def test_table_empty_1(qtbot):
     table = Table()
     table.show()
@@ -160,7 +126,37 @@ def test_table_init_1(qtbot):
     assert table._row2id(0) == 0
     assert table._row2id(1) == 1
     assert table._row2id(2) == 3
-    assert table._row2id(3) == -1
+    with raises(ValueError):
+        assert table._row2id(3) == -1
+
+    assert table._get_value(0, 'a') == 'b'
+    assert table._get_value(0, 'u') == ''
+    assert table._get_value(1, 'a') == 'c'
+    assert table._get_value(1, 'u') == ''
+    with raises(ValueError):
+        table._get_value(2, 'a')
+    assert table._get_value(3, 'a') == ''
+    assert table._get_value(3, 'u') == 'd'
+
+    # qtbot.stop()
+    table.close()
+
+
+def test_table_init_2(qtbot):
+    data = [
+        {'id': 0, 'col0': '10'},
+        {'id': 10, 'col0': '20'},
+    ]
+    table = Table(data=data, columns=['id', 'col0'])
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+
+    table.add([{'id': 20, 'col0': '30'}])
+
+    assert table._get_value(0, 'col0') == '10'
+    assert table._get_value(10, 'col0') == '20'
+    assert table._get_value(20, 'col0') == '30'
 
     # qtbot.stop()
     table.close()
@@ -182,13 +178,12 @@ def test_table_0(qtbot, table):
 def test_table_1(qtbot, table):
     table.select([1, 2])
     assert table.get_selected() == [1, 2]
-    # qtbot.stop()
 
 
 def test_table_scroll(qtbot, table):
     table.add([{'id': 1000 + i, 'count': i} for i in range(1000)])
-    qtbot.wait(50)
     table.scroll_to(1400)
+    qtbot.stop()
 
 
 def test_table_busy(qtbot, table):
