@@ -16,12 +16,13 @@ from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
     QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
-    QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox,
+    QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt,
     pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
 from phylib.utils._types import _is_integer
+from phylib.io.array import _flatten
 
 logger = logging.getLogger(__name__)
 
@@ -104,38 +105,38 @@ def _uniq(seq):
     return [int(x) for x in seq if not (x in seen or seen_add(x))]
 
 
-class Barrier(object):
-    """Implement a synchronization barrier."""
+# class Barrier(object):
+#     """Implement a synchronization barrier."""
 
-    def __init__(self):
-        self._keys = []
-        self._results = {}
-        self._callback_after_all = None
+#     def __init__(self):
+#         self._keys = []
+#         self._results = {}
+#         self._callback_after_all = None
 
-    def _callback(self, key, *args, **kwargs):
-        self._results[key] = (args, kwargs)
-        if self._callback_after_all and self.have_all_finished():
-            self._callback_after_all()
+#     def _callback(self, key, *args, **kwargs):
+#         self._results[key] = (args, kwargs)
+#         if self._callback_after_all and self.have_all_finished():
+#             self._callback_after_all()
 
-    def __call__(self, key):
-        self._keys.append(key)
-        return partial(self._callback, key)
+#     def __call__(self, key):
+#         self._keys.append(key)
+#         return partial(self._callback, key)
 
-    def have_all_finished(self):
-        """Whether all tasks have finished."""
-        return set(self._keys) == set(self._results.keys())
+#     def have_all_finished(self):
+#         """Whether all tasks have finished."""
+#         return set(self._keys) == set(self._results.keys())
 
-    def wait(self):
-        """Wait until all tasks have finished."""
-        _block(self.have_all_finished)
+#     def wait(self):
+#         """Wait until all tasks have finished."""
+#         _block(self.have_all_finished)
 
-    def after_all_finished(self, callback):
-        """Specify the callback function to call after all tasks have finished."""
-        self._callback_after_all = callback
+#     def after_all_finished(self, callback):
+#         """Specify the callback function to call after all tasks have finished."""
+#         self._callback_after_all = callback
 
-    def result(self, key):
-        """Return the result of a task specified by its key."""
-        return self._results.get(key, None)
+#     def result(self, key):
+#         """Return the result of a task specified by its key."""
+#         return self._results.get(key, None)
 
 
 # -----------------------------------------------------------------------------
@@ -173,6 +174,9 @@ class Table(QTableWidget):
         """Build the table."""
 
         columns = columns or ['id']
+        assert 'id' in columns
+        columns.remove('id')
+
         data = data or []
 
         self.data = data
@@ -190,25 +194,53 @@ class Table(QTableWidget):
         self.setRowCount(n_rows)
 
         # Set column names.
-        for col_idx, col_name in enumerate(columns):
-            self.setHorizontalHeaderItem(col_idx, QTableWidgetItem(str(col_name)))
+        self.setHorizontalHeaderLabels(columns)
+
+        # Set row ids.
+        ids = [str(row_dict['id']) for row_dict in data]
+        self.setVerticalHeaderLabels(ids)
 
         # Set the rows.
+        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
         for row_idx, row_dict in enumerate(data):
             for col_idx, col_name in enumerate(columns):
                 s = str(row_dict.get(col_name, ''))
-                self.setItem(row_idx, col_idx, QTableWidgetItem(s))
+                item = QTableWidgetItem(s)
+                item.setFlags(flags)
+                self.setItem(row_idx, col_idx, item)
 
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
         connect(event='ready', sender=self, func=lambda *args: self._set_ready())
 
-    def _set_ready(self):
-        """Set the widget as ready."""
-        self._ready = True
+    def _row2id(self, row_idx):
+        row = self.verticalHeaderItem(row_idx)
+        if row:
+            return int(row.text())
+        else:
+            return -1
 
-    def is_ready(self):
-        """Whether the widget has been fully loaded."""
-        return self._ready
+    def _id2row(self, id):
+        for row_idx in range(self.rowCount()):
+            if self._row2id(row_idx) == id:
+                return row_idx
+
+    def _row_items(self, row_idx):
+        return [self.item(row_idx, col_idx) for col_idx in range(self.columnCount())]
+
+    def get_selected(self):
+        """Get the currently selected rows."""
+        return [self._row2id(item.row()) for item in self.selectedItems()]
+
+    def select(self, ids, **kwargs):
+        """Select some rows in the table from Python."""
+        ids = _uniq(ids)
+        assert all(_is_integer(_) for _ in ids)
+        rows = [self._id2row(id) for id in ids]
+        items = _flatten([self._row_items(row) for row in rows])
+        for item in items:
+            item.setSelected(True)
+
+    #
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
@@ -220,45 +252,33 @@ class Table(QTableWidget):
         logger.log(5, "Filter table with `%s`.", text)
         self.eval_js('table.filter_("{}", true);'.format(text))
 
-    def get_ids(self, callback=None):
+    def get_ids(self):
         """Get the list of ids."""
         self.eval_js('table._getIds();', callback=callback)
 
-    def get_next_id(self, callback=None):
+    def get_next_id(self):
         """Get the next non-skipped row id."""
         self.eval_js('table.getSiblingId(undefined, "next");', callback=callback)
 
-    def get_previous_id(self, callback=None):
+    def get_previous_id(self):
         """Get the previous non-skipped row id."""
         self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
 
-    def first(self, callback=None):
+    def first(self):
         """Select the first item."""
         self.eval_js('table.selectFirst();', callback=callback)
 
-    def last(self, callback=None):
+    def last(self):
         """Select the last item."""
         self.eval_js('table.selectLast();', callback=callback)
 
-    def next(self, callback=None):
+    def next(self):
         """Select the next non-skipped row."""
         self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)
 
-    def previous(self, callback=None):
+    def previous(self):
         """Select the previous non-skipped row."""
         self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
-
-    def select(self, ids, callback=None, **kwargs):
-        """Select some rows in the table from Python.
-
-        This function calls `table.select()` in Javascript, which raises a Javascript event
-        relayed to Python. This sequence of actions is the same when the user selects
-        rows directly in the HTML view.
-
-        """
-        ids = _uniq(ids)
-        assert all(_is_integer(_) for _ in ids)
-        self.eval_js('table.select({}, {});'.format(dumps(ids), dumps(kwargs)), callback=callback)
 
     def scroll_to(self, id):
         """Scroll until a given row is visible."""
@@ -268,7 +288,7 @@ class Table(QTableWidget):
         """Set the busy state of the GUI."""
         self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
 
-    def get(self, id, callback=None):
+    def get(self, id):
         """Get the object given its id."""
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
 
@@ -300,11 +320,7 @@ class Table(QTableWidget):
             return self.remove_all()
         self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
 
-    def get_selected(self, callback=None):
-        """Get the currently selected rows."""
-        self.eval_js('table.selected()', callback=callback)
-
-    def get_current_sort(self, callback=None):
+    def get_current_sort(self):
         """Get the current sort as a tuple `(name, dir)`."""
         self.eval_js('table._currentSort()', callback=callback)
 
