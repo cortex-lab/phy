@@ -243,7 +243,6 @@ def test_table_sort(qtbot, table):
     @connect(sender=table)
     def on_table_sort(sender, row_ids):
         _l.append(row_ids)
-        # print(row_ids)
 
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number).
@@ -253,9 +252,7 @@ def test_table_sort(qtbot, table):
     # The sort should not change the selection.
     assert table.get_selected() == [6]
 
-    # qtbot.stop()
-
-    return
+    # Check the sorting.
     assert table.get_ids() == list(range(9, -1, -1))
 
     table.next()
@@ -265,6 +262,7 @@ def test_table_sort(qtbot, table):
     assert table.get_ids() == list(range(10))
 
     assert _l == [list(range(9, -1, -1)), list(range(10))]
+    # qtbot.stop()
 
 
 def _test_table_remove_all(qtbot, table):

@@ -313,9 +313,7 @@ class Table(QTableWidget):
         assert items
         self.scrollToItem(items[0], QAbstractItemView.PositionAtCenter)
 
-    # TODO: update values, update the Qt items, and the self._data dictionary
     # TODO: keep clicked selection order
-    # TODO: click on a column to sort by it
 
     # Wizard
     # ---------------------------------------------------------------------------------------------
@@ -414,7 +412,7 @@ class Table(QTableWidget):
         assert name in self.columns
         col_idx = self.columns.index(name)
         order = Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder
-        self.sortItems(col_idx)
+        self.sortItems(col_idx, order)
 
     def get_current_sort(self):
         """Get the current sort as a tuple `(name, dir)`."""
