@@ -272,16 +272,18 @@ class Table(QTableWidget):
         return [self.item(row_idx, col_idx) for col_idx in range(self.columnCount())]
 
     def _hide_row(self, row_idx):
-        for item in self._row_items(row_idx):
-            item.hide()
+        self.hideRow(row_idx)
 
     def _show_row(self, row_idx):
-        for item in self._row_items(row_idx):
-            item.show()
+        self.showRow(row_idx)
 
     def _is_masked(self, id):
         """Return whether an item is masked or not."""
         return self._data.get(id, {}).get(self._mask_name, False)
+
+    def get(self, id):
+        """Get the object given its id."""
+        return self._data.get(id, {})
 
     # Selection
     # ---------------------------------------------------------------------------------------------
@@ -376,32 +378,6 @@ class Table(QTableWidget):
         """Get the list of ids."""
         return [self._row2id(row_idx) for row_idx in range(self.rowCount())]
 
-    def filter(self, text=''):
-        """Filter the view with a Python expression."""
-        for col in self.columns:
-            text = text.replace(col, f'row_dict["{col}"]')
-        logger.log(10, "Filter table with `%s`.", text)
-
-        # All ids.
-        ids = self.get_ids()
-
-        # Ids to keep.
-        kept = [id for id in ids if eval(text, {'row_dict': self._data[id]})]
-
-        # Emit an event.
-        emit('table_filter', self, kept)
-
-        # Ids to filter out.
-        to_hide = set(ids) - set(kept)
-
-        # Hide rows.
-        for id in to_hide:
-            self._hide_row(self._id2row(id))
-
-        # Show the others.
-        for id in kept:
-            self._show_row(self._id2row(id))
-
     # Sorting
     # ---------------------------------------------------------------------------------------------
 
@@ -421,9 +397,37 @@ class Table(QTableWidget):
     # Filtering
     # ---------------------------------------------------------------------------------------------
 
-    def get(self, id):
-        """Get the object given its id."""
-        self.eval_js('table.get("id", {})[0]["_values"]'.format(id))
+    def filter(self, text=''):
+        """Filter the view with a Python expression."""
+        for col in self.columns:
+            text = text.replace(col, f'row_dict["{col}"]')
+        logger.log(10, "Filter table with `%s`.", text)
+
+        # All ids.
+        ids = self.get_ids()
+
+        # Ids to keep.
+        kept = [id for id in ids if not text or eval(text, {'row_dict': self._data[id]})]
+
+        # Emit an event.
+        emit('table_filter', self, kept)
+
+        # Ids to filter out.
+        to_hide = set(ids) - set(kept)
+
+        # Hide rows.
+        for id in to_hide:
+            self._hide_row(self._id2row(id))
+
+        # Show the others.
+        for id in kept:
+            self._show_row(self._id2row(id))
+
+    def shown_ids(self):
+        """Return the list of filtered ids."""
+        return [
+            self._row2id(row_idx) for row_idx in range(self.rowCount())
+            if not self.isRowHidden(row_idx)]
 
     # Update functions
     # ---------------------------------------------------------------------------------------------
@@ -448,6 +452,7 @@ class Table(QTableWidget):
     def remove_all(self):
         """Remove all rows in the table."""
         self.clear()
+        self.setRowCount(0)
 
     def remove_all_and_add(self, objects):
         """Remove all rows in the table and add new objects."""

@@ -265,55 +265,57 @@ def test_table_sort(qtbot, table):
     # qtbot.stop()
 
 
-def _test_table_remove_all(qtbot, table):
+def test_table_remove_all(qtbot, table):
     table.remove_all()
-    _assert(table.get_ids, [])
+    assert len(table.get_ids()) == 0
+    # qtbot.stop()
 
 
-def _test_table_remove_all_and_add_1(qtbot, table):
+def test_table_remove_all_and_add_1(qtbot, table):
     table.remove_all_and_add([])
-    _assert(table.get_ids, [])
+    assert len(table.get_ids()) == 0
 
 
-def _test_table_remove_all_and_add_2(qtbot, table):
-    table.remove_all_and_add({"id": 1000})
-    _assert(table.get_ids, [1000])
+def test_table_remove_all_and_add_2(qtbot, table):
+    table.remove_all_and_add([{"id": 1000}])
+    assert table.get_ids() == [1000]
 
 
-def _test_table_add_change_remove(qtbot, table):
-    _assert(table.get_ids, list(range(10)))
+def test_table_add_change_remove(qtbot, table):
+    assert table.get_ids() == list(range(10))
 
-    table.add({'id': 100, 'count': 1000})
-    _assert(table.get_ids, list(range(10)) + [100])
+    table.add([{'id': 100, 'count': 1000}])
+    assert table.get_ids() == list(range(10)) + [100]
 
     table.remove([0, 1])
-    _assert(table.get_ids, list(range(2, 10)) + [100])
+    assert table.get_ids() == list(range(2, 10)) + [100]
 
-    _assert(partial(table.get, 100), {'id': 100, 'count': 1000})
+    assert table.get(100) == {'id': 100, 'count': 1000}
     table.change([{'id': 100, 'count': 2000}])
-    _assert(partial(table.get, 100), {'id': 100, 'count': 2000})
+    assert table.get(100) == {'id': 100, 'count': 2000}
 
 
-def _test_table_change_and_sort_1(qtbot, table):
+def test_table_change_and_sort_1(qtbot, table):
     table.change([{'id': 5, 'count': 1000}])
-    _assert(table.get_ids, list(range(10)))
+    assert table.get_ids() == list(range(10))
 
 
-def _test_table_change_and_sort_2(qtbot, table):
+def test_table_change_and_sort_2(qtbot, table):
     table.sort_by('count', 'asc')
-    _assert(table.get_ids, list(range(9, -1, -1)))
+    assert table.get_ids() == list(range(9, -1, -1))
 
     # Check that the table is automatically resorted after a change.
     table.change([{'id': 5, 'count': 1000}])
-    _assert(table.get_ids, [9, 8, 7, 6, 4, 3, 2, 1, 0, 5])
+    assert table.get_ids() == [9, 8, 7, 6, 4, 3, 2, 1, 0, 5]
 
 
-def _test_table_filter(qtbot, table):
+def test_table_filter(qtbot, table):
     table.filter("id == 5")
-    _assert(table.get_ids, [5])
+
+    assert table.shown_ids() == [5]
 
     table.filter("count == 80")
-    _assert(table.get_ids, [2])
+    assert table.shown_ids() == [2]
 
     table.filter()
-    _assert(table.get_ids, list(range(10)))
+    assert table.shown_ids() == table.get_ids()
