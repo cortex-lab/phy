@@ -140,9 +140,17 @@ class Table(QTableWidget):
         self._mask_name = mask_name
         self._init_table(columns=columns, data=data, sort=sort)
 
+        # Layout with the filter box and the table.
         layout = QVBoxLayout(*args)
 
+        # Filter box.
         self.filter_form = QLineEdit(*args)
+        self.filter_form.setClearButtonEnabled(True)
+        self.filter_form.setPlaceholderText(
+            "filter string, e.g. `count > 1e6`")
+        self.filter_form.textChanged.connect(self.filter)
+        self.filter_form.editingFinished.connect(self.filter)
+
         layout.addWidget(self.filter_form)
 
         layout.addWidget(self)
@@ -413,15 +421,24 @@ class Table(QTableWidget):
 
     def filter(self, text=''):
         """Filter the view with a Python expression."""
+        text0 = text
         for col in self.columns:
             text = text.replace(col, f'row_dict["{col}"]')
-        logger.log(10, "Filter table with `%s`.", text)
+        # logger.log(10, "Filter table with `%s`.", text)
 
         # All ids.
         ids = self.get_ids()
 
+        # Compile the filter function.
+        try:
+            f = eval('lambda row_dict: ' + text)
+            f(self._data[ids[0]])
+        except Exception as e:
+            logger.log(5, f"Filter `{text0}` is invalid.")
+            text = ''
+
         # Ids to keep.
-        kept = [id for id in ids if not text or eval(text, {'row_dict': self._data[id]})]
+        kept = [id for id in ids if not text or f(self._data[id])]
 
         # Emit an event.
         emit('table_filter', self, kept)

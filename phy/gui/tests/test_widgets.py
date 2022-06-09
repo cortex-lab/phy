@@ -182,7 +182,7 @@ def test_table_0(qtbot, table):
     def on_select(sender, ids):
         print(ids)
 
-    # qtbot.stop()
+    qtbot.stop()
 
 
 def test_table_1(qtbot, table):
