@@ -207,13 +207,15 @@ class Table(QTableWidget):
             # Set the row id.
             id = row_dict['id']
             assert id >= 0
-            self.setVerticalHeaderItem(row_idx, QTableWidgetItem(str(id)))
+            self.setVerticalHeaderItem(row_idx, QTableWidgetItem(id))
 
-            # Set the columns.
+            # Set the column values.
             for col_idx, col_name in enumerate(self.columns):
-                s = str(row_dict.get(col_name, ''))
-                item = QTableWidgetItem(s)
+                s = row_dict.get(col_name, '')
+                item = QTableWidgetItem()
                 item.setFlags(flags)
+                item.setData(Qt.EditRole, s)
+                item.setData(Qt.DisplayRole, str(s))
                 self.setItem(row_idx, col_idx, item)
 
         self.setSortingEnabled(True)
@@ -243,7 +245,8 @@ class Table(QTableWidget):
         # Set the item's text.
         item = self.item(row_idx, col_idx)
         assert item
-        item.setText(str(value))
+        item.setData(Qt.EditRole, value)
+        item.setData(Qt.DisplayRole, str(value))
 
     def _row2id(self, row_idx):
         assert row_idx is not None
@@ -252,8 +255,8 @@ class Table(QTableWidget):
         if not item:
             raise ValueError(f"Row {row_idx} not found.")
             return -1
-        id = int(item.text())
-        return id
+        id = item.data(Qt.DisplayRole)
+        return int(id) if id is not None else -1
 
     def _id2row(self, id):
         assert id is not None

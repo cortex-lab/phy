@@ -175,7 +175,7 @@ def test_table_0(qtbot, table):
     assert len(table.get_selected()) == 0
     table.sort_by("count")
     # TODO: fix sort by int and not str
-    # assert table.get_ids() == list(range(9, -1, -1))
+    assert table.get_ids() == list(range(9, -1, -1))
     # qtbot.stop()
 
 
