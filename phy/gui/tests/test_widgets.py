@@ -110,6 +110,7 @@ def test_table_empty_1(qtbot):
     table = Table()
     table.show()
 
+    # qtbot.stop()
     table.close()
 
 

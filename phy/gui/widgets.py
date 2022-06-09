@@ -17,7 +17,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from .qt import (
     QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt, QAbstractItemView,
-    pyqtSlot, _static_abs_path, _block, Debouncer)
+    QVBoxLayout, pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
@@ -139,6 +139,20 @@ class Table(QTableWidget):
         self._data = {}
         self._mask_name = mask_name
         self._init_table(columns=columns, data=data, sort=sort)
+
+        layout = QVBoxLayout(*args)
+
+        self.filter_form = QLineEdit(*args)
+        layout.addWidget(self.filter_form)
+
+        layout.addWidget(self)
+
+        self.container = QWidget()
+        self.container.setLayout(layout)
+
+    def show(self):
+        super(Table, self).show()
+        self.container.show()
 
     # Adding items
     # ---------------------------------------------------------------------------------------------
@@ -316,8 +330,6 @@ class Table(QTableWidget):
         items = self._row_items(row_idx)
         assert items
         self.scrollToItem(items[0], QAbstractItemView.PositionAtCenter)
-
-    # TODO: keep clicked selection order
 
     # Wizard
     # ---------------------------------------------------------------------------------------------
