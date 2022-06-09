@@ -176,6 +176,11 @@ def test_table_0(qtbot, table):
     table.sort_by("count")
     # TODO: fix sort by int and not str
     assert table.get_ids() == list(range(9, -1, -1))
+
+    @connect(sender=table)
+    def on_select(sender, ids):
+        print(ids)
+
     # qtbot.stop()
 
 

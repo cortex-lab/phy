@@ -184,6 +184,11 @@ class Table(QTableWidget):
         def sort_changed(col_idx, order):
             emit('table_sort', self, self.get_ids())
 
+        @self.itemSelectionChanged.connect
+        def selection_changed():
+            # Emit an event.
+            emit('select', self, self.get_selected())
+
     def add(self, data):
         """Add objects to the table."""
 
@@ -301,9 +306,6 @@ class Table(QTableWidget):
         self.clearSelection()
         for item in items:
             item.setSelected(True)
-
-        # Emit an event.
-        emit('select', self, ids)
 
     # Scrolling
     # ---------------------------------------------------------------------------------------------
