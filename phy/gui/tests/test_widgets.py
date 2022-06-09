@@ -8,6 +8,7 @@
 
 from functools import partial
 from pathlib import Path
+import platform
 from pytest import fixture, mark, raises
 
 from phylib.utils import connect, unconnect
@@ -76,6 +77,8 @@ def test_key_value_1(qtbot):
 
 @mark.filterwarnings("ignore")
 def test_ipython_view_1(qtbot):
+    if platform.system() == 'Darwin':
+        return
     view = IPythonView()
     view.show()
     view.start_kernel()
@@ -86,6 +89,8 @@ def test_ipython_view_1(qtbot):
 
 @mark.filterwarnings("ignore")
 def test_ipython_view_2(qtbot, tempdir):
+    if platform.system() == 'Darwin':
+        return
     from ..gui import GUI
     gui = GUI(config_dir=tempdir)
     gui.set_default_actions()
@@ -182,7 +187,7 @@ def test_table_0(qtbot, table):
     def on_select(sender, ids):
         print(ids)
 
-    qtbot.stop()
+    # qtbot.stop()
 
 
 def test_table_1(qtbot, table):
