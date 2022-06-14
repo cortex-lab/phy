@@ -17,7 +17,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from .qt import (
     QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt, QAbstractItemView,
-    QVBoxLayout, pyqtSlot, _static_abs_path, _block, Debouncer)
+    QVBoxLayout, QColor, pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
@@ -209,7 +209,9 @@ class Table(QTableWidget):
         @self.itemSelectionChanged.connect
         def selection_changed():
             # Emit an event.
-            emit('select', self, self.get_selected())
+            sel = self.get_selected()
+            emit('select', self, {'selected': sel,
+                 'next': self.get_next_id(sel[0] if sel else None)})
 
     # Overriden methods
     # ---------------------------------------------------------------------------------------------
@@ -221,6 +223,9 @@ class Table(QTableWidget):
     def close(self):
         super(Table, self).close()
         self.container.close()
+
+    def resize(self, *args):
+        self.container.resize(*args)
 
     # Internal util functions
     # ---------------------------------------------------------------------------------------------
@@ -241,13 +246,9 @@ class Table(QTableWidget):
 
         # Find the row and column index of the corresponding item.
         row_idx = self._id2row(id)
+        assert col_name in self.columns
         col_idx = self.columns.index(col_name)
-
-        # Set the item's text.
-        item = self.item(row_idx, col_idx)
-        assert item
-        item.setData(Qt.EditRole, value)
-        item.setData(Qt.DisplayRole, str(value))
+        self._set_item_value(row_idx, col_idx, value)
 
     def _row2id(self, row_idx):
         assert row_idx is not None
@@ -437,6 +438,27 @@ class Table(QTableWidget):
     # Update functions
     # ---------------------------------------------------------------------------------------------
 
+    def _create_item(self, row_idx, col_idx, flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled):
+        item = QTableWidgetItem()
+        item.setFlags(flags)
+        self.setItem(row_idx, col_idx, item)
+
+    def _set_item_value(self, row_idx, col_idx, value):
+        item = self.item(row_idx, col_idx)
+        assert item
+        item.setData(Qt.EditRole, value)
+        item.setData(Qt.DisplayRole, str(value))
+
+    def _set_item_style(self, row_idx, col_idx, d):
+        item = self.item(row_idx, col_idx)
+        assert item
+        bg = d.get('_background', None)
+        fg = d.get('_foreground', None)
+        if bg:
+            item.setBackground(QColor(bg))
+        if fg:
+            item.setForeground(QColor(fg))
+
     def add(self, data):
         """Add objects to the table."""
 
@@ -462,14 +484,16 @@ class Table(QTableWidget):
             assert id >= 0
             self.setVerticalHeaderItem(row_idx, QTableWidgetItem(id))
 
-            # Set the column values.
+            # Set the values.
             for col_idx, col_name in enumerate(self.columns):
-                s = row_dict.get(col_name, '')
-                item = QTableWidgetItem()
-                item.setFlags(flags)
-                item.setData(Qt.EditRole, s)
-                item.setData(Qt.DisplayRole, str(s))
-                self.setItem(row_idx, col_idx, item)
+                # Create the QTableWidgetItem object.
+                self._create_item(row_idx, col_idx)
+
+                # Set the item style.
+                self._set_item_style(row_idx, col_idx, row_dict)
+
+                # Set the item's data.
+                self._set_item_value(row_idx, col_idx, row_dict.get(col_name, ''))
 
         self.setSortingEnabled(True)
         self.resizeColumnsToContents()
@@ -481,7 +505,19 @@ class Table(QTableWidget):
         for row_dict in objects:
             id = row_dict['id']
             for col_name, value in row_dict.items():
-                self._set_value(id, col_name, value)
+
+                self._data.get(id, {})[col_name] = value
+
+                # Find the row and column index of the corresponding item.
+                row_idx = self._id2row(id)
+                assert col_name in self.columns
+                col_idx = self.columns.index(col_name)
+
+                # Set the item's value.
+                self._set_item_value(row_idx, col_idx, value)
+
+                # Set the item style.
+                self._set_item_style(row_idx, col_idx, row_dict)
 
         self.setSortingEnabled(True)
 

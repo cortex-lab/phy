@@ -25,16 +25,18 @@ from ..widgets import Table, IPythonView, KeyValueWidget
 @fixture
 def table(qtbot):
     columns = ["id", "count"]
-    data = [{"id": i,
-             "count": 100 - 10 * i,
-             "float": float(i),
-             "is_masked": True if i in (2, 3, 5) else False,
-             } for i in range(10)]
+    data = [
+        {"id": i,
+         "count": 100 - 10 * i,
+         "float": float(i),
+         "is_masked": True if i in (2, 3, 5) else False,
+         "_foreground": '#777' if i in (2, 3, 5) else False,
+         } for i in range(10)]
     table = Table(
         columns=columns,
         data=data)
     table.show()
-    table.resize(800, 600)
+    table.resize(300, 500)
     assert table.columnCount() == 2
 
     yield table
@@ -183,16 +185,18 @@ def test_table_0(qtbot, table):
     # TODO: fix sort by int and not str
     assert table.get_ids() == list(range(9, -1, -1))
 
-    @connect(sender=table)
-    def on_select(sender, ids):
-        print(ids)
-
     # qtbot.stop()
 
 
 def test_table_1(qtbot, table):
+    @connect(sender=table)
+    def on_select(sender, obj, **kwargs):
+        assert isinstance(obj, dict)
+        assert isinstance(obj['selected'], list)
+
     table.select([1, 2])
     assert table.get_selected() == [1, 2]
+
     # qtbot.stop()
 
 
