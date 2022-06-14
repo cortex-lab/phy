@@ -165,6 +165,8 @@ class Table(QTableWidget):
         self.container.setLayout(layout)
         self.container.setWindowTitle('Table')
 
+        self._init_events()
+
     def _init_table(self, columns=None, data=None, sort=None):
         """Build the table."""
 
@@ -196,6 +198,7 @@ class Table(QTableWidget):
         # Set the rows.
         self.add(data)
 
+    def _init_events(self):
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
         connect(event='ready', sender=self, func=lambda *args: self._set_ready())
 

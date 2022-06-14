@@ -37,7 +37,7 @@ def gui(tempdir, qtbot):
     # NOTE: mock patch show box exec_
     _supervisor._show_box = lambda _: _
 
-    gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
+    gui = GUI(position=(200, 100), size=(800, 600), config_dir=tempdir)
     gui.set_default_actions()
     gui.show()
     qtbot.waitForWindowShown(gui)
@@ -192,11 +192,12 @@ def test_task_move_all(tl):
 
 @fixture
 def data():
-    _data = [{"id": i,
-              "n_spikes": 100 - 10 * i,
-              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
-              "is_masked": i in (2, 3, 5),
-              } for i in range(10)]
+    _data = [
+        {"id": i,
+         "n_spikes": 100 - 10 * i,
+         "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
+         "is_masked": i in (2, 3, 5),
+         } for i in range(10)]
     return _data
 
 
@@ -205,7 +206,7 @@ def test_cluster_view_1(qtbot, gui, data):
 
     cv.sort_by('n_spikes', 'asc')
     cv.select([1])
-    qtbot.wait(10)
+    qtbot.wait(5)
     assert cv.state == {'current_sort': ('n_spikes', 'asc'), 'selected': [1]}
 
     cv.set_state({'current_sort': ('id', 'desc'), 'selected': [2]})
@@ -250,7 +251,7 @@ def _select(supervisor, cluster_ids, similar=None):
     if similar is not None:
         supervisor.task_logger.enqueue(supervisor.similarity_view, 'select', similar)
     supervisor.task_logger.process()
-    supervisor.block()
+    # supervisor.block()
     supervisor.task_logger.show_history()
 
     assert supervisor.task_logger.last_state()[0] == cluster_ids
@@ -261,9 +262,16 @@ def _assert_selected(supervisor, sel):
     assert supervisor.selected == sel
 
 
-def test_select(qtbot, supervisor):
+def test_select_1(qtbot, supervisor):
+    _select(supervisor, [30])
+    _assert_selected(supervisor, [30])
+    # qtbot.stop()
+
+
+def test_select_2(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+    # qtbot.stop()
 
 
 def test_supervisor_busy(qtbot, supervisor):

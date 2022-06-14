@@ -257,19 +257,11 @@ class TaskLogger(object):
 # Cluster view and similarity view
 # -----------------------------------------------------------------------------
 
-_CLUSTER_VIEW_STYLES = '''
-table tr[data-group='good'] {
-    color: #86D16D;
+GROUP_COLORS = {
+    'good': '#86D16D',
+    'mua': '#afafaf',
+    'noise': '#777',
 }
-
-table tr[data-group='mua'] {
-    color: #afafaf;
-}
-
-table tr[data-group='noise'] {
-    color: #777;
-}
-'''
 
 
 class ClusterView(Table):
@@ -295,6 +287,14 @@ class ClusterView(Table):
     def __init__(self, *args, data=None, columns=(), sort=None):
         Table.__init__(self, *args, title=self.__class__.__name__)
         self._reset_table(data=data, columns=columns, sort=sort)
+
+    def _set_item_style(self, row_idx, col_idx, d):
+        """Set row color as a function of a cluster's group."""
+        # mask = d.get('is_masked', False)
+        group = d.get('group', None)
+        if group:
+            d['_foreground'] = GROUP_COLORS.get(group, None)
+        super(ClusterView, self)._set_item_style(row_idx, col_idx, d)
 
     def _reset_table(self, data=None, columns=(), sort=None):
         """Recreate the table with specified columns, data, and sort."""
@@ -356,10 +356,10 @@ class SimilarityView(ClusterView):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
         # TODO
-        raise NotImplementedError()
 
-    def reset(self, cluster_ids):
+    def reset(self, cluster_ids=None):
         """Recreate the similarity view, given the selected clusters in the cluster view."""
+        cluster_ids = cluster_ids or []
         if not len(cluster_ids):
             return
         similar = emit('request_similar_clusters', self, cluster_ids[-1])
@@ -804,8 +804,8 @@ class Supervisor(object):
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
         # event, but instead after the second similarity_view.select event.
-        if kwargs.pop('update_views', True):
-            emit('select', self, self.selected, **kwargs)
+        # if kwargs.pop('update_views', True):
+        #     emit('select', self, self.selected, **kwargs)
         if cluster_ids:
             self.cluster_view.scroll_to(cluster_ids[-1])
         self.cluster_view.dock.set_status('clusters: %s' % ', '.join(map(str, cluster_ids)))
