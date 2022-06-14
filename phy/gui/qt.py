@@ -44,7 +44,7 @@ from PyQt5.QtWidgets import (  # noqa
     QPushButton, QLabel, QCheckBox, QPlainTextEdit, QTableWidget,
     QTableWidgetItem, QAbstractItemView,
     QLineEdit, QSlider, QSpinBox, QDoubleSpinBox,
-    QMessageBox, QApplication, QMenu, QMenuBar,
+    QMessageBox, QApplication, QMenu, QMenuBar, qApp,
     QInputDialog, QOpenGLWidget)
 
 # Enable high DPI support.

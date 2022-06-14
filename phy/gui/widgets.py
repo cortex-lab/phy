@@ -17,7 +17,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from .qt import (
     QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt, QAbstractItemView,
-    QVBoxLayout, QColor, pyqtSlot, _static_abs_path, _block, Debouncer)
+    QEvent, qApp, QVBoxLayout, QColor, pyqtSlot, _static_abs_path, _block, Debouncer)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
 from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
@@ -127,10 +127,10 @@ def _color_styles():
 
 
 class FilterForm(QLineEdit):
-    def keyPressEvent(self, e):
-        super(FilterForm, self).keyPressEvent(e)
-        if e.key() == Qt.Key_Escape:
-            self.clear()
+    pass
+
+
+FILTER_PLACEHOLDER = "filter string, e.g. `count > 1e6`"
 
 
 class Table(QTableWidget):
@@ -139,6 +139,8 @@ class Table(QTableWidget):
     _data = None  # keep a dictionary mapping id to a dictionary {column: value}
     _mask_name = None  # name of the boolean field indicating whether an item is masked
     _sort = None
+    _sel = ()
+    _do_raise_select = True
 
     def __init__(self, *args, columns=None, data=None, sort=None, title='', mask_name='is_masked'):
         super(QTableWidget, self).__init__(0, 0, *args)
@@ -153,8 +155,7 @@ class Table(QTableWidget):
         # Filter box.
         self.filter_form = FilterForm(*args)
         self.filter_form.setClearButtonEnabled(True)
-        self.filter_form.setPlaceholderText(
-            "filter string, e.g. `count > 1e6`")
+        self.filter_form.setPlaceholderText(FILTER_PLACEHOLDER)
         self.filter_form.textChanged.connect(self.filter)
         self.filter_form.editingFinished.connect(self.filter)
 
@@ -190,6 +191,7 @@ class Table(QTableWidget):
         self.setColumnCount(n_cols)
 
         # Set column names.
+        print(self, columns)
         self.setHorizontalHeaderLabels(columns)
 
         # Hide vertical header.
@@ -211,10 +213,10 @@ class Table(QTableWidget):
 
         @self.itemSelectionChanged.connect
         def selection_changed():
-            # Emit an event.
-            sel = self.get_selected()
-            emit('select', self, {'selected': sel,
-                 'next': self.get_next_id(sel[0] if sel else None)})
+            # Flag that enables or disables the emission of the select event in reaction to
+            # cluster selection via clicking.
+            if self._do_raise_select:
+                self._emit_select()
 
     # Overriden methods
     # ---------------------------------------------------------------------------------------------
@@ -233,14 +235,21 @@ class Table(QTableWidget):
     # Internal util functions
     # ---------------------------------------------------------------------------------------------
 
+    def _emit_select(self):
+        """Emit a select event."""
+        sel = self.get_selected()
+
+        # HACK: ensure that the select event is only emitted if the selection really changes.
+        # The reason is that this Qt slot may be called when the selected column changes but
+        # not the row.
+        if tuple(sel) == self._sel:
+            return
+        self._sel = tuple(sel)
+        sel_next = self.get_next_id(sel[0] if sel else None)
+        emit('select', self, {'selected': sel, 'next': sel_next})
+
     def _get_value(self, id, col_name):
         """Return the value of an item."""
-        # row_idx = self._id2row(id)
-        # assert col_name in self.columns
-        # col_idx = self.columns.index(col_name)
-        # item = self.item(row_idx, col_idx)
-        # assert item
-        # return item.text()
         return self._data.get(id, {}).get(col_name, None)
 
     def _set_value(self, id, col_name, value):
@@ -303,9 +312,16 @@ class Table(QTableWidget):
         assert all(_is_integer(_) for _ in ids)
         rows = [self._id2row(id) for id in ids]
         items = _flatten([self._row_items(row) for row in rows])
+
+        # HACK: avoid raising the select event automatically when changing the selection status of
+        # the items. Raise it manually instead.
+        do_raise_select = self._do_raise_select
+        self._do_raise_select = False
         self.clearSelection()
         for item in items:
             item.setSelected(True)
+        self._do_raise_select = do_raise_select
+        self._emit_select()
 
     # Scrolling
     # ---------------------------------------------------------------------------------------------
