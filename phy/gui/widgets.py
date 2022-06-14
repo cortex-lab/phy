@@ -191,7 +191,6 @@ class Table(QTableWidget):
         self.setColumnCount(n_cols)
 
         # Set column names.
-        print(self, columns)
         self.setHorizontalHeaderLabels(columns)
 
         # Hide vertical header.
@@ -548,7 +547,7 @@ class Table(QTableWidget):
 
     def remove_all(self):
         """Remove all rows in the table."""
-        self.clear()
+        self.clearContents()
         self.setRowCount(0)
 
     def remove_all_and_add(self, objects):
