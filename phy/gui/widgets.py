@@ -126,6 +126,13 @@ def _color_styles():
         for i, (r, g, b) in enumerate(colormaps.default * 255))
 
 
+class FilterForm(QLineEdit):
+    def keyPressEvent(self, e):
+        super(FilterForm, self).keyPressEvent(e)
+        if e.key() == Qt.Key_Escape:
+            self.clear()
+
+
 class Table(QTableWidget):
     """A sortable table with support for selection."""
 
@@ -135,7 +142,7 @@ class Table(QTableWidget):
 
     def __init__(self, *args, columns=None, data=None, sort=None, title='', mask_name='is_masked'):
         super(QTableWidget, self).__init__(0, 0, *args)
-        self.setWindowTitle('Table')
+
         self._data = {}
         self._mask_name = mask_name
         self._init_table(columns=columns, data=data, sort=sort)
@@ -144,7 +151,7 @@ class Table(QTableWidget):
         layout = QVBoxLayout(*args)
 
         # Filter box.
-        self.filter_form = QLineEdit(*args)
+        self.filter_form = FilterForm(*args)
         self.filter_form.setClearButtonEnabled(True)
         self.filter_form.setPlaceholderText(
             "filter string, e.g. `count > 1e6`")
@@ -152,15 +159,19 @@ class Table(QTableWidget):
         self.filter_form.editingFinished.connect(self.filter)
 
         layout.addWidget(self.filter_form)
-
         layout.addWidget(self)
 
         self.container = QWidget()
         self.container.setLayout(layout)
+        self.container.setWindowTitle('Table')
 
     def show(self):
         super(Table, self).show()
         self.container.show()
+
+    def close(self):
+        super(Table, self).close()
+        self.container.close()
 
     # Adding items
     # ---------------------------------------------------------------------------------------------
@@ -423,7 +434,7 @@ class Table(QTableWidget):
         """Filter the view with a Python expression."""
         text0 = text
         for col in self.columns:
-            text = text.replace(col, f'row_dict["{col}"]')
+            text = text.replace(col, f'row_dict.get("{col}", None)')
         # logger.log(10, "Filter table with `%s`.", text)
 
         # All ids.
