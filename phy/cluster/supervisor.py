@@ -20,7 +20,7 @@ from .clustering import Clustering
 from phylib.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
-from phy.gui.widgets import Table, _uniq, Barrier
+from phy.gui.widgets import Table, _uniq
 
 logger = logging.getLogger(__name__)
 
@@ -291,13 +291,9 @@ class ClusterView(Table):
 
     _required_columns = ('n_spikes',)
     _view_name = 'cluster_view'
-    _styles = _CLUSTER_VIEW_STYLES
 
     def __init__(self, *args, data=None, columns=(), sort=None):
-        # NOTE: debounce select events.
-        Table.__init__(
-            self, *args, title=self.__class__.__name__, debounce_events=('select',))
-        self._set_styles()
+        Table.__init__(self, *args, title=self.__class__.__name__)
         self._reset_table(data=data, columns=columns, sort=sort)
 
     def _reset_table(self, data=None, columns=(), sort=None):
@@ -314,26 +310,15 @@ class ClusterView(Table):
             assert col in columns
         assert columns[0] == 'id'
 
-        # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
-        value_names = columns + [{'data': ['group']}]
         # Default sort.
         sort = sort or ('n_spikes', 'desc')
-        self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
-
-    def _set_styles(self):
-        self.builder.add_style(self._styles)
+        self._init_table(columns=columns, data=data, sort=sort)
 
     @property
     def state(self):
         """Return the cluster view state, with the current sort and selection."""
-
-        b = Barrier()
-        self.get_current_sort(b('current_sort'))
-        self.get_selected(b('selected'))
-        b.wait()
-
-        current_sort = tuple(b.result('current_sort')[0][0] or (None, None))
-        selected = b.result('selected')[0][0]
+        current_sort = self.get_current_sort()
+        selected = self.get_selected()
 
         return {
             'current_sort': current_sort,
@@ -370,7 +355,8 @@ class SimilarityView(ClusterView):
     def set_selected_index_offset(self, n):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
-        self.eval_js('table._setSelectedIndexOffset(%d);' % n)
+        # TODO
+        raise NotImplementedError()
 
     def reset(self, cluster_ids):
         """Recreate the similarity view, given the selected clusters in the cluster view."""
@@ -886,7 +872,7 @@ class Supervisor(object):
     # Selection actions
     # -------------------------------------------------------------------------
 
-    def select(self, *cluster_ids, callback=None):
+    def select(self, *cluster_ids):
         """Select a list of clusters."""
         # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
         # This makes it more convenient to select multiple clusters with
@@ -896,7 +882,7 @@ class Supervisor(object):
         # Remove non-existing clusters from the selection.
         #cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
-        self.cluster_view.select(cluster_ids, callback=callback)
+        self.cluster_view.select(cluster_ids)
 
     # Cluster view actions
     # -------------------------------------------------------------------------
@@ -923,10 +909,7 @@ class Supervisor(object):
     @property
     def shown_cluster_ids(self):
         """The sorted list of cluster ids as they are currently shown in the cluster view."""
-        b = Barrier()
-        self.cluster_view.get_ids(callback=b(1))
-        b.wait()
-        return b.result(1)[0][0]
+        return self.cluster_view.get_ids()
 
     @property
     def state(self):
@@ -1091,42 +1074,45 @@ class Supervisor(object):
     # Wizard actions
     # -------------------------------------------------------------------------
 
-    # There are callbacks because these functions call Javascript functions that return
-    # asynchronously in Qt5.
-
-    def reset_wizard(self, callback=None):
+    def reset_wizard(self):
         """Reset the wizard."""
-        self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
+        self.cluster_view.first()
+        emit('wizard_done', self)
 
-    def next_best(self, callback=None):
+    def next_best(self):
         """Select the next best cluster in the cluster view."""
-        self.cluster_view.next(callback=callback or partial(emit, 'wizard_done', self))
+        self.cluster_view.next()
+        emit('wizard_done', self)
 
-    def previous_best(self, callback=None):
+    def previous_best(self):
         """Select the previous best cluster in the cluster view."""
-        self.cluster_view.previous(callback=callback or partial(emit, 'wizard_done', self))
+        self.cluster_view.previous()
+        emit('wizard_done', self)
 
-    def next(self, callback=None):
+    def next(self):
         """Select the next cluster in the similarity view."""
         state = self.task_logger.last_state()
         if not state or not state[0]:
-            self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
+            self.cluster_view.first()
+            emit('wizard_done', self)
         else:
-            self.similarity_view.next(callback=callback or partial(emit, 'wizard_done', self))
+            self.similarity_view.next()
+            emit('wizard_done', self)
 
-    def previous(self, callback=None):
+    def previous(self):
         """Select the previous cluster in the similarity view."""
-        self.similarity_view.previous(callback=callback or partial(emit, 'wizard_done', self))
+        self.similarity_view.previous()
+        emit('wizard_done', self)
 
-    def unselect_similar(self, callback=None):
+    def unselect_similar(self):
         """Select only the clusters in the cluster view."""
-        self.cluster_view.select(self.selected_clusters, callback=callback)
+        self.cluster_view.select(self.selected_clusters)
 
-    def first(self, callback=None):
+    def first(self):
         """Select the first cluster in the cluster view."""
         self.cluster_view.first()
 
-    def last(self, callback=None):
+    def last(self):
         """Select the last cluster in the cluster view."""
         self.cluster_view.last()
 

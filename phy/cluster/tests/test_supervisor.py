@@ -16,9 +16,7 @@ from .. import supervisor as _supervisor
 from ..supervisor import (
     Supervisor, TaskLogger, ClusterView, SimilarityView, ActionCreator)
 from phy.gui import GUI
-from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
-from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.utils.context import Context
 from phylib.utils import connect, Bunch, emit
 
@@ -64,10 +62,6 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
         sort=('id', 'desc'),
     )
     s.attach(gui)
-    b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=s.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=s.similarity_view)
-    b.wait()
     return s
 
 
@@ -208,7 +202,6 @@ def data():
 
 def test_cluster_view_1(qtbot, gui, data):
     cv = ClusterView(gui, data=data)
-    _wait_until_table_ready(qtbot, cv)
 
     cv.sort_by('n_spikes', 'asc')
     cv.select([1])
@@ -221,14 +214,13 @@ def test_cluster_view_1(qtbot, gui, data):
 
 def test_similarity_view_1(qtbot, gui, data):
     sv = SimilarityView(gui, data=data)
-    _wait_until_table_ready(qtbot, sv)
 
     @connect(sender=sv)
     def on_request_similar_clusters(sender, cluster_id):
         return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
 
     sv.reset([5])
-    _assert(sv.get_ids, [105, 115, 107])
+    assert sv.get_ids() == [105, 115, 107]
 
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
@@ -237,7 +229,6 @@ def test_cluster_view_extra_columns(qtbot, gui, data):
         cl['my_metrics'] = cl['id'] * 1000
 
     cv = ClusterView(gui, data=data, columns=['id', 'n_spikes', 'my_metrics'])
-    _wait_until_table_ready(qtbot, cv)
 
 
 #------------------------------------------------------------------------------
@@ -312,10 +303,6 @@ def test_supervisor_cluster_metrics(
         context=Context(tempdir),
     )
     mc.attach(gui)
-    b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
-    b.wait()
 
     assert 'my_metrics' in mc.columns
 
@@ -514,11 +501,6 @@ def test_supervisor_split_2(gui, similarity):
 
     supervisor = Supervisor(spike_clusters, similarity=similarity)
     supervisor.attach(gui)
-
-    b = Barrier()
-    connect(b('cluster_view'), event='ready', sender=supervisor.cluster_view)
-    connect(b('similarity_view'), event='ready', sender=supervisor.similarity_view)
-    b.wait()
 
     supervisor.actions.split([0])
     supervisor.block()

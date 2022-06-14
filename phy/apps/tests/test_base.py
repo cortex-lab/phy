@@ -28,7 +28,6 @@ from phy.cluster.views import (
     WaveformView, FeatureView, AmplitudeView, TraceView, TemplateView,
 )
 from phy.gui.qt import Debouncer, create_app
-from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
 from ..base import BaseController, WaveformMixin, FeatureMixin, TraceMixin, TemplateMixin
 
@@ -265,13 +264,9 @@ class MinimalControllerTests(object):
     def _create_gui(cls):
         cls._gui = cls._controller.create_gui(do_prompt_save=False)
         s = cls._controller.supervisor
-        b = Barrier()
-        connect(b('cluster_view'), event='ready', sender=s.cluster_view)
-        connect(b('similarity_view'), event='ready', sender=s.similarity_view)
         cls._gui.show()
         # cls._qtbot.addWidget(cls._gui)
         cls._qtbot.waitForWindowShown(cls._gui)
-        b.wait()
 
     @classmethod
     def _close_gui(cls):
