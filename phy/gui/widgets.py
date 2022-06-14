@@ -165,17 +165,6 @@ class Table(QTableWidget):
         self.container.setLayout(layout)
         self.container.setWindowTitle('Table')
 
-    def show(self):
-        super(Table, self).show()
-        self.container.show()
-
-    def close(self):
-        super(Table, self).close()
-        self.container.close()
-
-    # Adding items
-    # ---------------------------------------------------------------------------------------------
-
     def _init_table(self, columns=None, data=None, sort=None):
         """Build the table."""
 
@@ -222,42 +211,16 @@ class Table(QTableWidget):
             # Emit an event.
             emit('select', self, self.get_selected())
 
-    def add(self, data):
-        """Add objects to the table."""
+    # Overriden methods
+    # ---------------------------------------------------------------------------------------------
 
-        self.setSortingEnabled(False)
+    def show(self):
+        super(Table, self).show()
+        self.container.show()
 
-        data = data or []
-        self._data.update({d['id']: d for d in data})
-
-        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
-
-        # Previous row count.
-        prev_n_rows = self.rowCount()
-
-        # New row count.
-        new_n_rows = prev_n_rows + len(data)
-        self.setRowCount(new_n_rows)
-
-        for row_rel_idx, row_dict in enumerate(data):
-            row_idx = row_rel_idx + prev_n_rows
-
-            # Set the row id.
-            id = row_dict['id']
-            assert id >= 0
-            self.setVerticalHeaderItem(row_idx, QTableWidgetItem(id))
-
-            # Set the column values.
-            for col_idx, col_name in enumerate(self.columns):
-                s = row_dict.get(col_name, '')
-                item = QTableWidgetItem()
-                item.setFlags(flags)
-                item.setData(Qt.EditRole, s)
-                item.setData(Qt.DisplayRole, str(s))
-                self.setItem(row_idx, col_idx, item)
-
-        self.setSortingEnabled(True)
-        self.resizeColumnsToContents()
+    def close(self):
+        super(Table, self).close()
+        self.container.close()
 
     # Internal util functions
     # ---------------------------------------------------------------------------------------------
@@ -473,6 +436,43 @@ class Table(QTableWidget):
 
     # Update functions
     # ---------------------------------------------------------------------------------------------
+
+    def add(self, data):
+        """Add objects to the table."""
+
+        self.setSortingEnabled(False)
+
+        data = data or []
+        self._data.update({d['id']: d for d in data})
+
+        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+
+        # Previous row count.
+        prev_n_rows = self.rowCount()
+
+        # New row count.
+        new_n_rows = prev_n_rows + len(data)
+        self.setRowCount(new_n_rows)
+
+        for row_rel_idx, row_dict in enumerate(data):
+            row_idx = row_rel_idx + prev_n_rows
+
+            # Set the row id.
+            id = row_dict['id']
+            assert id >= 0
+            self.setVerticalHeaderItem(row_idx, QTableWidgetItem(id))
+
+            # Set the column values.
+            for col_idx, col_name in enumerate(self.columns):
+                s = row_dict.get(col_name, '')
+                item = QTableWidgetItem()
+                item.setFlags(flags)
+                item.setData(Qt.EditRole, s)
+                item.setData(Qt.DisplayRole, str(s))
+                self.setItem(row_idx, col_idx, item)
+
+        self.setSortingEnabled(True)
+        self.resizeColumnsToContents()
 
     def change(self, objects):
         """Change some objects."""
