@@ -53,6 +53,12 @@ def _try_get_opengl_canvas(view):
     return view
 
 
+def _try_get_table(view):
+    from phy.gui.widgets import Table
+    if isinstance(view, Table):
+        return view.container
+
+
 def _widget_position(widget):  # pragma: no cover
     return widget.parentWidget().mapToGlobal(widget.geometry().topLeft())
 
@@ -724,6 +730,7 @@ class GUI(QMainWindow):
         # Get the Qt canvas for matplotlib/OpenGL views.
         widget = _try_get_matplotlib_canvas(view)
         widget = _try_get_opengl_canvas(widget)
+        widget = _try_get_table(widget)
 
         dock = _create_dock_widget(widget, name, closable=closable, floatable=floatable)
         self.addDockWidget(_get_dock_position(position), dock, Qt.Horizontal)
