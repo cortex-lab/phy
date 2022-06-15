@@ -57,34 +57,34 @@ def tl():
     class MockClusterView(object):
         _selected = [0]
 
-        def select(self, cl, callback=None, **kwargs):
+        def select(self, cl, **kwargs):
             self._selected = cl
-            callback({'selected': cl, 'next': cl[-1] + 1})
+            return {'selected': cl, 'next': cl[-1] + 1}
 
-        def next(self, callback=None):
-            callback({'selected': [self._selected[-1] + 1], 'next': self._selected[-1] + 2})
+        def next(self):
+            return {'selected': [self._selected[-1] + 1], 'next': self._selected[-1] + 2}
 
-        def previous(self, callback=None):  # pragma: no cover
-            callback({'selected': [self._selected[-1] - 1], 'next': self._selected[-1]})
+        def previous(self):  # pragma: no cover
+            return {'selected': [self._selected[-1] - 1], 'next': self._selected[-1]}
 
     class MockSimilarityView(MockClusterView):
         pass
 
     class MockSupervisor(object):
-        def merge(self, cluster_ids, to, callback=None):
-            callback(Bunch(deleted=cluster_ids, added=[to]))
+        def merge(self, cluster_ids, to):
+            return Bunch(deleted=cluster_ids, added=[to])
 
-        def split(self, old_cluster_ids, new_cluster_ids, callback=None):
-            callback(Bunch(deleted=old_cluster_ids, added=new_cluster_ids))
+        def split(self, old_cluster_ids, new_cluster_ids):
+            return Bunch(deleted=old_cluster_ids, added=new_cluster_ids)
 
-        def move(self, which, group, callback=None):
-            callback(Bunch(metadata_changed=which, metadata_value=group))
+        def move(self, which, group):
+            return Bunch(metadata_changed=which, metadata_value=group)
 
-        def undo(self, callback=None):
-            callback(Bunch())
+        def undo(self):
+            return Bunch()
 
-        def redo(self, callback=None):
-            callback(Bunch())
+        def redo(self):
+            return Bunch()
 
     out = TaskLogger(MockClusterView(), MockSimilarityView(), MockSupervisor())
 
@@ -312,7 +312,7 @@ def test_select_2(qtbot, supervisor):
     # qtbot.stop()
 
 
-def test_supervisor_busy(qtbot, supervisor):
+def _test_supervisor_busy(qtbot, supervisor):
     _select(supervisor, [30], [20])
 
     o = object()
@@ -442,14 +442,10 @@ def test_supervisor_sort(qtbot, supervisor):
 
 
 def test_supervisor_filter(qtbot, supervisor):
-    supervisor.filter('5 <= id && id <= 20')
-    qtbot.wait(50)
-    _cl = []
-    supervisor.cluster_view.get_ids(lambda cluster_ids: _cl.extend(cluster_ids))
-    qtbot.wait(50)
-    assert _cl == [20, 11, 10]
+    supervisor.filter('5 <= id and id <= 20')
+    assert supervisor.shown_cluster_ids == [20, 11, 10]
     supervisor.clear_filter()
-    qtbot.wait(50)
+    # qtbot.stop()
 
 
 def test_supervisor_merge_1(qtbot, supervisor):

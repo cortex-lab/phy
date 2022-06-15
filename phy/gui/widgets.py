@@ -425,6 +425,10 @@ class Table(QTableWidget):
 
     def filter(self, text=''):
         """Filter the view with a Python expression."""
+
+        # Update the filter form.
+        self.filter_form.setText(text)
+
         text0 = text
         for col in self.columns:
             text = text.replace(col, f'row_dict.get("{col}", None)')

@@ -919,7 +919,7 @@ class Supervisor(object):
     @property
     def shown_cluster_ids(self):
         """The sorted list of cluster ids as they are currently shown in the cluster view."""
-        return self.cluster_view.get_ids()
+        return self.cluster_view.shown_ids()
 
     @property
     def state(self):
