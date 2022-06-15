@@ -101,7 +101,7 @@ class TaskLogger(object):
     def _eval(self, task):
         """Evaluate a task and call a callback function."""
         sender, name, args, kwargs = task
-        logger.log(5, "Calling %s.%s(%s)", sender.__class__.__name__, name, args, kwargs)
+        logger.log(5, "Calling %s.%s(%s, %s)", sender.__class__.__name__, name, args, kwargs)
         f = getattr(sender, name)
         callback = partial(self._callback, task)
         argspec = inspect.getfullargspec(f)
@@ -351,16 +351,18 @@ class SimilarityView(ClusterView):
 
     _required_columns = ('n_spikes', 'similarity')
     _view_name = 'similarity_view'
+    _selected_index_offset = 0
 
     def set_selected_index_offset(self, n):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
-        # TODO
+        self._selected_index_offset = n
 
     def reset(self, cluster_ids=None):
         """Recreate the similarity view, given the selected clusters in the cluster view."""
         cluster_ids = cluster_ids or []
         if not len(cluster_ids):
+            self.setRowCount(0)
             return
         similar = emit('request_similar_clusters', self, cluster_ids[-1])
         # Clear the table.
@@ -798,6 +800,7 @@ class Supervisor(object):
         kwargs = obj.get('kwargs', {})
         logger.debug("Clusters selected: %s (%s)", cluster_ids, next_cluster)
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=obj)
+
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
         self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
@@ -1159,4 +1162,4 @@ class Supervisor(object):
         """
         _block(lambda: self.task_logger.has_finished() and not self._is_busy)
         assert not self._is_busy
-        _wait(50)
+        _wait(10)

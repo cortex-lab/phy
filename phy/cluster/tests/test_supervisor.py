@@ -251,7 +251,7 @@ def _select(supervisor, cluster_ids, similar=None):
     if similar is not None:
         supervisor.task_logger.enqueue(supervisor.similarity_view, 'select', similar)
     supervisor.task_logger.process()
-    # supervisor.block()
+    supervisor.block()
     supervisor.task_logger.show_history()
 
     assert supervisor.task_logger.last_state()[0] == cluster_ids
@@ -263,8 +263,8 @@ def _assert_selected(supervisor, sel):
 
 
 def test_select_1(qtbot, supervisor):
-    _select(supervisor, [30])
-    _assert_selected(supervisor, [30])
+    _select(supervisor, [2, 11])
+    _assert_selected(supervisor, [2, 11])
     # qtbot.stop()
 
 

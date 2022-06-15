@@ -21,7 +21,7 @@ from phylib.conftest import *  # noqa
 #------------------------------------------------------------------------------
 
 logger = logging.getLogger('phy')
-logger.setLevel(10)
+logger.setLevel(5)
 add_default_handler(5, logger=logger)
 
 # Fix the random seed in the tests.
