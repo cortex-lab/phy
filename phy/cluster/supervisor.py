@@ -10,6 +10,7 @@
 from functools import partial
 import inspect
 import logging
+from pprint import pprint
 
 import numpy as np
 
@@ -17,7 +18,7 @@ from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 
-from phylib.utils import Bunch, emit, connect, unconnect
+from phylib.utils import Bunch, emit, connect, unconnect, silent
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, _uniq
@@ -73,12 +74,13 @@ class TaskLogger(object):
         # Tasks that have yet to be performed.
         self._queue = []
 
-    def enqueue(self, sender, name, *args, output=None, **kwargs):
+    def enqueue(self, obj_sender, name, *args, output=None, **kwargs):
         """Enqueue an action, which has a sender, a function name, a list of arguments,
         and an optional output."""
         logger.log(
-            5, "Enqueue %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
-        self._queue.append((sender, name, args, kwargs))
+            5, "Enqueue %s %s %s %s (%s)",
+            obj_sender.__class__.__name__, name, args, kwargs, output)
+        self._queue.append((obj_sender, name, args, kwargs))
 
     def dequeue(self):
         """Dequeue the oldest item in the queue."""
@@ -91,6 +93,7 @@ class TaskLogger(object):
         ensure these actions are immediately executed.
 
         """
+        logger.log(5, "Callback called for %s.", task)
         # Log the task and its output.
         self._log(task, output)
         # Find the post tasks after that task has completed, and enqueue them.
@@ -103,8 +106,10 @@ class TaskLogger(object):
         sender, name, args, kwargs = task
         logger.log(5, "Calling %s.%s(%s, %s)", sender.__class__.__name__, name, args, kwargs)
         f = getattr(sender, name)
-        out = f(*args, **kwargs)
-        self._callback(task, out)
+        with self.cluster_view.mute_select():
+            with self.similarity_view.mute_select():
+                out = f(*args, **kwargs)
+                self._callback(task, out)
 
         # callback = partial(self._callback, task)
         # argspec = inspect.getfullargspec(f)
@@ -144,15 +149,22 @@ class TaskLogger(object):
         # Otherwise, this is only the similarity_view that will raise the select event leading
         # to view updates.
         do_select_new = self.auto_select_after_action and similar is not None
-        self.enqueue(self.cluster_view, 'select', [to], update_views=not do_select_new)
+
+        # NOTE: sender=self.supervisor is used to let the Table widget now, in the select() method,
+        # that the selection stems from the supervisor (task logger) and not from the table itself.
+        # This way, the callback normally called when manually selecting a cluster, which logs
+        # this selection action in the history, is not called.
+        self.enqueue(
+            self.cluster_view, 'select', [to], update_views=not do_select_new,
+            sender=self.supervisor)
         if do_select_new:  # pragma: no cover
             if set(merged).intersection(similar) and next_similar is not None:
                 similar = [next_similar]
-            self.enqueue(self.similarity_view, 'select', similar)
+            self.enqueue(self.similarity_view, 'select', similar, sender=self.supervisor)
 
     def _after_split(self, task, output):
         """Tasks that should follow a split."""
-        self.enqueue(self.cluster_view, 'select', output.added)
+        self.enqueue(self.cluster_view, 'select', output.added, sender=self.supervisor)
 
     def _get_clusters(self, which):
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
@@ -173,14 +185,14 @@ class TaskLogger(object):
         similar = set(similar or ())
         # Move best.
         if moved <= cluster_ids:
-            self.enqueue(self.cluster_view, 'next')
+            self.enqueue(self.cluster_view, 'next', sender=self.supervisor)
         # Move similar.
         elif moved <= similar:
-            self.enqueue(self.similarity_view, 'next')
+            self.enqueue(self.similarity_view, 'next', sender=self.supervisor)
         # Move all.
         else:
-            self.enqueue(self.cluster_view, 'next')
-            self.enqueue(self.similarity_view, 'next')
+            self.enqueue(self.cluster_view, 'next', sender=self.supervisor)
+            self.enqueue(self.similarity_view, 'next', sender=self.supervisor)
 
     def _after_undo(self, task, output):
         """Task that should follow an undo."""
@@ -197,9 +209,10 @@ class TaskLogger(object):
         """Enqueue select actions when a state (selected clusters and similar clusters) is set."""
         cluster_ids, next_cluster, similar, next_similar = state
         self.enqueue(
-            self.cluster_view, 'select', cluster_ids, update_views=False if similar else True)
+            self.cluster_view, 'select', cluster_ids, update_views=False if similar else True,
+            sender=self.supervisor)
         if similar:
-            self.enqueue(self.similarity_view, 'select', similar)
+            self.enqueue(self.similarity_view, 'select', similar, sender=self.supervisor)
 
     def _log(self, task, output):
         """Add a completed task to the history stack."""
@@ -207,7 +220,7 @@ class TaskLogger(object):
         assert sender
         assert name
         logger.log(
-            5, "Log %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
+            5, "Log_ %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
         args = [a.tolist() if isinstance(a, np.ndarray) else a for a in args]
         task = (sender, name, args, kwargs, output)
         # Avoid successive duplicates (even if sender is different).
@@ -216,6 +229,8 @@ class TaskLogger(object):
 
     def log(self, sender, name, *args, output=None, **kwargs):
         """Add a completed task to the history stack."""
+        logger.log(5, "Log %s %s %s %s (%s)", sender.__class__.__name__,
+                   name, args, kwargs, output)
         self._log((sender, name, args, kwargs), output)
 
     def last_task(self, name=None, name_not_in=()):
@@ -789,7 +804,7 @@ class Supervisor(object):
 
     def _cluster_metadata_changed(self, field, cluster_ids, value):
         """Update the cluster and similarity views when clusters metadata is updated."""
-        logger.log(5, "%s changed for %s to %s", field, cluster_ids, value)
+        logger.log(5, "`%s` changed for %s to %s", field, cluster_ids, value)
         data = [{'id': cluster_id, field: value} for cluster_id in cluster_ids]
         for _ in data:
             _['is_masked'] = _is_group_masked(_.get('group', None))
@@ -992,14 +1007,16 @@ class Supervisor(object):
     @property
     def selected_clusters(self):
         """Selected clusters in the cluster view only."""
-        state = self.task_logger.last_state()
-        return state[0] or [] if state else []
+        # state = self.task_logger.last_state()
+        # return state[0] or [] if state else []
+        return self.cluster_view.get_selected()
 
     @property
     def selected_similar(self):
         """Selected clusters in the similarity view only."""
-        state = self.task_logger.last_state()
-        return state[2] or [] if state else []
+        # state = self.task_logger.last_state()
+        # return state[2] or [] if state else []
+        return self.similarity_view.get_selected()
 
     @property
     def selected(self):

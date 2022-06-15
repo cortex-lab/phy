@@ -224,6 +224,7 @@ class Table(QTableWidget):
             # Flag that enables or disables the emission of the select event in reaction to
             # cluster selection via clicking.
             if self._do_raise_select:
+                logger.log(5, "Emit select event from Qt slot")
                 self._emit_select()
 
     # Overriden methods
@@ -243,7 +244,7 @@ class Table(QTableWidget):
     # Internal util functions
     # ---------------------------------------------------------------------------------------------
 
-    def _emit_select(self):
+    def _emit_select(self, sender=None):
         """Emit a select event."""
         sel = self.get_selected()
 
@@ -255,7 +256,7 @@ class Table(QTableWidget):
         self._sel = tuple(sel)
         sel_next = self.get_next_id(sel[0] if sel else None)
         obj = {'selected': sel, 'next': sel_next}
-        emit('select', self, obj)
+        emit('select', sender or self, obj)
         return obj
 
     def _get_value(self, id, col_name):
@@ -340,7 +341,8 @@ class Table(QTableWidget):
             self.clearSelection()
             for item in items:
                 item.setSelected(True)
-            obj = self._emit_select()
+            logger.log(5, "Emit select event while calling table.select(%s)", ids)
+            obj = self._emit_select(sender=kwargs.pop('sender', None))
         return obj
 
     # Scrolling
