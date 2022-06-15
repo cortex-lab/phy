@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from contextlib import contextmanager
 import json
 import logging
 from functools import partial
@@ -287,7 +288,9 @@ class Table(QTableWidget):
         for row_idx in range(self.rowCount()):
             if self._row2id(row_idx) == id:
                 return row_idx
-        raise ValueError(f"Item with id {id} not found in the table.")
+        # raise ValueError(
+        logger.warning(f"Item with id {id} not found in the table.")
+        return -1
 
     def _row_items(self, row_idx):
         assert row_idx is not None
@@ -315,6 +318,15 @@ class Table(QTableWidget):
         """Get the currently selected rows."""
         return _uniq([self._row2id(item.row()) for item in self.selectedItems()])
 
+    @contextmanager
+    def mute_select(self):
+        """Context manager for avoiding raising select events while programmatically updating
+        the table selection."""
+        do_raise_select = self._do_raise_select
+        self._do_raise_select = False
+        yield
+        self._do_raise_select = do_raise_select
+
     def select(self, ids, **kwargs):
         """Select some rows in the table from Python."""
         ids = _uniq(ids)
@@ -324,13 +336,11 @@ class Table(QTableWidget):
 
         # HACK: avoid raising the select event automatically when changing the selection status of
         # the items. Raise it manually instead.
-        do_raise_select = self._do_raise_select
-        self._do_raise_select = False
-        self.clearSelection()
-        for item in items:
-            item.setSelected(True)
-        self._do_raise_select = do_raise_select
-        obj = self._emit_select()
+        with self.mute_select():
+            self.clearSelection()
+            for item in items:
+                item.setSelected(True)
+            obj = self._emit_select()
         return obj
 
     # Scrolling
@@ -567,7 +577,8 @@ class Table(QTableWidget):
         """Remove some objects from their ids."""
         for id in ids:
             row_idx = self._id2row(id)
-            self.removeRow(row_idx)
+            if row_idx >= 0:
+                self.removeRow(row_idx)
 
     def remove_all(self):
         """Remove all rows in the table."""

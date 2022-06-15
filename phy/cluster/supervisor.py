@@ -856,10 +856,15 @@ class Supervisor(object):
         the selection."""
         # This is called once the action has completed. We update the tables.
         # Update the views with the old and new clusters.
-        self._clusters_added(up.added)
-        self._clusters_removed(up.deleted)
-        self._cluster_metadata_changed(
-            up.description.replace('metadata_', ''), up.metadata_changed, up.metadata_value)
+
+        with self.cluster_view.mute_select():
+            with self.similarity_view.mute_select():
+                self._clusters_added(up.added)
+                self._clusters_removed(up.deleted)
+                self._cluster_metadata_changed(
+                    up.description.replace('metadata_', ''),
+                    up.metadata_changed, up.metadata_value)
+
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
         self.task_logger.process()
