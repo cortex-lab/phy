@@ -48,23 +48,6 @@ def gui(tempdir, qtbot):
     qtbot.wait(5)
 
 
-@fixture
-def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
-               similarity, tempdir):
-    spike_clusters = np.repeat(cluster_ids, 2)
-
-    s = Supervisor(
-        spike_clusters,
-        cluster_groups=cluster_groups,
-        cluster_labels=cluster_labels,
-        similarity=similarity,
-        context=Context(tempdir),
-        sort=('id', 'desc'),
-    )
-    s.attach(gui)
-    return s
-
-
 #------------------------------------------------------------------------------
 # Test tasks
 #------------------------------------------------------------------------------
@@ -192,19 +175,26 @@ def test_task_move_all(tl):
 
 @fixture
 def data():
+    n = 30
     _data = [
         {"id": i,
-         "n_spikes": 100 - 10 * i,
+         "n_spikes": n * 10 - 10 * i,
          "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
          "is_masked": i in (2, 3, 5),
-         } for i in range(10)]
+         } for i in range(n)]
     return _data
 
 
 def test_cluster_view_1(qtbot, gui, data):
     cv = ClusterView(gui, data=data)
+    n = len(data)
+
+    cv.sort_by('id', 'desc')
+    assert cv.get_ids() == list(range(n - 1, -1, -1))
 
     cv.sort_by('n_spikes', 'asc')
+    assert cv.get_ids() == list(range(n - 1, -1, -1))
+
     cv.select([1])
     qtbot.wait(5)
     assert cv.state == {'current_sort': ('n_spikes', 'asc'), 'selected': [1]}
@@ -212,9 +202,36 @@ def test_cluster_view_1(qtbot, gui, data):
     cv.set_state({'current_sort': ('id', 'desc'), 'selected': [2]})
     assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
+    # qtbot.stop()
+
+
+# def test_cluster_view_2(qtbot, gui):
+#     data = [
+#         {'id': 0, 'n_spikes': 2, 'group': 'noise', 'test_label': 456, 'is_masked': True},
+#         {'id': 1, 'n_spikes': 2, 'group': 'good', 'test_label': None, 'is_masked': False},
+#         {'id': 2, 'n_spikes': 2, 'group': None, 'test_label': None, 'is_masked': False},
+#         {'id': 10, 'n_spikes': 2, 'group': 'mua', 'test_label': 123, 'is_masked': True},
+#         {'id': 11, 'n_spikes': 2, 'group': 'good', 'test_label': None, 'is_masked': False},
+#         {'id': 20, 'n_spikes': 2, 'group': None, 'test_label': None, 'is_masked': False},
+#         {'id': 30, 'n_spikes': 2, 'group': None, 'test_label': None, 'is_masked': False}
+#     ]
+
+#     columns = ['id', 'n_spikes', 'test_label']
+#     sort = ('id', 'desc')
+
+#     cv = ClusterView(gui, data=data, sort=sort, columns=columns)
+#     gui.add_view(cv, position='left', closable=False)
+
+#     sort = ('similarity', 'desc')
+#     sv = SimilarityView(gui, sort=sort, columns=columns + ['similarity'])
+#     gui.add_view(sv, position='right', closable=False)
+
+#     qtbot.stop()
+
 
 def test_similarity_view_1(qtbot, gui, data):
     sv = SimilarityView(gui, data=data)
+    gui.add_view(sv, position='right', closable=False)
 
     @connect(sender=sv)
     def on_request_similar_clusters(sender, cluster_id):
@@ -222,6 +239,8 @@ def test_similarity_view_1(qtbot, gui, data):
 
     sv.reset([5])
     assert sv.get_ids() == [105, 115, 107]
+
+    # qtbot.stop()
 
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
@@ -246,6 +265,23 @@ def test_action_creator_1(qtbot, gui):
 # Test GUI component
 #------------------------------------------------------------------------------
 
+@fixture
+def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
+               similarity, tempdir):
+    spike_clusters = np.repeat(cluster_ids, 2)
+
+    s = Supervisor(
+        spike_clusters,
+        cluster_groups=cluster_groups,
+        cluster_labels=cluster_labels,
+        similarity=similarity,
+        context=Context(tempdir),
+        sort=('id', 'desc'),
+    )
+    s.attach(gui)
+    return s
+
+
 def _select(supervisor, cluster_ids, similar=None):
     tl = supervisor.task_logger
     tl.enqueue(supervisor.cluster_view, 'select', cluster_ids)
@@ -266,6 +302,7 @@ def _assert_selected(supervisor, sel):
 def test_select_1(qtbot, supervisor):
     _select(supervisor, [2])
     _assert_selected(supervisor, [2])
+    assert supervisor.shown_cluster_ids == [30, 20, 11, 10, 2, 1, 0]
     # qtbot.stop()
 
 
@@ -391,6 +428,7 @@ def test_supervisor_skip(qtbot, gui, supervisor):
         supervisor.select_actions.next_best()
         supervisor.block()
         _assert_selected(supervisor, [clu])
+    # qtbot.stop()
 
 
 def test_supervisor_sort(qtbot, supervisor):

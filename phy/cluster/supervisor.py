@@ -303,10 +303,10 @@ class ClusterView(Table):
     def _reset_table(self, data=None, columns=(), sort=None):
         """Recreate the table with specified columns, data, and sort."""
         emit(self._view_name + '_init', self)
+
         # Ensure 'id' is the first column.
-        if 'id' in columns:
-            columns.remove('id')
-        columns = ['id'] + list(columns)
+        columns = ['id'] + [_ for _ in columns if _ != 'id']
+
         # Add required columns if needed.
         for col in self._required_columns:
             if col not in columns:
@@ -751,15 +751,18 @@ class Supervisor(object):
         # Create the cluster view.
         self.cluster_view = ClusterView(
             gui, data=self.cluster_info, columns=self.columns, sort=sort)
+
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
             gui, columns=self.columns + ['similarity'], sort=('similarity', 'desc'))
+
         connect(
             self._get_similar_clusters, event='request_similar_clusters',
             sender=self.similarity_view)
+
         connect(self._similar_selected, event='select', sender=self.similarity_view)
 
         # Change the state after every clustering action, according to the action flow.
