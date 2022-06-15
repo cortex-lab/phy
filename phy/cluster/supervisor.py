@@ -103,18 +103,22 @@ class TaskLogger(object):
         sender, name, args, kwargs = task
         logger.log(5, "Calling %s.%s(%s, %s)", sender.__class__.__name__, name, args, kwargs)
         f = getattr(sender, name)
-        callback = partial(self._callback, task)
-        argspec = inspect.getfullargspec(f)
-        argspec = argspec.args + argspec.kwonlyargs
-        if 'callback' in argspec:
-            f(*args, **kwargs, callback=callback)
-        else:
-            # HACK: use on_cluster event instead of callback.
-            def _cluster_callback(tsender, up):
-                self._callback(task, up)
-            connect(_cluster_callback, event='cluster', sender=self.supervisor)
-            f(*args, **kwargs)
-            unconnect(_cluster_callback)
+        out = f(*args, **kwargs)
+        self._callback(task, out)
+
+        # callback = partial(self._callback, task)
+        # argspec = inspect.getfullargspec(f)
+        # argspec = argspec.args + argspec.kwonlyargs
+        # if 'callback' in argspec:
+        #     f(*args, **kwargs, callback=callback)
+        # else:
+
+        # # HACK: use on_cluster event instead of callback.
+        # def _cluster_callback(tsender, up):
+        #     self._callback(task, up)
+        # connect(_cluster_callback, event='cluster', sender=self.supervisor)
+        # f(*args, **kwargs)
+        # unconnect(_cluster_callback)
 
     def process(self):
         """Process all tasks in queue."""
@@ -865,12 +869,12 @@ class Supervisor(object):
         # Set the busy cursor.
         logger.log(5, "GUI is %sbusy" % ('' if busy else 'not '))
         set_busy(busy)
-        # Let the cluster views know that the GUI is busy.
-        self.cluster_view.set_busy(busy)
-        self.similarity_view.set_busy(busy)
-        # If the GUI is no longer busy, stop the debouncer waiting period.
-        if not busy:
-            self.cluster_view.debouncer.stop_waiting()
+        # # Let the cluster views know that the GUI is busy.
+        # self.cluster_view.set_busy(busy)
+        # self.similarity_view.set_busy(busy)
+        # # If the GUI is no longer busy, stop the debouncer waiting period.
+        # if not busy:
+        #     self.cluster_view.debouncer.stop_waiting()
 
     # Selection actions
     # -------------------------------------------------------------------------
@@ -1154,12 +1158,18 @@ class Supervisor(object):
         self._save_spikes_per_cluster()
         self._is_dirty = False
 
+    def _has_finished(self):
+        n = len(self.task_logger._queue)
+        processing = self.task_logger._processing
+        busy = self._is_busy
+        return n == 0 and not processing and not busy
+
     def block(self):
         """Block until there are no pending actions.
 
         Only used in the automated testing suite.
 
         """
-        _block(lambda: self.task_logger.has_finished() and not self._is_busy)
+        _block(self._has_finished)
         assert not self._is_busy
         _wait(10)

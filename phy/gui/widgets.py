@@ -193,8 +193,7 @@ class Table(QTableWidget):
         # Set column names.
         self.setHorizontalHeaderLabels(columns)
 
-        # Hide vertical header.
-        # self.verticalHeader().setVisible(False)
+        self.setSelectionBehavior(QTableWidget.SelectRows)
 
         # Set the rows.
         self.add(data)
@@ -245,7 +244,9 @@ class Table(QTableWidget):
             return
         self._sel = tuple(sel)
         sel_next = self.get_next_id(sel[0] if sel else None)
-        emit('select', self, {'selected': sel, 'next': sel_next})
+        obj = {'selected': sel, 'next': sel_next}
+        emit('select', self, obj)
+        return obj
 
     def _get_value(self, id, col_name):
         """Return the value of an item."""
@@ -320,7 +321,8 @@ class Table(QTableWidget):
         for item in items:
             item.setSelected(True)
         self._do_raise_select = do_raise_select
-        self._emit_select()
+        obj = self._emit_select()
+        return obj
 
     # Scrolling
     # ---------------------------------------------------------------------------------------------
