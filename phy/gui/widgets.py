@@ -11,6 +11,7 @@ import json
 import logging
 from functools import partial
 
+import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
@@ -97,6 +98,10 @@ class IPythonView(RichJupyterWidget):
         except Exception as e:  # pragma: no cover
             logger.error("Could not stop the IPython kernel: %s.", str(e))
 
+    def close(self):
+        self.stop()
+        super(IPythonView, self).close()
+
 
 def _uniq(seq):
     """Return the list of unique integers in a sequence, by keeping the order."""
@@ -174,7 +179,6 @@ class Table(QTableWidget):
         columns = columns or ['id']
         assert 'id' in columns
         assert columns.index('id') == 0  # HACK: used when converting row_idx <=> id
-        # columns.remove('id')  # NOTE: keep the id column to enable sort by id
 
         data = data or []
 
@@ -193,10 +197,15 @@ class Table(QTableWidget):
         # Set column names.
         self.setHorizontalHeaderLabels(columns)
 
+        # Select whole rows instead of individual cells in the table.
         self.setSelectionBehavior(QTableWidget.SelectRows)
 
         # Set the rows.
         self.add(data)
+
+        # Initial sort.
+        if sort:
+            self.sort_by(*sort)
 
     def _init_events(self):
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
@@ -425,12 +434,13 @@ class Table(QTableWidget):
         ids = self.get_ids()
 
         # Compile the filter function.
-        try:
-            f = eval('lambda row_dict: ' + text)
-            f(self._data[ids[0]])
-        except Exception as e:
-            logger.log(5, f"Filter `{text0}` is invalid.")
-            text = ''
+        if text0:
+            try:
+                f = eval('lambda row_dict: ' + text)
+                f(self._data[ids[0]])
+            except Exception as e:
+                logger.log(5, f"Filter `{text0}` is invalid.")
+                text = ''
 
         # Ids to keep.
         kept = [id for id in ids if not text or f(self._data[id])]
@@ -466,6 +476,14 @@ class Table(QTableWidget):
     def _set_item_value(self, row_idx, col_idx, value):
         item = self.item(row_idx, col_idx)
         assert item
+
+        # HACK: cast NumPy scalar to Python types, so as to proper enable Qt sorting.
+        # Otherwise, sorting may be done on lexicographic, not numerical order.
+        if isinstance(value, np.integer):
+            value = int(value)
+        if isinstance(value, np.floating):
+            value = float(value)
+
         item.setData(Qt.EditRole, value)
         item.setData(Qt.DisplayRole, str(value))
 

@@ -22,16 +22,19 @@ from ..widgets import Table, IPythonView, KeyValueWidget
 # Fixtures
 #------------------------------------------------------------------------------
 
+N = 15
+
+
 @fixture
 def table(qtbot):
     columns = ["id", "count"]
     data = [
         {"id": i,
-         "count": 100 - 10 * i,
+         "count": N * 10 - 10 * i,
          "float": float(i),
          "is_masked": True if i in (2, 3, 5) else False,
          "_foreground": '#777' if i in (2, 3, 5) else False,
-         } for i in range(10)]
+         } for i in range(N)]
     table = Table(
         columns=columns,
         data=data)
@@ -170,6 +173,22 @@ def test_table_init_2(qtbot):
     table.close()
 
 
+def test_table_id_sort(qtbot):
+    n = 50
+    data = [{'id': i, 'a': '%d' % i} for i in range(n)]
+    table = Table(data=data, columns=['id', 'a'])
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+
+    table.sort_by('id', 'desc')
+
+    assert table.get_ids() == list(range(n - 1, -1, -1))
+
+    # qtbot.stop()
+    table.close()
+
+
 def test_table_invalid_column(qtbot):
     table = Table(data=[{'id': 0, 'a': 'b'}], columns=['id', 'u'])
     table.show()
@@ -181,9 +200,12 @@ def test_table_invalid_column(qtbot):
 
 def test_table_0(qtbot, table):
     assert len(table.get_selected()) == 0
+
+    table.sort_by("id")
+    assert table.get_ids() == list(range(N))
+
     table.sort_by("count")
-    # TODO: fix sort by int and not str
-    assert table.get_ids() == list(range(9, -1, -1))
+    assert table.get_ids() == list(range(N - 1, -1, -1))
 
     # qtbot.stop()
 
@@ -227,7 +249,7 @@ def test_table_nav_first_2(qtbot, table):
 
 def test_table_nav_last(qtbot, table):
     table.previous()
-    assert table.get_selected() == [8]
+    assert table.get_selected() == [N - 2]
     assert table.get_previous_id(0) is None
 
     table.first()
@@ -268,15 +290,15 @@ def test_table_sort(qtbot, table):
     assert table.get_selected() == [6]
 
     # Check the sorting.
-    assert table.get_ids() == list(range(9, -1, -1))
+    assert table.get_ids() == list(range(N - 1, -1, -1))
 
     table.next()
     assert table.get_selected() == [4]
 
     table.sort_by('count', 'desc')
-    assert table.get_ids() == list(range(10))
+    assert table.get_ids() == list(range(N))
 
-    assert _l == [list(range(9, -1, -1)), list(range(10))]
+    assert _l == [list(range(N - 1, -1, -1)), list(range(N))]
     # qtbot.stop()
 
 
@@ -297,13 +319,13 @@ def test_table_remove_all_and_add_2(qtbot, table):
 
 
 def test_table_add_change_remove(qtbot, table):
-    assert table.get_ids() == list(range(10))
+    assert table.get_ids() == list(range(N))
 
     table.add([{'id': 100, 'count': 1000}])
-    assert table.get_ids() == list(range(10)) + [100]
+    assert table.get_ids() == list(range(N)) + [100]
 
     table.remove([0, 1])
-    assert table.get_ids() == list(range(2, 10)) + [100]
+    assert table.get_ids() == list(range(2, N)) + [100]
 
     assert table.get(100) == {'id': 100, 'count': 1000}
     table.change([{'id': 100, 'count': 2000}])
@@ -312,16 +334,16 @@ def test_table_add_change_remove(qtbot, table):
 
 def test_table_change_and_sort_1(qtbot, table):
     table.change([{'id': 5, 'count': 1000}])
-    assert table.get_ids() == list(range(10))
+    assert table.get_ids() == list(range(N))
 
 
 def test_table_change_and_sort_2(qtbot, table):
     table.sort_by('count', 'asc')
-    assert table.get_ids() == list(range(9, -1, -1))
+    assert table.get_ids() == list(range(N - 1, -1, -1))
 
     # Check that the table is automatically resorted after a change.
     table.change([{'id': 5, 'count': 1000}])
-    assert table.get_ids() == [9, 8, 7, 6, 4, 3, 2, 1, 0, 5]
+    assert table.get_ids() == [14, 13, 12, 11, 10, 9, 8, 7, 6, 4, 3, 2, 1, 0, 5]
 
 
 def test_table_filter(qtbot, table):
@@ -330,7 +352,7 @@ def test_table_filter(qtbot, table):
     assert table.shown_ids() == [5]
 
     table.filter("count == 80")
-    assert table.shown_ids() == [2]
+    assert table.shown_ids() == [7]
 
     table.filter()
     assert table.shown_ids() == table.get_ids()
