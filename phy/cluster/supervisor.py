@@ -185,14 +185,14 @@ class TaskLogger(object):
         similar = set(similar or ())
         # Move best.
         if moved <= cluster_ids:
-            self.enqueue(self.cluster_view, 'next', sender=self.supervisor)
+            self.enqueue(self.cluster_view, 'next')
         # Move similar.
         elif moved <= similar:
-            self.enqueue(self.similarity_view, 'next', sender=self.supervisor)
+            self.enqueue(self.similarity_view, 'next')
         # Move all.
         else:
-            self.enqueue(self.cluster_view, 'next', sender=self.supervisor)
-            self.enqueue(self.similarity_view, 'next', sender=self.supervisor)
+            self.enqueue(self.cluster_view, 'next')
+            self.enqueue(self.similarity_view, 'next')
 
     def _after_undo(self, task, output):
         """Task that should follow an undo."""
@@ -253,11 +253,11 @@ class TaskLogger(object):
             # Last selection is cluster view selection: return the state.
             if (sender == self.similarity_view and similarity_state == (None, None) and
                     name in ('select', 'next', 'previous')):
-                similarity_state = (output['selected'], output['next']) if output else (None, None)
+                similarity_state = (output['selected'], output['next']) if output else ([], None)
             if (sender == self.cluster_view and
                     cluster_state == (None, None) and
                     name in ('select', 'next', 'previous')):
-                cluster_state = (output['selected'], output['next']) if output else (None, None)
+                cluster_state = (output['selected'], output['next']) if output else ([], None)
                 return (*cluster_state, *similarity_state)
 
     def show_history(self):
@@ -1078,13 +1078,14 @@ class Supervisor(object):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
             return
-        self.cluster_meta.set(name, cluster_ids, value)
+        out = self.cluster_meta.set(name, cluster_ids, value)
         self._global_history.action(self.cluster_meta)
         # Add column if needed.
         if name != 'group' and name not in self.columns:
             logger.debug("Add column %s.", name)
             self.columns.append(name)
             self._reset_cluster_view()
+        return out
 
     def move(self, group, which):
         """Assign a cluster group to some clusters."""
@@ -1101,7 +1102,7 @@ class Supervisor(object):
         _ensure_all_ints(which)
         logger.debug("Move %s to %s.", which, group)
         group = 'unsorted' if group is None else group
-        self.label('group', group, cluster_ids=which)
+        return self.label('group', group, cluster_ids=which)
 
     # Wizard actions
     # -------------------------------------------------------------------------

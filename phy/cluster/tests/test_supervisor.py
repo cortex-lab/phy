@@ -461,8 +461,6 @@ def test_supervisor_merge_1(qtbot, supervisor):
     supervisor.actions.undo()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
-    # qtbot.stop()
-    return
 
     supervisor.actions.redo()
     supervisor.block()

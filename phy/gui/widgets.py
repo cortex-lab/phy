@@ -490,6 +490,8 @@ class Table(QTableWidget):
         self.setItem(row_idx, col_idx, item)
 
     def _set_item_value(self, row_idx, col_idx, value):
+        if row_idx < 0:
+            return
         item = self.item(row_idx, col_idx)
         assert item
 
@@ -504,6 +506,8 @@ class Table(QTableWidget):
         item.setData(Qt.DisplayRole, str(value))
 
     def _set_item_style(self, row_idx, col_idx, d):
+        if row_idx < 0:
+            return
         item = self.item(row_idx, col_idx)
         assert item
         bg = d.get('_background', None)
@@ -558,19 +562,24 @@ class Table(QTableWidget):
 
         for row_dict in objects:
             id = row_dict['id']
-            for col_name, value in row_dict.items():
+            row_idx = self._id2row(id)
 
-                self._data.get(id, {})[col_name] = value
+            d = self._data.get(id, {})
+            for col_name in self.columns:
+                value = row_dict.get(col_name, None)
+                d[col_name] = value
 
                 # Find the row and column index of the corresponding item.
-                row_idx = self._id2row(id)
                 assert col_name in self.columns
                 col_idx = self.columns.index(col_name)
 
                 # Set the item's value.
                 self._set_item_value(row_idx, col_idx, value)
 
-                # Set the item style.
+            # Set the item style.
+            # for key, val in d.items():
+            #     if key not in self.columns:
+            for col_idx in range(len(self.columns)):
                 self._set_item_style(row_idx, col_idx, row_dict)
 
         self.setSortingEnabled(True)
