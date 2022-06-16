@@ -35,7 +35,8 @@ def default_last():
 
 def default_similar(clusters):
     assert len(clusters) > 0
-    return clusters[0] + 1
+    # TODO
+    return N if clusters[0] != N else 20
 
 
 def default_new_cluster_id():
@@ -46,6 +47,8 @@ def default_next(clusters=None):
     if not clusters:
         return default_first()
     cl = clusters[0]
+    if cl not in CLUSTERS:
+        return None
     i = UNMASKED.index(cl)
     if cl == default_last():
         return default_last()
@@ -64,6 +67,10 @@ def default_prev(clusters=None):
     return UNMASKED[i - 1]
 
 
+def default_merge_split(clusters=None):
+    return N + 1
+
+
 @fixture
 def cluster_info():
     return ClusterInfo(
@@ -73,6 +80,7 @@ def cluster_info():
         new_cluster_id=default_new_cluster_id,
         next=default_next,
         prev=default_prev,
+        merge=default_merge_split,
     )
 
 
@@ -87,7 +95,8 @@ def automaton(cluster_info):
 #------------------------------------------------------------------------------
 
 def _assert(a: Automaton, cl: list[int], sim: list[int]):
-    assert a.current_clusters() == cl and a.current_similar() == sim
+    assert a.current_clusters() == cl
+    assert a.current_similar() == sim
 
 
 def test_automaton_state_1():
@@ -123,3 +132,13 @@ def test_automaton_skip(automaton):
     for clu in UNMASKED:
         a.transition('next_best')
         _assert(a, [clu], [])
+
+
+def test_automaton_merge(automaton):
+    a = automaton
+
+    a.set_state([30], [20])
+    _assert(a, [30], [20])
+
+    a.transition('merge')
+    _assert(a, [31], [30])

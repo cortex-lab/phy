@@ -35,16 +35,14 @@ logger = logging.getLogger(__name__)
 @dataclass(kw_only=True)
 class State:
     clusters: list[int] = field(default_factory=list)
-    # next_cluster: int | None = None
     similar: list[int] = field(default_factory=list)
-    # next_similar: int | None = None
 
 
 @dataclass(kw_only=True)
 class Transition:
     name: str
     kwargs: dict = field(default_factory=dict)
-    before: State | None = None
+    before: Optional[State] = None
     after: State
 
 
@@ -57,27 +55,6 @@ class Callback:
 @dataclass(kw_only=True)
 class ClusterInfo:
 
-    # Default functions
-
-    def _default_next(self, clusters):
-        if not clusters:
-            return
-        nx = clusters[0] + 1
-        while nx in clusters:
-            nx += 1
-        return nx
-
-    def _default_prev(self, clusters):
-        if not clusters:
-            return
-        nx = clusters[0] - 1
-        while nx in clusters:
-            nx -= 1
-        return nx
-
-    def _default_merge_split(self, clusters):
-        return self.new_cluster_id() + 1
-
     # Mandatory:
     first: Callable[[], int]
     last: Callable[[], int]
@@ -86,17 +63,17 @@ class ClusterInfo:
 
     # Optional:
 
-    # id of the clusters after the specified clusters
-    next: Callable[[], int] | None = _default_next
+    # id of the cluster after the specified clusters
+    next: Optional[Callable[[], int]] = None
 
-    # id of the clusters before the specified clusters
-    prev: Callable[[], int] | None = _default_prev
+    # id of the cluster before the specified clusters
+    prev: Optional[Callable[[], int]] = None
 
-    # id of the new merged that should be selected after a merge
-    merge: Callable[[list[int]], int] | None = _default_merge_split
+    # id of the new merged cluster that should be selected after a merge
+    merge: Optional[Callable[[list[int]], int]] = None
 
     # id of the new clusters that should be selected after a split
-    split: Callable[[list[int]], int] | None = _default_merge_split
+    split: Optional[Callable[[list[int]], list[int]]] = None
 
 
 # ----------------------------------------------------------------------------
@@ -117,10 +94,10 @@ class Automaton:
         self.similar = cluster_info.similar
         self.new_cluster_id = cluster_info.new_cluster_id
 
-        self.prev = cluster_info.prev or self._default_prev
-        self.next = cluster_info.next or self._default_next
-        self.merge = cluster_info.merge or self._default_merge_split
-        self.split = cluster_info.split or self._default_merge_split
+        self.prev = cluster_info.prev
+        self.next = cluster_info.next
+        self.merge = cluster_info.merge
+        self.split = cluster_info.split
 
         self._history = [Transition(name='init', after=state)]
         self._callbacks = []
@@ -244,8 +221,8 @@ class Automaton:
 
         # Similarity view.
         else:
-            after.clusters = self.merge(before.clusters + before.similar)
-            after.similar = [self.next(after.clusters)]
+            after.clusters = [self.merge(before.clusters + before.similar)]
+            after.similar = [self.similar(after.clusters)]
 
         return after
 
@@ -257,7 +234,7 @@ class Automaton:
 
         # Only cluster view
         if not self.current_similar():
-            after.clusters = [self.split(before.clusters)]
+            after.clusters = self.split(before.clusters)
 
         # Similarity view.
         else:
@@ -307,7 +284,7 @@ class Automaton:
         return len(self._history)
 
     # -------------------------------------------------------------------------
-    # Ection methods
+    # Transition methods
     # -------------------------------------------------------------------------
 
     def set_state(
@@ -317,6 +294,10 @@ class Automaton:
             clusters = self.current_clusters()
         clusters = clusters or []
         similar = similar or []
+
+        assert isinstance(clusters, list)
+        assert isinstance(similar, list)
+
         self.transition(transition_name='manual', clusters=clusters, similar=similar)
 
     def transition(self, transition_name: str, **kwargs) -> State:
