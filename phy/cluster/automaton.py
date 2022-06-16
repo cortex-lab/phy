@@ -45,3 +45,35 @@ class Transition:
     kwargs: dict = field(default_factory=dict)
     before: State
     after: State
+
+
+# ----------------------------------------------------------------------------
+# Automaton
+# -----------------------------------------------------------------------------
+
+class Automaton:
+    def __init__(
+            self, next=None, prev=None, first=None, last=None,
+            similar=None, merge=None, split=None):
+        pass
+
+    def current_state(self) -> State:
+        pass
+
+    def transition(self, transition_name: str, **kwargs) -> State:
+        pass
+
+    def _after_move(self, state: State = None, **kwargs) -> State:
+        state = state or self.current_state()
+
+    def _append(self, before, transition, after):
+        pass
+
+    def undo(self):
+        pass
+
+    def redo(self):
+        pass
+
+    def on_transition(self, name, callback):
+        pass
