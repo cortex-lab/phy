@@ -78,5 +78,13 @@ def test_automaton_transition_1():
 
 def test_automaton_1(cluster_info):
     s = State(clusters=[0])
+
     a = Automaton(s, cluster_info)
     _assert(a, [0], [])
+
+    assert not a.can_undo()
+    assert not a.can_redo()
+    assert a.history_length() == 1
+
+    a.set_state([1])
+    _assert(a, [1], [])

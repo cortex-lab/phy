@@ -12,7 +12,7 @@ from functools import partial
 import inspect
 import logging
 from pprint import pprint
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Optional
 
 import numpy as np
 
@@ -121,15 +121,19 @@ class Automaton:
     # After private methods
     # -------------------------------------------------------------------------
 
-    def _after_first(self, before: State = None, **kwargs) -> State:
+    def _after_manual(self, before: State = None, clusters=None, similar=None) -> State:
+        """Determine the state after a manual transition."""
+        return State(clusters=clusters, similar=similar)
+
+    def _after_first(self, before: State = None) -> State:
         """Determine the state after a first transition."""
         return State(clusters=self.first(), similar=[])
 
-    def _after_last(self, before: State = None, **kwargs) -> State:
+    def _after_last(self, before: State = None) -> State:
         """Determine the state after a last transition."""
         return State(clusters=self.last(), similar=[])
 
-    def _after_next_best(self, before: State = None, **kwargs) -> State:
+    def _after_next_best(self, before: State = None) -> State:
         """Determine the state after a next_best transition."""
 
         before = before or self.current_state()
@@ -143,7 +147,7 @@ class Automaton:
 
         return after
 
-    def _after_prev_best(self, before: State = None, **kwargs) -> State:
+    def _after_prev_best(self, before: State = None) -> State:
         """Determine the state after a prev_best transition."""
 
         before = before or self.current_state()
@@ -157,7 +161,7 @@ class Automaton:
 
         return after
 
-    def _after_next(self, before: State = None, **kwargs) -> State:
+    def _after_next(self, before: State = None) -> State:
         """Determine the state after a next transition."""
 
         before = before or self.current_state()
@@ -175,7 +179,7 @@ class Automaton:
 
         return after
 
-    def _after_prev(self, before: State = None, **kwargs) -> State:
+    def _after_prev(self, before: State = None) -> State:
         """Determine the state after a prev transition."""
 
         before = before or self.current_state()
@@ -192,11 +196,11 @@ class Automaton:
 
         return after
 
-    def _after_label(self, before: State = None, **kwargs) -> State:
+    def _after_label(self, before: State = None) -> State:
         """Determine the state after a label transition."""
         return before
 
-    def _after_move(self, before: State = None, **kwargs) -> State:
+    def _after_move(self, before: State = None, which=None) -> State:
         """Determine the state after a move transition."""
 
         before = before or self.current_state()
@@ -208,17 +212,19 @@ class Automaton:
 
         # Similarity view.
         else:
-            which = kwargs.get('which')
+            assert which
             if which == 'similar':
                 after.clusters = before.clusters
                 after.similar = [self.next(before.similar)]
-            else:
+            elif which in ('all', 'best'):
                 after.clusters = [self._next_cluster()]
                 after.similar = self.next(after.clusters)
+            else:
+                raise NotImplementedError(which)
 
         return after
 
-    def _after_merge(self, before: State = None, **kwargs) -> State:
+    def _after_merge(self, before: State = None) -> State:
         """Determine the state after a merge transition."""
 
         before = before or self.current_state()
@@ -235,7 +241,7 @@ class Automaton:
 
         return after
 
-    def _after_split(self, before: State = None, **kwargs) -> State:
+    def _after_split(self, before: State = None) -> State:
         """Determine the state after a split transition."""
 
         before = before or self.current_state()
@@ -295,6 +301,15 @@ class Automaton:
     # -------------------------------------------------------------------------
     # Ection methods
     # -------------------------------------------------------------------------
+
+    def set_state(
+            self, clusters: Optional[list[int]] = None, similar: Optional[list[int]] = None):
+        """Manually set a state by making a manual transition."""
+        if not clusters and similar:
+            clusters = self.current_clusters()
+        clusters = clusters or []
+        similar = similar or []
+        self.transition(transition_name='manual', clusters=clusters, similar=similar)
 
     def transition(self, transition_name: str, **kwargs) -> State:
         """Make a new transition."""
