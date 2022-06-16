@@ -44,7 +44,7 @@ class State:
 class Transition:
     name: str
     kwargs: dict = field(default_factory=dict)
-    before: State
+    before: State | None = None
     after: State
 
 
@@ -56,49 +56,8 @@ class Callback:
 
 @dataclass(kw_only=True)
 class ClusterInfo:
-    # Mandatory:
-    first: Callable[[], int]
-    last: Callable[[], int]
-    similar: Callable[[list[int]], int]  # first similar cluster to the specified set of clusters
-    new_cluster_id: Callable[[], int]
 
-    # Optional:
-    next: Callable[[], int] | None = None
-    prev: Callable[[], int] | None = None
-    merge: Callable[[list[int]], int] | None = None
-    split: Callable[[list[int]], int] | None = None
-
-
-# ----------------------------------------------------------------------------
-# Automaton
-# ----------------------------------------------------------------------------
-
-class Automaton:
-    _state: State
-    _history: list[Transition]
-    _callbacks: list[Callback]
-    _cursor = -1
-
-    def __init__(self, cluster_info: ClusterInfo):
-
-        assert cluster_info
-
-        self.first = cluster_info.first
-        self.last = cluster_info.last
-        self.similar = cluster_info.similar
-        self.new_cluster_id = cluster_info.new_cluster_id
-
-        self.prev = cluster_info.prev or self._default_prev
-        self.next = cluster_info.next or self._default_next
-        self.merge = cluster_info.merge or self._default_merge_split
-        self.split = cluster_info.split or self._default_merge_split
-
-        self._history = []
-        self._callbacks = []
-
-    # -------------------------------------------------------------------------
     # Default functions
-    # -------------------------------------------------------------------------
 
     def _default_next(self, clusters):
         if not clusters:
@@ -118,6 +77,45 @@ class Automaton:
 
     def _default_merge_split(self, clusters):
         return self.new_cluster_id() + 1
+
+    # Mandatory:
+    first: Callable[[], int]
+    last: Callable[[], int]
+    similar: Callable[[list[int]], int]  # first similar cluster to the specified set of clusters
+    new_cluster_id: Callable[[], int]
+
+    # Optional:
+    next: Callable[[], int] | None = _default_next
+    prev: Callable[[], int] | None = _default_prev
+    merge: Callable[[list[int]], int] | None = _default_merge_split
+    split: Callable[[list[int]], int] | None = _default_merge_split
+
+
+# ----------------------------------------------------------------------------
+# Automaton
+# ----------------------------------------------------------------------------
+
+class Automaton:
+    _history: list[Transition]
+    _callbacks: list[Callback]
+    _cursor = -1
+
+    def __init__(self, state: State, cluster_info: ClusterInfo):
+
+        assert cluster_info
+
+        self.first = cluster_info.first
+        self.last = cluster_info.last
+        self.similar = cluster_info.similar
+        self.new_cluster_id = cluster_info.new_cluster_id
+
+        self.prev = cluster_info.prev or self._default_prev
+        self.next = cluster_info.next or self._default_next
+        self.merge = cluster_info.merge or self._default_merge_split
+        self.split = cluster_info.split or self._default_merge_split
+
+        self._history = [Transition(name='init', after=state)]
+        self._callbacks = []
 
     # -------------------------------------------------------------------------
     # After private methods
@@ -139,7 +137,7 @@ class Automaton:
 
         # Only cluster view
         after.clusters = self.next(before.clusters)
-        if self.similar():
+        if self.current_similar():
             # Similarity view.
             after.similar = self.similar(after.clusters)
 
@@ -153,7 +151,7 @@ class Automaton:
 
         # Only cluster view
         after.clusters = self.prev(before.clusters)
-        if self.similar():
+        if self.current_similar():
             # Similarity view.
             after.similar = self.similar(after.clusters)
 
@@ -166,7 +164,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        if not self.similar():
+        if not self.current_similar():
             after.clusters = before.clusters
             after.similar = self.similar(before.clusters)
 
@@ -184,7 +182,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        if not self.similar():
+        if not self.current_similar():
             return before
 
         # Similarity view.
@@ -205,7 +203,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        if not self.similar():
+        if not self.current_similar():
             after.clusters = [self._next_cluster()]
 
         # Similarity view.
@@ -227,7 +225,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        if not self.similar():
+        if not self.current_similar():
             after.clusters = [self.merge(before.clusters)]
 
         # Similarity view.
@@ -244,7 +242,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        if not self.similar():
+        if not self.current_similar():
             after.clusters = [self.split(before.clusters)]
 
         # Similarity view.
@@ -260,7 +258,7 @@ class Automaton:
 
     def _next_cluster(self) -> int | None:
         """Return the next cluster in the cluster view."""
-        return self.next(self.clusters())
+        return self.next(self.current_clusters())
 
     def _next_similar(self) -> int | None:
         """Return the next cluster in the similarity view."""
@@ -286,11 +284,11 @@ class Automaton:
         """Return the number of transitions in the history."""
         return len(self._history)
 
-    def clusters(self) -> list[int]:
+    def current_clusters(self) -> list[int]:
         """Currently-selected clusters in the cluster view."""
         return self.current_state().clusters
 
-    def similar(self) -> list[int]:
+    def current_similar(self) -> list[int]:
         """Currently-selected similar clusters in the similarity view."""
         return self.current_state().similar
 
@@ -315,6 +313,8 @@ class Automaton:
             after=after,
         )
 
+        # Delete the transitions after the current cursor (destroy actions after undos).
+        del self._history[self._cursor + 1:]
         # Add it to the history list.
         self._history.append(transition)
 

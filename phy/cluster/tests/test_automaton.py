@@ -25,43 +25,47 @@ N = 30
 def data():
     _data = [
         {"id": i,
-         "n_spikes": N * 10 - 10 * i,
+         "n_spikes": 10 * (N - i),
          "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
          "is_masked": i in (2, 3, 5),
          } for i in range(N)]
     return _data
 
 
-def first():
+def default_first():
     return 0
 
 
-def last():
+def default_last():
     return N - 1
 
 
-def similar(clusters):
+def default_similar(clusters):
     assert len(clusters) > 0
     return clusters[0] + 1
 
 
-def new_cluster_id():
+def default_new_cluster_id():
     return N
 
 
 @fixture
 def cluster_info():
     return ClusterInfo(
-        first=first,
-        last=last,
-        similar=similar,
-        new_cluster_id=new_cluster_id,
+        first=default_first,
+        last=default_last,
+        similar=default_similar,
+        new_cluster_id=default_new_cluster_id,
     )
 
 
 #------------------------------------------------------------------------------
 # Test automaton
 #------------------------------------------------------------------------------
+
+def _assert(a: Automaton, cl: list[int], sim: list[int]):
+    assert a.current_clusters() == cl and a.current_similar() == sim
+
 
 def test_automaton_state_1():
     s = State(clusters=[1, 2])
@@ -73,4 +77,6 @@ def test_automaton_transition_1():
 
 
 def test_automaton_1(cluster_info):
-    a = Automaton(cluster_info)
+    s = State(clusters=[0])
+    a = Automaton(s, cluster_info)
+    _assert(a, [0], [])
