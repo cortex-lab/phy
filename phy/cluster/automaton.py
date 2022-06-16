@@ -85,9 +85,17 @@ class ClusterInfo:
     new_cluster_id: Callable[[], int]
 
     # Optional:
+
+    # id of the clusters after the specified clusters
     next: Callable[[], int] | None = _default_next
+
+    # id of the clusters before the specified clusters
     prev: Callable[[], int] | None = _default_prev
+
+    # id of the new merged that should be selected after a merge
     merge: Callable[[list[int]], int] | None = _default_merge_split
+
+    # id of the new clusters that should be selected after a split
     split: Callable[[list[int]], int] | None = _default_merge_split
 
 
@@ -140,7 +148,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        after.clusters = self.next(before.clusters)
+        after.clusters = [self.next(before.clusters)]
         if self.current_similar():
             # Similarity view.
             after.similar = self.similar(after.clusters)
@@ -154,7 +162,7 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        after.clusters = self.prev(before.clusters)
+        after.clusters = [self.prev(before.clusters)]
         if self.current_similar():
             # Similarity view.
             after.similar = self.similar(after.clusters)
@@ -175,7 +183,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = before.clusters
-            after.similar = self.next(before.similar)
+            after.similar = [self.next(before.similar)]
 
         return after
 
@@ -192,7 +200,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = before.clusters
-            after.similar = self.prev(before.similar)
+            after.similar = [self.prev(before.similar)]
 
         return after
 
@@ -218,7 +226,7 @@ class Automaton:
                 after.similar = [self.next(before.similar)]
             elif which in ('all', 'best'):
                 after.clusters = [self._next_cluster()]
-                after.similar = self.next(after.clusters)
+                after.similar = [self.next(after.clusters)]
             else:
                 raise NotImplementedError(which)
 
@@ -237,7 +245,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = self.merge(before.clusters + before.similar)
-            after.similar = self.next(after.clusters)
+            after.similar = [self.next(after.clusters)]
 
         return after
 
@@ -254,7 +262,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = self.split(before.clusters + before.similar)
-            after.similar = self.next(after.clusters)
+            after.similar = [self.next(after.clusters)]
 
         return after
 
@@ -278,6 +286,14 @@ class Automaton:
         """Return the current state."""
         return self._history[self._cursor].after if self._history else None
 
+    def current_clusters(self) -> list[int]:
+        """Currently-selected clusters in the cluster view."""
+        return self.current_state().clusters
+
+    def current_similar(self) -> list[int]:
+        """Currently-selected similar clusters in the similarity view."""
+        return self.current_state().similar
+
     def can_undo(self) -> bool:
         """Whether we can undo."""
         return abs(self._cursor) < len(self._history)
@@ -289,14 +305,6 @@ class Automaton:
     def history_length(self) -> int:
         """Return the number of transitions in the history."""
         return len(self._history)
-
-    def current_clusters(self) -> list[int]:
-        """Currently-selected clusters in the cluster view."""
-        return self.current_state().clusters
-
-    def current_similar(self) -> list[int]:
-        """Currently-selected similar clusters in the similarity view."""
-        return self.current_state().similar
 
     # -------------------------------------------------------------------------
     # Ection methods
@@ -319,6 +327,11 @@ class Automaton:
         method = getattr(self, method_name, None)
         assert method, f'method {method_name} not implemented'
         after = method(**kwargs)
+
+        assert isinstance(before.clusters, list)
+        assert isinstance(before.similar, list)
+        assert isinstance(after.clusters, list)
+        assert isinstance(after.similar, list)
 
         # Create the transition object.
         transition = Transition(

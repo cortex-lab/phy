@@ -19,25 +19,18 @@ from phylib.utils import connect, Bunch, emit
 #------------------------------------------------------------------------------
 
 N = 30
-
-
-@fixture
-def data():
-    _data = [
-        {"id": i,
-         "n_spikes": 10 * (N - i),
-         "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
-         "is_masked": i in (2, 3, 5),
-         } for i in range(N)]
-    return _data
+CLUSTERS = [0, 1, 2, 10, 11, 20, 30]
+#           i, g, N,  i,  g,  N, N
+MASKED = [0, 10]
+UNMASKED = [1, 2, 11, 20, 30]
 
 
 def default_first():
-    return 0
+    return 1
 
 
 def default_last():
-    return N - 1
+    return N
 
 
 def default_similar(clusters):
@@ -46,7 +39,29 @@ def default_similar(clusters):
 
 
 def default_new_cluster_id():
-    return N
+    return N + 1
+
+
+def default_next(clusters=None):
+    if not clusters:
+        return default_first()
+    cl = clusters[0]
+    i = UNMASKED.index(cl)
+    if cl == default_last():
+        return default_last()
+    assert i <= len(UNMASKED) - 2
+    return UNMASKED[i + 1]
+
+
+def default_prev(clusters=None):
+    if not clusters:
+        return default_last()
+    cl = clusters[0]
+    i = UNMASKED.index(cl)
+    if cl == default_first():
+        return default_first()
+    assert i >= 1
+    return UNMASKED[i - 1]
 
 
 @fixture
@@ -56,7 +71,15 @@ def cluster_info():
         last=default_last,
         similar=default_similar,
         new_cluster_id=default_new_cluster_id,
+        next=default_next,
+        prev=default_prev,
     )
+
+
+@fixture
+def automaton(cluster_info):
+    s = State(clusters=[])
+    return Automaton(s, cluster_info)
 
 
 #------------------------------------------------------------------------------
@@ -78,7 +101,6 @@ def test_automaton_transition_1():
 
 def test_automaton_1(cluster_info):
     s = State(clusters=[0])
-
     a = Automaton(s, cluster_info)
     _assert(a, [0], [])
 
@@ -88,3 +110,16 @@ def test_automaton_1(cluster_info):
 
     a.set_state([1])
     _assert(a, [1], [])
+
+
+def test_automaton_skip(automaton):
+    a = automaton
+    _assert(a, [], [])
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    for clu in UNMASKED:
+        a.transition('next_best')
+        _assert(a, [clu], [])
