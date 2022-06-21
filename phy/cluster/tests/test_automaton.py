@@ -362,23 +362,38 @@ def test_automaton_history_1(automaton):
     # Wizard.
     a.set_state([2], [10])
 
+    _l = []
+
+    @a.connect
+    def on_undo(name, before, after, **kwargs):
+        _l.append(name)
+
     # Merge.
     assert not a.can_undo()
     assert not a.can_redo()
     a.merge()
     _assert(a, [31], [30])
+    assert not _l
 
     # Undo.
     assert a.can_undo()
     assert not a.can_redo()
     a.undo()
     _assert(a, [2], [10])
+    assert _l == ['merge']
+
+    _l = []
+
+    @a.connect
+    def on_redo(name, before, after, **kwargs):
+        _l.append(name)
 
     # Redo.
     assert not a.can_undo()
     assert a.can_redo()
     a.redo()
     _assert(a, [31], [30])
+    assert _l == ['merge']
 
 
 def test_automaton_history_move_1(automaton):

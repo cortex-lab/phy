@@ -423,10 +423,15 @@ class Automaton:
         if not self.can_undo():
             return
         # Transition leading to the state to revert to.
-        tr = self._history[self._cursor]
+        transition = self._history[self._cursor]
         self._cursor -= 1
         assert self._cursor <= -1
-        self._state = tr.before
+        self._state = transition.before
+
+        for cb in self._callbacks:
+            if cb.name == 'undo':
+                cb.function(transition.name, transition.before,
+                            transition.after, **transition.kwargs)
 
     def redo(self):
         """Redo the last transition."""
@@ -435,5 +440,10 @@ class Automaton:
         # Transition leading to the state to revert.
         self._cursor += 1
         assert self._cursor <= -1
-        tr = self._history[self._cursor]
-        self._state = tr.after
+        transition = self._history[self._cursor]
+        self._state = transition.after
+
+        for cb in self._callbacks:
+            if cb.name == 'redo':
+                cb.function(transition.name, transition.before,
+                            transition.after, **transition.kwargs)
