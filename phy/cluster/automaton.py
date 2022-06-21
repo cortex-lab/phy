@@ -364,6 +364,13 @@ class Automaton:
         """Register a callback when a given transition occurs."""
         self._callbacks.append(Callback(name, callback))
 
+    def connect(self, f):
+        """Register a callback for a transition, defined by the function's name e.g. on_merge."""
+        name = f.__name__
+        if not name.startswith('on_'):
+            raise ValueError(f"function name `{f}` should start with on_")
+        self.on_transition(name[3:], f)
+
     def first(self):
         return self.transition('first')
 

@@ -245,8 +245,17 @@ def test_automaton_merge_1(automaton):
     a.set_state([30, 20], [])
     _assert(a, [30, 20])
 
+    _l = []
+
+    @a.connect
+    def on_merge(before, after, **kwargs):
+        _l.append((before, after))
+
     a.merge()
     _assert(a, [31], [])
+
+    assert _l[0][0].clusters == [30, 20]
+    assert _l[0][1].clusters == [31]
 
 
 def test_automaton_merge_2(automaton):
