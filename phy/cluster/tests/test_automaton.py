@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import bisect
+from pprint import pprint
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import fixture
@@ -35,9 +36,9 @@ def default_last():
 
 
 def default_similar(clusters):
-    assert len(clusters) > 0
     if not clusters:
         return default_first()
+    assert len(clusters) > 0
     cl = clusters[0]
     if cl not in CLUSTERS:
         return default_last()
@@ -134,7 +135,7 @@ def test_automaton_1(cluster_info):
     _assert(a, [1], [])
 
 
-def test_automaton_skip_0(automaton):
+def test_automaton_nav_0(automaton):
     a = automaton
     _assert(a, [], [])
 
@@ -158,7 +159,7 @@ def test_automaton_skip_0(automaton):
     _assert(a, [1], [])
 
 
-def test_automaton_skip_best_1(automaton):
+def test_automaton_nav_best_1(automaton):
     a = automaton
     _assert(a, [], [])
 
@@ -175,7 +176,7 @@ def test_automaton_skip_best_1(automaton):
         _assert(a, [clu], [])
 
 
-def test_automaton_skip_best_2(automaton):
+def test_automaton_nav_best_2(automaton):
     a = automaton
 
     # [0, 1, 2, 10, 11, 20, 30]
@@ -198,7 +199,7 @@ def test_automaton_skip_best_2(automaton):
         _assert(a, [clu], [])
 
 
-def test_automaton_skip_similar(automaton):
+def test_automaton_nav_similar(automaton):
     a = automaton
 
     # [0, 1, 2, 10, 11, 20, 30]
@@ -214,6 +215,30 @@ def test_automaton_skip_similar(automaton):
     for clu in UNMASKED[:-1:-1]:
         a.prev()
         _assert(a, [0], [clu])
+
+
+def test_automaton_nav_next(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    # Wizard.
+    a.next()
+    _assert(a, [1], [2])
+
+    a.next()
+    _assert(a, [1], [11])
+
+    a.next()
+    _assert(a, [1], [20])
+
+    a.next()
+    _assert(a, [1], [30])
+
+    a.next()
+    _assert(a, [2], [10])
 
 
 def test_automaton_merge_1(automaton):
@@ -302,12 +327,35 @@ def test_automaton_move_3(automaton):
     _assert(a, [1, 2], [1])
 
 
-def test_automaton_history(automaton):
+def test_automaton_history_1(automaton):
     a = automaton
 
     # [0, 1, 2, 10, 11, 20, 30]
-    #  i, g, N,  i,  g,  N, N
+    #  i, g, N,  i,  g,  N,  N
     # UNMASKED = [1, 2, 11, 20, 30]
 
-    # a.next()
-    # _assert(a, [1, 2], [1])
+    # These should not add anything to the undo stack (history).
+    a.next()
+    a.next()
+    a.next()
+
+    # Wizard.
+    a.set_state([2], [10])
+
+    # Merge.
+    assert not a.can_undo()
+    assert not a.can_redo()
+    a.merge()
+    _assert(a, [31], [30])
+
+    # Undo.
+    assert a.can_undo()
+    assert not a.can_redo()
+    a.undo()
+    _assert(a, [2], [10])
+
+    # Redo.
+    assert not a.can_undo()
+    assert a.can_redo()
+    a.redo()
+    _assert(a, [31], [30])

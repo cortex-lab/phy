@@ -90,8 +90,11 @@ class ClusterInfo:
 # ----------------------------------------------------------------------------
 
 class Automaton:
+    KEEP_IN_HISTORY = ('label', 'move', 'merge', 'split')
+
     _history: list[Transition]
     _callbacks: list[Callback]
+    _state: State
     _cursor = -1
 
     def __init__(self, state: State, cluster_info: ClusterInfo):
@@ -112,6 +115,7 @@ class Automaton:
         self.fn_merge = cluster_info.merge
         self.fn_split = cluster_info.split
 
+        self._state = state
         self._history = [Transition(name='init', after=state)]
         self._callbacks = []
 
@@ -167,13 +171,17 @@ class Automaton:
 
         # Only cluster view
         if not self.current_similar():
-            after.clusters = before.clusters
-            after.similar = [self.fn_similar(before.clusters)]
+            after.clusters = before.clusters or [self.fn_first()]
+            after.similar = [self.fn_similar(after.clusters)]
 
         # Similarity view.
         else:
             after.clusters = before.clusters
             after.similar = [self.fn_next_similar(before.similar)]
+            # If we're at the end of the similarity view, we switch to the next best cluster.
+            if after.similar == before.similar:
+                after.clusters = [self.fn_next_best(before.clusters)]
+                after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -275,7 +283,8 @@ class Automaton:
 
     def current_state(self) -> State | None:
         """Return the current state."""
-        return self._history[self._cursor].after if self._history else None
+        # return self._history[self._cursor].after if self._history else None
+        return self._state
 
     def current_clusters(self) -> list[int]:
         """Currently-selected clusters in the cluster view."""
@@ -284,18 +293,6 @@ class Automaton:
     def current_similar(self) -> list[int]:
         """Currently-selected similar clusters in the similarity view."""
         return self.current_state().similar
-
-    def can_undo(self) -> bool:
-        """Whether we can undo."""
-        return abs(self._cursor) < len(self._history)
-
-    def can_redo(self) -> bool:
-        """Whether we can redo."""
-        return self._cursor != -1
-
-    def history_length(self) -> int:
-        """Return the number of transitions in the history."""
-        return len(self._history)
 
     # -------------------------------------------------------------------------
     # Transition methods
@@ -335,16 +332,23 @@ class Automaton:
             before=before,
             after=after,
         )
+        self._state = after
 
         # Delete the transitions after the current cursor (destroy actions after undos).
-        del self._history[self._cursor + 1:]
-        # Add it to the history list.
-        self._history.append(transition)
+        if transition_name in self.KEEP_IN_HISTORY:
+            if self._cursor <= -2:
+                del self._history[self._cursor + 1:]
+            # Add it to the history list.
+            self._history.append(transition)
 
         # Call the registered callbacks.
         for cb in self._callbacks:
             if cb.name == transition_name:
                 cb.function(before, after, **kwargs)
+
+    def on_transition(self, name, callback):
+        """Register a callback when a given transition occurs."""
+        self._callbacks.append(Callback(name, callback))
 
     def first(self):
         return self.transition('first')
@@ -376,18 +380,38 @@ class Automaton:
     def split(self):
         return self.transition('split')
 
+    # -------------------------------------------------------------------------
+    # History methods
+    # -------------------------------------------------------------------------
+
+    def can_undo(self) -> bool:
+        """Whether we can undo."""
+        return abs(self._cursor) < len(self._history)
+
+    def can_redo(self) -> bool:
+        """Whether we can redo."""
+        return self._cursor != -1
+
+    def history_length(self) -> int:
+        """Return the number of transitions in the history."""
+        return len(self._history)
+
     def undo(self):
         """Undo the last transition."""
-        if self.can_undo():
-            self._cursor -= 1
+        if not self.can_undo():
+            return
+        # Transition leading to the state to revert to.
+        tr = self._history[self._cursor]
+        self._cursor -= 1
         assert self._cursor <= -1
+        self._state = tr.before
 
     def redo(self):
         """Redo the last transition."""
-        if self.can_redo():
-            self._cursor += 1
+        if not self.can_redo():
+            return
+        # Transition leading to the state to revert.
+        self._cursor += 1
         assert self._cursor <= -1
-
-    def on_transition(self, name, callback):
-        """Register a callback when a given transition occurs."""
-        self._callbacks.append(Callback(name, callback))
+        tr = self._history[self._cursor]
+        self._state = tr.after
