@@ -56,9 +56,7 @@ def default_next(clusters=None):
     if not clusters:
         return default_first()
     cl = clusters[-1]
-    if cl not in CLUSTERS:
-        return None
-    if cl == default_last():
+    if cl not in CLUSTERS or cl == default_last():
         return default_last()
     return UNMASKED[bisect.bisect_right(UNMASKED, cl)]
 
@@ -261,6 +259,19 @@ def test_automaton_merge_2(automaton):
     _assert(a, [31], [30])
 
 
+def test_automaton_merge_move(automaton):
+    a = automaton
+
+    a.set_state([20, 11], [])
+    _assert(a, [20, 11])
+
+    a.merge()
+    _assert(a, [31], [])
+
+    a.move(group='good', which='all')
+    _assert(a, [30], [])
+
+
 def test_automaton_split_1(automaton):
     a = automaton
 
@@ -297,7 +308,7 @@ def test_automaton_move_1(automaton):
 
     a.set_state([1, 2])
 
-    a.move(which='best')
+    a.move(group='good', which='best')
     _assert(a, [11])
 
 
@@ -310,7 +321,7 @@ def test_automaton_move_2(automaton):
 
     a.set_state([1, 2], [0])
 
-    a.move(which='all')
+    a.move(group='good', which='all')
     _assert(a, [11], [20])
 
 
@@ -323,7 +334,7 @@ def test_automaton_move_3(automaton):
 
     a.set_state([1, 2], [0])
 
-    a.move(which='similar')
+    a.move(group='good', which='similar')
     _assert(a, [1, 2], [1])
 
 
@@ -359,3 +370,43 @@ def test_automaton_history_1(automaton):
     assert a.can_redo()
     a.redo()
     _assert(a, [31], [30])
+
+
+def test_automaton_history_move_1(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    a.set_state([10])
+    _assert(a, [10])
+
+    a.move(which='all', group='noise')
+    _assert(a, [11])
+
+    a.undo()
+    _assert(a, [10])
+
+    a.redo()
+    _assert(a, [11])
+
+
+def test_automaton_history_move_2(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    a.set_state([20], [2])
+    _assert(a, [20], [2])
+
+    a.move(which='similar', group='noise')
+    _assert(a, [20], [11])
+
+    a.undo()
+    _assert(a, [20], [2])
+
+    a.redo()
+    _assert(a, [20], [11])

@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 
 from dataclasses import dataclass, field
-from functools import partial
+from functools import partial, wraps
 import inspect
 import logging
 from pprint import pprint
@@ -89,6 +89,17 @@ class ClusterInfo:
 # Automaton
 # ----------------------------------------------------------------------------
 
+def ensure_int(f):
+    """Ensure the output of a function is an integer."""
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        out = f(*args, **kwargs)
+        if not isinstance(out, int):
+            raise TypeError(f"Output `{out}` of function {f} is not an integer.")
+        return out
+    return wrapped
+
+
 class Automaton:
     KEEP_IN_HISTORY = ('label', 'move', 'merge', 'split')
 
@@ -101,16 +112,16 @@ class Automaton:
 
         assert cluster_info
 
-        self.fn_first = cluster_info.first
-        self.fn_last = cluster_info.last
-        self.fn_similar = cluster_info.similar
-        self.fn_new_cluster_id = cluster_info.new_cluster_id
+        self.fn_first = ensure_int(cluster_info.first)
+        self.fn_last = ensure_int(cluster_info.last)
+        self.fn_similar = ensure_int(cluster_info.similar)
+        self.fn_new_cluster_id = ensure_int(cluster_info.new_cluster_id)
 
-        self.fn_next_best = cluster_info.next_best
-        self.fn_prev_best = cluster_info.prev_best
+        self.fn_next_best = ensure_int(cluster_info.next_best)
+        self.fn_prev_best = ensure_int(cluster_info.prev_best)
 
-        self.fn_next_similar = cluster_info.next_similar
-        self.fn_prev_similar = cluster_info.prev_similar
+        self.fn_next_similar = ensure_int(cluster_info.next_similar)
+        self.fn_prev_similar = ensure_int(cluster_info.prev_similar)
 
         self.fn_merge = cluster_info.merge
         self.fn_split = cluster_info.split
@@ -207,7 +218,7 @@ class Automaton:
         before = before or self.current_state()
         return before
 
-    def _after_move(self, before: State = None, which=None) -> State:
+    def _after_move(self, before: State = None, which=None, group: str = None) -> State:
         """Determine the state after a move transition."""
 
         before = before or self.current_state()
@@ -271,7 +282,10 @@ class Automaton:
 
     def _next_cluster(self) -> int | None:
         """Return the next cluster in the cluster view."""
-        return self.fn_next_best(self.current_clusters())
+        cl = self.current_clusters()
+        ncl = self.fn_next_best(cl)
+        assert ncl is not None
+        return ncl
 
     def _next_similar(self) -> int | None:
         """Return the next cluster in the similarity view."""
@@ -371,8 +385,9 @@ class Automaton:
     def label(self):
         return self.transition('label')
 
-    def move(self, which=None):
-        return self.transition('move', which=which)
+    def move(self, which=None, group=None):
+        assert which in ('all', 'best', 'similar')
+        return self.transition('move', which=which, group=group)
 
     def merge(self):
         return self.transition('merge')
