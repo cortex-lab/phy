@@ -41,7 +41,10 @@ def default_similar(clusters):
     cl = clusters[0]
     if cl not in CLUSTERS:
         return default_last()
-    return CLUSTERS[bisect.bisect_right(CLUSTERS, cl)]
+    while cl in clusters:
+        cl = CLUSTERS[bisect.bisect_right(CLUSTERS, cl)]
+    assert cl not in clusters
+    return cl
 
 
 def default_new_cluster_id():
@@ -51,7 +54,7 @@ def default_new_cluster_id():
 def default_next(clusters=None):
     if not clusters:
         return default_first()
-    cl = clusters[0]
+    cl = clusters[-1]
     if cl not in CLUSTERS:
         return None
     if cl == default_last():
@@ -128,6 +131,30 @@ def test_automaton_1(cluster_info):
     assert a.history_length() == 1
 
     a.set_state([1])
+    _assert(a, [1], [])
+
+
+def test_automaton_skip_0(automaton):
+    a = automaton
+    _assert(a, [], [])
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    a.transition('first')
+    _assert(a, [1], [])
+
+    a.transition('last')
+    _assert(a, [30], [])
+
+    a.set_state([10])
+    _assert(a, [10])
+
+    a.transition('last')
+    _assert(a, [30], [])
+
+    a.transition('first')
     _assert(a, [1], [])
 
 
@@ -227,3 +254,49 @@ def test_automaton_split_2(automaton):
 
     a.transition('split')
     _assert(a, [31], [30])
+
+
+def test_automaton_label(automaton):
+    a = automaton
+    a.set_state([30, 20], [])
+    a.transition('label')
+    _assert(a, [30, 20])
+
+
+def test_automaton_move_1(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    a.set_state([1, 2])
+
+    a.transition('move', which='best')
+    _assert(a, [11])
+
+
+def test_automaton_move_2(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    a.set_state([1, 2], [0])
+
+    a.transition('move', which='all')
+    _assert(a, [11], [20])
+
+
+def test_automaton_move_3(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    a.set_state([1, 2], [0])
+
+    a.transition('move', which='similar')
+    _assert(a, [1, 2], [1])

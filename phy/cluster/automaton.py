@@ -37,6 +37,9 @@ class State:
     clusters: list[int] = field(default_factory=list)
     similar: list[int] = field(default_factory=list)
 
+    def copy(self):
+        return State(clusters=self.clusters, similar=self.similar)
+
 
 @dataclass(kw_only=True)
 class Transition:
@@ -122,11 +125,11 @@ class Automaton:
 
     def _after_first(self, before: State = None) -> State:
         """Determine the state after a first transition."""
-        return State(clusters=self.first(), similar=[])
+        return State(clusters=[self.first()], similar=[])
 
     def _after_last(self, before: State = None) -> State:
         """Determine the state after a last transition."""
-        return State(clusters=self.last(), similar=[])
+        return State(clusters=[self.last()], similar=[])
 
     def _after_next_best(self, before: State = None) -> State:
         """Determine the state after a next_best transition."""
@@ -193,6 +196,7 @@ class Automaton:
 
     def _after_label(self, before: State = None) -> State:
         """Determine the state after a label transition."""
+        before = before or self.current_state()
         return before
 
     def _after_move(self, before: State = None, which=None) -> State:
