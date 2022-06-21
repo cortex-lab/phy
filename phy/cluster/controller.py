@@ -295,7 +295,7 @@ class Controller:
         self._global_history.action(self.clustering)
         return out
 
-    def label(self, name, value, cluster_ids=None):
+    def label(self, cluster_ids=None, name=None, value=None):
         """Assign a label to some clusters."""
         if cluster_ids is None:
             return
@@ -307,7 +307,7 @@ class Controller:
         self._global_history.action(self.cluster_meta)
         return out
 
-    def move(self, group, cluster_ids):
+    def move(self, cluster_ids=None, group=None):
         """Assign a cluster group to some clusters."""
         if not cluster_ids:
             return
