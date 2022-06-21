@@ -239,7 +239,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = self.split(before.clusters + before.similar)
-            after.similar = [self.next(after.clusters)]
+            after.similar = [self.similar(after.clusters)]
 
         return after
 

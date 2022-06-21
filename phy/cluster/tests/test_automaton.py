@@ -67,8 +67,12 @@ def default_prev(clusters=None):
     return UNMASKED[i - 1]
 
 
-def default_merge_split(clusters=None):
+def default_merge(clusters=None):
     return N + 1
+
+
+def default_split(clusters=None):
+    return [N + 1]
 
 
 @fixture
@@ -80,7 +84,8 @@ def cluster_info():
         new_cluster_id=default_new_cluster_id,
         next=default_next,
         prev=default_prev,
-        merge=default_merge_split,
+        merge=default_merge,
+        split=default_split,
     )
 
 
@@ -94,9 +99,9 @@ def automaton(cluster_info):
 # Test automaton
 #------------------------------------------------------------------------------
 
-def _assert(a: Automaton, cl: list[int], sim: list[int]):
+def _assert(a: Automaton, cl: list[int], sim: list[int] = None):
     assert a.current_clusters() == cl
-    assert a.current_similar() == sim
+    assert a.current_similar() == (sim or [])
 
 
 def test_automaton_state_1():
@@ -134,11 +139,41 @@ def test_automaton_skip(automaton):
         _assert(a, [clu], [])
 
 
-def test_automaton_merge(automaton):
+def test_automaton_merge_1(automaton):
+    a = automaton
+
+    a.set_state([30, 20], [])
+    _assert(a, [30, 20])
+
+    a.transition('merge')
+    _assert(a, [31], [])
+
+
+def test_automaton_merge_2(automaton):
     a = automaton
 
     a.set_state([30], [20])
     _assert(a, [30], [20])
 
     a.transition('merge')
+    _assert(a, [31], [30])
+
+
+def test_automaton_split_1(automaton):
+    a = automaton
+
+    a.set_state([30, 20], [])
+    _assert(a, [30, 20])
+
+    a.transition('split')
+    _assert(a, [31], [])
+
+
+def test_automaton_split_2(automaton):
+    a = automaton
+
+    a.set_state([30], [20])
+    _assert(a, [30], [20])
+
+    a.transition('split')
     _assert(a, [31], [30])
