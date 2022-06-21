@@ -98,19 +98,19 @@ class Automaton:
 
         assert cluster_info
 
-        self.first = cluster_info.first
-        self.last = cluster_info.last
-        self.similar = cluster_info.similar
-        self.new_cluster_id = cluster_info.new_cluster_id
+        self.fn_first = cluster_info.first
+        self.fn_last = cluster_info.last
+        self.fn_similar = cluster_info.similar
+        self.fn_new_cluster_id = cluster_info.new_cluster_id
 
-        self.next_best = cluster_info.next_best
-        self.prev_best = cluster_info.prev_best
+        self.fn_next_best = cluster_info.next_best
+        self.fn_prev_best = cluster_info.prev_best
 
-        self.next_similar = cluster_info.next_similar
-        self.prev_similar = cluster_info.prev_similar
+        self.fn_next_similar = cluster_info.next_similar
+        self.fn_prev_similar = cluster_info.prev_similar
 
-        self.merge = cluster_info.merge
-        self.split = cluster_info.split
+        self.fn_merge = cluster_info.merge
+        self.fn_split = cluster_info.split
 
         self._history = [Transition(name='init', after=state)]
         self._callbacks = []
@@ -125,11 +125,11 @@ class Automaton:
 
     def _after_first(self, before: State = None) -> State:
         """Determine the state after a first transition."""
-        return State(clusters=[self.first()], similar=[])
+        return State(clusters=[self.fn_first()], similar=[])
 
     def _after_last(self, before: State = None) -> State:
         """Determine the state after a last transition."""
-        return State(clusters=[self.last()], similar=[])
+        return State(clusters=[self.fn_last()], similar=[])
 
     def _after_next_best(self, before: State = None) -> State:
         """Determine the state after a next_best transition."""
@@ -138,10 +138,10 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        after.clusters = [self.next_best(before.clusters)]
+        after.clusters = [self.fn_next_best(before.clusters)]
         if self.current_similar():
             # Similarity view.
-            after.similar = [self.similar(after.clusters)]
+            after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -152,10 +152,10 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        after.clusters = [self.prev_best(before.clusters)]
+        after.clusters = [self.fn_prev_best(before.clusters)]
         if self.current_similar():
             # Similarity view.
-            after.similar = [self.similar(after.clusters)]
+            after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -168,12 +168,12 @@ class Automaton:
         # Only cluster view
         if not self.current_similar():
             after.clusters = before.clusters
-            after.similar = [self.similar(before.clusters)]
+            after.similar = [self.fn_similar(before.clusters)]
 
         # Similarity view.
         else:
             after.clusters = before.clusters
-            after.similar = [self.next_similar(before.similar)]
+            after.similar = [self.fn_next_similar(before.similar)]
 
         return after
 
@@ -190,7 +190,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = before.clusters
-            after.similar = [self.prev_similar(before.similar)]
+            after.similar = [self.fn_prev_similar(before.similar)]
 
         return after
 
@@ -214,10 +214,10 @@ class Automaton:
             assert which
             if which == 'similar':
                 after.clusters = before.clusters
-                after.similar = [self.next_best(before.similar)]
+                after.similar = [self.fn_next_best(before.similar)]
             elif which in ('all', 'best'):
                 after.clusters = [self._next_cluster()]
-                after.similar = [self.next_similar(after.clusters)]
+                after.similar = [self.fn_next_similar(after.clusters)]
             else:
                 raise NotImplementedError(which)
 
@@ -231,12 +231,12 @@ class Automaton:
 
         # Only cluster view
         if not self.current_similar():
-            after.clusters = [self.merge(before.clusters)]
+            after.clusters = [self.fn_merge(before.clusters)]
 
         # Similarity view.
         else:
-            after.clusters = [self.merge(before.clusters + before.similar)]
-            after.similar = [self.similar(after.clusters)]
+            after.clusters = [self.fn_merge(before.clusters + before.similar)]
+            after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -248,12 +248,12 @@ class Automaton:
 
         # Only cluster view
         if not self.current_similar():
-            after.clusters = self.split(before.clusters)
+            after.clusters = self.fn_split(before.clusters)
 
         # Similarity view.
         else:
-            after.clusters = self.split(before.clusters + before.similar)
-            after.similar = [self.similar(after.clusters)]
+            after.clusters = self.fn_split(before.clusters + before.similar)
+            after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -263,11 +263,11 @@ class Automaton:
 
     def _next_cluster(self) -> int | None:
         """Return the next cluster in the cluster view."""
-        return self.next_best(self.current_clusters())
+        return self.fn_next_best(self.current_clusters())
 
     def _next_similar(self) -> int | None:
         """Return the next cluster in the similarity view."""
-        return self.next_similar(self.similar())
+        return self.fn_next_similar(self.fn_similar())
 
     # -------------------------------------------------------------------------
     # Getter methods
@@ -345,6 +345,36 @@ class Automaton:
         for cb in self._callbacks:
             if cb.name == transition_name:
                 cb.function(before, after, **kwargs)
+
+    def first(self):
+        return self.transition('first')
+
+    def last(self):
+        return self.transition('last')
+
+    def next_best(self):
+        return self.transition('next_best')
+
+    def prev_best(self):
+        return self.transition('prev_best')
+
+    def next(self):
+        return self.transition('next')
+
+    def prev(self):
+        return self.transition('prev')
+
+    def label(self):
+        return self.transition('label')
+
+    def move(self, which=None):
+        return self.transition('move', which=which)
+
+    def merge(self):
+        return self.transition('merge')
+
+    def split(self):
+        return self.transition('split')
 
     def undo(self):
         """Undo the last transition."""

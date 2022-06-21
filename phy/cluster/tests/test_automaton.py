@@ -142,19 +142,19 @@ def test_automaton_skip_0(automaton):
     #  i, g, N,  i,  g,  N, N
     # UNMASKED = [1, 2, 11, 20, 30]
 
-    a.transition('first')
+    a.first()
     _assert(a, [1], [])
 
-    a.transition('last')
+    a.last()
     _assert(a, [30], [])
 
     a.set_state([10])
     _assert(a, [10])
 
-    a.transition('last')
+    a.last()
     _assert(a, [30], [])
 
-    a.transition('first')
+    a.first()
     _assert(a, [1], [])
 
 
@@ -167,11 +167,11 @@ def test_automaton_skip_best_1(automaton):
     # UNMASKED = [1, 2, 11, 20, 30]
 
     for clu in UNMASKED:
-        a.transition('next_best')
+        a.next_best()
         _assert(a, [clu], [])
 
     for clu in UNMASKED[:-1:-1]:
-        a.transition('prev_best')
+        a.prev_best()
         _assert(a, [clu], [])
 
 
@@ -185,16 +185,16 @@ def test_automaton_skip_best_2(automaton):
     _assert(a, [0])
 
     for clu in UNMASKED:
-        a.transition('next_best')
+        a.next_best()
         _assert(a, [clu], [])
 
     # One more next_best should not change the state if we're
     # already on the last best.
-    a.transition('next_best')
+    a.next_best()
     _assert(a, [clu], [])
 
     for clu in UNMASKED[:-1:-1]:
-        a.transition('prev_best')
+        a.prev_best()
         _assert(a, [clu], [])
 
 
@@ -208,11 +208,11 @@ def test_automaton_skip_similar(automaton):
     _assert(a, [0])
 
     for clu in UNMASKED:
-        a.transition('next')
+        a.next()
         _assert(a, [0], [clu])
 
     for clu in UNMASKED[:-1:-1]:
-        a.transition('prev')
+        a.prev()
         _assert(a, [0], [clu])
 
 
@@ -222,7 +222,7 @@ def test_automaton_merge_1(automaton):
     a.set_state([30, 20], [])
     _assert(a, [30, 20])
 
-    a.transition('merge')
+    a.merge()
     _assert(a, [31], [])
 
 
@@ -232,7 +232,7 @@ def test_automaton_merge_2(automaton):
     a.set_state([30], [20])
     _assert(a, [30], [20])
 
-    a.transition('merge')
+    a.merge()
     _assert(a, [31], [30])
 
 
@@ -242,7 +242,7 @@ def test_automaton_split_1(automaton):
     a.set_state([30, 20], [])
     _assert(a, [30, 20])
 
-    a.transition('split')
+    a.split()
     _assert(a, [31], [])
 
 
@@ -252,14 +252,14 @@ def test_automaton_split_2(automaton):
     a.set_state([30], [20])
     _assert(a, [30], [20])
 
-    a.transition('split')
+    a.split()
     _assert(a, [31], [30])
 
 
 def test_automaton_label(automaton):
     a = automaton
     a.set_state([30, 20], [])
-    a.transition('label')
+    a.label()
     _assert(a, [30, 20])
 
 
@@ -272,7 +272,7 @@ def test_automaton_move_1(automaton):
 
     a.set_state([1, 2])
 
-    a.transition('move', which='best')
+    a.move(which='best')
     _assert(a, [11])
 
 
@@ -285,7 +285,7 @@ def test_automaton_move_2(automaton):
 
     a.set_state([1, 2], [0])
 
-    a.transition('move', which='all')
+    a.move(which='all')
     _assert(a, [11], [20])
 
 
@@ -298,5 +298,16 @@ def test_automaton_move_3(automaton):
 
     a.set_state([1, 2], [0])
 
-    a.transition('move', which='similar')
+    a.move(which='similar')
     _assert(a, [1, 2], [1])
+
+
+def test_automaton_history(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+    # UNMASKED = [1, 2, 11, 20, 30]
+
+    # a.next()
+    # _assert(a, [1, 2], [1])
