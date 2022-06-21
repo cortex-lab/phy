@@ -63,11 +63,17 @@ class ClusterInfo:
 
     # Optional:
 
-    # id of the cluster after the specified clusters
-    next: Optional[Callable[[], int]] = None
+    # id of the cluster after the specified clusters in the cluster view
+    next_best: Optional[Callable[[], int]] = None
 
-    # id of the cluster before the specified clusters
-    prev: Optional[Callable[[], int]] = None
+    # id of the cluster before the specified clusters in the cluster view
+    prev_best: Optional[Callable[[], int]] = None
+
+    # id of the cluster after the specified clusters in the similarity view
+    next_similar: Optional[Callable[[], int]] = None
+
+    # id of the cluster before the specified clusters in the similarity view
+    prev_similar: Optional[Callable[[], int]] = None
 
     # id of the new merged cluster that should be selected after a merge
     merge: Optional[Callable[[list[int]], int]] = None
@@ -94,8 +100,12 @@ class Automaton:
         self.similar = cluster_info.similar
         self.new_cluster_id = cluster_info.new_cluster_id
 
-        self.prev = cluster_info.prev
-        self.next = cluster_info.next
+        self.next_best = cluster_info.next_best
+        self.prev_best = cluster_info.prev_best
+
+        self.next_similar = cluster_info.next_similar
+        self.prev_similar = cluster_info.prev_similar
+
         self.merge = cluster_info.merge
         self.split = cluster_info.split
 
@@ -125,10 +135,10 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        after.clusters = [self.next(before.clusters)]
+        after.clusters = [self.next_best(before.clusters)]
         if self.current_similar():
             # Similarity view.
-            after.similar = self.similar(after.clusters)
+            after.similar = [self.similar(after.clusters)]
 
         return after
 
@@ -139,10 +149,10 @@ class Automaton:
         after = State()
 
         # Only cluster view
-        after.clusters = [self.prev(before.clusters)]
+        after.clusters = [self.prev_best(before.clusters)]
         if self.current_similar():
             # Similarity view.
-            after.similar = self.similar(after.clusters)
+            after.similar = [self.similar(after.clusters)]
 
         return after
 
@@ -155,12 +165,12 @@ class Automaton:
         # Only cluster view
         if not self.current_similar():
             after.clusters = before.clusters
-            after.similar = self.similar(before.clusters)
+            after.similar = [self.similar(before.clusters)]
 
         # Similarity view.
         else:
             after.clusters = before.clusters
-            after.similar = [self.next(before.similar)]
+            after.similar = [self.next_similar(before.similar)]
 
         return after
 
@@ -177,7 +187,7 @@ class Automaton:
         # Similarity view.
         else:
             after.clusters = before.clusters
-            after.similar = [self.prev(before.similar)]
+            after.similar = [self.prev_similar(before.similar)]
 
         return after
 
@@ -200,10 +210,10 @@ class Automaton:
             assert which
             if which == 'similar':
                 after.clusters = before.clusters
-                after.similar = [self.next(before.similar)]
+                after.similar = [self.next_best(before.similar)]
             elif which in ('all', 'best'):
                 after.clusters = [self._next_cluster()]
-                after.similar = [self.next(after.clusters)]
+                after.similar = [self.next_similar(after.clusters)]
             else:
                 raise NotImplementedError(which)
 
@@ -249,11 +259,11 @@ class Automaton:
 
     def _next_cluster(self) -> int | None:
         """Return the next cluster in the cluster view."""
-        return self.next(self.current_clusters())
+        return self.next_best(self.current_clusters())
 
     def _next_similar(self) -> int | None:
         """Return the next cluster in the similarity view."""
-        return self.next(self.similar())
+        return self.next_similar(self.similar())
 
     # -------------------------------------------------------------------------
     # Getter methods

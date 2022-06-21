@@ -6,9 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import fixture
+import bisect
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from pytest import fixture
 
 from ..automaton import State, Transition, ClusterInfo, Automaton
 from phylib.utils import connect, Bunch, emit
@@ -35,8 +36,12 @@ def default_last():
 
 def default_similar(clusters):
     assert len(clusters) > 0
-    # TODO
-    return N if clusters[0] != N else 20
+    if not clusters:
+        return default_first()
+    cl = clusters[0]
+    if cl not in CLUSTERS:
+        return default_last()
+    return CLUSTERS[bisect.bisect_right(CLUSTERS, cl)]
 
 
 def default_new_cluster_id():
@@ -49,11 +54,9 @@ def default_next(clusters=None):
     cl = clusters[0]
     if cl not in CLUSTERS:
         return None
-    i = UNMASKED.index(cl)
     if cl == default_last():
         return default_last()
-    assert i <= len(UNMASKED) - 2
-    return UNMASKED[i + 1]
+    return UNMASKED[bisect.bisect_right(UNMASKED, cl)]
 
 
 def default_prev(clusters=None):
@@ -82,8 +85,10 @@ def cluster_info():
         last=default_last,
         similar=default_similar,
         new_cluster_id=default_new_cluster_id,
-        next=default_next,
-        prev=default_prev,
+        next_best=default_next,
+        prev_best=default_prev,
+        next_similar=default_next,
+        prev_similar=default_prev,
         merge=default_merge,
         split=default_split,
     )
@@ -126,7 +131,7 @@ def test_automaton_1(cluster_info):
     _assert(a, [1], [])
 
 
-def test_automaton_skip(automaton):
+def test_automaton_skip_best_1(automaton):
     a = automaton
     _assert(a, [], [])
 
@@ -137,6 +142,51 @@ def test_automaton_skip(automaton):
     for clu in UNMASKED:
         a.transition('next_best')
         _assert(a, [clu], [])
+
+    for clu in UNMASKED[:-1:-1]:
+        a.transition('prev_best')
+        _assert(a, [clu], [])
+
+
+def test_automaton_skip_best_2(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+
+    a.set_state([0])
+    _assert(a, [0])
+
+    for clu in UNMASKED:
+        a.transition('next_best')
+        _assert(a, [clu], [])
+
+    # One more next_best should not change the state if we're
+    # already on the last best.
+    a.transition('next_best')
+    _assert(a, [clu], [])
+
+    for clu in UNMASKED[:-1:-1]:
+        a.transition('prev_best')
+        _assert(a, [clu], [])
+
+
+def test_automaton_skip_similar(automaton):
+    a = automaton
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N, N
+
+    a.set_state([0])
+    _assert(a, [0])
+
+    for clu in UNMASKED:
+        a.transition('next')
+        _assert(a, [0], [clu])
+
+    for clu in UNMASKED[:-1:-1]:
+        a.transition('prev')
+        _assert(a, [0], [clu])
 
 
 def test_automaton_merge_1(automaton):
