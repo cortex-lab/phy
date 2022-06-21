@@ -247,6 +247,11 @@ class Controller:
         """The cluster info as a list of per-cluster dictionaries."""
         return [self.get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
+    @property
+    def cluster_ids(self):
+        """List of cluster ids."""
+        return self.clustering.cluster_ids
+
     def n_spikes(self, cluster_id):
         """Number of spikes in a given cluster."""
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))

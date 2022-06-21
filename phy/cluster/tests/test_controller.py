@@ -41,5 +41,29 @@ def controller(
 # Test controller
 #------------------------------------------------------------------------------
 
-def test_action_controller_1(controller):
+def test_controller_1(controller):
     c = controller
+
+    assert len(c.cluster_info()) == 7
+    assert c.n_spikes(30) == 8
+    assert c.fields == ('test_label',)
+
+
+def test_controller_split_1(controller):
+    c = controller
+
+    # Split some spikes.
+    up = c.split(spike_ids=[1, 2])
+    assert up.description == 'assign'
+    assert up.deleted == [0, 1]
+    assert up.added == [31, 32, 33]
+
+    assert list(c.cluster_ids) == [2, 10, 11, 20, 30, 31, 32, 33]
+
+    # Undo the split.
+    c.undo()
+    assert list(c.cluster_ids) == [0, 1, 2, 10, 11, 20, 30]
+
+    # Redo the split.
+    c.redo()
+    assert list(c.cluster_ids) == [2, 10, 11, 20, 30, 31, 32, 33]
