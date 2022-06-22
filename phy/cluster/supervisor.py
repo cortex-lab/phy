@@ -335,6 +335,118 @@ class ActionCreator(object):
 
 
 # -----------------------------------------------------------------------------
+# TableController
+# -----------------------------------------------------------------------------
+
+class TableController:
+    """Create the cluster view and similarity view."""
+
+    def __init__(
+        self, gui,
+        cluster_ids=None,
+        cluster_groups=None,
+        cluster_labels=None,
+        cluster_metrics=None,
+        similarity=None,
+        sort=None,
+        columns=None,
+    ):
+        # create cluster view and similarity view
+        # define the next, prev functions etc to pass to the Automaton
+        self.gui = gui
+
+        self.cluster_groups = cluster_groups or {}
+        self.cluster_ids = \
+            cluster_ids if cluster_ids is not None else sorted(self.cluster_groups.keys())
+        self.cluster_labels = cluster_labels or {}
+        self.cluster_metrics = cluster_metrics or {}
+        self.fn_similarity = similarity
+        self.sort = sort or ('n_spikes', 'desc')
+        self.columns = columns or self._default_columns()
+
+    # Private methods
+    # -------------------------------------------------------------------------
+
+    def _default_columns(self):
+        columns = ['id']
+        columns += list(self.cluster_metrics.keys())
+        columns += [
+            label for label in self.cluster_labels.keys()
+            if label not in columns + ['group']]
+        return columns
+
+    def _create_cluster_view(self):
+        """Create the cluster view."""
+
+        # Create the cluster view.
+        self.cluster_view = ClusterView(
+            self.gui,
+            data=self.cluster_info,
+            columns=self.columns,
+            sort=self.sort,
+        )
+
+    def _create_similarity_view(self):
+        """Create the similarity view."""
+
+        # Create the similarity view.
+        self.similarity_view = SimilarityView(
+            self.gui,
+            columns=self.columns + ['similarity'],
+            sort=('similarity', 'desc')
+        )
+
+    # Cluster info
+    # -------------------------------------------------------------------------
+
+    def _get_similar_clusters(self, sender, cluster_id):
+        """Return the clusters similar to a given cluster."""
+        sim = self.fn_similarity(cluster_id) or []
+        # Only keep existing clusters.
+        clusters_set = set(self.clustering.cluster_ids)
+        data = [
+            dict(similarity='%.3f' % s, **self.get_cluster_info(c))
+            for c, s in sim if c in clusters_set]
+        return data
+
+    def get_cluster_info(self, cluster_id, exclude=()):
+        """Return the data associated to a given cluster."""
+        out = {'id': cluster_id}
+        # Cluster metrics.
+        for key, func in self.cluster_metrics.items():
+            out[key] = func(cluster_id)
+        # Cluster labels.
+        for key, value in self.cluster_labels.items():
+            out[key] = value
+        return {k: v for k, v in out.items() if k not in exclude}
+
+    def cluster_info(self):
+        """The cluster info as a list of per-cluster dictionaries."""
+        return [self.get_cluster_info(cluster_id) for cluster_id in self.cluster_ids]
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    def reset_similarity_view(self, cluster_ids):
+        pass
+
+    def add_cluster(self):
+        pass
+
+    def change_cluster(self):
+        pass
+
+    def remove_cluster(self):
+        pass
+
+    def add_column(self):
+        pass
+
+    def remove_column(self):
+        pass
+
+
+# -----------------------------------------------------------------------------
 # Supervisor
 # -----------------------------------------------------------------------------
 

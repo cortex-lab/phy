@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal as ae
 
 from .. import supervisor as _supervisor
 from ..supervisor import (
-    Supervisor, ClusterView, SimilarityView, ActionCreator)
+    Supervisor, ClusterView, SimilarityView, ActionCreator, TableController)
 from phy.gui import GUI
 from phy.gui.qt import qInstallMessageHandler
 from phy.utils.context import Context
@@ -48,6 +48,18 @@ def gui(tempdir, qtbot):
     qtbot.wait(5)
 
 
+@fixture
+def controller(gui, cluster_ids, cluster_groups, cluster_labels, similarity):
+    c = TableController(
+        gui,
+        cluster_ids=cluster_ids,
+        cluster_groups=cluster_groups,
+        cluster_labels=cluster_labels,
+        similarity=similarity,
+    )
+    return c
+
+
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
@@ -59,5 +71,6 @@ def test_action_creator_1(qtbot, gui):
     # qtbot.stop()
 
 
-def test_supervisor_1():
-    pass
+def test_table_controller_1(controller):
+    c = controller
+    assert len(c.cluster_info()) == 7

@@ -44,7 +44,6 @@ def controller(
 def test_controller_1(controller):
     c = controller
 
-    assert len(c.cluster_info()) == 7
     assert c.n_spikes(30) == 8
     assert c.fields == ('test_label',)
 

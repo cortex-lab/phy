@@ -219,35 +219,8 @@ class Controller:
             logger.log(5, "Save the new cluster id: %d.", new_cluster_id)
             self.context.save('new_cluster_id', dict(new_cluster_id=new_cluster_id))
 
-    def _get_similar_clusters(self, sender, cluster_id):
-        """Return the clusters similar to a given cluster."""
-        sim = self.fn_similarity(cluster_id) or []
-        # Only keep existing clusters.
-        clusters_set = set(self.clustering.cluster_ids)
-        data = [
-            dict(similarity='%.3f' % s, **self.get_cluster_info(c))
-            for c, s in sim if c in clusters_set]
-        return data
-
     # Cluster info
     # -------------------------------------------------------------------------
-
-    def get_cluster_info(self, cluster_id, exclude=()):
-        """Return the data associated to a given cluster."""
-        out = {'id': cluster_id}
-        # Cluster metrics.
-        for key, func in self.cluster_metrics.items():
-            out[key] = func(cluster_id)
-        # Cluster meta.
-        for key in self.cluster_meta.fields:
-            # includes group
-            out[key] = self.cluster_meta.get(key, cluster_id)
-        out['is_masked'] = _is_group_masked(out.get('group', None))
-        return {k: v for k, v in out.items() if k not in exclude}
-
-    def cluster_info(self):
-        """The cluster info as a list of per-cluster dictionaries."""
-        return [self.get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
     @property
     def cluster_ids(self):
