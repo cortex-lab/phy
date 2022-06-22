@@ -20,6 +20,7 @@ from .clustering import Clustering
 
 from phylib.utils import Bunch, emit, connect, unconnect, silent
 from phy.gui.actions import Actions
+from phy.gui.gui import GUI
 from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, _uniq
 
@@ -29,6 +30,9 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------------
 # Utility functions
 # -----------------------------------------------------------------------------
+
+def _is_group_masked(group):
+    return group in ('noise', 'mua')
 
 
 # -----------------------------------------------------------------------------
@@ -341,6 +345,9 @@ class ActionCreator(object):
 class TableController:
     """Create the cluster view and similarity view."""
 
+    default_similarity_sort = ('similarity', 'desc')
+    default_cluster_sort = ('n_spikes', 'desc')
+
     def __init__(
         self, gui,
         cluster_ids=None,
@@ -353,6 +360,8 @@ class TableController:
     ):
         # create cluster view and similarity view
         # define the next, prev functions etc to pass to the Automaton
+        assert gui
+        assert isinstance(gui, GUI)
         self.gui = gui
 
         self.cluster_groups = cluster_groups or {}
@@ -361,8 +370,12 @@ class TableController:
         self.cluster_labels = cluster_labels or {}
         self.cluster_metrics = cluster_metrics or {}
         self.fn_similarity = similarity
-        self.sort = sort or ('n_spikes', 'desc')
+        self.sort = sort or self.default_cluster_sort
         self.columns = columns or self._default_columns()
+
+        # Create tables.
+        self._create_cluster_view()
+        self._create_similarity_view()
 
     # Private methods
     # -------------------------------------------------------------------------
@@ -381,10 +394,11 @@ class TableController:
         # Create the cluster view.
         self.cluster_view = ClusterView(
             self.gui,
-            data=self.cluster_info,
+            data=self.cluster_info(),
             columns=self.columns,
             sort=self.sort,
         )
+        self.gui.add_view(self.cluster_view, position='left', closable=False)
 
     def _create_similarity_view(self):
         """Create the similarity view."""
@@ -393,8 +407,9 @@ class TableController:
         self.similarity_view = SimilarityView(
             self.gui,
             columns=self.columns + ['similarity'],
-            sort=('similarity', 'desc')
+            sort=self.default_similarity_sort,
         )
+        self.gui.add_view(self.similarity_view, position='right', closable=False)
 
     # Cluster info
     # -------------------------------------------------------------------------
@@ -412,13 +427,24 @@ class TableController:
     def get_cluster_info(self, cluster_id, exclude=()):
         """Return the data associated to a given cluster."""
         out = {'id': cluster_id}
+
         # Cluster metrics.
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
+
         # Cluster labels.
-        for key, value in self.cluster_labels.items():
-            out[key] = value
-        return {k: v for k, v in out.items() if k not in exclude}
+        for key, d in self.cluster_labels.items():
+            out[key] = d.get(cluster_id, None)
+
+        # Cluster groups.
+        out['group'] = self.cluster_groups.get(cluster_id, None)
+        out['is_masked'] = _is_group_masked(out.get('group', None))
+
+        # Exclude some fields.
+        for ex in exclude:
+            del out[ex]
+
+        return out
 
     def cluster_info(self):
         """The cluster info as a list of per-cluster dictionaries."""

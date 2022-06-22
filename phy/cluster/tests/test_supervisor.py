@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-#from contextlib import contextmanager
+from pprint import pprint
 
 from pytest import fixture
 import numpy as np
@@ -49,12 +49,13 @@ def gui(tempdir, qtbot):
 
 
 @fixture
-def controller(gui, cluster_ids, cluster_groups, cluster_labels, similarity):
+def controller(gui, cluster_ids, cluster_groups, cluster_labels, cluster_metrics, similarity):
     c = TableController(
         gui,
         cluster_ids=cluster_ids,
         cluster_groups=cluster_groups,
         cluster_labels=cluster_labels,
+        cluster_metrics=cluster_metrics,
         similarity=similarity,
     )
     return c
@@ -71,6 +72,8 @@ def test_action_creator_1(qtbot, gui):
     # qtbot.stop()
 
 
-def test_table_controller_1(controller):
+def test_table_controller_1(qtbot, gui, controller):
     c = controller
     assert len(c.cluster_info()) == 7
+
+    qtbot.stop()

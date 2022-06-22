@@ -503,7 +503,7 @@ class Table(QTableWidget):
             value = float(value)
 
         item.setData(Qt.EditRole, value)
-        item.setData(Qt.DisplayRole, str(value))
+        item.setData(Qt.DisplayRole, str(value) if value is not None else '')
 
     def _set_item_style(self, row_idx, col_idx, d):
         if row_idx < 0:
@@ -551,7 +551,7 @@ class Table(QTableWidget):
                 self._set_item_style(row_idx, col_idx, row_dict)
 
                 # Set the item's data.
-                self._set_item_value(row_idx, col_idx, row_dict.get(col_name, ''))
+                self._set_item_value(row_idx, col_idx, row_dict.get(col_name, None))
 
         self.setSortingEnabled(True)
         self.resizeColumnsToContents()

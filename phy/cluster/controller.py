@@ -32,10 +32,6 @@ logger = logging.getLogger(__name__)
 # Util functions
 # ----------------------------------------------------------------------------
 
-def _is_group_masked(group):
-    return group in ('noise', 'mua')
-
-
 def _process_ups(ups):  # pragma: no cover
     """This function processes the UpdateInfo instances of the two
     undo stacks (clustering and cluster metadata) and concatenates them

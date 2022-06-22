@@ -36,6 +36,12 @@ def cluster_labels():
 
 
 @fixture
+def cluster_metrics():
+    n_spikes = {0: 2, 1: 3, 2: 4, 10: 5, 11: 6, 20: 7, 30: 8}
+    return {'n_spikes': lambda cl: n_spikes.get(cl, None)}
+
+
+@fixture
 def similarity(cluster_ids):
     sim = lambda c, d: (c * 1.01 + d)
 
