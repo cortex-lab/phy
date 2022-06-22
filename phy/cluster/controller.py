@@ -212,6 +212,8 @@ class Controller:
     def _save_new_cluster_id(self, sender, up):
         """Save the new cluster id on disk, knowing that cluster ids are unique for
         easier cache consistency."""
+        if up.description not in ('assign', 'merge'):
+            return
         new_cluster_id = self.clustering.new_cluster_id()
         if self.context:
             logger.log(5, "Save the new cluster id: %d.", new_cluster_id)
@@ -255,6 +257,10 @@ class Controller:
     def n_spikes(self, cluster_id):
         """Number of spikes in a given cluster."""
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
+
+    def cluster_group(self, cluster_id):
+        """Return the group of a cluster."""
+        return self.cluster_meta.get('group', cluster_id)
 
     @property
     def fields(self):
@@ -314,7 +320,7 @@ class Controller:
         _ensure_all_ints(cluster_ids)
         logger.debug("Move %s to %s.", cluster_ids, group)
         group = 'unsorted' if group is None else group
-        return self.label('group', group, cluster_ids=cluster_ids)
+        return self.label(cluster_ids=cluster_ids, name='group', value=group)
 
     def undo(self):
         """Undo the last action."""

@@ -150,3 +150,20 @@ def test_controller_label_merge_3(controller):
 
     # The new cluster should have the value of the first, merged big cluster, i.e. 3.14.
     assert c.get_labels('my_field')[up.added[0]] == 3.14
+
+
+def test_controller_move_1(controller):
+    c = controller
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+
+    assert c.cluster_group(10) == 'mua'
+    c.move([10], 'good')
+    assert c.cluster_group(10) == 'good'
+
+    c.undo()
+    assert c.cluster_group(10) == 'mua'
+
+    c.redo()
+    assert c.cluster_group(10) == 'good'
