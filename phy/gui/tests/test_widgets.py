@@ -356,3 +356,10 @@ def test_table_filter(qtbot, table):
 
     table.filter()
     assert table.shown_ids() == table.get_ids()
+
+
+def test_table_column(qtbot, table):
+    table.add_column('new')
+    table.change([{'id': 10, 'new': 'hello'}])
+    table.add([{'id': 100, 'new': 'world'}])
+    # qtbot.stop()

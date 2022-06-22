@@ -485,14 +485,15 @@ class Table(QTableWidget):
     # ---------------------------------------------------------------------------------------------
 
     def _create_item(self, row_idx, col_idx, flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled):
-        item = QTableWidgetItem()
+        item = QTableWidgetItem() or self.item(row_idx, col_idx)
         item.setFlags(flags)
         self.setItem(row_idx, col_idx, item)
+        return item
 
     def _set_item_value(self, row_idx, col_idx, value):
         if row_idx < 0:
             return
-        item = self.item(row_idx, col_idx)
+        item = self.item(row_idx, col_idx) or self._create_item(row_idx, col_idx)
         assert item
 
         # HACK: cast NumPy scalar to Python types, so as to proper enable Qt sorting.
@@ -508,7 +509,7 @@ class Table(QTableWidget):
     def _set_item_style(self, row_idx, col_idx, d):
         if row_idx < 0:
             return
-        item = self.item(row_idx, col_idx)
+        item = self.item(row_idx, col_idx) or self._create_item(row_idx, col_idx)
         assert item
         bg = d.get('_background', None)
         fg = d.get('_foreground', None)
@@ -605,6 +606,14 @@ class Table(QTableWidget):
         self.insertColumn(self.columnCount())
         self.columns.append(col_name)
         self.setHorizontalHeaderLabels(self.columns)
+
+        # Set the values.
+        col_idx = self.columnCount() - 1
+
+        for row_idx in range(self.rowCount()):
+            assert self.item(row_idx, col_idx) is None
+            # Create the QTableWidgetItem object.
+            self._create_item(row_idx, col_idx)
 
     def remove_all(self):
         """Remove all rows in the table."""
