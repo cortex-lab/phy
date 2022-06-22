@@ -255,6 +255,7 @@ class Actions(object):
         Map action names to snippets (regular strings).
 
     """
+
     def __init__(
             self, gui, name=None, menu=None, submenu=None, view=None,
             insert_menu_before=None, default_shortcuts=None, default_snippets=None):
@@ -381,7 +382,7 @@ class Actions(object):
         action = _create_qaction(self.gui, **kwargs)
         action_obj = Bunch(qaction=action, **kwargs)
         if verbose and not name.startswith('_'):
-            logger.log(5, "Add action `%s` (%s).", name, _get_shortcut_string(action.shortcut()))
+            logger.log(1, "Add action `%s` (%s).", name, _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
 
         # Do not show private actions in the menu.
