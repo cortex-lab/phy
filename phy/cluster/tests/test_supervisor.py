@@ -76,4 +76,41 @@ def test_table_controller_1(qtbot, gui, controller):
     c = controller
     assert len(c.cluster_info()) == 7
 
-    qtbot.stop()
+    assert c.shown_cluster_ids == [30, 20, 11, 10, 2, 1, 0]
+    assert c.similarity_view.shown_ids() == []
+
+    c.select_clusters([30, 11])
+    assert c.selected_clusters == [30, 11]
+    assert c.selected_similar == []
+    assert c.similarity_view.shown_ids() == [20, 10, 2, 1, 0]
+
+    c.select_similar([10, 1])
+    assert c.selected_similar == [10, 1]
+
+    # qtbot.stop()
+
+
+def test_table_controller_2(qtbot, gui, controller):
+    c = controller
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+
+    # Add a cluster.
+    c.add_cluster(100, n_spikes=3, group='mygroup', test_label='mylabel')
+
+    # Select a cluster.
+    assert 100 in c.shown_cluster_ids
+    c.select_clusters([100])
+    assert c.selected_clusters == [100]
+
+    # Change a cluster.
+    c.change_cluster(11, group='noise', n_spikes=60)
+    assert 11 in c.shown_cluster_ids
+
+    # Remove a cluster.
+    assert 20 in c.shown_cluster_ids
+    c.remove_cluster(20)
+    assert 20 not in c.shown_cluster_ids
+
+    # qtbot.stop()
