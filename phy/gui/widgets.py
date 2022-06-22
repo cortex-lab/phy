@@ -556,11 +556,11 @@ class Table(QTableWidget):
         self.setSortingEnabled(True)
         self.resizeColumnsToContents()
 
-    def change(self, objects):
+    def change(self, data):
         """Change some objects."""
         self.setSortingEnabled(False)
 
-        for row_dict in objects:
+        for row_dict in data:
             id = row_dict['id']
             row_idx = self._id2row(id)
 
@@ -590,6 +590,19 @@ class Table(QTableWidget):
             row_idx = self._id2row(id)
             if row_idx >= 0:
                 self.removeRow(row_idx)
+
+    def remove_column(self, col_name):
+        """Remove a column."""
+        if col_name in self.columns:
+            col_idx = self.columns.index(col_name)
+        if col_idx >= 0:
+            self.removeColumn(col_idx)
+
+    def add_column(self, col_name):
+        """Add a column."""
+        self.insertColumn(self.columnCount())
+        self.columns.append(col_name)
+        self.setHorizontalHeaderLabels(self.columns)
 
     def remove_all(self):
         """Remove all rows in the table."""
