@@ -45,6 +45,10 @@ def cluster_metrics():
 def similarity(cluster_ids):
     sim = lambda c, d: (c * 1.01 + d)
 
-    def similarity(c):
-        return get_closest_clusters(c, cluster_ids, sim)
+    def similarity(selected):
+        if not selected:
+            return []
+        out = get_closest_clusters(selected[0], cluster_ids, sim)
+        out = [(c, s) for c, s in out if c not in selected]
+        return out
     return similarity

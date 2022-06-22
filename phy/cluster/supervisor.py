@@ -124,11 +124,6 @@ class SimilarityView(ClusterView):
     This view displays clusters similar to the clusters currently selected
     in the cluster view.
 
-    Events
-    ------
-
-    * request_similar_clusters(cluster_id)
-
     """
 
     _required_columns = ('n_spikes', 'similarity')
@@ -139,21 +134,6 @@ class SimilarityView(ClusterView):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
         self._selected_index_offset = n
-
-    def reset(self, cluster_ids=None):
-        """Recreate the similarity view, given the selected clusters in the cluster view."""
-        cluster_ids = cluster_ids or []
-        if not len(cluster_ids):
-            self.setRowCount(0)
-            return
-        similar = emit('request_similar_clusters', self, cluster_ids[-1])
-        # Clear the table.
-        if similar:
-            self.remove_all_and_add(
-                [cl for cl in similar[0] if cl['id'] not in cluster_ids])
-        else:  # pragma: no cover
-            self.remove_all()
-        return similar
 
 
 # -----------------------------------------------------------------------------
@@ -350,13 +330,13 @@ class TableController:
 
     def __init__(
         self, gui,
-        cluster_ids=None,
-        cluster_groups=None,
-        cluster_labels=None,
-        cluster_metrics=None,
-        similarity=None,
-        sort=None,
-        columns=None,
+        cluster_ids=None,  # [int]
+        cluster_groups=None,  # {int: str}
+        cluster_labels=None,  # {str: {int: float}}
+        cluster_metrics=None,  # {str: int => float}
+        similarity=None,  # [int] => [tuple(int, float)]
+        sort=None,  # (str, 'asc'|'desc')
+        columns=None,  # [str]
     ):
         # create cluster view and similarity view
         # define the next, prev functions etc to pass to the Automaton
@@ -400,6 +380,17 @@ class TableController:
         )
         self.gui.add_view(self.cluster_view, position='left', closable=False)
 
+        connect(self._clusters_selected, event='select', sender=self.cluster_view)
+
+    def _get_data_similar(self, cluster_ids):
+        """Return the data to feed the similarity view."""
+        sim = self.fn_similarity(cluster_ids) or []
+        # Only keep existing clusters.
+        clusters_set = set(self.cluster_ids)
+        data = [
+            dict(similarity=s, **self.get_cluster_info(c)) for c, s in sim if c in clusters_set]
+        return data
+
     def _create_similarity_view(self):
         """Create the similarity view."""
 
@@ -413,16 +404,6 @@ class TableController:
 
     # Cluster info
     # -------------------------------------------------------------------------
-
-    def _get_similar_clusters(self, sender, cluster_id):
-        """Return the clusters similar to a given cluster."""
-        sim = self.fn_similarity(cluster_id) or []
-        # Only keep existing clusters.
-        clusters_set = set(self.clustering.cluster_ids)
-        data = [
-            dict(similarity='%.3f' % s, **self.get_cluster_info(c))
-            for c, s in sim if c in clusters_set]
-        return data
 
     def get_cluster_info(self, cluster_id, exclude=()):
         """Return the data associated to a given cluster."""
@@ -450,26 +431,97 @@ class TableController:
         """The cluster info as a list of per-cluster dictionaries."""
         return [self.get_cluster_info(cluster_id) for cluster_id in self.cluster_ids]
 
+    # Properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def shown_cluster_ids(self):
+        """The sorted list of cluster ids as they are currently shown in the cluster view."""
+        return self.cluster_view.shown_ids()
+
+    @property
+    def selected_clusters(self):
+        """Selected clusters in the cluster view only."""
+        return self.cluster_view.get_selected()
+
+    @property
+    def selected_similar(self):
+        """Selected clusters in the similarity view only."""
+        return self.similarity_view.get_selected()
+
+    @property
+    def selected(self):
+        """Selected clusters in the cluster and similarity views."""
+        return _uniq(self.selected_clusters + self.selected_similar)
+
+    # Event callbacks
+    # -------------------------------------------------------------------------
+
+    def _clusters_selected(self, sender, obj, **kwargs):
+        """When clusters are selected in the cluster view, register the action in the history
+        stack, update the similarity view, and emit the global supervisor.select event unless
+        update_views is False."""
+        if sender != self.cluster_view:
+            return
+        cluster_ids = obj['selected']
+        next_cluster = obj['next']
+        kwargs = obj.get('kwargs', {})
+        logger.debug(f"Clusters selected: {cluster_ids} ({next_cluster})")
+
+        # Update the similarity view when the cluster view selection changes.
+        self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
+        self.reset_similarity_view(cluster_ids)
+
+        # Emit supervisor.select event unless update_views is False. This happens after
+        # a merge event, where the views should not be updated after the first cluster_view.select
+        # event, but instead after the second similarity_view.select event.
+        # if kwargs.pop('update_views', True):
+        #     emit('select', self, self.selected, **kwargs)
+        if cluster_ids:
+            self.cluster_view.scroll_to(cluster_ids[-1])
+        self.cluster_view.dock.set_status('clusters: %s' % ', '.join(map(str, cluster_ids)))
+
     # Public methods
     # -------------------------------------------------------------------------
 
     def reset_similarity_view(self, cluster_ids):
-        pass
+        """Reset the similarity view with the clusters similar to the specified clusters."""
+        self.similarity_view.remove_all_and_add(self._get_data_similar(cluster_ids))
 
-    def add_cluster(self):
-        pass
+    def select_clusters(self, cluster_ids):
+        """Select clusters in the cluster view."""
+        self.cluster_view.select(cluster_ids)
 
-    def change_cluster(self):
-        pass
+    def select_similar(self, cluster_ids):
+        """Select clusters in the similarity view."""
+        self.similarity_view.select(cluster_ids)
 
-    def remove_cluster(self):
-        pass
+    def add_cluster(self, cluster_id, **labels):
+        """Add a new cluster in the cluster and similarity views."""
+        d = [{'id': cluster_id, **labels}]
+        self.cluster_view.add(d)
+        self.similarity_view.add(d)
 
-    def add_column(self):
-        pass
+    def change_cluster(self, cluster_id, **labels):
+        """Change an existing cluster in the cluster and similarity views."""
+        d = [{'id': cluster_id, **labels}]
+        self.cluster_view.change(d)
+        self.similarity_view.change(d)
 
-    def remove_column(self):
-        pass
+    def remove_cluster(self, cluster_id):
+        """Remove a cluster from the cluster and similarity views."""
+        self.cluster_view.remove(cluster_id)
+        self.similarity_view.remove(cluster_id)
+
+    def add_column(self, col_name):
+        """Add a column."""
+        self.cluster_view.add_column(col_name)
+        self.similarity_view.add_column(col_name)
+
+    def remove_column(self, col_name):
+        """Remove a column."""
+        self.cluster_view.remove_column(col_name)
+        self.similarity_view.remove_column(col_name)
 
 
 # -----------------------------------------------------------------------------
