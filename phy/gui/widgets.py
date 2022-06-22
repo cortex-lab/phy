@@ -565,20 +565,22 @@ class Table(QTableWidget):
             row_idx = self._id2row(id)
 
             d = self._data.get(id, {})
-            for col_name in self.columns:
-                value = row_dict.get(col_name, None)
-                d[col_name] = value
+            for col_name, new_value in row_dict.items():
+                if col_name == 'id':
+                    continue
+                if col_name not in self.columns:
+                    logger.debug(f"column {col_name} does not exist, skipping this value")
+                    continue
+
+                d[col_name] = new_value
 
                 # Find the row and column index of the corresponding item.
-                assert col_name in self.columns
                 col_idx = self.columns.index(col_name)
 
                 # Set the item's value.
-                self._set_item_value(row_idx, col_idx, value)
+                self._set_item_value(row_idx, col_idx, new_value)
 
             # Set the item style.
-            # for key, val in d.items():
-            #     if key not in self.columns:
             for col_idx in range(len(self.columns)):
                 self._set_item_style(row_idx, col_idx, row_dict)
 
