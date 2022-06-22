@@ -529,15 +529,28 @@ class TableController:
         self.cluster_view.remove([cluster_id])
         self.similarity_view.remove([cluster_id])
 
+    def _reset_similarity_columns(self):
+        # Reset the similarity view.
+        self.similarity_view.clear()
+        self.similarity_view._init_table(columns=self.columns + ['similarity'])
+        if self.selected_clusters:
+            self.reset_similarity_view(self.selected_clusters)
+
     def add_column(self, col_name):
         """Add a column."""
+        if col_name in self.columns:
+            return
         self.cluster_view.add_column(col_name)
-        self.similarity_view.add_column(col_name)
+        self.columns.append(col_name)
+        self._reset_similarity_columns()
 
     def remove_column(self, col_name):
         """Remove a column."""
+        if col_name not in self.columns:
+            return
         self.cluster_view.remove_column(col_name)
-        self.similarity_view.remove_column(col_name)
+        self.columns.remove(col_name)
+        self._reset_similarity_columns()
 
 
 # -----------------------------------------------------------------------------

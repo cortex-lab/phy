@@ -114,3 +114,29 @@ def test_table_controller_2(qtbot, gui, controller):
     assert 20 not in c.shown_cluster_ids
 
     # qtbot.stop()
+
+
+def test_table_controller_3(qtbot, gui, controller):
+    c = controller
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+
+    c.add_column('new_column')
+    assert 'new_column' in c.columns
+
+    c.select_clusters([30])
+
+    # qtbot.stop()
+
+
+def test_table_controller_4(qtbot, gui, controller):
+    c = controller
+
+    # [0, 1, 2, 10, 11, 20, 30]
+    #  i, g, N,  i,  g,  N,  N
+
+    c.remove_column('test_label')
+    assert 'test_label' not in c.columns
+
+    # qtbot.stop()
