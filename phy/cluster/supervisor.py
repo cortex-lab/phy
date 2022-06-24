@@ -173,10 +173,10 @@ class ActionCreator(object):
         'last': 'end',
         'reset': 'ctrl+alt+space',
         'next': 'space',
-        'previous': 'shift+space',
+        'prev': 'shift+space',
         'unselect_similar': 'backspace',
         'next_best': 'down',
-        'previous_best': 'up',
+        'prev_best': 'up',
 
         # Misc.
         'undo': 'ctrl+z',
@@ -211,7 +211,7 @@ class ActionCreator(object):
 
         def raise_action():
             # NOTE: only 1 callback per action is supported for now.
-            logger.log(5, f"raising action {method_name}{method_args}")
+            logger.log(5, f"Raising action {method_name}{method_args}")
             if f:
                 return f(*method_args)
 
@@ -239,7 +239,10 @@ class ActionCreator(object):
         name = f.__name__
         if not name.startswith('on_'):
             raise ValueError(f"function name `{f}` should start with on_")
-        self.callbacks[name[3:]] = f
+        key = name[3:]
+        if key in self.callbacks:
+            logger.warning(f"Callback {key} already defined, overriding it with the new one")
+        self.callbacks[key] = f
 
     def _create_edit_actions(self):
         w = 'edit'
@@ -298,11 +301,11 @@ class ActionCreator(object):
         self.select_actions.separator()
 
         self.add(w, 'next', icon='f061')
-        self.add(w, 'previous', icon='f060')
+        self.add(w, 'prev', icon='f060')
         self.select_actions.separator()
 
         self.add(w, 'next_best', icon='f0a9')
-        self.add(w, 'previous_best', icon='f0a8')
+        self.add(w, 'prev_best', icon='f0a8')
         self.select_actions.separator()
 
     def _create_toolbar(self, gui):
@@ -310,9 +313,9 @@ class ActionCreator(object):
         gui._toolbar.addAction(self.edit_actions.get('redo'))
         gui._toolbar.addSeparator()
         gui._toolbar.addAction(self.select_actions.get('reset_wizard'))
-        gui._toolbar.addAction(self.select_actions.get('previous_best'))
+        gui._toolbar.addAction(self.select_actions.get('prev_best'))
         gui._toolbar.addAction(self.select_actions.get('next_best'))
-        gui._toolbar.addAction(self.select_actions.get('previous'))
+        gui._toolbar.addAction(self.select_actions.get('prev'))
         gui._toolbar.addAction(self.select_actions.get('next'))
         gui._toolbar.addSeparator()
         gui._toolbar.show()
@@ -552,6 +555,27 @@ class TableController:
         self.columns.remove(col_name)
         self._reset_similarity_columns()
 
+    # Wizard methods
+    # -------------------------------------------------------------------------
+
+    def first(self):
+        self.cluster_view.first()
+
+    def last(self):
+        self.cluster_view.last()
+
+    def next_best(self):
+        self.cluster_view.next()
+
+    def prev_best(self):
+        self.cluster_view.previous()
+
+    def next_similar(self):
+        self.similarity_view.next()
+
+    def prev_similar(self):
+        self.similarity_view.previous()
+
     # Automaton methods
     # -------------------------------------------------------------------------
 
@@ -573,16 +597,16 @@ class TableController:
         return sim[0][0]
 
     def an_next_best(self, cluster_ids):
-        if not cluster_ids:
-            return
+        # if not cluster_ids:
+        #     return
         # HACK: only take the first cluster
-        return self.cluster_view.get_next_id(cluster_ids[0])
+        return self.cluster_view.get_next_id(cluster_ids[0] if cluster_ids else None)
 
     def an_prev_best(self, cluster_ids):
         if not cluster_ids:
             return
         # HACK: only take the first cluster
-        return self.cluster_view.get_previous_id(cluster_ids[0])
+        return self.cluster_view.get_previous_id(cluster_ids[0] if cluster_ids else None)
 
     def an_next_similar(self, cluster_ids):
         if not cluster_ids:
@@ -595,13 +619,6 @@ class TableController:
             return
         # HACK: only take the first cluster
         return self.similarity_view.get_previous_id(cluster_ids[0])
-
-    def an_merge(self, to_merge):
-        # TODO
-        pass
-
-    def an_split(self, to_split):
-        pass
 
 
 # -----------------------------------------------------------------------------
@@ -616,7 +633,7 @@ class Supervisor:
         cluster_metrics=None,
         cluster_labels=None,
         similarity=None,
-        new_cluster_id=None,
+        # new_cluster_id=None,
         sort=None,
         context=None,
     ):
@@ -645,6 +662,8 @@ class Supervisor:
 
         # Create the automaton.
         self.cluster_info = ClusterInfo(
+
+            # These methods are provided by the table controller.
             first=tc.an_first,
             last=tc.an_last,
             similar=tc.an_similar,
@@ -652,15 +671,21 @@ class Supervisor:
             prev_best=tc.an_prev_best,
             next_similar=tc.an_next_similar,
             prev_similar=tc.an_prev_similar,
-            merge=tc.an_merge,
-            split=tc.an_split,
-            new_cluster_id=new_cluster_id,
+
+            # This method is provided by the controller.
+
+            # These methods are provided by the current class, ie the Supervisor.
+            merge=self.an_merge,
+            split=self.an_split,
+            new_cluster_id=self.an_new_cluster_id,
         )
         s = State(clusters=[])
         self.automaton = Automaton(s, self.cluster_info)
 
         # Create the Qt actions in the GUI.
         self.action_creator = ActionCreator(columns=self.table_controller.columns)
+        self.action_creator.connect(self.on_next_best)
+        self.action_creator.connect(self.on_prev_best)
 
     @property
     def cluster_ids(self):
@@ -670,3 +695,41 @@ class Supervisor:
     def attach(self, gui):
         self.action_creator.attach(gui)
         self.table_controller.attach(gui)
+
+    # Action callback methods
+    # -------------------------------------------------------------------------
+
+    def on_next_best(self):
+        """This method is called when Qt triggers the next_best action."""
+
+        tc = self.table_controller
+
+        # We register the action in the automaton.
+        self.automaton.next_best()
+
+        # We perform the action via the table controller.
+        tc.next_best()
+
+    def on_prev_best(self):
+        """This method is called when Qt triggers the prev_best action."""
+
+        tc = self.table_controller
+
+        # We register the action in the automaton.
+        self.automaton.prev_best()
+
+        # We perform the action via the table controller.
+        tc.prev_best()
+
+    # Automaton methods
+    # -------------------------------------------------------------------------
+
+    def an_new_cluster_id(self):
+        return self.controller.clustering.new_cluster_id
+
+    def an_merge(self, to_merge):
+        # Do the merge and return
+        pass
+
+    def an_split(self, to_split):
+        pass
