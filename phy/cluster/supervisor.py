@@ -570,10 +570,13 @@ class TableController:
     def prev_best(self):
         self.cluster_view.previous()
 
-    def next_similar(self):
-        self.similarity_view.next()
+    def next(self):
+        if self.selected_clusters:
+            self.similarity_view.next()
+        else:
+            self.cluster_view.next()
 
-    def prev_similar(self):
+    def prev(self):
         self.similarity_view.previous()
 
     # Automaton methods
@@ -587,11 +590,11 @@ class TableController:
         """Return the last cluster in the cluster view."""
         return self.shown_cluster_ids[-1] if self.shown_cluster_ids else None
 
-    def an_similar(self):
+    def an_similar(self, cluster_ids):
         """Return the first similar cluster to the currently-selected clusters."""
         if not self.fn_similarity:
             return
-        sim = self.fn_similarity(self.selected_clusters)
+        sim = self.fn_similarity(cluster_ids)
         if not sim:
             return
         return sim[0][0]
@@ -686,6 +689,8 @@ class Supervisor:
         self.action_creator = ActionCreator(columns=self.table_controller.columns)
         self.action_creator.connect(self.on_next_best)
         self.action_creator.connect(self.on_prev_best)
+        self.action_creator.connect(self.on_next)
+        self.action_creator.connect(self.on_prev)
 
     @property
     def cluster_ids(self):
@@ -704,22 +709,44 @@ class Supervisor:
 
         tc = self.table_controller
 
-        # We register the action in the automaton.
-        self.automaton.next_best()
-
         # We perform the action via the table controller.
         tc.next_best()
+
+        # We register the action in the automaton.
+        self.automaton.next_best()
 
     def on_prev_best(self):
         """This method is called when Qt triggers the prev_best action."""
 
         tc = self.table_controller
 
+        # We perform the action via the table controller.
+        tc.prev_best()
+
         # We register the action in the automaton.
         self.automaton.prev_best()
 
+    def on_next(self):
+        """This method is called when Qt triggers the next action."""
+
+        tc = self.table_controller
+
         # We perform the action via the table controller.
-        tc.prev_best()
+        tc.next()
+
+        # We register the action in the automaton.
+        self.automaton.next()
+
+    def on_prev(self):
+        """This method is called when Qt triggers the prev action."""
+
+        tc = self.table_controller
+
+        # We perform the action via the table controller.
+        tc.prev()
+
+        # We register the action in the automaton.
+        self.automaton.prev()
 
     # Automaton methods
     # -------------------------------------------------------------------------

@@ -330,6 +330,8 @@ class Table(QTableWidget):
 
     def select(self, ids, **kwargs):
         """Select some rows in the table from Python."""
+        if not ids:
+            return
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
         rows = [self._id2row(id) for id in ids]
@@ -380,11 +382,15 @@ class Table(QTableWidget):
 
     def first(self):
         """Select the first item."""
-        self.select([self.get_next_id()])
+        next_id = self.get_next_id()
+        if next_id is not None:
+            self.select([next_id])
 
     def last(self):
         """Select the last item."""
-        self.select([self.get_previous_id()])
+        previous_id = self.get_previous_id()
+        if previous_id is not None:
+            self.select([previous_id])
 
     def next(self):
         """Select the next non-skipped row."""
