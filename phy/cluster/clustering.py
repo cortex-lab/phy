@@ -142,6 +142,7 @@ class Clustering(object):
     def __init__(self, spike_clusters, new_cluster_id=None,
                  spikes_per_cluster=None):
         super(Clustering, self).__init__()
+        assert spike_clusters is not None
         self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)

@@ -175,9 +175,9 @@ class Controller:
 
     def _save_spikes_per_cluster(self):
         """Cache on the disk the dictionary with the spikes belonging to each cluster."""
-        if not self.context:
-            return
-        self.context.save('spikes_per_cluster', self.clustering.spikes_per_cluster, kind='pickle')
+        if self.context:
+            self.context.save('spikes_per_cluster',
+                              self.clustering.spikes_per_cluster, kind='pickle')
 
     def _log_action(self, sender, up):
         """Log the clustering action (merge, split)."""

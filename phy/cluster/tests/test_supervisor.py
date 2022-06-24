@@ -51,18 +51,31 @@ def gui(tempdir, qtbot):
 @fixture
 def controller(gui, cluster_ids, cluster_groups, cluster_labels, cluster_metrics, similarity):
     c = TableController(
-        gui,
         cluster_ids=cluster_ids,
         cluster_groups=cluster_groups,
         cluster_labels=cluster_labels,
         cluster_metrics=cluster_metrics,
         similarity=similarity,
     )
+    c.attach(gui)
     return c
 
 
+@fixture
+def supervisor(gui, spike_clusters, cluster_groups, cluster_labels, cluster_metrics, similarity):
+    s = Supervisor(
+        spike_clusters=spike_clusters,
+        cluster_groups=cluster_groups,
+        cluster_metrics=cluster_metrics,
+        cluster_labels=cluster_labels,
+        similarity=similarity,
+    )
+    s.attach(gui)
+    return s
+
+
 #------------------------------------------------------------------------------
-# Tests
+# Action creator tests
 #------------------------------------------------------------------------------
 
 def test_action_creator_1(qtbot, gui):
@@ -71,6 +84,10 @@ def test_action_creator_1(qtbot, gui):
     gui.show()
     # qtbot.stop()
 
+
+#------------------------------------------------------------------------------
+# Table controller tests
+#------------------------------------------------------------------------------
 
 def test_table_controller_1(qtbot, gui, controller):
     c = controller
@@ -140,3 +157,12 @@ def test_table_controller_4(qtbot, gui, controller):
     assert 'test_label' not in c.columns
 
     # qtbot.stop()
+
+
+#------------------------------------------------------------------------------
+# Supervisor tests
+#------------------------------------------------------------------------------
+
+def test_supervisor_1(qtbot, gui, supervisor):
+    s = supervisor
+    qtbot.stop()

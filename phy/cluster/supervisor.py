@@ -17,6 +17,8 @@ import numpy as np
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
+from .controller import Controller
+from .automaton import Automaton, State, ClusterInfo
 
 from phylib.utils import Bunch, emit, connect, unconnect, silent
 from phy.gui.actions import Actions
@@ -192,8 +194,8 @@ class ActionCreator(object):
         'sort': 's',
     }
 
-    def __init__(self, supervisor=None):
-        self.supervisor = supervisor
+    def __init__(self, columns=None):
+        self.columns = columns or []
         self.callbacks = {}
 
     def add(self, which, name, **kwargs):
@@ -202,8 +204,7 @@ class ActionCreator(object):
         # action and the event name/method (used for different move flavors).
         method_name = kwargs.pop('method_name', name)
         method_args = kwargs.pop('method_args', ())
-        emit_fun = partial(emit, 'action', self, method_name, *method_args)
-        f = getattr(self.supervisor, method_name, None)
+        f = self.callbacks.get(method_name, None)
         docstring = inspect.getdoc(f) if f else name
         if not kwargs.get('docstring', None):
             kwargs['docstring'] = docstring
@@ -211,7 +212,6 @@ class ActionCreator(object):
         def raise_action():
             # NOTE: only 1 callback per action is supported for now.
             logger.log(5, f"raising action {method_name}{method_args}")
-            f = self.callbacks.get(method_name, None)
             if f:
                 return f(*method_args)
 
@@ -282,7 +282,7 @@ class ActionCreator(object):
         self.add(w, 'clear_filter')
 
         # Sort by:
-        for column in getattr(self.supervisor, 'columns', ()):
+        for column in self.columns:
             self.add(
                 w, 'sort_by_%s' % column.lower(), method_name='sort', method_args=(column,),
                 docstring='Sort by %s' % column,
@@ -329,7 +329,7 @@ class TableController:
     default_cluster_sort = ('n_spikes', 'desc')
 
     def __init__(
-        self, gui,
+        self,
         cluster_ids=None,  # [int]
         cluster_groups=None,  # {int: str}
         cluster_labels=None,  # {str: {int: float}}
@@ -338,12 +338,6 @@ class TableController:
         sort=None,  # (str, 'asc'|'desc')
         columns=None,  # [str]
     ):
-        # create cluster view and similarity view
-        # define the next, prev functions etc to pass to the Automaton
-        assert gui
-        assert isinstance(gui, GUI)
-        self.gui = gui
-
         self.cluster_groups = cluster_groups or {}
         self.cluster_ids = \
             list(cluster_ids if cluster_ids is not None else sorted(self.cluster_groups.keys()))
@@ -352,6 +346,12 @@ class TableController:
         self.fn_similarity = similarity
         self.sort = sort or self.default_cluster_sort
         self.columns = columns or self._default_columns()
+
+    def attach(self, gui):
+        """Attach to a GUI and create the cluster tables."""
+        assert gui
+        assert isinstance(gui, GUI)
+        self.gui = gui
 
         # Create tables.
         self._create_cluster_view()
@@ -552,10 +552,121 @@ class TableController:
         self.columns.remove(col_name)
         self._reset_similarity_columns()
 
+    # Automaton methods
+    # -------------------------------------------------------------------------
+
+    def an_first(self):
+        """Return the first cluster in the cluster view."""
+        return self.shown_cluster_ids[0] if self.shown_cluster_ids else None
+
+    def an_last(self):
+        """Return the last cluster in the cluster view."""
+        return self.shown_cluster_ids[-1] if self.shown_cluster_ids else None
+
+    def an_similar(self):
+        """Return the first similar cluster to the currently-selected clusters."""
+        if not self.fn_similarity:
+            return
+        sim = self.fn_similarity(self.selected_clusters)
+        if not sim:
+            return
+        return sim[0][0]
+
+    def an_next_best(self, cluster_ids):
+        if not cluster_ids:
+            return
+        # HACK: only take the first cluster
+        return self.cluster_view.get_next_id(cluster_ids[0])
+
+    def an_prev_best(self, cluster_ids):
+        if not cluster_ids:
+            return
+        # HACK: only take the first cluster
+        return self.cluster_view.get_previous_id(cluster_ids[0])
+
+    def an_next_similar(self, cluster_ids):
+        if not cluster_ids:
+            return
+        # HACK: only take the first cluster
+        return self.similarity_view.get_next_id(cluster_ids[0])
+
+    def an_prev_similar(self, cluster_ids):
+        if not cluster_ids:
+            return
+        # HACK: only take the first cluster
+        return self.similarity_view.get_previous_id(cluster_ids[0])
+
+    def an_merge(self, to_merge):
+        # TODO
+        pass
+
+    def an_split(self, to_split):
+        pass
+
 
 # -----------------------------------------------------------------------------
 # Supervisor
 # -----------------------------------------------------------------------------
 
 class Supervisor:
-    pass
+    def __init__(
+        self,
+        spike_clusters=None,
+        cluster_groups=None,
+        cluster_metrics=None,
+        cluster_labels=None,
+        similarity=None,
+        new_cluster_id=None,
+        sort=None,
+        context=None,
+    ):
+        assert spike_clusters is not None
+
+        # Create the clustering controller.
+        self.controller = Controller(
+            spike_clusters=spike_clusters,
+            cluster_groups=cluster_groups,
+            cluster_labels=cluster_labels,
+            similarity=similarity,
+            context=context,
+        )
+        # All cluster ids.
+        cluster_ids = self.controller.cluster_ids
+
+        # Create the table controller (cluster view and similarity view).
+        self.table_controller = TableController(
+            cluster_ids=cluster_ids,
+            cluster_groups=cluster_groups,
+            cluster_labels=cluster_labels,
+            cluster_metrics=cluster_metrics,
+            similarity=similarity,
+        )
+        tc = self.table_controller
+
+        # Create the automaton.
+        self.cluster_info = ClusterInfo(
+            first=tc.an_first,
+            last=tc.an_last,
+            similar=tc.an_similar,
+            next_best=tc.an_next_best,
+            prev_best=tc.an_prev_best,
+            next_similar=tc.an_next_similar,
+            prev_similar=tc.an_prev_similar,
+            merge=tc.an_merge,
+            split=tc.an_split,
+            new_cluster_id=new_cluster_id,
+        )
+        s = State(clusters=[])
+        self.automaton = Automaton(s, self.cluster_info)
+
+        # Create the Qt actions in the GUI.
+        self.action_creator = ActionCreator(columns=self.table_controller.columns)
+
+    @property
+    def cluster_ids(self):
+        """List of all cluster ids."""
+        return self.controller.cluster_ids
+
+    def attach(self, gui):
+        self.action_creator.attach(gui)
+        self.table_controller.attach(gui)

@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
 from pytest import fixture
 
 from phylib.io.array import get_closest_clusters
@@ -23,6 +24,11 @@ phy.gui.qt.Debouncer.delay = 1
 def cluster_ids():
     return [0, 1, 2, 10, 11, 20, 30]
     #       i, g, N,  i,  g,  N, N
+
+
+@fixture
+def spike_clusters(cluster_ids):
+    return np.repeat(cluster_ids, 2 + np.arange(len(cluster_ids)))
 
 
 @fixture
