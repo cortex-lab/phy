@@ -366,7 +366,7 @@ class Table(QTableWidget):
             nid = self._row2id(row_idx)
             if not self._is_masked(nid):
                 return nid
-        return None
+        return id
 
     def get_previous_id(self, id=None):
         """Return the previous unmasked id before the specified id."""
@@ -376,7 +376,7 @@ class Table(QTableWidget):
             nid = self._row2id(row_idx)
             if not self._is_masked(nid):
                 return nid
-        return None
+        return id
 
     def first(self):
         """Select the first item."""

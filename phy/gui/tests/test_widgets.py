@@ -250,7 +250,7 @@ def test_table_nav_first_2(qtbot, table):
 def test_table_nav_last(qtbot, table):
     table.previous()
     assert table.get_selected() == [N - 2]
-    assert table.get_previous_id(0) is None
+    assert table.get_previous_id(0) == 0
 
     table.first()
     qtbot.wait(1)
