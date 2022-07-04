@@ -249,6 +249,7 @@ class Controller:
             return
         if len(cluster_ids or []) <= 1:
             return
+        assert to is not None
         out = self.clustering.merge(cluster_ids, to=to)
         self._global_history.action(self.clustering)
         return out

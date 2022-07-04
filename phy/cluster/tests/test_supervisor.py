@@ -165,4 +165,4 @@ def test_table_controller_4(qtbot, gui, controller):
 
 def test_supervisor_1(qtbot, gui, supervisor):
     s = supervisor
-    qtbot.stop()
+    # qtbot.stop()

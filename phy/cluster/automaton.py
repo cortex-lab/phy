@@ -79,7 +79,7 @@ class ClusterInfo:
     prev_similar: Optional[Callable[[], int]] = None
 
     # id of the new merged cluster that should be selected after a merge
-    merge: Optional[Callable[[list[int]], int]] = None
+    merge: Optional[Callable[[list[int], int], int]] = None
 
     # id of the new clusters that should be selected after a split
     split: Optional[Callable[[list[int]], list[int]]] = None
@@ -242,19 +242,20 @@ class Automaton:
 
         return after
 
-    def _after_merge(self, before: State = None) -> State:
+    def _after_merge(self, before: State = None, to: int = None) -> State:
         """Determine the state after a merge transition."""
 
+        assert to is not None
         before = before or self.current_state()
         after = State()
 
         # Only cluster view
         if not self.current_similar():
-            after.clusters = [self.fn_merge(before.clusters)]
+            after.clusters = [self.fn_merge(before.clusters, to)]
 
         # Similarity view.
         else:
-            after.clusters = [self.fn_merge(before.clusters + before.similar)]
+            after.clusters = [self.fn_merge(before.clusters + before.similar, to)]
             after.similar = [self.fn_similar(after.clusters)]
 
         return after
@@ -396,8 +397,9 @@ class Automaton:
         assert which in ('all', 'best', 'similar')
         return self.transition('move', which=which, group=group)
 
-    def merge(self):
-        return self.transition('merge')
+    def merge(self, to=None):
+        assert to is not None
+        return self.transition('merge', to=to)
 
     def split(self):
         return self.transition('split')

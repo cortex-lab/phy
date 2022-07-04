@@ -52,7 +52,7 @@ def test_controller_merge_1(controller):
     c = controller
 
     # Split some spikes.
-    up = c.merge([30, 20])
+    up = c.merge([30, 20], to=31)
     assert up.description == 'merge'
     assert up.deleted == [20, 30]
     assert up.added == [31]
@@ -108,7 +108,7 @@ def test_controller_label_merge_1(controller):
     l = c.get_labels('my_field')
     assert l[20] == l[30] == 3.14
 
-    up = c.merge([20, 30])
+    up = c.merge([20, 30], to=31)
 
     assert c.get_labels('my_field')[up.added[0]] == 3.14
 
@@ -123,7 +123,7 @@ def test_controller_label_merge_2(controller):
     assert l[20] == 3.14
     assert l[30] is None
 
-    up = c.merge([20, 30])
+    up = c.merge([20, 30], to=31)
 
     assert c.get_labels('my_field')[up.added[0]] == 3.14
 
@@ -135,7 +135,7 @@ def test_controller_label_merge_3(controller):
     c.label(cluster_ids=[20, 30], name="my_field", value=3.14)
 
     # Create merged cluster from 20 and 30.
-    up = c.merge(cluster_ids=[20, 30])
+    up = c.merge(cluster_ids=[20, 30], to=31)
     new = up.added[0]
 
     # It fot the label of its parents.
@@ -145,7 +145,7 @@ def test_controller_label_merge_3(controller):
     c.label(cluster_ids=[10], name="my_field", value=2.718)
 
     # We merge the large and small cluster together.
-    up = c.merge(cluster_ids=up.added + [10])
+    up = c.merge(cluster_ids=up.added + [10], to=32)
 
     # The new cluster should have the value of the first, merged big cluster, i.e. 3.14.
     assert c.get_labels('my_field')[up.added[0]] == 3.14

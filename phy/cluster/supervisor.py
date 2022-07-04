@@ -687,10 +687,16 @@ class Supervisor:
 
         # Create the Qt actions in the GUI.
         self.action_creator = ActionCreator(columns=self.table_controller.columns)
+        self.action_creator.connect(self.on_first)
+        self.action_creator.connect(self.on_last)
         self.action_creator.connect(self.on_next_best)
         self.action_creator.connect(self.on_prev_best)
         self.action_creator.connect(self.on_next)
         self.action_creator.connect(self.on_prev)
+
+        self.action_creator.connect(self.on_merge)
+        self.action_creator.connect(self.on_split)
+        self.action_creator.connect(self.on_move)
 
     @property
     def cluster_ids(self):
@@ -703,6 +709,28 @@ class Supervisor:
 
     # Action callback methods
     # -------------------------------------------------------------------------
+
+    def on_first(self):
+        """This method is called when Qt triggers the first action."""
+
+        tc = self.table_controller
+
+        # We perform the action via the table controller.
+        tc.first()
+
+        # We register the action in the automaton.
+        self.automaton.first()
+
+    def on_last(self):
+        """This method is called when Qt triggers the last action."""
+
+        tc = self.table_controller
+
+        # We perform the action via the table controller.
+        tc.last()
+
+        # We register the action in the automaton.
+        self.automaton.last()
 
     def on_next_best(self):
         """This method is called when Qt triggers the next_best action."""
@@ -748,15 +776,39 @@ class Supervisor:
         # We register the action in the automaton.
         self.automaton.prev()
 
+    def on_merge(self):
+        """This method is called when Qt triggers the merge action."""
+
+        # We find the clusters to merge.
+        tc = self.table_controller
+        cluster_ids = tc.selected_clusters + tc.selected_similar
+
+        # We perform the action via the action controller.
+        to = self.an_new_cluster_id()
+        self.controller.merge(cluster_ids, to=to)
+
+        # We register the action in the automaton.
+        self.automaton.merge(to=to)
+
+        tc.select_clusters(self.automaton.current_clusters())
+        tc.select_similar(self.automaton.current_similar())
+
+    def on_split(self):
+        """This method is called when Qt triggers the split action."""
+
+    def on_move(self):
+        """This method is called when Qt triggers the move action."""
+
     # Automaton methods
     # -------------------------------------------------------------------------
 
     def an_new_cluster_id(self):
-        return self.controller.clustering.new_cluster_id
+        return self.controller.clustering.new_cluster_id()
 
-    def an_merge(self, to_merge):
+    def an_merge(self, cluster_ids=None, to=None):
         # Do the merge and return
-        pass
+        return to
 
-    def an_split(self, to_split):
+    def an_split(self, cluster_ids=None, new_cluster_ids=None):
+        # TODO
         pass

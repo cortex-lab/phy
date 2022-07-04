@@ -72,8 +72,8 @@ def default_prev(clusters=None):
     return UNMASKED[i - 1]
 
 
-def default_merge(clusters=None):
-    return N + 1
+def default_merge(clusters=None, to=None):
+    return to
 
 
 def default_split(clusters=None):
@@ -251,7 +251,7 @@ def test_automaton_merge_1(automaton):
     def on_merge(before, after, **kwargs):
         _l.append((before, after))
 
-    a.merge()
+    a.merge(to=31)
     _assert(a, [31], [])
 
     assert _l[0][0].clusters == [30, 20]
@@ -264,7 +264,7 @@ def test_automaton_merge_2(automaton):
     a.set_state([30], [20])
     _assert(a, [30], [20])
 
-    a.merge()
+    a.merge(to=31)
     _assert(a, [31], [30])
 
 
@@ -274,7 +274,7 @@ def test_automaton_merge_move(automaton):
     a.set_state([20, 11], [])
     _assert(a, [20, 11])
 
-    a.merge()
+    a.merge(to=31)
     _assert(a, [31], [])
 
     a.move(group='good', which='all')
@@ -371,7 +371,7 @@ def test_automaton_history_1(automaton):
     # Merge.
     assert not a.can_undo()
     assert not a.can_redo()
-    a.merge()
+    a.merge(to=31)
     _assert(a, [31], [30])
     assert not _l
 
