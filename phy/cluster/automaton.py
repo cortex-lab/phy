@@ -344,7 +344,7 @@ class Automaton:
             5,
             f'Transition `{transition_name}` '
             f'(before: {before.clusters} {before.similar}, '
-            f'after: {after.clusters} {after.similar})')
+            f'after: {after.clusters} {after.similar}).')
 
         # Create the transition object.
         transition = Transition(

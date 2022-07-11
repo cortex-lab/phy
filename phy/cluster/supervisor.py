@@ -211,7 +211,7 @@ class ActionCreator(object):
 
         def raise_action():
             # NOTE: only 1 callback per action is supported for now.
-            logger.log(5, f"Raising action {method_name}{method_args}")
+            logger.log(5, f"Raising action {method_name}{method_args}.")
             if f:
                 return f(*method_args)
 
@@ -241,7 +241,7 @@ class ActionCreator(object):
             raise ValueError(f"function name `{f}` should start with on_")
         key = name[3:]
         if key in self.callbacks:
-            logger.warning(f"Callback {key} already defined, overriding it with the new one")
+            logger.warning(f"Callback {key} already defined, overriding it with the new one.")
         self.callbacks[key] = f
 
     def _create_edit_actions(self):
@@ -437,6 +437,7 @@ class TableController:
 
     def reset_similarity_view(self, selected_clusters):
         """Reset the similarity view with the clusters similar to the specified clusters."""
+        logger.log(5, f"Resetting the similarity view.")
         self.similarity_view.remove_all_and_add(self._get_data_similar(selected_clusters))
 
     # Properties
@@ -474,7 +475,7 @@ class TableController:
         selected = obj['selected']
         next_cluster = obj['next']
         kwargs = obj.get('kwargs', {})
-        logger.debug(f"Clusters selected: {selected} ({next_cluster})")
+        logger.debug(f"Clusters selected: {selected} ({next_cluster}).")
 
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
@@ -572,30 +573,6 @@ class TableController:
         self.cluster_view.remove_column(col_name)
         self.columns.remove(col_name)
         self._reset_similarity_columns()
-
-    # Wizard methods
-    # -------------------------------------------------------------------------
-
-    def first(self):
-        self.cluster_view.first()
-
-    def last(self):
-        self.cluster_view.last()
-
-    def next_best(self):
-        self.cluster_view.next()
-
-    def prev_best(self):
-        self.cluster_view.previous()
-
-    def next(self):
-        if self.selected_clusters:
-            self.similarity_view.next()
-        else:
-            self.cluster_view.next()
-
-    def prev(self):
-        self.similarity_view.previous()
 
     # Automaton methods
     # -------------------------------------------------------------------------
@@ -732,15 +709,18 @@ class Supervisor:
 
     def autoselect(self):
         """Select the best clusters and similar clusters as per the automaton state."""
-        logger.log(5, f"Select clusters in the tables as requested by the Automaton")
+        logger.log(5, f"Autoselect clusters in the tables as requested by the Automaton.")
         tc = self.table_controller
-        tc.select_clusters(self.automaton.current_clusters())
-        tc.reset_similarity_view(tc.selected_clusters)
+        if tc.selected_clusters != self.automaton.current_clusters():
+            tc.select_clusters(self.automaton.current_clusters())
+            tc.reset_similarity_view(tc.selected_clusters)
         tc.select_similar(self.automaton.current_similar())
 
     def update_clusters(self, up):
         """Add and remove clusters in the tables after a clustering action."""
-        logger.log(5, f"Update clusters ({len(up.added)} added, {len(up.deleted)} removed)")
+        if not up:
+            return
+        logger.log(5, f"Update clusters ({len(up.added)} added, {len(up.deleted)} removed).")
         tc = self.table_controller
         for cl in up.added:
             tc.add_cluster(cl)
@@ -752,66 +732,66 @@ class Supervisor:
 
         tc = self.table_controller
 
-        # We perform the action via the table controller.
-        tc.first()
-
         # We register the action in the automaton.
         self.automaton.first()
+
+        # Update the cluster selection in the tables as specified by the Automaton.
+        self.autoselect()
 
     def on_last(self):
         """This method is called when Qt triggers the last action."""
 
         tc = self.table_controller
 
-        # We perform the action via the table controller.
-        tc.last()
-
         # We register the action in the automaton.
         self.automaton.last()
+
+        # Update the cluster selection in the tables as specified by the Automaton.
+        self.autoselect()
 
     def on_next_best(self):
         """This method is called when Qt triggers the next_best action."""
 
         tc = self.table_controller
 
-        # We perform the action via the table controller.
-        tc.next_best()
-
         # We register the action in the automaton.
         self.automaton.next_best()
+
+        # Update the cluster selection in the tables as specified by the Automaton.
+        self.autoselect()
 
     def on_prev_best(self):
         """This method is called when Qt triggers the prev_best action."""
 
         tc = self.table_controller
 
-        # We perform the action via the table controller.
-        tc.prev_best()
-
         # We register the action in the automaton.
         self.automaton.prev_best()
+
+        # Update the cluster selection in the tables as specified by the Automaton.
+        self.autoselect()
 
     def on_next(self):
         """This method is called when Qt triggers the next action."""
 
         tc = self.table_controller
 
-        # We perform the action via the table controller.
-        tc.next()
-
         # We register the action in the automaton.
         self.automaton.next()
+
+        # Update the cluster selection in the tables as specified by the Automaton.
+        self.autoselect()
 
     def on_prev(self):
         """This method is called when Qt triggers the prev action."""
 
         tc = self.table_controller
 
-        # We perform the action via the table controller.
-        tc.prev()
-
         # We register the action in the automaton.
         self.automaton.prev()
+
+        # Update the cluster selection in the tables as specified by the Automaton.
+        self.autoselect()
 
     def on_merge(self):
         """This method is called when Qt triggers the merge action."""

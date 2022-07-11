@@ -635,6 +635,7 @@ class Table(QTableWidget):
 
     def remove_all_and_add(self, objects):
         """Remove all rows in the table and add new objects."""
+        logger.log(5, f"Clearing table {self.__class__.__name__} and adding {len(objects)} rows.")
         self.remove_all()
         self.add(objects)
 
