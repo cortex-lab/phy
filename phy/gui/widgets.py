@@ -290,7 +290,7 @@ class Table(QTableWidget):
             if self._row2id(row_idx) == id:
                 return row_idx
         # raise ValueError(
-        logger.warning(f"Item with id {id} not found in the table.")
+        logger.debug(f"Item with id {id} not found in the table.")
         return -1
 
     def _row_items(self, row_idx):
@@ -335,7 +335,7 @@ class Table(QTableWidget):
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
         rows = [self._id2row(id) for id in ids]
-        items = _flatten([self._row_items(row) for row in rows])
+        items = _flatten([self._row_items(row) for row in rows if row >= 0])
 
         # HACK: avoid raising the select event automatically when changing the selection status of
         # the items. Raise it manually instead.
@@ -527,104 +527,111 @@ class Table(QTableWidget):
     def add(self, data):
         """Add objects to the table."""
 
-        self.setSortingEnabled(False)
+        with self.mute_select():
+            self.setSortingEnabled(False)
 
-        data = data or []
-        self._data.update({d['id']: d for d in data})
+            data = data or []
+            self._data.update({d['id']: d for d in data})
 
-        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
-        # Previous row count.
-        prev_n_rows = self.rowCount()
+            # Previous row count.
+            prev_n_rows = self.rowCount()
 
-        # New row count.
-        new_n_rows = prev_n_rows + len(data)
-        self.setRowCount(new_n_rows)
+            # New row count.
+            new_n_rows = prev_n_rows + len(data)
+            self.setRowCount(new_n_rows)
 
-        for row_rel_idx, row_dict in enumerate(data):
-            row_idx = row_rel_idx + prev_n_rows
+            for row_rel_idx, row_dict in enumerate(data):
+                row_idx = row_rel_idx + prev_n_rows
 
-            # Set the row id.
-            id = row_dict['id']
-            assert id >= 0
-            self.setVerticalHeaderItem(row_idx, QTableWidgetItem(id))
+                # Set the row id.
+                id = row_dict['id']
+                assert id >= 0
+                self.setVerticalHeaderItem(row_idx, QTableWidgetItem(id))
 
-            # Set the values.
-            for col_idx, col_name in enumerate(self.columns):
-                # Create the QTableWidgetItem object.
-                self._create_item(row_idx, col_idx)
+                # Set the values.
+                for col_idx, col_name in enumerate(self.columns):
+                    # Create the QTableWidgetItem object.
+                    self._create_item(row_idx, col_idx)
 
-                # Set the item style.
-                self._set_item_style(row_idx, col_idx, row_dict)
+                    # Set the item style.
+                    self._set_item_style(row_idx, col_idx, row_dict)
 
-                # Set the item's data.
-                self._set_item_value(row_idx, col_idx, row_dict.get(col_name, None))
+                    # Set the item's data.
+                    self._set_item_value(row_idx, col_idx, row_dict.get(col_name, None))
 
-        self.setSortingEnabled(True)
-        self.resizeColumnsToContents()
+            self.setSortingEnabled(True)
+            self.resizeColumnsToContents()
 
     def change(self, data):
         """Change some objects."""
-        self.setSortingEnabled(False)
 
-        for row_dict in data:
-            id = row_dict['id']
-            row_idx = self._id2row(id)
+        with self.mute_select():
+            self.setSortingEnabled(False)
 
-            d = self._data.get(id, {})
-            for col_name, new_value in row_dict.items():
-                if col_name == 'id':
-                    continue
-                if col_name not in self.columns:
-                    logger.debug(f"column {col_name} does not exist, skipping this value")
-                    continue
+            for row_dict in data:
+                id = row_dict['id']
+                row_idx = self._id2row(id)
 
-                d[col_name] = new_value
+                d = self._data.get(id, {})
+                for col_name, new_value in row_dict.items():
+                    if col_name == 'id':
+                        continue
+                    if col_name not in self.columns:
+                        logger.debug(f"column {col_name} does not exist, skipping this value")
+                        continue
 
-                # Find the row and column index of the corresponding item.
-                col_idx = self.columns.index(col_name)
+                    d[col_name] = new_value
 
-                # Set the item's value.
-                self._set_item_value(row_idx, col_idx, new_value)
+                    # Find the row and column index of the corresponding item.
+                    col_idx = self.columns.index(col_name)
 
-            # Set the item style.
-            for col_idx in range(len(self.columns)):
-                self._set_item_style(row_idx, col_idx, row_dict)
+                    # Set the item's value.
+                    self._set_item_value(row_idx, col_idx, new_value)
 
-        self.setSortingEnabled(True)
+                # Set the item style.
+                for col_idx in range(len(self.columns)):
+                    self._set_item_style(row_idx, col_idx, row_dict)
+
+            self.setSortingEnabled(True)
 
     def remove(self, ids):
         """Remove some objects from their ids."""
-        for id in ids:
-            row_idx = self._id2row(id)
-            if row_idx >= 0:
-                self.removeRow(row_idx)
+        with self.mute_select():
+            for id in ids:
+                row_idx = self._id2row(id)
+                if row_idx >= 0:
+                    self.removeRow(row_idx)
 
     def remove_column(self, col_name):
         """Remove a column."""
-        if col_name in self.columns:
-            col_idx = self.columns.index(col_name)
-        if col_idx >= 0:
-            self.removeColumn(col_idx)
+        with self.mute_select():
+            if col_name in self.columns:
+                col_idx = self.columns.index(col_name)
+            if col_idx >= 0:
+                self.removeColumn(col_idx)
 
     def add_column(self, col_name):
         """Add a column."""
-        self.insertColumn(self.columnCount())
-        self.columns.append(col_name)
-        self.setHorizontalHeaderLabels(self.columns)
+        with self.mute_select():
+            self.insertColumn(self.columnCount())
+            self.columns.append(col_name)
+            self.setHorizontalHeaderLabels(self.columns)
 
-        # Set the values.
-        col_idx = self.columnCount() - 1
+            # Set the values.
+            col_idx = self.columnCount() - 1
 
-        for row_idx in range(self.rowCount()):
-            assert self.item(row_idx, col_idx) is None
-            # Create the QTableWidgetItem object.
-            self._create_item(row_idx, col_idx)
+            for row_idx in range(self.rowCount()):
+                assert self.item(row_idx, col_idx) is None
+                # Create the QTableWidgetItem object.
+                self._create_item(row_idx, col_idx)
 
     def remove_all(self):
         """Remove all rows in the table."""
-        self.clearContents()
-        self.setRowCount(0)
+        with self.mute_select():
+            self.clearContents()
+            self.setRowCount(0)
 
     def remove_all_and_add(self, objects):
         """Remove all rows in the table and add new objects."""
