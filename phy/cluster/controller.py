@@ -294,11 +294,11 @@ class Controller:
 
     def undo(self):
         """Undo the last action."""
-        self._global_history.undo()
+        return self._global_history.undo()
 
     def redo(self):
         """Undo the last undone action."""
-        self._global_history.redo()
+        return self._global_history.redo()
 
     def save(self):
         """Save the manual clustering back to disk.

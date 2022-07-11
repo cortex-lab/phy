@@ -503,6 +503,12 @@ class TableController:
     # Update methods
     # -------------------------------------------------------------------------
 
+    def _update_cluster(self, cluster_id, **labels):
+        """Update the internal structures with the cluster data."""
+        self.cluster_groups[cluster_id] = labels.get('group', None)
+        for name, d in self.cluster_labels.items():
+            d[cluster_id] = labels.get(name, None)
+
     def add_cluster(self, cluster_id, **labels):
         """Add a new cluster in the cluster and similarity views."""
 
@@ -512,23 +518,35 @@ class TableController:
 
         # Update the data structures.
         self.cluster_ids.append(cluster_id)
-        self.cluster_groups[cluster_id] = labels.get('group', None)
-        for name, d in self.cluster_labels.items():
-            d[cluster_id] = labels.get(name, None)
+        self._update_cluster(cluster_id, **labels)
 
         # Add the cluster to the tables.
         d = [{'id': cluster_id, **labels}]
         self.cluster_view.add(d)
-        self.reset_similarity_view(self.selected_clusters)
+        self.similarity_view.add(d)
+        # self.reset_similarity_view(self.selected_clusters)
 
     def change_cluster(self, cluster_id, **labels):
         """Change an existing cluster in the cluster and similarity views."""
+
+        # Update the data structures.
+        self._update_cluster(cluster_id, **labels)
+
         d = [{'id': cluster_id, **labels}]
         self.cluster_view.change(d)
         self.similarity_view.change(d)
 
     def remove_cluster(self, cluster_id):
         """Remove a cluster from the cluster and similarity views."""
+
+        # Update the data structures.
+        if cluster_id in self.cluster_ids:
+            self.cluster_ids.remove(cluster_id)
+        if cluster_id in self.cluster_groups:
+            del self.cluster_groups[cluster_id]
+        if cluster_id in self.cluster_labels:
+            del self.cluster_labels[cluster_id]
+
         self.cluster_view.remove([cluster_id])
         self.similarity_view.remove([cluster_id])
 
@@ -697,6 +715,8 @@ class Supervisor:
         self.action_creator.connect(self.on_merge)
         self.action_creator.connect(self.on_split)
         self.action_creator.connect(self.on_move)
+        self.action_creator.connect(self.on_undo)
+        self.action_creator.connect(self.on_redo)
 
     @property
     def cluster_ids(self):
@@ -709,6 +729,23 @@ class Supervisor:
 
     # Action callback methods
     # -------------------------------------------------------------------------
+
+    def autoselect(self):
+        """Select the best clusters and similar clusters as per the automaton state."""
+        logger.log(5, f"Select clusters in the tables as requested by the Automaton")
+        tc = self.table_controller
+        tc.select_clusters(self.automaton.current_clusters())
+        tc.reset_similarity_view(tc.selected_clusters)
+        tc.select_similar(self.automaton.current_similar())
+
+    def update_clusters(self, up):
+        """Add and remove clusters in the tables after a clustering action."""
+        logger.log(5, f"Update clusters ({len(up.added)} added, {len(up.deleted)} removed)")
+        tc = self.table_controller
+        for cl in up.added:
+            tc.add_cluster(cl)
+        for cl in up.deleted:
+            tc.remove_cluster(cl)
 
     def on_first(self):
         """This method is called when Qt triggers the first action."""
@@ -785,19 +822,54 @@ class Supervisor:
 
         # We perform the action via the action controller.
         to = self.an_new_cluster_id()
-        self.controller.merge(cluster_ids, to=to)
+        up = self.controller.merge(cluster_ids, to=to)
 
         # We register the action in the automaton.
         self.automaton.merge(to=to)
 
-        tc.select_clusters(self.automaton.current_clusters())
-        tc.select_similar(self.automaton.current_similar())
+        # Update the tables.
+        self.update_clusters(up)
+
+        # Update the cluster selection in the table using the Automaton current state.
+        self.autoselect()
 
     def on_split(self):
         """This method is called when Qt triggers the split action."""
+        # TODO
 
     def on_move(self):
         """This method is called when Qt triggers the move action."""
+        # TODO
+
+    def on_undo(self):
+        """This method is called when Qt triggers the undo action."""
+
+        # We perform the action via the action controller.
+        up = self.controller.undo()
+
+        # We register the action in the automaton.
+        self.automaton.undo()
+
+        # Update the tables.
+        self.update_clusters(up)
+
+        # Update the cluster selection in the table using the Automaton current state.
+        self.autoselect()
+
+    def on_redo(self):
+        """This method is called when Qt triggers the redo action."""
+
+        # We perform the action via the action controller.
+        up = self.controller.redo()
+
+        # We register the action in the automaton.
+        self.automaton.redo()
+
+        # Update the tables.
+        self.update_clusters(up)
+
+        # Update the cluster selection in the table using the Automaton current state.
+        self.autoselect()
 
     # Automaton methods
     # -------------------------------------------------------------------------
