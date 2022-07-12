@@ -247,7 +247,7 @@ class Automaton:
 
         return after
 
-    def _after_split(self, before: State = None) -> State:
+    def _after_split(self, before: State = None, new_clusters: list[int] = None) -> State:
         """Determine the state after a split transition."""
 
         before = before or self.current_state()
@@ -255,12 +255,13 @@ class Automaton:
 
         # Only cluster view
         if not self.current_similar():
-            after.clusters = self.fn_split(before.clusters)
+            after.clusters = self.fn_split(before.clusters, new_clusters=new_clusters)
 
         # Similarity view.
         else:
-            after.clusters = self.fn_split(before.clusters + before.similar)
-            after.similar = [self.fn_similar(after.clusters)]
+            after.clusters = self.fn_split(
+                before.clusters + before.similar, new_clusters=new_clusters)
+            # after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -394,8 +395,8 @@ class Automaton:
         assert to is not None
         return self.transition('merge', to=to)
 
-    def split(self):
-        return self.transition('split')
+    def split(self, new_clusters=None):
+        return self.transition('split', new_clusters=new_clusters)
 
     # -------------------------------------------------------------------------
     # History methods

@@ -13,6 +13,7 @@ from ..supervisor import (
     Supervisor, ActionCreator, TableController)
 from phy.gui import GUI
 from phy.gui.qt import qInstallMessageHandler
+from phylib.utils import connect
 
 
 def handler(msg_type, msg_log_context, msg_string):
@@ -223,3 +224,19 @@ def test_supervisor_3(qtbot, gui, supervisor):
 
     s.on_move('mua', 'best')
     _a(tc, [20], [11])
+
+
+def test_supervisor_4(qtbot, gui, spike_clusters, supervisor):
+    s = supervisor
+    tc = supervisor.table_controller
+
+    s.on_next()
+    _a(tc, [30], [20])
+
+    @connect(sender=s.controller)
+    def on_request_split(c):
+        return spike_clusters[:5]
+
+    s.on_split()
+    # print(tc.selected_clusters, tc.selected_similar)
+    _a(tc, [31], [])

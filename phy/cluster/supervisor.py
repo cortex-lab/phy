@@ -804,7 +804,19 @@ class Supervisor:
 
     def on_split(self):
         """This method is called when Qt triggers the split action."""
-        # TODO
+
+        # We perform the action via the action controller.
+        # This method requests the views to specify the spikes to split.
+        up = self.controller.split()
+
+        # We register the action in the automaton.
+        self.automaton.split(new_clusters=up.added)
+
+        # Update the tables.
+        self.update_clusters(up)
+
+        # Update the cluster selection in the table using the Automaton current state.
+        self.autoselect()
 
     def on_move(self, group, which):
         """This method is called when Qt triggers the move action."""
@@ -869,10 +881,9 @@ class Supervisor:
     def an_new_cluster_id(self):
         return self.controller.clustering.new_cluster_id()
 
+    # TODO: remove these 2 methods?
     def an_merge(self, cluster_ids=None, to=None):
-        # Do the merge and return
         return to
 
-    def an_split(self, cluster_ids=None, new_cluster_ids=None):
-        # TODO
-        pass
+    def an_split(self, cluster_ids=None, new_clusters=None):
+        return new_clusters or []
