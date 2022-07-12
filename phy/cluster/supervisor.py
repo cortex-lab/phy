@@ -799,7 +799,23 @@ class Supervisor:
 
     def on_move(self):
         """This method is called when Qt triggers the move action."""
-        # TODO
+
+        # # We find the clusters to move.
+        # tc = self.table_controller
+        # cluster_ids = tc.selected_clusters + tc.selected_similar
+
+        # # We perform the action via the action controller.
+        # to = self.an_new_cluster_id()
+        # up = self.controller.merge(cluster_ids, to=to)
+
+        # # We register the action in the automaton.
+        # self.automaton.merge(to=to)
+
+        # # Update the tables.
+        # self.update_clusters(up)
+
+        # # Update the cluster selection in the table using the Automaton current state.
+        # self.autoselect()
 
     def on_undo(self):
         """This method is called when Qt triggers the undo action."""

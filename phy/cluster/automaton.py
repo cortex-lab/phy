@@ -141,9 +141,9 @@ class Automaton:
 
         # Only cluster view
         after.clusters = [self.fn_next_best(before.clusters)]
-        if self.current_similar():
-            # Similarity view.
-            after.similar = [self.fn_similar(after.clusters)]
+        # if self.current_similar():
+        #     # Similarity view.
+        #     after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
@@ -177,9 +177,9 @@ class Automaton:
             after.clusters = before.clusters
             after.similar = [self.fn_next_similar(before.similar)]
             # If we're at the end of the similarity view, we switch to the next best cluster.
-            if after.similar == before.similar:
-                after.clusters = [self.fn_next_best(before.clusters)]
-                after.similar = [self.fn_similar(after.clusters)]
+            # if after.similar == before.similar:
+            #     after.clusters = [self.fn_next_best(before.clusters)]
+            #     after.similar = [self.fn_similar(after.clusters)]
 
         return after
 
