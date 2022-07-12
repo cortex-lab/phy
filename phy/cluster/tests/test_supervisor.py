@@ -223,6 +223,3 @@ def test_supervisor_3(qtbot, gui, supervisor):
 
     s.on_move('mua', 'best')
     _a(tc, [20], [11])
-    print(tc.selected_clusters, tc.selected_similar)
-
-    # qtbot.stop()
