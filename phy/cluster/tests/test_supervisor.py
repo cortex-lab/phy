@@ -163,6 +163,61 @@ def test_table_controller_4(qtbot, gui, controller):
 # Supervisor tests
 #------------------------------------------------------------------------------
 
+def _a(tc, c, s):
+    assert tc.selected_clusters == c
+    assert tc.selected_similar == s
+
+
 def test_supervisor_1(qtbot, gui, supervisor):
     s = supervisor
+    c = supervisor.controller
+    tc = supervisor.table_controller
+
+    s.on_next_best()
+    _a(tc, [30], [])
+
+    s.on_next_best()
+    _a(tc, [20], [])
+
+    s.on_next()
+    _a(tc, [20], [30])
+
+    s.on_prev()
+    _a(tc, [20], [30])
+
+    s.on_prev_best()
+    _a(tc, [30], [20])
+
+
+def test_supervisor_2(qtbot, gui, supervisor):
+    s = supervisor
+    c = supervisor.controller
+    tc = supervisor.table_controller
+
+    s.on_next()
+    _a(tc, [30], [20])
+
+    s.on_next()
+    _a(tc, [30], [11])
+
+    s.on_undo()
+    _a(tc, [30], [11])
+
+    s.on_prev()
+    _a(tc, [30], [20])
+
+    s.on_merge()
+    _a(tc, [31], [])
+
+    s.on_next()
+    _a(tc, [31], [11])
+
+    s.on_undo()
+    _a(tc, [30], [20])
+
+    s.on_redo()
+    _a(tc, [31], [])
+
+    print(tc.selected_clusters, tc.selected_similar)
+
     # qtbot.stop()
