@@ -210,6 +210,19 @@ def test_supervisor_2(qtbot, gui, supervisor):
     s.on_redo()
     _a(tc, [31], [])
 
+
+def test_supervisor_3(qtbot, gui, supervisor):
+    s = supervisor
+    tc = supervisor.table_controller
+
+    s.on_next()
+    _a(tc, [30], [20])
+
+    s.on_move('mua', 'similar')
+    _a(tc, [30], [11])
+
+    s.on_move('mua', 'best')
+    _a(tc, [20], [11])
     print(tc.selected_clusters, tc.selected_similar)
 
     # qtbot.stop()

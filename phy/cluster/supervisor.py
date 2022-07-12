@@ -714,10 +714,19 @@ class Supervisor:
             return
         logger.log(5, f"Update clusters ({len(up.added)} added, {len(up.deleted)} removed).")
         tc = self.table_controller
+
+        # Added clusters.
         for cl in up.added:
             tc.add_cluster(cl)
+
+        # Deleted clusters.
         for cl in up.deleted:
             tc.remove_cluster(cl)
+
+        if 'metadata' in up.description:
+            label = up.description[9:]
+            for cl in up.metadata_changed:
+                tc.change_cluster(cl, **{label: up.metadata_value})
 
     def on_first(self):
         """This method is called when Qt triggers the first action."""
@@ -797,25 +806,32 @@ class Supervisor:
         """This method is called when Qt triggers the split action."""
         # TODO
 
-    def on_move(self):
+    def on_move(self, group, which):
         """This method is called when Qt triggers the move action."""
 
-        # # We find the clusters to move.
-        # tc = self.table_controller
-        # cluster_ids = tc.selected_clusters + tc.selected_similar
+        # We find the clusters to move.
+        tc = self.table_controller
 
-        # # We perform the action via the action controller.
-        # to = self.an_new_cluster_id()
-        # up = self.controller.merge(cluster_ids, to=to)
+        if which == 'best':
+            cluster_ids = tc.selected_clusters
+        elif which == 'similar':
+            cluster_ids = tc.selected_similar
+        elif which == 'all':
+            cluster_ids = tc.selected_clusters + tc.selected_similar
+        else:
+            raise ValueError(f'which keyword {which} is not valid')
 
-        # # We register the action in the automaton.
-        # self.automaton.merge(to=to)
+        # We perform the action via the action controller.
+        up = self.controller.move(cluster_ids=cluster_ids, group=group)
 
-        # # Update the tables.
-        # self.update_clusters(up)
+        # We register the action in the automaton.
+        self.automaton.move(which=which, group=group)
 
-        # # Update the cluster selection in the table using the Automaton current state.
-        # self.autoselect()
+        # Update the tables.
+        self.update_clusters(up)
+
+        # Update the cluster selection in the table using the Automaton current state.
+        self.autoselect()
 
     def on_undo(self):
         """This method is called when Qt triggers the undo action."""
