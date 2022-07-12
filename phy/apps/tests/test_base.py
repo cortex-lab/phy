@@ -263,7 +263,7 @@ class MinimalControllerTests(object):
     @classmethod
     def _create_gui(cls):
         cls._gui = cls._controller.create_gui(do_prompt_save=False)
-        s = cls._controller.supervisor
+        # s = cls._controller.supervisor
         cls._gui.show()
         # cls._qtbot.addWidget(cls._gui)
         cls._qtbot.waitForWindowShown(cls._gui)

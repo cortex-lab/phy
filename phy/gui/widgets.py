@@ -10,19 +10,18 @@
 from contextlib import contextmanager
 import json
 import logging
-from functools import partial
 
 import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from .qt import (
-    QObject, QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
+    QWidget, QGridLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, Qt, QAbstractItemView,
-    QEvent, qApp, QVBoxLayout, QColor, pyqtSlot, _static_abs_path, _block, Debouncer)
+    QVBoxLayout, QColor)
 from phylib.utils import emit, connect
 from phy.utils.color import colormaps, _is_bright
-from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
+from phylib.utils._misc import _CustomEncoder, _pretty_floats
 from phylib.utils._types import _is_integer
 from phylib.io.array import _flatten
 
@@ -190,7 +189,7 @@ class Table(QTableWidget):
         # Fill in the table.
         self.clearContents()
         n_cols = len(columns)
-        n_rows = len(data)
+        # n_rows = len(data)
 
         # Set table size.
         self.setColumnCount(n_cols)
@@ -461,7 +460,7 @@ class Table(QTableWidget):
                 f = eval('lambda row_dict: ' + text)
                 f(self._data[ids[0]])
             except Exception as e:
-                logger.log(5, f"Filter `{text0}` is invalid.")
+                logger.log(5, f"Filter `{text0}` is invalid: {e.msg}.")
                 text = ''
 
         # Ids to keep.
@@ -533,7 +532,7 @@ class Table(QTableWidget):
             data = data or []
             self._data.update({d['id']: d for d in data})
 
-            flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            # flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
             # Previous row count.
             prev_n_rows = self.rowCount()

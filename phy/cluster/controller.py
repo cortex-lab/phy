@@ -7,23 +7,15 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from dataclasses import dataclass, field
-from functools import partial, wraps
-import inspect
 import logging
-from pprint import pprint
-from typing import Tuple, Callable, Optional
 
 import numpy as np
 
 from ._history import GlobalHistory
-from ._utils import create_cluster_meta, ClusterMeta
+from ._utils import create_cluster_meta
 from .clustering import Clustering
 
-from phylib.utils import Bunch, emit, connect, unconnect, silent
-from phy.gui.actions import Actions
-from phy.gui.qt import _block, set_busy, _wait
-from phy.gui.widgets import Table, _uniq
+from phylib.utils import emit, connect
 
 logger = logging.getLogger(__name__)
 

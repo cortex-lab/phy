@@ -6,15 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from functools import partial
-from pathlib import Path
 import platform
 from pytest import fixture, mark, raises
 
-from phylib.utils import connect, unconnect
-from phylib.utils.testing import captured_logging
-import phy
-from .test_qt import _block
+from phylib.utils import connect
 from ..widgets import Table, IPythonView, KeyValueWidget
 
 

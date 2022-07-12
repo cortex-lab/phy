@@ -20,7 +20,7 @@ from pathlib import Path
 import shutil
 
 from phylib.utils import Bunch, _bunchify, load_json, save_json
-from phylib.utils._misc import _CustomEncoder, _json_custom_hook
+from phylib.utils._misc import _CustomEncoder
 from phy.utils import ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@
 
 from contextlib import contextmanager
 from datetime import datetime
-from functools import wraps, partial
+from functools import wraps
 import logging
 import os
 import os.path as op

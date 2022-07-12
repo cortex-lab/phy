@@ -7,13 +7,9 @@
 #------------------------------------------------------------------------------
 
 import bisect
-from pprint import pprint
-import numpy as np
-from numpy.testing import assert_array_equal as ae
 from pytest import fixture
 
 from ..automaton import State, Transition, ClusterInfo, Automaton
-from phylib.utils import connect, Bunch, emit
 
 
 #------------------------------------------------------------------------------
@@ -118,6 +114,7 @@ def test_automaton_state_1():
 
 def test_automaton_transition_1():
     s = Transition(name='transition', before=None, after=None)
+    assert s
 
 
 def test_automaton_1(cluster_info):

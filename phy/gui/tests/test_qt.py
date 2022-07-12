@@ -8,11 +8,10 @@
 
 from pytest import raises
 
-from phylib.utils.testing import captured_logging
 from ..qt import (
     QMessageBox, Qt, QWidget, QTimer, _button_name_from_enum, _button_enum_from_name,
-    prompt, screen_size, is_high_dpi, _wait_signal, require_qt, create_app, QApplication,
-    busy_cursor, AsyncCaller, _wait, Worker, _block, screenshot, screenshot_default_path,
+    prompt, screen_size, is_high_dpi, _wait_signal, require_qt, create_app, busy_cursor,
+    AsyncCaller, _wait, Worker, _block, screenshot, screenshot_default_path,
     Debouncer, thread_pool)
 
 

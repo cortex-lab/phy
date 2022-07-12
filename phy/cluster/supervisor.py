@@ -7,23 +7,15 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from functools import partial
 import inspect
 import logging
-from pprint import pprint
 
-import numpy as np
-
-from ._history import GlobalHistory
-from ._utils import create_cluster_meta
-from .clustering import Clustering
 from .controller import Controller
 from .automaton import Automaton, State, ClusterInfo
 
-from phylib.utils import Bunch, emit, connect, unconnect, silent
+from phylib.utils import emit, connect
 from phy.gui.actions import Actions
 from phy.gui.gui import GUI
-from phy.gui.qt import _block, set_busy, _wait
 from phy.gui.widgets import Table, _uniq
 
 logger = logging.getLogger(__name__)
@@ -437,7 +429,7 @@ class TableController:
 
     def reset_similarity_view(self, selected_clusters):
         """Reset the similarity view with the clusters similar to the specified clusters."""
-        logger.log(5, f"Resetting the similarity view.")
+        logger.log(5, "Resetting the similarity view.")
         self.similarity_view.remove_all_and_add(self._get_data_similar(selected_clusters))
 
     # Properties
@@ -474,7 +466,7 @@ class TableController:
             return
         selected = obj['selected']
         next_cluster = obj['next']
-        kwargs = obj.get('kwargs', {})
+        # kwargs = obj.get('kwargs', {})
         logger.debug(f"Clusters selected: {selected} ({next_cluster}).")
 
         # Update the similarity view when the cluster view selection changes.
@@ -709,7 +701,7 @@ class Supervisor:
 
     def autoselect(self):
         """Select the best clusters and similar clusters as per the automaton state."""
-        logger.log(5, f"Autoselect clusters in the tables as requested by the Automaton.")
+        logger.log(5, "Autoselect clusters in the tables as requested by the Automaton.")
         tc = self.table_controller
         if tc.selected_clusters != self.automaton.current_clusters():
             tc.select_clusters(self.automaton.current_clusters())
@@ -730,8 +722,6 @@ class Supervisor:
     def on_first(self):
         """This method is called when Qt triggers the first action."""
 
-        tc = self.table_controller
-
         # We register the action in the automaton.
         self.automaton.first()
 
@@ -740,8 +730,6 @@ class Supervisor:
 
     def on_last(self):
         """This method is called when Qt triggers the last action."""
-
-        tc = self.table_controller
 
         # We register the action in the automaton.
         self.automaton.last()
@@ -752,8 +740,6 @@ class Supervisor:
     def on_next_best(self):
         """This method is called when Qt triggers the next_best action."""
 
-        tc = self.table_controller
-
         # We register the action in the automaton.
         self.automaton.next_best()
 
@@ -762,8 +748,6 @@ class Supervisor:
 
     def on_prev_best(self):
         """This method is called when Qt triggers the prev_best action."""
-
-        tc = self.table_controller
 
         # We register the action in the automaton.
         self.automaton.prev_best()
@@ -774,8 +758,6 @@ class Supervisor:
     def on_next(self):
         """This method is called when Qt triggers the next action."""
 
-        tc = self.table_controller
-
         # We register the action in the automaton.
         self.automaton.next()
 
@@ -784,8 +766,6 @@ class Supervisor:
 
     def on_prev(self):
         """This method is called when Qt triggers the prev action."""
-
-        tc = self.table_controller
 
         # We register the action in the automaton.
         self.automaton.prev()

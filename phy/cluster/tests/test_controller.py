@@ -6,14 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import bisect
-from pprint import pprint
 import numpy as np
-from numpy.testing import assert_array_equal as ae
 from pytest import fixture
 
 from ..controller import Controller
-from phylib.utils import connect, Bunch, emit
 from phy.utils.context import Context
 
 

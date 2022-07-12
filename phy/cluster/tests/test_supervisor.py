@@ -6,19 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pprint import pprint
-
 from pytest import fixture
-import numpy as np
-from numpy.testing import assert_array_equal as ae
 
 from .. import supervisor as _supervisor
 from ..supervisor import (
-    Supervisor, ClusterView, SimilarityView, ActionCreator, TableController)
+    Supervisor, ActionCreator, TableController)
 from phy.gui import GUI
 from phy.gui.qt import qInstallMessageHandler
-from phy.utils.context import Context
-from phylib.utils import connect, Bunch, emit
 
 
 def handler(msg_type, msg_log_context, msg_string):
@@ -170,7 +164,6 @@ def _a(tc, c, s):
 
 def test_supervisor_1(qtbot, gui, supervisor):
     s = supervisor
-    c = supervisor.controller
     tc = supervisor.table_controller
 
     s.on_next_best()
@@ -191,7 +184,6 @@ def test_supervisor_1(qtbot, gui, supervisor):
 
 def test_supervisor_2(qtbot, gui, supervisor):
     s = supervisor
-    c = supervisor.controller
     tc = supervisor.table_controller
 
     s.on_next()
