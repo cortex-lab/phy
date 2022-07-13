@@ -1,6 +1,6 @@
 name: phy2
 dependencies:
-  - python=3.7
+  - python
   - pip
   - numpy
   - matplotlib
@@ -10,6 +10,6 @@ dependencies:
   - dask
   - cython
   - pillow
-  - sklearn
+  - scikit-learn
   - pip:
     - phy
