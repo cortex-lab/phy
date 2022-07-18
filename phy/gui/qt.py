@@ -13,7 +13,9 @@ import logging
 import os
 import os.path as op
 from pathlib import Path
+import shutil
 import sys
+import tempfile
 from timeit import default_timer
 import traceback
 
@@ -466,8 +468,21 @@ class WebView(QWebEngineView):
         self._callback = callback
         self.loadFinished.connect(self._loadFinished)
         static_dir = str(Path(__file__).parent / 'static') + '/'
-        base_url = QUrl().fromLocalFile(static_dir)
-        self.page().setHtml(html, base_url)
+
+        # Create local file from HTML
+        self.clear_temporary_files()
+        self._tempdir = Path(tempfile.mkdtemp())
+        shutil.copytree(static_dir, self._tempdir / 'html')
+        file_path = self._tempdir / 'html' / 'page.html'
+        with open(file_path, 'w') as f:
+            f.write(html)
+        file_url = QUrl().fromLocalFile(str(file_path))
+        self.page().setUrl(file_url)
+
+    def clear_temporary_files(self):
+        """Delete the temporary HTML files"""
+        if hasattr(self, '_tempdir') and self._tempdir.is_dir():
+            shutil.rmtree(self._tempdir, ignore_errors=True)
 
     def _callable(self, data):
         self.html = data
