@@ -1,4 +1,7 @@
 name: phy2
+channels:
+  - conda-forge
+  - defaults
 dependencies:
   - python=3.7
   - pip
@@ -7,9 +10,18 @@ dependencies:
   - scipy
   - h5py
   - pyqt
+  - pyopengl
+  - pyqtwebengine
+  - pytest
+  - qtconsole
+  - requests
+  - responses
+  - traitlets
   - dask
   - cython
   - pillow
-  - sklearn
+  - scikit-learn
+  - joblib
   - pip:
-    - phy
+    - git+https://github.com/cortex-lab/phy.git
+
