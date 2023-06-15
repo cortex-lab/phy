@@ -1,20 +1,18 @@
 phylib
 mtscomp
+numpy
+matplotlib
+scipy
+h5py
+dask
+cython
+pillow
 colorcet
+pyopengl
+requests
+qtconsole
 tqdm
+joblib
 click
 mkdocs
-pytest-qt
-# numpy
-# joblib
-# click
-# matplotlib
-# scipy
-# h5py
-# dask
-# cython
-# pillow
-# pyopengl
-# requests
-# qtconsole
-# PyQtWebEngine
+PyQtWebEngine
