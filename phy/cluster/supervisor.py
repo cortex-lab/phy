@@ -728,6 +728,10 @@ class Supervisor(object):
         """Save the GUI state with the cluster view and similarity view."""
         gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
 
+        # Clear temporary HTML files
+        self.cluster_view.clear_temporary_files()
+        self.similarity_view.clear_temporary_files()
+
     def _get_similar_clusters(self, sender, cluster_id):
         """Return the clusters similar to a given cluster."""
         sim = self.similarity(cluster_id) or []
