@@ -30,52 +30,35 @@ Phy provides two GUIs:
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
 
 
+## Hardware requirements
+
+It is recommanded to store the data on a SSD for performance reasons.
+
+There are no specific GPU requirements as long as relatively recent graphics and OpenGL drivers are installed on the system.
+
+
 ## Installation instructions
 
-Phy requires a recent GPU and an SSD for storing your data (the GUI may be slow if the data is on an HDD).
+Run the following commands in a terminal:
 
-1. You need a recent Python distribution.
+1. Create a new conda environment with the conda dependencies:
 
-2. Open a terminal and type:
-
-```bash
-pip install phy --pre --upgrade
-# If you plan to use the Kwik GUI, type the following without the leading hash # character:
-# pip install klusta klustakwik2
+    ```
+    conda create -n phy2 -y cython dask h5py joblib matplotlib numpy pillow pip pyopengl pyqt pyqtwebengine pytest python qtconsole requests responses scikit-learn scipy traitlets
 ```
 
-3. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
+2. Activate the new conda environment with `conda activate phy2`
+
+3. Install the development version of phy: `pip install git+https://github.com/cortex-lab/phy.git`
+
+4. [OPTIONAL] If you plan to use the Kwik GUI, type `pip install klusta klustakwik2`
+
+5. Phy should now be installed. Open the GUI on a dataset as follows (the phy2 environment should still be activated):
 
 ```bash
 cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
-
-### Dependencies
-
-For your information, here are the Python dependencies of phy  (as found in `requirements.txt`):
-
-```
-phylib
-mtscomp
-numpy
-matplotlib
-scipy
-h5py
-dask
-cython
-pillow
-colorcet
-pyopengl
-requests
-qtconsole
-tqdm
-joblib
-click
-mkdocs
-PyQtWebEngine
-```
-
 
 
 ### Dealing with the error `ModuleNotFoundError: No module named 'PyQt5.QtWebEngineWidget`
