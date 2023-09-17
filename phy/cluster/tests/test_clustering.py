@@ -50,7 +50,7 @@ def test_extend_spikes():
     # These are the spikes belonging to those clusters, but not in the
     # originally-specified spikes.
     extended = _extend_spikes(spike_ids, spike_clusters)
-    assert np.all(np.in1d(spike_clusters[extended], clusters))
+    assert np.all(np.isin(spike_clusters[extended], clusters))
 
     # The function only returns spikes that weren't in the passed spikes.
     assert len(np.intersect1d(extended, spike_ids)) == 0
@@ -58,7 +58,7 @@ def test_extend_spikes():
     # Check that all spikes from our clusters have been selected.
     rest = np.setdiff1d(np.arange(n_spikes), extended)
     rest = np.setdiff1d(rest, spike_ids)
-    assert not np.any(np.in1d(spike_clusters[rest], clusters))
+    assert not np.any(np.isin(spike_clusters[rest], clusters))
 
 
 def test_concatenate_spike_clusters():

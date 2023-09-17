@@ -232,7 +232,7 @@ class Clustering(object):
                 self._spikes_per_cluster[clu] = spk
         # If spikes_per_cluster is invalid, recompute the entire
         # spikes_per_cluster array.
-        coherent = np.all(np.in1d(self._cluster_ids, sorted(self._spikes_per_cluster)))
+        coherent = np.all(np.isin(self._cluster_ids, sorted(self._spikes_per_cluster)))
         if not coherent:
             logger.debug("Recompute spikes_per_cluster manually: this might take a while.")
             sc = self._spike_clusters
