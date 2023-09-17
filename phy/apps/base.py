@@ -160,7 +160,7 @@ class WaveformMixin(object):
         # The cluster assignments of the requested spikes.
         spike_clusters = self.supervisor.clustering.spike_clusters[spike_ids]
         # Only keep spikes from clusters on the "best" channel.
-        to_keep = np.in1d(spike_clusters, self.get_clusters_on_channel(channel_id))
+        to_keep = np.isin(spike_clusters, self.get_clusters_on_channel(channel_id))
         waveforms = self.model.get_waveforms(spike_ids[to_keep], [channel_id])
         if waveforms is not None:
             waveforms = waveforms[..., 0]
