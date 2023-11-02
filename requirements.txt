@@ -16,3 +16,7 @@ joblib
 click
 mkdocs
 PyQtWebEngine
+PyQt5
+responses
+traitlets
+scikit-learn
