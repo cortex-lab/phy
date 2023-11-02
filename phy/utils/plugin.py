@@ -11,7 +11,7 @@ Code from http://eli.thegreenplace.net/2012/08/07/fundamental-concepts-of-plugin
 # Imports
 #------------------------------------------------------------------------------
 
-import imp
+import importlib
 import logging
 import os
 from pathlib import Path
@@ -101,12 +101,12 @@ def discover_plugins(dirs):
         modname = path.stem
         if modname in ('phy_config', 'phycontrib_loader'):
             continue
-        file, path, descr = imp.find_module(modname, [subdir])
+        file, path, descr = importlib.util.find_spec(modname, [subdir])
         if file:
             # Loading the module registers the plugin in
             # IPluginRegistry.
             try:
-                mod = imp.load_module(modname, file, path, descr)  # noqa
+                mod = importlib.load_module(modname, file, path, descr)  # noqa
             except Exception as e:  # pragma: no cover
                 logger.exception(e)
             finally:
