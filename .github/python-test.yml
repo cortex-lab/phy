@@ -2,11 +2,9 @@ name: Install and Test with Pip
 
 on:
   pull_request:
-    branches: [ "main" ]
   push:
     branches: [ "main" ]
-  schedule:  # once a day at midnight UTC
-    - cron: '0 0 * * *'
+
 
 jobs:
   build:
