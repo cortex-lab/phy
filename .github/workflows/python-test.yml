@@ -27,7 +27,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f requirements-dev.txt]; then pip install -r requirements-dev.txt; fi
+    - name: Install test dependencies
+        pip install -r requirements-dev.txt
         pip install git+https://github.com/cortex-lab/phy.git
     - name: Test apps
       run: |
