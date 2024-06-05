@@ -30,4 +30,4 @@ jobs:
         pip install git+https://github.com/cortex-lab/phy.git
     - name: Test with pytest
       run: |
-        pytest ./gui
+        pytest phy/gui
