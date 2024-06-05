@@ -98,11 +98,10 @@ def discover_plugins(dirs):
     """
     # Scan all subdirectories recursively.
     for path in _iter_plugin_files(dirs):
-        subdir = path.parent
         modname = path.stem
         if modname in ('phy_config', 'phycontrib_loader'):
             continue
-        spec = importlib.util.spec_from_file_location(modname, subdir)
+        spec = importlib.util.spec_from_file_location(modname, path)
         if spec is not None:
             # Loading the module registers the plugin in
             # IPluginRegistry.
