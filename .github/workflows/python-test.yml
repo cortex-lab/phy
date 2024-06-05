@@ -33,7 +33,7 @@ jobs:
         pip install git+https://github.com/cortex-lab/phy.git
     - name: Test with pytest utils
       run: |
-        sudo catchsegv xvfb-run --auto-servernum `which coverage` run -m pytest phy/utils
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/utils
     - name: Test with pytest plot
       run: |
         sudo catchsegv xvfb-run --auto-servernum `which coverage` run -m pytest phy/plot
