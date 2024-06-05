@@ -102,7 +102,7 @@ def discover_plugins(dirs):
         modname = path.stem
         if modname in ('phy_config', 'phycontrib_loader'):
             continue
-        spec = importlib.util.find_spec(modname, subdir)
+        spec = importlib.util.spec_from_file_location(modname, subdir)
         if spec is not None:
             # Loading the module registers the plugin in
             # IPluginRegistry.
