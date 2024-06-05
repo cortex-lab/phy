@@ -28,6 +28,9 @@ jobs:
         python -m pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install git+https://github.com/cortex-lab/phy.git
+    - name: Test apps
+      run: |
+        pytest phy/apps
     - name: Test with pytest utils
       run: |
         pytest phy/utils
