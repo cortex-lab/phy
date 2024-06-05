@@ -34,6 +34,6 @@ jobs:
     - name: Test with pytest utils
       run: |
         pytest phy/utils
-    - name: Test with pytest cluster
+    - name: Test with pytest plot
       run: |
-        pytest phy/cluster
+        pytest phy/plot
