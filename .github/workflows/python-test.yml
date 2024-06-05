@@ -24,8 +24,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt install -y xvfb x11-utils libxkbcommon-x11-0
         python -m pip install --upgrade pip
-        python -m pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Install test dependencies
       run: |
@@ -33,7 +33,7 @@ jobs:
         pip install git+https://github.com/cortex-lab/phy.git
     - name: Test with pytest utils
       run: |
-        pytest phy/utils
+        sudo catchsegv xvfb-run --auto-servernum `which coverage` run -m pytest phy/utils
     - name: Test with pytest plot
       run: |
-        pytest phy/plot
+        sudo catchsegv xvfb-run --auto-servernum `which coverage` run -m pytest phy/plot
