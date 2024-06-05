@@ -19,7 +19,7 @@ Phy provides two GUIs:
 
 
 ## What's new
-
+* [5 June 2024] phy 2.0 beta 6, bug fixes, install work, fixing some deprecations
 * [7 Sep 2021] Release of phy 2.0 beta 5, with some install and bug fixes
 * [7 Feb 2020] Release of phy 2.0 beta 1, with many new views, new features, various improvements and bug fixes...
 
@@ -44,7 +44,7 @@ Run the following commands in a terminal:
 1. Create a new conda environment with the conda dependencies:
 
     ```
-    conda create -n phy2 -y cython dask h5py joblib matplotlib numpy pillow pip pyopengl pyqt pyqtwebengine pytest python qtconsole requests responses scikit-learn scipy traitlets
+    conda create -n phy2 -y python=3.11 cython dask h5py joblib matplotlib numpy pillow pip pyopengl pyqt pyqtwebengine pytest python qtconsole requests responses scikit-learn scipy traitlets
     ```
 
 2. Activate the new conda environment with `conda activate phy2`
@@ -59,6 +59,9 @@ Run the following commands in a terminal:
 cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
+
+6. If there are problems with this method we also have an `environment.yml` file which allows for
+automatic install of the necessary packages. Give that a try.
 
 
 ### Dealing with the error `ModuleNotFoundError: No module named 'PyQt5.QtWebEngineWidget`
