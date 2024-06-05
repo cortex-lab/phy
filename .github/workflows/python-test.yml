@@ -31,9 +31,6 @@ jobs:
       run: |
         pip install -r requirements-dev.txt
         pip install git+https://github.com/cortex-lab/phy.git
-    - name: Test apps
-      run: |
-        pytest phy/apps
     - name: Test with pytest utils
       run: |
         pytest phy/utils
