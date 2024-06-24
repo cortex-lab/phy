@@ -1,6 +1,6 @@
 phylib
 mtscomp
-numpy
+numpy<2.0
 matplotlib
 scipy
 h5py
