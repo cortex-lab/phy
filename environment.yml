@@ -11,7 +11,7 @@ dependencies:
   - scipy
   - h5py
   - pyqt
-  - pyopengl
+  - pyopengl=3.1.6
   - pyqtwebengine
   - pytest
   - qtconsole
