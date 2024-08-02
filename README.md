@@ -1,6 +1,6 @@
 # phy: interactive visualization and manual spike sorting of large-scale ephys data
 
-[![Build Status](https://travis-ci.org/cortex-lab/phy.svg)](https://travis-ci.org/cortex-lab/phy)
+[![Install and Test with Pip](https://github.com/cortex-lab/phy/actions/workflows/python-test.yml/badge.svg)](https://github.com/cortex-lab/phy/actions/workflows/python-test.yml)
 [![codecov.io](https://img.shields.io/codecov/c/github/cortex-lab/phy.svg)](http://codecov.io/github/cortex-lab/phy)
 [![Documentation Status](https://readthedocs.org/projects/phy/badge/?version=latest)](https://phy.readthedocs.io/en/latest/?badge=latest)
 [![GitHub release](https://img.shields.io/github/release/cortex-lab/phy.svg)](https://github.com/cortex-lab/phy/releases/latest)
@@ -39,7 +39,7 @@ There are no specific GPU requirements as long as relatively recent graphics and
 
 ## Installation instructions
 
-Run the following commands in a terminal:
+Run the following commands in a terminal (currently working for Linux machines):
 
 1. Create a new conda environment with the conda dependencies:
 
@@ -75,7 +75,7 @@ In some environments, you might get an error message related to QtWebEngineWidge
 * It is recommended to delete `~/.phy/*GUI/state.json` when upgrading.
 
 
-### Developer instructions
+### Developer instructions (and instructions for some Windows machines)
 
 To install the development version of phy in a fresh environment, do:
 
@@ -90,6 +90,11 @@ git clone git@github.com:cortex-lab/phylib.git
 cd phylib
 pip install -e . --upgrade
 ```
+
+### Mac Install
+
+Since the switch to M-series chips Mac install for Phy is not being officially supported.
+Rarely people are able to hack together a version with old versions of python etc.
 
 ### Troubleshooting
 
