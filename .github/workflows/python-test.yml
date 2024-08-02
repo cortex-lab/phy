@@ -3,7 +3,7 @@ name: Install and Test with Pip
 on:
   pull_request:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 
