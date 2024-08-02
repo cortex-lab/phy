@@ -46,9 +46,9 @@ jobs:
         ulimit -c unlimited
         sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/plot/tests
 
-    - name: Test with pytest cluster
+    - name: Test with pytest app
       env:
         QT_DEBUG_PLUGINS: 1
       run: |
         ulimit -c unlimited
-        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/app/tests
