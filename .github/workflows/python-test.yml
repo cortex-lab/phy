@@ -54,4 +54,14 @@ jobs:
         sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_actions.py
         sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_gui.py
         sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_state.py
-        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_widgets.py
+
+    - name: Test with pytest cluster
+      env:
+        QT_DEBUG_PLUGINS: 1
+      run: |
+        ulimit -c unlimited
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_clustering.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_history.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_supervisor.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_utils.py
+        
