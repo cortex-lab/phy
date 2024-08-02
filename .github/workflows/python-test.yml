@@ -51,4 +51,7 @@ jobs:
         QT_DEBUG_PLUGINS: 1
       run: |
         ulimit -c unlimited
-        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_actions.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_gui.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_state.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_widgets.py
