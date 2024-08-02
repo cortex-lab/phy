@@ -6,12 +6,12 @@ dependencies:
   - python=3.11
   - pip
   - git
-  - numpy
+  - numpy<2.0
   - matplotlib
   - scipy
   - h5py
   - pyqt
-  - pyopengl
+  - pyopengl=3.1.6
   - pyqtwebengine
   - pytest
   - qtconsole
