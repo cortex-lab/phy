@@ -1,0 +1,66 @@
+name: Install and Test with Pip
+
+on:
+  pull_request:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        # sudo apt install -y xvfb x11-utils libxkbcommon-x11-0
+        sudo apt-get -qq install libxcb-xinerama0 pyqt5-dev-tools
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Install test dependencies
+      run: |
+        pip install -r requirements-dev.txt
+        pip install git+https://github.com/cortex-lab/phy.git
+    - name: Test with pytest utils
+      env:
+        QT_DEBUG_PLUGINS: 1
+      run: |
+        ulimit -c unlimited
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/utils
+
+    - name: Test with pytest plot
+      env:
+        QT_DEBUG_PLUGINS: 1
+      run: |
+        ulimit -c unlimited
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/plot/tests
+
+    - name: Test with pytest gui
+      env:
+        QT_DEBUG_PLUGINS: 1
+      run: |
+        ulimit -c unlimited
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_actions.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_gui.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/gui/tests/test_state.py
+
+    - name: Test with pytest cluster
+      env:
+        QT_DEBUG_PLUGINS: 1
+      run: |
+        ulimit -c unlimited
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_clustering.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_history.py
+        sudo xvfb-run --auto-servernum `which coverage` run -m pytest phy/cluster/tests/test_utils.py
+        
