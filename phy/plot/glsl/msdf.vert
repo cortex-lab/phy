@@ -12,8 +12,6 @@ in float a_string_index;  // index of the string
 in vec2 a_anchor;
 
 uniform vec2 u_glyph_size;  // (w, h)
-// uniform vec2 u_window_size;
-
 
 out vec4 v_color;
 out vec2 v_tex_coords;

@@ -15,11 +15,11 @@ Read more on framebuffers on OpenGL Wiki <https://www.opengl.org/wiki/Texture>
 
      ...
     fragment = '''
-        uniform sampler2D texture;
+        uniform sampler2D tex;
         varying vec2 v_texcoord;
         void main()
         {
-           FragColor = texture2D(texture, v_texcoord);
+           gl_FragColor = texture(texture, v_texcoord);
         } '''
 
     ...
@@ -394,7 +394,6 @@ class TextureCube(Texture):
         """ Setup texture on GPU """
 
         Texture._setup(self)
-        gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
         gl.glBindTexture(self.target, self._handle)
         targets = [gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X,
                    gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
@@ -411,7 +410,6 @@ class TextureCube(Texture):
         log.log(5, "GPU: Updating texture cube")
 
         if self.need_update:
-            gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
             gl.glBindTexture(self.target, self.handle)
 
             targets = [gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -455,7 +453,6 @@ class TextureCube(Texture):
         """ Activate texture on GPU """
 
         log.log(5, "GPU: Activate texture cube")
-        gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
         gl.glBindTexture(self.target, self._handle)
         if self._need_setup:
             self._setup()

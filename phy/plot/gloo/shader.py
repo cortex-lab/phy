@@ -15,15 +15,16 @@ Read more on shaders on `OpenGL Wiki <https://www.opengl.org/wiki/Shader>`_
   .. code:: python
 
      vertex = '''
-         attribute vec2 position;
+        in vec2 position;
          void main (void)
          {
              gl_Position = vec4(0.85*position, 0.0, 1.0);
          } '''
      fragment = '''
+         out vec4 fragColor;
          void main(void)
          {
-             FragColor = vec4(1.0,1.0,0.0,1.0);
+             fragColor = vec4(1.0,1.0,0.0,1.0);
          } '''
 
      quad = gloo.Program(vertex, fragment, count=4)
@@ -85,7 +86,7 @@ class Shader(GLObject):
         'samplerCube': gl.GL_SAMPLER_CUBE,
     }
 
-    def __init__(self, target, code, version="330"):
+    def __init__(self, target, code, version="410"):
         """
         Initialize the shader.
         """
@@ -338,7 +339,7 @@ class Shader(GLObject):
 class VertexShader(Shader):
     """ Vertex shader class """
 
-    def __init__(self, code=None, version="330"):
+    def __init__(self, code=None, version="410"):
         Shader.__init__(self, gl.GL_VERTEX_SHADER, code, version)
 
     @property
@@ -354,7 +355,7 @@ class VertexShader(Shader):
 class FragmentShader(Shader):
     """ Fragment shader class """
 
-    def __init__(self, code=None, version="330"):
+    def __init__(self, code=None, version="410"):
         Shader.__init__(self, gl.GL_FRAGMENT_SHADER, code, version)
 
     @property
@@ -387,7 +388,7 @@ class GeometryShader(Shader):
     """
 
     def __init__(self, code=None,
-                 vertices_out=None, input_type=None, output_type=None, version="330"):
+                 vertices_out=None, input_type=None, output_type=None, version="410"):
         Shader.__init__(self, gl.GL_GEOMETRY_SHADER_EXT, code, version)
 
         self._vertices_out = vertices_out

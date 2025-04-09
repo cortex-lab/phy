@@ -18,14 +18,14 @@ uniform float u_antialias;
 uniform float u_linewidth;
 uniform float u_mask_max;
 
-// Varyings
+// outs
 // ------------------------------------
 out float v_antialias;
 out float v_linewidth;
 out float v_distance;
 out vec4  v_color;
 
-varying float v_mask;
+out float v_mask;
 
 vec2 NDC_to_viewport(vec4 position, vec2 viewport)
 {

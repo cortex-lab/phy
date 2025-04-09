@@ -13,13 +13,13 @@ in float v_linewidth;
 in float v_antialias;
 in float v_mask;
 
-out vec4 FragColor;
+out vec4 fragColor;
 
 // Main
 // ------------------------------------
 void main()
 {
     if (v_color.a == 0)  { discard; }
-    FragColor = stroke(v_distance, v_linewidth, v_antialias, v_color);
-    FragColor = apply_mask(FragColor, v_mask);
+    vec4 strokeColor = stroke(v_distance, v_linewidth, v_antialias, v_color);
+    fragColor = apply_mask(gl_FragColor, v_mask);
 }

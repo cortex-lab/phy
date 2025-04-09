@@ -80,7 +80,7 @@ class Grid(BaseLayout):
         canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert(
             """
-            in vec2 {};
+           in vec2 {};
             uniform vec2 {};
             uniform vec2 u_grid_scaling;
             """.format(self.box_var, self.shape_var),

@@ -1,3 +1,15 @@
+in vec2 v_texcoord;
+in float v_length;
+in vec2 v_caps;
+in vec2 v_bevel_distance;
+
+out vec4 FragColor;
+
+uniform vec4 color;
+uniform float antialias;
+uniform float linewidth;
+uniform float miter_limit;
+
 vec4 stroke(float distance, float linewidth, float antialias, vec4 color)
 {
     vec4 frag_color;
@@ -41,19 +53,6 @@ vec4 cap(int type, float dx, float dy, float linewidth, float antialias, vec4 co
     return stroke(d, linewidth, antialias, color);
 }
 
-
-uniform vec4  color;
-uniform float antialias;
-uniform float linewidth;
-uniform float miter_limit;
-
-in float v_length;
-in vec2  v_caps;
-in vec2  v_texcoord;
-in vec2  v_bevel_distance;
-
-out vec4 FragColor;
-
 void main()
 {
 
@@ -66,7 +65,7 @@ void main()
     }
     if (v_caps.y > v_length)
     {
-        FragColor = cap(1, v_texcoord.x-v_length, v_texcoord.y, linewidth, antialias, color);
+        FragColor = cap(1, v_texcoord.x - v_length, v_texcoord.y, linewidth, antialias, color);
         return;
     }
 
@@ -75,16 +74,16 @@ void main()
     // else if(v_texcoord.x > v_length) { distance = length(v_texcoord - vec2(v_length, 0.0)); }
 
     // Miter limit
-    float t = (miter_limit-1.0)*(linewidth/2.0) + antialias;
+    float t = (miter_limit - 1.0) * (linewidth / 2.0) + antialias;
 
-    if( (v_texcoord.x < 0.0) && (v_bevel_distance.x > (abs(distance) + t)) )
+    if ((v_texcoord.x < 0.0) && (v_bevel_distance.x > (abs(distance) + t)))
     {
         distance = v_bevel_distance.x - t;
     }
-    else if( (v_texcoord.x > v_length) && (v_bevel_distance.y > (abs(distance) + t)) )
+    else if ((v_texcoord.x > v_length) && (v_bevel_distance.y > (abs(distance) + t)))
     {
         distance = v_bevel_distance.y - t;
     }
-    FragColor = stroke(distance, linewidth, antialias, color);
 
+    FragColor = stroke(distance, linewidth, antialias, color);
 }

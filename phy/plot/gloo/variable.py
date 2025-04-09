@@ -41,16 +41,17 @@ samplerCube gl.GL_SAMPLER_CUBE 1  gl.GL_UNSIGNED_INT np.uint32
   .. code::
 
      vertex = '''
-         attribute vec3 position;
+        in vec3 position;
          void main (void)
          {
              gl_Position = vec4(position, 1.0);
          } '''
      fragment = '''
          uniform vec4 color;
+         out vec4 fragColor;
          void main(void)
          {
-             FragColor = color;
+             fragColor = color;
          } '''
      program = gloo.Program(vertex, fragment, count=4)
      # program["position"] type is Attribute
@@ -363,14 +364,35 @@ class Attribute(Variable):
         self._generic = False
 
     def _activate(self):
+        """Activate the attribute ensuring proper GL state."""
+        if not self._active:
+            return
+
         if isinstance(self.data, (VertexBuffer, VertexArray)):
-            self.data.activate()
-            size, gtype, dtype = gl_typeinfo[self._gtype]
-            stride = self.data.stride
-            offset = ctypes.c_void_p(self.data.offset)
-            gl.glEnableVertexAttribArray(self.handle)
-            gl.glVertexAttribPointer(
-                self.handle, size, gtype, gl.GL_FALSE, stride, offset)
+            # Early validation
+            if self.handle < 0:
+                log.debug("Skipping activation of attribute %s (invalid handle)", self.name)
+                return
+
+            try:
+                # 1. First bind the buffer
+                self.data.activate()
+
+                # 2. Get the attribute information
+                size, gtype, dtype = gl_typeinfo[self._gtype]
+                stride = self.data.stride
+                offset = ctypes.c_void_p(self.data.offset)
+                
+                # 3. Set pointer before enabling
+                gl.glVertexAttribPointer(
+                    self.handle, size, gtype, gl.GL_FALSE, stride, offset)
+
+                # 4. Enable the attribute array
+                gl.glEnableVertexAttribArray(self.handle)
+
+            except Exception as e:
+                log.error("Error activating attribute %s: %s", self.name, str(e))
+                raise
 
     def _deactivate(self):
         if isinstance(self.data, VertexBuffer):

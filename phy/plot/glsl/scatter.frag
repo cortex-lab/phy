@@ -3,7 +3,9 @@
 
 in vec4 v_color;
 in float v_size;
-in vec2 u_zoom;
+
+uniform vec2 u_zoom;
+
 
 out vec4 fragColor;
 
