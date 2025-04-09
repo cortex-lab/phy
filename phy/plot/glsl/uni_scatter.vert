@@ -1,13 +1,13 @@
 #include "utils.glsl"
 
-attribute vec2 a_position;
-attribute float a_mask;
+in vec2 a_position;
+in float a_mask;
 
 uniform vec4 u_color;
 uniform float u_size;
 uniform float u_mask_max;
 
-varying float v_mask;
+out float v_mask;
 
 void main() {
     gl_Position = transform(a_position);

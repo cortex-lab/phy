@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 @fixture
 def vertex_shader_nohook():
     yield """
-        attribute vec2 a_position;
+       in vec2 a_position;
         void main() {
             gl_Position = vec4(a_position.xy, 0, 1);
         }
@@ -38,7 +38,7 @@ def vertex_shader_nohook():
 @fixture
 def vertex_shader():
     yield """
-        attribute vec2 a_position;
+       in vec2 a_position;
         void main() {
             gl_Position = transform(a_position.xy);
             gl_PointSize = 2.0;
@@ -49,8 +49,9 @@ def vertex_shader():
 @fixture
 def fragment_shader():
     yield """
+            out vec4 fragColor;
             void main() {
-                gl_FragColor = vec4(1, 1, 1, 1);
+                fragColor = vec4(1, 1, 1, 1);
             }
         """
 

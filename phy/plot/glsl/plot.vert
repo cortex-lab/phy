@@ -1,15 +1,15 @@
 #include "utils.glsl"
 
-attribute vec3 a_position;
-attribute vec4 a_color;
-attribute float a_signal_index;  // 0..n_signals-1
-attribute float a_mask;
+in vec3 a_position;
+in vec4 a_color;
+in float a_signal_index;  // 0..n_signals-1
+in float a_mask;
 
 uniform float u_mask_max;
 
-varying vec4 v_color;
-varying float v_signal_index;
-varying float v_mask;
+out vec4 v_color;
+out float v_signal_index;
+out float v_mask;
 
 void main() {
     vec2 xy = a_position.xy;

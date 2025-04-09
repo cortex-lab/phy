@@ -2,11 +2,11 @@ uniform float antialias;
 uniform float linewidth;
 uniform float miter_limit;
 
-attribute vec2 position;
+in vec2 position;
 
-varying float v_antialias[1];
-varying float v_linewidth[1];
-varying float v_miter_limit[1];
+out float v_antialias[1];
+out float v_linewidth[1];
+out float v_miter_limit[1];
 
 void main()
 {

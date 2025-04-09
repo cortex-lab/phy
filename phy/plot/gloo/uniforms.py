@@ -226,7 +226,7 @@ class Uniforms(Texture2D):
             count, shift = _dtype[name], 0
             while count:
                 if store == 0:
-                    body += "\n    _uniform = texture2D(u_uniforms, vec2(float(i++)/size_x,ty));\n"
+                    body += "\n    _uniform = texture(u_uniforms, vec2(float(i++)/size_x,ty));\n"
                     store = 4
                 if store == 4:
                     a = "xyzw"

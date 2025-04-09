@@ -238,8 +238,8 @@ class GLSLInserter(object):
     def _init_insert(self):
         self.insert_vert('vec2 {{varout}} = {{varin}};', 'before_transforms', index=0)
         self.insert_vert('gl_Position = vec4({{varout}}, 0., 1.);', 'after_transforms', index=0)
-        self.insert_vert('varying vec2 v_{{varout}};\n', 'header', index=0)
-        self.insert_frag('varying vec2 v_{{varout}};\n', 'header', index=0)
+        self.insert_vert('out vec2 v_{{varout}};\n', 'header', index=0)
+        self.insert_frag('in vec2 v_{{varout}};\n', 'header', index=0)
 
     def _insert(self, shader_type, glsl, location, origin=None, index=None):
         assert location in (
@@ -289,8 +289,8 @@ class GLSLInserter(object):
 
     def add_varying(self, vtype, name, value):
         """Add a varying variable."""
-        self.insert_vert('varying %s %s;' % (vtype, name), 'header')
-        self.insert_frag('varying %s %s;' % (vtype, name), 'header')
+        self.insert_vert('out %s %s;' % (vtype, name), 'header')
+        self.insert_frag('in %s %s;' % (vtype, name), 'header')
         self.insert_vert('%s = %s;' % (name, value), 'end')
 
     def add_gpu_transforms(self, tc):
