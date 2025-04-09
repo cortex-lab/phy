@@ -32,7 +32,7 @@ class MyTestVisual(BaseVisual):
     def __init__(self):
         super(MyTestVisual, self).__init__()
         self.vertex_shader = """
-            attribute vec2 a_position;
+            in vec2 a_position;
             void main() {
                 vec2 xy = a_position.xy;
                 gl_Position = transform(xy);
@@ -41,7 +41,7 @@ class MyTestVisual(BaseVisual):
         """
         self.fragment_shader = """
             void main() {
-                gl_FragColor = vec4(1, 1, 1, 1);
+                FragColor = vec4(1, 1, 1, 1);
             }
         """
         self.set_primitive_type('points')

@@ -5,10 +5,11 @@ uniform sampler2D u_tex;
 uniform vec4 u_color;
 uniform vec2 u_zoom;
 
-varying vec2 v_tex_coords;
+in vec2 v_tex_coords;
+out vec4 FragColor
 
 void main() {
     // Texture scalar.
-    float c = texture2D(u_tex, v_tex_coords).x;
-    gl_FragColor = vec4(u_color.rgb * c, u_color.a);
+    float c = texture(u_tex, v_tex_coords).x;
+    FragColor = vec4(u_color.rgb * c, u_color.a);
 }

@@ -47,10 +47,12 @@ uniform float antialias;
 uniform float linewidth;
 uniform float miter_limit;
 
-varying float v_length;
-varying vec2  v_caps;
-varying vec2  v_texcoord;
-varying vec2  v_bevel_distance;
+in float v_length;
+in vec2  v_caps;
+in vec2  v_texcoord;
+in vec2  v_bevel_distance;
+
+out vec4 FragColor;
 
 void main()
 {
@@ -59,12 +61,12 @@ void main()
 
     if (v_caps.x < 0.0)
     {
-        gl_FragColor = cap(1, v_texcoord.x, v_texcoord.y, linewidth, antialias, color);
+        FragColor = cap(1, v_texcoord.x, v_texcoord.y, linewidth, antialias, color);
         return;
     }
     if (v_caps.y > v_length)
     {
-        gl_FragColor = cap(1, v_texcoord.x-v_length, v_texcoord.y, linewidth, antialias, color);
+        FragColor = cap(1, v_texcoord.x-v_length, v_texcoord.y, linewidth, antialias, color);
         return;
     }
 
@@ -83,6 +85,6 @@ void main()
     {
         distance = v_bevel_distance.y - t;
     }
-    gl_FragColor = stroke(distance, linewidth, antialias, color);
+    FragColor = stroke(distance, linewidth, antialias, color);
 
 }

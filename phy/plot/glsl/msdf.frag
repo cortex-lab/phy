@@ -8,8 +8,10 @@ uniform vec4 u_color;
 uniform vec2 u_tex_size;
 uniform vec2 u_zoom;
 
-varying vec2 v_tex_coords;
-varying vec4 v_color;
+in vec2 v_tex_coords;
+in vec4 v_color;
+
+out vec4 FragColor; 
 
 
 float median(float r, float g, float b) {
@@ -24,7 +26,7 @@ float contour(float d, float w) {
 
 float get_alpha(vec2 uv) {
     vec2 msdfUnit = 4.0 / u_tex_size;
-    vec3 sample = texture2D(u_tex, uv).rgb;
+    vec3 sample = texture(u_tex, uv).rgb;
     float sigDist = median(sample.r, sample.g, sample.b) - 0.5;
     sigDist *= dot(msdfUnit, 0.5 / fwidth(uv));
     sigDist += 0.5;
@@ -65,5 +67,5 @@ void main() {
     // sigDist = exp(-20 * pow(sigDist - 1, 2));
     // color = mix(vec3(1, 1, 1), u_color.rgb, sigDist);
 
-    gl_FragColor = vec4(v_color.rgb * alpha, v_color.a);
+    FragColor = vec4(v_color.rgb * alpha, v_color.a);
 }

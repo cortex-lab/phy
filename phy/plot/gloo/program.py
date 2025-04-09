@@ -50,7 +50,7 @@ class Program(GLObject):
 
     # ---------------------------------
     def __init__(self, vertex=None, fragment=None, geometry=None,
-                 count=0, version="120"):
+                 count=0, version="330"):
         """
         Initialize the program and optionnaly buffer.
         """
@@ -427,7 +427,7 @@ class Program(GLObject):
 
               uniform vec3 color;     # Inactive
               void main() {
-                  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                  FragColor = vec4(1.0, 1.0, 1.0, 1.0);
               }
         """
 
@@ -470,7 +470,7 @@ class Program(GLObject):
 
               uniform vec3 color;     # Inactive
               void main() {
-                  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                  FragColor = vec4(1.0, 1.0, 1.0, 1.0);
               }
         """
 

@@ -50,7 +50,7 @@ samplerCube gl.GL_SAMPLER_CUBE 1  gl.GL_UNSIGNED_INT np.uint32
          uniform vec4 color;
          void main(void)
          {
-             gl_FragColor = color;
+             FragColor = color;
          } '''
      program = gloo.Program(vertex, fragment, count=4)
      # program["position"] type is Attribute

@@ -1,9 +1,11 @@
 #include "markers/%MARKER.glsl"
 #include "utils.glsl"
 
-varying vec4 v_color;
-varying float v_size;
-uniform vec2 u_zoom;
+in vec4 v_color;
+in float v_size;
+in vec2 u_zoom;
+
+out vec4 fragColor;
 
 void main()
 {
@@ -11,5 +13,5 @@ void main()
     float point_size = v_size + 5.;
     %MARKER_SCALING
     float distance = marker_%MARKER(P * point_size, marker_size);
-    gl_FragColor = filled(distance, 1.0, 1.0, v_color);
+    fragColor = filled(distance, 1.0, 1.0, v_color);
 }

@@ -19,7 +19,7 @@ Read more on framebuffers on OpenGL Wiki <https://www.opengl.org/wiki/Texture>
         varying vec2 v_texcoord;
         void main()
         {
-           gl_FragColor = texture2D(texture, v_texcoord);
+           FragColor = texture2D(texture, v_texcoord);
         } '''
 
     ...
