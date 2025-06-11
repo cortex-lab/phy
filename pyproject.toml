@@ -1,0 +1,161 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phy"
+dynamic = ["version"]
+description = "Interactive visualization and manual spike sorting of large-scale ephys data"
+readme = "README.md"
+license = { text = "BSD" }
+authors = [
+    { name = "Cyrille Rossant (cortex-lab/UCL/IBL)", email = "cyrille.rossant+pypi@gmail.com" },
+]
+keywords = ["phy", "data analysis", "electrophysiology", "neuroscience"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Framework :: IPython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "phylib",
+    "mtscomp",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "h5py",
+    "dask",
+    "cython",
+    "pillow",
+    "colorcet",
+    "pyopengl==3.1.6",
+    "requests",
+    "qtconsole",
+    "tqdm",
+    "joblib",
+    "click",
+    "responses",
+    "traitlets",
+    "scikit-learn",
+]
+
+[project.urls]
+Homepage = "https://phy.cortexlab.net"
+Repository = "https://github.com/cortex-lab/phy"
+Documentation = "https://phy.cortexlab.net"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-qt",
+    "pytest-cov",
+    "ruff",
+    "coverage",
+    "coveralls",
+    "memory_profiler",
+    "mkdocs",
+]
+qt5 = ["PyQt5", "PyQtWebEngine"]
+qt6 = ["PyQt6", "PyQt6-WebEngine"]
+
+[project.scripts]
+phy = "phy.apps:phycli"
+
+[tool.setuptools.dynamic]
+version = { attr = "phy.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["phy*"]
+
+[tool.setuptools.package-data]
+phy = [
+    "*.vert",
+    "*.frag",
+    "*.glsl",
+    "*.npy",
+    "*.gz",
+    "*.txt",
+    "*.json",
+    "*.html",
+    "*.css",
+    "*.js",
+    "*.prb",
+    "*.ttf",
+    "*.png",
+]
+
+[tool.pytest.ini_options]
+norecursedirs = ["experimental", "_*"]
+filterwarnings = [
+    "default",
+    "ignore::DeprecationWarning:.*",
+    "ignore:numpy.ufunc",
+]
+testpaths = ["phy"]
+addopts = "--cov=phy --cov-report=term-missing"
+
+[tool.coverage.run]
+branch = false
+source = ["phy"]
+omit = [
+    "*/phy/ext/*",
+    "*/phy/utils/tempdir.py",
+    "*/default_settings.py",
+    "*/phy/plot/gloo/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "pass",
+    "continue",
+    "qtbot.stop()",
+    "_in_travis():",
+    "_is_high_dpi():",
+    "return$",
+    "^\"\"\"",
+]
+omit = ["*/phy/plot/gloo/*"]
+show_missing = true
+
+[tool.ruff]
+line-length = 99
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "PIE", "NPY201"]
+ignore = [
+    "E265", # block comment should start with '# '
+    "E731", # do not assign a lambda expression, use a def
+    "E741", # ambiguous variable name
+    "W605", # invalid escape sequence
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["phy"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=6.0",
+    "pytest-qt>=4.0",
+    "pytest-cov>=3.0",
+    "ruff>=0.1.0",
+    "coverage>=6.0",
+    "coveralls>=3.0",
+    "memory_profiler>=0.60",
+    "mkdocs>=1.4",
+]
