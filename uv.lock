@@ -1802,7 +1802,7 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'dev'" },
     { name = "mtscomp" },
     { name = "numpy" },
-    { name = "phylib" },
+    { name = "phylib", git = "https://github.com/jesusdpa1/phylib_update.git" },
     { name = "pillow" },
     { name = "pyopengl", specifier = "==3.1.6" },
     { name = "pyqt5", marker = "extra == 'qt5'" },
@@ -1838,7 +1838,7 @@ dev = [
 [[package]]
 name = "phylib"
 version = "2.6.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/jesusdpa1/phylib_update.git#c5e719802bf91043324d73030f256776dcb65274" }
 dependencies = [
     { name = "dask", version = "2024.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "dask", version = "2025.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -1852,10 +1852,6 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "toolz" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/60/a5/c081e24220e03725a19a3dff4197a5ed211759d25ce896eb7c7381411f11/phylib-2.6.0.tar.gz", hash = "sha256:c93123cc6f29ff60c2bd39ba2e693b8c57bb111fc790d7c1a0859d1a2286a9fa", size = 69008, upload-time = "2024-06-12T08:32:03.938Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/16/ac454e0b7d1029a5fa137860bfd6b87674db1a001fe13426d254d8fa72f1/phylib-2.6.0-py2.py3-none-any.whl", hash = "sha256:9b220b898d370baa5db7ed8f0b8e85f067b32b6babf40efb7a1db4bef0611344", size = 80402, upload-time = "2024-06-12T08:32:02.031Z" },
 ]
 
 [[package]]
