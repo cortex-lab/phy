@@ -1,27 +1,29 @@
-# -*- coding: utf-8 -*-
-
 """Test clustering."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from phylib.io.array import (
+    _spikes_in_clusters,
+)
+from phylib.io.mock import artificial_spike_clusters
+from phylib.utils import connect
 from pytest import raises
 
-from phylib.io.mock import artificial_spike_clusters
-from phylib.io.array import (_spikes_in_clusters,)
-from phylib.utils import connect
-from ..clustering import (_extend_spikes,
-                          _concatenate_spike_clusters,
-                          _extend_assignment,
-                          Clustering)
+from ..clustering import (
+    Clustering,
+    _concatenate_spike_clusters,
+    _extend_assignment,
+    _extend_spikes,
+)
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test assignments
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_extend_spikes_simple():
     spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
@@ -62,10 +64,9 @@ def test_extend_spikes():
 
 
 def test_concatenate_spike_clusters():
-    spikes, clusters = _concatenate_spike_clusters(([1, 5, 4],
-                                                    [10, 50, 40]),
-                                                   ([2, 0, 3, 6],
-                                                    [20, 0, 30, 60]))
+    spikes, clusters = _concatenate_spike_clusters(
+        ([1, 5, 4], [10, 50, 40]), ([2, 0, 3, 6], [20, 0, 30, 60])
+    )
     ae(spikes, np.arange(7))
     ae(clusters, np.arange(0, 60 + 1, 10))
 
@@ -82,28 +83,31 @@ def test_extend_assignment():
     # This should not depend on the index chosen.
     for to in (123, 0, 1, 2, 3):
         clusters_rel = [123] * len(spike_ids)
-        new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
-                                                            spike_clusters,
-                                                            clusters_rel,
-                                                            10,
-                                                            )
+        new_spike_ids, new_cluster_ids = _extend_assignment(
+            spike_ids,
+            spike_clusters,
+            clusters_rel,
+            10,
+        )
         ae(new_spike_ids, [0, 2, 6])
         ae(new_cluster_ids, [10, 10, 11])
 
     # Second case: we assign the spikes to different clusters.
     clusters_rel = [0, 1]
-    new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
-                                                        spike_clusters,
-                                                        clusters_rel,
-                                                        10,
-                                                        )
+    new_spike_ids, new_cluster_ids = _extend_assignment(
+        spike_ids,
+        spike_clusters,
+        clusters_rel,
+        10,
+    )
     ae(new_spike_ids, [0, 2, 6])
     ae(new_cluster_ids, [10, 11, 12])
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test clustering
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_clustering_split():
     spike_clusters = np.array([2, 5, 3, 2, 7, 5, 2])
@@ -115,22 +119,24 @@ def test_clustering_split():
     assert clustering.n_spikes == n_spikes
     ae(clustering.spike_ids, np.arange(n_spikes))
 
-    splits = [[0],
-              [1],
-              [2],
-              [0, 1],
-              [0, 2],
-              [1, 2],
-              [0, 1, 2],
-              [3],
-              [4],
-              [3, 4],
-              [6],
-              [6, 5],
-              [0, 6],
-              [0, 3, 6],
-              [0, 2, 6],
-              np.arange(7)]
+    splits = [
+        [0],
+        [1],
+        [2],
+        [0, 1],
+        [0, 2],
+        [1, 2],
+        [0, 1, 2],
+        [3],
+        [4],
+        [3, 4],
+        [6],
+        [6, 5],
+        [0, 6],
+        [0, 3, 6],
+        [0, 2, 6],
+        np.arange(7),
+    ]
 
     # Test many splits.
     for to_split in splits:
@@ -156,7 +162,7 @@ def test_clustering_descendants_merge():
     up = clustering.merge([2, 3])
     new = up.added[0]
     assert new == 8
-    assert set(up.descendants) == set([(2, 8), (3, 8)])
+    assert set(up.descendants) == {(2, 8), (3, 8)}
 
     with raises(ValueError):
         up = clustering.merge([2, 8])
@@ -164,7 +170,7 @@ def test_clustering_descendants_merge():
     up = clustering.merge([5, 8])
     new = up.added[0]
     assert new == 9
-    assert set(up.descendants) == set([(5, 9), (8, 9)])
+    assert set(up.descendants) == {(5, 9), (8, 9)}
 
 
 def test_clustering_descendants_split():
@@ -173,44 +179,44 @@ def test_clustering_descendants_split():
     # Instantiate a Clustering instance.
     clustering = Clustering(spike_clusters)
 
-    with raises(Exception):
+    with raises(ValueError):
         clustering.split([-1])
-    with raises(Exception):
+    with raises(ValueError):
         clustering.split([8])
 
     # First split.
     up = clustering.split([0])
     assert up.deleted == [2]
     assert up.added == [8, 9]
-    assert set(up.descendants) == set([(2, 8), (2, 9)])
+    assert set(up.descendants) == {(2, 8), (2, 9)}
     ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
 
     # Undo.
     up = clustering.undo()
     assert up.deleted == [8, 9]
     assert up.added == [2]
-    assert set(up.descendants) == set([(8, 2), (9, 2)])
+    assert set(up.descendants) == {(8, 2), (9, 2)}
     ae(clustering.spike_clusters, spike_clusters)
 
     # Redo.
     up = clustering.redo()
     assert up.deleted == [2]
     assert up.added == [8, 9]
-    assert set(up.descendants) == set([(2, 8), (2, 9)])
+    assert set(up.descendants) == {(2, 8), (2, 9)}
     ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
 
     # Second split: just replace cluster 8 by 10 (1 spike in it).
     up = clustering.split([0])
     assert up.deleted == [8]
     assert up.added == [10]
-    assert set(up.descendants) == set([(8, 10)])
+    assert set(up.descendants) == {(8, 10)}
     ae(clustering.spike_clusters, [10, 5, 3, 9, 7, 5, 9])
 
     # Undo again.
     up = clustering.undo()
     assert up.deleted == [10]
     assert up.added == [8]
-    assert set(up.descendants) == set([(10, 8)])
+    assert set(up.descendants) == {(10, 8)}
     ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
 
 
@@ -466,7 +472,7 @@ def test_clustering_long():
     assert np.all(clustering.spike_clusters[:10] == new_cluster)
 
     # Merge.
-    my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [2, 3]))[0]
+    my_spikes_0 = np.nonzero(np.isin(clustering.spike_clusters, [2, 3]))[0]
     info = clustering.merge([2, 3])
     my_spikes = info.spike_ids
     ae(my_spikes, my_spikes_0)
@@ -477,7 +483,7 @@ def test_clustering_long():
     clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering._new_cluster_id = 11
 
-    my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [4, 6]))[0]
+    my_spikes_0 = np.nonzero(np.isin(clustering.spike_clusters, [4, 6]))[0]
     info = clustering.merge([4, 6], 11)
     my_spikes = info.spike_ids
     ae(my_spikes, my_spikes_0)

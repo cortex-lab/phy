@@ -9,7 +9,6 @@ class ExampleCustomButtonPlugin(IPlugin):
         @connect
         def on_view_attached(view, gui):
             if isinstance(view, WaveformView):
-
                 # view.dock is a DockWidget instance, it has methods such as add_button(),
                 # add_checkbox(), and set_status().
 

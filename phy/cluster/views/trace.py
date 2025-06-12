@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Trace view."""
 
 
@@ -10,13 +8,19 @@
 import logging
 
 import numpy as np
-
 from phylib.utils import Bunch, emit
-from phy.utils.color import selected_cluster_color, colormaps, _continuous_colormap, add_alpha
+
 from phy.plot.interact import Stacked
 from phy.plot.transform import NDC, Range, _fix_coordinate_in_visual
-from phy.plot.visuals import PlotVisual, UniformPlotVisual, TextVisual, ImageVisual
-from .base import ManualClusteringView, ScalingMixin, BaseColorView
+from phy.plot.visuals import ImageVisual, PlotVisual, TextVisual, UniformPlotVisual
+from phy.utils.color import (
+    _continuous_colormap,
+    add_alpha,
+    colormaps,
+    selected_cluster_color,
+)
+
+from .base import BaseColorView, ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +28,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Trace view
 # -----------------------------------------------------------------------------
+
 
 def select_traces(traces, interval, sample_rate=None):
     """Load traces in an interval (in seconds)."""
@@ -36,8 +41,14 @@ def select_traces(traces, interval, sample_rate=None):
 
 
 def _iter_spike_waveforms(
-        interval=None, traces_interval=None, model=None, supervisor=None,
-        n_samples_waveforms=None, get_best_channels=None, show_all_spikes=False):
+    interval=None,
+    traces_interval=None,
+    model=None,
+    supervisor=None,
+    n_samples_waveforms=None,
+    get_best_channels=None,
+    show_all_spikes=False,
+):
     """Iterate through the spike waveforms belonging in the current trace view."""
     m = model
     p = supervisor
@@ -55,7 +66,7 @@ def _iter_spike_waveforms(
             if is_selected is not show_selected:
                 continue
             # Skip non-selected spikes if requested.
-            if (not show_all_spikes and c not in supervisor.selected):
+            if not show_all_spikes and c not in supervisor.selected:
                 continue
             # cg = p.cluster_meta.get('group', c)
             channel_ids, channel_amps = get_best_channels(c)
@@ -65,7 +76,7 @@ def _iter_spike_waveforms(
                 continue
             # Extract the waveform.
             wave = Bunch(
-                data=traces_interval[s - k:s + ns - k, channel_ids],
+                data=traces_interval[s - k : s + ns - k, channel_ids],
                 channel_ids=channel_ids,
                 start_time=(s + s0 - k) / sr,
                 spike_id=i,
@@ -106,16 +117,17 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         Labels of all shown channels. By default, this is just the channel ids.
 
     """
+
     _default_position = 'left'
     auto_update = True
     auto_scale = True
-    interval_duration = .25  # default duration of the interval
-    shift_amount = .1
+    interval_duration = 0.25  # default duration of the interval
+    shift_amount = 0.1
     scaling_coeff_x = 1.25
-    trace_quantile = .01  # quantile for auto-scaling
-    default_trace_color = (.5, .5, .5, 1)
-    trace_color_0 = (.353, .161, .443)
-    trace_color_1 = (.133, .404, .396)
+    trace_quantile = 0.01  # quantile for auto-scaling
+    default_trace_color = (0.5, 0.5, 0.5, 1)
+    trace_color_0 = (0.353, 0.161, 0.443)
+    trace_color_1 = (0.133, 0.404, 0.396)
     default_shortcuts = {
         'change_trace_size': 'ctrl+wheel',
         'switch_color_scheme': 'shift+wheel',
@@ -146,9 +158,16 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     }
 
     def __init__(
-            self, traces=None, sample_rate=None, spike_times=None, duration=None,
-            n_channels=None, channel_positions=None, channel_labels=None, **kwargs):
-
+        self,
+        traces=None,
+        sample_rate=None,
+        spike_times=None,
+        duration=None,
+        n_channels=None,
+        channel_positions=None,
+        channel_labels=None,
+        **kwargs,
+    ):
         self.do_show_labels = True
         self.show_all_spikes = False
 
@@ -157,10 +176,10 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         # Sample rate.
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
-        self.dt = 1. / self.sample_rate
+        self.dt = 1.0 / self.sample_rate
 
         # Traces and spikes.
-        assert hasattr(traces, '__call__')
+        assert callable(traces)
         self.traces = traces
         # self.waveforms = None
 
@@ -172,29 +191,41 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
         # Channel y ranking.
         self.channel_positions = (
-            channel_positions if channel_positions is not None else
-            np.c_[np.zeros(n_channels), np.arange(n_channels)])
+            channel_positions
+            if channel_positions is not None
+            else np.c_[np.zeros(n_channels), np.arange(n_channels)]
+        )
         # channel_y_ranks[i] is the position of channel #i in the trace view.
         self.channel_y_ranks = np.argsort(np.argsort(self.channel_positions[:, 1]))
         assert self.channel_y_ranks.shape == (n_channels,)
 
         # Channel labels.
         self.channel_labels = (
-            channel_labels if channel_labels is not None else
-            ['%d' % ch for ch in range(n_channels)])
-        assert len(self.channel_labels) == n_channels
+            channel_labels
+            if channel_labels is not None
+            else [f'{ch}' for ch in range(n_channels)]
+        )
+        assert len(self.channel_labels) == self.n_channels
 
         # Initialize the view.
-        super(TraceView, self).__init__(**kwargs)
-        self.state_attrs += ('origin', 'do_show_labels', 'show_all_spikes', 'auto_scale')
-        self.local_state_attrs += ('interval', 'scaling',)
+        super().__init__(**kwargs)
+        self.state_attrs += (
+            'origin',
+            'do_show_labels',
+            'show_all_spikes',
+            'auto_scale',
+        )
+        self.local_state_attrs += (
+            'interval',
+            'scaling',
+        )
 
         # Visuals.
         self._create_visuals()
 
         # Initial interval.
         self._interval = None
-        self.go_to(duration / 2.)
+        self.go_to(duration / 2.0)
 
         self._waveform_times = []
         self.canvas.panzoom.set_constrain_bounds((-1, -2, +1, +2))
@@ -207,8 +238,10 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         # Gradient of color for the traces.
         if self.trace_color_0 and self.trace_color_1:
             self.trace_visual.inserter.insert_frag(
-                'gl_FragColor.rgb = mix(vec3%s, vec3%s, (v_signal_index / %d));' % (
-                    self.trace_color_0, self.trace_color_1, self.n_channels), 'end')
+                f'gl_FragColor.rgb = mix(vec3{self.trace_color_0}, '
+                f'vec3{self.trace_color_1}, (v_signal_index / {self.n_channels}));',
+                'end',
+            )
         self.canvas.add_visual(self.trace_visual)
 
         self.waveform_visual = PlotVisual()
@@ -217,9 +250,11 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         self.text_visual = TextVisual()
         _fix_coordinate_in_visual(self.text_visual, 'x')
         self.text_visual.inserter.add_varying(
-            'float', 'v_discard',
+            'float',
+            'v_discard',
             'float((n_boxes >= 50 * u_zoom.y) && '
-            '(mod(int(a_box_index), int(n_boxes / (50 * u_zoom.y))) >= 1))')
+            '(mod(int(a_box_index), int(n_boxes / (50 * u_zoom.y))) >= 1))',
+        )
         self.text_visual.inserter.insert_frag('if (v_discard > 0) discard;', 'end')
         self.canvas.add_visual(self.text_visual)
 
@@ -250,7 +285,8 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         self.trace_visual.color = color
         self.canvas.update_visual(
             self.trace_visual,
-            t, traces,
+            t,
+            traces,
             data_bounds=self.data_bounds,
             box_index=box_index.ravel(),
         )
@@ -268,7 +304,9 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         i = bunch.select_index
         c = bunch.spike_cluster
         cs = self.color_schemes.get()
-        color = selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
+        color = (
+            selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
+        )
 
         # We could tweak the color of each spike waveform depending on the template amplitude
         # on each of its best channels.
@@ -283,7 +321,9 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
         self.waveform_visual.add_batch_data(
             box_index=box_index,
-            x=t, y=bunch.data.T, color=color,
+            x=t,
+            y=bunch.data.T,
+            color=color,
             data_bounds=self.data_bounds,
         )
 
@@ -297,7 +337,13 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             for w in waveforms:
                 self._plot_spike(w)
                 self._waveform_times.append(
-                    (w.start_time, w.spike_id, w.spike_cluster, w.get('channel_ids', None)))
+                    (
+                        w.start_time,
+                        w.spike_id,
+                        w.spike_cluster,
+                        w.get('channel_ids', None),
+                    )
+                )
             self.canvas.update_visual(self.waveform_visual)
         else:  # pragma: no cover
             self.waveform_visual.hide()
@@ -310,7 +356,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             self.text_visual.add_batch_data(
                 pos=[self.data_bounds[0], 0],
                 text=ch_label,
-                anchor=[+1., 0],
+                anchor=[+1.0, 0],
                 data_bounds=self.data_bounds,
                 box_index=bi,
             )
@@ -327,10 +373,10 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         end = int(round(end * self.sample_rate)) / self.sample_rate
         # Restrict the interval to the boundaries of the traces.
         if start < 0:
-            end += (-start)
+            end += -start
             start = 0
         elif end >= self.duration:
-            start -= (end - self.duration)
+            start -= end - self.duration
             end = self.duration
         start = np.clip(start, 0, end)
         end = np.clip(end, start, self.duration)
@@ -343,13 +389,13 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             traces = self.traces(self._interval)
 
         if update_traces:
-            logger.log(5, "Redraw the entire trace view.")
+            logger.log(5, 'Redraw the entire trace view.')
             start, end = self._interval
 
             # Find the data bounds.
             if self.auto_scale or getattr(self, 'data_bounds', NDC) == NDC:
                 ymin = np.quantile(traces.data, self.trace_quantile)
-                ymax = np.quantile(traces.data, 1. - self.trace_quantile)
+                ymax = np.quantile(traces.data, 1.0 - self.trace_quantile)
             else:
                 ymin, ymax = self.data_bounds[1], self.data_bounds[3]
             self.data_bounds = (start, ymin, end, ymax)
@@ -358,8 +404,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             self._waveform_times = []
 
             # Plot the traces.
-            self._plot_traces(
-                traces.data, color=traces.get('color', None))
+            self._plot_traces(traces.data, color=traces.get('color', None))
 
             # Plot the labels.
             if self.do_show_labels:
@@ -378,7 +423,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         interval = self._restrict_interval(interval)
 
         if interval != self._interval:
-            logger.log(5, "Redraw the entire trace view.")
+            logger.log(5, 'Redraw the entire trace view.')
             self._interval = interval
             emit('is_busy', self, True)
             self.plot(update_traces=True, update_waveforms=True)
@@ -397,17 +442,21 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-        super(TraceView, self).attach(gui)
+        super().attach(gui)
 
-        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(
-            self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes)
-        self.actions.add(self.toggle_auto_scale, checkable=True, checked=self.auto_scale)
+            self.toggle_show_labels, checkable=True, checked=self.do_show_labels
+        )
+        self.actions.add(
+            self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes
+        )
+        self.actions.add(
+            self.toggle_auto_scale, checkable=True, checked=self.auto_scale
+        )
         self.actions.add(self.switch_origin)
         self.actions.separator()
 
-        self.actions.add(
-            self.go_to, prompt=True, prompt_default=lambda: str(self.time))
+        self.actions.add(self.go_to, prompt=True, prompt_default=lambda: str(self.time))
         self.actions.separator()
 
         self.actions.add(self.go_to_start)
@@ -453,8 +502,9 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             self.canvas.layout.origin = value
         else:  # pragma: no cover
             logger.warning(
-                "Could not set origin to %s because the layout instance was not initialized yet.",
-                value)
+                'Could not set origin to %s because the layout instance was not initialized yet.',
+                value,
+            )
 
     def switch_origin(self):
         """Switch between top and bottom origin for the channels."""
@@ -466,7 +516,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     @property
     def time(self):
         """Time at the center of the window."""
-        return sum(self._interval) * .5
+        return sum(self._interval) * 0.5
 
     @property
     def interval(self):
@@ -482,9 +532,9 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         """Half of the duration of the current interval."""
         if self._interval is not None:
             a, b = self._interval
-            return (b - a) * .5
+            return (b - a) * 0.5
         else:
-            return self.interval_duration * .5
+            return self.interval_duration * 0.5
 
     def go_to(self, time):
         """Go to a specific time (in seconds)."""
@@ -506,23 +556,23 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     def go_right(self):
         """Go to right."""
         start, end = self._interval
-        delay = (end - start) * .1
+        delay = (end - start) * 0.1
         self.shift(delay)
 
     def go_left(self):
         """Go to left."""
         start, end = self._interval
-        delay = (end - start) * .1
+        delay = (end - start) * 0.1
         self.shift(-delay)
 
     def jump_right(self):
         """Jump to right."""
-        delay = self.duration * .1
+        delay = self.duration * 0.1
         self.shift(delay)
 
     def jump_left(self):
         """Jump to left."""
-        delay = self.duration * .1
+        delay = self.duration * 0.1
         self.shift(-delay)
 
     def _jump_to_spike(self, delta=+1):
@@ -533,11 +583,15 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             n = len(spike_times)
             self.go_to(spike_times[(ind + delta) % n])
 
-    def go_to_next_spike(self, ):
+    def go_to_next_spike(
+        self,
+    ):
         """Jump to the next spike from the first selected cluster."""
         self._jump_to_spike(+1)
 
-    def go_to_previous_spike(self, ):
+    def go_to_previous_spike(
+        self,
+    ):
         """Jump to the previous spike from the first selected cluster."""
         self._jump_to_spike(-1)
 
@@ -563,14 +617,14 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
     def toggle_show_labels(self, checked):
         """Toggle the display of the channel ids."""
-        logger.debug("Set show labels to %s.", checked)
+        logger.debug('Set show labels to %s.', checked)
         self.do_show_labels = checked
         self.text_visual.toggle()
         self.canvas.update()
 
     def toggle_auto_scale(self, checked):
         """Toggle automatic scaling of the traces."""
-        logger.debug("Set auto scale to %s.", checked)
+        logger.debug('Set auto scale to %s.', checked)
         self.auto_scale = checked
 
     def update_color(self):
@@ -608,7 +662,11 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             # Find the spike and cluster closest to the mouse.
             db = self.data_bounds
             # Get the information about the displayed spikes.
-            wt = [(t, s, c, ch) for t, s, c, ch in self._waveform_times if channel_id in ch]
+            wt = [
+                (t, s, c, ch)
+                for t, s, c, ch in self._waveform_times
+                if channel_id in ch
+            ]
             if not wt:
                 return
             # Get the time coordinate of the mouse position.
@@ -620,8 +678,13 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             # Raise the select_spike event.
             spike_id = spike_ids[i]
             cluster_id = spike_clusters[i]
-            emit('select_spike', self, channel_id=channel_id,
-                 spike_id=spike_id, cluster_id=cluster_id)
+            emit(
+                'select_spike',
+                self,
+                channel_id=channel_id,
+                spike_id=spike_id,
+                cluster_id=cluster_id,
+            )
 
         if 'Shift' in e.modifiers:
             # Get mouse position in NDC.
@@ -631,16 +694,17 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
     def on_mouse_wheel(self, e):  # pragma: no cover
         """Scroll through the data with alt+wheel."""
-        super(TraceView, self).on_mouse_wheel(e)
+        super().on_mouse_wheel(e)
         if e.modifiers == ('Alt',):
             start, end = self._interval
-            delay = e.delta * (end - start) * .1
+            delay = e.delta * (end - start) * 0.1
             self.shift(-delay)
 
 
 # -----------------------------------------------------------------------------
 # Trace Image view
 # -----------------------------------------------------------------------------
+
 
 class TraceImageView(TraceView):
     """This view shows the raw traces as an image
@@ -666,6 +730,7 @@ class TraceImageView(TraceView):
         Labels of all shown channels. By default, this is just the channel ids.
 
     """
+
     default_shortcuts = {
         'change_trace_size': 'ctrl+wheel',
         'decrease': 'ctrl+alt+down',
@@ -691,10 +756,13 @@ class TraceImageView(TraceView):
         self._scaling = 1
         self.vrange = (0, 1)
 
-        super(TraceImageView, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.state_attrs += ('origin', 'auto_scale')
-        self.local_state_attrs += ('interval', 'scaling',)
+        self.local_state_attrs += (
+            'interval',
+            'scaling',
+        )
 
     def _create_visuals(self):
         self.trace_visual = ImageVisual()
@@ -714,7 +782,7 @@ class TraceImageView(TraceView):
 
         vmin, vmax = self.vrange
         image = _continuous_colormap(colormaps.diverging, traces, vmin=vmin, vmax=vmax)
-        image = add_alpha(image, alpha=1.)
+        image = add_alpha(image, alpha=1.0)
         self.trace_visual.set_data(image=image)
 
     # Public methods
@@ -722,21 +790,20 @@ class TraceImageView(TraceView):
 
     def plot(self, update_traces=True, **kwargs):
         if update_traces:
-            logger.log(5, "Redraw the entire trace view.")
+            logger.log(5, 'Redraw the entire trace view.')
             traces = self.traces(self._interval)
 
             # Find the data bounds.
             if self.auto_scale or self.vrange == (0, 1):
                 vmin = np.quantile(traces.data, self.trace_quantile)
-                vmax = np.quantile(traces.data, 1. - self.trace_quantile)
+                vmax = np.quantile(traces.data, 1.0 - self.trace_quantile)
             else:  # pragma: no cover
                 vmin, vmax = self.vrange
 
             self.vrange = (vmin * self.scaling, vmax * self.scaling)
 
             # Plot the traces.
-            self._plot_traces(
-                traces.data, color=traces.get('color', None))
+            self._plot_traces(traces.data, color=traces.get('color', None))
 
         self.canvas.update()
 

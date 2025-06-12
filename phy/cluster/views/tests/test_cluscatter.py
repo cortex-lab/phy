@@ -1,47 +1,51 @@
-# -*- coding: utf-8 -*-
-
 """Test views."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from numpy.random import RandomState
-
 from phylib.utils import Bunch, connect, emit
 
 from phy.plot.tests import mouse_click
+
 from ..cluscatter import ClusterScatterView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test cluster scatter view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     n_clusters = 1000
     cluster_ids = np.arange(n_clusters)[2::3]
 
-    class Supervisor(object):
+    class Supervisor:
         pass
+
     s = Supervisor()
 
     def cluster_info(cluster_id):
         np.random.seed(cluster_id)
-        return Bunch({
-            'fet1': np.random.randn(),
-            'fet2': np.random.randn(),
-            'fet3': np.random.uniform(low=5, high=20)
-        })
+        return Bunch(
+            {
+                'fet1': np.random.randn(),
+                'fet2': np.random.randn(),
+                'fet3': np.random.uniform(low=5, high=20),
+            }
+        )
 
     bindings = Bunch({'x_axis': 'fet1', 'y_axis': 'fet2', 'size': 'fet3'})
 
     v = ClusterScatterView(cluster_info=cluster_info, cluster_ids=cluster_ids, bindings=bindings)
     v.add_color_scheme(
-        lambda cluster_id: RandomState(cluster_id).rand(), name='depth',
-        colormap='linear', cluster_ids=cluster_ids)
+        lambda cluster_id: RandomState(cluster_id).rand(),
+        name='depth',
+        colormap='linear',
+        cluster_ids=cluster_ids,
+    )
     v.show()
     v.plot()
     v.color_scheme = 'depth'
@@ -91,14 +95,13 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
     mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=())
     assert len(_clicked) == 1
 
-    mouse_click(
-        qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Shift',))
+    mouse_click(qtbot, v.canvas, pos=(w / 2, h / 2), button='Left', modifiers=('Shift',))
     assert len(_clicked) == 2
 
-    mouse_click(qtbot, v.canvas, pos=(w * .3, h * .3), button='Left', modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, pos=(w * .7, h * .3), button='Left', modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, pos=(w * .7, h * .7), button='Left', modifiers=('Control',))
-    mouse_click(qtbot, v.canvas, pos=(w * .3, h * .7), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * 0.3, h * 0.3), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * 0.7, h * 0.3), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * 0.7, h * 0.7), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(w * 0.3, h * 0.7), button='Left', modifiers=('Control',))
 
     assert len(v.cluster_ids) >= 1
 

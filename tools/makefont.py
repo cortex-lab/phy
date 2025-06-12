@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """Create a multi-channel signed distance field map.
 Use https://github.com/Chlumsky/msdfgen/
@@ -13,7 +12,6 @@ Just run this script to (re)create the font map directly in phy/plot/static/ in 
 
 """
 
-
 import gzip
 import os
 from pathlib import Path
@@ -21,13 +19,12 @@ from pathlib import Path
 import imageio
 import numpy as np
 
-from phy.plot.visuals import FONT_MAP_SIZE, FONT_MAP_PATH, SDF_SIZE, FONT_MAP_CHARS, GLYPH_SIZE
+from phy.plot.visuals import FONT_MAP_CHARS, FONT_MAP_PATH, FONT_MAP_SIZE, GLYPH_SIZE, SDF_SIZE
 
 
-class FontMapGenerator(object):
-    """Generate a SDF font map for a monospace font, with a given uniform glyph size.
+class FontMapGenerator:
+    """Generate a SDF font map for a monospace font, with a given uniform glyph size."""
 
-    """
     def __init__(self):
         self.rows, self.cols = FONT_MAP_SIZE
         self.font_map_output = FONT_MAP_PATH
@@ -56,7 +53,8 @@ class FontMapGenerator(object):
         return (
             f'{self.msdfgen_path} msdf -font {self.font} {char_number} -o {self.glyph_output} '
             f'-size {self.width} {self.height} '
-            '-pxrange 4 -scale 3.9 -translate 0.5 4')
+            '-pxrange 4 -scale 3.9 -translate 0.5 4'
+        )
 
     def _get_glyph_array(self, char_number):
         """Return the NumPy array with a glyph, by calling the msdfgen tool."""

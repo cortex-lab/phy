@@ -4,19 +4,18 @@
 # -----------------------------------------------------------------------------
 
 import logging
-from operator import attrgetter
 import re
+from operator import attrgetter
 
 import numpy as np
 
 from . import gl
-from .snippet import Snippet
-from .globject import GLObject
 from .array import VertexArray
-from .buffer import VertexBuffer, IndexBuffer
-from .shader import VertexShader, FragmentShader, GeometryShader
-from .variable import Uniform, Attribute
-
+from .buffer import IndexBuffer, VertexBuffer
+from .globject import GLObject
+from .shader import FragmentShader, GeometryShader, VertexShader
+from .snippet import Snippet
+from .variable import Attribute, Uniform
 
 log = logging.getLogger(__name__)
 
@@ -49,8 +48,9 @@ class Program(GLObject):
     """
 
     # ---------------------------------
-    def __init__(self, vertex=None, fragment=None, geometry=None,
-                 count=0, version="120"):
+    def __init__(
+        self, vertex=None, fragment=None, geometry=None, count=0, version='120'
+    ):
         """
         Initialize the program and optionnaly buffer.
         """
@@ -70,7 +70,7 @@ class Program(GLObject):
                 self._vertex = vertex
                 self._vertex._version = version
             else:
-                log.error("vertex must be a string or a VertexShader")
+                log.error('vertex must be a string or a VertexShader')
 
         if fragment is not None:
             if isinstance(fragment, str):
@@ -79,7 +79,7 @@ class Program(GLObject):
                 self._fragment = fragment
                 self._fragment._version = version
             else:
-                log.error("fragment must be a string or a FragmentShader")
+                log.error('fragment must be a string or a FragmentShader')
 
         if geometry is not None:
             if isinstance(geometry, str):
@@ -88,7 +88,7 @@ class Program(GLObject):
                 self._geometry = geometry
                 self._geometry._version = version
             else:
-                log.error("geometry must be a string or a GeometryShader")
+                log.error('geometry must be a string or a GeometryShader')
 
         self._uniforms = {}
         self._attributes = {}
@@ -101,10 +101,11 @@ class Program(GLObject):
         # Build associated structured vertex buffer if count is given
         if self._count > 0:
             dtype = []
-            for attribute in sorted(self._attributes.values(), filter=attrgetter('name')):
+            for attribute in sorted(
+                self._attributes.values(), filter=attrgetter('name')
+            ):
                 dtype.append(attribute.dtype)
-            self._buffer = np.zeros(
-                self._count, dtype=dtype).view(VertexBuffer)
+            self._buffer = np.zeros(self._count, dtype=dtype).view(VertexBuffer)
             self.bind(self._buffer)
 
     def __len__(self):
@@ -115,17 +116,17 @@ class Program(GLObject):
 
     @property
     def vertex(self):
-        """ Vertex shader object """
+        """Vertex shader object"""
         return self._vertex
 
     @property
     def fragment(self):
-        """ Fragment shader object """
+        """Fragment shader object"""
         return self._fragment
 
     @property
     def geometry(self):
-        """ Geometry shader object """
+        """Geometry shader object"""
         return self._geometry
 
     @property
@@ -147,13 +148,14 @@ class Program(GLObject):
            }
         """
 
-        return tuple(self._vert_hooks.keys()) + \
-            tuple(self._frag_hooks.keys()) + \
-            tuple(self._geom_hooks.keys())
+        return (
+            tuple(self._vert_hooks.keys())
+            + tuple(self._frag_hooks.keys())
+            + tuple(self._geom_hooks.keys())
+        )
 
     def _setup(self):
-        """ Setup the program by resolving all pending hooks. """
-        pass
+        """Setup the program by resolving all pending hooks."""
 
     def _create(self):
         """
@@ -162,17 +164,17 @@ class Program(GLObject):
         A GL context must be available to be able to build (link)
         """
 
-        log.log(5, "GPU: Creating program")
+        log.log(5, 'GPU: Creating program')
 
         # Check if program has been created
         if self._handle <= 0:
             self._handle = gl.glCreateProgram()
             if not self._handle:
-                raise ValueError("Cannot create program object")
+                raise ValueError('Cannot create program object')
 
         self._build_shaders(self._handle)
 
-        log.log(5, "GPU: Linking program")
+        log.log(5, 'GPU: Linking program')
 
         # Link the program
         gl.glLinkProgram(self._handle)
@@ -197,15 +199,15 @@ class Program(GLObject):
                 attribute.active = False
 
     def _build_shaders(self, program):
-        """ Build and attach shaders """
+        """Build and attach shaders"""
 
         # Check if we have at least something to attach
         if not self._vertex:
-            raise ValueError("No vertex shader has been given")
+            raise ValueError('No vertex shader has been given')
         if not self._fragment:
-            raise ValueError("No fragment shader has been given")
+            raise ValueError('No fragment shader has been given')
 
-        log.log(5, "GPU: Attaching shaders to program")
+        log.log(5, 'GPU: Attaching shaders to program')
 
         # Attach shaders
         attached = gl.glGetAttachedShaders(program)
@@ -220,45 +222,51 @@ class Program(GLObject):
                 shader.activate()
                 if isinstance(shader, GeometryShader):
                     if shader.vertices_out is not None:
-                        gl.glProgramParameteriEXT(self._handle,
-                                                  gl.GL_GEOMETRY_VERTICES_OUT_EXT,
-                                                  shader.vertices_out)
+                        gl.glProgramParameteriEXT(
+                            self._handle,
+                            gl.GL_GEOMETRY_VERTICES_OUT_EXT,
+                            shader.vertices_out,
+                        )
                     if shader.input_type is not None:
-                        gl.glProgramParameteriEXT(self._handle,
-                                                  gl.GL_GEOMETRY_INPUT_TYPE_EXT,
-                                                  shader.input_type)
+                        gl.glProgramParameteriEXT(
+                            self._handle,
+                            gl.GL_GEOMETRY_INPUT_TYPE_EXT,
+                            shader.input_type,
+                        )
                     if shader.output_type is not None:
-                        gl.glProgramParameteriEXT(self._handle,
-                                                  gl.GL_GEOMETRY_OUTPUT_TYPE_EXT,
-                                                  shader.output_type)
+                        gl.glProgramParameteriEXT(
+                            self._handle,
+                            gl.GL_GEOMETRY_OUTPUT_TYPE_EXT,
+                            shader.output_type,
+                        )
                 gl.glAttachShader(program, shader.handle)
                 shader._program = self
 
     def _build_hooks(self):
-        """ Build hooks """
+        """Build hooks"""
 
         self._vert_hooks = {}
         self._frag_hooks = {}
         self._geom_hooks = {}
 
         if self._vertex is not None:
-            for (hook, subhook) in self._vertex.hooks:
+            for hook, subhook in self._vertex.hooks:
                 self._vert_hooks[hook] = None
         if self._fragment is not None:
-            for (hook, subhook) in self._fragment.hooks:
+            for hook, subhook in self._fragment.hooks:
                 self._frag_hooks[hook] = None
         if self._geometry is not None:
-            for (hook, subhook) in self._geometry.hooks:
+            for hook, subhook in self._geometry.hooks:
                 self._geom_hooks[hook] = None
 
     def _build_uniforms(self):
-        """ Build the uniform objects """
+        """Build the uniform objects"""
 
         # We might rebuild the program because of snippets but we must
         # keep already bound uniforms
 
         count = 0
-        for (name, gtype) in self.all_uniforms:
+        for name, gtype in self.all_uniforms:
             if name not in self._uniforms.keys():
                 uniform = Uniform(self, name, gtype)
             else:
@@ -271,13 +279,13 @@ class Program(GLObject):
         self._need_update = True
 
     def _build_attributes(self):
-        """ Build the attribute objects """
+        """Build the attribute objects"""
 
         # We might rebuild the program because of snippets but we must
         # keep already bound attributes
 
         dtype = []
-        for (name, gtype) in self.all_attributes:
+        for name, gtype in self.all_attributes:
             if name not in self._attributes.keys():
                 attribute = Attribute(self, name, gtype)
             else:
@@ -338,22 +346,24 @@ class Program(GLObject):
             self._attributes[name].set_data(data)
         else:
             raise IndexError(
-                f"Unknown item {name} (no corresponding hook, uniform or attribute)")
+                f'Unknown item {name} (no corresponding hook, uniform or attribute)'
+            )
 
     def __getitem__(self, name):
         if name in self._vert_hooks.keys():
             return self._vert_hooks[name]
         elif name in self._frag_hooks.keys():
             return self._frag_hooks[name]
-#        if name in self._hooks.keys():
-#            return self._hooks[name][1]
+        #        if name in self._hooks.keys():
+        #            return self._hooks[name][1]
         elif name in self._uniforms.keys():
             return self._uniforms[name].data
         elif name in self._attributes.keys():
             return self._attributes[name].data
         else:
             raise IndexError(
-                "Unknown item (no corresponding hook, uniform or attribute)")
+                'Unknown item (no corresponding hook, uniform or attribute)'
+            )
 
     def __contains__(self, name):
         try:
@@ -370,7 +380,7 @@ class Program(GLObject):
     def _activate(self):
         """Activate the program as part of current rendering state."""
 
-        log.log(5, "GPU: Activating program (id=%d)" % self._id)
+        log.log(5, f'GPU: Activating program (id={self._id})')
         gl.glUseProgram(self.handle)
 
         for uniform in sorted(self._uniforms.values(), key=attrgetter('name')):
@@ -393,7 +403,7 @@ class Program(GLObject):
         # Need fix when dealing with vertex arrays (only need to active the array)
         for attribute in sorted(self._attributes.values(), key=attrgetter('name')):
             attribute.deactivate()
-        log.log(5, "GPU: Deactivating program (id=%d)" % self._id)
+        log.log(5, f'GPU: Deactivating program (id={self._id})')
 
     @property
     def all_uniforms(self):
@@ -447,7 +457,7 @@ class Program(GLObject):
                 name = m.group('name')
                 if size >= 1:
                     for i in range(size):
-                        name = '%s[%d]' % (m.group('name'), i)
+                        name = f'{m.group("name")}[{i}]'
                         uniforms.append((name, gtype))
             else:
                 uniforms.append((name, gtype))
@@ -531,7 +541,7 @@ class Program(GLObject):
                 name = m.group('name')
                 if size >= 1:
                     for i in range(size):
-                        name = '%s[%d]' % (m.group('name'), i)
+                        name = f'{m.group("name")}[{i}]'
                         attributes.append((name, gtype))
             else:
                 attributes.append((name, gtype))
@@ -575,7 +585,7 @@ class Program(GLObject):
 
     # first=0, count=None):
     def draw(self, mode=None, indices=None):
-        """ Draw using the specified mode & indices.
+        """Draw using the specified mode & indices.
 
         :param gl.GLEnum mode:
           One of
@@ -605,9 +615,11 @@ class Program(GLObject):
 
         if isinstance(indices, IndexBuffer):
             indices.activate()
-            gltypes = {np.dtype(np.uint8): gl.GL_UNSIGNED_BYTE,
-                       np.dtype(np.uint16): gl.GL_UNSIGNED_SHORT,
-                       np.dtype(np.uint32): gl.GL_UNSIGNED_INT}
+            gltypes = {
+                np.dtype(np.uint8): gl.GL_UNSIGNED_BYTE,
+                np.dtype(np.uint16): gl.GL_UNSIGNED_SHORT,
+                np.dtype(np.uint32): gl.GL_UNSIGNED_INT,
+            }
             gl.glDrawElements(mode, indices.size, gltypes[indices.dtype], None)
             indices.deactivate()
         else:

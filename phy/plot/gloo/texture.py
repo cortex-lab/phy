@@ -33,38 +33,30 @@ import logging
 import numpy as np
 
 from . import gl
-from .gpudata import GPUData
 from .globject import GLObject
-
+from .gpudata import GPUData
 
 log = logging.getLogger(__name__)
 
 
 class Texture(GPUData, GLObject):
-    """ Generic texture """
+    """Generic texture"""
 
-    _cpu_formats = {1: gl.GL_RED,
-                    2: gl.GL_RG,
-                    3: gl.GL_RGB,
-                    4: gl.GL_RGBA}
+    _cpu_formats = {1: gl.GL_RED, 2: gl.GL_RG, 3: gl.GL_RGB, 4: gl.GL_RGBA}
 
-    _gpu_formats = {1: gl.GL_RED,
-                    2: gl.GL_RG,
-                    3: gl.GL_RGB,
-                    4: gl.GL_RGBA}
+    _gpu_formats = {1: gl.GL_RED, 2: gl.GL_RG, 3: gl.GL_RGB, 4: gl.GL_RGBA}
 
-    _gpu_float_formats = {1: gl.GL_R32F,
-                          2: gl.GL_RG32F,
-                          3: gl.GL_RGB32F,
-                          4: gl.GL_RGBA32F}
+    _gpu_float_formats = {1: gl.GL_R32F, 2: gl.GL_RG32F, 3: gl.GL_RGB32F, 4: gl.GL_RGBA32F}
 
-    _gtypes = {np.dtype(np.int8): gl.GL_BYTE,
-               np.dtype(np.uint8): gl.GL_UNSIGNED_BYTE,
-               np.dtype(np.int16): gl.GL_SHORT,
-               np.dtype(np.uint16): gl.GL_UNSIGNED_SHORT,
-               np.dtype(np.int32): gl.GL_INT,
-               np.dtype(np.uint32): gl.GL_UNSIGNED_INT,
-               np.dtype(np.float32): gl.GL_FLOAT}
+    _gtypes = {
+        np.dtype(np.int8): gl.GL_BYTE,
+        np.dtype(np.uint8): gl.GL_UNSIGNED_BYTE,
+        np.dtype(np.int16): gl.GL_SHORT,
+        np.dtype(np.uint16): gl.GL_UNSIGNED_SHORT,
+        np.dtype(np.int32): gl.GL_INT,
+        np.dtype(np.uint32): gl.GL_UNSIGNED_INT,
+        np.dtype(np.float32): gl.GL_FLOAT,
+    }
 
     def __init__(self, target):
         GLObject.__init__(self)
@@ -76,22 +68,24 @@ class Texture(GPUData, GLObject):
         self._gpu_format = None
 
     def _check_shape(self, shape, ndims):
-        """ Check and normalize shape. """
+        """Check and normalize shape."""
 
         if len(shape) < ndims:
-            raise ValueError("Too few dimensions for texture")
+            raise ValueError('Too few dimensions for texture')
         elif len(shape) > ndims + 1:
-            raise ValueError("Too many dimensions for texture")
+            raise ValueError('Too many dimensions for texture')
         elif len(shape) == ndims:
-            shape = list(shape) + [1, ]
+            shape = list(shape) + [
+                1,
+            ]
         elif len(shape) == ndims + 1:
             if shape[-1] > 4:
-                raise ValueError("Too many channels for texture")
+                raise ValueError('Too many channels for texture')
         return shape
 
     @property
     def need_update(self):
-        """ Whether object needs to be updated """
+        """Whether object needs to be updated"""
 
         return self.pending_data is not None
 
@@ -127,7 +121,7 @@ class Texture(GPUData, GLObject):
 
     @gpu_format.setter
     def gpu_format(self, value):
-        """ Texture GPU format. """
+        """Texture GPU format."""
 
         self._gpu_format = value
         self._need_setup = True
@@ -137,30 +131,30 @@ class Texture(GPUData, GLObject):
         if self.dtype in Texture._gtypes.keys():
             return Texture._gtypes[self.dtype]
         else:
-            raise TypeError("No available GL type equivalent")
+            raise TypeError('No available GL type equivalent')
 
     @property
     def wrapping(self):
-        """ Texture wrapping mode """
+        """Texture wrapping mode"""
 
         return self._wrapping
 
     @wrapping.setter
     def wrapping(self, value):
-        """ Texture wrapping mode """
+        """Texture wrapping mode"""
 
         self._wrapping = value
         self._need_setup = True
 
     @property
     def interpolation(self):
-        """ Texture interpolation for minification and magnification. """
+        """Texture interpolation for minification and magnification."""
 
         return self._interpolation
 
     @interpolation.setter
     def interpolation(self, value):
-        """ Texture interpolation for minication and magnification. """
+        """Texture interpolation for minication and magnification."""
         if isinstance(value, str):
             value = getattr(gl, f'GL_{value.upper()}')
 
@@ -176,7 +170,7 @@ class Texture(GPUData, GLObject):
             self._interpolation = value, value
 
     def _setup(self):
-        """ Setup texture on GPU """
+        """Setup texture on GPU"""
 
         min_filter, mag_filter = self._interpolation
         wrapping = self._wrapping
@@ -185,39 +179,38 @@ class Texture(GPUData, GLObject):
         gl.glTexParameterf(self.target, gl.GL_TEXTURE_MAG_FILTER, mag_filter)
         gl.glTexParameterf(self.target, gl.GL_TEXTURE_WRAP_S, wrapping)
         gl.glTexParameterf(self.target, gl.GL_TEXTURE_WRAP_T, wrapping)
-        gl.glTexParameterf(self.target, gl.GL_TEXTURE_WRAP_R,
-                           gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameterf(self.target, gl.GL_TEXTURE_WRAP_R, gl.GL_CLAMP_TO_EDGE)
         self._need_setup = False
 
     def _activate(self):
-        """ Activate texture on GPU """
+        """Activate texture on GPU"""
 
-        log.log(5, "GPU: Activate texture")
+        log.log(5, 'GPU: Activate texture')
         gl.glBindTexture(self.target, self._handle)
         if self._need_setup:
             self._setup()
 
     def _deactivate(self):
-        """ Deactivate texture on GPU """
+        """Deactivate texture on GPU"""
 
-        log.log(5, "GPU: Deactivate texture")
+        log.log(5, 'GPU: Deactivate texture')
         gl.glBindTexture(self._target, 0)
 
     def _create(self):
-        """ Create texture on GPU """
+        """Create texture on GPU"""
 
-        log.log(5, "GPU: Creating texture")
+        log.log(5, 'GPU: Creating texture')
         self._handle = gl.glGenTextures(1)
 
     def _delete(self):
-        """ Delete texture from GPU """
+        """Delete texture from GPU"""
 
-        log.log(5, "GPU: Deleting texture")
+        log.log(5, 'GPU: Deleting texture')
         if self.handle > -1:
             gl.glDeleteTextures(np.array([self.handle], dtype=np.uint32))
 
     def get(self):
-        """ Read the texture data back into CPU memory """
+        """Read the texture data back into CPU memory"""
         host = np.zeros(self.shape, self.dtype)
         gl.glBindTexture(self.target, self._handle)
         gl.glGetTexImage(self.target, 0, self.cpu_format, self.gtype, host)
@@ -244,25 +237,24 @@ class Texture1D(Texture):
         return self.shape[0]
 
     def _setup(self):
-        """ Setup texture on GPU """
+        """Setup texture on GPU"""
 
         Texture._setup(self)
         gl.glBindTexture(self.target, self._handle)
-        gl.glTexImage1D(self.target, 0, self._gpu_format, self.width,
-                        0, self._cpu_format, self.gtype, None)
+        gl.glTexImage1D(
+            self.target, 0, self._gpu_format, self.width, 0, self._cpu_format, self.gtype, None
+        )
         self._need_setup = False
 
     def _update(self):
-
-        log.log(5, "GPU: Updating texture")
+        log.log(5, 'GPU: Updating texture')
         if self.pending_data:
             start, stop = self.pending_data
             offset, nbytes = start, stop - start
             itemsize = self.strides[0]
             x = offset // itemsize
             width = nbytes // itemsize
-            gl.glTexSubImage1D(self.target, 0, x, width,
-                               self._cpu_format, self.gtype, self)
+            gl.glTexSubImage1D(self.target, 0, x, width, self._cpu_format, self.gtype, self)
 
         self._pending_data = None
         self._need_update = False
@@ -279,7 +271,7 @@ class TextureFloat1D(Texture1D):
 
 
 class Texture2D(Texture):
-    """ 2D texture """
+    """2D texture"""
 
     def __init__(self):
         Texture.__init__(self, gl.GL_TEXTURE_2D)
@@ -289,33 +281,42 @@ class Texture2D(Texture):
 
     @property
     def width(self):
-        """ Texture width """
+        """Texture width"""
 
         return self.shape[1]
 
     @property
     def height(self):
-        """ Texture height """
+        """Texture height"""
 
         return self.shape[0]
 
     def _setup(self):
-        """ Setup texture on GPU """
+        """Setup texture on GPU"""
 
         Texture._setup(self)
         gl.glBindTexture(self.target, self._handle)
-        gl.glTexImage2D(self.target, 0, self._gpu_format, self.width, self.height,
-                        0, self._cpu_format, self.gtype, None)
+        gl.glTexImage2D(
+            self.target,
+            0,
+            self._gpu_format,
+            self.width,
+            self.height,
+            0,
+            self._cpu_format,
+            self.gtype,
+            None,
+        )
         self._need_setup = False
 
     def _update(self):
-        """ Update texture on GPU """
+        """Update texture on GPU"""
 
         if self.width == 0:
             return
 
         if self.pending_data:
-            log.log(5, "GPU: Updating texture")
+            log.log(5, 'GPU: Updating texture')
 
             start, stop = self.pending_data
             offset, nbytes = start, stop - start
@@ -326,8 +327,7 @@ class Texture2D(Texture):
 
             nbytes += offset % self.width
             offset -= offset % self.width
-            nbytes += (self.width - ((offset + nbytes) %
-                                     self.width)) % self.width
+            nbytes += (self.width - ((offset + nbytes) % self.width)) % self.width
 
             # x = 0
             # y = offset // self.width
@@ -338,8 +338,17 @@ class Texture2D(Texture):
             #                    self._cpu_format, self.gtype, self)
             # HACK: disable partial texture update which fails if the new texture
             # doesn't have the same size.
-            gl.glTexImage2D(self.target, 0, self._gpu_format, self.width, self.height,
-                            0, self._cpu_format, self.gtype, self)
+            gl.glTexImage2D(
+                self.target,
+                0,
+                self._gpu_format,
+                self.width,
+                self.height,
+                0,
+                self._cpu_format,
+                self.gtype,
+                self,
+            )
             gl.glBindTexture(self._target, self.handle)
 
         self._pending_data = None
@@ -347,7 +356,7 @@ class Texture2D(Texture):
 
 
 class TextureFloat2D(Texture2D):
-    """ 2D float texture """
+    """2D float texture"""
 
     def __init__(self):
         Texture2D.__init__(self)
@@ -355,7 +364,7 @@ class TextureFloat2D(Texture2D):
 
 
 class DepthTexture(Texture2D):
-    """ Depth texture """
+    """Depth texture"""
 
     def __init__(self):
         Texture2D.__init__(self)
@@ -364,13 +373,12 @@ class DepthTexture(Texture2D):
 
 
 class TextureCube(Texture):
-    """ Cube texture """
+    """Cube texture"""
 
     def __init__(self):
-
         Texture.__init__(self, gl.GL_TEXTURE_CUBE_MAP)
         if self.shape[0] != 6:
-            error = "Texture cube require arrays first dimension to be 6"
+            error = 'Texture cube require arrays first dimension to be 6'
             log.error(error)
             raise RuntimeError(error)
 
@@ -380,46 +388,59 @@ class TextureCube(Texture):
 
     @property
     def width(self):
-        """ Texture width """
+        """Texture width"""
 
         return self.shape[2]
 
     @property
     def height(self):
-        """ Texture height """
+        """Texture height"""
 
         return self.shape[1]
 
     def _setup(self):
-        """ Setup texture on GPU """
+        """Setup texture on GPU"""
 
         Texture._setup(self)
         gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
         gl.glBindTexture(self.target, self._handle)
-        targets = [gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-                   gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-                   gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-                   gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-                   gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-                   gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z]
+        targets = [
+            gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+            gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+            gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+            gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+            gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+            gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+        ]
         for i, target in enumerate(targets):
-            gl.glTexImage2D(target, 0, self._gpu_format, self.width, self.height,
-                            0, self._cpu_format, self.gtype, None)
+            gl.glTexImage2D(
+                target,
+                0,
+                self._gpu_format,
+                self.width,
+                self.height,
+                0,
+                self._cpu_format,
+                self.gtype,
+                None,
+            )
         self._need_setup = False
 
     def _update(self):
-        log.log(5, "GPU: Updating texture cube")
+        log.log(5, 'GPU: Updating texture cube')
 
         if self.need_update:
             gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
             gl.glBindTexture(self.target, self.handle)
 
-            targets = [gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-                       gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-                       gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-                       gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-                       gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-                       gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z]
+            targets = [
+                gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+                gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+                gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+                gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+                gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+                gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+            ]
 
             for i, target in enumerate(targets):
                 face = self[i]
@@ -439,30 +460,30 @@ class TextureCube(Texture):
                 nbytes /= itemsize
                 nbytes += offset % self.width
                 offset -= offset % self.width
-                nbytes += (self.width - ((offset + nbytes) %
-                                         self.width)) % self.width
+                nbytes += (self.width - ((offset + nbytes) % self.width)) % self.width
                 x = 0
                 y = offset // self.width
                 width = self.width
                 height = nbytes // self.width
-                gl.glTexSubImage2D(target, 0, x, y, width, height,
-                                   self._cpu_format, self.gtype, face)
+                gl.glTexSubImage2D(
+                    target, 0, x, y, width, height, self._cpu_format, self.gtype, face
+                )
 
         self._pending_data = None
         self._need_update = False
 
     def _activate(self):
-        """ Activate texture on GPU """
+        """Activate texture on GPU"""
 
-        log.log(5, "GPU: Activate texture cube")
+        log.log(5, 'GPU: Activate texture cube')
         gl.glEnable(gl.GL_TEXTURE_CUBE_MAP)
         gl.glBindTexture(self.target, self._handle)
         if self._need_setup:
             self._setup()
 
     def _deactivate(self):
-        """ Deactivate texture on GPU """
+        """Deactivate texture on GPU"""
 
-        log.log(5, "GPU: Deactivate texture cube")
+        log.log(5, 'GPU: Deactivate texture cube')
         gl.glBindTexture(self._target, 0)
         gl.glDisable(gl.GL_TEXTURE_CUBE_MAP)

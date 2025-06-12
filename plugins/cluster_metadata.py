@@ -7,8 +7,9 @@ along with all values found in the GUI cluster view.
 
 import logging
 
-from phy import IPlugin, connect
 from phylib.io.model import save_metadata
+
+from phy import IPlugin, connect
 
 logger = logging.getLogger('phy')
 
@@ -17,7 +18,6 @@ class ExampleClusterMetadataPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-
             @connect(sender=gui)
             def on_request_save(sender):
                 """This function is called whenever the Save action is triggered."""
@@ -43,8 +43,9 @@ class ExampleClusterMetadataPlugin(IPlugin):
                 # Dictionary mapping cluster_ids to the best channel id.
                 metadata = {
                     cluster_id: controller.get_best_channel(cluster_id)
-                    for cluster_id in cluster_ids}
+                    for cluster_id in cluster_ids
+                }
 
                 # Save the metadata file.
                 save_metadata(filename, field_name, metadata)
-                logger.info("Saved %s.", filename)
+                logger.info('Saved %s.', filename)

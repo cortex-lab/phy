@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 # Distributed under the (new) BSD License.
@@ -19,13 +18,14 @@ Example usage:
 
 import logging
 import sys
-from . texture import Texture2D
+
+from .texture import Texture2D
 
 log = logging.getLogger(__name__)
 
 
 class Atlas(Texture2D):
-    """ Texture Atlas (two dimensional)
+    """Texture Atlas (two dimensional)
 
     Parameters
 
@@ -53,7 +53,9 @@ class Atlas(Texture2D):
 
     def __init__(self):
         Texture2D.__init__(self)
-        self.nodes = [(0, 0, self.width), ]
+        self.nodes = [
+            (0, 0, self.width),
+        ]
         self.used = 0
 
     def allocate(self, shape):
@@ -82,15 +84,16 @@ class Atlas(Texture2D):
             y = self._fit(i, width, height)
             if y >= 0:
                 node = self.nodes[i]
-                if (y + height < best_height or
-                        (y + height == best_height and node[2] < best_width)):
+                if y + height < best_height or (
+                    y + height == best_height and node[2] < best_width
+                ):
                     best_height = y + height
                     best_index = i
                     best_width = node[2]
                     region = node[0], y, width, height
 
         if best_index == -1:
-            log.warning("No enough free space in atlas")
+            log.warning('No enough free space in atlas')
             return None
 
         node = region[0], region[1] + height, width
@@ -155,7 +158,7 @@ class Atlas(Texture2D):
         return y
 
     def _merge(self):
-        """ Merge nodes. """
+        """Merge nodes."""
 
         i = 0
         while i < len(self.nodes) - 1:

@@ -1,26 +1,24 @@
-# -*- coding: utf-8 -*-
-
 """Test views."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
-
 from phylib.io.mock import artificial_waveforms
 from phylib.utils import Bunch, connect
 from phylib.utils.geometry import staggered_positions
-from phy.plot.tests import mouse_click, key_press, key_release
+
+from phy.plot.tests import key_press, key_release, mouse_click
 
 from ..waveform import WaveformView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test waveform view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_waveform_view(qtbot, tempdir, gui):
     nc = 5
@@ -31,14 +29,15 @@ def test_waveform_view(qtbot, tempdir, gui):
     def get_waveforms(cluster_id):
         return Bunch(
             data=w,
-            masks=np.random.uniform(low=0., high=1., size=(ns, nc)),
+            masks=np.random.uniform(low=0.0, high=1.0, size=(ns, nc)),
             channel_ids=np.arange(nc),
-            channel_labels=['%d' % (ch * 10) for ch in range(nc)],
-            channel_positions=staggered_positions(nc))
+            channel_labels=[f'{ch * 10}' for ch in range(nc)],
+            channel_positions=staggered_positions(nc),
+        )
 
     v = WaveformView(
         waveforms={'waveforms': get_waveforms, 'mean_waveforms': get_waveforms},
-        sample_rate=10000.,
+        sample_rate=10000.0,
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
@@ -99,7 +98,7 @@ def test_waveform_view(qtbot, tempdir, gui):
         _clicked.append((channel_id, button, key))
 
     key_press(qtbot, v.canvas, '2')
-    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left')
+    mouse_click(qtbot, v.canvas, pos=(0.0, 0.0), button='Left')
     key_release(qtbot, v.canvas, '2')
 
     assert _clicked == [(2, 'Left', 2)]

@@ -264,7 +264,7 @@ class Uniform(Variable):
     def _activate(self):
         if self._gtype in (gl.GL_SAMPLER_1D, gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE):
             if self.data is not None:
-                log.log(5, 'GPU: Active texture is %d' % self._texture_unit)
+                log.log(5, f'GPU: Active texture is {self._texture_unit}')
                 gl.glActiveTexture(gl.GL_TEXTURE0 + self._texture_unit)
                 if hasattr(self.data, 'activate'):
                     self.data.activate()
@@ -289,7 +289,7 @@ class Uniform(Variable):
         # Textures (need to get texture count)
         elif self._gtype in (gl.GL_SAMPLER_1D, gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE):
             # texture = self.data
-            log.log(5, 'GPU: Activactin texture %d' % self._texture_unit)
+            log.log(5, f'GPU: Activactin texture {self._texture_unit}')
             # gl.glActiveTexture(gl.GL_TEXTURE0 + self._unit)
             # gl.glBindTexture(texture.target, texture.handle)
             gl.glUniform1i(self._handle, self._texture_unit)
