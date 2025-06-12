@@ -210,19 +210,19 @@ class HTMLBuilder(object):
 
     def add_style(self, s):
         """Add a CSS style."""
-        self.add_header('<style>\n{}\n</style>'.format(s))
+        self.add_header(f'<style>\n{s}\n</style>')
 
     def add_style_src(self, filename):
         """Add a link to a stylesheet URL."""
-        self.add_header(('<link rel="stylesheet" type="text/css" href="{}" />').format(filename))
+        self.add_header(f"<link rel=\"stylesheet\" type=\"text/css\" href=\"{filename}\" />")
 
     def add_script(self, s):
         """Add Javascript code."""
-        self.add_header('<script>{}</script>'.format(s))
+        self.add_header(f'<script>{s}</script>')
 
     def add_script_src(self, filename):
         """Add a link to a Javascript file."""
-        self.add_header('<script src="{}"></script>'.format(filename))
+        self.add_header(f'<script src="{filename}"></script>')
 
     def add_header(self, s):
         """Add HTML headers."""
@@ -396,7 +396,7 @@ class Table(HTMLWidget):
 
         """
         # Avoid JS errors when the table is not yet fully loaded.
-        expr = 'if (typeof table !== "undefined") ' + expr
+        expr = f"if (typeof table !== \"undefined\") {expr}"
         return super(Table, self).eval_js(expr, callback=callback)
 
     def _init_table(self, columns=None, value_names=None, data=None, sort=None):
@@ -452,12 +452,12 @@ class Table(HTMLWidget):
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
-        self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
+        self.eval_js(f'table.sort_("{name}", "{sort_dir}");')
 
     def filter(self, text=''):
         """Filter the view with a Javascript expression."""
         logger.log(5, "Filter table with `%s`.", text)
-        self.eval_js('table.filter_("{}", true);'.format(text))
+        self.eval_js(f'table.filter_("{text}", true);')
 
     def get_ids(self, callback=None):
         """Get the list of ids."""
@@ -497,37 +497,37 @@ class Table(HTMLWidget):
         """
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        self.eval_js('table.select({}, {});'.format(dumps(ids), dumps(kwargs)), callback=callback)
+        self.eval_js(f'table.select({dumps(ids)}, {dumps(kwargs)});', callback=callback)
 
     def scroll_to(self, id):
         """Scroll until a given row is visible."""
-        self.eval_js('table._scrollTo({});'.format(id))
+        self.eval_js(f'table._scrollTo({id});')
 
     def set_busy(self, busy):
         """Set the busy state of the GUI."""
-        self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
+        self.eval_js(f"table.setBusy({'true' if busy else 'false'});")
 
     def get(self, id, callback=None):
         """Get the object given its id."""
-        self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
+        self.eval_js(f'table.get("id", {id})[0]["_values"]', callback=callback)
 
     def add(self, objects):
         """Add objects object to the table."""
         if not objects:
             return
-        self.eval_js('table.add_({});'.format(dumps(objects)))
+        self.eval_js(f'table.add_({dumps(objects)});')
 
     def change(self, objects):
         """Change some objects."""
         if not objects:
             return
-        self.eval_js('table.change_({});'.format(dumps(objects)))
+        self.eval_js(f'table.change_({dumps(objects)});')
 
     def remove(self, ids):
         """Remove some objects from their ids."""
         if not ids:
             return
-        self.eval_js('table.remove_({});'.format(dumps(ids)))
+        self.eval_js(f'table.remove_({dumps(ids)});')
 
     def remove_all(self):
         """Remove all rows in the table."""
@@ -537,7 +537,7 @@ class Table(HTMLWidget):
         """Remove all rows in the table and add new objects."""
         if not objects:
             return self.remove_all()
-        self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
+        self.eval_js(f'table.removeAllAndAdd({dumps(objects)});')
 
     def get_selected(self, callback=None):
         """Get the currently selected rows."""
@@ -601,7 +601,7 @@ class KeyValueWidget(QWidget):
             widget = QCheckBox(self)
             widget.setChecked(default is True)
         else:  # pragma: no cover
-            raise ValueError("Not supported vtype: %s." % vtype)
+            raise ValueError(f"Not supported vtype: {vtype}.")
 
         widget.setMaximumWidth(400)
 
@@ -630,7 +630,7 @@ class KeyValueWidget(QWidget):
         """Get the default or user-entered value of a field."""
         # Detect if the requested name is a list type.
         names = set(i[0] for i in self._items)
-        if '%s[0]' % name in names:
+        if f'{name}[0]' in names:
             out = []
             i = 0
             namei = '%s[%d]' % (name, i)

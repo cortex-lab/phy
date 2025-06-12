@@ -402,7 +402,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         if self.channel_ids is None:  # pragma: no cover
             return ''
         channel_labels = [self.channel_labels[ch] for ch in self.channel_ids[:2]]
-        return 'channels: %s' % ', '.join(channel_labels)
+        return f"channels: {', '.join(channel_labels)}"
 
     # Dimension selection
     # -------------------------------------------------------------------------

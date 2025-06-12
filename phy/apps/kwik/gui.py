@@ -39,7 +39,7 @@ except ImportError:  # pragma: no cover
 def _backup(path):
     """Backup a file."""
     assert path.exists()
-    path_backup = str(path) + '.bak'
+    path_backup = f"{str(path)}.bak"
     if not Path(path_backup).exists():
         logger.info("Backup `%s`.", path_backup)
         shutil.copy(str(path), str(path_backup))

@@ -215,7 +215,7 @@ def test_gui_dock_widget_1(qtbot, gui):
     assert v.dock.status == 'this is a status'
 
     # Set and check the title bar status text.
-    v.dock.set_status("---very long---" + "------" * 10)
+    v.dock.set_status(f"---very long---{'------' * 10}")
     assert len(v.dock.status) <= v.dock.max_status_length + 5
 
     b2.click()

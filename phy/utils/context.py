@@ -2,26 +2,28 @@
 
 """Execution context that handles parallel processing and caching."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-from functools import wraps
 import inspect
 import logging
 import os
+from functools import wraps
 from pathlib import Path
 from pickle import dump, load
 
-from phylib.utils._misc import save_json, load_json, load_pickle, save_pickle, _fullname
-from .config import phy_config_dir, ensure_dir_exists
+from phylib.utils._misc import _fullname, load_json, load_pickle, save_json, save_pickle
+
+from .config import ensure_dir_exists, phy_config_dir
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Context
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _cache_methods(obj, memcached, cached):  # pragma: no cover
     for name in memcached:
@@ -70,14 +72,14 @@ class Context(object):
     """
 
     """Maximum cache size, in bytes."""
-    cache_limit = 2 * 1024 ** 3  # 2 GB
+    cache_limit = 2 * 1024**3  # 2 GB
 
     def __init__(self, cache_dir, verbose=0):
         self.verbose = verbose
         # Make sure the cache directory exists.
         self.cache_dir = Path(cache_dir).expanduser()
         if not self.cache_dir.exists():
-            logger.debug("Create cache directory `%s`.", self.cache_dir)
+            logger.debug('Create cache directory `%s`.', self.cache_dir)
             os.makedirs(str(self.cache_dir))
 
         # Ensure the memcache directory exists.
@@ -94,21 +96,23 @@ class Context(object):
         # Try importing joblib.
         try:
             from joblib import Memory
+
             self._memory = Memory(
-                location=self.cache_dir, mmap_mode=None, verbose=self.verbose,
-                bytes_limit=self.cache_limit)
-            logger.debug("Initialize joblib cache dir at `%s`.", self.cache_dir)
-            logger.debug("Reducing the size of the cache if needed.")
+                location=self.cache_dir, mmap_mode=None, verbose=self.verbose
+            )
+            logger.debug('Initialize joblib cache dir at `%s`.', self.cache_dir)
+            logger.debug('Reducing the size of the cache if needed.')
             self._memory.reduce_size()
         except ImportError:  # pragma: no cover
             logger.warning(
-                "Joblib is not installed. Install it with `conda install joblib`.")
+                'Joblib is not installed. Install it with `conda install joblib`.'
+            )
             self._memory = None
 
     def cache(self, f):
         """Cache a function using the context's cache directory."""
         if self._memory is None:  # pragma: no cover
-            logger.debug("Joblib is not installed: skipping caching.")
+            logger.debug('Joblib is not installed: skipping caching.')
             return f
         assert f
         # NOTE: discard self in instance methods.
@@ -121,9 +125,9 @@ class Context(object):
 
     def load_memcache(self, name):
         """Load the memcache from disk (pickle file), if it exists."""
-        path = self.cache_dir / 'memcache' / (name + '.pkl')
+        path = self.cache_dir / 'memcache' / (f"{name}.pkl")
         if path.exists():
-            logger.debug("Load memcache for `%s`.", name)
+            logger.debug('Load memcache for `%s`.', name)
             with open(str(path), 'rb') as fd:
                 cache = load(fd)
         else:
@@ -134,8 +138,8 @@ class Context(object):
     def save_memcache(self):
         """Save the memcache to disk using pickle."""
         for name, cache in self._memcache.items():
-            path = self.cache_dir / 'memcache' / (name + '.pkl')
-            logger.debug("Save memcache for `%s`.", name)
+            path = self.cache_dir / 'memcache' / (f"{name}.pkl")
+            logger.debug('Save memcache for `%s`.', name)
             with open(str(path), 'wb') as fd:
                 dump(cache, fd)
 
@@ -154,6 +158,7 @@ class Context(object):
                 out = f(*args, **kwargs)
                 cache[h] = out
             return out
+
         return memcached
 
     def _get_path(self, name, location, file_ext='.json'):
@@ -182,7 +187,7 @@ class Context(object):
         file_ext = '.json' if kind == 'json' else '.pkl'
         path = self._get_path(name, location, file_ext=file_ext)
         ensure_dir_exists(path.parent)
-        logger.debug("Save data to `%s`.", path)
+        logger.debug('Save data to `%s`.', path)
         if kind == 'json':
             save_json(path, data)
         else:
