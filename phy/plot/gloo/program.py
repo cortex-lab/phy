@@ -338,7 +338,7 @@ class Program(GLObject):
             self._attributes[name].set_data(data)
         else:
             raise IndexError(
-                "Unknown item %s (no corresponding hook, uniform or attribute)" % name)
+                f"Unknown item {name} (no corresponding hook, uniform or attribute)")
 
     def __getitem__(self, name):
         if name in self._vert_hooks.keys():
@@ -592,7 +592,7 @@ class Program(GLObject):
         """
 
         if isinstance(mode, str):
-            mode = getattr(gl, 'GL_%s' % mode.upper())
+            mode = getattr(gl, f'GL_{mode.upper()}')
 
         self.activate()
         attributes = self._attributes.values()

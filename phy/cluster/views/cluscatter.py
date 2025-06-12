@@ -261,7 +261,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
     def toggle_log_scale(self, dim, checked):
         """Toggle logarithmic scaling for one of the dimensions."""
         self._size_min = None
-        setattr(self, '%s_log_scale' % dim, checked)
+        setattr(self, f'{dim}_log_scale', checked)
         self.prepare_data()
         self.plot()
         self.canvas.update()
@@ -297,20 +297,20 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
         # Change the bindings.
         for dim in self._dims:
-            view_submenu = 'Change %s' % dim
+            view_submenu = f'Change {dim}'
 
             # Change to every cluster info.
             for name in self.fields:
                 self.actions.add(
                     _make_action(dim, name), show_shortcut=False,
-                    name='Change %s to %s' % (dim, name), view_submenu=view_submenu)
+                    name=f'Change {dim} to {name}', view_submenu=view_submenu)
 
             # Toggle logarithmic scale.
             self.actions.separator(view_submenu=view_submenu)
             self.actions.add(
                 _make_log_toggle(dim), checkable=True, view_submenu=view_submenu,
-                name='Toggle log scale for %s' % dim, show_shortcut=False,
-                checked=getattr(self, '%s_log_scale' % dim))
+                name=f'Toggle log scale for {dim}', show_shortcut=False,
+                checked=getattr(self, f'{dim}_log_scale'))
 
         self.actions.separator()
         self.actions.add(self.set_x_axis, prompt=True, prompt_default=lambda: self.x_axis)
@@ -351,7 +351,7 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
 
     @property
     def status(self):
-        return 'Size: %s. Color scheme: %s.' % (self.size, self.color_scheme)
+        return f'Size: {self.size}. Color scheme: {self.color_scheme}.'
 
     # Interactivity
     # -------------------------------------------------------------------------

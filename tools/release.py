@@ -93,8 +93,8 @@ def _set_final_version():
 
 def _create_gh_release():
     version = _get_stable_version()
-    name = 'Version {}'.format(version)
-    path = _path('dist/phy-{}.zip'.format(version))
+    name = f'Version {version}'
+    path = _path(f'dist/phy-{version}.zip')
     assert op.exists(path)
 
     with open(_path('.github_credentials'), 'r') as f:
@@ -104,7 +104,7 @@ def _create_gh_release():
 
     if input("About to create a GitHub release: are you sure?") != 'yes':
         return
-    release = phy.create_release('v' + version,
+    release = phy.create_release(f"v{version}",
                                  name=name,
                                  # draft=False,
                                  # prerelease=False,
@@ -117,7 +117,7 @@ def _git_commit(message, push=False):
     assert message
     if input("About to git commit {}: are you sure?") != 'yes':
         return
-    _call('git commit -am "{}"'.format(message))
+    _call(f'git commit -am "{message}"')
     if push:
         if input("About to git push upstream master: are you sure?") != 'yes':
             return
@@ -164,7 +164,7 @@ def release():
     version = _get_stable_version()
     _set_final_version()
     _upload_pypi()
-    _git_commit("Release {}.".format(version), push=True)
+    _git_commit(f"Release {version}.", push=True)
     _create_gh_release()
 
 

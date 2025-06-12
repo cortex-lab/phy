@@ -125,7 +125,7 @@ class Context(object):
 
     def load_memcache(self, name):
         """Load the memcache from disk (pickle file), if it exists."""
-        path = self.cache_dir / 'memcache' / (name + '.pkl')
+        path = self.cache_dir / 'memcache' / (f"{name}.pkl")
         if path.exists():
             logger.debug('Load memcache for `%s`.', name)
             with open(str(path), 'rb') as fd:
@@ -138,7 +138,7 @@ class Context(object):
     def save_memcache(self):
         """Save the memcache to disk using pickle."""
         for name, cache in self._memcache.items():
-            path = self.cache_dir / 'memcache' / (name + '.pkl')
+            path = self.cache_dir / 'memcache' / (f"{name}.pkl")
             logger.debug('Save memcache for `%s`.', name)
             with open(str(path), 'wb') as fd:
                 dump(cache, fd)
