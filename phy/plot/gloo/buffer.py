@@ -26,9 +26,8 @@ import logging
 import numpy as np
 
 from . import gl
-from .gpudata import GPUData
 from .globject import GLObject
-
+from .gpudata import GPUData
 
 log = logging.getLogger(__name__)
 
@@ -48,59 +47,59 @@ class Buffer(GPUData, GLObject):
 
     @property
     def need_update(self):
-        """ Whether object needs to be updated """
+        """Whether object needs to be updated"""
 
         return self.pending_data is not None
 
     def _create(self):
-        """ Create buffer on GPU """
+        """Create buffer on GPU"""
 
         self._handle = gl.glGenBuffers(1)
         self._activate()
-        log.log(5, "GPU: Creating buffer (id=%d)" % self._id)
+        log.log(5, f'GPU: Creating buffer (id={self._id})')
         gl.glBufferData(self._target, self.nbytes, None, self._usage)
         self._deactivate()
 
     def _delete(self):
-        """ Delete buffer from GPU """
+        """Delete buffer from GPU"""
 
         if self._handle > -1:
             gl.glDeleteBuffers(1, np.array([self._handle]))
 
     def _activate(self):
-        """ Bind the buffer to some target """
+        """Bind the buffer to some target"""
 
-        log.log(5, "GPU: Activating buffer (id=%d)" % self._id)
+        log.log(5, f'GPU: Activating buffer (id={self._id})')
         gl.glBindBuffer(self._target, self._handle)
 
     def _deactivate(self):
-        """ Unbind the current bound buffer """
+        """Unbind the current bound buffer"""
 
-        log.log(5, "GPU: Deactivating buffer (id=%d)" % self._id)
+        log.log(5, f'GPU: Deactivating buffer (id={self._id})')
         gl.glBindBuffer(self._target, 0)
 
     def _update(self):
-        """ Upload all pending data to GPU. """
+        """Upload all pending data to GPU."""
 
         if self.pending_data:
             start, stop = self.pending_data
             offset, nbytes = start, stop - start
             # offset, nbytes = self.pending_data
-            data = self.ravel().view(np.ubyte)[offset:offset + nbytes]
+            data = self.ravel().view(np.ubyte)[offset : offset + nbytes]
             gl.glBufferSubData(self.target, offset, nbytes, data)
         self._pending_data = None
         self._need_update = False
 
 
 class VertexBuffer(Buffer):
-    """ Buffer for vertex attribute data """
+    """Buffer for vertex attribute data"""
 
     def __init__(self, usage=gl.GL_DYNAMIC_DRAW):
         Buffer.__init__(self, gl.GL_ARRAY_BUFFER, usage)
 
 
 class IndexBuffer(Buffer):
-    """ Buffer for index data """
+    """Buffer for index data"""
 
     def __init__(self, usage=gl.GL_DYNAMIC_DRAW):
         Buffer.__init__(self, gl.GL_ELEMENT_ARRAY_BUFFER, usage)

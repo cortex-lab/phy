@@ -1,25 +1,21 @@
-# -*- coding: utf-8 -*-
-
 """Test plotting utilities."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..utils import (
-    _load_shader, _tesselate_histogram, BatchAccumulator, _in_polygon
-)
+from ..utils import BatchAccumulator, _in_polygon, _load_shader, _tesselate_histogram
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test utilities
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_load_shader():
     assert 'main()' in _load_shader('simple.vert')
@@ -53,9 +49,8 @@ def test_accumulator():
 def test_in_polygon():
     polygon = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
     points = np.random.uniform(size=(100, 2), low=-1, high=1)
-    idx_expected = np.nonzero((points[:, 0] > 0) &
-                              (points[:, 1] > 0) &
-                              (points[:, 0] < 1) &
-                              (points[:, 1] < 1))[0]
+    idx_expected = np.nonzero(
+        (points[:, 0] > 0) & (points[:, 1] > 0) & (points[:, 0] < 1) & (points[:, 1] < 1)
+    )[0]
     idx = np.nonzero(_in_polygon(points, polygon))[0]
     ae(idx, idx_expected)

@@ -1,34 +1,32 @@
-# -*- coding: utf-8 -*-
-
 """Test views."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
-
-from phylib.io.mock import artificial_traces, artificial_spike_clusters
+from phylib.io.mock import artificial_spike_clusters, artificial_traces
 from phylib.utils import Bunch, connect
 from phylib.utils.geometry import linear_positions
+
 from phy.plot.tests import mouse_click
 
-from ..trace import TraceView, TraceImageView, select_traces, _iter_spike_waveforms
+from ..trace import TraceImageView, TraceView, _iter_spike_waveforms, select_traces
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test trace view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_iter_spike_waveforms():
     nc = 5
     ns = 20
-    sr = 2000.
+    sr = 2000.0
     ch = list(range(nc))
-    duration = 1.
-    st = np.linspace(0.1, .9, ns)
+    duration = 1.0
+    st = np.linspace(0.1, 0.9, ns)
     sc = artificial_spike_clusters(ns, nc)
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
 
@@ -36,13 +34,13 @@ def test_iter_spike_waveforms():
     s = Bunch(cluster_meta={}, selected=[0])
 
     for w in _iter_spike_waveforms(
-            interval=[0., 1.],
-            traces_interval=traces,
-            model=m,
-            supervisor=s,
-            n_samples_waveforms=ns,
-            show_all_spikes=True,
-            get_best_channels=lambda cluster_id: (ch, np.ones(nc)),
+        interval=[0.0, 1.0],
+        traces_interval=traces,
+        model=m,
+        supervisor=s,
+        n_samples_waveforms=ns,
+        show_all_spikes=True,
+        get_best_channels=lambda cluster_id: (ch, np.ones(nc)),
     ):
         assert w
 
@@ -50,16 +48,16 @@ def test_iter_spike_waveforms():
 def test_trace_view_1(qtbot, tempdir, gui):
     nc = 5
     ns = 20
-    sr = 2000.
-    duration = 1.
-    st = np.linspace(0.1, .9, ns)
+    sr = 2000.0
+    duration = 1.0
+    st = np.linspace(0.1, 0.9, ns)
     sc = artificial_spike_clusters(ns, nc)
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
 
     def get_traces(interval):
         out = Bunch(
             data=select_traces(traces, interval, sample_rate=sr),
-            color=(.75, .75, .75, 1),
+            color=(0.75, 0.75, 0.75, 1),
         )
         a, b = st.searchsorted(interval)
         out.waveforms = []
@@ -69,7 +67,7 @@ def test_trace_view_1(qtbot, tempdir, gui):
             c = sc[i]
             s = int(round(t * sr))
             d = Bunch(
-                data=traces[s - k:s + k, :],
+                data=traces[s - k : s + k, :],
                 start_time=(s - k) / sr,
                 channel_ids=np.arange(5),
                 spike_id=i,
@@ -101,25 +99,25 @@ def test_trace_view_1(qtbot, tempdir, gui):
 
     v.stacked.add_boxes(v.canvas)
 
-    ac(v.stacked.box_size, (.950, .165), atol=1e-3)
-    v.set_interval((.375, .625))
-    assert v.time == .5
+    ac(v.stacked.box_size, (0.950, 0.165), atol=1e-3)
+    v.set_interval((0.375, 0.625))
+    assert v.time == 0.5
     qtbot.wait(1)
 
-    v.go_to(.25)
-    assert v.time == .25
+    v.go_to(0.25)
+    assert v.time == 0.25
     qtbot.wait(1)
 
-    v.go_to(-.5)
-    assert v.time == .125
+    v.go_to(-0.5)
+    assert v.time == 0.125
     qtbot.wait(1)
 
     v.go_left()
-    assert v.time == .125
+    assert v.time == 0.125
     qtbot.wait(1)
 
     v.go_right()
-    ac(v.time, .150)
+    ac(v.time, 0.150)
     qtbot.wait(1)
 
     v.jump_left()
@@ -135,16 +133,16 @@ def test_trace_view_1(qtbot, tempdir, gui):
     qtbot.wait(1)
 
     # Change interval size.
-    v.interval = (.25, .75)
-    ac(v.interval, (.25, .75))
+    v.interval = (0.25, 0.75)
+    ac(v.interval, (0.25, 0.75))
     qtbot.wait(1)
 
     v.widen()
-    ac(v.interval, (.1875, .8125))
+    ac(v.interval, (0.1875, 0.8125))
     qtbot.wait(1)
 
     v.narrow()
-    ac(v.interval, (.25, .75))
+    ac(v.interval, (0.25, 0.75))
     qtbot.wait(1)
 
     v.go_to_start()
@@ -185,7 +183,7 @@ def test_trace_view_1(qtbot, tempdir, gui):
     qtbot.wait(1)
 
     v.increase()
-    ac(v.stacked.box_size, bs, atol=.05)
+    ac(v.stacked.box_size, bs, atol=0.05)
     qtbot.wait(1)
 
     v.origin = 'bottom'
@@ -200,7 +198,7 @@ def test_trace_view_1(qtbot, tempdir, gui):
     def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None, key=None):
         _clicked.append((channel_id, spike_id, cluster_id))
 
-    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Control',))
+    mouse_click(qtbot, v.canvas, pos=(0.0, 0.0), button='Left', modifiers=('Control',))
 
     v.set_state(v.state)
 
@@ -213,28 +211,30 @@ def test_trace_view_1(qtbot, tempdir, gui):
     def on_select_channel(sender, channel_id=None, button=None):
         _clicked.append((channel_id, button))
 
-    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Left', modifiers=('Shift',))
-    mouse_click(qtbot, v.canvas, pos=(0., 0.), button='Right', modifiers=('Shift',))
+    mouse_click(qtbot, v.canvas, pos=(0.0, 0.0), button='Left', modifiers=('Shift',))
+    mouse_click(qtbot, v.canvas, pos=(0.0, 0.0), button='Right', modifiers=('Shift',))
 
     assert _clicked == [(2, 'Left'), (2, 'Right')]
 
     _stop_and_close(qtbot, v)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test trace imageview
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_trace_image_view_1(qtbot, tempdir, gui):
     nc = 350
-    sr = 2000.
-    duration = 1.
+    sr = 2000.0
+    duration = 1.0
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
 
     def get_traces(interval):
-        return Bunch(data=select_traces(traces, interval, sample_rate=sr),
-                     color=(.75, .75, .75, 1),
-                     )
+        return Bunch(
+            data=select_traces(traces, interval, sample_rate=sr),
+            color=(0.75, 0.75, 0.75, 1),
+        )
 
     v = TraceImageView(
         traces=get_traces,
@@ -249,24 +249,24 @@ def test_trace_image_view_1(qtbot, tempdir, gui):
 
     v.update_color()
 
-    v.set_interval((.375, .625))
-    assert v.time == .5
+    v.set_interval((0.375, 0.625))
+    assert v.time == 0.5
     qtbot.wait(1)
 
-    v.go_to(.25)
-    assert v.time == .25
+    v.go_to(0.25)
+    assert v.time == 0.25
     qtbot.wait(1)
 
-    v.go_to(-.5)
-    assert v.time == .125
+    v.go_to(-0.5)
+    assert v.time == 0.125
     qtbot.wait(1)
 
     v.go_left()
-    assert v.time == .125
+    assert v.time == 0.125
     qtbot.wait(1)
 
     v.go_right()
-    ac(v.time, .150)
+    ac(v.time, 0.150)
     qtbot.wait(1)
 
     v.jump_left()
@@ -276,16 +276,16 @@ def test_trace_image_view_1(qtbot, tempdir, gui):
     qtbot.wait(1)
 
     # Change interval size.
-    v.interval = (.25, .75)
-    ac(v.interval, (.25, .75))
+    v.interval = (0.25, 0.75)
+    ac(v.interval, (0.25, 0.75))
     qtbot.wait(1)
 
     v.widen()
-    ac(v.interval, (.1875, .8125))
+    ac(v.interval, (0.1875, 0.8125))
     qtbot.wait(1)
 
     v.narrow()
-    ac(v.interval, (.25, .75))
+    ac(v.interval, (0.25, 0.75))
     qtbot.wait(1)
 
     v.go_to_start()

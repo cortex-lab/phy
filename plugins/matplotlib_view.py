@@ -10,7 +10,7 @@ class FeatureDensityView(ManualClusteringView):
 
     def __init__(self, features=None):
         """features is a function (cluster_id => Bunch(data, ...)) where data is a 3D array."""
-        super(FeatureDensityView, self).__init__()
+        super().__init__()
         self.features = features
 
     def on_select(self, cluster_ids=(), **kwargs):

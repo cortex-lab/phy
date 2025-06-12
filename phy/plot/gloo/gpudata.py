@@ -47,7 +47,7 @@ class GPUData(np.ndarray):
 
     @property
     def pending_data(self):
-        """ Pending data region as (byte offset, byte size) """
+        """Pending data region as (byte offset, byte size)"""
 
         if isinstance(self.base, GPUData):
             return self.base.pending_data
@@ -59,7 +59,7 @@ class GPUData(np.ndarray):
 
     @property
     def stride(self):
-        """ Item stride in the base array. """
+        """Item stride in the base array."""
 
         if self.base is None:
             return self.ravel().strides[0]
@@ -68,7 +68,7 @@ class GPUData(np.ndarray):
 
     @property
     def offset(self):
-        """ Byte offset in the base array. """
+        """Byte offset in the base array."""
 
         return self._extents[0]
 
@@ -105,7 +105,7 @@ class GPUData(np.ndarray):
             return 0, self.size * self.itemsize
 
     def __getitem__(self, key):
-        """ FIXME: Need to take care of case where key is a list or array """
+        """FIXME: Need to take care of case where key is a list or array"""
 
         Z = np.ndarray.__getitem__(self, key)
         if not hasattr(Z, 'shape') or Z.shape == ():
@@ -114,7 +114,7 @@ class GPUData(np.ndarray):
         return Z
 
     def __setitem__(self, key, value):
-        """ FIXME: Need to take care of case where key is a list or array """
+        """FIXME: Need to take care of case where key is a list or array"""
 
         Z = np.ndarray.__getitem__(self, key)
         if Z.shape == ():

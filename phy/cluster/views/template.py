@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Template view."""
 
 
@@ -10,14 +8,14 @@
 import logging
 
 import numpy as np
-
-from phy.utils.color import _add_selected_clusters_colors
 from phylib.io.array import _index_of
-from phylib.utils import emit, Bunch
+from phylib.utils import Bunch, emit
 
 from phy.plot import get_linear_x
 from phy.plot.visuals import PlotVisual
-from .base import ManualClusteringView, BaseGlobalView, ScalingMixin, BaseColorView
+from phy.utils.color import _add_selected_clusters_colors
+
+from .base import BaseColorView, BaseGlobalView, ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +23,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Template view
 # -----------------------------------------------------------------------------
+
 
 class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClusteringView):
     """This view shows all template waveforms of all clusters in a large grid of shape
@@ -45,8 +44,9 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         The list of all clusters to show initially.
 
     """
+
     _default_position = 'right'
-    _scaling = 1.
+    _scaling = 1.0
 
     default_shortcuts = {
         'change_template_size': 'ctrl+wheel',
@@ -58,9 +58,14 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
     }
 
     def __init__(
-            self, templates=None, channel_ids=None, channel_labels=None,
-            cluster_ids=None, **kwargs):
-        super(TemplateView, self).__init__(**kwargs)
+        self,
+        templates=None,
+        channel_ids=None,
+        channel_labels=None,
+        cluster_ids=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
         self.state_attrs += ()
         self.local_state_attrs += ('scaling',)
 
@@ -70,8 +75,10 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
 
         # Channel labels.
         self.channel_labels = (
-            channel_labels if channel_labels is not None else
-            ['%d' % ch for ch in range(self.n_channels)])
+            channel_labels
+            if channel_labels is not None
+            else [f'{ch}' for ch in range(self.n_channels)]
+        )
         assert len(self.channel_labels) == self.n_channels
         # TODO: show channel and cluster labels
 
@@ -108,7 +115,8 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         box_index = np.repeat(box_index, n_samples)
         box_index = np.c_[
             box_index.reshape((-1, 1)),
-            bunch.cluster_idx * np.ones((n_samples * len(bunch.channel_ids), 1))]
+            bunch.cluster_idx * np.ones((n_samples * len(bunch.channel_ids), 1)),
+        ]
         assert box_index.shape == (len(bunch.channel_ids) * n_samples, 2)
         assert box_index.size == bunch.template.size * 2
         return box_index
@@ -131,7 +139,12 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         box_index = self._get_box_index(bunch)
 
         return Bunch(
-            x=t, y=wave.T, color=color, box_index=box_index, data_bounds=self.data_bounds)
+            x=t,
+            y=wave.T,
+            color=color,
+            box_index=box_index,
+            data_bounds=self.data_bounds,
+        )
 
     def set_cluster_ids(self, cluster_ids):
         """Update the cluster ids when their identity or order has changed."""
@@ -142,7 +155,9 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         self.cluster_idxs = np.argsort(self.all_cluster_ids)
         self.sorted_cluster_ids = self.all_cluster_ids[self.cluster_idxs]
         # Cluster colors, ordered by cluster id.
-        self.cluster_colors = self.get_cluster_colors(self.sorted_cluster_ids, alpha=.75)
+        self.cluster_colors = self.get_cluster_colors(
+            self.sorted_cluster_ids, alpha=0.75
+        )
 
     def get_clusters_data(self, load_all=None):
         """Return all templates data."""
@@ -193,10 +208,13 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         selected_clusters = self.cluster_ids
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
-                selected_clusters, self.sorted_cluster_ids, cluster_colors)
+                selected_clusters, self.sorted_cluster_ids, cluster_colors
+            )
         # Number of vertices per cluster = number of vertices per signal
         n_vertices_clu = [
-            len(self._cluster_box_index[cluster_id]) for cluster_id in self.sorted_cluster_ids]
+            len(self._cluster_box_index[cluster_id])
+            for cluster_id in self.sorted_cluster_ids
+        ]
         # The argument passed to set_color() must have 1 row per vertex.
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))
         self.canvas.update()
@@ -228,7 +246,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         self.canvas.update()
 
     def on_select(self, *args, **kwargs):
-        super(TemplateView, self).on_select(*args, **kwargs)
+        super().on_select(*args, **kwargs)
         self.update_color()
 
     # Scaling
@@ -262,7 +280,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         # Get mouse position in NDC.
         (channel_idx, cluster_rel), _ = self.canvas.grid.box_map(e.pos)
         cluster_id = self.all_cluster_ids[cluster_rel]
-        logger.debug("Click on cluster %d with button %s.", cluster_id, b)
+        logger.debug('Click on cluster %d with button %s.', cluster_id, b)
         if 'Shift' in e.modifiers:
             emit('select_more', self, [cluster_id])
         else:

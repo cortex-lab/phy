@@ -9,7 +9,7 @@ import re
 from . import parser
 
 
-class Snippet(object):
+class Snippet:
     """
     A snippet is a piece of GLSL code that can be injected into an another GLSL
     code. It provides the necessary machinery to take care of name collisions,
@@ -53,7 +53,6 @@ class Snippet(object):
     aliases = {}
 
     def __init__(self, code=None, default=None, *args, **kwargs):
-
         # Original source code
         self._source_code = parser.merge_includes(code)
 
@@ -63,7 +62,7 @@ class Snippet(object):
         # Arguments (other snippets or strings)
         for arg in args:
             if isinstance(arg, Snippet) and self in arg.snippets:
-                raise ValueError("Recursive call is forbidden.")
+                raise ValueError('Recursive call is forbidden.')
         self._args = list(args)
 
         # No chained snippet yet
@@ -85,20 +84,20 @@ class Snippet(object):
         # If no name has been given, set a default one
         if self._name is None:
             classname = self.__class__.__name__
-            self._name = "%s_%d" % (classname, self._id)
+            self._name = f'{classname}_{self._id}'
 
         # Symbol table
         self._symbols = {}
-        for (name, dtype) in self._objects["attributes"]:
-            self._symbols[name] = "%s_%d" % (name, self._id)
-        for (name, dtype) in self._objects["uniforms"]:
-            self._symbols[name] = "%s_%d" % (name, self._id)
-        for (name, dtype) in self._objects["varyings"]:
-            self._symbols[name] = "%s_%d" % (name, self._id)
-        for (name, dtype) in self._objects["consts"]:
-            self._symbols[name] = "%s_%d" % (name, self._id)
-        for (rtype, name, args, code) in self._objects["functions"]:
-            self._symbols[name] = "%s_%d" % (name, self._id)
+        for name, dtype in self._objects['attributes']:
+            self._symbols[name] = f'{name}_{self._id}'
+        for name, dtype in self._objects['uniforms']:
+            self._symbols[name] = f'{name}_{self._id}'
+        for name, dtype in self._objects['varyings']:
+            self._symbols[name] = f'{name}_{self._id}'
+        for name, dtype in self._objects['consts']:
+            self._symbols[name] = f'{name}_{self._id}'
+        for rtype, name, args, code in self._objects['functions']:
+            self._symbols[name] = f'{name}_{self._id}'
 
         # Aliases (through kwargs)
         for name, alias in kwargs.items():
@@ -108,25 +107,25 @@ class Snippet(object):
         self._programs = []
 
     def process_kwargs(self, **kwargs):
-        """ Process kwargs as given in __init__() or __call__() """
+        """Process kwargs as given in __init__() or __call__()"""
 
-        if "name" in kwargs.keys():
-            self._name = kwargs["name"]
-            del kwargs["name"]
+        if 'name' in kwargs:
+            self._name = kwargs['name']
+            del kwargs['name']
 
-        if "call" in kwargs.keys():
-            self._call = kwargs["call"]
-            del kwargs["call"]
+        if 'call' in kwargs:
+            self._call = kwargs['call']
+            del kwargs['call']
 
     @property
     def name(self):
-        """ Name of the snippet """
+        """Name of the snippet"""
 
         return self._name
 
     @property
     def programs(self):
-        """ Currently attached programs """
+        """Currently attached programs"""
 
         return self._programs
 
@@ -157,7 +156,9 @@ class Snippet(object):
 
         symbols = {}
         objects = self._objects
-        for name, dtype in objects["uniforms"] + objects["attributes"] + objects["varyings"]:
+        for name, dtype in (
+            objects['uniforms'] + objects['attributes'] + objects['varyings']
+        ):
             symbols[name] = self.symbols[name]
         # return self._symbols
         return symbols
@@ -178,13 +179,13 @@ class Snippet(object):
 
     @property
     def args(self):
-        """ Call arguments """
+        """Call arguments"""
 
         return list(self._args)
 
     @property
     def next(self):
-        """ Next snippet in the arihmetic chain. """
+        """Next snippet in the arihmetic chain."""
 
         if self._next:
             return self._next[1]
@@ -220,7 +221,9 @@ class Snippet(object):
           D.snippets # [A,B,C]
         """
 
-        all = [self, ]
+        all = [
+            self,
+        ]
         for snippet in self._args:
             if isinstance(snippet, Snippet):
                 all.extend(snippet.snippets)
@@ -323,34 +326,33 @@ class Snippet(object):
 
     @property
     def code(self):
-        """ Mangled code """
+        """Mangled code"""
 
-        code = ""
+        code = ''
         for snippet in self.dependencies:
             code += snippet.mangled_code()
         return code
 
     def mangled_code(self):
-        """ Generate mangled code """
+        """Generate mangled code"""
 
         code = self._source_code
         objects = self._objects
-        functions = objects["functions"]
-        names = objects["uniforms"] + \
-            objects["attributes"] + objects["varyings"]
+        functions = objects['functions']
+        names = objects['uniforms'] + objects['attributes'] + objects['varyings']
         for _, name, _, _ in functions:
             symbol = self.symbols[name]
-            code = re.sub(r"(?<=[^\w])(%s)(?=\()" % name, symbol, code)
+            code = re.sub(rf'(?<=[^\w])({name})(?=\()', symbol, code)
         for name, _ in names:
             # Variable starting "__" are protected and unaliased
             # if not name.startswith("__"):
             symbol = self.symbols[name]
-            code = re.sub(r"(?<=[^\w])(%s)(?=[^\w])" % name, symbol, code)
+            code = re.sub(rf'(?<=[^\w])({name})(?=[^\w])', symbol, code)
         return code
 
     @property
     def call(self):
-        """ Computes and returns the GLSL code that correspond to the call """
+        """Computes and returns the GLSL code that correspond to the call"""
         self.mangled_code()
         return self.mangled_call()
 
@@ -364,13 +366,12 @@ class Snippet(object):
                               with shader arguments
         """
 
-        s = ""
+        s = ''
 
         # Is there a function defined in the snippet ?
         # (It may happen a snippet only has uniforms, like the Viewport snippet)
         # WARN: what about Viewport(Transform) ?
-        if len(self._objects["functions"]):
-
+        if len(self._objects['functions']):
             # Is there a function specified in the shader source ?
             # Such as <transform.forward>
             if function:
@@ -381,12 +382,12 @@ class Snippet(object):
             elif self._call is not None:
                 name = self._call
             else:
-                _, name, _, _ = self._objects["functions"][0]
+                _, name, _, _ = self._objects['functions'][0]
 
             s = self.lookup(name, deepsearch=False) or name
 
             if len(self._args) and override is False:
-                s += "("
+                s += '('
                 for i, arg in enumerate(self._args):
                     if isinstance(arg, Snippet):
                         # We do not propagate given function to to other snippets
@@ -399,27 +400,27 @@ class Snippet(object):
                         s += str(arg)
 
                     if i < (len(self._args) - 1):
-                        s += ", "
-                s += ")"
+                        s += ', '
+                s += ')'
             else:
                 # If an argument has been given, we put it at the end
                 # This handles hooks of the form <transform(args)>
                 if arguments is not None:
-                    s += f"({arguments})"
+                    s += f'({arguments})'
                 else:
-                    s += "()"
+                    s += '()'
             if self.next:
                 operand, other = self._next
-                if operand in "+-/*":
+                if operand in '+-/*':
                     call = other.mangled_call(function, arguments).strip()
                     if len(call):
-                        s += f" {operand} {call}"
+                        s += f' {operand} {call}'
 
         # No function defined in this snippet, we look for next one
         else:
             if self._next:
                 operand, other = self.next
-                if operand in "+-/*":
+                if operand in '+-/*':
                     s = other.mangled_call(function, arguments)
         return s
 
@@ -432,7 +433,7 @@ class Snippet(object):
 
         for arg in args:
             if isinstance(arg, Snippet) and self in arg.snippets:
-                raise ValueError("Recursive call is forbidden")
+                raise ValueError('Recursive call is forbidden')
 
         # Override call arguments
         self._args = args
@@ -447,12 +448,9 @@ class Snippet(object):
         return self
 
     def copy(self, deep=False):
-        """ Shallow or deep copy of the snippet """
+        """Shallow or deep copy of the snippet"""
 
-        if deep:
-            snippet = copy.deepcopy(self)
-        else:
-            snippet = copy.copy(self)
+        snippet = copy.deepcopy(self) if deep else copy.copy(self)
         return snippet
 
     def __op__(self, operand, other):
@@ -461,54 +459,54 @@ class Snippet(object):
         return snippet
 
     def __add__(self, other):
-        return self.__op__("+", other)
+        return self.__op__('+', other)
 
     def __and__(self, other):
-        return self.__op__("&", other)
+        return self.__op__('&', other)
 
     def __sub__(self, other):
-        return self.__op__("-", other)
+        return self.__op__('-', other)
 
     def __mul__(self, other):
-        return self.__op__("*", other)
+        return self.__op__('*', other)
 
     def __div__(self, other):
-        return self.__op__("/", other)
+        return self.__op__('/', other)
 
     def __radd__(self, other):
-        return self.__op__("+", other)
+        return self.__op__('+', other)
 
     def __rand__(self, other):
-        return self.__op__("&", other)
+        return self.__op__('&', other)
 
     def __rsub__(self, other):
-        return self.__op__("-", other)
+        return self.__op__('-', other)
 
     def __rmul__(self, other):
-        return self.__op__("*", other)
+        return self.__op__('*', other)
 
     def __rdiv__(self, other):
-        return self.__op__("/", other)
+        return self.__op__('/', other)
 
     def __rshift__(self, other):
-        return self.__op__(";", other)
+        return self.__op__(';', other)
 
     def __repr__(self):
         # return self.generate_call()
 
         s = self._name
         # s = self.__class__.__name__
-        s += "("
+        s += '('
         if len(self._args):
-            s += " "
+            s += ' '
             for i, snippet in enumerate(self._args):
                 s += repr(snippet)
                 if i < len(self._args) - 1:
-                    s += ", "
-            s += " "
-        s += ")"
+                    s += ', '
+            s += ' '
+        s += ')'
         if self._next:
-            s += " %s %s" % self._next
+            s += ' {} {}'.format(*self._next)
 
         return s
 

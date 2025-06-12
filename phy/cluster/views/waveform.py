@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Waveform view."""
 
 
@@ -7,18 +5,26 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import defaultdict
 import logging
+from collections import defaultdict
 
 import numpy as np
-
 from phylib.io.array import _flatten, _index_of
 from phylib.utils import emit
-from phy.utils.color import selected_cluster_color
+
+from phy.cluster._utils import RotatingProperty
 from phy.plot import get_linear_x
 from phy.plot.visuals import (  # noqa
-    PlotVisual, PlotAggVisual, UniformScatterVisual, TextVisual, LineVisual, _min, _max)
-from phy.cluster._utils import RotatingProperty
+    LineVisual,
+    PlotAggVisual,
+    PlotVisual,
+    TextVisual,
+    UniformScatterVisual,
+    _max,
+    _min,
+)
+from phy.utils.color import selected_cluster_color
+
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
@@ -27,6 +33,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Waveform view
 # -----------------------------------------------------------------------------
+
 
 def _get_box_pos(bunchs, channel_ids):
     cp = {}
@@ -89,8 +96,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     max_n_clusters = 8
 
     _default_position = 'right'
-    ax_color = (.75, .75, .75, 1.)
-    tick_size = 5.
+    ax_color = (0.75, 0.75, 0.75, 1.0)
+    tick_size = 5.0
     cluster_ids = ()
 
     default_shortcuts = {
@@ -99,14 +106,12 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         'next_waveforms_type': 'w',
         'previous_waveforms_type': 'shift+w',
         'toggle_mean_waveforms': 'm',
-
         # Box scaling.
         'widen': 'ctrl+right',
         'narrow': 'ctrl+left',
         'increase': 'ctrl+up',
         'decrease': 'ctrl+down',
         'change_box_size': 'ctrl+wheel',
-
         # Probe scaling.
         'extend_horizontally': 'shift+right',
         'shrink_horizontally': 'shift+left',
@@ -122,14 +127,16 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.do_show_labels = True
         self.channel_ids = None
         self.filtered_tags = ()
-        self.wave_duration = 0.  # updated in the plotting method
+        self.wave_duration = 0.0  # updated in the plotting method
         self.data_bounds = None
         self.sample_rate = sample_rate
         self._status_suffix = ''
-        assert sample_rate > 0., "The sample rate must be provided to the waveform view."
+        assert sample_rate > 0.0, (
+            'The sample rate must be provided to the waveform view.'
+        )
 
         # Initialize the view.
-        super(WaveformView, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.state_attrs += ('waveforms_type', 'overlap', 'do_show_labels')
         self.local_state_attrs += ('box_scaling', 'probe_scaling')
 
@@ -138,7 +145,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Ensure waveforms is a dictionary, even if there is a single waveforms type.
         waveforms = waveforms or {}
-        waveforms = waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
+        waveforms = (
+            waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
+        )
         self.waveforms = waveforms
 
         # Rotating property waveforms types.
@@ -156,7 +165,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.canvas.add_visual(self.line_visual)
 
         self.tick_visual = UniformScatterVisual(
-            marker='vbar', color=self.ax_color, size=self.tick_size)
+            marker='vbar', color=self.ax_color, size=self.tick_size
+        )
         self.canvas.add_visual(self.tick_visual)
 
         # Two types of visuals: thin raw line visual for normal waveforms, thick antialiased
@@ -187,7 +197,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         if self.waveforms_type not in self.waveforms:
             return
         bunchs = [
-            self.waveforms_types.get()(cluster_id) for cluster_id in self.cluster_ids]
+            self.waveforms_types.get()(cluster_id) for cluster_id in self.cluster_ids
+        ]
         clu_offsets = _get_clu_offsets(bunchs)
         n_clu = max(clu_offsets) + 1
         # Offset depending on the overlap.
@@ -195,7 +206,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             bunch.index = i
             bunch.offset = offset
             bunch.n_clu = n_clu
-            bunch.color = selected_cluster_color(i, bunch.get('alpha', .75))
+            bunch.color = selected_cluster_color(i, bunch.get('alpha', 0.75))
         return bunchs
 
     def _plot_cluster(self, bunch):
@@ -216,12 +227,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Find the x coordinates.
         t = get_linear_x(n_spikes_clu * n_channels, n_samples)
-        t = _overlap_transform(t, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
+        t = _overlap_transform(
+            t, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap
+        )
         # HACK: on the GPU, we get the actual masks with fract(masks)
         # since we add the relative cluster index. We need to ensure
         # that the masks is never 1.0, otherwise it is interpreted as
         # 0.
-        eps = .001
+        eps = 0.001
         masks = eps + (1 - 2 * eps) * masks
         # NOTE: we add the cluster index which is used for the
         # computation of the depth on the GPU.
@@ -248,8 +261,13 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         assert self.data_bounds is not None
         self._current_visual.add_batch_data(
-            x=t, y=wave, color=bunch.color, masks=masks, box_index=box_index,
-            data_bounds=self.data_bounds)
+            x=t,
+            y=wave,
+            color=bunch.color,
+            masks=masks,
+            box_index=box_index,
+            data_bounds=self.data_bounds,
+        )
 
         # Waveform axes.
         # --------------
@@ -257,7 +275,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Horizontal y=0 lines.
         ax_db = self.data_bounds
         a, b = _overlap_transform(
-            np.array([-1, 1]), offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
+            np.array([-1, 1]), offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap
+        )
         box_index = _index_of(channel_ids_loc, self.channel_ids)
         box_index = np.repeat(box_index, 2)
         box_index = np.tile(box_index, n_spikes_clu)
@@ -273,18 +292,21 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Vertical ticks every millisecond.
         steps = np.arange(np.round(self.wave_duration * 1000))
         # A vline every millisecond.
-        x = .001 * steps
+        x = 0.001 * steps
         # Scale to [-1, 1], same coordinates as the waveform points.
         x = -1 + 2 * x / self.wave_duration
         # Take overlap into account.
-        x = _overlap_transform(x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
+        x = _overlap_transform(
+            x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap
+        )
         x = np.tile(x, len(channel_ids_loc))
         # Generate the box index.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
         box_index = np.repeat(box_index, x.size // len(box_index))
         assert x.size == box_index.size
         self.tick_visual.add_batch_data(
-            x=x, y=np.zeros_like(x),
+            x=x,
+            y=np.zeros_like(x),
             data_bounds=ax_db,
             box_index=box_index,
         )
@@ -318,14 +340,15 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         if bunchs[0].data is not None:
             self.wave_duration = bunchs[0].data.shape[1] / float(self.sample_rate)
         else:  # pragma: no cover
-            self.wave_duration = 1.
+            self.wave_duration = 1.0
 
         # Channel labels.
         channel_labels = {}
         for d in bunchs:
-            chl = d.get('channel_labels', ['%d' % ch for ch in d.channel_ids])
-            channel_labels.update({
-                channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)})
+            chl = d.get('channel_labels', [f'{ch}' for ch in d.channel_ids])
+            channel_labels.update(
+                {channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)}
+            )
 
         # Update the Boxed box positions as a function of the selected channels.
         if channel_ids:
@@ -357,10 +380,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-        super(WaveformView, self).attach(gui)
+        super().attach(gui)
 
-        self.actions.add(self.toggle_waveform_overlap, checkable=True, checked=self.overlap)
-        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
+        self.actions.add(
+            self.toggle_waveform_overlap, checkable=True, checked=self.overlap
+        )
+        self.actions.add(
+            self.toggle_show_labels, checkable=True, checked=self.do_show_labels
+        )
         self.actions.add(self.next_waveforms_type)
         self.actions.add(self.previous_waveforms_type)
         self.actions.add(self.toggle_mean_waveforms, checkable=True)
@@ -472,13 +499,15 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def on_mouse_click(self, e):
         """Select a channel by clicking on a box in the waveform view."""
         b = e.button
-        nums = tuple('%d' % i for i in range(10))
+        nums = tuple(f'{i}' for i in range(10))
         if 'Control' in e.modifiers or e.key in nums:
             key = int(e.key) if e.key in nums else None
             # Get mouse position in NDC.
             channel_idx, _ = self.canvas.boxed.box_map(e.pos)
             channel_id = self.channel_ids[channel_idx]
-            logger.debug("Click on channel_id %d with key %s and button %s.", channel_id, key, b)
+            logger.debug(
+                'Click on channel_id %d with key %s and button %s.', channel_id, key, b
+            )
             emit('select_channel', self, channel_id=channel_id, key=key, button=b)
 
     @property
@@ -492,22 +521,22 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def next_waveforms_type(self):
         """Switch to the next waveforms type."""
         self.waveforms_types.next()
-        logger.debug("Switch to waveforms type %s.", self.waveforms_type)
+        logger.debug('Switch to waveforms type %s.', self.waveforms_type)
         self.plot()
 
     def previous_waveforms_type(self):
         """Switch to the previous waveforms type."""
         self.waveforms_types.previous()
-        logger.debug("Switch to waveforms type %s.", self.waveforms_type)
+        logger.debug('Switch to waveforms type %s.', self.waveforms_type)
         self.plot()
 
     def toggle_mean_waveforms(self, checked):
         """Switch to the `mean_waveforms` type, if it is available."""
         if self.waveforms_type == 'mean_waveforms' and 'waveforms' in self.waveforms:
             self.waveforms_types.set('waveforms')
-            logger.debug("Switch to raw waveforms.")
+            logger.debug('Switch to raw waveforms.')
             self.plot()
         elif 'mean_waveforms' in self.waveforms:
             self.waveforms_types.set('mean_waveforms')
-            logger.debug("Switch to mean waveforms.")
+            logger.debug('Switch to mean waveforms.')
             self.plot()

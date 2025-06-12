@@ -1,27 +1,35 @@
-# -*- coding: utf-8 -*-
-
 """Test transform."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from textwrap import dedent
 
 import numpy as np
-from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
+from numpy.testing import assert_equal as ae
 from pytest import fixture
 
 from ..transform import (
-    _glslify, pixels_to_ndc, _normalize, extend_bounds,
-    Translate, Scale, Rotate, Range, Clip, Subplot, TransformChain)
+    Clip,
+    Range,
+    Rotate,
+    Scale,
+    Subplot,
+    TransformChain,
+    Translate,
+    _glslify,
+    _normalize,
+    extend_bounds,
+    pixels_to_ndc,
+)
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _check_forward(transform, array, expected):
     transformed = transform.apply(array)
@@ -46,14 +54,15 @@ def _check(transform, array, expected):
     _check_forward(inv, expected, array)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test utils
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_glslify():
     assert _glslify('a') == 'a', 'b'
     assert _glslify((1, 2, 3, 4)) == 'vec4(1, 2, 3, 4)'
-    assert _glslify((1., 2.)) == 'vec2(1.0, 2.0)'
+    assert _glslify((1.0, 2.0)) == 'vec2(1.0, 2.0)'
 
 
 def test_pixels_to_ndc():
@@ -61,9 +70,9 @@ def test_pixels_to_ndc():
 
 
 def test_normalize():
-    m, M = 0., 10.
-    arr = np.linspace(0., 10., 10)
-    ac(_normalize(arr, m, M), np.linspace(-1., 1., 10))
+    m, M = 0.0, 10.0
+    arr = np.linspace(0.0, 10.0, 10)
+    ac(_normalize(arr, m, M), np.linspace(-1.0, 1.0, 10))
     ac(_normalize(arr, m, m), arr)
 
 
@@ -72,16 +81,16 @@ def test_extend_bounds():
     assert extend_bounds([(0, 0, 0, 0)]) == (-1, -1, 1, 1)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test transform
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_types():
     _check(Translate([1, 2]), [], [])
 
-    for ab in [[3, 4], [3., 4.]]:
-        for arr in [ab, [ab], np.array(ab), np.array([ab]),
-                    np.array([ab, ab, ab])]:
+    for ab in [[3, 4], [3.0, 4.0]]:
+        for arr in [ab, [ab], np.array(ab), np.array([ab]), np.array([ab, ab, ab])]:
             _check(Translate([1, 2]), arr, [[4, 6]])
 
 
@@ -112,13 +121,12 @@ def test_range_cpu():
     _check(Range([0, 0, 1, 1], [-1, -1, 1, 1]), [0.5, 0.5], [[0, 0]])
     _check(Range([0, 0, 1, 1], [-1, -1, 1, 1]), [1, 1], [[1, 1]])
 
-    _check(Range([0, 0, 1, 1], [-1, -1, 1, 1]),
-           [[0, .5], [1.5, -.5]], [[-1, 0], [2, -2]])
+    _check(Range([0, 0, 1, 1], [-1, -1, 1, 1]), [[0, 0.5], [1.5, -0.5]], [[-1, 0], [2, -2]])
 
 
 def test_range_cpu_vectorized():
-    arr = np.arange(6).reshape((3, 2)) * 1.
-    arr_tr = arr / 5.
+    arr = np.arange(6).reshape((3, 2)) * 1.0
+    arr_tr = arr / 5.0
     arr_tr[2, :] /= 10
 
     f = np.tile([0, 0, 5, 5], (3, 1))
@@ -145,17 +153,18 @@ def test_subplot_cpu():
     shape = (2, 3)
 
     _check(Subplot(shape, (0, 0)), [-1, -1], [-1, +0])
-    _check(Subplot(shape, (0, 0)), [+0, +0], [-2. / 3., .5])
+    _check(Subplot(shape, (0, 0)), [+0, +0], [-2.0 / 3.0, 0.5])
 
     _check(Subplot(shape, (1, 0)), [-1, -1], [-1, -1])
-    _check(Subplot(shape, (1, 0)), [+1, +1], [-1. / 3, 0])
+    _check(Subplot(shape, (1, 0)), [+1, +1], [-1.0 / 3, 0])
 
     _check(Subplot(shape, (1, 1)), [0, 1], [0, 0])
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test GLSL transforms
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_translate_glsl():
     assert 'x = x + u_translate' in Translate(gpu_var='u_translate').glsl('x')
@@ -173,7 +182,6 @@ def test_rotate_glsl():
 
 
 def test_range_glsl():
-
     assert Range([-1, -1, 1, 1]).glsl('x')
     r = Range('u_from', 'u_to')
     assert 'x = (x - ' in r.glsl('x')
@@ -197,13 +205,14 @@ def test_subplot_glsl():
     assert 'x = ' in glsl
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test transform chain
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def array():
-    return np.array([[-1., 0.], [1., 2.]])
+    return np.array([[-1.0, 0.0], [1.0, 2.0]])
 
 
 def test_transform_chain_empty(array):
@@ -226,7 +235,7 @@ def test_transform_chain_one(array):
 
 def test_transform_chain_two(array):
     translate = Translate([1, 2])
-    scale = Scale([.5, .5])
+    scale = Scale([0.5, 0.5])
     t = TransformChain([translate, scale])
 
     assert t.transforms == [translate, scale]
@@ -240,26 +249,26 @@ def test_transform_chain_two(array):
 
 
 def test_transform_chain_complete(array):
-    t = Scale(.5) + Scale(2.) + Range([-3, -3, 1, 1]) + Subplot('u_shape', 'a_box_index')
+    t = Scale(0.5) + Scale(2.0) + Range([-3, -3, 1, 1]) + Subplot('u_shape', 'a_box_index')
     assert len(t.transforms) == 4
-    ae(t.apply(array), [[0, .5], [1, 1.5]])
+    ae(t.apply(array), [[0, 0.5], [1, 1.5]])
 
 
 def test_transform_chain_add():
     tc = TransformChain()
-    tc.add([Scale(.5)])
+    tc.add([Scale(0.5)])
 
     tc_2 = TransformChain()
-    tc_2.add([Scale(2.)])
+    tc_2.add([Scale(2.0)])
 
-    ae((tc + tc_2).apply([3.]), [[3.]])
+    ae((tc + tc_2).apply([3.0]), [[3.0]])
 
     assert str(tc)
 
 
 def test_transform_chain_inverse():
     tc = TransformChain()
-    tc.add([Scale(.5), Translate((1, 0)), Scale(2)])
+    tc.add([Scale(0.5), Translate((1, 0)), Scale(2)])
     tci = tc.inverse()
-    ae(tc.apply([[1., 0.]]), [[3., 0.]])
-    ae(tci.apply([[3., 0.]]), [[1., 0.]])
+    ae(tc.apply([[1.0, 0.0]]), [[3.0, 0.0]])
+    ae(tci.apply([[3.0, 0.0]]), [[1.0, 0.0]])

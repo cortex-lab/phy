@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Execution context that handles parallel processing and caching."""
 
 # ------------------------------------------------------------------------------
@@ -35,7 +33,7 @@ def _cache_methods(obj, memcached, cached):  # pragma: no cover
         setattr(obj, name, obj.context.cache(f))
 
 
-class Context(object):
+class Context:
     """Handle function disk and memory caching with joblib.
 
     Memcaching a function is used to save *in memory* the output of the function for all
@@ -97,16 +95,12 @@ class Context(object):
         try:
             from joblib import Memory
 
-            self._memory = Memory(
-                location=self.cache_dir, mmap_mode=None, verbose=self.verbose
-            )
+            self._memory = Memory(location=self.cache_dir, mmap_mode=None, verbose=self.verbose)
             logger.debug('Initialize joblib cache dir at `%s`.', self.cache_dir)
             logger.debug('Reducing the size of the cache if needed.')
             self._memory.reduce_size()
         except ImportError:  # pragma: no cover
-            logger.warning(
-                'Joblib is not installed. Install it with `conda install joblib`.'
-            )
+            logger.warning('Joblib is not installed. Install it with `conda install joblib`.')
             self._memory = None
 
     def cache(self, f):
@@ -116,16 +110,13 @@ class Context(object):
             return f
         assert f
         # NOTE: discard self in instance methods.
-        if 'self' in inspect.getfullargspec(f).args:
-            ignore = ['self']
-        else:
-            ignore = None
+        ignore = ['self'] if 'self' in inspect.getfullargspec(f).args else None
         disk_cached = self._memory.cache(f, ignore=ignore)
         return disk_cached
 
     def load_memcache(self, name):
         """Load the memcache from disk (pickle file), if it exists."""
-        path = self.cache_dir / 'memcache' / (f"{name}.pkl")
+        path = self.cache_dir / 'memcache' / (f'{name}.pkl')
         if path.exists():
             logger.debug('Load memcache for `%s`.', name)
             with open(str(path), 'rb') as fd:
@@ -138,7 +129,7 @@ class Context(object):
     def save_memcache(self):
         """Save the memcache to disk using pickle."""
         for name, cache in self._memcache.items():
-            path = self.cache_dir / 'memcache' / (f"{name}.pkl")
+            path = self.cache_dir / 'memcache' / (f'{name}.pkl')
             logger.debug('Save memcache for `%s`.', name)
             with open(str(path), 'wb') as fd:
                 dump(cache, fd)
