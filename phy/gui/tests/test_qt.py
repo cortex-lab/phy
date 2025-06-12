@@ -141,7 +141,7 @@ def test_web_view(qtbot):
     view = WebView()
 
     def _assert(text):
-        return view.html == '<html><head></head><body>%s</body></html>' % text
+        return view.html == f'<html><head></head><body>{text}</body></html>'
 
     view.set_html('hello', _assert)
     qtbot.addWidget(view)

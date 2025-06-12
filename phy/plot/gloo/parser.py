@@ -57,12 +57,12 @@ def merge_includes(code):
             includes.append(filename)
             path = _find(filename)
             if not path:
-                log.critical('"%s" not found' % filename)
+                log.critical(f'"{filename}" not found')
                 raise RuntimeError("File not found")
-            text = '\n// --- start of "%s" ---\n' % filename
+            text = f'\n// --- start of "{filename}" ---\n'
             with open(str(path)) as f:
                 text += remove_comments(f.read())
-            text += '// --- end of "%s" ---\n' % filename
+            text += f'// --- end of "{filename}" ---\n'
             return text
         return ''
 
@@ -98,7 +98,7 @@ def get_declarations(code, qualifier=""):
     variables = []
 
     if isinstance(qualifier, list):
-        qualifier = "(" + "|".join([str(q) for q in qualifier]) + ")"
+        qualifier = f"({'|'.join([str(q) for q in qualifier])})"
 
     if qualifier != "":
         re_type = re.compile(r"""

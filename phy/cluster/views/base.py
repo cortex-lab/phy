@@ -301,7 +301,7 @@ class ManualClusteringView(object):
 
     def update_status(self):
         if hasattr(self, 'dock'):
-            self.dock.set_status('%s %s' % (self.status, self.ex_status))
+            self.dock.set_status(f'{self.status} {self.ex_status}')
 
     # -------------------------------------------------------------------------
     # Misc public methods
@@ -509,7 +509,7 @@ class BaseColorView(BaseWheelMixin):
             return callback
 
         for cs in self.color_schemes.keys():
-            name = 'Change color scheme to %s' % cs
+            name = f'Change color scheme to {cs}'
             self.actions.add(
                 _make_color_scheme_action(cs), show_shortcut=False,
                 name=name, view_submenu='Change color scheme')

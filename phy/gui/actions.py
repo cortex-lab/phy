@@ -120,7 +120,7 @@ def _show_shortcuts(shortcuts):
     for n in sorted(shortcuts):
         shortcut = _get_shortcut_string(shortcuts[n])
         if not n.startswith('_') and not shortcut.startswith('-'):
-            out.append('- {0:<40} {1:s}'.format(n, shortcut))
+            out.append(f'- {n:<40} {shortcut:s}')
     if out:
         print('Keyboard shortcuts')
         print('\n'.join(out))
@@ -133,7 +133,7 @@ def _show_snippets(snippets):
     for n in sorted(snippets):
         snippet = snippets[n]
         if not n.startswith('_'):
-            out.append('- {0:<40} :{1:s}'.format(n, snippet))
+            out.append(f'- {n:<40} :{snippet:s}')
     if out:
         print('Snippets')
         print('\n'.join(out))
@@ -220,7 +220,7 @@ def _create_qaction(gui, **kwargs):
     action.setShortcuts(sequence)
     assert kwargs.get('docstring', None)
     docstring = re.sub(r'\s+', ' ', kwargs.get('docstring', None))
-    docstring += ' (alias: {})'.format(kwargs.get('alias', None))
+    docstring += f" (alias: {kwargs.get('alias', None)})"
     action.setStatusTip(docstring)
     action.setWhatsThis(docstring)
     action.setCheckable(kwargs.get('checkable', None))
@@ -453,13 +453,13 @@ class Actions(object):
         # Get the action.
         action = self._actions_dict.get(name, None)
         if not action:
-            raise ValueError("Action `{}` doesn't exist.".format(name))
+            raise ValueError(f"Action `{name}` doesn't exist.")
         if not name.startswith('_'):
             logger.debug("Execute action `%s`.", name)
         try:
             return action.callback(*args)
         except TypeError as e:
-            logger.warning("Invalid action arguments: " + str(e))
+            logger.warning(f"Invalid action arguments: {str(e)}")
             return
 
     def remove(self, name):
@@ -486,10 +486,10 @@ class Actions(object):
             if not action.shortcut and not action.alias:
                 continue
             # Only show alias for actions with no shortcut.
-            alias_str = ' (:%s)' % action.alias if action.alias != name else ''
+            alias_str = f' (:{action.alias})' if action.alias != name else ''
             shortcut = action.shortcut or '-'
             shortcut = shortcut if isinstance(action.shortcut, str) else ', '.join(shortcut)
-            out[name] = '%s%s' % (shortcut, alias_str)
+            out[name] = f'{shortcut}{alias_str}'
         return out
 
     def show_shortcuts(self):
@@ -501,7 +501,7 @@ class Actions(object):
         return name in self._actions_dict
 
     def __repr__(self):
-        return '<Actions {}>'.format(sorted(self._actions_dict))
+        return f'<Actions {sorted(self._actions_dict)}>'
 
 
 # -----------------------------------------------------------------------------
@@ -613,15 +613,15 @@ class Snippets(object):
 
             # Lowercase letters.
             self.actions.add(
-                name='_snippet_{}'.format(i),
+                name=f'_snippet_{i}',
                 shortcut=char,
                 callback=_make_func(char))
 
             # Uppercase letters.
             if char in self._snippet_chars[:26]:
                 self.actions.add(
-                    name='_snippet_{}_upper'.format(i),
-                    shortcut='shift+' + char,
+                    name=f'_snippet_{i}_upper',
+                    shortcut=f"shift+{char}",
                     callback=_make_func(char.upper()))
 
         self.actions.add(

@@ -277,7 +277,7 @@ def test_snippets_gui(qtbot, gui, actions):
         """Simulate keystrokes."""
         for char in cmd:
             i = snippets._snippet_chars.index(char)
-            snippets.actions.run('_snippet_{}'.format(i))
+            snippets.actions.run(f'_snippet_{i}')
 
     snippets.actions.enable_snippet_mode()
     _run('t2 ')
@@ -296,7 +296,7 @@ def test_snippets_gui(qtbot, gui, actions):
 
 def test_snippets_parse():
     def _check(args, expected):
-        snippet = 'snip ' + args
+        snippet = f"snip {args}"
         assert _parse_snippet(snippet) == tuple(['snip'] + expected)
 
     _check('a', ['a'])
@@ -386,7 +386,7 @@ def test_snippets_actions_1(actions, snippets):
         """Simulate keystrokes."""
         for char in cmd:
             i = snippets._snippet_chars.index(char)
-            snippets.actions.run('_snippet_{}'.format(i))
+            snippets.actions.run(f'_snippet_{i}')
 
     # Need to activate the snippet mode first.
     with raises(ValueError):

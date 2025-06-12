@@ -128,7 +128,7 @@ class Shader(GLObject):
                 # hook = match.group('hook')
                 subhook = match.group('subhook')
                 if subhook:
-                    return snippet + '.' + subhook
+                    return f"{snippet}.{subhook}"
                 return snippet
             self._hooked = re.sub(pattern, replace, self._hooked)
             return
@@ -221,11 +221,11 @@ class Shader(GLObject):
 
         if len(self.hooks):
             hooks = [name for name, snippet in self.hooks]
-            error = "Shader has pending hooks (%s), cannot compile" % hooks
+            error = f"Shader has pending hooks ({hooks}), cannot compile"
             raise RuntimeError(error)
 
         # Set shader version
-        code = ("#version %s\n" % self._version) + self.code
+        code = f"#version {self._version}\n{self.code}"
         gl.glShaderSource(self._handle, code)
 
         # Actual compilation
@@ -276,7 +276,7 @@ class Shader(GLObject):
                           for m in matches]
                 return sorted(errors, key=lambda elem: elem[0])
         else:
-            raise ValueError('Unknown GLSL error format:\n{}\n'.format(error))
+            raise ValueError(f'Unknown GLSL error format:\n{error}\n')
 
     def _print_error(self, error, lineno):
         """
@@ -294,8 +294,8 @@ class Shader(GLObject):
         start = max(0, lineno - 3)
         end = min(len(lines), lineno + 3)
 
-        print('Error in %s' % (repr(self)))
-        print(' -> %s' % error)
+        print(f'Error in {repr(self)}')
+        print(f' -> {error}')
         print()
         if start > 0:
             print(' ...')
@@ -344,7 +344,7 @@ class VertexShader(Shader):
     @property
     def code(self):
         code = super(VertexShader, self).code
-        code = "#define _GLUMPY__VERTEX_SHADER__\n" + code
+        code = f"#define _GLUMPY__VERTEX_SHADER__\n{code}"
         return code
 
     def __repr__(self):
@@ -360,7 +360,7 @@ class FragmentShader(Shader):
     @property
     def code(self):
         code = super(FragmentShader, self).code
-        code = "#define _GLUMPY__FRAGMENT_SHADER__\n" + code
+        code = f"#define _GLUMPY__FRAGMENT_SHADER__\n{code}"
         return code
 
     def __repr__(self):

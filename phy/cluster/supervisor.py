@@ -130,7 +130,7 @@ class TaskLogger(object):
         """Enqueue tasks after a given action."""
         sender, name, args, kwargs = task
         f = lambda *args, **kwargs: logger.log(5, "No method _after_%s", name)
-        getattr(self, '_after_%s' % name, f)(task, output)
+        getattr(self, f'_after_{name}', f)(task, output)
 
     def _after_merge(self, task, output):
         """Tasks that should follow a merge."""
@@ -246,7 +246,7 @@ class TaskLogger(object):
         print("=== History ===")
         for sender, name, args, kwargs, output in self._history:
             print(
-                '{: <24} {: <8}'.format(sender.__class__.__name__, name), *args, output, kwargs)
+                f'{sender.__class__.__name__: <24} {name: <8}', *args, output, kwargs)
 
     def has_finished(self):
         """Return whether the queue has finished being processed."""
@@ -302,7 +302,7 @@ class ClusterView(Table):
 
     def _reset_table(self, data=None, columns=(), sort=None):
         """Recreate the table with specified columns, data, and sort."""
-        emit(self._view_name + '_init', self)
+        emit(f"{self._view_name}_init", self)
         # Ensure 'id' is the first column.
         if 'id' in columns:
             columns.remove('id')
@@ -456,7 +456,7 @@ class ActionCreator(object):
         docstring = inspect.getdoc(f) if f else name
         if not kwargs.get('docstring', None):
             kwargs['docstring'] = docstring
-        getattr(self, '%s_actions' % which).add(emit_fun, name=name, **kwargs)
+        getattr(self, f'{which}_actions').add(emit_fun, name=name, **kwargs)
 
     def attach(self, gui):
         """Attach the GUI and create the menus."""
@@ -491,11 +491,11 @@ class ActionCreator(object):
         for which in ('best', 'similar', 'all'):
             for group in ('noise', 'mua', 'good', 'unsorted'):
                 self.add(
-                    w, 'move_%s_to_%s' % (which, group),
+                    w, f'move_{which}_to_{group}',
                     method_name='move',
                     method_args=(group, which),
-                    submenu='Move %s to' % which,
-                    docstring='Move %s to %s.' % (which, group))
+                    submenu=f'Move {which} to',
+                    docstring=f'Move {which} to {group}.')
         self.edit_actions.separator()
 
         # Label.
@@ -518,9 +518,9 @@ class ActionCreator(object):
         # Sort by:
         for column in getattr(self.supervisor, 'columns', ()):
             self.add(
-                w, 'sort_by_%s' % column.lower(), method_name='sort', method_args=(column,),
-                docstring='Sort by %s' % column,
-                submenu='Sort by', alias='s%s' % column.replace('_', '')[:2])
+                w, f'sort_by_{column.lower()}', method_name='sort', method_args=(column,),
+                docstring=f'Sort by {column}',
+                submenu='Sort by', alias=f"s{column.replace('_', '')[:2]}")
 
         self.select_actions.separator()
         self.add(w, 'first')
@@ -695,7 +695,7 @@ class Supervisor(object):
         if sender != self.clustering:
             return
         if up.history:
-            logger.info(up.history.title() + " cluster assign.")
+            logger.info(f"{up.history.title()} cluster assign.")
         elif up.description == 'merge':
             logger.info("Merge clusters %s to %s.", ', '.join(map(str, up.deleted)), up.added[0])
         else:
@@ -706,7 +706,7 @@ class Supervisor(object):
         if sender != self.cluster_meta:
             return
         if up.history:
-            logger.info(up.history.title() + " move.")
+            logger.info(f"{up.history.title()} move.")
         else:
             logger.info(
                 "Change %s for clusters %s to %s.", up.description,
@@ -738,7 +738,7 @@ class Supervisor(object):
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
         data = [
-            dict(similarity='%.3f' % s, **self.get_cluster_info(c))
+            dict(similarity=f'{s:.3f}', **self.get_cluster_info(c))
             for c, s in sim if c in clusters_set]
         return data
 
@@ -826,7 +826,7 @@ class Supervisor(object):
             emit('select', self, self.selected, **kwargs)
         if cluster_ids:
             self.cluster_view.scroll_to(cluster_ids[-1])
-        self.cluster_view.dock.set_status('clusters: %s' % ', '.join(map(str, cluster_ids)))
+        self.cluster_view.dock.set_status(f"clusters: {', '.join(map(str, cluster_ids))}")
 
     def _similar_selected(self, sender, obj):
         """When clusters are selected in the similarity view, register the action in the history
@@ -841,7 +841,7 @@ class Supervisor(object):
         emit('select', self, self.selected, **kwargs)
         if similar:
             self.similarity_view.scroll_to(similar[-1])
-        self.similarity_view.dock.set_status('similar clusters: %s' % ', '.join(map(str, similar)))
+        self.similarity_view.dock.set_status(f"similar clusters: {', '.join(map(str, similar))}")
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -878,7 +878,7 @@ class Supervisor(object):
             return
         self._is_busy = busy
         # Set the busy cursor.
-        logger.log(5, "GUI is %sbusy" % ('' if busy else 'not '))
+        logger.log(5, f"GUI is {'' if busy else 'not '}busy")
         set_busy(busy)
         # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)

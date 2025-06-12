@@ -79,11 +79,11 @@ class Grid(BaseLayout):
         super(Grid, self).attach(canvas)
         canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert(
-            """
-            attribute vec2 {};
-            uniform vec2 {};
+            f"""
+            attribute vec2 {self.box_var};
+            uniform vec2 {self.shape_var};
             uniform vec2 u_grid_scaling;
-            """.format(self.box_var, self.shape_var),
+            """,
             'header', origin=self)
 
     def add_boxes(self, canvas, shape=None):
@@ -202,14 +202,14 @@ class Boxed(BaseLayout):
         """Attach the boxed interact to a canvas."""
         super(Boxed, self).attach(canvas)
         canvas.gpu_transforms += self.gpu_transforms
-        canvas.inserter.insert_vert("""
+        canvas.inserter.insert_vert(f"""
             #include "utils.glsl"
-            attribute float {};
+            attribute float {self.box_var};
             uniform sampler2D u_box_pos;
             uniform float n_boxes;
             uniform vec2 u_box_size;
             uniform vec2 u_layout_scaling;
-            """.format(self.box_var), 'header', origin=self)
+            """, 'header', origin=self)
         canvas.inserter.insert_vert("""
             // Fetch the box bounds for the current box (`box_var`).
             vec2 box_pos = fetch_texture({}, u_box_pos, n_boxes).xy;
@@ -383,13 +383,13 @@ class Stacked(Boxed):
         """Attach the stacked interact to a canvas."""
         BaseLayout.attach(self, canvas)
         canvas.gpu_transforms += self.gpu_transforms
-        canvas.inserter.insert_vert("""
+        canvas.inserter.insert_vert(f"""
             #include "utils.glsl"
-            attribute float {};
+            attribute float {self.box_var};
             uniform float n_boxes;
             uniform bool u_top_origin;
             uniform vec2 u_box_size;
-            """.format(self.box_var), 'header', origin=self)
+            """, 'header', origin=self)
         canvas.inserter.insert_vert("""
             float margin = .1 / n_boxes;
             float a = 1 - 2. / n_boxes + margin;

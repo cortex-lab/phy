@@ -46,7 +46,7 @@ for file in files:
         j = m.end(2)
         contents = contents[:i] + shortcuts + contents[j:]
         file.write_text(contents)
-        print("Inserted shortcuts for %s in %s." % (view_name, file))
+        print(f"Inserted shortcuts for {view_name} in {file}.")
 
 
 # All shortcuts
@@ -66,4 +66,4 @@ i = m.start(1)
 j = m.end(1)
 contents = contents[:i] + all_shortcuts + contents[j:]
 shortcuts_file.write_text(contents)
-print("Inserted all shortcuts in %s." % shortcuts_file)
+print(f"Inserted all shortcuts in {shortcuts_file}.")

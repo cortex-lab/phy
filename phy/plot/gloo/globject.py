@@ -91,7 +91,7 @@ class GLObject(object):
             self._need_setup = False
 
         if self.need_update:
-            log.log(5, "%s need update" % self.handle)
+            log.log(5, f"{self.handle} need update")
             self._update()
             self._need_update = False
 

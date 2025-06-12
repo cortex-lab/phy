@@ -53,7 +53,7 @@ def get_plugin(name):
     for plugin in IPluginRegistry.plugins:
         if name in plugin.__name__:
             return plugin
-    raise ValueError("The plugin %s cannot be found." % name)
+    raise ValueError(f"The plugin {name} cannot be found.")
 
 
 #------------------------------------------------------------------------------

@@ -331,7 +331,7 @@ class Clustering(object):
             to = self.new_cluster_id()
         if to < self.new_cluster_id():
             raise ValueError(
-                "The new cluster numbers should be higher than {0}.".format(self.new_cluster_id()))
+                f"The new cluster numbers should be higher than {self.new_cluster_id()}.")
 
         # NOTE: we could have called self.assign() here, but we don't.
         # We circumvent self.assign() for performance reasons.

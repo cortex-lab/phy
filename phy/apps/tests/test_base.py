@@ -230,7 +230,7 @@ class MinimalControllerTests(object):
 
     def move(self, w):
         s = self.supervisor
-        getattr(s.actions, 'move_%s' % w)()
+        getattr(s.actions, f'move_{w}')()
         s.block()
 
     def lasso(self, view, scale=1.):

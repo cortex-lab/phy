@@ -977,7 +977,7 @@ class BaseController(object):
         }
         # Spike attributes.
         for name, arr in getattr(self.model, 'spike_attributes', {}).items():
-            view_name = 'Spike%sView' % name.title()
+            view_name = f'Spike{name.title()}View'
             self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
 
     def _set_cluster_metrics(self):
@@ -1741,7 +1741,7 @@ class BaseController(object):
             # to be saved in the data directory.
             for view in gui.views:
                 local_keys = getattr(view, 'local_state_attrs', [])
-                local_keys = ['%s.%s' % (view.name, key) for key in local_keys]
+                local_keys = [f'{view.name}.{key}' for key in local_keys]
                 gui.state.add_local_keys(local_keys)
 
             # Update the controller params in the GUI state.

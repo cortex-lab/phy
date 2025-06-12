@@ -42,7 +42,7 @@ def _default_config(config_dir=None):
     if not config_dir:  # pragma: no cover
         config_dir = Path.home() / '.phy'
     path = config_dir / 'plugins'
-    return dedent("""
+    return dedent(f"""
     # You can also put your plugins in ~/.phy/plugins/.
 
     from phy import IPlugin
@@ -55,8 +55,8 @@ def _default_config(config_dir=None):
     #         pass
 
     c = get_config()
-    c.Plugins.dirs = [r'{}']
-    """.format(path))
+    c.Plugins.dirs = [r'{path}']
+    """)
 
 
 def load_master_config(config_dir=None):

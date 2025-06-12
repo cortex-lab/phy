@@ -203,7 +203,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
 
     @property
     def status(self):
-        return 'Color scheme: %s' % self.color_schemes.current
+        return f'Color scheme: {self.color_schemes.current}'
 
     def plot(self, **kwargs):
         """Make the template plot."""

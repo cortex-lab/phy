@@ -74,11 +74,11 @@ def test_attach_plugins(tempdir):
         def attach_to_controller(self, controller):
             controller.plugin2 = True
 
-    contents = dedent('''
+    contents = dedent(f'''
     c = get_config()
-    c.Plugins.dirs = ['%s']
+    c.Plugins.dirs = ['{tempdir}']
     c.MyController.plugins = ['MyPlugin1']
-    ''' % tempdir)
+    ''')
     write_text(tempdir / 'phy_config.py', contents)
 
     controller = MyController()

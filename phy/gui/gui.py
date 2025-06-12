@@ -246,7 +246,7 @@ class DockWidget(QDockWidget):
         """Set the status text of the widget."""
         n = self.max_status_length
         if len(text) >= n:
-            text = text[:n // 2] + ' ... ' + text[-n // 2:]
+            text = f"{text[:n // 2]} ... {text[-n // 2:]}"
         self._status.setText(text)
 
     def _default_buttons(self):
@@ -259,7 +259,7 @@ class DockWidget(QDockWidget):
             def on_close(e):  # pragma: no cover
                 if not self.confirm_before_close_view or show_box(
                     prompt(
-                        "Close %s?" % self.windowTitle(),
+                        f"Close {self.windowTitle()}?",
                         buttons=['yes', 'no'], title='Close?')) == 'yes':
                     self.close()
 
@@ -282,7 +282,7 @@ class DockWidget(QDockWidget):
 
     def _create_menu(self):
         """Create the contextual menu for this view."""
-        self._menu = QMenu("%s menu" % self.objectName(), self)
+        self._menu = QMenu(f"{self.objectName()} menu", self)
 
     def _create_title_bar(self):
         """Create the title bar."""
@@ -524,7 +524,7 @@ class GUI(QMainWindow):
         """Set the GUI name."""
         if name is None:
             name = self.__class__.__name__
-        title = name if not subtitle else name + ' - ' + subtitle
+        title = name if not subtitle else f"{name} - {subtitle}"
         self.setWindowTitle(title)
         self.setObjectName(name)
         # Set the name in the GUI.
@@ -555,8 +555,8 @@ class GUI(QMainWindow):
         for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
                 partial(self.create_and_add_view, view_name),
-                name='Add %s' % view_name,
-                docstring="Add %s" % view_name,
+                name=f'Add {view_name}',
+                docstring=f"Add {view_name}",
                 show_shortcut=False)
         self.view_actions.separator()
 
@@ -571,10 +571,10 @@ class GUI(QMainWindow):
         def about():  # pragma: no cover
             """Display an about dialog."""
             from phy import __version_git__
-            msg = "phy {} v{}".format(self.name, __version_git__)
+            msg = f"phy {self.name} v{__version_git__}"
             try:
                 from phylib import __version__
-                msg += "\nphylib v{}".format(__version__)
+                msg += f"\nphylib v{__version__}"
             except ImportError:
                 pass
             QMessageBox.about(self, "About", msg)

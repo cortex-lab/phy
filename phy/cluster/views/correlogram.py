@@ -263,7 +263,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     @property
     def status(self):
         b, w = self.bin_size * 1000, self.window_size * 1000
-        return '{:.1f} ms ({:.1f} ms)'.format(w, b)
+        return f'{w:.1f} ms ({b:.1f} ms)'
 
     def set_refractory_period(self, value):
         """Set the refractory period (in milliseconds)."""

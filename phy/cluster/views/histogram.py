@@ -90,10 +90,10 @@ class HistogramView(ScalingMixin, ManualClusteringView):
     }
 
     default_snippets = {
-        'set_n_bins': '%sn' % alias_char,
-        'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
-        'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
-        'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
+        'set_n_bins': f'{alias_char}n',
+        f'set_bin_size ({bin_unit})': f'{alias_char}b',
+        f'set_x_min ({bin_unit})': f'{alias_char}min',
+        f'set_x_max ({bin_unit})': f'{alias_char}max',
     }
 
     _state_attrs = ('n_bins', 'x_min', 'x_max')
@@ -202,16 +202,16 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         super(HistogramView, self).attach(gui)
 
         self.actions.add(
-            self.set_n_bins, alias=self.alias_char + 'n',
+            self.set_n_bins, alias=f"{self.alias_char}n",
             prompt=True, prompt_default=lambda: self.n_bins)
         self.actions.add(
-            self.set_bin_size, alias=self.alias_char + 'b',
+            self.set_bin_size, alias=f"{self.alias_char}b",
             prompt=True, prompt_default=lambda: self.bin_size)
         self.actions.add(
-            self.set_x_min, alias=self.alias_char + 'min',
+            self.set_x_min, alias=f"{self.alias_char}min",
             prompt=True, prompt_default=lambda: self.x_min)
         self.actions.add(
-            self.set_x_max, alias=self.alias_char + 'max',
+            self.set_x_max, alias=f"{self.alias_char}max",
             prompt=True, prompt_default=lambda: self.x_max)
         self.actions.separator()
 
@@ -305,10 +305,10 @@ class ISIView(HistogramView):
     }
 
     default_snippets = {
-        'set_n_bins': '%sn' % alias_char,
-        'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
-        'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
-        'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
+        'set_n_bins': f'{alias_char}n',
+        f'set_bin_size ({bin_unit})': f'{alias_char}b',
+        f'set_x_min ({bin_unit})': f'{alias_char}min',
+        f'set_x_max ({bin_unit})': f'{alias_char}max',
     }
 
 
@@ -327,8 +327,8 @@ class FiringRateView(HistogramView):
     }
 
     default_snippets = {
-        'set_n_bins': '%sn' % alias_char,
-        'set_bin_size (%s)' % bin_unit: '%sb' % alias_char,
-        'set_x_min (%s)' % bin_unit: '%smin' % alias_char,
-        'set_x_max (%s)' % bin_unit: '%smax' % alias_char,
+        'set_n_bins': f'{alias_char}n',
+        f'set_bin_size ({bin_unit})': f'{alias_char}b',
+        f'set_x_min ({bin_unit})': f'{alias_char}min',
+        f'set_x_max ({bin_unit})': f'{alias_char}max',
     }

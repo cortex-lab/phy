@@ -216,4 +216,4 @@ def _make_plugin_test_case(plugin_name):
 
 # Dynamically define test classes for each builtin plugin.
 for plugin_name in plugin_names():
-    globals()['TemplateController%sTests' % plugin_name] = _make_plugin_test_case(plugin_name)
+    globals()[f'TemplateController{plugin_name}Tests'] = _make_plugin_test_case(plugin_name)

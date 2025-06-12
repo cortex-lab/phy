@@ -389,13 +389,13 @@ class Attribute(Variable):
     def _update(self):
         """Actual upload of data to GPU memory"""
 
-        log.log(5, 'GPU: Updating %s' % self.name)
+        log.log(5, f'GPU: Updating {self.name}')
 
         if self.data is None or self.data.size == 0:
-            log.debug('Data is empty for %s' % self.name)
+            log.debug(f'Data is empty for {self.name}')
             return
         else:
-            log.log(5, 'data shape is %s' % self.data.shape)
+            log.log(5, f'data shape is {self.data.shape}')
 
         # Check active status (mandatory)
         #        if not self._active:
@@ -412,13 +412,13 @@ class Attribute(Variable):
         # Regular vertex buffer
         elif self.handle >= 0:
             if self.data is None:
-                log.warning('data %s is None' % self.name)
+                log.warning(f'data {self.name} is None')
                 return
             elif self.data.size == 0:
-                log.warning('data %s is empty, %s' % (self.name, self.data.shape))
+                log.warning(f'data {self.name} is empty, {self.data.shape}')
                 return
             else:
-                log.log(5, 'data %s is okay %s' % (self.name, self.data.shape))
+                log.log(5, f'data {self.name} is okay {self.data.shape}')
 
             # Get relevant information from gl_typeinfo
             size, gtype, dtype = gl_typeinfo[self._gtype]

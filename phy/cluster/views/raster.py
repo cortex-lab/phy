@@ -148,7 +148,7 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
 
     @property
     def status(self):
-        return 'Color scheme: %s' % self.color_scheme
+        return f'Color scheme: {self.color_scheme}'
 
     def plot(self, **kwargs):
         """Make the raster plot."""
