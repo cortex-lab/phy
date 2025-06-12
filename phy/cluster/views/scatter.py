@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Scatter view."""
 
 
@@ -12,9 +10,10 @@ import logging
 
 import numpy as np
 
-from phy.utils.color import selected_cluster_color, spike_colors
-from .base import ManualClusteringView, MarkerSizeMixin, LassoMixin
 from phy.plot.visuals import ScatterVisual
+from phy.utils.color import selected_cluster_color, spike_colors
+
+from .base import LassoMixin, ManualClusteringView, MarkerSizeMixin
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +21,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Scatter view
 # -----------------------------------------------------------------------------
+
 
 class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     """This view displays a scatter plot for all selected clusters.
@@ -44,7 +44,7 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     }
 
     def __init__(self, coords=None, **kwargs):
-        super(ScatterView, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         # Save the marker size in the global and local view's config.
 
         self.canvas.enable_axes()
@@ -57,7 +57,8 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
     def _plot_cluster(self, bunch):
         ms = self._marker_size
         self.visual.add_batch_data(
-            pos=bunch.pos, color=bunch.color, size=ms, data_bounds=self.data_bounds)
+            pos=bunch.pos, color=bunch.color, size=ms, data_bounds=self.data_bounds
+        )
 
     def _get_split_cluster_data(self, bunchs):
         """Get the data when there is one Bunch per cluster."""
@@ -70,7 +71,7 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
                 bunch.pos = np.c_[bunch.x, bunch.y]
             assert bunch.pos.ndim == 2
             assert 'spike_ids' in bunch
-            bunch.color = selected_cluster_color(i, .75)
+            bunch.color = selected_cluster_color(i, 0.75)
         return bunchs
 
     def _get_collated_cluster_data(self, bunch):
@@ -92,14 +93,15 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             bunchs = self.coords(self.cluster_ids, load_all=load_all) or ()
         else:
             logger.warning(
-                "The view `%s` may not load all spikes when using the lasso for splitting.",
-                self.__class__.__name__)
+                'The view `%s` may not load all spikes when using the lasso for splitting.',
+                self.__class__.__name__,
+            )
             bunchs = self.coords(self.cluster_ids)
         if isinstance(bunchs, dict):
             return [self._get_collated_cluster_data(bunchs)]
         elif isinstance(bunchs, (list, tuple)):
             return self._get_split_cluster_data(bunchs)
-        raise ValueError("The output of `coords()` should be either a list of Bunch, or a Bunch.")
+        raise ValueError('The output of `coords()` should be either a list of Bunch, or a Bunch.')
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""

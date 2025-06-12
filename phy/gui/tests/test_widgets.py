@@ -1,25 +1,25 @@
-# -*- coding: utf-8 -*-
-
 """Test widgets."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from functools import partial
 from pathlib import Path
-from pytest import fixture, mark
 
 from phylib.utils import connect, unconnect
 from phylib.utils.testing import captured_logging
+from pytest import fixture, mark
+
 import phy
+
+from ..widgets import Barrier, HTMLWidget, IPythonView, KeyValueWidget, Table
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table, Barrier, IPythonView, KeyValueWidget
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _assert(f, expected):
     _out = []
@@ -39,16 +39,17 @@ def _wait_until_table_ready(qtbot, table):
 
 @fixture
 def table(qtbot):
-    columns = ["id", "count"]
-    data = [{"id": i,
-             "count": 100 - 10 * i,
-             "float": float(i),
-             "is_masked": True if i in (2, 3, 5) else False,
-             } for i in range(10)]
-    table = Table(
-        columns=columns,
-        value_names=['id', 'count', {'data': ['is_masked']}],
-        data=data)
+    columns = ['id', 'count']
+    data = [
+        {
+            'id': i,
+            'count': 100 - 10 * i,
+            'float': float(i),
+            'is_masked': i in (2, 3, 5),
+        }
+        for i in range(10)
+    ]
+    table = Table(columns=columns, value_names=['id', 'count', {'data': ['is_masked']}], data=data)
     _wait_until_table_ready(qtbot, table)
 
     yield table
@@ -56,9 +57,10 @@ def table(qtbot):
     table.close()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test widgets
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_widget_empty(qtbot):
     widget = HTMLWidget()
@@ -117,7 +119,7 @@ def test_widget_javascript_1(qtbot):
     widget.close()
 
 
-@mark.parametrize("event_name", ('select', 'nodebounce'))
+@mark.parametrize('event_name', ('select', 'nodebounce'))
 def test_widget_javascript_debounce(qtbot, event_name):
     phy.gui.qt.Debouncer.delay = 300
 
@@ -128,15 +130,18 @@ def test_widget_javascript_debounce(qtbot, event_name):
     qtbot.waitForWindowShown(widget)
     _block(lambda: widget.html is not None)
 
-    event_code = lambda i: r'''
-    var event = new CustomEvent("phy_event", {detail: {name: '%s', data: {'i': %s}}});
+    event_code = (
+        lambda i: rf"""
+    var event = new CustomEvent("phy_event", {{detail: {{name: '{event_name}', data: {{'i': {i}}}}}}});
     document.dispatchEvent(event);
-    ''' % (event_name, i)
+    """
+    )
 
     _l = []
 
     def f(sender, *args):
         _l.append(args)
+
     connect(f, sender=widget, event=event_name)
 
     for i in range(5):
@@ -152,9 +157,10 @@ def test_widget_javascript_debounce(qtbot, event_name):
     phy.gui.qt.Debouncer.delay = 1
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test key value widget
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_key_value_1(qtbot):
     widget = KeyValueWidget()
@@ -163,29 +169,35 @@ def test_key_value_1(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
 
-    widget.add_pair("my text", "some text")
-    widget.add_pair("my text multiline", "some\ntext", 'multiline')
-    widget.add_pair("my float", 3.5)
-    widget.add_pair("my int", 3)
-    widget.add_pair("my bool", True)
-    widget.add_pair("my list", [1, 5])
+    widget.add_pair('my text', 'some text')
+    widget.add_pair('my text multiline', 'some\ntext', 'multiline')
+    widget.add_pair('my float', 3.5)
+    widget.add_pair('my int', 3)
+    widget.add_pair('my bool', True)
+    widget.add_pair('my list', [1, 5])
 
     widget.get_widget('my bool').setChecked(False)
     widget.get_widget('my list[0]').setValue(2)
 
     assert widget.to_dict() == {
-        'my text': 'some text', 'my text multiline': 'some\ntext',
-        'my float': 3.5, 'my int': 3, 'my bool': False, 'my list': [2, 5]}
+        'my text': 'some text',
+        'my text multiline': 'some\ntext',
+        'my float': 3.5,
+        'my int': 3,
+        'my bool': False,
+        'my list': [2, 5],
+    }
 
     # qtbot.stop()
     widget.close()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test IPython view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-@mark.filterwarnings("ignore")
+
+@mark.filterwarnings('ignore')
 def test_ipython_view_1(qtbot):
     view = IPythonView()
     view.show()
@@ -195,9 +207,10 @@ def test_ipython_view_1(qtbot):
     view.close()
 
 
-@mark.filterwarnings("ignore")
+@mark.filterwarnings('ignore')
 def test_ipython_view_2(qtbot, tempdir):
     from ..gui import GUI
+
     gui = GUI(config_dir=tempdir)
     gui.set_default_actions()
 
@@ -213,9 +226,10 @@ def test_ipython_view_2(qtbot, tempdir):
     qtbot.wait(10)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test table
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_barrier_1(qtbot, table):
     table.select([1])
@@ -254,7 +268,6 @@ def test_table_0(qtbot, table):
 
 
 def test_table_1(qtbot, table):
-
     assert table.is_ready()
 
     table.select([1, 2])
@@ -373,7 +386,7 @@ def test_table_remove_all_and_add_1(qtbot, table):
 
 
 def test_table_remove_all_and_add_2(qtbot, table):
-    table.remove_all_and_add({"id": 1000})
+    table.remove_all_and_add({'id': 1000})
     _assert(table.get_ids, [1000])
 
 
@@ -406,10 +419,10 @@ def test_table_change_and_sort_2(qtbot, table):
 
 
 def test_table_filter(qtbot, table):
-    table.filter("id == 5")
+    table.filter('id == 5')
     _assert(table.get_ids, [5])
 
-    table.filter("count == 80")
+    table.filter('count == 80')
     _assert(table.get_ids, [2])
 
     table.filter()

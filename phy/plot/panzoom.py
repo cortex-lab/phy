@@ -1,27 +1,25 @@
-# -*- coding: utf-8 -*-
-
 """Pan & zoom transform."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import math
 import sys
 
 import numpy as np
-
-from .transform import Translate, Scale, pixels_to_ndc
+from phylib.utils import connect, emit
 from phylib.utils._types import _as_array
-from phylib.utils import emit, connect
 
+from .transform import Scale, Translate, pixels_to_ndc
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # PanZoom class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class PanZoom(object):
+
+class PanZoom:
     """Pan and zoom interact. Support mouse and keyboard interactivity.
 
     Constructor
@@ -88,15 +86,27 @@ class PanZoom(object):
 
     _default_zoom_coeff = 1.5
     _default_pan = (0, 0)
-    _default_zoom = 1.
-    _default_wheel_coeff = .1
+    _default_zoom = 1.0
+    _default_wheel_coeff = 0.1
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _pm = ('+', '-')
 
     def __init__(
-            self, aspect=None, pan=(0.0, 0.0), zoom=(1.0, 1.0), zmin=1e-5, zmax=1e5,
-            xmin=None, xmax=None, ymin=None, ymax=None, constrain_bounds=None,
-            pan_var_name='u_pan', zoom_var_name='u_zoom', enable_mouse_wheel=None):
+        self,
+        aspect=None,
+        pan=(0.0, 0.0),
+        zoom=(1.0, 1.0),
+        zmin=1e-5,
+        zmax=1e5,
+        xmin=None,
+        xmax=None,
+        ymin=None,
+        ymax=None,
+        constrain_bounds=None,
+        pan_var_name='u_pan',
+        zoom_var_name='u_zoom',
+        enable_mouse_wheel=None,
+    ):
         if constrain_bounds:
             assert xmin is None
             assert ymin is None
@@ -164,8 +174,7 @@ class PanZoom(object):
 
     @xmin.setter
     def xmin(self, value):
-        self._xmin = (np.minimum(value, self._xmax)
-                      if self._xmax is not None else value)
+        self._xmin = np.minimum(value, self._xmax) if self._xmax is not None else value
 
     @property
     def xmax(self):
@@ -174,8 +183,7 @@ class PanZoom(object):
 
     @xmax.setter
     def xmax(self, value):
-        self._xmax = (np.maximum(value, self._xmin)
-                      if self._xmin is not None else value)
+        self._xmax = np.maximum(value, self._xmin) if self._xmin is not None else value
 
     # ymin/ymax
     # -------------------------------------------------------------------------
@@ -187,8 +195,7 @@ class PanZoom(object):
 
     @ymin.setter
     def ymin(self, value):
-        self._ymin = (min(value, self._ymax)
-                      if self._ymax is not None else value)
+        self._ymin = min(value, self._ymax) if self._ymax is not None else value
 
     @property
     def ymax(self):
@@ -197,8 +204,7 @@ class PanZoom(object):
 
     @ymax.setter
     def ymax(self, value):
-        self._ymax = (max(value, self._ymin)
-                      if self._ymin is not None else value)
+        self._ymax = max(value, self._ymin) if self._ymin is not None else value
 
     # zmin/zmax
     # -------------------------------------------------------------------------
@@ -227,7 +233,7 @@ class PanZoom(object):
     def _zoom_aspect(self, zoom=None):
         zoom = zoom if zoom is not None else self._zoom
         zoom = _as_array(zoom)
-        aspect = (self._canvas_aspect * self._aspect if self._aspect is not None else 1.)
+        aspect = self._canvas_aspect * self._aspect if self._aspect is not None else 1.0
         return zoom * aspect
 
     def _normalize(self, pos):
@@ -236,35 +242,35 @@ class PanZoom(object):
     def _constrain_pan(self):
         """Constrain bounding box."""
         if self.xmin is not None and self.xmax is not None:
-            p0 = self.xmin + 1. / self._zoom[0]
-            p1 = self.xmax - 1. / self._zoom[0]
+            p0 = self.xmin + 1.0 / self._zoom[0]
+            p1 = self.xmax - 1.0 / self._zoom[0]
             p0, p1 = min(p0, p1), max(p0, p1)
             self._pan[0] = np.clip(self._pan[0], p0, p1)
 
         if self.ymin is not None and self.ymax is not None:
-            p0 = self.ymin + 1. / self._zoom[1]
-            p1 = self.ymax - 1. / self._zoom[1]
+            p0 = self.ymin + 1.0 / self._zoom[1]
+            p1 = self.ymax - 1.0 / self._zoom[1]
             p0, p1 = min(p0, p1), max(p0, p1)
             self._pan[1] = np.clip(self._pan[1], p0, p1)
 
     def _constrain_zoom(self):
         """Constrain bounding box."""
         if self.xmin is not None:
-            self._zoom[0] = max(self._zoom[0], 1. / (self._pan[0] - self.xmin))
+            self._zoom[0] = max(self._zoom[0], 1.0 / (self._pan[0] - self.xmin))
         if self.xmax is not None:
-            self._zoom[0] = max(self._zoom[0], 1. / (self.xmax - self._pan[0]))
+            self._zoom[0] = max(self._zoom[0], 1.0 / (self.xmax - self._pan[0]))
 
         if self.ymin is not None:
-            self._zoom[1] = max(self._zoom[1], 1. / (self._pan[1] - self.ymin))
+            self._zoom[1] = max(self._zoom[1], 1.0 / (self._pan[1] - self.ymin))
         if self.ymax is not None:
-            self._zoom[1] = max(self._zoom[1], 1. / (self.ymax - self._pan[1]))
+            self._zoom[1] = max(self._zoom[1], 1.0 / (self.ymax - self._pan[1]))
 
     def window_to_ndc(self, pos):
         """Return the mouse coordinates in NDC, taking panzoom into account."""
         position = np.asarray(self._normalize(pos))
         zoom = np.asarray(self._zoom_aspect())
         pan = np.asarray(self.pan)
-        ndc = ((position / zoom) - pan)
+        ndc = (position / zoom) - pan
         return ndc
 
     # Pan and zoom
@@ -321,7 +327,7 @@ class PanZoom(object):
         self.pan = (pan_x + dx / zoom_x, pan_y + dy / zoom_y)
         self.update()
 
-    def zoom_delta(self, d, p=(0., 0.), c=1.):
+    def zoom_delta(self, d, p=(0.0, 0.0), c=1.0):
         """Zoom the view by a given amount."""
         dx, dy = d
         if self.aspect is not None:
@@ -335,7 +341,8 @@ class PanZoom(object):
         zoom_x, zoom_y = self._zoom
         zoom_x_new, zoom_y_new = (
             zoom_x * math.exp(c * self._zoom_coeff * dx),
-            zoom_y * math.exp(c * self._zoom_coeff * dy))
+            zoom_y * math.exp(c * self._zoom_coeff * dy),
+        )
 
         zoom_x_new = max(min(zoom_x_new, self._zmax), self._zmin)
         zoom_y_new = max(min(zoom_y_new, self._zmax), self._zmin)
@@ -347,8 +354,9 @@ class PanZoom(object):
             zoom_x_new, zoom_y_new = self._zoom_aspect((zoom_x_new, zoom_y_new))
 
             self.pan = (
-                pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
-                pan_y - y0 * (1. / zoom_y - 1. / zoom_y_new))
+                pan_x - x0 * (1.0 / zoom_x - 1.0 / zoom_x_new),
+                pan_y - y0 * (1.0 / zoom_y - 1.0 / zoom_y_new),
+            )
 
         self.update()
 
@@ -372,8 +380,8 @@ class PanZoom(object):
         bounds = np.asarray(bounds, dtype=np.float64)
         v0 = bounds[:2]
         v1 = bounds[2:]
-        pan = -.5 * (v0 + v1)
-        zoom = 2. / (v1 - v0)
+        pan = -0.5 * (v0 + v1)
+        zoom = 2.0 / (v1 - v0)
         if keep_aspect:
             zoom = zoom.min() * np.ones(2)
         self.set_pan_zoom(pan=pan, zoom=zoom)
@@ -382,8 +390,8 @@ class PanZoom(object):
     def get_range(self):
         """Return the bounds currently visible."""
         p, z = np.asarray(self.pan), np.asarray(self.zoom)
-        x0, y0 = -1. / z - p
-        x1, y1 = +1. / z - p
+        x0, y0 = -1.0 / z - p
+        x1, y1 = +1.0 / z - p
         return (x0, y0, x1, y1)
 
     def emit_update_events(self):
@@ -402,20 +410,20 @@ class PanZoom(object):
 
     def _set_canvas_aspect(self):
         w, h = self.size
-        aspect = w / max(float(h), 1.)
+        aspect = w / max(float(h), 1.0)
         if aspect > 1.0:
             self._canvas_aspect = np.array([1.0 / aspect, 1.0])
         else:  # pragma: no cover
             self._canvas_aspect = np.array([1.0, aspect / 1.0])
 
     def _zoom_keyboard(self, key):
-        k = .05
+        k = 0.05
         if key == '-':
             k = -k
         self.zoom_delta((k, k), (0, 0))
 
     def _pan_keyboard(self, key):
-        k = .1 / np.asarray(self.zoom)
+        k = 0.1 / np.asarray(self.zoom)
         if key == 'Left':
             self.pan_delta((+k[0], +0))
         elif key == 'Right':
@@ -450,7 +458,7 @@ class PanZoom(object):
             if e.button == 'Left':
                 self.pan_delta((dx, dy))
             elif e.button == 'Right':
-                c = np.sqrt(self.size[0]) * .03
+                c = np.sqrt(self.size[0]) * 0.03
                 self.zoom_delta((dx, dy), (x0, y0), c=c)
 
     # def on_touch(self, e):
@@ -540,11 +548,11 @@ class PanZoom(object):
 
         # Because the visual shaders must be modified to account for u_pan and u_zoom.
         if not all(v.visual.program is None for v in canvas.visuals):  # pragma: no cover
-            raise RuntimeError("The PanZoom instance must be attached before the visuals.")
+            raise RuntimeError('The PanZoom instance must be attached before the visuals.')
 
         canvas.gpu_transforms.add([self._translate, self._scale], origin=self)
         # Add the variable declarations.
-        vs = f"uniform vec2 {self.pan_var_name};\nuniform vec2 {self.zoom_var_name};\n"
+        vs = f'uniform vec2 {self.pan_var_name};\nuniform vec2 {self.zoom_var_name};\n'
         canvas.inserter.insert_vert(vs, 'header', origin=self)
 
         canvas.attach_events(self)

@@ -1,26 +1,24 @@
-# -*- coding: utf-8 -*-
-
 """Test views."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 import pytest
-
 from phylib.io.array import _spikes_per_cluster
 from phylib.io.mock import artificial_features, artificial_spike_clusters
 from phylib.utils import Bunch, connect
+
 from phy.plot.tests import mouse_click
 
 from ..feature import FeatureView, _get_default_grid
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test feature view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize('n_channels', [5, 1])
 def test_feature_view(qtbot, gui, n_channels):
@@ -28,17 +26,14 @@ def test_feature_view(qtbot, gui, n_channels):
     ns = 10000
     features = artificial_features(ns, nc, 4)
     spike_clusters = artificial_spike_clusters(ns, 4)
-    spike_times = np.linspace(0., 1., ns)
+    spike_times = np.linspace(0.0, 1.0, ns)
     spc = _spikes_per_cluster(spike_clusters)
 
     def get_spike_ids(cluster_id):
-        return (spc[cluster_id] if cluster_id is not None else np.arange(ns))
+        return spc[cluster_id] if cluster_id is not None else np.arange(ns)
 
     def get_features(cluster_id=None, channel_ids=None, spike_ids=None, load_all=None):
-        if load_all:
-            spike_ids = spc[cluster_id]
-        else:
-            spike_ids = get_spike_ids(cluster_id)
+        spike_ids = spc[cluster_id] if load_all else get_spike_ids(cluster_id)
         return Bunch(
             data=features[spike_ids],
             spike_ids=spike_ids,
@@ -47,7 +42,7 @@ def test_feature_view(qtbot, gui, n_channels):
         )
 
     def get_time(cluster_id=None, load_all=None):
-        return Bunch(data=spike_times[get_spike_ids(cluster_id)], lim=(0., 1.))
+        return Bunch(data=spike_times[get_spike_ids(cluster_id)], lim=(0.0, 1.0))
 
     v = FeatureView(features=get_features, attributes={'time': get_time})
     v.show()

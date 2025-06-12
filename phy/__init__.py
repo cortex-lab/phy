@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 # flake8: noqa
 
 """phy: interactive visualization and manual spike sorting of large-scale ephys data."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import atexit
 import logging
@@ -22,9 +21,9 @@ from .utils.config import load_master_config
 from .utils.plugin import IPlugin, get_plugin, discover_plugins
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Global variables and functions
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 __author__ = 'Cyrille Rossant'
 __email__ = 'cyrille.rossant at gmail.com'
@@ -50,4 +49,5 @@ def on_exit():  # pragma: no cover
 def test():  # pragma: no cover
     """Run the full testing suite of phy."""
     import pytest
+
     pytest.main()

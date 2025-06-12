@@ -1,31 +1,36 @@
-# -*- coding: utf-8 -*-
-
 """Tests of manual clustering utility functions."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
 from pytest import raises
 
-from .._utils import (ClusterMeta, UpdateInfo, RotatingProperty,
-                      _update_cluster_selection, create_cluster_meta)
+from .._utils import (
+    ClusterMeta,
+    RotatingProperty,
+    UpdateInfo,
+    _update_cluster_selection,
+    create_cluster_meta,
+)
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Tests
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_create_cluster_meta():
-    cluster_groups = {2: 3,
-                      3: 3,
-                      5: 1,
-                      7: 2,
-                      }
+    cluster_groups = {
+        2: 3,
+        3: 3,
+        5: 1,
+        7: 2,
+    }
     meta = create_cluster_meta(cluster_groups)
     assert meta.group(2) == 3
     assert meta.group(3) == 3
@@ -143,11 +148,12 @@ def test_metadata_history_complex():
 def test_metadata_descendants():
     """Test ClusterMeta history."""
 
-    data = {0: {'group': 0},
-            1: {'group': 1},
-            2: {'group': 2},
-            3: {'group': 3},
-            }
+    data = {
+        0: {'group': 0},
+        1: {'group': 1},
+        2: {'group': 2},
+        3: {'group': 3},
+    }
 
     meta = ClusterMeta()
 
@@ -191,8 +197,7 @@ def test_update_info():
     logger.debug(UpdateInfo(description='hello'))
     logger.debug(UpdateInfo(deleted=range(5), added=[5], description='merge'))
     logger.debug(UpdateInfo(deleted=range(5), added=[5], description='assign'))
-    logger.debug(UpdateInfo(deleted=range(5), added=[5],
-                            description='assign', history='undo'))
+    logger.debug(UpdateInfo(deleted=range(5), added=[5], description='assign', history='undo'))
     logger.debug(UpdateInfo(metadata_changed=[2, 3], description='metadata'))
 
 

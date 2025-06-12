@@ -4,9 +4,9 @@
 """Installation script."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import os
 import os.path as op
@@ -15,15 +15,18 @@ import re
 from setuptools import setup
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Setup
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _package_tree(pkgroot):
     path = op.dirname(__file__)
-    subdirs = [op.relpath(i[0], path).replace(op.sep, '.')
-               for i in os.walk(op.join(path, pkgroot))
-               if '__init__.py' in i[2]]
+    subdirs = [
+        op.relpath(i[0], path).replace(op.sep, '.')
+        for i in os.walk(op.join(path, pkgroot))
+        if '__init__.py' in i[2]
+    ]
     return subdirs
 
 
@@ -52,23 +55,34 @@ except ImportError:
 setup(
     name='phy',
     version=version,
-    license="BSD",
+    license='BSD',
     description='Interactive visualization and manual spike sorting of large-scale ephys data',
     long_description=readme,
-    long_description_content_type="text/markdown",
+    long_description_content_type='text/markdown',
     author='Cyrille Rossant (cortex-lab/UCL/IBL)',
     author_email='cyrille.rossant+pypi@gmail.com',
     url='https://phy.cortexlab.net',
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy': ['*.vert', '*.frag', '*.glsl', '*.npy', '*.gz', '*.txt', '*.json',
-                '*.html', '*.css', '*.js', '*.prb', '*.ttf', '*.png'],
+        'phy': [
+            '*.vert',
+            '*.frag',
+            '*.glsl',
+            '*.npy',
+            '*.gz',
+            '*.txt',
+            '*.json',
+            '*.html',
+            '*.css',
+            '*.js',
+            '*.prb',
+            '*.ttf',
+            '*.png',
+        ],
     },
     entry_points={
-        'console_scripts': [
-            'phy = phy.apps:phycli'
-        ],
+        'console_scripts': ['phy = phy.apps:phycli'],
     },
     install_requires=require,
     include_package_data=True,
@@ -78,7 +92,7 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
-        "Framework :: IPython",
+        'Framework :: IPython',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
     ],

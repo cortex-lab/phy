@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
-
 """History class for undo stack."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # History class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class History(object):
+
+class History:
     """Implement a history of actions with an undo stack."""
 
     def __init__(self, base_item=None):
@@ -84,7 +83,7 @@ class History(object):
         """Add an item in the history."""
         self._check_index()
         # Possibly truncate the history up to the current point.
-        self._history = self._history[:self._index + 1]
+        self._history = self._history[: self._index + 1]
         # Append the item
         self._history.append(item)
         # Increment the index.
@@ -130,7 +129,7 @@ class GlobalHistory(History):
     """Merge several controllers with different undo stacks."""
 
     def __init__(self, process_ups=None):
-        super(GlobalHistory, self).__init__(())
+        super().__init__(())
         self.process_ups = process_ups
 
     def action(self, *controllers):
@@ -152,8 +151,7 @@ class GlobalHistory(History):
         if controllers is None:
             ups = ()
         else:
-            ups = tuple([controller.undo()
-                        for controller in controllers])
+            ups = tuple([controller.undo() for controller in controllers])
         if self.process_ups is not None:
             return self.process_ups(ups)
         else:
@@ -169,8 +167,7 @@ class GlobalHistory(History):
         if controllers is None:
             ups = ()
         else:
-            ups = tuple([controller.redo() for
-                         controller in controllers])
+            ups = tuple([controller.redo() for controller in controllers])
         if self.process_ups is not None:
             return self.process_ups(ups)
         else:

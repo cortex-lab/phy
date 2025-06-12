@@ -1,19 +1,19 @@
 """Show how to add a custom cluster histogram view showing cluster statistics."""
 
-from phy import IPlugin, Bunch
+from phy import Bunch, IPlugin
 from phy.cluster.views import HistogramView
 
 
 class FeatureHistogramView(HistogramView):
     """Every view corresponds to a unique view class, so we need to subclass HistogramView."""
+
     n_bins = 100  # default number of bins
-    x_max = .1  # maximum value on the x axis (maximum bin)
+    x_max = 0.1  # maximum value on the x axis (maximum bin)
     alias_char = 'fh'  # provide `:fhn` (set number of bins) and `:fhm` (set max bin) snippets
 
 
 class ExampleClusterStatsPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         def feature_histogram(cluster_id):
             """Must return a Bunch object with data and optional x_max, plot, text items.
 

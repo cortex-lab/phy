@@ -1,27 +1,26 @@
-# -*- coding: utf-8 -*-
-
 """Clustering structure."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
 import numpy as np
-
+from phylib.io.array import _spikes_in_clusters, _spikes_per_cluster, _unique
 from phylib.utils._types import _as_array, _is_array_like
-from phylib.io.array import _unique, _spikes_in_clusters, _spikes_per_cluster
-from ._utils import UpdateInfo
-from ._history import History
 from phylib.utils.event import emit
+
+from ._history import History
+from ._utils import UpdateInfo
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Clustering class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _extend_spikes(spike_ids, spike_clusters):
     """Return all spikes belonging to the clusters containing the specified
@@ -58,7 +57,7 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cl
     assert spike_clusters_rel.min() >= 0
 
     # We renumber the new cluster indices.
-    new_spike_clusters = (spike_clusters_rel + (new_cluster_id - spike_clusters_rel.min()))
+    new_spike_clusters = spike_clusters_rel + (new_cluster_id - spike_clusters_rel.min())
 
     # We find the spikes belonging to modified clusters.
     extended_spike_ids = _extend_spikes(spike_ids, old_spike_clusters)
@@ -71,11 +70,12 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cl
     _, extended_spike_clusters = np.unique(extended_spike_clusters, return_inverse=True)
     # Generate new cluster numbers.
     k = new_spike_clusters.max() + 1
-    extended_spike_clusters += (k - extended_spike_clusters.min())
+    extended_spike_clusters += k - extended_spike_clusters.min()
 
     # Finally, we concatenate spike_ids and extended_spike_ids.
     return _concatenate_spike_clusters(
-        (spike_ids, new_spike_clusters), (extended_spike_ids, extended_spike_clusters))
+        (spike_ids, new_spike_clusters), (extended_spike_ids, extended_spike_clusters)
+    )
 
 
 def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
@@ -95,7 +95,7 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     return update_info
 
 
-class Clustering(object):
+class Clustering:
     """Handle cluster changes in a set of spikes.
 
     Constructor
@@ -139,9 +139,8 @@ class Clustering(object):
 
     """
 
-    def __init__(self, spike_clusters, new_cluster_id=None,
-                 spikes_per_cluster=None):
-        super(Clustering, self).__init__()
+    def __init__(self, spike_clusters, new_cluster_id=None, spikes_per_cluster=None):
+        super().__init__()
         self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
@@ -217,7 +216,7 @@ class Clustering(object):
         return _spikes_in_clusters(self.spike_clusters, clusters)
 
     # Actions
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def _update_cluster_ids(self, to_remove=None, to_add=None):
         # Update the list of non-empty cluster ids.
@@ -234,7 +233,7 @@ class Clustering(object):
         # spikes_per_cluster array.
         coherent = np.all(np.isin(self._cluster_ids, sorted(self._spikes_per_cluster)))
         if not coherent:
-            logger.debug("Recompute spikes_per_cluster manually: this might take a while.")
+            logger.debug('Recompute spikes_per_cluster manually: this might take a while.')
             sc = self._spike_clusters
             self._spikes_per_cluster = _spikes_per_cluster(sc)
 
@@ -277,7 +276,6 @@ class Clustering(object):
         return up
 
     def _do_merge(self, spike_ids, cluster_ids, to):
-
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
         largest_old_cluster = np.bincount(self.spike_clusters[spike_ids]).argmax()
@@ -320,18 +318,19 @@ class Clustering(object):
         """
 
         if not _is_array_like(cluster_ids):
-            raise ValueError("The first argument should be a list or an array.")
+            raise ValueError('The first argument should be a list or an array.')
 
         cluster_ids = sorted(cluster_ids)
         if not set(cluster_ids) <= set(self.cluster_ids):
-            raise ValueError("Some clusters do not exist.")
+            raise ValueError('Some clusters do not exist.')
 
         # Find the new cluster number.
         if to is None:
             to = self.new_cluster_id()
         if to < self.new_cluster_id():
             raise ValueError(
-                f"The new cluster numbers should be higher than {self.new_cluster_id()}.")
+                f'The new cluster numbers should be higher than {self.new_cluster_id()}.'
+            )
 
         # NOTE: we could have called self.assign() here, but we don't.
         # We circumvent self.assign() for performance reasons.
@@ -413,7 +412,8 @@ class Clustering(object):
         # belong to clusters affected by the operation, will be assigned
         # to brand new clusters.
         spike_ids, cluster_ids = _extend_assignment(
-            spike_ids, self._spike_clusters, spike_clusters_rel, self.new_cluster_id())
+            spike_ids, self._spike_clusters, spike_clusters_rel, self.new_cluster_id()
+        )
 
         up = self._do_assign(spike_ids, cluster_ids)
         undo_state = emit('request_undo_state', self, up)

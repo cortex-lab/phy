@@ -1,35 +1,32 @@
-# -*- coding: utf-8 -*-
-
 """Test correlogram view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
-
 from phylib.io.mock import artificial_correlograms
 
 from ..correlogram import CorrelogramView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test correlogram view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_correlogram_view(qtbot, gui):
-
     def get_correlograms(cluster_ids, bin_size, window_size):
         return artificial_correlograms(len(cluster_ids), int(window_size / bin_size))
 
     def get_firing_rate(cluster_ids, bin_size):
-        return .5 * np.ones((len(cluster_ids), len(cluster_ids)))
+        return 0.5 * np.ones((len(cluster_ids), len(cluster_ids)))
 
-    v = CorrelogramView(correlograms=get_correlograms,
-                        firing_rate=get_firing_rate,
-                        sample_rate=100.,
-                        )
+    v = CorrelogramView(
+        correlograms=get_correlograms,
+        firing_rate=get_firing_rate,
+        sample_rate=100.0,
+    )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -47,8 +44,8 @@ def test_correlogram_view(qtbot, gui):
     v.set_window(100)
     v.set_refractory_period(3)
 
-    assert v.bin_size == .001
-    assert v.window_size == .1
+    assert v.bin_size == 0.001
+    assert v.window_size == 0.1
     assert v.refractory_period == 3e-3
 
     v.increase()

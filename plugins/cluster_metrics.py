@@ -1,6 +1,7 @@
 """Show how to add a custom cluster metrics."""
 
 import numpy as np
+
 from phy import IPlugin
 
 

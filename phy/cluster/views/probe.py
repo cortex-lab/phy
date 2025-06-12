@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
-
 """Probe view."""
 
 # -----------------------------------------------------------------------------
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import defaultdict
 import logging
+from collections import defaultdict
 
 import numpy as np
-
-from phy.utils.color import selected_cluster_color
 from phylib.utils.geometry import get_non_overlapping_boxes
+
 from phy.plot.visuals import ScatterVisual, TextVisual
+from phy.utils.color import selected_cluster_color
+
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -23,13 +22,14 @@ logger = logging.getLogger(__name__)
 # Probe view
 # -----------------------------------------------------------------------------
 
+
 def _get_pos_data_bounds(positions):
     positions, _ = get_non_overlapping_boxes(positions)
     x, y = positions.T
     xmin, ymin, xmax, ymax = x.min(), y.min(), x.max(), y.max()
     w = xmax - xmin
     h = ymax - ymin
-    k = .05
+    k = 0.05
     data_bounds = (xmin - w * k, ymin - h * k, xmax + w * k, ymax + h * k)
     return positions, data_bounds
 
@@ -64,14 +64,14 @@ class ProbeView(ManualClusteringView):
     selected_marker_size = 15
 
     # Alpha value of the dead channels.
-    dead_channel_alpha = .25
+    dead_channel_alpha = 0.25
 
     do_show_labels = False
 
     def __init__(
-            self, positions=None, best_channels=None, channel_labels=None,
-            dead_channels=None, **kwargs):
-        super(ProbeView, self).__init__(**kwargs)
+        self, positions=None, best_channels=None, channel_labels=None, dead_channels=None, **kwargs
+    ):
+        super().__init__(**kwargs)
         self.state_attrs += ('do_show_labels',)
 
         # Normalize positions.
@@ -91,13 +91,16 @@ class ProbeView(ManualClusteringView):
 
         # Probe visual.
         color = np.ones((self.n_channels, 4))
-        color[:, :3] = .5
+        color[:, :3] = 0.5
         # Change alpha value for dead channels.
         if len(self.dead_channels):
             color[self.dead_channels, 3] = self.dead_channel_alpha
         self.probe_visual.set_data(
-            pos=self.positions, data_bounds=self.data_bounds,
-            color=color, size=self.unselected_marker_size)
+            pos=self.positions,
+            data_bounds=self.data_bounds,
+            color=color,
+            size=self.unselected_marker_size,
+        )
 
         # Cluster visual.
         self.cluster_visual = ScatterVisual()
@@ -109,14 +112,19 @@ class ProbeView(ManualClusteringView):
         self.text_visual = TextVisual()
         self.text_visual.inserter.insert_vert('uniform float n_channels;', 'header')
         self.text_visual.inserter.add_varying(
-            'float', 'v_discard',
+            'float',
+            'v_discard',
             'float((n_channels >= 200 * u_zoom.y) && '
-            '(mod(int(a_string_index), int(n_channels / (200 * u_zoom.y))) >= 1))')
+            '(mod(int(a_string_index), int(n_channels / (200 * u_zoom.y))) >= 1))',
+        )
         self.text_visual.inserter.insert_frag('if (v_discard > 0) discard;', 'end')
         self.canvas.add_visual(self.text_visual)
         self.text_visual.set_data(
-            pos=self.positions, text=self.channel_labels, anchor=[0, -1],
-            data_bounds=self.data_bounds, color=color
+            pos=self.positions,
+            text=self.channel_labels,
+            anchor=[0, -1],
+            data_bounds=self.data_bounds,
+            color=color,
         )
         self.text_visual.program['n_channels'] = self.n_channels
         self.canvas.update()
@@ -128,7 +136,7 @@ class ProbeView(ManualClusteringView):
         cluster_channels = {i: self.best_channels(cl) for i, cl in enumerate(cluster_ids)}
 
         # List of clusters per channel.
-        clusters_per_channel = defaultdict(lambda: [])
+        clusters_per_channel = defaultdict(list)
         for clu_idx, channels in cluster_channels.items():
             for channel in channels:
                 clusters_per_channel[channel].append(clu_idx)
@@ -141,7 +149,7 @@ class ProbeView(ManualClusteringView):
             for i, clu_idx in enumerate(clusters_per_channel[channel_id]):
                 n = len(clusters_per_channel[channel_id])
                 # Translation.
-                t = .025 * w * (i - .5 * (n - 1))
+                t = 0.025 * w * (i - 0.5 * (n - 1))
                 x += t
                 alpha = 1.0 if channel_id not in self.dead_channels else self.dead_channel_alpha
                 clu_pos.append((x, y))
@@ -155,12 +163,13 @@ class ProbeView(ManualClusteringView):
             return
         pos, colors = self._get_clu_positions(cluster_ids)
         self.cluster_visual.set_data(
-            pos=pos, color=colors, size=self.selected_marker_size, data_bounds=self.data_bounds)
+            pos=pos, color=colors, size=self.selected_marker_size, data_bounds=self.data_bounds
+        )
         self.canvas.update()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-        super(ProbeView, self).attach(gui)
+        super().attach(gui)
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
 
         if not self.do_show_labels:
@@ -168,7 +177,7 @@ class ProbeView(ManualClusteringView):
 
     def toggle_show_labels(self, checked):
         """Toggle the display of the channel ids."""
-        logger.debug("Set show labels to %s.", checked)
+        logger.debug('Set show labels to %s.', checked)
         self.do_show_labels = checked
         self.text_visual._hidden = not checked
         self.canvas.update()

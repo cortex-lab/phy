@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Manual clustering GUI component."""
 
 
@@ -7,20 +5,20 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from functools import partial
 import inspect
 import logging
+from functools import partial
 
 import numpy as np
+from phylib.utils import Bunch, connect, emit, unconnect
+
+from phy.gui.actions import Actions
+from phy.gui.qt import _block, _wait, set_busy
+from phy.gui.widgets import Barrier, HTMLWidget, Table, _uniq
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-
-from phylib.utils import Bunch, emit, connect, unconnect
-from phy.gui.actions import Actions
-from phy.gui.qt import _block, set_busy, _wait
-from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +26,7 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------------
 # Utility functions
 # -----------------------------------------------------------------------------
+
 
 def _process_ups(ups):  # pragma: no cover
     """This function processes the UpdateInfo instances of the two
@@ -46,7 +45,7 @@ def _process_ups(ups):  # pragma: no cover
 
 
 def _ensure_all_ints(l):
-    if (l is None or l == []):
+    if l is None or l == []:
         return
     for i in range(len(l)):
         l[i] = int(l[i])
@@ -56,7 +55,8 @@ def _ensure_all_ints(l):
 # Tasks
 # -----------------------------------------------------------------------------
 
-class TaskLogger(object):
+
+class TaskLogger:
     """Internal object that gandles all clustering actions and the automatic actions that
     should follow as part of the "wizard"."""
 
@@ -77,7 +77,14 @@ class TaskLogger(object):
         """Enqueue an action, which has a sender, a function name, a list of arguments,
         and an optional output."""
         logger.log(
-            5, "Enqueue %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
+            5,
+            'Enqueue %s %s %s %s (%s)',
+            sender.__class__.__name__,
+            name,
+            args,
+            kwargs,
+            output,
+        )
         self._queue.append((sender, name, args, kwargs))
 
     def dequeue(self):
@@ -101,7 +108,9 @@ class TaskLogger(object):
     def _eval(self, task):
         """Evaluate a task and call a callback function."""
         sender, name, args, kwargs = task
-        logger.log(5, "Calling %s.%s(%s)", sender.__class__.__name__, name, args, kwargs)
+        logger.log(
+            5, 'Calling %s.%s(%s)', sender.__class__.__name__, name, args, kwargs
+        )
         f = getattr(sender, name)
         callback = partial(self._callback, task)
         argspec = inspect.getfullargspec(f)
@@ -112,6 +121,7 @@ class TaskLogger(object):
             # HACK: use on_cluster event instead of callback.
             def _cluster_callback(tsender, up):
                 self._callback(task, up)
+
             connect(_cluster_callback, event='cluster', sender=self.supervisor)
             f(*args, **kwargs)
             unconnect(_cluster_callback)
@@ -129,7 +139,7 @@ class TaskLogger(object):
     def enqueue_after(self, task, output):
         """Enqueue tasks after a given action."""
         sender, name, args, kwargs = task
-        f = lambda *args, **kwargs: logger.log(5, "No method _after_%s", name)
+        f = lambda *args, **kwargs: logger.log(5, 'No method _after_%s', name)
         getattr(self, f'_after_{name}', f)(task, output)
 
     def _after_merge(self, task, output):
@@ -180,7 +190,9 @@ class TaskLogger(object):
 
     def _after_undo(self, task, output):
         """Task that should follow an undo."""
-        last_action = self.last_task(name_not_in=('select', 'next', 'previous', 'undo', 'redo'))
+        last_action = self.last_task(
+            name_not_in=('select', 'next', 'previous', 'undo', 'redo')
+        )
         self._select_state(self.last_state(last_action))
 
     def _after_redo(self, task, output):
@@ -192,8 +204,7 @@ class TaskLogger(object):
     def _select_state(self, state):
         """Enqueue select actions when a state (selected clusters and similar clusters) is set."""
         cluster_ids, next_cluster, similar, next_similar = state
-        self.enqueue(
-            self.cluster_view, 'select', cluster_ids, update_views=False if similar else True)
+        self.enqueue(self.cluster_view, 'select', cluster_ids, update_views=not similar)
         if similar:
             self.enqueue(self.similarity_view, 'select', similar)
 
@@ -203,7 +214,14 @@ class TaskLogger(object):
         assert sender
         assert name
         logger.log(
-            5, "Log %s %s %s %s (%s)", sender.__class__.__name__, name, args, kwargs, output)
+            5,
+            'Log %s %s %s %s (%s)',
+            sender.__class__.__name__,
+            name,
+            args,
+            kwargs,
+            output,
+        )
         args = [a.tolist() if isinstance(a, np.ndarray) else a for a in args]
         task = (sender, name, args, kwargs, output)
         # Avoid successive duplicates (even if sender is different).
@@ -216,8 +234,10 @@ class TaskLogger(object):
 
     def last_task(self, name=None, name_not_in=()):
         """Return the last executed task."""
-        for (sender, name_, args, kwargs, output) in reversed(self._history):
-            if (name and name_ == name) or (name_not_in and name_ and name_ not in name_not_in):
+        for sender, name_, args, kwargs, output in reversed(self._history):
+            if (name and name_ == name) or (
+                name_not_in and name_ and name_ not in name_not_in
+            ):
                 assert name_
                 return (sender, name_, args, kwargs, output)
 
@@ -230,23 +250,31 @@ class TaskLogger(object):
         if task:
             i = self._history.index(task)
             h = self._history[:i]
-        for (sender, name, args, kwargs, output) in reversed(h):
+        for sender, name, args, kwargs, output in reversed(h):
             # Last selection is cluster view selection: return the state.
-            if (sender == self.similarity_view and similarity_state == (None, None) and
-                    name in ('select', 'next', 'previous')):
-                similarity_state = (output['selected'], output['next']) if output else (None, None)
-            if (sender == self.cluster_view and
-                    cluster_state == (None, None) and
-                    name in ('select', 'next', 'previous')):
-                cluster_state = (output['selected'], output['next']) if output else (None, None)
+            if (
+                sender == self.similarity_view
+                and similarity_state == (None, None)
+                and name in ('select', 'next', 'previous')
+            ):
+                similarity_state = (
+                    (output['selected'], output['next']) if output else (None, None)
+                )
+            if (
+                sender == self.cluster_view
+                and cluster_state == (None, None)
+                and name in ('select', 'next', 'previous')
+            ):
+                cluster_state = (
+                    (output['selected'], output['next']) if output else (None, None)
+                )
                 return (*cluster_state, *similarity_state)
 
     def show_history(self):
         """Show the history stack."""
-        print("=== History ===")
+        print('=== History ===')
         for sender, name, args, kwargs, output in self._history:
-            print(
-                f'{sender.__class__.__name__: <24} {name: <8}', *args, output, kwargs)
+            print(f'{sender.__class__.__name__: <24} {name: <8}', *args, output, kwargs)
 
     def has_finished(self):
         """Return whether the queue has finished being processed."""
@@ -257,7 +285,7 @@ class TaskLogger(object):
 # Cluster view and similarity view
 # -----------------------------------------------------------------------------
 
-_CLUSTER_VIEW_STYLES = '''
+_CLUSTER_VIEW_STYLES = """
 table tr[data-group='good'] {
     color: #86D16D;
 }
@@ -269,7 +297,7 @@ table tr[data-group='mua'] {
 table tr[data-group='noise'] {
     color: #777;
 }
-'''
+"""
 
 
 class ClusterView(Table):
@@ -296,13 +324,14 @@ class ClusterView(Table):
     def __init__(self, *args, data=None, columns=(), sort=None):
         # NOTE: debounce select events.
         HTMLWidget.__init__(
-            self, *args, title=self.__class__.__name__, debounce_events=('select',))
+            self, *args, title=self.__class__.__name__, debounce_events=('select',)
+        )
         self._set_styles()
         self._reset_table(data=data, columns=columns, sort=sort)
 
     def _reset_table(self, data=None, columns=(), sort=None):
         """Recreate the table with specified columns, data, and sort."""
-        emit(f"{self._view_name}_init", self)
+        emit(f'{self._view_name}_init', self)
         # Ensure 'id' is the first column.
         if 'id' in columns:
             columns.remove('id')
@@ -370,7 +399,7 @@ class SimilarityView(ClusterView):
     def set_selected_index_offset(self, n):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
-        self.eval_js('table._setSelectedIndexOffset(%d);' % n)
+        self.eval_js(f'table._setSelectedIndexOffset({n});')
 
     def reset(self, cluster_ids):
         """Recreate the similarity view, given the selected clusters in the cluster view."""
@@ -380,7 +409,8 @@ class SimilarityView(ClusterView):
         # Clear the table.
         if similar:
             self.remove_all_and_add(
-                [cl for cl in similar[0] if cl['id'] not in cluster_ids])
+                [cl for cl in similar[0] if cl['id'] not in cluster_ids]
+            )
         else:  # pragma: no cover
             self.remove_all()
         return similar
@@ -390,32 +420,28 @@ class SimilarityView(ClusterView):
 # ActionCreator
 # -----------------------------------------------------------------------------
 
-class ActionCreator(object):
+
+class ActionCreator:
     """Companion class to the Supervisor that manages the related GUI actions."""
 
     default_shortcuts = {
         # Clustering.
         'merge': 'g',
         'split': 'k',
-
         'label': 'l',
-
         # Move.
         'move_best_to_noise': 'alt+n',
         'move_best_to_mua': 'alt+m',
         'move_best_to_good': 'alt+g',
         'move_best_to_unsorted': 'alt+u',
-
         'move_similar_to_noise': 'ctrl+n',
         'move_similar_to_mua': 'ctrl+m',
         'move_similar_to_good': 'ctrl+g',
         'move_similar_to_unsorted': 'ctrl+u',
-
         'move_all_to_noise': 'ctrl+alt+n',
         'move_all_to_mua': 'ctrl+alt+m',
         'move_all_to_good': 'ctrl+alt+g',
         'move_all_to_unsorted': 'ctrl+alt+u',
-
         # Wizard.
         'first': 'home',
         'last': 'end',
@@ -425,11 +451,9 @@ class ActionCreator(object):
         'unselect_similar': 'backspace',
         'next_best': 'down',
         'previous_best': 'up',
-
         # Misc.
         'undo': 'ctrl+z',
         'redo': ('ctrl+shift+z', 'ctrl+y'),
-
         'clear_filter': 'esc',
     }
 
@@ -454,7 +478,7 @@ class ActionCreator(object):
         emit_fun = partial(emit, 'action', self, method_name, *method_args)
         f = getattr(self.supervisor, method_name, None)
         docstring = inspect.getdoc(f) if f else name
-        if not kwargs.get('docstring', None):
+        if not kwargs.get('docstring'):
             kwargs['docstring'] = docstring
         getattr(self, f'{which}_actions').add(emit_fun, name=name, **kwargs)
 
@@ -464,11 +488,21 @@ class ActionCreator(object):
         ds = self.default_shortcuts
         dsp = self.default_snippets
         self.edit_actions = Actions(
-            gui, name='Edit', menu='&Edit', insert_menu_before='&View',
-            default_shortcuts=ds, default_snippets=dsp)
+            gui,
+            name='Edit',
+            menu='&Edit',
+            insert_menu_before='&View',
+            default_shortcuts=ds,
+            default_snippets=dsp,
+        )
         self.select_actions = Actions(
-            gui, name='Select', menu='Sele&ct', insert_menu_before='&View',
-            default_shortcuts=ds, default_snippets=dsp)
+            gui,
+            name='Select',
+            menu='Sele&ct',
+            insert_menu_before='&View',
+            default_shortcuts=ds,
+            default_snippets=dsp,
+        )
 
         # Create the actions.
         self._create_edit_actions()
@@ -491,11 +525,13 @@ class ActionCreator(object):
         for which in ('best', 'similar', 'all'):
             for group in ('noise', 'mua', 'good', 'unsorted'):
                 self.add(
-                    w, f'move_{which}_to_{group}',
+                    w,
+                    f'move_{which}_to_{group}',
                     method_name='move',
                     method_args=(group, which),
                     submenu=f'Move {which} to',
-                    docstring=f'Move {which} to {group}.')
+                    docstring=f'Move {which} to {group}.',
+                )
         self.edit_actions.separator()
 
         # Label.
@@ -518,9 +554,14 @@ class ActionCreator(object):
         # Sort by:
         for column in getattr(self.supervisor, 'columns', ()):
             self.add(
-                w, f'sort_by_{column.lower()}', method_name='sort', method_args=(column,),
+                w,
+                f'sort_by_{column.lower()}',
+                method_name='sort',
+                method_args=(column,),
                 docstring=f'Sort by {column}',
-                submenu='Sort by', alias=f"s{column.replace('_', '')[:2]}")
+                submenu='Sort by',
+                alias=f's{column.replace("_", "")[:2]}',
+            )
 
         self.select_actions.separator()
         self.add(w, 'first')
@@ -556,11 +597,12 @@ class ActionCreator(object):
 # Clustering GUI component
 # -----------------------------------------------------------------------------
 
+
 def _is_group_masked(group):
     return group in ('noise', 'mua')
 
 
-class Supervisor(object):
+class Supervisor:
     """Component that brings manual clustering facilities to a GUI:
 
     * `Clustering` instance: merge, split, undo, redo.
@@ -608,9 +650,17 @@ class Supervisor(object):
     """
 
     def __init__(
-            self, spike_clusters=None, cluster_groups=None, cluster_metrics=None,
-            cluster_labels=None, similarity=None, new_cluster_id=None, sort=None, context=None):
-        super(Supervisor, self).__init__()
+        self,
+        spike_clusters=None,
+        cluster_groups=None,
+        cluster_metrics=None,
+        cluster_labels=None,
+        similarity=None,
+        new_cluster_id=None,
+        sort=None,
+        context=None,
+    ):
+        super().__init__()
         self.context = context
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
         self.actions = None  # will be set when attaching the GUI
@@ -629,14 +679,17 @@ class Supervisor(object):
         self.columns = ['id']  # n_spikes comes from cluster_metrics
         self.columns += list(self.cluster_metrics.keys())
         self.columns += [
-            label for label in self.cluster_labels.keys()
-            if label not in self.columns + ['group']]
+            label
+            for label in self.cluster_labels.keys()
+            if label not in self.columns + ['group']
+        ]
 
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
         spc = context.load('spikes_per_cluster') if context else None
         self.clustering = Clustering(
-            spike_clusters, spikes_per_cluster=spc, new_cluster_id=new_cluster_id)
+            spike_clusters, spikes_per_cluster=spc, new_cluster_id=new_cluster_id
+        )
 
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
@@ -670,7 +723,8 @@ class Supervisor(object):
             # the largest cluster wins and its value is set to its descendants.
             if up.added:
                 self.cluster_meta.set_from_descendants(
-                    up.descendants, largest_old_cluster=up.largest_old_cluster)
+                    up.descendants, largest_old_cluster=up.largest_old_cluster
+                )
             emit('cluster', self, up)
 
         @connect(sender=self.cluster_meta)  # noqa
@@ -688,29 +742,36 @@ class Supervisor(object):
         """Cache on the disk the dictionary with the spikes belonging to each cluster."""
         if not self.context:
             return
-        self.context.save('spikes_per_cluster', self.clustering.spikes_per_cluster, kind='pickle')
+        self.context.save(
+            'spikes_per_cluster', self.clustering.spikes_per_cluster, kind='pickle'
+        )
 
     def _log_action(self, sender, up):
         """Log the clustering action (merge, split)."""
         if sender != self.clustering:
             return
         if up.history:
-            logger.info(f"{up.history.title()} cluster assign.")
+            logger.info(f'{up.history.title()} cluster assign.')
         elif up.description == 'merge':
-            logger.info("Merge clusters %s to %s.", ', '.join(map(str, up.deleted)), up.added[0])
+            logger.info(
+                'Merge clusters %s to %s.', ', '.join(map(str, up.deleted)), up.added[0]
+            )
         else:
-            logger.info("Assigned %s spikes.", len(up.spike_ids))
+            logger.info('Assigned %s spikes.', len(up.spike_ids))
 
     def _log_action_meta(self, sender, up):
         """Log the cluster meta action (move, label)."""
         if sender != self.cluster_meta:
             return
         if up.history:
-            logger.info(f"{up.history.title()} move.")
+            logger.info(f'{up.history.title()} move.')
         else:
             logger.info(
-                "Change %s for clusters %s to %s.", up.description,
-                ', '.join(map(str, up.metadata_changed)), up.metadata_value)
+                'Change %s for clusters %s to %s.',
+                up.description,
+                ', '.join(map(str, up.metadata_changed)),
+                up.metadata_value,
+            )
 
         # Skip cluster metadata other than groups.
         if up.description != 'metadata_group':
@@ -721,8 +782,8 @@ class Supervisor(object):
         easier cache consistency."""
         new_cluster_id = self.clustering.new_cluster_id()
         if self.context:
-            logger.log(5, "Save the new cluster id: %d.", new_cluster_id)
-            self.context.save('new_cluster_id', dict(new_cluster_id=new_cluster_id))
+            logger.log(5, 'Save the new cluster id: %d.', new_cluster_id)
+            self.context.save('new_cluster_id', {'new_cluster_id': new_cluster_id})
 
     def _save_gui_state(self, gui):
         """Save the GUI state with the cluster view and similarity view."""
@@ -739,7 +800,9 @@ class Supervisor(object):
         clusters_set = set(self.clustering.cluster_ids)
         data = [
             dict(similarity=f'{s:.3f}', **self.get_cluster_info(c))
-            for c, s in sim if c in clusters_set]
+            for c, s in sim
+            if c in clusters_set
+        ]
         return data
 
     def get_cluster_info(self, cluster_id, exclude=()):
@@ -752,7 +815,7 @@ class Supervisor(object):
         for key in self.cluster_meta.fields:
             # includes group
             out[key] = self.cluster_meta.get(key, cluster_id)
-        out['is_masked'] = _is_group_masked(out.get('group', None))
+        out['is_masked'] = _is_group_masked(out.get('group'))
         return {k: v for k, v in out.items() if k not in exclude}
 
     def _create_views(self, gui=None, sort=None):
@@ -762,16 +825,20 @@ class Supervisor(object):
 
         # Create the cluster view.
         self.cluster_view = ClusterView(
-            gui, data=self.cluster_info, columns=self.columns, sort=sort)
+            gui, data=self.cluster_info, columns=self.columns, sort=sort
+        )
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
-            gui, columns=self.columns + ['similarity'], sort=('similarity', 'desc'))
+            gui, columns=self.columns + ['similarity'], sort=('similarity', 'desc')
+        )
         connect(
-            self._get_similar_clusters, event='request_similar_clusters',
-            sender=self.similarity_view)
+            self._get_similar_clusters,
+            event='request_similar_clusters',
+            sender=self.similarity_view,
+        )
         connect(self._similar_selected, event='select', sender=self.similarity_view)
 
         # Change the state after every clustering action, according to the action flow.
@@ -779,26 +846,27 @@ class Supervisor(object):
 
     def _reset_cluster_view(self):
         """Recreate the cluster view."""
-        logger.debug("Reset the cluster view.")
+        logger.debug('Reset the cluster view.')
         self.cluster_view._reset_table(
-            data=self.cluster_info, columns=self.columns, sort=self._sort)
+            data=self.cluster_info, columns=self.columns, sort=self._sort
+        )
 
     def _clusters_added(self, cluster_ids):
         """Update the cluster and similarity views when new clusters are created."""
-        logger.log(5, "Clusters added: %s", cluster_ids)
+        logger.log(5, 'Clusters added: %s', cluster_ids)
         data = [self.get_cluster_info(cluster_id) for cluster_id in cluster_ids]
         self.cluster_view.add(data)
         self.similarity_view.add(data)
 
     def _clusters_removed(self, cluster_ids):
         """Update the cluster and similarity views when clusters are removed."""
-        logger.log(5, "Clusters removed: %s", cluster_ids)
+        logger.log(5, 'Clusters removed: %s', cluster_ids)
         self.cluster_view.remove(cluster_ids)
         self.similarity_view.remove(cluster_ids)
 
     def _cluster_metadata_changed(self, field, cluster_ids, value):
         """Update the cluster and similarity views when clusters metadata is updated."""
-        logger.log(5, "%s changed for %s to %s", field, cluster_ids, value)
+        logger.log(5, '%s changed for %s to %s', field, cluster_ids, value)
         data = [{'id': cluster_id, field: value} for cluster_id in cluster_ids]
         for _ in data:
             _['is_masked'] = _is_group_masked(_.get('group', None))
@@ -814,7 +882,7 @@ class Supervisor(object):
         cluster_ids = obj['selected']
         next_cluster = obj['next']
         kwargs = obj.get('kwargs', {})
-        logger.debug("Clusters selected: %s (%s)", cluster_ids, next_cluster)
+        logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=obj)
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
@@ -826,7 +894,9 @@ class Supervisor(object):
             emit('select', self, self.selected, **kwargs)
         if cluster_ids:
             self.cluster_view.scroll_to(cluster_ids[-1])
-        self.cluster_view.dock.set_status(f"clusters: {', '.join(map(str, cluster_ids))}")
+        self.cluster_view.dock.set_status(
+            f'clusters: {", ".join(map(str, cluster_ids))}'
+        )
 
     def _similar_selected(self, sender, obj):
         """When clusters are selected in the similarity view, register the action in the history
@@ -836,23 +906,25 @@ class Supervisor(object):
         similar = obj['selected']
         next_similar = obj['next']
         kwargs = obj.get('kwargs', {})
-        logger.debug("Similar clusters selected: %s (%s)", similar, next_similar)
+        logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
         emit('select', self, self.selected, **kwargs)
         if similar:
             self.similarity_view.scroll_to(similar[-1])
-        self.similarity_view.dock.set_status(f"similar clusters: {', '.join(map(str, similar))}")
+        self.similarity_view.dock.set_status(
+            f'similar clusters: {", ".join(map(str, similar))}'
+        )
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
         assert sender == self.action_creator
         # The GUI should not be busy when calling a new action.
         if 'select' not in name and self._is_busy:
-            logger.log(5, "The GUI is busy, waiting before calling the action.")
+            logger.log(5, 'The GUI is busy, waiting before calling the action.')
             try:
                 _block(lambda: not self._is_busy)
             except Exception:
-                logger.warning("The GUI is busy, could not execute `%s`.", name)
+                logger.warning('The GUI is busy, could not execute `%s`.', name)
                 return
         # Enqueue the requested action.
         self.task_logger.enqueue(self, name, *args)
@@ -867,7 +939,10 @@ class Supervisor(object):
         self._clusters_added(up.added)
         self._clusters_removed(up.deleted)
         self._cluster_metadata_changed(
-            up.description.replace('metadata_', ''), up.metadata_changed, up.metadata_value)
+            up.description.replace('metadata_', ''),
+            up.metadata_changed,
+            up.metadata_value,
+        )
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
         self.task_logger.process()
@@ -878,7 +953,7 @@ class Supervisor(object):
             return
         self._is_busy = busy
         # Set the busy cursor.
-        logger.log(5, f"GUI is {'' if busy else 'not '}busy")
+        logger.log(5, f'GUI is {"" if busy else "not "}busy')
         set_busy(busy)
         # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)
@@ -898,7 +973,7 @@ class Supervisor(object):
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
         # Remove non-existing clusters from the selection.
-        #cluster_ids = self._keep_existing_clusters(cluster_ids)
+        # cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids, callback=callback)
 
@@ -922,7 +997,10 @@ class Supervisor(object):
     @property
     def cluster_info(self):
         """The cluster view table as a list of per-cluster dictionaries."""
-        return [self.get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+        return [
+            self.get_cluster_info(cluster_id)
+            for cluster_id in self.clustering.cluster_ids
+        ]
 
     @property
     def shown_cluster_ids(self):
@@ -948,7 +1026,8 @@ class Supervisor(object):
 
         # Create the cluster view and similarity view.
         self._create_views(
-            gui=gui, sort=gui.state.get('ClusterView', {}).get('current_sort', None))
+            gui=gui, sort=gui.state.get('ClusterView', {}).get('current_sort', None)
+        )
 
         # Create the TaskLogger.
         self.task_logger = TaskLogger(
@@ -1038,11 +1117,9 @@ class Supervisor(object):
             assert spike_ids.dtype == np.int64
             assert spike_ids.ndim == 1
         if len(spike_ids) == 0:
-            logger.warning(
-                """No spikes selected, cannot split.""")
+            logger.warning("""No spikes selected, cannot split.""")
             return
-        out = self.clustering.split(
-            spike_ids, spike_clusters_rel=spike_clusters_rel)
+        out = self.clustering.split(spike_ids, spike_clusters_rel=spike_clusters_rel)
         self._global_history.action(self.clustering)
         return out
 
@@ -1056,8 +1133,7 @@ class Supervisor(object):
 
     def get_labels(self, field):
         """Return the labels of all clusters, for a given label name."""
-        return {c: self.cluster_meta.get(field, c)
-                for c in self.clustering.cluster_ids}
+        return {c: self.cluster_meta.get(field, c) for c in self.clustering.cluster_ids}
 
     def label(self, name, value, cluster_ids=None):
         """Assign a label to some clusters."""
@@ -1071,7 +1147,7 @@ class Supervisor(object):
         self._global_history.action(self.cluster_meta)
         # Add column if needed.
         if name != 'group' and name not in self.columns:
-            logger.debug("Add column %s.", name)
+            logger.debug('Add column %s.', name)
             self.columns.append(name)
             self._reset_cluster_view()
 
@@ -1088,7 +1164,7 @@ class Supervisor(object):
         if not which:
             return
         _ensure_all_ints(which)
-        logger.debug("Move %s to %s.", which, group)
+        logger.debug('Move %s to %s.', which, group)
         group = 'unsorted' if group is None else group
         self.label('group', group, cluster_ids=which)
 
@@ -1108,19 +1184,27 @@ class Supervisor(object):
 
     def previous_best(self, callback=None):
         """Select the previous best cluster in the cluster view."""
-        self.cluster_view.previous(callback=callback or partial(emit, 'wizard_done', self))
+        self.cluster_view.previous(
+            callback=callback or partial(emit, 'wizard_done', self)
+        )
 
     def next(self, callback=None):
         """Select the next cluster in the similarity view."""
         state = self.task_logger.last_state()
         if not state or not state[0]:
-            self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
+            self.cluster_view.first(
+                callback=callback or partial(emit, 'wizard_done', self)
+            )
         else:
-            self.similarity_view.next(callback=callback or partial(emit, 'wizard_done', self))
+            self.similarity_view.next(
+                callback=callback or partial(emit, 'wizard_done', self)
+            )
 
     def previous(self, callback=None):
         """Select the previous cluster in the similarity view."""
-        self.similarity_view.previous(callback=callback or partial(emit, 'wizard_done', self))
+        self.similarity_view.previous(
+            callback=callback or partial(emit, 'wizard_done', self)
+        )
 
     def unselect_similar(self, callback=None):
         """Select only the clusters in the cluster view."""
@@ -1139,7 +1223,11 @@ class Supervisor(object):
 
     def is_dirty(self):
         """Return whether there are any pending changes."""
-        return self._is_dirty if self._is_dirty in (False, True) else len(self._global_history) > 1
+        return (
+            self._is_dirty
+            if self._is_dirty in (False, True)
+            else len(self._global_history) > 1
+        )
 
     def undo(self):
         """Undo the last action."""
@@ -1159,11 +1247,14 @@ class Supervisor(object):
         spike_clusters = self.clustering.spike_clusters
         groups = {
             c: self.cluster_meta.get('group', c) or 'unsorted'
-            for c in self.clustering.cluster_ids}
+            for c in self.clustering.cluster_ids
+        }
         # List of tuples (field_name, dictionary).
         labels = [
-            (field, self.get_labels(field)) for field in self.cluster_meta.fields
-            if field not in ('next_cluster')]
+            (field, self.get_labels(field))
+            for field in self.cluster_meta.fields
+            if field not in ('next_cluster')
+        ]
         emit('save_clustering', self, spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
