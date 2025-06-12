@@ -250,7 +250,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             return callback
 
         for a in self.amplitudes_types.keys():
-            name = 'Change amplitudes type to %s' % a
+            name = f'Change amplitudes type to {a}'
             self.actions.add(
                 _make_amplitude_action(a), show_shortcut=False,
                 name=name, view_submenu='Change amplitudes type')

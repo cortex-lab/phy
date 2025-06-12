@@ -54,7 +54,7 @@ def _glslify(r):
     else:
         r = _call_if_callable(r)
         assert 2 <= len(r) <= 4
-        return 'vec{}({})'.format(len(r), ', '.join(map(str, r)))
+        return f"vec{len(r)}({', '.join(map(str, r))})"
 
 
 def _call_if_callable(s):
@@ -120,12 +120,12 @@ def subplot_bounds(shape=None, index=None):
 
 def subplot_bounds_glsl(shape=None, index=None):
     """Get the data bounds in GLSL of a subplot."""
-    x0 = '-1.0 + 2.0 * {i}.y / {s}.y'.format(s=shape, i=index)
-    y0 = '+1.0 - 2.0 * ({i}.x + 1) / {s}.x'.format(s=shape, i=index)
-    x1 = '-1.0 + 2.0 * ({i}.y + 1) / {s}.y'.format(s=shape, i=index)
-    y1 = '+1.0 - 2.0 * ({i}.x) / {s}.x'.format(s=shape, i=index)
+    x0 = f'-1.0 + 2.0 * {index}.y / {shape}.y'
+    y0 = f'+1.0 - 2.0 * ({index}.x + 1) / {shape}.x'
+    x1 = f'-1.0 + 2.0 * ({index}.y + 1) / {shape}.y'
+    y1 = f'+1.0 - 2.0 * ({index}.x) / {shape}.x'
 
-    return 'vec4(\n{x0}, \n{y0}, \n{x1}, \n{y1})'.format(x0=x0, y0=y0, x1=x1, y1=y1)
+    return f'vec4(\n{x0}, \n{y0}, \n{x1}, \n{y1})'
 
 
 def extend_bounds(bounds_list):
@@ -226,7 +226,7 @@ class Translate(BaseTransform):
         """Return the inverse Translate instance."""
         return Translate(
             amount=_minus(_call_if_callable(self.amount)) if self.amount is not None else None,
-            gpu_var=('-%s' % self.gpu_var) if self.gpu_var else None)
+            gpu_var=f'-{self.gpu_var}' if self.gpu_var else None)
 
 
 class Scale(BaseTransform):
@@ -265,7 +265,7 @@ class Scale(BaseTransform):
         """Return the inverse Scale instance."""
         return Scale(
             amount=_inverse(_call_if_callable(self.amount)) if self.amount is not None else None,
-            gpu_var=('1.0 / %s' % self.gpu_var) if self.gpu_var else None)
+            gpu_var=f'1.0 / {self.gpu_var}' if self.gpu_var else None)
 
 
 class Rotate(BaseTransform):

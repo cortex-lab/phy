@@ -22,7 +22,7 @@ from ..context import Context, _fullname
 
 @fixture(scope='function')
 def context(tempdir):
-    ctx = Context('{}/cache/'.format(tempdir), verbose=1)
+    ctx = Context(f'{tempdir}/cache/', verbose=1)
     return ctx
 
 
@@ -109,7 +109,7 @@ def test_context_cache_method(tempdir, context):
     assert a._l == [3]
 
     # Recreate the context.
-    context = Context('{}/cache/'.format(tempdir), verbose=1)
+    context = Context(f'{tempdir}/cache/', verbose=1)
     # Recreate the class.
     a = A(context)
     assert a.f(3) == 3

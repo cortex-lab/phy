@@ -30,7 +30,7 @@ def _update_cluster_selection(clusters, up):
 
 
 def _join(clusters):
-    return '[{}]'.format(', '.join(map(str, clusters)))
+    return f"[{', '.join(map(str, clusters))}]"
 
 
 def create_cluster_meta(cluster_groups):
@@ -99,18 +99,16 @@ class UpdateInfo(Bunch):
 
     def __repr__(self):
         desc = self.description
-        h = ' ({})'.format(self.history) if self.history else ''
+        h = f' ({self.history})' if self.history else ''
         if not desc:
             return '<UpdateInfo>'
         elif desc in ('merge', 'assign'):
             a, d = _join(self.added), _join(self.deleted)
-            return '<{desc}{h} {d} => {a}>'.format(
-                desc=desc, a=a, d=d, h=h)
+            return f'<{desc}{h} {d} => {a}>'
         elif desc.startswith('metadata'):
             c = _join(self.metadata_changed)
             m = self.metadata_value
-            return '<{desc}{h} {c} => {m}>'.format(
-                desc=desc, c=c, m=m, h=h)
+            return f'<{desc}{h} {c} => {m}>'
         return '<UpdateInfo>'
 
 
@@ -192,7 +190,7 @@ class ClusterMeta(object):
                 self._data[cluster] = {}
             self._data[cluster][field] = value
 
-        up = UpdateInfo(description='metadata_' + field,
+        up = UpdateInfo(description=f"metadata_{field}",
                         metadata_changed=clusters,
                         metadata_value=value,
                         )

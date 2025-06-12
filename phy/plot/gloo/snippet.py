@@ -405,7 +405,7 @@ class Snippet(object):
                 # If an argument has been given, we put it at the end
                 # This handles hooks of the form <transform(args)>
                 if arguments is not None:
-                    s += "(%s)" % arguments
+                    s += f"({arguments})"
                 else:
                     s += "()"
             if self.next:
@@ -413,7 +413,7 @@ class Snippet(object):
                 if operand in "+-/*":
                     call = other.mangled_call(function, arguments).strip()
                     if len(call):
-                        s += ' ' + operand + ' ' + call
+                        s += f" {operand} {call}"
 
         # No function defined in this snippet, we look for next one
         else:
@@ -573,5 +573,5 @@ class Snippet(object):
                     found = True
 
         if not found:
-            error = 'Snippet does not have such key ("%s")' % key
+            error = f'Snippet does not have such key ("{key}")'
             raise IndexError(error)

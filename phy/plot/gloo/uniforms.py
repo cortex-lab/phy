@@ -50,7 +50,7 @@ def dtype_reduce(dtype, level=0, depth=0):
                 items.append([key, l[1], l[2]])
             else:
                 items.append(l)
-            name += key + ','
+            name += f"{key},"
 
         # Check if we can reduce item list
         ctype = None
@@ -199,7 +199,7 @@ class Uniforms(Texture2D):
         types = {1: 'float', 2: 'vec2 ', 3: 'vec3 ',
                  4: 'vec4 ', 9: 'mat3 ', 16: 'mat4 '}
         for name, count, _ in _dtype:
-            header += "varying %s %s%s;\n" % (types[count], prefix, name)
+            header += f"varying {types[count]} {prefix}{name};\n"
 
         # Body generation (not so easy)
         rows, cols = self.shape[0], self.shape[1]
@@ -246,8 +246,7 @@ class Uniforms(Texture2D):
                     b = "w"
 
                 i = min(min(len(b), count), len(a))
-                body += "    %s%s.%s = _uniforms.%s;\n" % (
-                    prefix, name, b[:i], a[:i])
+                body += f"    {prefix}{name}.{b[:i]} = _uniforms.{a[:i]};\n"
                 count -= i
                 shift += i
                 store -= i

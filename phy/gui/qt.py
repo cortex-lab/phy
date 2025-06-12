@@ -316,7 +316,7 @@ def screenshot_default_path(widget, dir=None):
     """Return a default path for the screenshot of a widget."""
     from phylib.utils._misc import phy_config_dir
     date = datetime.now().strftime('%Y%m%d%H%M%S')
-    name = 'phy_screenshot_%s_%s.png' % (date, widget.__class__.__name__)
+    name = f'phy_screenshot_{date}_{widget.__class__.__name__}.png'
     path = (Path(dir) if dir else phy_config_dir() / 'screenshots') / name
     path.parent.mkdir(exist_ok=True, parents=True)
     return path
@@ -374,7 +374,7 @@ def _get_icon(icon, size=64, color='black'):
     # from https://github.com/Pythonity/icon-font-to-png/blob/master/icon_font_to_png/icon_font.py
     static_dir = op.join(op.dirname(op.abspath(__file__)), 'static/icons/')
     ttf_file = op.abspath(op.join(static_dir, '../fa-solid-900.ttf'))
-    output_path = op.join(static_dir, icon + '.png')
+    output_path = op.join(static_dir, f"{icon}.png")
 
     if not op.exists(output_path):  # pragma: no cover
         # Ideally, this should only run on the developer's machine.
@@ -467,7 +467,7 @@ class WebView(QWebEngineView):
         """Set the HTML code."""
         self._callback = callback
         self.loadFinished.connect(self._loadFinished)
-        static_dir = str(Path(__file__).parent / 'static') + '/'
+        static_dir = f"{str(Path(__file__).parent / 'static')}/"
 
         # Create local file from HTML
         self.clear_temporary_files()

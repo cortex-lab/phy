@@ -63,12 +63,10 @@ import logging
 import numpy as np
 
 from . import gl
-from .globject import GLObject
 from .array import VertexArray
 from .buffer import VertexBuffer
-from .texture import TextureCube
-from .texture import Texture1D, Texture2D
-
+from .globject import GLObject
+from .texture import Texture1D, Texture2D, TextureCube
 
 log = logging.getLogger(__name__)
 
@@ -92,25 +90,33 @@ gl_typeinfo = {
     gl.GL_FLOAT_MAT4: (16, gl.GL_FLOAT, np.float32),
     gl.GL_SAMPLER_1D: (1, gl.GL_UNSIGNED_INT, np.uint32),
     gl.GL_SAMPLER_2D: (1, gl.GL_UNSIGNED_INT, np.uint32),
-    gl.GL_SAMPLER_CUBE: (1, gl.GL_UNSIGNED_INT, np.uint32)
+    gl.GL_SAMPLER_CUBE: (1, gl.GL_UNSIGNED_INT, np.uint32),
 }
 
 
 # ---------------------------------------------------------- Variable class ---
 class Variable(GLObject):
-    """ A variable is an interface between a program and data """
+    """A variable is an interface between a program and data"""
 
     def __init__(self, program, name, gtype):
-        """ Initialize the data into default state """
+        """Initialize the data into default state"""
 
         # Make sure variable type is allowed (for ES 2.0 shader)
-        if gtype not in [gl.GL_FLOAT, gl.GL_FLOAT_VEC2,
-                         gl.GL_FLOAT_VEC3, gl.GL_FLOAT_VEC4,
-                         gl.GL_INT, gl.GL_BOOL,
-                         gl.GL_FLOAT_MAT2, gl.GL_FLOAT_MAT3,
-                         gl.GL_FLOAT_MAT4, gl.GL_SAMPLER_1D,
-                         gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE]:
-            raise TypeError("Unknown variable type")
+        if gtype not in [
+            gl.GL_FLOAT,
+            gl.GL_FLOAT_VEC2,
+            gl.GL_FLOAT_VEC3,
+            gl.GL_FLOAT_VEC4,
+            gl.GL_INT,
+            gl.GL_BOOL,
+            gl.GL_FLOAT_MAT2,
+            gl.GL_FLOAT_MAT3,
+            gl.GL_FLOAT_MAT4,
+            gl.GL_SAMPLER_1D,
+            gl.GL_SAMPLER_2D,
+            gl.GL_SAMPLER_CUBE,
+        ]:
+            raise TypeError('Unknown variable type')
 
         GLObject.__init__(self)
 
@@ -135,48 +141,48 @@ class Variable(GLObject):
 
     @property
     def name(self):
-        """ Variable name """
+        """Variable name"""
 
         return self._name
 
     @property
     def program(self):
-        """ Program this variable belongs to """
+        """Program this variable belongs to"""
 
         return self._program
 
     @property
     def gtype(self):
-        """ Type of the underlying variable (as a GL constant) """
+        """Type of the underlying variable (as a GL constant)"""
 
         return self._gtype
 
     @property
     def dtype(self):
-        """ Equivalent dtype of the variable """
+        """Equivalent dtype of the variable"""
 
         return self._dtype
 
     @property
     def active(self):
-        """ Whether this variable is active in the program """
+        """Whether this variable is active in the program"""
         return self._active
 
     @active.setter
     def active(self, active):
-        """ Whether this variable is active in the program """
+        """Whether this variable is active in the program"""
         self._active = active
 
     @property
     def data(self):
-        """ CPU data """
+        """CPU data"""
 
         return self._data
 
 
 # ----------------------------------------------------------- Uniform class ---
 class Uniform(Variable):
-    """ A Uniform represents a program uniform variable. """
+    """A Uniform represents a program uniform variable."""
 
     _ufunctions = {
         gl.GL_FLOAT: gl.glUniform1fv,
@@ -190,11 +196,11 @@ class Uniform(Variable):
         gl.GL_FLOAT_MAT4: gl.glUniformMatrix4fv,
         gl.GL_SAMPLER_1D: gl.glUniform1i,
         gl.GL_SAMPLER_2D: gl.glUniform1i,
-        gl.GL_SAMPLER_CUBE: gl.glUniform1i
+        gl.GL_SAMPLER_CUBE: gl.glUniform1i,
     }
 
     def __init__(self, program, name, gtype):
-        """ Initialize the input into default state """
+        """Initialize the input into default state"""
 
         Variable.__init__(self, program, name, gtype)
         size, _, dtype = gl_typeinfo[self._gtype]
@@ -203,11 +209,10 @@ class Uniform(Variable):
         self._texture_unit = -1
 
     def set_data(self, data):
-        """ Assign new data to the variable (deferred operation) """
+        """Assign new data to the variable (deferred operation)"""
 
         # Textures need special handling
         if self._gtype == gl.GL_SAMPLER_1D:
-
             if isinstance(data, Texture1D):
                 self._data = data
 
@@ -216,7 +221,7 @@ class Uniform(Variable):
 
             # Automatic texture creation if required
             else:
-                data = np.array(data, copy=False)
+                data = np.asarray(data)  # NumPy 2.0 compatible
                 if data.dtype in [np.float16, np.float32, np.float64]:
                     self._data = data.astype(np.float32).view(Texture1D)
                 else:
@@ -231,7 +236,7 @@ class Uniform(Variable):
 
             # Automatic texture creation if required
             else:
-                data = np.array(data, copy=False)
+                data = np.asarray(data)  # NumPy 2.0 compatible
                 if data.dtype in [np.float16, np.float32, np.float64]:
                     self._data = data.astype(np.float32).view(Texture2D)
                 else:
@@ -245,30 +250,29 @@ class Uniform(Variable):
 
             # Automatic texture creation if required
             else:
-                data = np.array(data, copy=False)
+                data = np.asarray(data)  # NumPy 2.0 compatible
                 if data.dtype in [np.float16, np.float32, np.float64]:
                     self._data = data.astype(np.float32).view(TextureCube)
                 else:
                     self._data = data.view(TextureCube)
 
         else:
-            self._data[...] = np.array(data, copy=False).ravel()
+            self._data[...] = np.asarray(data).ravel()  # NumPy 2.0 compatible
 
         self._need_update = True
 
     def _activate(self):
         if self._gtype in (gl.GL_SAMPLER_1D, gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE):
             if self.data is not None:
-                log.log(5, "GPU: Active texture is %d" % self._texture_unit)
+                log.log(5, 'GPU: Active texture is %d' % self._texture_unit)
                 gl.glActiveTexture(gl.GL_TEXTURE0 + self._texture_unit)
                 if hasattr(self.data, 'activate'):
                     self.data.activate()
 
     def _update(self):
-
         # Check active status (mandatory)
         if not self._active:
-            raise RuntimeError("Uniform variable is not active")
+            raise RuntimeError('Uniform variable is not active')
 
         # WARNING : Uniform are supposed to keep their value between program
         #           activation/deactivation (from the GL documentation). It has
@@ -285,7 +289,7 @@ class Uniform(Variable):
         # Textures (need to get texture count)
         elif self._gtype in (gl.GL_SAMPLER_1D, gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE):
             # texture = self.data
-            log.log(5, "GPU: Activactin texture %d" % self._texture_unit)
+            log.log(5, 'GPU: Activactin texture %d' % self._texture_unit)
             # gl.glActiveTexture(gl.GL_TEXTURE0 + self._unit)
             # gl.glBindTexture(texture.target, texture.handle)
             gl.glUniform1i(self._handle, self._texture_unit)
@@ -295,25 +299,24 @@ class Uniform(Variable):
             self._ufunction(self._handle, 1, self._data)
 
     def _create(self):
-        """ Create uniform on GPU (get handle) """
+        """Create uniform on GPU (get handle)"""
 
-        self._handle = gl.glGetUniformLocation(
-            self._program.handle, self._name)
+        self._handle = gl.glGetUniformLocation(self._program.handle, self._name)
 
 
 # --------------------------------------------------------- Attribute class ---
 class Attribute(Variable):
-    """ An Attribute represents a program attribute variable """
+    """An Attribute represents a program attribute variable"""
 
     _afunctions = {
         gl.GL_FLOAT: gl.glVertexAttrib1f,
         gl.GL_FLOAT_VEC2: gl.glVertexAttrib2f,
         gl.GL_FLOAT_VEC3: gl.glVertexAttrib3f,
-        gl.GL_FLOAT_VEC4: gl.glVertexAttrib4f
+        gl.GL_FLOAT_VEC4: gl.glVertexAttrib4f,
     }
 
     def __init__(self, program, name, gtype):
-        """ Initialize the input into default state """
+        """Initialize the input into default state"""
 
         Variable.__init__(self, program, name, gtype)
 
@@ -324,7 +327,7 @@ class Attribute(Variable):
         self._generic = False
 
     def set_data(self, data):
-        """ Assign new data to the variable (deferred operation) """
+        """Assign new data to the variable (deferred operation)"""
 
         isnumeric = isinstance(data, (float, int))
 
@@ -334,14 +337,16 @@ class Attribute(Variable):
 
         # We already have a vertex buffer
         # HACK: disable reusing the same buffer for now: fails if the data has not the same shape
-        #elif isinstance(self._data, (VertexBuffer, VertexArray)) and len(self._data) == len(data):
+        # elif isinstance(self._data, (VertexBuffer, VertexArray)) and len(self._data) == len(data):
         #    self._data[...] = data
 
         # Data is a tuple with size <= 4, we assume this designates a generate
         # vertex attribute.
-        elif (isnumeric or (isinstance(data, (tuple, list)) and
-                            len(data) in (1, 2, 3, 4) and
-                            isinstance(data[0], (float, int)))):
+        elif isnumeric or (
+            isinstance(data, (tuple, list))
+            and len(data) in (1, 2, 3, 4)
+            and isinstance(data[0], (float, int))
+        ):
             # Let numpy convert the data for us
             _, _, dtype = gl_typeinfo[self._gtype]
             self._data = np.array(data).astype(dtype)
@@ -354,7 +359,7 @@ class Attribute(Variable):
         # upload it later to GPU memory.
         else:  # lif not isinstance(data, VertexBuffer):
             name, base, count = self.dtype
-            data = np.array(data, dtype=base, copy=False)
+            data = np.asarray(data, dtype=base)  # NumPy 2.0 compatible
             data = data.ravel().view([(name, base, (count,))])
             # WARNING : transform data with the right type
             # data = np.array(data,copy=False)
@@ -370,7 +375,8 @@ class Attribute(Variable):
             offset = ctypes.c_void_p(self.data.offset)
             gl.glEnableVertexAttribArray(self.handle)
             gl.glVertexAttribPointer(
-                self.handle, size, gtype, gl.GL_FALSE, stride, offset)
+                self.handle, size, gtype, gl.GL_FALSE, stride, offset
+            )
 
     def _deactivate(self):
         if isinstance(self.data, VertexBuffer):
@@ -381,21 +387,21 @@ class Attribute(Variable):
             self.data.deactivate()
 
     def _update(self):
-        """ Actual upload of data to GPU memory  """
+        """Actual upload of data to GPU memory"""
 
-        log.log(5, "GPU: Updating %s" % self.name)
+        log.log(5, f'GPU: Updating {self.name}')
 
         if self.data is None or self.data.size == 0:
-            log.debug("Data is empty for %s" % self.name)
+            log.debug(f'Data is empty for {self.name}')
             return
         else:
-            log.log(5, "data shape is %s" % self.data.shape)
+            log.log(5, f'data shape is {self.data.shape}')
 
         # Check active status (mandatory)
-#        if not self._active:
-#            raise RuntimeError("Attribute variable is not active")
-#        if self._data is None:
-#            raise RuntimeError("Attribute variable data is not set")
+        #        if not self._active:
+        #            raise RuntimeError("Attribute variable is not active")
+        #        if self._data is None:
+        #            raise RuntimeError("Attribute variable data is not set")
 
         # Generic vertex attribute (all vertices receive the same value)
         if self._generic:
@@ -406,13 +412,13 @@ class Attribute(Variable):
         # Regular vertex buffer
         elif self.handle >= 0:
             if self.data is None:
-                log.warning("data %s is None" % self.name)
+                log.warning(f'data {self.name} is None')
                 return
             elif self.data.size == 0:
-                log.warning("data %s is empty, %s" % (self.name, self.data.shape))
+                log.warning(f'data {self.name} is empty, {self.data.shape}')
                 return
             else:
-                log.log(5, "data %s is okay %s" % (self.name, self.data.shape))
+                log.log(5, f'data {self.name} is okay {self.data.shape}')
 
             # Get relevant information from gl_typeinfo
             size, gtype, dtype = gl_typeinfo[self._gtype]
@@ -423,23 +429,24 @@ class Attribute(Variable):
             gl.glEnableVertexAttribArray(self.handle)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.data.handle)
             gl.glVertexAttribPointer(
-                self.handle, size, gtype, gl.GL_FALSE, stride, offset)
+                self.handle, size, gtype, gl.GL_FALSE, stride, offset
+            )
 
     def _create(self):
-        """ Create attribute on GPU (get handle) """
+        """Create attribute on GPU (get handle)"""
 
         self._handle = gl.glGetAttribLocation(self._program.handle, self.name)
 
     @property
     def size(self):
-        """ Size of the underlying vertex buffer """
+        """Size of the underlying vertex buffer"""
 
         if self._data is None:
             return 0
         return self._data.size
 
     def __len__(self):
-        """ Length of the underlying vertex buffer """
+        """Length of the underlying vertex buffer"""
 
         if self._data is None:
             return 0
