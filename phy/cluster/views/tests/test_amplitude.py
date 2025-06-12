@@ -1,24 +1,22 @@
-# -*- coding: utf-8 -*-
-
 """Test amplitude view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
-
 from phylib.io.mock import artificial_spike_samples
 from phylib.utils import Bunch, connect
 
 from phy.plot.tests import mouse_click
+
 from ..amplitude import AmplitudeView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test amplitude view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_amplitude_view_0(qtbot, gui):
     v = AmplitudeView(
@@ -40,35 +38,44 @@ def test_amplitude_view_1(qtbot, gui):
     x = np.zeros(1)
     v = AmplitudeView(
         amplitudes=lambda cluster_ids, load_all=False: [
-            Bunch(amplitudes=x, spike_ids=[0], spike_times=[0])],
+            Bunch(amplitudes=x, spike_ids=[0], spike_times=[0])
+        ],
     )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
-    v.show_time_range((.499, .501))
+    v.show_time_range((0.499, 0.501))
 
     _stop_and_close(qtbot, v)
 
 
 def test_amplitude_view_2(qtbot, gui):
     n = 1000
-    st1 = artificial_spike_samples(n) / 20000.
-    st2 = artificial_spike_samples(n) / 20000.
+    st1 = artificial_spike_samples(n) / 20000.0
+    st2 = artificial_spike_samples(n) / 20000.0
     v = AmplitudeView(
         amplitudes={
-            'amp1': lambda cluster_ids, load_all=False: [Bunch(
-                amplitudes=15 + np.random.randn(n),
-                spike_ids=np.arange(n),
-                spike_times=st1,
-            ) for c in cluster_ids],
-            'amp2': lambda cluster_ids, load_all=False: [Bunch(
-                amplitudes=10 + np.random.randn(n),
-                spike_ids=np.arange(n),
-                spike_times=st2,
-            ) for c in cluster_ids],
-        }, duration=max(st1.max(), st2.max()))
+            'amp1': lambda cluster_ids, load_all=False: [
+                Bunch(
+                    amplitudes=15 + np.random.randn(n),
+                    spike_ids=np.arange(n),
+                    spike_times=st1,
+                )
+                for c in cluster_ids
+            ],
+            'amp2': lambda cluster_ids, load_all=False: [
+                Bunch(
+                    amplitudes=10 + np.random.randn(n),
+                    spike_ids=np.arange(n),
+                    spike_times=st2,
+                )
+                for c in cluster_ids
+            ],
+        },
+        duration=max(st1.max(), st2.max()),
+    )
     v.show()
     qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
@@ -91,9 +98,10 @@ def test_amplitude_view_2(qtbot, gui):
     @connect(sender=v)
     def on_select_time(sender, time):
         _times.append(time)
+
     mouse_click(qtbot, v.canvas, (w / 3, h / 2), modifiers=('Alt',))
     assert len(_times) == 1
-    assert np.allclose(_times[0], .5, atol=.01)
+    assert np.allclose(_times[0], 0.5, atol=0.01)
 
     # Split without selection.
     spike_ids = v.on_request_split()

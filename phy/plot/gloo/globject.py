@@ -8,14 +8,14 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class GLObject(object):
-    """ Generic GL object that may live both on CPU and GPU """
+class GLObject:
+    """Generic GL object that may live both on CPU and GPU"""
 
     # Internal id counter to keep track of GPU objects
     _idcount = 0
 
     def __init__(self):
-        """ Initialize the object in the default state """
+        """Initialize the object in the default state"""
 
         self._handle = -1
         self._target = None
@@ -44,26 +44,26 @@ class GLObject(object):
 
     @property
     def need_create(self):
-        """ Whether object needs to be created """
+        """Whether object needs to be created"""
         return self._need_create
 
     @property
     def need_update(self):
-        """ Whether object needs to be updated """
+        """Whether object needs to be updated"""
         return self._need_update
 
     @property
     def need_setup(self):
-        """ Whether object needs to be setup """
+        """Whether object needs to be setup"""
         return self._need_setup
 
     @property
     def need_delete(self):
-        """ Whether object needs to be deleted """
+        """Whether object needs to be deleted"""
         return self._need_delete
 
     def delete(self):
-        """ Delete the object from GPU memory """
+        """Delete the object from GPU memory"""
 
         # if self.need_delete:
         self._delete()
@@ -74,9 +74,9 @@ class GLObject(object):
         self._need_delete = False
 
     def activate(self):
-        """ Activate the object on GPU """
+        """Activate the object on GPU"""
 
-        if hasattr(self, "base") and isinstance(self.base, GLObject):
+        if hasattr(self, 'base') and isinstance(self.base, GLObject):
             self.base.activate()
             return
 
@@ -91,63 +91,51 @@ class GLObject(object):
             self._need_setup = False
 
         if self.need_update:
-            log.log(5, "%s need update" % self.handle)
+            log.log(5, f'{self.handle} need update')
             self._update()
             self._need_update = False
 
     def deactivate(self):
-        """ Deactivate the object on GPU """
+        """Deactivate the object on GPU"""
 
-        if hasattr(self, "base") and isinstance(self.base, GLObject):
+        if hasattr(self, 'base') and isinstance(self.base, GLObject):
             self.base.deactivate()
         else:
             self._deactivate()
 
     @property
     def handle(self):
-        """ Name of this object on the GPU """
+        """Name of this object on the GPU"""
 
-        if hasattr(self, "base") and isinstance(self.base, GLObject):
-            if hasattr(self.base, "_handle"):
+        if hasattr(self, 'base') and isinstance(self.base, GLObject):
+            if hasattr(self.base, '_handle'):
                 return self.base._handle
         return self._handle
         # return self._handle
 
     @property
     def target(self):
-        """ OpenGL type of object. """
+        """OpenGL type of object."""
 
-        if hasattr(self, "base") and isinstance(self.base, GLObject):
+        if hasattr(self, 'base') and isinstance(self.base, GLObject):
             return self.base._target
         return self._target
         # return self._handle
 
     def _create(self):
-        """ Dummy create method """
-
-        pass
+        """Dummy create method"""
 
     def _delete(self):
-        """ Dummy delete method """
-
-        pass
+        """Dummy delete method"""
 
     def _activate(self):
-        """ Dummy activate method """
-
-        pass
+        """Dummy activate method"""
 
     def _deactivate(self):
-        """ Dummy deactivate method """
-
-        pass
+        """Dummy deactivate method"""
 
     def _setup(self):
-        """ Dummy setup method """
-
-        pass
+        """Dummy setup method"""
 
     def _update(self):
-        """ Dummy update method """
-
-        pass
+        """Dummy update method"""

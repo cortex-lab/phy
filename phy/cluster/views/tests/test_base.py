@@ -1,27 +1,28 @@
-# -*- coding: utf-8 -*-
-
 """Test scatter view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
-
 from phylib.utils import emit
-from phy.utils.color import selected_cluster_color, colormaps
+
+from phy.utils.color import colormaps, selected_cluster_color
+
 from ..base import BaseColorView, ManualClusteringView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test manual clustering view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class MyView(BaseColorView, ManualClusteringView):
     def plot(self, **kwargs):
         for i in range(len(self.cluster_ids)):
-            self.canvas.scatter(pos=.25 * np.random.randn(100, 2), color=selected_cluster_color(i))
+            self.canvas.scatter(
+                pos=0.25 * np.random.randn(100, 2), color=selected_cluster_color(i)
+            )
 
     @property
     def status(self):
@@ -52,10 +53,11 @@ def test_manual_clustering_view_2(qtbot, gui):
     v = MyView()
     v.canvas.show()
     v.add_color_scheme(
-        lambda cid: cid, name='myscheme', colormap=colormaps.rainbow, cluster_ids=[0, 1])
+        lambda cid: cid, name='myscheme', colormap=colormaps.rainbow, cluster_ids=[0, 1]
+    )
     v.attach(gui)
 
-    class Supervisor(object):
+    class Supervisor:
         pass
 
     emit('select', Supervisor(), cluster_ids=[0, 1])

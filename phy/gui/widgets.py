@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """HTML widgets for GUIs."""
 
 
@@ -11,17 +9,31 @@ import json
 import logging
 from functools import partial
 
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from phylib.utils import connect, emit
+from phylib.utils._misc import _CustomEncoder, _pretty_floats, read_text
+from phylib.utils._types import _is_integer
 from qtconsole.inprocess import QtInProcessKernelManager
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
+
+from phy.utils.color import _is_bright, colormaps
 
 from .qt import (
-    WebView, QObject, QWebChannel, QWidget, QGridLayout, QPlainTextEdit,
-    QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox,
-    pyqtSlot, _static_abs_path, _block, Debouncer)
-from phylib.utils import emit, connect
-from phy.utils.color import colormaps, _is_bright
-from phylib.utils._misc import _CustomEncoder, read_text, _pretty_floats
-from phylib.utils._types import _is_integer
+    Debouncer,
+    QCheckBox,
+    QDoubleSpinBox,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QObject,
+    QPlainTextEdit,
+    QSpinBox,
+    QWebChannel,
+    QWidget,
+    WebView,
+    _block,
+    _static_abs_path,
+    pyqtSlot,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +42,17 @@ logger = logging.getLogger(__name__)
 # IPython widget
 # -----------------------------------------------------------------------------
 
+
 class IPythonView(RichJupyterWidget):
     """A view with an IPython console living in the same Python process as the GUI."""
 
     def __init__(self, *args, **kwargs):
-        super(IPythonView, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def start_kernel(self):
         """Start the IPython kernel."""
 
-        logger.debug("Starting the kernel.")
+        logger.debug('Starting the kernel.')
 
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel(show_banner=False)
@@ -51,18 +64,22 @@ class IPythonView(RichJupyterWidget):
             self.kernel_client = self.kernel_manager.client()
             self.kernel_client.start_channels()
         except Exception as e:  # pragma: no cover
-            logger.error("Could not start IPython kernel: %s.", str(e))
+            logger.error('Could not start IPython kernel: %s.', str(e))
 
         self.set_default_style('linux')
         self.exit_requested.connect(self.stop)
 
     def inject(self, **kwargs):
         """Inject variables into the IPython namespace."""
-        logger.debug("Injecting variables into the kernel: %s.", ', '.join(kwargs.keys()))
+        logger.debug(
+            'Injecting variables into the kernel: %s.', ', '.join(kwargs.keys())
+        )
         try:
             self.kernel.shell.push(kwargs)
         except Exception as e:  # pragma: no cover
-            logger.error("Could not inject variables to the IPython kernel: %s.", str(e))
+            logger.error(
+                'Could not inject variables to the IPython kernel: %s.', str(e)
+            )
 
     def attach(self, gui, **kwargs):
         """Add the view to the GUI, start the kernel, and inject the specified variables."""
@@ -71,11 +88,13 @@ class IPythonView(RichJupyterWidget):
         self.inject(gui=gui, **kwargs)
         try:
             import numpy
+
             self.inject(np=numpy)
         except ImportError:  # pragma: no cover
             pass
         try:
             import matplotlib.pyplot as plt
+
             self.inject(plt=plt)
         except ImportError:  # pragma: no cover
             pass
@@ -86,12 +105,12 @@ class IPythonView(RichJupyterWidget):
 
     def stop(self):
         """Stop the kernel."""
-        logger.debug("Stopping the kernel.")
+        logger.debug('Stopping the kernel.')
         try:
             self.kernel_client.stop_channels()
             self.kernel_manager.shutdown_kernel()
         except Exception as e:  # pragma: no cover
-            logger.error("Could not stop the IPython kernel: %s.", str(e))
+            logger.error('Could not stop the IPython kernel: %s.', str(e))
 
 
 # -----------------------------------------------------------------------------
@@ -165,7 +184,7 @@ def _uniq(seq):
     return [int(x) for x in seq if not (x in seen or seen_add(x))]
 
 
-class Barrier(object):
+class Barrier:
     """Implement a synchronization barrier."""
 
     def __init__(self):
@@ -199,7 +218,7 @@ class Barrier(object):
         return self._results.get(key, None)
 
 
-class HTMLBuilder(object):
+class HTMLBuilder:
     """Build an HTML widget."""
 
     def __init__(self, title=''):
@@ -210,19 +229,19 @@ class HTMLBuilder(object):
 
     def add_style(self, s):
         """Add a CSS style."""
-        self.add_header('<style>\n{}\n</style>'.format(s))
+        self.add_header(f'<style>\n{s}\n</style>')
 
     def add_style_src(self, filename):
         """Add a link to a stylesheet URL."""
-        self.add_header(('<link rel="stylesheet" type="text/css" href="{}" />').format(filename))
+        self.add_header(f'<link rel="stylesheet" type="text/css" href="{filename}" />')
 
     def add_script(self, s):
         """Add Javascript code."""
-        self.add_header('<script>{}</script>'.format(s))
+        self.add_header(f'<script>{s}</script>')
 
     def add_script_src(self, filename):
         """Add a link to a Javascript file."""
-        self.add_header('<script src="{}"></script>'.format(filename))
+        self.add_header(f'<script src="{filename}"></script>')
 
     def add_header(self, s):
         """Add HTML headers."""
@@ -252,16 +271,17 @@ class HTMLBuilder(object):
 class JSEventEmitter(QObject):
     """Object used to relay the Javascript events to Python. Some vents can be debounced so that
     there is a minimal delay between two consecutive events of the same type."""
+
     _parent = None
 
     def __init__(self, *args, debounce_events=()):
-        super(JSEventEmitter, self).__init__(*args)
+        super().__init__(*args)
         self._debouncer = Debouncer()
         self._debounce_events = debounce_events
 
     @pyqtSlot(str, str)
     def emitJS(self, name, arg_json):
-        logger.log(5, "Emit from Python %s %s.", name, arg_json)
+        logger.log(5, 'Emit from Python %s %s.', name, arg_json)
         args = str(name), self._parent, json.loads(str(arg_json))
         # NOTE: debounce some events but not other events coming from JS.
         # This is typically used for select events of table widgets.
@@ -286,6 +306,7 @@ class HTMLWidget(WebView):
         The list of event names, raised by the underlying HTML widget, that should be debounced.
 
     """
+
     def __init__(self, *args, title='', debounce_events=()):
         # Due to a limitation of QWebChannel, need to register a Python object
         # BEFORE this web view is created?!
@@ -294,7 +315,7 @@ class HTMLWidget(WebView):
         self.channel = QWebChannel(*args)
         self.channel.registerObject('eventEmitter', self._event)
 
-        super(HTMLWidget, self).__init__(*args)
+        super().__init__(*args)
         self.page().setWebChannel(self.channel)
 
         self.builder = HTMLBuilder(title=title)
@@ -313,7 +334,8 @@ class HTMLWidget(WebView):
     def view_source(self, callback=None):
         """View the HTML source of the widget."""
         return self.eval_js(
-            "document.getElementsByTagName('html')[0].innerHTML", callback=callback)
+            "document.getElementsByTagName('html')[0].innerHTML", callback=callback
+        )
 
     # Javascript methods
     # -------------------------------------------------------------------------
@@ -331,13 +353,14 @@ class HTMLWidget(WebView):
             evaluated. It takes as input the output of the Javascript expression.
 
         """
-        logger.log(5, "%s eval JS %s", self.__class__.__name__, expr)
+        logger.log(5, f'{self.__class__.__name__} eval JS {expr}')
         return self.page().runJavaScript(expr, callback or (lambda _: _))
 
 
 # -----------------------------------------------------------------------------
 # HTML table
 # -----------------------------------------------------------------------------
+
 
 def dumps(o):
     """Dump a JSON object into a string, with pretty floats."""
@@ -347,13 +370,14 @@ def dumps(o):
 def _color_styles():
     """Use colormap colors in table widget."""
     return '\n'.join(
-        '''
-        #table .color-%d > td[class='id'] {
-            background-color: rgb(%d, %d, %d);
-            %s
-        }
-        ''' % (i, r, g, b, 'color: #000 !important;' if _is_bright((r, g, b)) else '')
-        for i, (r, g, b) in enumerate(colormaps.default * 255))
+        f"""
+        #table .color-{i} > td[class='id'] {{
+            background-color: rgb({r}, {g}, {b});
+            {'color: #000 !important;' if _is_bright((r, g, b)) else ''}
+        }}
+        """
+        for i, (r, g, b) in enumerate(colormaps.default * 255)
+    )
 
 
 class Table(HTMLWidget):
@@ -367,9 +391,16 @@ class Table(HTMLWidget):
     _ready = False
 
     def __init__(
-            self, *args, columns=None, value_names=None, data=None, sort=None, title='',
-            debounce_events=()):
-        super(Table, self).__init__(*args, title=title, debounce_events=debounce_events)
+        self,
+        *args,
+        columns=None,
+        value_names=None,
+        data=None,
+        sort=None,
+        title='',
+        debounce_events=(),
+    ):
+        super().__init__(*args, title=title, debounce_events=debounce_events)
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def eval_js(self, expr, callback=None):
@@ -396,8 +427,8 @@ class Table(HTMLWidget):
 
         """
         # Avoid JS errors when the table is not yet fully loaded.
-        expr = 'if (typeof table !== "undefined") ' + expr
-        return super(Table, self).eval_js(expr, callback=callback)
+        expr = f'if (typeof table !== "undefined") {expr}'
+        return super().eval_js(expr, callback=callback)
 
     def _init_table(self, columns=None, value_names=None, data=None, sort=None):
         """Build the table."""
@@ -422,23 +453,25 @@ class Table(HTMLWidget):
         value_names_json = dumps(self.value_names)
         sort_json = dumps(sort)
 
-        b.body += '''
+        b.body += f"""
         <script>
-            var data = %s;
+            var data = {data_json};
 
-            var options = {
-              valueNames: %s,
-              columns: %s,
-              sort: %s,
-            };
+            var options = {{
+              valueNames: {value_names_json},
+              columns: {columns_json},
+              sort: {sort_json},
+            }};
 
             var table = new Table('table', options, data);
 
         </script>
-        ''' % (data_json, value_names_json, columns_json, sort_json)
+        """
         self.build(lambda html: emit('ready', self))
 
-        connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
+        connect(
+            event='select', sender=self, func=lambda *args: self.update(), last=True
+        )
         connect(event='ready', sender=self, func=lambda *args: self._set_ready())
 
     def _set_ready(self):
@@ -451,13 +484,13 @@ class Table(HTMLWidget):
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
-        logger.log(5, "Sort by `%s` %s.", name, sort_dir)
-        self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
+        logger.log(5, 'Sort by `%s` %s.', name, sort_dir)
+        self.eval_js(f'table.sort_("{name}", "{sort_dir}");')
 
     def filter(self, text=''):
         """Filter the view with a Javascript expression."""
-        logger.log(5, "Filter table with `%s`.", text)
-        self.eval_js('table.filter_("{}", true);'.format(text))
+        logger.log(5, 'Filter table with `%s`.', text)
+        self.eval_js(f'table.filter_("{text}", true);')
 
     def get_ids(self, callback=None):
         """Get the list of ids."""
@@ -497,37 +530,37 @@ class Table(HTMLWidget):
         """
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        self.eval_js('table.select({}, {});'.format(dumps(ids), dumps(kwargs)), callback=callback)
+        self.eval_js(f'table.select({dumps(ids)}, {dumps(kwargs)});', callback=callback)
 
     def scroll_to(self, id):
         """Scroll until a given row is visible."""
-        self.eval_js('table._scrollTo({});'.format(id))
+        self.eval_js(f'table._scrollTo({id});')
 
     def set_busy(self, busy):
         """Set the busy state of the GUI."""
-        self.eval_js('table.setBusy({});'.format('true' if busy else 'false'))
+        self.eval_js(f'table.setBusy({"true" if busy else "false"});')
 
     def get(self, id, callback=None):
         """Get the object given its id."""
-        self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
+        self.eval_js(f'table.get("id", {id})[0]["_values"]', callback=callback)
 
     def add(self, objects):
         """Add objects object to the table."""
         if not objects:
             return
-        self.eval_js('table.add_({});'.format(dumps(objects)))
+        self.eval_js(f'table.add_({dumps(objects)});')
 
     def change(self, objects):
         """Change some objects."""
         if not objects:
             return
-        self.eval_js('table.change_({});'.format(dumps(objects)))
+        self.eval_js(f'table.change_({dumps(objects)});')
 
     def remove(self, ids):
         """Remove some objects from their ids."""
         if not ids:
             return
-        self.eval_js('table.remove_({});'.format(dumps(ids)))
+        self.eval_js(f'table.remove_({dumps(ids)});')
 
     def remove_all(self):
         """Remove all rows in the table."""
@@ -537,7 +570,7 @@ class Table(HTMLWidget):
         """Remove all rows in the table and add new objects."""
         if not objects:
             return self.remove_all()
-        self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
+        self.eval_js(f'table.removeAllAndAdd({dumps(objects)});')
 
     def get_selected(self, callback=None):
         """Get the currently selected rows."""
@@ -552,11 +585,13 @@ class Table(HTMLWidget):
 # KeyValueWidget
 # -----------------------------------------------------------------------------
 
+
 class KeyValueWidget(QWidget):
     """A Qt widget that displays a simple form where each field has a name, a type, and accept
     user input."""
+
     def __init__(self, *args, **kwargs):
-        super(KeyValueWidget, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._items = []
         self._layout = QGridLayout(self)
 
@@ -575,7 +610,7 @@ class KeyValueWidget(QWidget):
         if isinstance(default, list):
             # Take lists into account.
             for i, value in enumerate(default):
-                self.add_pair('%s[%d]' % (name, i), default=value, vtype=vtype)
+                self.add_pair(f'{name}[{i}]', default=value, vtype=vtype)
             return
         if vtype is None and default is not None:
             vtype = type(default).__name__
@@ -601,7 +636,7 @@ class KeyValueWidget(QWidget):
             widget = QCheckBox(self)
             widget.setChecked(default is True)
         else:  # pragma: no cover
-            raise ValueError("Not supported vtype: %s." % vtype)
+            raise ValueError(f'Not supported vtype: {vtype}.')
 
         widget.setMaximumWidth(400)
 
@@ -618,7 +653,8 @@ class KeyValueWidget(QWidget):
     def names(self):
         """List of field names."""
         return sorted(
-            set(i[0] if '[' not in i[0] else i[0][:i[0].index('[')] for i in self._items))
+            {i[0] if '[' not in i[0] else i[0][: i[0].index('[')] for i in self._items}
+        )
 
     def get_widget(self, name):
         """Get the widget of a field."""
@@ -629,15 +665,15 @@ class KeyValueWidget(QWidget):
     def get_value(self, name):
         """Get the default or user-entered value of a field."""
         # Detect if the requested name is a list type.
-        names = set(i[0] for i in self._items)
-        if '%s[0]' % name in names:
+        names = {i[0] for i in self._items}
+        if f'{name}[0]' in names:
             out = []
             i = 0
-            namei = '%s[%d]' % (name, i)
+            namei = f'{name}[{i}]'
             while namei in names:
                 out.append(self.get_value(namei))
                 i += 1
-                namei = '%s[%d]' % (name, i)
+                namei = f'{name}[{i}]'
             return out
         for name_, vtype, default, widget in self._items:
             if name_ == name:

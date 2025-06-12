@@ -1,44 +1,44 @@
-# -*- coding: utf-8 -*-
-
 """Base OpenGL classes."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-from contextlib import contextmanager
 import gc
 import logging
 import re
+from contextlib import contextmanager, suppress
 from timeit import default_timer
 
 import numpy as np
+from phylib.utils import Bunch, connect, emit
 
-from phylib.utils import connect, emit, Bunch
-from phy.gui.qt import Qt, QEvent, QOpenGLWindow
+from phy.gui.qt import QEvent, QOpenGLWindow, Qt
+
 from . import gloo
 from .gloo import gl
-from .transform import TransformChain, Clip, pixels_to_ndc, Range
-from .utils import _load_shader, _get_array, BatchAccumulator
-
+from .transform import Clip, Range, TransformChain, pixels_to_ndc
+from .utils import BatchAccumulator, _get_array, _load_shader
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utils
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def indent(text):
-    return '\n'.join('    ' + l.strip() for l in text.splitlines())
+    return '\n'.join(f'    {l.strip()}' for l in text.splitlines())
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Base spike visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class BaseVisual(object):
+
+class BaseVisual:
     """A Visual represents one object (or homogeneous set of objects).
 
     It is rendered with a single pass of a single gloo program with a single type of GL primitive.
@@ -94,9 +94,9 @@ class BaseVisual(object):
 
     def set_shader(self, name):
         """Set the built-in vertex and fragment shader."""
-        self.vertex_shader = _load_shader(name + '.vert')
-        self.fragment_shader = _load_shader(name + '.frag')
-        self.geometry_shader = _load_shader(name + '.geom')
+        self.vertex_shader = _load_shader(f'{name}.vert')
+        self.fragment_shader = _load_shader(f'{name}.frag')
+        self.geometry_shader = _load_shader(f'{name}.geom')
 
     def set_primitive_type(self, primitive_type):
         """Set the primitive type (points, lines, line_strip, line_fan, triangles)."""
@@ -115,12 +115,14 @@ class BaseVisual(object):
             # Draw the program.
             self.program.draw(self.gl_primitive_type, self.index_buffer)
         else:  # pragma: no cover
-            logger.debug("Skipping drawing visual `%s` because the program "
-                         "has not been built yet.", self)
+            logger.debug(
+                'Skipping drawing visual `%s` because the program has not been built yet.',
+                self,
+            )
 
     def on_resize(self, width, height):
         """Update the window size in the OpenGL program."""
-        s = self.program._vertex.code + '\n' + self.program.fragment.code
+        s = f'{self.program._vertex.code}\n{self.program.fragment.code}'
         # HACK: ensure that u_window_size appears somewhere in the shaders body (discarding
         # the headers).
         s = s.replace('uniform vec2 u_window_size;', '')
@@ -177,8 +179,12 @@ class BaseVisual(object):
         # WARNING: size should be the number of items for correct batch array creation,
         # not the number of vertices.
         self._acc.add(
-            data, box_index=box_index, n_items=data._n_items,
-            n_vertices=data._n_vertices, noconcat=self._noconcat)
+            data,
+            box_index=box_index,
+            n_items=data._n_items,
+            n_vertices=data._n_vertices,
+            noconcat=self._noconcat,
+        )
 
     def reset_batch(self):
         """Reinitialize the batch."""
@@ -201,27 +207,31 @@ class BaseVisual(object):
         self.program['a_box_index'] = a_box_index.astype(np.float32)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Build program with layouts
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _get_glsl(to_insert, shader_type=None, location=None, exclude_origins=()):
     """From a `to_insert` list of (shader_type, location, origin, snippet), return the
     concatenated snippet that satisfies the specified shader type, location, and origin."""
-    return '\n'.join((
+    return '\n'.join(
         snippet
         for (shader_type_, location_, origin_, snippet) in to_insert
-        if shader_type_ == shader_type and location_ == location and
-        origin_ not in exclude_origins
-    ))
+        if shader_type_ == shader_type
+        and location_ == location
+        and origin_ not in exclude_origins
+    )
 
 
 def _repl_vars(snippet, varout, varin):
-    snippet = snippet.replace('{{varout}}', varout if varout != 'gl_Position' else 'pos_tmp')
+    snippet = snippet.replace(
+        '{{varout}}', varout if varout != 'gl_Position' else 'pos_tmp'
+    )
     return snippet.replace('{{varin}}', varin)
 
 
-class GLSLInserter(object):
+class GLSLInserter:
     """Object used to insert GLSL snippets into shader code.
 
     This class provides methods to specify the snippets to insert, and the
@@ -237,7 +247,9 @@ class GLSLInserter(object):
 
     def _init_insert(self):
         self.insert_vert('vec2 {{varout}} = {{varin}};', 'before_transforms', index=0)
-        self.insert_vert('gl_Position = vec4({{varout}}, 0., 1.);', 'after_transforms', index=0)
+        self.insert_vert(
+            'gl_Position = vec4({{varout}}, 0., 1.);', 'after_transforms', index=0
+        )
         self.insert_vert('varying vec2 v_{{varout}};\n', 'header', index=0)
         self.insert_frag('varying vec2 v_{{varout}};\n', 'header', index=0)
 
@@ -289,9 +301,9 @@ class GLSLInserter(object):
 
     def add_varying(self, vtype, name, value):
         """Add a varying variable."""
-        self.insert_vert('varying %s %s;' % (vtype, name), 'header')
-        self.insert_frag('varying %s %s;' % (vtype, name), 'header')
-        self.insert_vert('%s = %s;' % (name, value), 'end')
+        self.insert_vert(f'varying {vtype} {name};', 'header')
+        self.insert_frag(f'varying {vtype} {name};', 'header')
+        self.insert_vert(f'{name} = {value};', 'end')
 
     def add_gpu_transforms(self, tc):
         """Insert all GLSL snippets from a transform chain."""
@@ -305,7 +317,9 @@ class GLSLInserter(object):
         # Clipping.
         clip = tc.get('Clip')
         if clip:
-            self.insert_frag(clip.glsl('v_{{varout}}'), 'before_transforms', origin=origin)
+            self.insert_frag(
+                clip.glsl('v_{{varout}}'), 'before_transforms', origin=origin
+            )
 
     def insert_into_shaders(self, vertex, fragment, exclude_origins=()):
         """Insert all GLSL snippets in a vertex and fragment shaders.
@@ -345,28 +359,32 @@ class GLSLInserter(object):
         if not self._variables:
             logger.debug(
                 "The vertex shader doesn't contain the transform placeholder: skipping the "
-                "transform chain GLSL insertion.")
+                'transform chain GLSL insertion.'
+            )
             return vertex, fragment
         assert self._variables
 
         # Define pos_orig only once.
         for varout, varin in self._variables:
             if varout == 'gl_Position':
-                self.insert_vert('vec2 pos_orig = %s;' % varin, 'before_transforms', index=0)
+                self.insert_vert(
+                    f'vec2 pos_orig = {varin};', 'before_transforms', index=0
+                )
 
         # Replace the variable placeholders.
         to_insert = []
-        for (shader_type, location, origin, glsl) in self._to_insert:
+        for shader_type, location, origin, glsl in self._to_insert:
             if '{{varout}}' not in glsl:
                 to_insert.append((shader_type, location, origin, glsl))
             else:
                 for varout, varin in self._variables:
                     to_insert.append(
-                        (shader_type, location, origin, _repl_vars(glsl, varout, varin)))
+                        (shader_type, location, origin, _repl_vars(glsl, varout, varin))
+                    )
 
         # Headers.
-        vertex = get_vert(to_insert, 'header') + '\n\n' + vertex
-        fragment = get_frag(to_insert, 'header') + '\n\n' + fragment
+        vertex = f'{get_vert(to_insert, "header")}\n\n{vertex}'
+        fragment = f'{get_frag(to_insert, "header")}\n\n{fragment}'
 
         # Get the pre and post transforms.
         vs_insert = get_vert(self._to_insert, 'before_transforms')
@@ -377,7 +395,12 @@ class GLSLInserter(object):
         def repl(m):
             varout, varin = m.group(1), m.group(2)
             varout = varout if varout != 'gl_Position' else 'pos_tmp'
-            return indent(vs_insert).replace('{{varout}}', varout).replace('{{varin}}', varin)
+            return (
+                indent(vs_insert)
+                .replace('{{varout}}', varout)
+                .replace('{{varin}}', varin)
+            )
+
         vertex = self._transform_regex.sub(repl, vertex)
 
         # Insert snippets at the very start of the vertex shader.
@@ -386,11 +409,11 @@ class GLSLInserter(object):
 
         # Insert snippets at the very end of the vertex shader.
         i = vertex.rindex('}')
-        vertex = vertex[:i] + get_vert(to_insert, 'end') + '}\n'
+        vertex = f'{vertex[:i] + get_vert(to_insert, "end")}}}\n'
 
         # Insert snippets at the very end of the fragment shader.
         i = fragment.rindex('}')
-        fragment = fragment[:i] + get_frag(to_insert, 'end') + '}\n'
+        fragment = f'{fragment[:i] + get_frag(to_insert, "end")}}}\n'
 
         # Now, we make the replacements in the fragment shader.
         fs_insert = r'\1\n' + get_frag(to_insert, 'before_transforms')
@@ -404,22 +427,22 @@ class GLSLInserter(object):
         return self
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Base canvas
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def get_modifiers(e):
     """Return modifier names from a Qt event."""
     m = e.modifiers()
     return tuple(
-        name for name in ('Shift', 'Control', 'Alt', 'Meta') if m & getattr(Qt, name + 'Modifier'))
+        name
+        for name in ('Shift', 'Control', 'Alt', 'Meta')
+        if m & getattr(Qt, f'{name}Modifier')
+    )
 
 
-_BUTTON_MAP = {
-    1: 'Left',
-    2: 'Right',
-    4: 'Middle'
-}
+_BUTTON_MAP = {1: 'Left', 2: 'Right', 4: 'Middle'}
 
 
 _SUPPORTED_KEYS = (
@@ -464,7 +487,7 @@ def mouse_info(e):
     p = e.pos()
     x, y = p.x(), p.y()
     b = e.button()
-    return (x, y), _BUTTON_MAP.get(b, None)
+    return (x, y), _BUTTON_MAP.get(b)
 
 
 def key_info(e):
@@ -474,7 +497,7 @@ def key_info(e):
         return chr(key)
     else:
         for name in _SUPPORTED_KEYS:
-            if key == getattr(Qt, 'Key_' + name, None):
+            if key == getattr(Qt, f'Key_{name}', None):
                 return name
 
 
@@ -487,21 +510,22 @@ class LazyProgram(gloo.Program):
     should always be sent from the main GUI thread.
 
     """
+
     def __init__(self, *args, **kwargs):
         self._update_queue = []
         self._is_lazy = False
-        super(LazyProgram, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __setitem__(self, name, data):
         # Remove all past items with the current name.
         if self._is_lazy:
-            self._update_queue[:] = ((n, d) for (n, d) in self._update_queue if n != name)
+            self._update_queue[:] = (
+                (n, d) for (n, d) in self._update_queue if n != name
+            )
             self._update_queue.append((name, data))
         else:
-            try:
-                super(LazyProgram, self).__setitem__(name, data)
-            except IndexError:
-                pass
+            with suppress(IndexError):
+                super().__setitem__(name, data)
 
 
 class BaseCanvas(QOpenGLWindow):
@@ -513,7 +537,7 @@ class BaseCanvas(QOpenGLWindow):
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseCanvas, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.gpu_transforms = TransformChain()
         self.inserter = GLSLInserter()
         self.visuals = []
@@ -527,7 +551,7 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_button = None
         self._mouse_press_modifiers = None
         self._last_mouse_pos = None
-        self._mouse_press_time = 0.
+        self._mouse_press_time = 0.0
         self._current_key_event = None
 
         # Default window size.
@@ -542,8 +566,10 @@ class BaseCanvas(QOpenGLWindow):
         account pan and zoom."""
         panzoom = getattr(self, 'panzoom', None)
         ndc = (
-            panzoom.window_to_ndc(mouse_pos) if panzoom else
-            np.asarray(pixels_to_ndc(mouse_pos, size=self.get_size())))
+            panzoom.window_to_ndc(mouse_pos)
+            if panzoom
+            else np.asarray(pixels_to_ndc(mouse_pos, size=self.get_size()))
+        )
         return ndc
 
     # Queue
@@ -576,7 +602,7 @@ class BaseCanvas(QOpenGLWindow):
         visuals = [v for v in visuals if v is not None]
         self.visuals[:] = (v for v in self.visuals if v.visual not in visuals)
         for v in visuals:
-            logger.log(5, "Remove visual %s.", v)
+            logger.log(5, 'Remove visual %s.', v)
             v.close()
             del v
         gc.collect()
@@ -606,7 +632,7 @@ class BaseCanvas(QOpenGLWindow):
 
         """
         if self.has_visual(visual):
-            logger.log(5, "This visual has already been added.")
+            logger.log(5, 'This visual has already been added.')
             return
         visual.canvas = self
         # This is the list of origins (mostly, interacts and layouts) that should be ignored
@@ -631,12 +657,13 @@ class BaseCanvas(QOpenGLWindow):
         gs = getattr(visual, 'geometry_shader', None)
         if gs:
             gs = gloo.GeometryShader(
-                gs, visual.geometry_count, visual.geometry_in, visual.geometry_out)
+                gs, visual.geometry_count, visual.geometry_in, visual.geometry_out
+            )
 
         # Finally, we create the visual's program.
         visual.program = LazyProgram(vs, fs, gs)
-        logger.log(5, "Vertex shader: %s", vs)
-        logger.log(5, "Fragment shader: %s", fs)
+        logger.log(5, 'Vertex shader: %s', vs)
+        logger.log(5, 'Fragment shader: %s', fs)
 
         # Initialize the size.
         visual.on_resize(self.size().width(), self.size().height())
@@ -647,10 +674,7 @@ class BaseCanvas(QOpenGLWindow):
 
     def has_visual(self, visual):
         """Return whether a visual belongs to the canvas."""
-        for v in self.visuals:
-            if v.visual == visual:
-                return True
-        return False
+        return any(v.visual == visual for v in self.visuals)
 
     def iter_update_queue(self):
         """Iterate through all OpenGL program updates called in lazy mode."""
@@ -672,7 +696,7 @@ class BaseCanvas(QOpenGLWindow):
         try:
             gl.enable_depth_mask()
         except Exception as e:  # pragma: no cover
-            logger.debug("Exception in initializetGL: %s", str(e))
+            logger.debug('Exception in initializetGL: %s', str(e))
             return
 
     def paintGL(self):
@@ -687,19 +711,24 @@ class BaseCanvas(QOpenGLWindow):
             # Draw all visuals, clearable first, non clearable last.
             visuals = [v for v in self.visuals if v.get('clearable', True)]
             visuals += [v for v in self.visuals if not v.get('clearable', True)]
-            logger.log(5, "Draw %d visuals.", len(visuals))
+            logger.log(5, 'Draw %d visuals.', len(visuals))
             for v in visuals:
                 visual = v.visual
                 if size != self._size:
                     visual.on_resize(*size)
                 # Do not draw if there are no vertices.
-                if not visual._hidden and visual.n_vertices > 0 and size[0] > 10 and size[1] > 10:
-                    logger.log(5, "Draw visual `%s`.", visual)
+                if (
+                    not visual._hidden
+                    and visual.n_vertices > 0
+                    and size[0] > 10
+                    and size[1] > 10
+                ):
+                    logger.log(5, 'Draw visual `%s`.', visual)
                     visual.on_draw()
             self._size = size
         except Exception as e:  # pragma: no cover
             # raise e
-            logger.debug("Exception in paintGL: %s", str(e))
+            logger.debug('Exception in paintGL: %s', str(e))
             return
 
     # Events
@@ -713,7 +742,7 @@ class BaseCanvas(QOpenGLWindow):
     def emit(self, name, **kwargs):
         """Raise an internal event and call `on_xxx()` on attached objects."""
         for obj in self._attached:
-            f = getattr(obj, 'on_' + name, None)
+            f = getattr(obj, f'on_{name}', None)
             if f:
                 f(Bunch(kwargs))
 
@@ -744,7 +773,7 @@ class BaseCanvas(QOpenGLWindow):
         """Emit an internal `mouse_release` or `mouse_click` event."""
         self._mouse_event('mouse_release', e)
         # HACK: since there is no mouseClickEvent in Qt, emulate it here.
-        if default_timer() - self._mouse_press_time < .25:
+        if default_timer() - self._mouse_press_time < 0.25:
             self._mouse_event('mouse_click', e)
         self._mouse_press_position = None
         self._mouse_press_button = None
@@ -765,7 +794,8 @@ class BaseCanvas(QOpenGLWindow):
             modifiers=modifiers,
             mouse_press_modifiers=self._mouse_press_modifiers,
             button=self._mouse_press_button,
-            mouse_press_position=self._mouse_press_position)
+            mouse_press_position=self._mouse_press_position,
+        )
         self._last_mouse_pos = pos
 
     def wheelEvent(self, e):  # pragma: no cover
@@ -796,14 +826,14 @@ class BaseCanvas(QOpenGLWindow):
 
     def event(self, e):  # pragma: no cover
         """Touch event."""
-        out = super(BaseCanvas, self).event(e)
+        out = super().event(e)
         t = e.type()
         # Two-finger pinch.
-        if (t == QEvent.TouchBegin):
+        if t == QEvent.TouchBegin:
             self.emit('pinch_begin')
-        elif (t == QEvent.TouchEnd):
+        elif t == QEvent.TouchEnd:
             self.emit('pinch_end')
-        elif (t == QEvent.Gesture):
+        elif t == QEvent.Gesture:
             gesture = e.gesture(Qt.PinchGesture)
             if gesture:
                 (x, y) = gesture.centerPoint().x(), gesture.centerPoint().y()
@@ -811,30 +841,39 @@ class BaseCanvas(QOpenGLWindow):
                 last_scale = gesture.lastScaleFactor()
                 rotation = gesture.rotationAngle()
                 self.emit(
-                    'pinch', pos=(x, y),
-                    scale=scale, last_scale=last_scale, rotation=rotation)
+                    'pinch',
+                    pos=(x, y),
+                    scale=scale,
+                    last_scale=last_scale,
+                    rotation=rotation,
+                )
         # General touch event.
-        elif (t == QEvent.TouchUpdate):
+        elif t == QEvent.TouchUpdate:
             points = e.touchPoints()
             # These variables are lists of (x, y) coordinates.
-            pos, last_pos = zip(*[
-                ((p.pos().x(), p.pos.y()), (p.lastPos().x(), p.lastPos.y()))
-                for p in points])
+            pos, last_pos = zip(
+                *[
+                    ((p.pos().x(), p.pos.y()), (p.lastPos().x(), p.lastPos.y()))
+                    for p in points
+                ]
+            )
             self.emit('touch', pos=pos, last_pos=last_pos)
         return out
 
     def update(self):
         """Update the OpenGL canvas."""
         if not self._is_lazy:
-            super(BaseCanvas, self).update()
+            super().update()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Base layout
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class BaseLayout(object):
+
+class BaseLayout:
     """Implement global transforms on a canvas, like subplots."""
+
     canvas = None
     box_var = None
     n_dims = 1
@@ -897,13 +936,18 @@ class BaseLayout(object):
 
     def update_visual(self, visual):
         """Called whenever visual.set_data() is called. Set a_box_index in here."""
-        if (visual.n_vertices > 0 and
-                self.box_var in visual.program and
-                ((visual.program[self.box_var] is None) or
-                 (visual.program[self.box_var].shape[0] != visual.n_vertices))):
-            logger.log(5, "Set %s(%d) for %s" % (self.box_var, visual.n_vertices, visual))
+        if (
+            visual.n_vertices > 0
+            and self.box_var in visual.program
+            and (
+                (visual.program[self.box_var] is None)
+                or (visual.program[self.box_var].shape[0] != visual.n_vertices)
+            )
+        ):
+            logger.log(5, f'Set {self.box_var}({visual.n_vertices}) for {visual}')
             visual.program[self.box_var] = _get_array(
-                self.active_box, (visual.n_vertices, self.n_dims)).astype(np.float32)
+                self.active_box, (visual.n_vertices, self.n_dims)
+            ).astype(np.float32)
 
     def update(self):
         """Update all visuals in the attached canvas."""

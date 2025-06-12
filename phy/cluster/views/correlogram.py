@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Correlogram view."""
 
 
@@ -10,12 +8,13 @@
 import logging
 
 import numpy as np
+from phylib.io.array import _clip
+from phylib.utils import Bunch
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
-from phylib.io.array import _clip
-from phylib.utils import Bunch
-from phy.utils.color import selected_cluster_color, _override_hsv, add_alpha
+from phy.utils.color import _override_hsv, add_alpha, selected_cluster_color
+
 from .base import ManualClusteringView, ScalingMixin
 
 logger = logging.getLogger(__name__)
@@ -24,6 +23,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Correlogram view
 # -----------------------------------------------------------------------------
+
 
 class CorrelogramView(ScalingMixin, ManualClusteringView):
     """A view showing the autocorrelogram of the selected clusters, and all cross-correlograms
@@ -70,14 +70,18 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     }
 
     def __init__(self, correlograms=None, firing_rate=None, sample_rate=None, **kwargs):
-        super(CorrelogramView, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.state_attrs += (
-            'bin_size', 'window_size', 'refractory_period', 'uniform_normalization')
+            'bin_size',
+            'window_size',
+            'refractory_period',
+            'uniform_normalization',
+        )
         self.local_state_attrs += ()
         self.canvas.set_layout(layout='grid')
 
         # Outside margin to show labels.
-        self.canvas.gpu_transforms.add(Scale(.9))
+        self.canvas.gpu_transforms.add(Scale(0.9))
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
@@ -97,7 +101,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.line_visual = LineVisual()
         self.canvas.add_visual(self.line_visual)
 
-        self.text_visual = TextVisual(color=(1., 1., 1., 1.))
+        self.text_visual = TextVisual(color=(1.0, 1.0, 1.0, 1.0))
         self.canvas.add_visual(self.text_visual)
 
     # -------------------------------------------------------------------------
@@ -127,23 +131,27 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             b.pair_index = i, j
             b.color = selected_cluster_color(i, 1)
             if i != j:
-                b.color = add_alpha(_override_hsv(b.color[:3], s=.1, v=1))
+                b.color = add_alpha(_override_hsv(b.color[:3], s=0.1, v=1))
             bunchs.append(b)
         return bunchs
 
     def _plot_pair(self, bunch):
         # Plot the histogram.
         self.correlogram_visual.add_batch_data(
-            hist=bunch.correlogram, color=bunch.color,
-            ylim=bunch.data_bounds[3], box_index=bunch.pair_index)
+            hist=bunch.correlogram,
+            color=bunch.color,
+            ylim=bunch.data_bounds[3],
+            box_index=bunch.pair_index,
+        )
 
         # Plot the firing rate.
-        gray = (.25, .25, .25, 1.)
+        gray = (0.25, 0.25, 0.25, 1.0)
         if bunch.firing_rate is not None:
             # Line.
             pos = np.array([[0, bunch.firing_rate, bunch.data_bounds[2], bunch.firing_rate]])
             self.line_visual.add_batch_data(
-                pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index)
+                pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index
+            )
             # # Text.
             # self.text_visual.add_batch_data(
             #     pos=[bunch.data_bounds[2], bunch.firing_rate],
@@ -154,12 +162,13 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             # )
 
         # Refractory period.
-        xrp0 = round((self.window_size * .5 - self.refractory_period) / self.bin_size)
-        xrp1 = round((self.window_size * .5 + self.refractory_period) / self.bin_size) + 1
+        xrp0 = round((self.window_size * 0.5 - self.refractory_period) / self.bin_size)
+        xrp1 = round((self.window_size * 0.5 + self.refractory_period) / self.bin_size) + 1
         ylim = bunch.data_bounds[3]
         pos = np.array([[xrp0, 0, xrp0, ylim], [xrp1, 0, xrp1, ylim]])
         self.line_visual.add_batch_data(
-            pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index)
+            pos=pos, color=gray, data_bounds=bunch.data_bounds, box_index=bunch.pair_index
+        )
 
     def _plot_labels(self):
         n = len(self.cluster_ids)
@@ -228,19 +237,21 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-        super(CorrelogramView, self).attach(gui)
+        super().attach(gui)
 
         self.actions.add(self.toggle_normalization, shortcut='n', checkable=True)
         self.actions.add(self.toggle_labels, checkable=True, checked=True)
         self.actions.separator()
 
+        self.actions.add(self.set_bin, prompt=True, prompt_default=lambda: self.bin_size * 1000)
         self.actions.add(
-            self.set_bin, prompt=True, prompt_default=lambda: self.bin_size * 1000)
+            self.set_window, prompt=True, prompt_default=lambda: self.window_size * 1000
+        )
         self.actions.add(
-            self.set_window, prompt=True, prompt_default=lambda: self.window_size * 1000)
-        self.actions.add(
-            self.set_refractory_period, prompt=True,
-            prompt_default=lambda: self.refractory_period * 1000)
+            self.set_refractory_period,
+            prompt=True,
+            prompt_default=lambda: self.refractory_period * 1000,
+        )
         self.actions.separator()
 
     # -------------------------------------------------------------------------
@@ -263,11 +274,11 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     @property
     def status(self):
         b, w = self.bin_size * 1000, self.window_size * 1000
-        return '{:.1f} ms ({:.1f} ms)'.format(w, b)
+        return f'{w:.1f} ms ({b:.1f} ms)'
 
     def set_refractory_period(self, value):
         """Set the refractory period (in milliseconds)."""
-        self.refractory_period = _clip(value, .1, 100) * 1e-3
+        self.refractory_period = _clip(value, 0.1, 100) * 1e-3
         self.plot()
 
     def set_bin(self, bin_size):
@@ -298,7 +309,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     def on_mouse_wheel(self, e):  # pragma: no cover
         """Change the scaling with the wheel."""
-        super(CorrelogramView, self).on_mouse_wheel(e)
+        super().on_mouse_wheel(e)
         if e.modifiers == ('Alt',):
-            self._set_bin_window(bin_size=self.bin_size * 1.1 ** e.delta)
+            self._set_bin_window(bin_size=self.bin_size * 1.1**e.delta)
             self.plot()

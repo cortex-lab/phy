@@ -1,23 +1,22 @@
-# -*- coding: utf-8 -*-
-
 """Testing the Kwik GUI."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
-from pathlib import Path
 import shutil
 import unittest
+from pathlib import Path
 
 from phylib.io.datasets import download_test_file
 from phylib.utils.testing import captured_output
 
 from phy.apps.tests.test_base import BaseControllerTests
-from phy.plot.tests import key_press
-from ..gui import KwikController, kwik_describe
 from phy.cluster.views import WaveformView
+from phy.plot.tests import key_press
+
+from ..gui import KwikController, kwik_describe
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +31,12 @@ def _kwik_controller(tempdir, kwik_only=False):
         shutil.copy(loc_path, tempdir / loc_path.name)
     kwik_path = tempdir / 'hybrid_10sec.kwik'
     return KwikController(
-        kwik_path, channel_group=0, config_dir=tempdir / 'config',
-        clear_cache=True, enable_threading=False)
+        kwik_path,
+        channel_group=0,
+        config_dir=tempdir / 'config',
+        clear_cache=True,
+        enable_threading=False,
+    )
 
 
 def test_kwik_describe(qtbot, tempdir):

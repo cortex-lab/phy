@@ -1,0 +1,192 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phy"
+version = "2.0.0" # No dynamic lookup needed
+description = "Interactive visualization and manual spike sorting of large-scale ephys data"
+readme = "README.md"
+license = { text = "BSD" }
+authors = [
+    { name = "Cyrille Rossant (cortex-lab/UCL/IBL)", email = "cyrille.rossant+pypi@gmail.com" },
+]
+keywords = ["phy", "data analysis", "electrophysiology", "neuroscience"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Framework :: IPython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+
+# specific version required for pyopengl >=3.1.9
+dependencies = [
+    "phylib @ git+https://github.com/jesusdpa1/phylib_update.git",
+    "click",
+    "colorcet",
+    "cython",
+    "dask",
+    "h5py",
+    "joblib",
+    "matplotlib",
+    "mtscomp",
+    "numba",
+    "numpy",
+    "pillow",
+    "pip",
+    "pyopengl>=3.1.9",
+    "qtconsole",
+    "requests",
+    "responses",
+    "scikit-learn",
+    "scipy",
+    "setuptools",
+    "tqdm",
+    "traitlets",
+    "ipykernel",
+]
+
+[project.urls]
+Homepage = "https://phy.cortexlab.net"
+Repository = "https://github.com/cortex-lab/phy"
+Documentation = "https://phy.cortexlab.net"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-qt",
+    "pytest-cov",
+    "ruff",
+    "coverage",
+    "coveralls",
+    "memory_profiler",
+    "mkdocs",
+]
+
+# Qt5 support (default for older systems)
+qt5 = ["PyQt5>=5.12.0", "PyQtWebEngine>=5.12.0"]
+
+# Qt6 support (recommended for new installations)
+qt6 = ["pyqt6>=6.9.1", "pyqt6-webengine>=6.9.0"]
+
+# Convenience extras that install Qt6 by default
+gui = ["pyqt6>=6.9.1", "pyqt6-webengine>=6.9.0"]
+
+# For users who want to specify Qt version explicitly
+qt = [
+    # This will be empty - users should choose qt5 or qt6
+]
+
+[project.scripts]
+phy = "phy.apps:phycli"
+
+[tool.setuptools.dynamic]
+version = { attr = "phy.version" }
+
+[tool.setuptools.packages.find]
+include = ["phy*"]
+
+[tool.setuptools.package-data]
+phy = [
+    ".vert",
+    ".frag",
+    ".glsl",
+    ".npy",
+    ".gz",
+    ".txt",
+    ".json",
+    ".html",
+    ".css",
+    ".js",
+    ".prb",
+    ".ttf",
+    "*.png",
+]
+
+[tool.pytest.inioptions]
+testpaths = ["phy"]
+addopts = "--ignore=phy/apps/kwik --cov=phy --cov-report=term-missing"
+norecursedirs = ["experimental", ""]
+filterwarnings = [
+    "default",
+    "ignore::DeprecationWarning:.",
+    "ignore:numpy.ufunc",
+]
+
+[tool.coverage.run]
+branch = false
+source = ["phy"]
+omit = [
+    "/phy/ext/",
+    "/phy/utils/tempdir.py",
+    "/default_settings.py",
+    "/phy/plot/gloo/",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "pass",
+    "continue",
+    "qtbot.stop()",
+    "_in_travis():",
+    "_is_high_dpi():",
+    "return$",
+    "^\"\"\"",
+]
+omit = ["/phy/plot/gloo/"]
+show_missing = true
+
+[tool.ruff]
+line-length = 99
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "PIE", "NPY201"]
+ignore = [
+    "E265",   # block comment should start with '# '
+    "E731",   # do not assign a lambda expression, use a def
+    "E741",   # ambiguous variable name
+    "W605",   # invalid escape sequence,
+    "N806",
+    "SIM102",
+    "B007",
+    "N803",
+    "N802",
+    "B018",
+    "F401",
+    "SIM118",
+    "B015",
+    "C416",
+    "E402",
+    "E501",
+    "SIM108",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["phy"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=6.0",
+    "pytest-qt>=4.0",
+    "pytest-cov>=3.0",
+    "ruff>=0.1.0",
+    "coverage>=6.0",
+    "coveralls>=3.0",
+    "memory_profiler>=0.60",
+    "mkdocs>=1.4",
+]

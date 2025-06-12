@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # flake8: noqa
 
 """Plotting module based on OpenGL.
@@ -8,9 +7,9 @@ For advanced users!
 """
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import os.path as op
 
@@ -22,5 +21,13 @@ from .axes import AxisLocator, Axes
 from .utils import get_linear_x, BatchAccumulator
 from .interact import Grid, Boxed, Lasso
 from .visuals import (
-    ScatterVisual, UniformScatterVisual, PlotVisual, UniformPlotVisual, HistogramVisual,
-    TextVisual, LineVisual, ImageVisual, PolygonVisual)
+    ScatterVisual,
+    UniformScatterVisual,
+    PlotVisual,
+    UniformPlotVisual,
+    HistogramVisual,
+    TextVisual,
+    LineVisual,
+    ImageVisual,
+    PolygonVisual,
+)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 # Distributed under the (new) BSD License.
@@ -34,12 +33,10 @@ import logging
 import os.path
 import re
 
-from .import gl
-from .snippet import Snippet
+from . import gl
 from .globject import GLObject
-from .parser import (remove_comments, preprocess,
-                     get_uniforms, get_attributes, get_hooks)
-
+from .parser import get_attributes, get_hooks, get_uniforms, preprocess, remove_comments
+from .snippet import Snippet
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +82,7 @@ class Shader(GLObject):
         'samplerCube': gl.GL_SAMPLER_CUBE,
     }
 
-    def __init__(self, target, code, version="120"):
+    def __init__(self, target, code, version='120'):
         """
         Initialize the shader.
         """
@@ -96,7 +93,7 @@ class Shader(GLObject):
         self._version = version
 
         if os.path.isfile(code):
-            with open(str(code), 'rt') as file:
+            with open(str(code)) as file:
                 self._code = preprocess(file.read())
                 self._source = os.path.basename(code)
         else:
@@ -115,21 +112,22 @@ class Shader(GLObject):
         self._snippets[name] = snippet
 
     def _replace_hooks(self, name, snippet):
-
-        #re_hook = r"(?P<hook>%s)(\.(?P<subhook>\w+))?" % name
-        re_hook = r"(?P<hook>%s)(\.(?P<subhook>[\.\w\!]+))?" % name
-        re_args = r"(\((?P<args>[^<>]+)\))?"
+        # re_hook = r"(?P<hook>%s)(\.(?P<subhook>\w+))?" % name
+        re_hook = rf'(?P<hook>{name})(\.(?P<subhook>[\.\w\!]+))?'
+        re_args = r'(\((?P<args>[^<>]+)\))?'
         # re_hooks = re.compile("\<" + re_hook + re_args + "\>", re.VERBOSE)
-        pattern = r"\<" + re_hook + re_args + r"\>"
+        pattern = r'\<' + re_hook + re_args + r'\>'
 
         # snippet is not a Snippet (it should be a string)
         if not isinstance(snippet, Snippet):
+
             def replace(match):
                 # hook = match.group('hook')
                 subhook = match.group('subhook')
                 if subhook:
-                    return snippet + '.' + subhook
+                    return f'{snippet}.{subhook}'
                 return snippet
+
             self._hooked = re.sub(pattern, replace, self._hooked)
             return
 
@@ -138,9 +136,9 @@ class Shader(GLObject):
 
         # Replace expression of type <hook.subhook(args)>
         def replace_with_args(match):
-            #hook = match.group('hook')
+            # hook = match.group('hook')
             subhook = match.group('subhook')
-            #args = match.group('args')
+            # args = match.group('args')
 
             if subhook and '.' in subhook:
                 s = snippet
@@ -155,7 +153,7 @@ class Shader(GLObject):
                 #   <S>     -> A(B(C("t")))
                 #   <S!>(t) -> A("t")
                 override = False
-                if subhook[-1] == "!":
+                if subhook[-1] == '!':
                     override = True
                     subhook = subhook[:-1]
 
@@ -166,66 +164,66 @@ class Shader(GLObject):
                 # If subhook is a variable (uniform/attribute/varying)
                 if subhook in s.globals:
                     return s.globals[subhook]
-                return s.mangled_call(subhook, match.group("args"), override=override)
+                return s.mangled_call(subhook, match.group('args'), override=override)
 
             # If subhook is a variable (uniform/attribute/varying)
             if subhook in snippet.globals:
                 return snippet.globals[subhook]
-            return snippet.mangled_call(subhook, match.group("args"))
+            return snippet.mangled_call(subhook, match.group('args'))
 
         self._hooked = re.sub(pattern, replace_with_args, self._hooked)
 
     def reset(self):
-        """ Reset shader snippets """
+        """Reset shader snippets"""
 
         self._snippets = {}
 
     @property
     def code(self):
-        """ Shader source code (built from original and snippet codes) """
+        """Shader source code (built from original and snippet codes)"""
 
         # Last minute hook settings
         self._hooked = self._code
         for name, snippet in self._snippets.items():
             self._replace_hooks(name, snippet)
 
-        snippet_code = "// --- Snippets code : start --- //\n"
+        snippet_code = '// --- Snippets code : start --- //\n'
         deps = []
         for snippet in self._snippets.values():
             if isinstance(snippet, Snippet):
                 deps.extend(snippet.dependencies)
         for snippet in list(set(deps)):
             snippet_code += snippet.mangled_code()
-        snippet_code += "// --- Snippets code : end --- //\n"
+        snippet_code += '// --- Snippets code : end --- //\n'
         return snippet_code + self._hooked
 
     def _create(self):
-        """ Create the shader """
+        """Create the shader"""
 
-        log.log(5, "GPU: Creating shader")
+        log.log(5, 'GPU: Creating shader')
 
         # Check if we have something to compile
         if not self.code:
-            raise RuntimeError("No code has been given")
+            raise RuntimeError('No code has been given')
 
         # Check that shader object has been created
         if self._handle <= 0:
             self._handle = gl.glCreateShader(self._target)
             if self._handle <= 0:
-                raise RuntimeError("Cannot create shader object")
+                raise RuntimeError('Cannot create shader object')
 
     def _update(self):
-        """ Compile the source and checks everything's ok """
+        """Compile the source and checks everything's ok"""
 
-        log.log(5, "GPU: Compiling shader")
+        log.log(5, 'GPU: Compiling shader')
 
         if len(self.hooks):
             hooks = [name for name, snippet in self.hooks]
-            error = "Shader has pending hooks (%s), cannot compile" % hooks
+            error = f'Shader has pending hooks ({hooks}), cannot compile'
             raise RuntimeError(error)
 
         # Set shader version
-        code = ("#version %s\n" % self._version) + self.code
+        code = f'#version {self._version}\n{self.code}'
         gl.glShaderSource(self._handle, code)
 
         # Actual compilation
@@ -236,10 +234,10 @@ class Shader(GLObject):
             parsed_errors = self._parse_error(error)
             for lineno, mesg in parsed_errors:
                 self._print_error(mesg, lineno - 1)
-            raise RuntimeError("Shader compilation error")
+            raise RuntimeError('Shader compilation error')
 
     def _delete(self):
-        """ Delete shader from GPU memory (if it was present). """
+        """Delete shader from GPU memory (if it was present)."""
 
         gl.glDeleteShader(self._handle)
 
@@ -248,15 +246,18 @@ class Shader(GLObject):
         # 0(7): error C1008: undefined variable "MV"
         # 0(2) : error C0118: macros prefixed with '__' are reserved
         re.compile(
-            r'^\s*(\d+)\((?P<line_no>\d+)\)\s*:\s(?P<error_msg>.*)', re.MULTILINE),
+            r'^\s*(\d+)\((?P<line_no>\d+)\)\s*:\s(?P<error_msg>.*)', re.MULTILINE
+        ),
         # ATI / Intel
         # ERROR: 0:131: '{' : syntax error parse error
         re.compile(
-            r'^\s*ERROR:\s(\d+):(?P<line_no>\d+):\s(?P<error_msg>.*)', re.MULTILINE),
+            r'^\s*ERROR:\s(\d+):(?P<line_no>\d+):\s(?P<error_msg>.*)', re.MULTILINE
+        ),
         # Nouveau
         # 0:28(16): error: syntax error, unexpected ')', expecting '('
         re.compile(
-            r'^\s*(\d+):(?P<line_no>\d+)\((\d+)\):\s(?P<error_msg>.*)', re.MULTILINE)
+            r'^\s*(\d+):(?P<line_no>\d+)\((\d+)\):\s(?P<error_msg>.*)', re.MULTILINE
+        ),
     ]
 
     def _parse_error(self, error):
@@ -272,11 +273,12 @@ class Shader(GLObject):
         for error_re in self._ERROR_RE:
             matches = list(error_re.finditer(error))
             if matches:
-                errors = [(int(m.group('line_no')), m.group('error_msg'))
-                          for m in matches]
+                errors = [
+                    (int(m.group('line_no')), m.group('error_msg')) for m in matches
+                ]
                 return sorted(errors, key=lambda elem: elem[0])
         else:
-            raise ValueError('Unknown GLSL error format:\n{}\n'.format(error))
+            raise ValueError(f'Unknown GLSL error format:\n{error}\n')
 
     def _print_error(self, error, lineno):
         """
@@ -294,24 +296,24 @@ class Shader(GLObject):
         start = max(0, lineno - 3)
         end = min(len(lines), lineno + 3)
 
-        print('Error in %s' % (repr(self)))
-        print(' -> %s' % error)
+        print(f'Error in {repr(self)}')
+        print(f' -> {error}')
         print()
         if start > 0:
             print(' ...')
         for i, line in enumerate(lines[start:end]):
             if (i + start) == lineno:
-                print(' %03d %s' % (i + start, line))
+                print(f' {i + start:03d} {line}')
             else:
                 if len(line):
-                    print(' %03d %s' % (i + start, line))
+                    print(f' {i + start:03d} {line}')
         if end < len(lines):
             print(' ...')
         print()
 
     @property
     def hooks(self):
-        """ Shader hooks (place where snippets can be inserted) """
+        """Shader hooks (place where snippets can be inserted)"""
 
         # We get hooks from the original code, not the hooked one
         code = remove_comments(self._hooked)
@@ -319,7 +321,7 @@ class Shader(GLObject):
 
     @property
     def uniforms(self):
-        """ Shader uniforms obtained from source code """
+        """Shader uniforms obtained from source code"""
 
         code = remove_comments(self.code)
         gtypes = Shader._gtypes
@@ -327,7 +329,7 @@ class Shader(GLObject):
 
     @property
     def attributes(self):
-        """ Shader attributes obtained from source code """
+        """Shader attributes obtained from source code"""
 
         code = remove_comments(self.code)
         gtypes = Shader._gtypes
@@ -336,58 +338,64 @@ class Shader(GLObject):
 
 # ------------------------------------------------------ VertexShader class ---
 class VertexShader(Shader):
-    """ Vertex shader class """
+    """Vertex shader class"""
 
-    def __init__(self, code=None, version="120"):
+    def __init__(self, code=None, version='120'):
         Shader.__init__(self, gl.GL_VERTEX_SHADER, code, version)
 
     @property
     def code(self):
-        code = super(VertexShader, self).code
-        code = "#define _GLUMPY__VERTEX_SHADER__\n" + code
+        code = super().code
+        code = f'#define _GLUMPY__VERTEX_SHADER__\n{code}'
         return code
 
     def __repr__(self):
-        return "Vertex shader %d (%s)" % (self._id, self._source)
+        return f'Vertex shader {self._id} ({self._source})'
 
 
 class FragmentShader(Shader):
-    """ Fragment shader class """
+    """Fragment shader class"""
 
-    def __init__(self, code=None, version="120"):
+    def __init__(self, code=None, version='120'):
         Shader.__init__(self, gl.GL_FRAGMENT_SHADER, code, version)
 
     @property
     def code(self):
-        code = super(FragmentShader, self).code
-        code = "#define _GLUMPY__FRAGMENT_SHADER__\n" + code
+        code = super().code
+        code = f'#define _GLUMPY__FRAGMENT_SHADER__\n{code}'
         return code
 
     def __repr__(self):
-        return "Fragment shader %d (%s)" % (self._id, self._source)
+        return f'Fragment shader {self._id} ({self._source})'
 
 
 class GeometryShader(Shader):
-    """ Geometry shader class.
+    """Geometry shader class.
 
-        :param str code: Shader code or a filename containing shader code
-        :param int vertices_out: Number of output vertices
-        :param gl.GLEnum input_type:
+    :param str code: Shader code or a filename containing shader code
+    :param int vertices_out: Number of output vertices
+    :param gl.GLEnum input_type:
 
-           * GL_POINTS
-           * GL_LINES​, GL_LINE_STRIP​, GL_LINE_LIST
-           * GL_LINES_ADJACENCY​, GL_LINE_STRIP_ADJACENCY
-           * GL_TRIANGLES​, GL_TRIANGLE_STRIP​, GL_TRIANGLE_FAN
-           * GL_TRIANGLES_ADJACENCY​, GL_TRIANGLE_STRIP_ADJACENCY
+       * GL_POINTS
+       * GL_LINES​, GL_LINE_STRIP​, GL_LINE_LIST
+       * GL_LINES_ADJACENCY​, GL_LINE_STRIP_ADJACENCY
+       * GL_TRIANGLES​, GL_TRIANGLE_STRIP​, GL_TRIANGLE_FAN
+       * GL_TRIANGLES_ADJACENCY​, GL_TRIANGLE_STRIP_ADJACENCY
 
-        :param gl.GLEnum output_type:
+    :param gl.GLEnum output_type:
 
-           * GL_POINTS, GL_LINES​, GL_LINE_STRIP
-           * GL_TRIANGLES​, GL_TRIANGLE_STRIP​, GL_TRIANGLE_FAN
+       * GL_POINTS, GL_LINES​, GL_LINE_STRIP
+       * GL_TRIANGLES​, GL_TRIANGLE_STRIP​, GL_TRIANGLE_FAN
     """
 
-    def __init__(self, code=None,
-                 vertices_out=None, input_type=None, output_type=None, version="120"):
+    def __init__(
+        self,
+        code=None,
+        vertices_out=None,
+        input_type=None,
+        output_type=None,
+        version='120',
+    ):
         Shader.__init__(self, gl.GL_GEOMETRY_SHADER_EXT, code, version)
 
         self._vertices_out = vertices_out
@@ -429,4 +437,4 @@ class GeometryShader(Shader):
         self._output_type = value
 
     def __repr__(self):
-        return "Geometry shader %d (%s)" % (self._id, self._source)
+        return f'Geometry shader {self._id} ({self._source})'

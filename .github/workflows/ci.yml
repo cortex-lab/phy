@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        qt-version: ["qt5", "qt6"]
+        exclude:
+          # PyQt6 might have issues on some older Python versions
+          - python-version: "3.9"
+            qt-version: "qt6"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Set up display for GUI testing on Linux
+    - name: Set up display (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb herbstluftwm
+        export DISPLAY=:99.0
+        Xvfb :99 -screen 0 1400x900x24 -ac +extension GLX +render &
+        sleep 3
+        herbstluftwm &
+        sleep 1
+      env:
+        DISPLAY: :99.0
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: uv sync --dev --extra ${{ matrix.qt-version }}
+
+    - name: Install phylib from branch
+      run: |
+        if [ "${{ github.ref_name }}" = "master" ]; then
+          uv add "git+https://github.com/cortex-lab/phylib.git@master"
+        elif [ "${{ github.ref_name }}" = "dev" ]; then  
+          uv add "git+https://github.com/cortex-lab/phylib.git@dev"
+        else
+          uv add "git+https://github.com/cortex-lab/phylib.git@${{ github.ref_name }}"
+        fi
+      shell: bash
+
+    - name: Install additional test dependencies
+      run: |
+        uv add "git+https://github.com/kwikteam/klusta.git"
+        uv add "git+https://github.com/kwikteam/klustakwik2.git"
+
+    - name: Lint with ruff
+      run: uv run ruff check phy
+
+    - name: Check formatting with ruff
+      run: uv run ruff format --check phy
+
+    - name: Test with pytest (Linux)
+      if: runner.os == 'Linux'
+      run: uv run make test-full
+      env:
+        DISPLAY: :99.0
+        QT_QPA_PLATFORM: offscreen
+
+    - name: Test with pytest (Windows/macOS)
+      if: runner.os != 'Linux'
+      run: uv run pytest --cov=phy --cov-report=xml phy
+      env:
+        QT_QPA_PLATFORM: offscreen
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.9
+
+    - name: Build package
+      run: uv build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
