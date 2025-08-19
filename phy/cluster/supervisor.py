@@ -19,7 +19,7 @@ from .clustering import Clustering
 
 from phylib.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
-from phy.gui.qt import _block, set_busy, _wait
+from phy.gui.qt import _block, set_busy, _wait, QMessageBox
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
@@ -1044,6 +1044,21 @@ class Supervisor(object):
         out = self.clustering.split(
             spike_ids, spike_clusters_rel=spike_clusters_rel)
         self._global_history.action(self.clustering)
+
+        # Show a pop-up with the split information.
+        if out:
+            added = out.get('added', [])
+            deleted = out.get('deleted', [])
+            message = f"Split successful.\n\n"
+            if added:
+                message += f"New clusters created: {', '.join(map(str, added))}\n"
+            if deleted:
+                message += f"Original clusters affected: {', '.join(map(str, deleted))}"
+
+            box = QMessageBox()
+            box.setText(message)
+            box.exec_()
+
         return out
 
     # Move actions
