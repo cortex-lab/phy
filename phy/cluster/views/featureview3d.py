@@ -552,28 +552,71 @@ class Feature3DView(LassoMixin, ManualClusteringView):
             logger.debug("Lasso polygon too small")
             return np.array([], dtype=np.int64)
 
-        # Find points inside the lasso for each cluster
+        # We need to reload ALL spikes (not just the displayed subset) to ensure
+        # we catch all points that should be split
+        logger.debug("Loading all spikes for lasso split operation")
+        
+        # Get full data for all selected clusters with load_all=True
+        bunchs = self.get_clusters_data(fixed_channels=self.fixed_channels, load_all=True)
+        
+        # Also need to recompute 3D positions for all loaded spikes
         spike_ids_to_split = []
-
-        for cluster_info in self._cluster_data:
-            if cluster_info['cluster_id'] is None:  # Skip background
-                continue
-
-            bunch = cluster_info['bunch']
-            if hasattr(bunch, 'pos') and len(bunch.pos) > 0:
-                pts2d = bunch.pos
-            else:
-                # Fallback: compute 2D positions from stored 3D points
-                pts2d = self._project_3d_to_2d(cluster_info['points_3d'])
-                bunch.pos = pts2d
-            # Check which points are inside the lasso
-            from matplotlib.path import Path
-            lasso_path = Path(lasso_points)
-            inside_mask = lasso_path.contains_points(pts2d)
-
-            if np.any(inside_mask):
+        from matplotlib.path import Path
+        lasso_path = Path(lasso_points)
+        
+        for bunch in bunchs:
+            cluster_id = bunch.get('cluster_id')
+            
+            # Skip background points (cluster_id = None) - they're shown but not selectable for split
+            # However, let's check if they actually belong to a selected cluster
+            if cluster_id is None:
+                # For background, we need to check if any of these spikes belong to selected clusters
+                # Background bunch might contain spikes from selected clusters
                 spike_ids = bunch.get('spike_ids', [])
-                if spike_ids is not None and len(spike_ids) > 0:
+                if spike_ids is None or len(spike_ids) == 0:
+                    continue
+                    
+                # Get 3D coordinates for background
+                x = self._get_axis_data(bunch, self.x_axis, cluster_id)
+                y = self._get_axis_data(bunch, self.y_axis, cluster_id) 
+                z = self._get_axis_data(bunch, self.z_axis, cluster_id)
+                
+                if len(x) == 0 or len(y) == 0 or len(z) == 0:
+                    continue
+                    
+                points_3d = np.column_stack([x, y, z])
+                pts2d = self._project_3d_to_2d(points_3d)
+                
+                # Check which points are inside the lasso
+                inside_mask = lasso_path.contains_points(pts2d)
+                
+                if np.any(inside_mask):
+                    # Only include spike IDs that actually belong to selected clusters
+                    selected_spikes = np.array(spike_ids)[inside_mask]
+                    # Filter to only include spikes from selected clusters
+                    # This requires the caller to handle the filtering
+                    spike_ids_to_split.extend(selected_spikes.tolist())
+            else:
+                # For regular clusters, include all spikes inside the lasso
+                spike_ids = bunch.get('spike_ids', [])
+                if spike_ids is None or len(spike_ids) == 0:
+                    continue
+                
+                # Get 3D coordinates
+                x = self._get_axis_data(bunch, self.x_axis, cluster_id)
+                y = self._get_axis_data(bunch, self.y_axis, cluster_id)
+                z = self._get_axis_data(bunch, self.z_axis, cluster_id)
+                
+                if len(x) == 0 or len(y) == 0 or len(z) == 0:
+                    continue
+                    
+                points_3d = np.column_stack([x, y, z])
+                pts2d = self._project_3d_to_2d(points_3d)
+                
+                # Check which points are inside the lasso
+                inside_mask = lasso_path.contains_points(pts2d)
+                
+                if np.any(inside_mask):
                     selected_spikes = np.array(spike_ids)[inside_mask]
                     spike_ids_to_split.extend(selected_spikes.tolist())
 
