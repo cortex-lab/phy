@@ -22,7 +22,7 @@ dependencies:
   - cython
   - pillow
   - scikit-learn
-  - joblib
+  - joblib=1.4.2
   - pip:
     - git+https://github.com/cortex-lab/phy.git
 
