@@ -12,7 +12,7 @@ pyopengl==3.1.6
 requests
 qtconsole
 tqdm
-joblib=1.4.2
+joblib==1.4.2
 click
 mkdocs
 PyQtWebEngine
