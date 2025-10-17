@@ -730,7 +730,7 @@ class BaseController(object):
     Methods to override
     -------------------
 
-    The main methods that can be overriden when implementing a custom `Controller` are:
+    The main methods that can be overridden when implementing a custom `Controller` are:
 
     _create_model() : None => object
         Return a Model instance (any object, see below) from the controller constructor's
@@ -804,7 +804,7 @@ class BaseController(object):
 
     The Model represents data as it is stored on disk. When cluster data changes during
     a manual clustering session (like spike-cluster assignments), the data in the model
-    is not expected to change (it is rather the responsability of the controller).
+    is not expected to change (it is rather the responsibility of the controller).
 
     The model implements saving option for spike cluster assignments and cluster metadata.
 
@@ -934,7 +934,7 @@ class BaseController(object):
     # -------------------------------------------------------------------------
 
     def _create_model(self, dir_path=None, **kwargs):
-        """Create a model using the constructor parameters. To be overriden."""
+        """Create a model using the constructor parameters. To be overridden."""
         return
 
     def _clear_cache(self):
@@ -962,7 +962,7 @@ class BaseController(object):
     def _set_view_creator(self):
         """Set the view creator, a dictionary mapping view names to methods creating views.
 
-        May be overriden to add specific views.
+        May be overridden to add specific views.
 
         """
         self.view_creator = {
@@ -1194,16 +1194,16 @@ class BaseController(object):
         return self._get_channel_labels([self.get_best_channel(cluster_id)])[0]
 
     def get_best_channels(self, cluster_id):  # pragma: no cover
-        """Return the best channels of a given cluster. To be overriden."""
+        """Return the best channels of a given cluster. To be overridden."""
         logger.warning(
-            "This method should be overriden and return a non-empty list of best channels.")
+            "This method should be overridden and return a non-empty list of best channels.")
         return []
 
     def get_channel_amplitudes(self, cluster_id):  # pragma: no cover
         """Return the best channels of a given cluster along with their relative amplitudes.
-        To be overriden."""
+        To be overridden."""
         logger.warning(
-            "This method should be overriden.")
+            "This method should be overridden.")
         return []
 
     def get_channel_shank(self, cluster_id):
@@ -1288,7 +1288,7 @@ class BaseController(object):
         return self.get_spike_ids(cluster_id, n=n)
 
     def _amplitude_getter(self, cluster_ids, name=None, load_all=False):
-        """Return the data requested by the amplitude view, wich depends on the
+        """Return the data requested by the amplitude view, which depends on the
         type of amplitude.
 
         Parameters
@@ -1318,7 +1318,7 @@ class BaseController(object):
         # Get the amplitude method.
         f = self._get_amplitude_functions()[name]
         # Take spikes from the waveform selection if we're loading the raw amplitudes,
-        # or by minimzing the number of chunks to load if fetching waveforms directly
+        # or by minimizing the number of chunks to load if fetching waveforms directly
         # from the raw data.
         # Otherwise we load the spikes randomly from the whole dataset.
         subset_chunks = subset_spikes = None
@@ -1594,7 +1594,7 @@ class BaseController(object):
             logger.debug("%s spike time reordering.", 'Enable' if checked else 'Disable')
             emit('toggle_spike_reorder', self, checked)
 
-        # Action to switch the raw data filter inthe trace and waveform views.
+        # Action to switch the raw data filter in the trace and waveform views.
         @gui.view_actions.add(shortcut=self.default_shortcuts['switch_raw_data_filter'])
         def switch_raw_data_filter():
             """Switch the raw data filter."""

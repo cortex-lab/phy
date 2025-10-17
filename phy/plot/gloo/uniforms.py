@@ -80,7 +80,7 @@ class Uniforms(Texture2D):
     This class is used in conjunction with collections in order to store a
     number of uniforms in a texture such that each vertices can retrieve a
     specific group of uniforms. The data type can be structured but must be
-    reduceable to n x np.float32. Note that you don't need to manipulate
+    reducible to n x np.float32. Note that you don't need to manipulate
     directly this function, it is done automagically in collections.
 
     .. note::
@@ -89,7 +89,7 @@ class Uniforms(Texture2D):
        function and is generated specifically for the actual data type.
 
     :param int size: Number of items to be stored in the texture
-    :param numpy.dtype dtype: Item data type (must be reduceable to n x np.float32)
+    :param numpy.dtype dtype: Item data type (must be reducible to n x np.float32)
     """
 
     def __init__(self, size, dtype):

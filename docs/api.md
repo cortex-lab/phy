@@ -150,7 +150,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 ## phy.utils
 
-Utilities: plugin system, event system, configuration system, profiling, debugging, cacheing,
+Utilities: plugin system, event system, configuration system, profiling, debugging, caching,
 basic read/write functions.
 
 ---
@@ -1128,7 +1128,7 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
     view class.
 
 * `default_views : list-like`
-    List of view names to create by default (overriden by `view_count` if not empty).
+    List of view names to create by default (overridden by `view_count` if not empty).
 
 * `config_dir : str or Path`
     User configuration directory used to load/save the GUI state
@@ -5804,7 +5804,7 @@ Switch to the next amplitudes type.
 
 **`AmplitudeView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -5846,7 +5846,7 @@ Return the spikes enclosed by the lasso.
 
 **`AmplitudeView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -5905,7 +5905,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -5969,7 +5969,7 @@ Size of the spike markers, in pixels.
 **`AmplitudeView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -6224,7 +6224,7 @@ Switch to the next color scheme.
 
 **`ClusterScatterView.on_cluster(self, sender, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -6257,7 +6257,7 @@ Change the scaling with the wheel.
 
 **`ClusterScatterView.on_select(self, *args, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -6388,7 +6388,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -6506,7 +6506,7 @@ Size of the spike markers, in pixels.
 **`ClusterScatterView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -6898,7 +6898,7 @@ results in a new cluster id being assigned.
 
 If a spike is assigned to a new cluster, then all other spikes
 belonging to the same cluster are assigned to a brand new cluster,
-even if they were not changed explicitely by the `assign()` method.
+even if they were not changed explicitly by the `assign()` method.
 
 In other words, the list of spikes affected by an `assign()` is almost
 always a strict superset of the `spike_ids` parameter. The only case
@@ -7149,7 +7149,7 @@ Increase the window size.
 
 **`CorrelogramView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -7173,7 +7173,7 @@ Change the scaling with the wheel.
 
 **`CorrelogramView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -7243,7 +7243,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -7309,7 +7309,7 @@ Change the normalization of the correlograms.
 **`CorrelogramView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -7426,7 +7426,7 @@ Increase the scaling parameter.
 
 **`FeatureView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -7468,7 +7468,7 @@ Return the spikes enclosed by the lasso.
 
 **`FeatureView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -7554,7 +7554,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -7609,7 +7609,7 @@ Size of the spike markers, in pixels.
 **`FeatureView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -7680,7 +7680,7 @@ Increase the scaling parameter.
 
 **`FiringRateView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -7704,7 +7704,7 @@ Change the scaling with the wheel.
 
 **`FiringRateView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -7772,7 +7772,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -7836,7 +7836,7 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 **`FiringRateView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -7852,7 +7852,7 @@ GUI is closed. To be overriden.
 ### phy.cluster.HistogramView
 
 This view displays a histogram for every selected cluster, along with a possible plot
-and some text. To be overriden.
+and some text. To be overridden.
 
 **Constructor**
 
@@ -7914,7 +7914,7 @@ Increase the scaling parameter.
 
 **`HistogramView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -7938,7 +7938,7 @@ Change the scaling with the wheel.
 
 **`HistogramView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -8006,7 +8006,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -8070,7 +8070,7 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 **`HistogramView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -8141,7 +8141,7 @@ Increase the scaling parameter.
 
 **`ISIView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -8165,7 +8165,7 @@ Change the scaling with the wheel.
 
 **`ISIView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -8233,7 +8233,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -8297,7 +8297,7 @@ Return the bin size (in seconds or milliseconds depending on `self.bin_unit`).
 **`ISIView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -8374,7 +8374,7 @@ To override.
 
 **`ManualClusteringView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -8389,7 +8389,7 @@ selected clusters (template view, raster view).
 
 **`ManualClusteringView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -8430,7 +8430,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -8467,7 +8467,7 @@ When on, the view is automatically updated when the cluster selection changes.
 **`ManualClusteringView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -8476,7 +8476,7 @@ GUI is closed. To be overriden.
 
 **`ManualClusteringView.status`**
 
-To be overriden.
+To be overridden.
 
 ---
 
@@ -8536,7 +8536,7 @@ To override.
 
 **`ProbeView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -8592,7 +8592,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -8638,7 +8638,7 @@ Toggle the display of the channel ids.
 **`ProbeView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -8647,7 +8647,7 @@ GUI is closed. To be overriden.
 
 **`ProbeView.status`**
 
-To be overriden.
+To be overridden.
 
 ---
 
@@ -8754,7 +8754,7 @@ Switch to the next color scheme.
 
 **`RasterView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -8787,7 +8787,7 @@ Change the scaling with the wheel.
 
 **`RasterView.on_select(self, *args, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -8864,7 +8864,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -8955,7 +8955,7 @@ Size of the spike markers, in pixels.
 **`RasterView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -9030,7 +9030,7 @@ Increase the scaling parameter.
 
 **`ScatterView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -9063,7 +9063,7 @@ Return the spikes enclosed by the lasso.
 
 **`ScatterView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -9113,7 +9113,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -9159,7 +9159,7 @@ Size of the spike markers, in pixels.
 **`ScatterView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -9168,7 +9168,7 @@ GUI is closed. To be overriden.
 
 **`ScatterView.status`**
 
-To be overriden.
+To be overridden.
 
 ---
 
@@ -9934,7 +9934,7 @@ Switch to the next color scheme.
 
 **`TemplateView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -9967,7 +9967,7 @@ Change the scaling with the wheel.
 
 **`TemplateView.on_select(self, *args, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -10044,7 +10044,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -10126,7 +10126,7 @@ Return the grid scaling.
 **`TemplateView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -10345,7 +10345,7 @@ Switch to the next color scheme.
 
 **`TraceImageView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -10378,7 +10378,7 @@ Scroll through the data with alt+wheel.
 
 **`TraceImageView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -10446,7 +10446,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -10610,7 +10610,7 @@ Scaling of the colormap vrange.
 **`TraceImageView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -10843,7 +10843,7 @@ Switch to the next color scheme.
 
 **`TraceView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -10876,7 +10876,7 @@ Scroll through the data with alt+wheel.
 
 **`TraceView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -10944,7 +10944,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -11108,7 +11108,7 @@ Scaling of the channel boxes.
 **`TraceView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -11293,7 +11293,7 @@ Switch to the next waveforms type.
 
 **`WaveformView.on_cluster(self, up)`**
 
-Callback function when a clustering action occurs. May be overriden.
+Callback function when a clustering action occurs. May be overridden.
 
 Note: this method is called *before* on_select() so as to give a chance to the view
 to update itself before the selection of the new clusters.
@@ -11326,7 +11326,7 @@ Change the scaling with the wheel.
 
 **`WaveformView.on_select(self, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overriden.
+Callback function when clusters are selected. May be overridden.
 
 ---
 
@@ -11385,7 +11385,7 @@ Set the view state.
 
 The passed object is the persisted `self.state` bunch.
 
-May be overriden.
+May be overridden.
 
 ---
 
@@ -11512,7 +11512,7 @@ Whether to overlap the waveforms belonging to different clusters.
 **`WaveformView.state`**
 
 View state, a Bunch instance automatically persisted in the GUI state when the
-GUI is closed. To be overriden.
+GUI is closed. To be overridden.
 
 ---
 
@@ -11645,7 +11645,7 @@ Base controller for manual clustering GUI.
 
 **Methods to override**
 
-The main methods that can be overriden when implementing a custom `Controller` are:
+The main methods that can be overridden when implementing a custom `Controller` are:
 
 
 * `_create_model() : None => object`
@@ -11737,7 +11737,7 @@ save_metadata(name, values) : str, dict => None
 
 The Model represents data as it is stored on disk. When cluster data changes during
 a manual clustering session (like spike-cluster assignments), the data in the model
-is not expected to change (it is rather the responsability of the controller).
+is not expected to change (it is rather the responsibility of the controller).
 
 The model implements saving option for spike cluster assignments and cluster metadata.
 
@@ -11866,7 +11866,7 @@ Return the channel label of the best channel, for display in the cluster view.
 
 **`BaseController.get_best_channels(self, cluster_id)`**
 
-Return the best channels of a given cluster. To be overriden.
+Return the best channels of a given cluster. To be overridden.
 
 ---
 
@@ -11876,7 +11876,7 @@ Return the best channels of a given cluster. To be overriden.
 **`BaseController.get_channel_amplitudes(self, cluster_id)`**
 
 Return the best channels of a given cluster along with their relative amplitudes.
-To be overriden.
+To be overridden.
 
 ---
 

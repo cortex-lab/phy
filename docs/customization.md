@@ -94,7 +94,7 @@ myevent called with argument 123
 
 The `connect()` function has a few optional parameters.
 
-* `connect(f, event=event)` to specify the event name explicitely, without having to use a special `on_eventname()` name for the function.
+* `connect(f, event=event)` to specify the event name explicitly, without having to use a special `on_eventname()` name for the function.
 * `connect(f, sender=sender)` to restrict the callback to a specific sender.
 
 *Note*: events are sent globally in the Python process.

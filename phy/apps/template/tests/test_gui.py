@@ -47,7 +47,7 @@ class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
     """Base template controller tests."""
     @classmethod
     def _create_dataset(cls, tempdir):  # pragma: no cover
-        """To be overriden in child classes."""
+        """To be overridden in child classes."""
         raise NotImplementedError()
 
     @classmethod
