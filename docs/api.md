@@ -3054,7 +3054,7 @@ Insert all GLSL snippets in a vertex and fragment shaders.
 
 **Notes**
 
-The vertex shader typicall contains `gl_Position = transform(data_var_name);`
+The vertex shader typically contains `gl_Position = transform(data_var_name);`
 which is automatically detected, and the GLSL transformations are inserted there.
 
 Snippets can contain `{{var}}` placeholders for the transformed variable name.
@@ -3086,7 +3086,7 @@ Insert a GLSL snippet into the vertex shader.
 
 
 * `origin : Interact`
-    The interact object that adds this GLSL snippet. Should be discared by
+    The interact object that adds this GLSL snippet. Should be discarded by
     visuals that are added with that interact object in `exclude_origins`.
 
 * `index : int`
