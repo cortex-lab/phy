@@ -48,7 +48,7 @@ def _first_not_null(*l):
 
 class HistogramView(ScalingMixin, ManualClusteringView):
     """This view displays a histogram for every selected cluster, along with a possible plot
-    and some text. To be overriden.
+    and some text. To be overridden.
 
     Constructor
     -----------

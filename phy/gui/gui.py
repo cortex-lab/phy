@@ -421,7 +421,7 @@ class GUI(QMainWindow):
         Map view classnames to integers specifying the number of views to create for every
         view class.
     default_views : list-like
-        List of view names to create by default (overriden by `view_count` if not empty).
+        List of view names to create by default (overridden by `view_count` if not empty).
     config_dir : str or Path
         User configuration directory used to load/save the GUI state
     enable_threading : boolean

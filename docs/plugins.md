@@ -650,7 +650,7 @@ In this example, we show how to customize the subplots in the feature view.
 
 ```python
 # import from plugins/feature_view_custom_grid.py
-"""Show how to customize the subplot grid specifiction in the feature view."""
+"""Show how to customize the subplot grid specification in the feature view."""
 
 import re
 from phy import IPlugin, connect

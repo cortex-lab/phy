@@ -384,7 +384,7 @@ class Clustering(object):
 
         If a spike is assigned to a new cluster, then all other spikes
         belonging to the same cluster are assigned to a brand new cluster,
-        even if they were not changed explicitely by the `assign()` method.
+        even if they were not changed explicitly by the `assign()` method.
 
         In other words, the list of spikes affected by an `assign()` is almost
         always a strict superset of the `spike_ids` parameter. The only case

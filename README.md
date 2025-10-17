@@ -32,7 +32,7 @@ Phy provides two GUIs:
 
 ## Hardware requirements
 
-It is recommanded to store the data on a SSD for performance reasons.
+It is recommended to store the data on a SSD for performance reasons.
 
 There are no specific GPU requirements as long as relatively recent graphics and OpenGL drivers are installed on the system.
 

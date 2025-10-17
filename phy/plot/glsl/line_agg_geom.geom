@@ -19,7 +19,7 @@ varying out vec2 v_bevel_distance;
 float compute_u(vec2 p0, vec2 p1, vec2 p)
 {
     // Projection p' of p such that p' = p0 + u*(p1-p0)
-    // Then  u *= lenght(p1-p0)
+    // Then  u *= length(p1-p0)
     vec2 v = p1 - p0;
     float l = length(v);
     return ((p.x-p0.x)*v.x + (p.y-p0.y)*v.y) / l;

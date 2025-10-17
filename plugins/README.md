@@ -8,7 +8,7 @@
 * [ExampleColorSchemePlugin](color_scheme.py): Show how to add a custom color scheme to a view.
 * [ExampleCustomButtonPlugin](custom_button.py): Show how to add custom buttons in a view's title bar.
 * [ExampleCustomColumnsPlugin](custom_columns.py): Show how to customize the columns in the cluster and similarity views.
-* [ExampleCustomFeatureViewPlugin](feature_view_custom_grid.py): Show how to customize the subplot grid specifiction in the feature view.
+* [ExampleCustomFeatureViewPlugin](feature_view_custom_grid.py): Show how to customize the subplot grid specification in the feature view.
 * [ExampleCustomSplitPlugin](custom_split.py): Show how to write a custom split action.
 * [ExampleFilterFiringRatePlugin](filter_action.py): Show how to create a filter snippet for the cluster view.
 * [ExampleFontSizePlugin](font_size.py): Show how to change the default text font size.

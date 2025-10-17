@@ -52,11 +52,11 @@ Current version is phy v2.0b1 (beta 1) (7 Feb 2020).
     * New default columns: mean firing rate, and template waveform amplitude
     * The styling can be customized with CSS in a plugin (see plugin examples in the documentation)
 * **Amplitude view**:
-    * Show an histogram of amplitudes overlayed with the amplitudes
+    * Show an histogram of amplitudes overlaid with the amplitudes
     * Support for multiple types of amplitudes (template waveform amplitude, raw waveform amplitude, feature amplitude)
     * Splitting is supported
     * Alt+click in the amplitude view to center the trace view to a certain time (position shown with the vertical yellow bar)
-    * Show the time interval currenty displayed in the trace view as a vertical yellow bar
+    * Show the time interval currently displayed in the trace view as a vertical yellow bar
 * **Correlogram view**:
     * Horizontal line for the baseline firing rate
     * Customizable vertical line for the refractory period

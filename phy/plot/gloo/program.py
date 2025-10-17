@@ -52,7 +52,7 @@ class Program(GLObject):
     def __init__(self, vertex=None, fragment=None, geometry=None,
                  count=0, version="120"):
         """
-        Initialize the program and optionnaly buffer.
+        Initialize the program and optionally buffer.
         """
 
         GLObject.__init__(self)

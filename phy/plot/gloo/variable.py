@@ -5,7 +5,7 @@
 """
 Variables are entry points in the shader that allow to upload CPU data to
 the GPU. For OpenGL ES 2.0, there are mainly two types: uniforms and
-attributes. The correspondance betwenn GPU and CPU data types is given in the
+attributes. The correspondence between GPU and CPU data types is given in the
 table below.
 
 =========== ================== == ================== ==============
@@ -320,7 +320,7 @@ class Attribute(Variable):
         # Number of elements this attribute links to (in the attached buffer)
         self._size = 0
 
-        # Whether this attribure is generic
+        # Whether this attribute is generic
         self._generic = False
 
     def set_data(self, data):

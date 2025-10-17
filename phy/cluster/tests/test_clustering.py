@@ -447,7 +447,7 @@ def test_clustering_long():
     spike_clusters_new = spike_clusters.copy()
     spike_clusters_new[:10] = 100
     clustering.spike_clusters[:] = spike_clusters_new[:]
-    # Need to update explicitely.
+    # Need to update explicitly.
     clustering._new_cluster_id = 101
     clustering._update_cluster_ids()
     ae(clustering.cluster_ids, np.r_[np.arange(n_clusters), 100])
