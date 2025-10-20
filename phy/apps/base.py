@@ -272,6 +272,8 @@ class WaveformMixin(object):
 
 
 class FeatureMixin(object):
+    # Spike attributes that can be used for visualization in addition to the features.
+    _spike_attributes = ('amplitudes', 'depths')
     n_spikes_features = 2500
     n_spikes_features_background = 2500
 
@@ -286,13 +288,98 @@ class FeatureMixin(object):
     )
 
     _cached = (
-        '_get_features',
         'get_spike_feature_amplitudes',
     )
 
+    _memcached = (
+        # '_get_features_for_view',
+        # 'get_spike_attributes_for_views',
+    )
+
+    # This property provides a consistent public interface for views to get feature data,
+    # abstracting away the underlying implementation.
+    get_features = property(lambda self: self._get_features_for_view)
+
+    def _get_feature_spike_ids(self, cluster_id, load_all=False):
+        """Return spike ids to be used in the feature view."""
+        if load_all:
+            return self.supervisor.get_spike_ids(cluster_id)
+        # Background spikes.
+        if cluster_id is None:
+            return self.selector(self.n_spikes_features_background, [])
+        # Spikes in a cluster.
+        return self.selector(self.n_spikes_features, [cluster_id])
+
+    def _get_features_for_view(self, cluster_ids, channel_ids=None, load_all=False):
+        """Get features for a list of clusters.
+
+        This function is the main entry point for views to retrieve feature data.
+        It handles fetching data for both background spikes and specific clusters,
+        and determines the appropriate channels to use if not specified.
+        """
+        if self.model.features is None:
+            return
+
+        # Special case for background spikes.
+        if cluster_ids is None:
+            spike_ids = self._get_feature_spike_ids(None, load_all=load_all)
+            if spike_ids is None or not len(spike_ids):
+                return
+            features = self.model.features[spike_ids, ...]
+            # We need to specify the channel ids, which are all channels in this case.
+            b_channel_ids = np.arange(self.model.channel_positions.shape[0])
+            b = Bunch(
+                data=features,
+                spike_ids=spike_ids,
+                channel_ids=b_channel_ids,
+                cluster_id=None,
+            )
+            # This is a list of bunches.
+            return [b]
+
+        bunchs = []
+        for cluster_id in cluster_ids:
+            spike_ids = self._get_feature_spike_ids(cluster_id, load_all=load_all)
+            if spike_ids is None or not len(spike_ids):
+                continue
+
+            # If channel_ids are not provided, get the best channels for the cluster.
+            if channel_ids is None:
+                c_ids = self.get_best_channels(cluster_id)
+            else:
+                c_ids = channel_ids
+
+            # Get the features for the specified channels.
+            features_bunch = self._get_spike_features(spike_ids, c_ids)
+            if not features_bunch:
+                continue
+
+            features_bunch.cluster_id = cluster_id
+            bunchs.append(features_bunch)
+        return bunchs
+
+    def get_spike_attributes_for_views(self):
+        """Return a dictionary of functions `cluster_id => values`.
+
+        This method provides a flexible "data menu" for views. Instead of returning data
+        directly, it returns a dictionary of callable functions. Each function can be
+        invoked by a view to get a specific data attribute (e.g., depths, amplitudes)
+        for a cluster on demand. This design enables the creation of complex views
+        (like a 3D view) that require multiple independent data sources.
+        """
+        d = {}
+        for name in self._spike_attributes:
+            # The function takes a cluster_id and returns an array.
+            d[name] = lambda cluster_id, name=name: getattr(
+                self.model, 'get_spike_%s' % name)(self._get_feature_spike_ids(cluster_id))
+        # Use helper that works across models (TemplateModel may not implement get_spike_times)
+        d['time'] = lambda cluster_id, load_all=False: self._get_feature_view_spike_times(
+            cluster_id, load_all=load_all)
+        return d
+
     def get_spike_feature_amplitudes(
-            self, spike_ids, channel_id=None, channel_ids=None, pc=None, **kwargs):
-        """Return the features for the specified channel and PC."""
+            self, spike_ids, channel_id=None, **kwargs):
+        """Return the maximum amplitude of the features on one channel."""
         if self.model.features is None:
             return
         channel_id = channel_id if channel_id is not None else channel_ids[0]
@@ -300,8 +387,8 @@ class FeatureMixin(object):
         if features is None:  # pragma: no cover
             return
         assert features.shape[0] == len(spike_ids)
-        logger.log(5, "Show channel %s and PC %s in amplitude view.", channel_id, pc)
-        return features[:, 0, pc or 0]
+        logger.log(5, "Show channel %s and PC 0 in amplitude view.", channel_id)
+        return features[:, 0, 0]
 
     def create_amplitude_view(self):
         view = super(FeatureMixin, self).create_amplitude_view()

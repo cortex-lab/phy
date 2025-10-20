@@ -396,6 +396,8 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
     def toggle_automatic_channel_selection(self, checked):
         """Toggle the automatic selection of channels when the cluster selection changes."""
         self.fixed_channels = not checked
+        # The status bar needs to be updated manually to reflect the change.
+        self.update_status()
 
     @property
     def status(self):
