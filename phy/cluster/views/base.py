@@ -136,7 +136,7 @@ class ManualClusteringView(object):
     # -------------------------------------------------------------------------
 
     def on_select(self, cluster_ids=None, **kwargs):
-        """Callback function when clusters are selected. May be overriden."""
+        """Callback function when clusters are selected. May be overridden."""
         self.cluster_ids = cluster_ids
         if not cluster_ids:
             return
@@ -223,7 +223,7 @@ class ManualClusteringView(object):
             self._lock = None
 
     def on_cluster(self, up):
-        """Callback function when a clustering action occurs. May be overriden.
+        """Callback function when a clustering action occurs. May be overridden.
 
         Note: this method is called *before* on_select() so as to give a chance to the view
         to update itself before the selection of the new clusters.
@@ -296,7 +296,7 @@ class ManualClusteringView(object):
 
     @property
     def status(self):
-        """To be overriden."""
+        """To be overridden."""
         return ''
 
     def update_status(self):
@@ -322,7 +322,7 @@ class ManualClusteringView(object):
     @property
     def state(self):
         """View state, a Bunch instance automatically persisted in the GUI state when the
-        GUI is closed. To be overriden."""
+        GUI is closed. To be overridden."""
         attrs = set(self.state_attrs + self.local_state_attrs)
         return Bunch({key: getattr(self, key, None) for key in attrs})
 
@@ -331,7 +331,7 @@ class ManualClusteringView(object):
 
         The passed object is the persisted `self.state` bunch.
 
-        May be overriden.
+        May be overridden.
 
         """
         logger.debug("Set state for %s.", getattr(self, 'name', self.__class__.__name__))
@@ -367,7 +367,7 @@ class BaseGlobalView(object):
     This view shows the clusters in the same order as in the cluster view. It reacts to sorting
     and filtering events.
 
-    The `get_cluster_data()` method (to be overriden) must return a list of Bunch instances
+    The `get_cluster_data()` method (to be overridden) must return a list of Bunch instances
     with each cluster's data, but also the attributes `cluster_rel`, `cluster_idx`, `cluster_id`.
 
     """
@@ -476,7 +476,7 @@ class BaseColorView(BaseWheelMixin):
         self._neighbor_color_scheme(-1)
 
     def update_color(self):
-        """Update the cluster colors depending on the current color scheme. To be overriden."""
+        """Update the cluster colors depending on the current color scheme. To be overridden."""
         pass
 
     def update_select_color(self):
@@ -555,11 +555,11 @@ class ScalingMixin(BaseWheelMixin):
                 self.decrease()
 
     def _get_scaling_value(self):  # pragma: no cover
-        """Return the scaling parameter. May be overriden."""
+        """Return the scaling parameter. May be overridden."""
         return self.scaling
 
     def _set_scaling_value(self, value):  # pragma: no cover
-        """Set the scaling parameter. May be overriden."""
+        """Set the scaling parameter. May be overridden."""
         self.scaling = value
 
     def increase(self):

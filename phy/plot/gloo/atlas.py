@@ -64,7 +64,7 @@ class Atlas(Texture2D):
         ----------
 
         shape : (int,int)
-            Shape of region  as (heigth, width)
+            Shape of region  as (height, width)
 
         Returns
         -------

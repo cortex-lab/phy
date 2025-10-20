@@ -75,7 +75,7 @@ The **Cluster view** shows the list of all clusters in your dataset.
 
 #### Cluster selection
 
-You can click on one cluster to select it. Select multiple clusters by keeping **Control** or **Shift** pressed. Selected clusters are shown in the different graphical views (detailled below). Clustering actions (merge, split, move, label...) operate on selected clusters.
+You can click on one cluster to select it. Select multiple clusters by keeping **Control** or **Shift** pressed. Selected clusters are shown in the different graphical views (detailed below). Clustering actions (merge, split, move, label...) operate on selected clusters.
 
 Select quickly one or several cluster(s) by using **snippets**: for example, type `:c 47 49` to select clusters 47 and 49. See [the list of keyboard shortcuts and snippets](shortcuts.md) for more details.
 
@@ -434,7 +434,7 @@ Extra spikes beyond those of the selected clusters are shown in gray. These spik
 
 #### Time range
 
-The time interval currenty displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+click` in the amplitude view: that will automatically change the time range in the trace view.
+The time interval currently displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+click` in the amplitude view: that will automatically change the time range in the trace view.
 
 #### Keyboard shortcuts
 

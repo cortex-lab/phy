@@ -603,7 +603,7 @@ def test_supervisor_label_cluster_3(supervisor):
     new = up.added[0]
     supervisor.block()
 
-    # It fot the label of its parents.
+    # It got the label of its parents.
     assert supervisor.get_labels('my_field')[new] == 3.14
 
     # Now, we label a smaller cluster.

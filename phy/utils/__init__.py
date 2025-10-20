@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""Utilities: plugin system, event system, configuration system, profiling, debugging, cacheing,
+"""Utilities: plugin system, event system, configuration system, profiling, debugging, caching,
 basic read/write functions.
 """
 
