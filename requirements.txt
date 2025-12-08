@@ -1,4 +1,4 @@
-phylib
+phylib>=2.6.4
 mtscomp
 numpy<2.0
 matplotlib
