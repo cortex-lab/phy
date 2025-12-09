@@ -56,8 +56,12 @@ def _filter_nested_dict(value, key=None, search_terms=None):
 
     # key is None for the root only.
     # Expression used to test whether we keep a key or not.
-    keep = lambda k: k is None or (
-        (not search_terms or k in search_terms) and not k.startswith('_'))
+    keep = lambda k: (
+        k is None or (
+            (not search_terms or (isinstance(k, str) and k in search_terms))
+            and not (isinstance(k, str) and k.startswith('_'))
+        )
+    )
     # Process leaves.
     if not isinstance(value, Mapping):
         return value if keep(key) else None
@@ -68,6 +72,31 @@ def _filter_nested_dict(value, key=None, search_terms=None):
             if cur_node is not None and (not isinstance(cur_node, dict) or cur_node):
                 dupe_node[key] = cur_node
         return dupe_node
+
+
+def _json_compatible_keys(d):
+    """Recursively convert dict keys to JSON-compatible builtin types.
+
+    - Cast NumPy scalars (e.g., numpy.int64) to Python scalars.
+    - Fallback to string for any other unsupported key types.
+    """
+    if not isinstance(d, dict):
+        return d
+
+    def _to_builtin_key(k):
+        # Convert NumPy scalar to Python scalar if possible
+        try:
+            if hasattr(k, 'item'):
+                k = k.item()
+        except Exception:
+            pass
+        # Keep builtin JSON-serializable key types
+        if isinstance(k, (str, int, float, bool)) or k is None:
+            return k
+        # Fallback to string
+        return str(k)
+
+    return {_to_builtin_key(k): _json_compatible_keys(v) for k, v in d.items()}
 
 
 def _recursive_update(d, u):
@@ -101,6 +130,8 @@ def _get_global_data(d, local_keys):
     """Remove the local keys from the GUI state."""
     # d = deepcopy(_filter_nested_dict(d))  # remove private fields
     d = deepcopy(_filter_nested_dict(d))
+    # Ensure dictionary keys are JSON-compatible (convert numpy scalars, etc.)
+    d = _json_compatible_keys(d)
     for key in local_keys:
         key1, key2 = key.split('.')
         # Remove that key.
