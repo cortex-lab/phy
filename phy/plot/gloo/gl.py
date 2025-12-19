@@ -48,13 +48,9 @@ def enable_depth_mask():
     glClearColor(0, 0, 0, 0)  # noqa
     glClearDepth(1.)  # noqa
 
-    glEnable(GL_BLEND)  # noqa
     glDepthRange(0., 1.)  # noqa
     glDepthFunc(GL_EQUAL)  # noqa
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)  # noqa
-
-    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)  # noqa
-    glEnable(GL_POINT_SPRITE)  # noqa
 
 
 # Patch: pythonize the glGetActiveAttrib

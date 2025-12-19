@@ -8,9 +8,10 @@ uniform vec4 u_color;
 uniform vec2 u_tex_size;
 uniform vec2 u_zoom;
 
-varying vec2 v_tex_coords;
-varying vec4 v_color;
+in vec2 v_tex_coords;
+in vec4 v_color;
 
+out vec4 fragColor;
 
 float median(float r, float g, float b) {
     return max(min(r, g), min(max(r, g), b));
@@ -24,8 +25,8 @@ float contour(float d, float w) {
 
 float get_alpha(vec2 uv) {
     vec2 msdfUnit = 4.0 / u_tex_size;
-    vec3 sample = texture2D(u_tex, uv).rgb;
-    float sigDist = median(sample.r, sample.g, sample.b) - 0.5;
+    vec3 _sample = texture(u_tex, uv).rgb;
+    float sigDist = median(_sample.r, _sample.g, _sample.b) - 0.5;
     sigDist *= dot(msdfUnit, 0.5 / fwidth(uv));
     sigDist += 0.5;
     return clamp(sigDist, 0.0, 1.0);
@@ -60,10 +61,10 @@ void main() {
     alpha = supersample(alpha);
 
     // CONTOUR -- does not work well with small font sizes
-    // vec3 sample = texture2D(u_tex, v_tex_coords).rgb;
+    // vec3 sample = texture(u_tex, v_tex_coords).rgb;
     // float sigDist = median(sample.r, sample.g, sample.b);
     // sigDist = exp(-20 * pow(sigDist - 1, 2));
     // color = mix(vec3(1, 1, 1), u_color.rgb, sigDist);
 
-    gl_FragColor = vec4(v_color.rgb * alpha, v_color.a);
+    fragColor = vec4(v_color.rgb * alpha, v_color.a);
 }

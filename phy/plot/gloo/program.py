@@ -50,7 +50,7 @@ class Program(GLObject):
 
     # ---------------------------------
     def __init__(self, vertex=None, fragment=None, geometry=None,
-                 count=0, version="120"):
+                 count=0, version="410"):
         """
         Initialize the program and optionally buffer.
         """
@@ -141,7 +141,7 @@ class Program(GLObject):
 
         .. code:: C
 
-           attribute vec3 position;
+          in vec3 position;
            void main () {
                gl_Position = <transform>(position); # "transform" is a hook
            }
@@ -506,8 +506,8 @@ class Program(GLObject):
 
            .. code::
 
-              attribute vec3 normal;    # Inactive
-              attribute vec3 position;  # Active
+             in vec3 normal;    # Inactive
+             in vec3 position;  # Active
               void main() {
                   gl_Position = vec4(position, 1.0);
               }
@@ -552,8 +552,8 @@ class Program(GLObject):
 
            .. code::
 
-              attribute vec3 normal;    # Inactive
-              attribute vec3 position;  # Active
+             in vec3 normal;    # Inactive
+             in vec3 position;  # Active
               void main() {
                   gl_Position = vec4(position, 1.0);
               }

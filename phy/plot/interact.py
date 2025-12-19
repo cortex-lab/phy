@@ -80,7 +80,7 @@ class Grid(BaseLayout):
         canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert(
             """
-            attribute vec2 {};
+           in vec2 {};
             uniform vec2 {};
             uniform vec2 u_grid_scaling;
             """.format(self.box_var, self.shape_var),
@@ -204,7 +204,7 @@ class Boxed(BaseLayout):
         canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
-            attribute float {};
+            in float {};
             uniform sampler2D u_box_pos;
             uniform float n_boxes;
             uniform vec2 u_box_size;
@@ -385,7 +385,7 @@ class Stacked(Boxed):
         canvas.gpu_transforms += self.gpu_transforms
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
-            attribute float {};
+            in float {};
             uniform float n_boxes;
             uniform bool u_top_origin;
             uniform vec2 u_box_size;

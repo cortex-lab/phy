@@ -6,26 +6,26 @@
 
 // Externs
 // ------------------------------------
-attribute vec3 a_prev;
-attribute vec3 a_curr;
-attribute vec3 a_next;
-attribute float a_id;
-attribute vec4 a_color;
-attribute float a_mask;
-attribute float a_depth;
+in vec3 a_prev;
+in vec3 a_curr;
+in vec3 a_next;
+in float a_id;
+in vec4 a_color;
+in float a_mask;
+in float a_depth;
 
 uniform float u_antialias;
 uniform float u_linewidth;
 uniform float u_mask_max;
 
-// Varyings
+// outs
 // ------------------------------------
-varying float v_antialias;
-varying float v_linewidth;
-varying float v_distance;
-varying vec4  v_color;
+out float v_antialias;
+out float v_linewidth;
+out float v_distance;
+out vec4  v_color;
 
-varying float v_mask;
+out float v_mask;
 
 vec2 NDC_to_viewport(vec4 position, vec2 viewport)
 {
