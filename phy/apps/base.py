@@ -303,7 +303,7 @@ class FeatureMixin(object):
     def _get_feature_spike_ids(self, cluster_id, load_all=False):
         """Return spike ids to be used in the feature view."""
         if load_all:
-            return self.supervisor.get_spike_ids(cluster_id)
+            return self.get_spike_ids(cluster_id)
         # Background spikes.
         if cluster_id is None:
             return self.selector(self.n_spikes_features_background, [])

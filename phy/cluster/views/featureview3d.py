@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-
-"""3D Feature view."""
-
-# -----------------------------------------------------------------------------
-# Imports
-# -----------------------------------------------------------------------------
-
 import logging
-
 import numpy as np
-from phylib.utils import Bunch, emit
+from phylib.utils import Bunch, emit, connect, unconnect
 from phy.utils.color import selected_cluster_color
 from phy.plot.visuals import ScatterVisual, TextVisual, LineVisual
 from phy.plot.transform import range_transform, NDC
@@ -26,7 +17,8 @@ def _get_point_color(clu_idx=None):
     if clu_idx is not None:
         color = selected_cluster_color(clu_idx, .5)
     else:
-        color = (.5,) * 4
+        # Lighter gray for background points so they are visible on black background
+        color = (0.5, 0.5, 0.5, 0.5)
     assert len(color) == 4
     return color
 
@@ -417,7 +409,17 @@ class Feature3DView(LassoMixin, ManualClusteringView):
             return []
 
         # Choose the channels based on the first selected cluster.
-        channel_ids = list(bunchs[0].get('channel_ids', [])) if bunchs else []
+        if bunchs and len(bunchs) > 0:
+            first_bunch = bunchs[0]
+            # Prioritize 'channel_ids' from the bunch itself
+            if 'channel_ids' in first_bunch and len(first_bunch.channel_ids) > 0:
+                 channel_ids = list(first_bunch.channel_ids)
+            else:
+                 # Fallback to empty if not present (shouldn't happen with valid features)
+                 channel_ids = []
+        else:
+             channel_ids = []
+
         logger.debug(f"Extracted channel_ids from first bunch: {channel_ids[:5] if len(channel_ids) > 5 else channel_ids}")
        
         # Always update channel_ids if not in fixed_channels mode
@@ -629,6 +631,39 @@ class Feature3DView(LassoMixin, ManualClusteringView):
 
         return np.array(spike_ids_to_split, dtype=np.int64)
 
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+        super(Feature3DView, self).attach(gui)
+        # Manually connect the split event to the controller
+        # This ensures that when 'K' is pressed, this view's on_request_split is called
+        connect(self.on_request_split)
+
+        # Add actions - the shortcuts are automatically handled by the Actions system
+        self.actions.add(self.zoom_in, name='Zoom in')
+        self.actions.add(self.zoom_out, name='Zoom out')
+        self.actions.add(self.reset_view, name='Reset view')
+        self.actions.separator()
+        # Register the toggle action so the default shortcut is picked up.
+        self.actions.add(
+            self.toggle_automatic_channel_selection,
+            checkable=True,
+            checked=not self.fixed_channels,
+        )
+
+        # Projection toggle (Orthographic/Perspective)
+        self.actions.add(
+            self.toggle_projection_mode,
+            name='Orthographic projection',
+            checkable=True,
+            checked=(self.projection_mode == 'orthographic')
+        )
+
+        # Create axis actions at startup
+        self._create_axis_actions()
+
+        # Force an initial plot to ensure the view is not blank on startup.
+        self.plot()
+
     def plot(self, **kwargs):
         """Update the view with the selected clusters."""
         logger.debug("Feature3DView.plot() called")
@@ -655,13 +690,18 @@ class Feature3DView(LassoMixin, ManualClusteringView):
                 primary_channel = self.channel_ids[0]
                 primary_channel_label = self.channel_labels.get(primary_channel, str(primary_channel))
                 primary_channel_text = f" (ch{primary_channel_label})"
+                
+                logger.debug(f"Updating axes for primary channel: {primary_channel} (label: {primary_channel_label})")
 
                 # Preserve the chosen PC (PC1/PC2/PC3) for each axis when relabeling Primary
                 for axis_name in ('x', 'y', 'z'):
                     current_label = getattr(self, f'{axis_name}_axis')
+                    # Update if it's explicitly a Primary axis OR if it's just initialized generic PC
                     if '(Primary' in current_label:
                         pc = current_label.split(' ')[0]  # e.g., 'PC1'
-                        setattr(self, f'{axis_name}_axis', f"{pc} (Primary{primary_channel_text})")
+                        new_label = f"{pc} (Primary{primary_channel_text})"
+                        setattr(self, f'{axis_name}_axis', new_label)
+                        logger.debug(f"Updated {axis_name}_axis to {new_label}")
 
             if not bunchs:
                 logger.debug("No cluster data, clearing view")
@@ -690,30 +730,49 @@ class Feature3DView(LassoMixin, ManualClusteringView):
        
             # Get and plot background data (gray points)
             if self.channel_ids:
-                logger.debug("Getting background data")
-                background_data = self.features(None, channel_ids=self.channel_ids)
-                # Handle both list and single-bunch returns
-                background = background_data[0] if isinstance(background_data, (list, tuple)) and background_data else background_data
-                if background:
-                    background.cluster_id = None
-                    x_bg = self._get_axis_data(background, self.x_axis)
-                    y_bg = self._get_axis_data(background, self.y_axis)
-                    z_bg = self._get_axis_data(background, self.z_axis)
-                    points_3d = np.column_stack([x_bg, y_bg, z_bg])
-                   
-                    # Store cluster data
-                    cluster_info = {
-                        'points_3d': points_3d,
-                        'cluster_id': None,
-                        'clu_idx': None,
-                        'color': _get_point_color(None),
-                        'spike_ids': background.get('spike_ids'),
-                        'bunch': background
-                    }
-                    self._cluster_data.append(cluster_info)
+                logger.debug(f"Attempting to get background data for channels: {self.channel_ids}")
+                try:
+                    # Request background features for the current channels
+                    # Note: We use None for cluster_id to get background
+                    background_data = self.features(None, channel_ids=self.channel_ids, load_all=False)
                     
-                    all_points_3d.append(points_3d)
-                    all_cluster_ids.extend([None] * len(points_3d))
+                    # Handle both list and single-bunch returns
+                    background = background_data[0] if isinstance(background_data, (list, tuple)) and background_data else background_data
+                    
+                    if background:
+                        spike_ids = background.get('spike_ids')
+                        logger.debug(f"Background data received: {len(spike_ids) if spike_ids is not None else 0} spikes")
+                        
+                        background.cluster_id = None
+                        x_bg = self._get_axis_data(background, self.x_axis)
+                        y_bg = self._get_axis_data(background, self.y_axis)
+                        z_bg = self._get_axis_data(background, self.z_axis)
+                        
+                        # Just plot whatever we got, even if some are zeros
+                        if len(x_bg) > 0:
+                            points_3d = np.column_stack([x_bg, y_bg, z_bg])
+                            
+                            # Store cluster data
+                            cluster_info = {
+                                'points_3d': points_3d,
+                                'cluster_id': None,
+                                'clu_idx': None,
+                                'color': _get_point_color(None),
+                                'spike_ids': spike_ids,
+                                'bunch': background
+                            }
+                            self._cluster_data.append(cluster_info)
+                            
+                            all_points_3d.append(points_3d)
+                            all_cluster_ids.extend([None] * len(points_3d))
+                        else:
+                            logger.debug("Background data has 0 length after axis extraction")
+                    else:
+                        logger.debug("No background data returned from features()")
+                except Exception as e:
+                    logger.error(f"Error retrieving background data: {e}")
+            else:
+                logger.debug("Skipping background: No channel_ids set")
        
             # Plot each cluster
             for clu_idx, bunch in enumerate(bunchs):
@@ -999,36 +1058,6 @@ class Feature3DView(LassoMixin, ManualClusteringView):
         self.scale_3d /= 1.1
         self._update_projections()
 
-    def attach(self, gui):
-        """Attach the view to the GUI."""
-        super(Feature3DView, self).attach(gui)
-
-        # Add actions - the shortcuts are automatically handled by the Actions system
-        self.actions.add(self.zoom_in, name='Zoom in')
-        self.actions.add(self.zoom_out, name='Zoom out')
-        self.actions.add(self.reset_view, name='Reset view')
-        self.actions.separator()
-        # Register the toggle action so the default shortcut is picked up.
-        self.actions.add(
-            self.toggle_automatic_channel_selection,
-            checkable=True,
-            checked=not self.fixed_channels,
-        )
-
-        # Projection toggle (Orthographic/Perspective)
-        self.actions.add(
-            self.toggle_projection_mode,
-            name='Orthographic projection',
-            checkable=True,
-            checked=(self.projection_mode == 'orthographic')
-        )
-
-        # Create axis actions at startup
-        self._create_axis_actions()
-
-        # Force an initial plot to ensure the view is not blank on startup.
-        self.plot()
-
     def toggle_projection_mode(self, checked):
         """Toggle between orthographic and perspective projection."""
         self.projection_mode = 'orthographic' if checked else 'perspective'
@@ -1172,4 +1201,3 @@ class Feature3DView(LassoMixin, ManualClusteringView):
                 f'Primary: ch{primary_channel_label} ({channel_mode}) | '
                 f'Rotation: X={self.rotation_x:.2f}, Y={self.rotation_y:.2f}, Z={self.rotation_z:.2f} | '
                 f'Scale: {self.scale_3d:.2f}')
-                
