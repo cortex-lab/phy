@@ -385,6 +385,7 @@ class FeatureMixin:
     def _get_spike_features(self, spike_ids, channel_ids):
         if len(spike_ids) == 0:  # pragma: no cover
             return Bunch()
+        channel_ids = np.asarray(channel_ids, dtype=np.int64)
         data = self.model.get_features(spike_ids, channel_ids)
         assert data.shape[:2] == (len(spike_ids), len(channel_ids))
         # Replace NaN values by zeros.

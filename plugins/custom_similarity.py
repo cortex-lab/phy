@@ -23,15 +23,15 @@ def _dot_product(mw1, c1, mw2, c2):
 
     # We find the union of the channel ids for both clusters so that we can convert from sparse
     # to dense format.
-    channel_ids = np.union1d(c1, c2)
+    channel_ids = np.union1d(c1, c2).astype(np.int64, copy=False)
 
     # We directly return 0 if the channels of the two clusters are disjoint.
     if not len(np.intersect1d(c1, c2)):
         return 0
 
     # We tile the channels so as to use `from_sparse()`.
-    c1 = np.tile(c1, (mw1.shape[0], 1))
-    c2 = np.tile(c2, (mw2.shape[0], 1))
+    c1 = np.tile(np.asarray(c1, dtype=np.int64), (mw1.shape[0], 1))
+    c2 = np.tile(np.asarray(c2, dtype=np.int64), (mw2.shape[0], 1))
 
     # We convert from sparse to dense format in order to compute the distance.
     mw1 = from_sparse(mw1, c1, channel_ids)  # (n_samples, n_channel_locs_common)
