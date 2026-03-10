@@ -14,7 +14,7 @@ from timeit import default_timer
 import numpy as np
 from phylib.utils import Bunch, connect, emit
 
-from phy.gui.qt import QEvent, QOpenGLWindow, Qt
+from phy.gui.qt import QOpenGLWindow, Qt
 
 from . import gloo
 from .gloo import gl
@@ -824,41 +824,19 @@ class BaseCanvas(QOpenGLWindow):
         self._key_event('key_release', e)
         self._current_key_event = None
 
-    def event(self, e):  # pragma: no cover
-        """Touch event."""
-        out = super().event(e)
-        t = e.type()
-        # Two-finger pinch.
-        if t == QEvent.TouchBegin:
-            self.emit('pinch_begin')
-        elif t == QEvent.TouchEnd:
-            self.emit('pinch_end')
-        elif t == QEvent.Gesture:
-            gesture = e.gesture(Qt.PinchGesture)
-            if gesture:
-                (x, y) = gesture.centerPoint().x(), gesture.centerPoint().y()
-                scale = gesture.scaleFactor()
-                last_scale = gesture.lastScaleFactor()
-                rotation = gesture.rotationAngle()
-                self.emit(
-                    'pinch',
-                    pos=(x, y),
-                    scale=scale,
-                    last_scale=last_scale,
-                    rotation=rotation,
-                )
-        # General touch event.
-        elif t == QEvent.TouchUpdate:
-            points = e.touchPoints()
-            # These variables are lists of (x, y) coordinates.
-            pos, last_pos = zip(
-                *[
-                    ((p.pos().x(), p.pos.y()), (p.lastPos().x(), p.lastPos.y()))
-                    for p in points
-                ]
-            )
-            self.emit('touch', pos=pos, last_pos=last_pos)
-        return out
+    def close(self):
+        """Close the OpenGL canvas.
+
+        The Qt offscreen platform plugin crashes when closing a shown QOpenGLWindow after
+        rendering. Hiding the window avoids the native crash and is sufficient for headless
+        test cleanup.
+        """
+        from os import environ
+
+        if environ.get('QT_QPA_PLATFORM') == 'offscreen':
+            self.hide()
+            return
+        super().close()
 
     def update(self):
         """Update the OpenGL canvas."""
