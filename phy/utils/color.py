@@ -56,11 +56,11 @@ def _hex_to_triplet(h):
 
 
 def _override_hsv(rgb, h=None, s=None, v=None):
-    h_, s_, v_ = rgb_to_hsv(np.array([[rgb]])).flat
+    h_, s_, v_ = rgb_to_hsv(np.array([[rgb]], dtype=np.float32)).flat
     h = h if h is not None else h_
     s = s if s is not None else s_
     v = v if v is not None else v_
-    r, g, b = hsv_to_rgb(np.array([[[h, s, v]]])).flat
+    r, g, b = hsv_to_rgb(np.array([[[h, s, v]]], dtype=np.float32)).flat
     return r, g, b
 
 
