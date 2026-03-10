@@ -110,11 +110,12 @@ testpaths = ["phy"]
 addopts = "--ignore=phy/apps/kwik --cov=phy --cov-report=term-missing"
 norecursedirs = ["experimental", ""]
 filterwarnings = [
-    "default",
+    "ignore:tostring\\(\\) is deprecated\\. Use tobytes\\(\\) instead\\.:DeprecationWarning",
+    "ignore::DeprecationWarning:OpenGL\\.GL\\.VERSION\\.GL_2_0",
     "ignore::DeprecationWarning:.",
     "ignore:numpy.ufunc",
     "ignore:Jupyter is migrating its paths to use standard platformdirs.*:DeprecationWarning",
-    "ignore:tostring\\(\\) is deprecated\\. Use tobytes\\(\\) instead\\.:DeprecationWarning",
+    "default",
 ]
 
 [tool.coverage.run]

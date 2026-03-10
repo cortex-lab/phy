@@ -7,6 +7,7 @@
 import os
 import logging
 import warnings
+from functools import wraps
 
 import matplotlib
 import numpy as np
@@ -32,6 +33,39 @@ warnings.filterwarnings(
     message=r'tostring\(\) is deprecated\. Use tobytes\(\) instead\.',
     category=DeprecationWarning,
 )
+warnings.filterwarnings(
+    'ignore',
+    category=DeprecationWarning,
+    module=r'OpenGL\.GL\.VERSION\.GL_2_0',
+)
+
+
+def _suppress_pyopengl_tostring_warning():
+    try:
+        from OpenGL.GL.VERSION import GL_2_0
+    except Exception:
+        return
+
+    def _wrap(func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    'ignore',
+                    message=r'tostring\(\) is deprecated\. Use tobytes\(\) instead\.',
+                    category=DeprecationWarning,
+                )
+                return func(*args, **kwargs)
+
+        return inner
+
+    for name in ('glGetActiveAttrib', 'glGetActiveUniform'):
+        func = getattr(GL_2_0, name, None)
+        if callable(func):
+            setattr(GL_2_0, name, _wrap(func))
+
+
+_suppress_pyopengl_tostring_warning()
 
 # Fix the random seed in the tests.
 np.random.seed(2019)

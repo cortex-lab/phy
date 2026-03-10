@@ -7,3 +7,9 @@ warnings.filterwarnings(
     message=r"Jupyter is migrating its paths to use standard platformdirs.*",
     category=DeprecationWarning,
 )
+warnings.filterwarnings(
+    "ignore",
+    message=r"tostring\(\) is deprecated\. Use tobytes\(\) instead\.",
+    category=DeprecationWarning,
+    append=False,
+)
