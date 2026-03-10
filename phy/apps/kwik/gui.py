@@ -179,13 +179,23 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         return self.model.all_masks[spike_ids]
 
     def _get_mean_masks(self, cluster_id):
-        return np.mean(self._get_masks(cluster_id), axis=0)
+        masks = self._get_masks(cluster_id)
+        if not len(masks):
+            return np.zeros((self.model.n_channels,), dtype=np.float32)
+        return np.mean(masks, axis=0)
 
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
         pos = self.model.channel_positions
         spike_ids = self.selector(self.n_spikes_waveforms, [cluster_id])
         data = self.model.all_waveforms[spike_ids]
+        if not len(data):
+            return Bunch(
+                data=np.zeros((0, 0, self.model.n_channels), dtype=np.float32),
+                channel_ids=np.arange(self.model.n_channels),
+                channel_positions=pos,
+                masks=np.zeros((0, self.model.n_channels), dtype=np.float32),
+            )
         mm = self._get_mean_masks(cluster_id)
         mw = np.mean(data, axis=0)
         amp = get_waveform_amplitude(mm, mw)
@@ -201,6 +211,8 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
 
     def _get_mean_waveforms(self, cluster_id):
         b = self._get_waveforms(cluster_id).copy()
+        if not len(b.data):
+            return b
         b.data = np.mean(b.data, axis=0)[np.newaxis, ...]
         b.masks = np.mean(b.masks, axis=0)[np.newaxis, ...] ** 0.1
         b['alpha'] = 1.0
