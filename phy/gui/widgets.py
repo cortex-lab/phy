@@ -624,8 +624,8 @@ class KeyValueWidget(QWidget):
             widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
-            widget.setMinimum(-1e9)
-            widget.setMaximum(+1e9)
+            widget.setMinimum(-10**9)
+            widget.setMaximum(10**9)
             widget.setValue(default or 0)
         elif vtype == 'float':
             widget = QDoubleSpinBox(self)
