@@ -9,6 +9,7 @@ from functools import partial
 from phylib.utils.testing import captured_logging, captured_output
 from pytest import raises
 
+from . import show_and_wait
 from ..actions import (
     Actions,
     _expected_args,
@@ -130,8 +131,7 @@ def test_actions_gui_menu(qtbot, gui, actions):
 
     actions.separator(menu='&File')
 
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     actions.get('press').trigger()
 
@@ -141,8 +141,7 @@ def test_actions_gui_menu(qtbot, gui, actions):
 
 def test_actions_gui(qtbot, gui, actions):
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     _press = []
 
@@ -175,8 +174,7 @@ def test_actions_submenu(qtbot, gui, actions):
         pass
 
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     # qtbot.stop()
     gui.close()
@@ -184,8 +182,7 @@ def test_actions_submenu(qtbot, gui, actions):
 
 def test_actions_checkable(qtbot, gui, actions):
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     _l = []
 
@@ -204,8 +201,7 @@ def test_actions_dialog_1(qtbot, gui, actions):
         print('hello', arg)
 
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     with captured_output() as (stdout, stderr), mock_dialogs(('world', True)):
         # return string, ok
@@ -219,8 +215,7 @@ def test_actions_dialog_2(qtbot, gui, actions):
         print('hello', arg1, arg2)
 
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     with captured_output() as (stdout, stderr), mock_dialogs(('world world', True)):
         # return string, ok
@@ -234,8 +229,7 @@ def test_actions_dialog_2(qtbot, gui, actions):
 
 def test_actions_disable(qtbot, gui, actions):
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     @actions.add(shortcut='g')
     def press():
@@ -257,8 +251,7 @@ def test_snippets_message(qtbot, gui):
 
 def test_snippets_gui(qtbot, gui, actions):
     qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     _actions = []
 

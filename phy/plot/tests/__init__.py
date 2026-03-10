@@ -1,24 +1,29 @@
 from phy.gui.qt import QPoint, Qt, _wait
 
 
+def _point(pos):
+    x, y = pos
+    return QPoint(int(round(x)), int(round(y)))
+
+
 def mouse_click(qtbot, c, pos, button='left', modifiers=()):
     b = getattr(Qt, f'{button.capitalize()}Button')
     modifiers = _modifiers_flag(modifiers)
-    qtbot.mouseClick(c, b, modifiers, QPoint(*pos))
+    qtbot.mouseClick(c, b, modifiers, _point(pos))
 
 
 def mouse_press(qtbot, c, pos, button='left', modifiers=()):
     b = getattr(Qt, f'{button.capitalize()}Button')
     modifiers = _modifiers_flag(modifiers)
-    qtbot.mousePress(c, b, modifiers, QPoint(*pos))
+    qtbot.mousePress(c, b, modifiers, _point(pos))
 
 
 def mouse_drag(qtbot, c, p0, p1, button='left', modifiers=()):
     b = getattr(Qt, f'{button.capitalize()}Button')
     modifiers = _modifiers_flag(modifiers)
-    qtbot.mousePress(c, b, modifiers, QPoint(*p0))
-    qtbot.mouseMove(c, QPoint(*p1))
-    qtbot.mouseRelease(c, b, modifiers, QPoint(*p1))
+    qtbot.mousePress(c, b, modifiers, _point(p0))
+    qtbot.mouseMove(c, _point(p1))
+    qtbot.mouseRelease(c, b, modifiers, _point(p1))
 
 
 def _modifiers_flag(modifiers):

@@ -13,6 +13,7 @@ from pytest import fixture, mark
 
 import phy
 
+from . import show_and_wait
 from ..widgets import Barrier, HTMLWidget, IPythonView, KeyValueWidget, Table
 from .test_qt import _block
 
@@ -31,9 +32,8 @@ def _wait_until_table_ready(qtbot, table):
     b = Barrier()
     connect(b(1), event='ready', sender=table)
 
-    table.show()
     qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
+    show_and_wait(qtbot, table)
     b.wait()
 
 
@@ -65,9 +65,8 @@ def table(qtbot):
 def test_widget_empty(qtbot):
     widget = HTMLWidget()
     widget.build()
-    widget.show()
     qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    show_and_wait(qtbot, widget)
     widget.close()
 
 
@@ -79,9 +78,8 @@ def test_widget_html(qtbot):
     widget.builder.add_header('<!-- comment -->')
     widget.builder.set_body('Hello world!')
     widget.build()
-    widget.show()
     qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    show_and_wait(qtbot, widget)
     _block(lambda: 'Hello world!' in str(widget.html))
 
     _out = []
@@ -97,9 +95,8 @@ def test_widget_javascript_1(qtbot):
     widget = HTMLWidget()
     widget.builder.add_script('var number = 1;')
     widget.build()
-    widget.show()
     qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    show_and_wait(qtbot, widget)
     _block(lambda: widget.html is not None)
 
     _out = []
@@ -125,9 +122,8 @@ def test_widget_javascript_debounce(qtbot, event_name):
 
     widget = HTMLWidget(debounce_events=('select',))
     widget.build()
-    widget.show()
     qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    show_and_wait(qtbot, widget)
     _block(lambda: widget.html is not None)
 
     event_code = (
@@ -164,10 +160,8 @@ def test_widget_javascript_debounce(qtbot, event_name):
 
 def test_key_value_1(qtbot):
     widget = KeyValueWidget()
-    widget.show()
-
     qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    show_and_wait(qtbot, widget)
 
     widget.add_pair('my text', 'some text')
     widget.add_pair('my text multiline', 'some\ntext', 'multiline')
@@ -257,9 +251,8 @@ def test_table_empty_1(qtbot):
 
 def test_table_invalid_column(qtbot):
     table = Table(data=[{'id': 0, 'a': 'b'}], columns=['id', 'u'])
-    table.show()
     qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
+    show_and_wait(qtbot, table)
     table.close()
 
 

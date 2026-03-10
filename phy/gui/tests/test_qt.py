@@ -7,6 +7,7 @@
 from phylib.utils.testing import captured_logging
 from pytest import raises
 
+from . import show_and_wait
 from ..qt import (
     AsyncCaller,
     Debouncer,
@@ -161,8 +162,7 @@ def test_web_view(qtbot):
 
     view.set_html('hello', _assert)
     qtbot.addWidget(view)
-    view.show()
-    qtbot.waitForWindowShown(view)
+    show_and_wait(qtbot, view)
     _block(lambda: _assert('hello'))
 
     view.set_html('world')
@@ -175,8 +175,7 @@ def test_javascript_1(qtbot):
     with captured_logging() as buf:
         view.set_html('<script>console.log("Test.");</script>')
         qtbot.addWidget(view)
-        view.show()
-        qtbot.waitForWindowShown(view)
+        show_and_wait(qtbot, view)
         _block(lambda: view.html is not None)
         view.close()
     assert buf.getvalue() == ''
@@ -188,8 +187,7 @@ def test_javascript_2(qtbot):
     with qtbot.capture_exceptions() as exceptions:
         view.set_html('<script>console.error("Test.");</script>')
         qtbot.addWidget(view)
-        view.show()
-        qtbot.waitForWindowShown(view)
+        show_and_wait(qtbot, view)
         _block(lambda: view.html is not None)
         view.close()
     assert len(exceptions) >= 1
@@ -201,8 +199,7 @@ def test_screenshot(qtbot, tempdir):
     assert str(screenshot_default_path(view, dir=tempdir)).startswith(str(tempdir))
     view.set_html('hello', lambda e: screenshot(view, path))
     qtbot.addWidget(view)
-    view.show()
-    qtbot.waitForWindowShown(view)
+    show_and_wait(qtbot, view)
     _block(lambda: path.exists())
     view.close()
 

@@ -6,6 +6,7 @@
 
 from pytest import fixture
 
+from . import show_and_wait
 from ..actions import Actions, Snippets
 from ..gui import GUI
 
@@ -18,9 +19,8 @@ from ..gui import GUI
 def gui(tempdir, qtbot):
     gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
     gui.set_default_actions()
-    gui.show()
     qtbot.addWidget(gui)
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
     yield gui
     gui.close()
     del gui

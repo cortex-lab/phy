@@ -11,6 +11,7 @@ from pytest import raises
 
 from phy.plot import BaseCanvas
 
+from . import show_and_wait
 from ..gui import (
     GUI,
     Actions,
@@ -157,8 +158,7 @@ def test_gui_creator(tempdir, qtbot):
     # Automatically create the views with the view counts.
     gui._requested_view_count = {'BaseCanvas': 1, 'MyCanvas': 2, 'UnusedClass': 0}
     gui.create_views()
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    show_and_wait(qtbot, gui)
 
     assert gui.view_count == {'BaseCanvas': 1, 'MyCanvas': 2}
     assert len(gui.list_views(BaseCanvas)) == 1
