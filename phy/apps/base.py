@@ -989,7 +989,7 @@ class BaseController:
         return
 
     def _clear_cache(self):
-        logger.warn('Deleting the cache directory %s.', self.cache_dir)
+        logger.warning('Deleting the cache directory %s.', self.cache_dir)
         shutil.rmtree(self.cache_dir, ignore_errors=True)
 
     def _clear_state(self):
@@ -1858,9 +1858,13 @@ class BaseController:
         def on_close(sender):  # noqa
             # Gather all GUI state attributes from views that are local and thus need
             # to be saved in the data directory.
-            for view in gui.views:
-                local_keys = getattr(view, 'local_state_attrs', [])
-                local_keys = [f'{view.name}.{key}' for key in local_keys]
+            for view in list(gui.views):
+                try:
+                    local_keys = getattr(view, 'local_state_attrs', [])
+                    view_name = view.name
+                except RuntimeError:
+                    continue
+                local_keys = [f'{view_name}.{key}' for key in local_keys]
                 gui.state.add_local_keys(local_keys)
 
             # Update the controller params in the GUI state.

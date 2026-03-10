@@ -112,7 +112,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         if self.channel_group is not None:
             self.cache_dir = self.cache_dir / str(self.channel_group)
         if clear_cache:
-            logger.warn('Deleting the cache directory %s.', self.cache_dir)
+            logger.warning('Deleting the cache directory %s.', self.cache_dir)
             shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.context = Context(self.cache_dir)
 

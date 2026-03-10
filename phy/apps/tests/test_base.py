@@ -21,6 +21,7 @@ from phylib.io.mock import (
     artificial_waveforms,
 )
 from phylib.utils import Bunch, connect, emit, reset, unconnect
+from pytest import mark
 from pytestqt.plugin import QtBot
 
 from phy.cluster.views import (
@@ -282,6 +283,7 @@ class MinimalControllerTests:
     def _close_gui(cls):
         cls._gui.close()
         cls._gui.deleteLater()
+        cls._qtbot.wait(100)
 
         # NOTE: make sure all callback functions are unconnected at the end of the tests
         # to avoid side-effects and spurious dependencies between tests.
@@ -382,8 +384,14 @@ class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.Tes
     def get_controller(cls, tempdir):
         return _mock_controller(tempdir, MyController)
 
+    @mark.filterwarnings(
+        'ignore:Parsing dates involving a day of month without a year specified is ambiguious:DeprecationWarning'
+    )
     def test_create_ipython_view(self):
-        self.gui.create_and_add_view('IPythonView')
+        view = self.gui.create_and_add_view('IPythonView')
+        view.stop()
+        view.dock.close()
+        self.qtbot.wait(100)
 
     def test_create_raster_view(self):
         view = self.gui.create_and_add_view('RasterView')

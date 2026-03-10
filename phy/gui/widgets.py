@@ -48,6 +48,10 @@ class IPythonView(RichJupyterWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.kernel_manager = None
+        self.kernel_client = None
+        self.kernel = None
+        self.shell = None
 
     def start_kernel(self):
         """Start the IPython kernel."""
@@ -107,10 +111,20 @@ class IPythonView(RichJupyterWidget):
         """Stop the kernel."""
         logger.debug('Stopping the kernel.')
         try:
-            self.kernel_client.stop_channels()
-            self.kernel_manager.shutdown_kernel()
+            if self.kernel_client is not None:
+                self.kernel_client.stop_channels()
+                self.kernel_client = None
+            if self.kernel_manager is not None:
+                self.kernel_manager.shutdown_kernel()
+                self.kernel_manager = None
+            self.kernel = None
+            self.shell = None
         except Exception as e:  # pragma: no cover
             logger.error('Could not stop the IPython kernel: %s.', str(e))
+
+    def closeEvent(self, event):
+        self.stop()
+        super().closeEvent(event)
 
 
 # -----------------------------------------------------------------------------
