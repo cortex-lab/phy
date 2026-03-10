@@ -127,12 +127,21 @@ class IPythonView(RichJupyterWidget):
         """Stop the kernel."""
         logger.debug('Stopping the kernel.')
         try:
+            kernel = self.kernel
             if self.kernel_client is not None:
                 self.kernel_client.stop_channels()
                 self.kernel_client = None
             if self.kernel_manager is not None:
                 self.kernel_manager.shutdown_kernel()
                 self.kernel_manager = None
+            if kernel is not None:
+                for stream_name in ('stdout', 'stderr'):
+                    stream = getattr(kernel, stream_name, None)
+                    if stream is not None:
+                        stream.close()
+                iopub_thread = getattr(kernel, 'iopub_thread', None)
+                if iopub_thread is not None and not iopub_thread.closed:
+                    iopub_thread.close()
             self.kernel = None
             self.shell = None
         except Exception as e:  # pragma: no cover
