@@ -23,6 +23,8 @@ logger.setLevel(10)
 add_default_handler(5, logger=logger)
 
 os.environ.setdefault('JUPYTER_PLATFORM_DIRS', '1')
+# Keep Qt tests headless by default so GUI windows do not interrupt the desktop.
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 warnings.filterwarnings(
     'ignore',
     message='Jupyter is migrating its paths to use standard platformdirs',
