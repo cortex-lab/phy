@@ -70,19 +70,14 @@ dev = [
     "mkdocs",
 ]
 
-# Qt5 support (default for older systems)
+# Qt5 support
 qt5 = ["PyQt5>=5.12.0", "PyQtWebEngine>=5.12.0"]
 
-# Qt6 support (recommended for new installations)
-qt6 = ["pyqt6>=6.9.1", "pyqt6-webengine>=6.9.0"]
+# Convenience extras that install Qt5 by default
+gui = ["PyQt5>=5.12.0", "PyQtWebEngine>=5.12.0"]
 
-# Convenience extras that install Qt6 by default
-gui = ["pyqt6>=6.9.1", "pyqt6-webengine>=6.9.0"]
-
-# For users who want to specify Qt version explicitly
-qt = [
-    # This will be empty - users should choose qt5 or qt6
-]
+# Default Qt extra for the current codebase
+qt = ["PyQt5>=5.12.0", "PyQtWebEngine>=5.12.0"]
 
 [project.scripts]
 phy = "phy.apps:phycli"
