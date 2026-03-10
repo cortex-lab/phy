@@ -35,3 +35,8 @@ def key_press(qtbot, c, key, modifiers=(), delay=50):
 
 def key_release(qtbot, c, key, modifiers=()):
     qtbot.keyRelease(c, getattr(Qt, f'Key_{key}'), _modifiers_flag(modifiers))
+
+
+def show_and_wait(qtbot, widget):
+    widget.show()
+    qtbot.waitUntil(widget.isVisible)

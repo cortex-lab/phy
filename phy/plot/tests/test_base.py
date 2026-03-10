@@ -6,15 +6,16 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import sys
 
 import numpy as np
-from pytest import fixture
+from pytest import fixture, skip
 
 from phy.gui.qt import QOpenGLWindow
 
 from ..base import BaseVisual, GLSLInserter, gloo
 from ..transform import Clip, Range, Scale, Subplot, TransformChain, Translate, subplot_bounds
-from . import key_press, key_release, mouse_click, mouse_drag, mouse_press
+from . import key_press, key_release, mouse_click, mouse_drag, mouse_press, show_and_wait
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +111,7 @@ def test_next_paint(qtbot, canvas):
     def next():
         pass
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
 
 def test_visual_1(qtbot, canvas):
@@ -122,8 +122,7 @@ def test_visual_1(qtbot, canvas):
     # Must be called *after* add_visual().
     v.set_data()
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
     v.hide()
     canvas.update()
@@ -178,8 +177,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     canvas.add_visual(v)
     v.set_data()
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
     # qtbot.stop()
 
 
@@ -188,13 +186,14 @@ def test_canvas_lazy(qtbot, canvas):
     canvas.add_visual(v)
     canvas.set_lazy(True)
     v.set_data()
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
     assert len(list(canvas.iter_update_queue())) == 2
 
 
 def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
+    if sys.version_info >= (3, 13):
+        skip("memory_profiler still uses fork() here on Python 3.13")
     try:
         from memory_profiler import memory_usage
     except ImportError:  # pragma: no cover
@@ -209,8 +208,7 @@ def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
     program = gloo.Program(vertex_shader_nohook, fragment_shader)
 
     canvas = TestCanvas()
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
     def f():
         for _ in range(100):
@@ -218,7 +216,7 @@ def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
             canvas.update()
             qtbot.wait(1)
 
-    mem = memory_usage(f)
+    mem = memory_usage((f, (), {}), multiprocess=False)
     usage = max(mem) - min(mem)
     print(usage)
 

@@ -33,6 +33,14 @@ from .visuals import (
 logger = logging.getLogger(__name__)
 
 
+def _is_single_color(color):
+    """Return whether a Matplotlib color value should be passed as `color=`."""
+    if color is None or isinstance(color, str):
+        return True
+    color = np.asarray(color)
+    return color.ndim == 1 and color.shape[0] in (3, 4)
+
+
 # ------------------------------------------------------------------------------
 # Plotting interface
 # ------------------------------------------------------------------------------
@@ -365,7 +373,12 @@ class PlotCanvasMpl:
         data_bounds=None,
         marker=None,
     ):
-        self.ax.scatter(x, y, c=color, s=size, marker=_MPL_MARKER.get(marker, 'o'))
+        kwargs = {'s': size, 'marker': _MPL_MARKER.get(marker, 'o')}
+        if _is_single_color(color):
+            kwargs['color'] = color
+        else:
+            kwargs['c'] = color
+        self.ax.scatter(x, y, **kwargs)
         self.set_data_bounds(data_bounds)
 
     def plot(self, x=None, y=None, color=None, depth=None, data_bounds=None):
@@ -389,7 +402,17 @@ class PlotCanvasMpl:
 
     def text(self, pos=None, text=None, anchor=None, data_bounds=None, color=None):
         pos = np.atleast_2d(pos)
-        self.ax.text(pos[:, 0], pos[:, 1], text, color=color or 'w')
+        if isinstance(text, str):
+            text = [text]
+        elif text is None:
+            text = []
+        else:
+            text = list(text)
+        if len(text) == 1 and len(pos) > 1:
+            text = text * len(pos)
+        assert len(text) == len(pos)
+        for (x, y), label in zip(pos, text):
+            self.ax.text(float(x), float(y), label, color=color or 'w')
         self.set_data_bounds(data_bounds)
 
     def polygon(self, pos=None, data_bounds=None):

@@ -113,6 +113,8 @@ filterwarnings = [
     "default",
     "ignore::DeprecationWarning:.",
     "ignore:numpy.ufunc",
+    "ignore:Jupyter is migrating its paths to use standard platformdirs.*:DeprecationWarning",
+    "ignore:tostring\\(\\) is deprecated\\. Use tobytes\\(\\) instead\\.:DeprecationWarning",
 ]
 
 [tool.coverage.run]

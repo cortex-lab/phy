@@ -8,15 +8,19 @@
 import os
 
 from numpy.testing import assert_allclose as ac
-from pytest import fixture
+from pytest import fixture, mark
 
 from ..base import BaseVisual
 from ..panzoom import PanZoom
-from . import key_press, mouse_drag
+from . import key_press, mouse_drag, show_and_wait
 
 # ------------------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------------------
+
+pytestmark = mark.filterwarnings(
+    r"ignore:tostring\(\) is deprecated\. Use tobytes\(\) instead\.:DeprecationWarning"
+)
 
 
 class MyTestVisual(BaseVisual):
@@ -39,8 +43,7 @@ def panzoom(qtbot, canvas_pz):
     c.add_visual(visual)
     visual.set_data()
 
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
 
     yield c.panzoom
 
@@ -312,8 +315,7 @@ def test_panzoom_excluded(qtbot, canvas_pz):
     c.add_visual(visual, exclude_origins=(c.panzoom,))
     visual.set_data()
 
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
 
     mouse_drag(qtbot, c, (100, 0), (200, 0))
 

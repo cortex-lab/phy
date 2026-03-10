@@ -4,6 +4,7 @@
 # Imports
 # ------------------------------------------------------------------------------
 
+import os
 import logging
 import warnings
 
@@ -19,6 +20,18 @@ from phylib.conftest import *  # noqa
 logger = logging.getLogger('phy')
 logger.setLevel(10)
 add_default_handler(5, logger=logger)
+
+os.environ.setdefault('JUPYTER_PLATFORM_DIRS', '1')
+warnings.filterwarnings(
+    'ignore',
+    message='Jupyter is migrating its paths to use standard platformdirs',
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    'ignore',
+    message=r'tostring\(\) is deprecated\. Use tobytes\(\) instead\.',
+    category=DeprecationWarning,
+)
 
 # Fix the random seed in the tests.
 np.random.seed(2019)

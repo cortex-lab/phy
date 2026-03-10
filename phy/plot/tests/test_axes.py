@@ -7,6 +7,7 @@
 
 import os
 
+from . import show_and_wait
 from ..axes import Axes
 
 # ------------------------------------------------------------------------------
@@ -21,8 +22,7 @@ def test_axes_1(qtbot, canvas_pz):
     g = Axes(data_bounds=db)
     g.attach(c)
 
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
 
     c.panzoom.zoom = 4
     c.panzoom.zoom = 8

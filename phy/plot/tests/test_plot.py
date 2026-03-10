@@ -12,6 +12,7 @@ from pytest import fixture
 
 from phy.gui import GUI
 
+from . import show_and_wait
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import get_linear_x
 from ..visuals import PlotVisual, TextVisual
@@ -40,8 +41,11 @@ def y():
 def canvas(request, qtbot):
     c = PlotCanvas() if request.param else PlotCanvasMpl()
     yield c
-    c.show()
-    qtbot.waitForWindowShown(c.canvas)
+    if isinstance(c, PlotCanvasMpl):
+        c.show()
+        qtbot.wait(50)
+    else:
+        show_and_wait(qtbot, c.canvas)
     if os.environ.get('PHY_TEST_STOP', None):
         qtbot.stop()
     c.close()
@@ -52,8 +56,7 @@ def test_plot_0(qtbot, x, y):
     c.has_axes = True
     c.has_lasso = True
     c.scatter(x=x, y=y)
-    c.show()
-    qtbot.waitForWindowShown(c.canvas)
+    show_and_wait(qtbot, c.canvas)
     # c._enable()
     c.close()
 
@@ -205,7 +208,7 @@ def test_plot_mpl_1(qtbot):
     c.attach(gui)
 
     c.show()
-    qtbot.waitForWindowShown(c.canvas)
+    qtbot.wait(50)
     if os.environ.get('PHY_TEST_STOP', None):
         qtbot.stop()
     c.close()

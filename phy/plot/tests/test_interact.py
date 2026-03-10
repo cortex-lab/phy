@@ -10,19 +10,23 @@ from itertools import product
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_equal as ae
+from pytest import mark
 
 from ..base import BaseCanvas, BaseVisual
 from ..interact import Boxed, Grid, Lasso, Stacked
 from ..panzoom import PanZoom
 from ..transform import NDC
 from ..visuals import ScatterVisual
-from . import mouse_click
+from . import mouse_click, show_and_wait
 
 # ------------------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------------------
 
 N = 10000
+pytestmark = mark.filterwarnings(
+    r"ignore:tostring\(\) is deprecated\. Use tobytes\(\) instead\.:DeprecationWarning"
+)
 
 
 class MyTestVisual(BaseVisual):
@@ -64,8 +68,7 @@ def _create_visual(qtbot, canvas, layout, box_index):
     visual.set_data()
     visual.set_box_index(box_index)
 
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
 
 
 # ------------------------------------------------------------------------------
@@ -186,8 +189,7 @@ def test_boxed_2(qtbot, canvas):
     visual.set_data(x=x, y=y)
     visual.set_box_index(box_index)
 
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
 
 
 # ------------------------------------------------------------------------------
@@ -279,8 +281,7 @@ def test_lasso_grid(qtbot, canvas):
     l.create_lasso_visual()
     l.update_lasso_visual()
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
     qtbot.wait(20)
 
     def _ctrl_click(x, y, button='left'):

@@ -11,6 +11,7 @@ import numpy as np
 
 from phy.utils.color import _random_color
 
+from . import show_and_wait
 from ..transform import NDC, Rotate, range_transform
 from ..visuals import (
     HistogramVisual,
@@ -37,8 +38,7 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
     data = v.validate(**kwargs)
     assert v.vertex_count(**data) >= 0
     v.set_data(**kwargs)
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
     if os.environ.get('PHY_TEST_STOP', None) or stop:  # pragma: no cover
         qtbot.stop()
     v.close()
@@ -108,8 +108,7 @@ def test_patch_2(qtbot, canvas_pz):
     v = PatchVisual(primitive_type='triangles')
     canvas_pz.add_visual(v)
     v.set_data(pos=pos, color=c)
-    canvas_pz.show()
-    qtbot.waitForWindowShown(canvas_pz)
+    show_and_wait(qtbot, canvas_pz)
     v.set_color((1, 1, 0, 1))
     canvas_pz.update()
     if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
@@ -183,8 +182,7 @@ def test_plot_color(qtbot, canvas_pz):
     assert v.vertex_count(**data) >= 0
     v.set_data(**data)
     v.set_color(np.random.uniform(low=0.5, high=0.9, size=(10, 4)))
-    canvas_pz.show()
-    qtbot.waitForWindowShown(canvas_pz)
+    show_and_wait(qtbot, canvas_pz)
     canvas_pz.close()
 
 
@@ -455,8 +453,7 @@ def test_text_2(qtbot, canvas_pz):
     v.set_marker_size(10)
     v.set_color(np.random.uniform(low=0.5, high=0.9, size=(v.n_vertices, 4)))
 
-    c.show()
-    qtbot.waitForWindowShown(c)
+    show_and_wait(qtbot, c)
 
     if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
         qtbot.stop()
