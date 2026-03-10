@@ -496,7 +496,6 @@ class BaseColorView(BaseWheelMixin):
 
     def update_color(self):
         """Update the cluster colors depending on the current color scheme. To be overridden."""
-        pass
 
     def update_select_color(self):
         """Update the cluster colors after the cluster selection changes."""
