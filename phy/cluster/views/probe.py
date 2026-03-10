@@ -77,7 +77,9 @@ class ProbeView(ManualClusteringView):
         # Normalize positions.
         assert positions.ndim == 2
         assert positions.shape[1] == 2
-        positions = positions.astype(np.float32)
+        # `get_non_overlapping_boxes()` can fail to converge on float32 inputs for larger
+        # probes; keep float64 through the layout computation.
+        positions = positions.astype(np.float64)
         self.positions, self.data_bounds = _get_pos_data_bounds(positions)
 
         self.n_channels = positions.shape[0]

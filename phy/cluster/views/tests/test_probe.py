@@ -4,6 +4,8 @@
 # Imports
 # ------------------------------------------------------------------------------
 
+import os
+
 import numpy as np
 import pytest
 from phylib.utils import emit
@@ -17,17 +19,21 @@ from . import _stop_and_close
 # ------------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Hangs indefinitely in the current test environment.")
 def test_probe_view(qtbot, gui):
     n = 50
     positions = staggered_positions(n)
     positions = positions.astype(np.int32)
-    best_channels = lambda cluster_id: range(1, 9, 2)
+    def best_channels(cluster_id):
+        return range(1, 9, 2)
 
     v = ProbeView(positions=positions, best_channels=best_channels, dead_channels=(3, 7, 12))
     v.do_show_labels = False
-    with qtbot.waitExposed(v.canvas):
+    if os.environ.get('QT_QPA_PLATFORM') == 'offscreen':
         v.show()
+        qtbot.wait(50)
+    else:
+        with qtbot.waitExposed(v.canvas):
+            v.show()
     v.attach(gui)
 
     class Supervisor:
