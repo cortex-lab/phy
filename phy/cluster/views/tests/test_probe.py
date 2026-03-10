@@ -26,8 +26,8 @@ def test_probe_view(qtbot, gui):
 
     v = ProbeView(positions=positions, best_channels=best_channels, dead_channels=(3, 7, 12))
     v.do_show_labels = False
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     class Supervisor:

@@ -20,8 +20,8 @@ from . import _stop_and_close
 
 def test_scatter_view_0(qtbot, gui):
     v = ScatterView(coords=lambda cluster_ids, load_all=False: None)
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
@@ -42,8 +42,8 @@ def test_scatter_view_1(qtbot, gui):
             x=x, y=x, spike_ids=[0], spike_clusters=[0], data_bounds=(0, 0, 0, 0)
         )
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[0])
     _stop_and_close(qtbot, v)
@@ -62,8 +62,8 @@ def test_scatter_view_2(qtbot, gui):
             for c in cluster_ids
         ]
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[])
@@ -100,8 +100,8 @@ def test_scatter_view_3(qtbot, gui):
             data_bounds=None,
         )
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[0, 2])

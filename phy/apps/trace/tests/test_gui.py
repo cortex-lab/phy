@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def test_trace_gui_1(qtbot, template_path):  # noqa
     gui = create_trace_gui(template_path)
-    gui.show()
     qtbot.addWidget(gui)
-    qtbot.waitForWindowShown(gui)
+    with qtbot.waitExposed(gui):
+        gui.show()
     gui.close()

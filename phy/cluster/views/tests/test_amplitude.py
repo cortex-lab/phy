@@ -22,8 +22,8 @@ def test_amplitude_view_0(qtbot, gui):
     v = AmplitudeView(
         amplitudes=lambda cluster_ids, load_all=False: None,
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
@@ -41,8 +41,8 @@ def test_amplitude_view_1(qtbot, gui):
             Bunch(amplitudes=x, spike_ids=[0], spike_times=[0])
         ],
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
@@ -76,8 +76,8 @@ def test_amplitude_view_2(qtbot, gui):
         },
         duration=max(st1.max(), st2.max()),
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[])

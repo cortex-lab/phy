@@ -45,8 +45,8 @@ def test_feature_view(qtbot, gui, n_channels):
         return Bunch(data=spike_times[get_spike_ids(cluster_id)], lim=(0.0, 1.0))
 
     v = FeatureView(features=get_features, attributes={'time': get_time})
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.set_grid_dim(_get_default_grid())

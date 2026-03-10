@@ -88,8 +88,8 @@ def test_trace_view_1(qtbot, tempdir, gui):
         duration=duration,
         channel_positions=linear_positions(nc),
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[])
@@ -243,8 +243,8 @@ def test_trace_image_view_1(qtbot, tempdir, gui):
         duration=duration,
         channel_positions=linear_positions(nc),
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.update_color()

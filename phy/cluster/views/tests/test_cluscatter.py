@@ -47,9 +47,9 @@ def test_cluster_scatter_view_1(qtbot, tempdir, gui):
         cluster_ids=cluster_ids,
     )
     v.show()
-    v.plot()
+    with qtbot.waitExposed(v.canvas):
+        v.plot()
     v.color_scheme = 'depth'
-    qtbot.waitForWindowShown(v.canvas)
     v.attach(gui)
 
     @connect(sender=v)

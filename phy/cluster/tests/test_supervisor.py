@@ -46,8 +46,8 @@ def gui(tempdir, qtbot):
 
     gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
     gui.set_default_actions()
-    gui.show()
-    qtbot.waitForWindowShown(gui)
+    with qtbot.waitExposed(gui):
+        gui.show()
     yield gui
     qtbot.wait(5)
     gui.close()

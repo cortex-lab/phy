@@ -39,8 +39,8 @@ def test_waveform_view(qtbot, tempdir, gui):
         waveforms={'waveforms': get_waveforms, 'mean_waveforms': get_waveforms},
         sample_rate=10000.0,
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[])

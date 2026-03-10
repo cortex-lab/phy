@@ -33,8 +33,8 @@ def test_template_view_0(qtbot, tempdir, gui):
         }
 
     v = TemplateView(templates=get_templates, channel_ids=channel_ids)
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.plot()
@@ -63,8 +63,8 @@ def test_template_view_1(qtbot, tempdir, gui):
     s = Supervisor()
 
     v = TemplateView(templates=get_templates, channel_ids=channel_ids, cluster_ids=cluster_ids)
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.update_color()  # should call .plot() instead as update_color() is for subsequent updates

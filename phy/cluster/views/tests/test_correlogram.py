@@ -27,8 +27,8 @@ def test_correlogram_view(qtbot, gui):
         firing_rate=get_firing_rate,
         sample_rate=100.0,
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[])

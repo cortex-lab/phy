@@ -273,9 +273,9 @@ class MinimalControllerTests:
         b = Barrier()
         connect(b('cluster_view'), event='ready', sender=s.cluster_view)
         connect(b('similarity_view'), event='ready', sender=s.similarity_view)
-        cls._gui.show()
+        with cls._qtbot.waitExposed(cls._gui):
+            cls._gui.show()
         # cls._qtbot.addWidget(cls._gui)
-        cls._qtbot.waitForWindowShown(cls._gui)
         b.wait()
 
     @classmethod

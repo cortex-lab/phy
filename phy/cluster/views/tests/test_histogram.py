@@ -25,8 +25,8 @@ def test_histogram_view_0(qtbot, gui):
             text=f'this is:\ncluster {cluster_id}',
         )
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])

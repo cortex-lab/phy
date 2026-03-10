@@ -30,8 +30,8 @@ def test_raster_0(qtbot, gui):
     s = Supervisor()
 
     v = RasterView(spike_times, spike_clusters)
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.set_cluster_ids(cluster_ids)
@@ -102,8 +102,8 @@ def test_raster_1(qtbot, gui):
         categorical=True,
     )
 
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.set_cluster_ids(cluster_ids)
