@@ -5,6 +5,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import inspect
 import json
 import logging
 from functools import partial
@@ -43,6 +44,20 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 
+def _ensure_async_ipykernel_methods(kernel):
+    """Adapt synchronous in-process kernel handlers to the newer awaitable API."""
+    if kernel is None:  # pragma: no cover
+        return
+
+    do_history = getattr(kernel, 'do_history', None)
+    if do_history is not None and not inspect.iscoroutinefunction(do_history):
+
+        async def do_history_async(*args, **kwargs):
+            return do_history(*args, **kwargs)
+
+        kernel.do_history = do_history_async
+
+
 class IPythonView(RichJupyterWidget):
     """A view with an IPython console living in the same Python process as the GUI."""
 
@@ -62,6 +77,7 @@ class IPythonView(RichJupyterWidget):
         self.kernel_manager.start_kernel(show_banner=False)
         self.kernel_manager.kernel.gui = 'qt'
         self.kernel = self.kernel_manager.kernel
+        _ensure_async_ipykernel_methods(self.kernel)
         self.shell = self.kernel.shell
 
         try:
