@@ -39,7 +39,9 @@ def _get_box_pos(bunchs, channel_ids):
     cp = {}
     for d in bunchs:
         cp.update({cid: pos for cid, pos in zip(d.channel_ids, d.channel_positions)})
-    return np.stack([cp[cid] for cid in channel_ids])
+    # Use float64 positions so phylib's box-size search cannot get stuck on float32
+    # midpoint rounding in older installs.
+    return np.asarray(np.stack([cp[cid] for cid in channel_ids]), dtype=np.float64)
 
 
 def _get_clu_offsets(bunchs):
