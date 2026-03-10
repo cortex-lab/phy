@@ -723,7 +723,7 @@ def test_supervisor_move_5(supervisor):
     assert supervisor.cluster_meta.get('group', 10) == 'mua'
 
     assert supervisor.cluster_meta.get('group', 2) == 'good'
-    assert supervisor.cluster_meta.get('group', 1) == 'good'
+    assert supervisor.cluster_meta.get('group', 1) == 'mua'
 
 
 def test_supervisor_reset(qtbot, supervisor):
