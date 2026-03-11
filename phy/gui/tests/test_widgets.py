@@ -428,6 +428,12 @@ def test_table_filter_comparison_operators(qtbot, table):
     table.filter('count > 80')
     _assert(table.get_ids, [0, 1])
 
+    table.filter('count >= 80')
+    _assert(table.get_ids, [0, 1, 2])
+
+    table.filter('count < 80')
+    _assert(table.get_ids, list(range(3, 10)))
+
     table.filter('count <= 80')
     _assert(table.get_ids, list(range(2, 10)))
 
@@ -438,6 +444,16 @@ def test_table_filter_comparison_operators(qtbot, table):
 def test_table_filter_combined_expression(qtbot, table):
     table.filter('(count >= 50) && id != 3')
     _assert(table.get_ids, [0, 1, 2, 4, 5])
+
+
+def test_table_filter_or_expression(qtbot, table):
+    table.filter('(id == 1) || (id == 3)')
+    _assert(table.get_ids, [1, 3])
+
+
+def test_table_filter_operator_precedence(qtbot, table):
+    table.filter('(id == 1 || id == 3) && count < 90')
+    _assert(table.get_ids, [3])
 
 
 def test_table_filter_invalid_expression_shows_all_rows(qtbot, table):
@@ -452,16 +468,22 @@ def test_table_filter_missing_field_shows_all_rows(qtbot, table):
 
 def test_table_filter_string_and_null_values(qtbot):
     data = [
-        {'id': 0, 'label': None},
+        {'id': 0, 'group': 'good', 'label': None},
         {'id': 1, 'group': 'mua', 'label': 'x'},
-        {'id': 2, 'label': None},
+        {'id': 2, 'group': 'noise', 'label': None},
     ]
     table = Table(
         columns=['id', 'label'],
-        value_names=['id', 'label'],
+        value_names=['id', 'label', {'data': ['group']}],
         data=data,
     )
     _wait_until_table_ready(qtbot, table)
+
+    table.filter("group == 'good'")
+    _assert(table.get_ids, [0])
+
+    table.filter("group != 'noise'")
+    _assert(table.get_ids, [0, 1])
 
     table.filter("label == 'x'")
     _assert(table.get_ids, [1])
@@ -469,4 +491,21 @@ def test_table_filter_string_and_null_values(qtbot):
     table.filter('label == null')
     _assert(table.get_ids, [0, 2])
 
+    table.filter('label != null')
+    _assert(table.get_ids, [1])
+
     table.close()
+
+
+def test_table_filter_event_emits_visible_ids(qtbot, table):
+    emitted = []
+
+    @connect(sender=table)
+    def on_table_filter(sender, row_ids):
+        emitted.append(row_ids)
+
+    table.filter('count >= 80')
+    _assert(table.get_ids, [0, 1, 2])
+    _block(lambda: emitted == [[0, 1, 2]])
+
+    unconnect(on_table_filter)
