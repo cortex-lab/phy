@@ -22,9 +22,6 @@ clean: clean-build clean-pyc clean-test
 install:
 	uv sync --dev --extra qt5
 
-install-qt6:
-	uv sync --dev --extra qt6
-
 lint:
 	uv run ruff check phy
 
@@ -72,4 +69,4 @@ dev: install lint format test
 
 ci: lint format-check test-full build
 
-.PHONY: clean-build clean-pyc clean-test clean install install-qt6 lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test coverage dev ci
+.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test coverage dev ci

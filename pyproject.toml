@@ -7,7 +7,8 @@ name = "phy"
 version = "2.1.0rc1" # No dynamic lookup needed
 description = "Interactive visualization and manual spike sorting of large-scale ephys data"
 readme = "README.md"
-license = { text = "BSD" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE.md"]
 authors = [
     { name = "Cyrille Rossant (cortex-lab/UCL/IBL)", email = "cyrille.rossant+pypi@gmail.com" },
 ]
@@ -15,7 +16,6 @@ keywords = ["phy", "data analysis", "electrophysiology", "neuroscience"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Framework :: IPython",
     "Programming Language :: Python :: 3",
@@ -27,7 +27,7 @@ requires-python = ">=3.10"
 
 # specific version required for pyopengl >=3.1.9
 dependencies = [
-    "phylib @ git+https://github.com/jesusdpa1/phylib_update.git",
+    "phylib>=2.7.0,<3",
     "click",
     "colorcet",
     "h5py",
@@ -77,11 +77,9 @@ qt = ["PyQt5>=5.12.0"]
 [project.scripts]
 phy = "phy.apps:phycli"
 
-[tool.setuptools.dynamic]
-version = { attr = "phy.version" }
-
 [tool.setuptools.packages.find]
 include = ["phy*"]
+exclude = ["*.tests", "*.tests.*"]
 
 [tool.setuptools.package-data]
 phy = [
