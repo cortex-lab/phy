@@ -44,7 +44,7 @@ dependencies = [
     "qtconsole",
     "requests",
     "responses",
-    "scikit-learn",
+    "scikit-learn>=1.6,<1.7",
     "scipy",
     "setuptools",
     "tqdm",
