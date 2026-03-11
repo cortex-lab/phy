@@ -22,6 +22,7 @@ from phy.utils.color import _is_bright, colormaps
 
 from .qt import (
     QApplication,
+    QBrush,
     Debouncer,
     QAbstractItemView,
     QAbstractTableModel,
@@ -458,7 +459,7 @@ class _TableItemDelegate(QStyledItemDelegate):
             painter.save()
             painter.fillRect(opt.rect, bg)
             painter.restore()
-            opt.backgroundBrush = Qt.NoBrush
+            opt.backgroundBrush = QBrush()
             opt.state &= ~QStyle.State_Selected
 
         if bg is not None:
@@ -737,6 +738,7 @@ class Table(QWidget):
                     index,
                     QItemSelectionModel.Select | QItemSelectionModel.Rows,
                 )
+        selection_model.setCurrentIndex(QModelIndex(), QItemSelectionModel.NoUpdate)
         self.table_view.viewport().update()
 
     def _selected_payload(self, kwargs=None):

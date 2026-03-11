@@ -49,6 +49,7 @@ from PyQt5.QtCore import (
     qInstallMessageHandler,
 )
 from PyQt5.QtGui import (  # noqa
+    QBrush,
     QKeySequence,
     QIcon,
     QColor,
