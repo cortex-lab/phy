@@ -32,6 +32,7 @@ from PyQt5.QtCore import (
     Qt,
     QByteArray,
     QMetaObject,
+    QAbstractTableModel,
     QObject,  # noqa
     QVariant,
     QEventLoop,
@@ -45,12 +46,16 @@ from PyQt5.QtCore import (
     QUrl,
     QEvent,
     QCoreApplication,
+    QModelIndex,
+    QItemSelectionModel,
+    QSortFilterProxyModel,
     qInstallMessageHandler,
 )
 from PyQt5.QtGui import (  # noqa
     QKeySequence,
     QIcon,
     QColor,
+    QPalette,
     QMouseEvent,
     QGuiApplication,
     QFontDatabase,
@@ -65,6 +70,7 @@ from PyQt5.QtWebEngineWidgets import (
 from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (  # noqa
     QAction,
+    QAbstractItemView,
     QStatusBar,
     QMainWindow,
     QDockWidget,
@@ -81,6 +87,8 @@ from PyQt5.QtWidgets import (  # noqa
     QLineEdit,
     QSlider,
     QSpinBox,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QDoubleSpinBox,
     QMessageBox,
     QApplication,
@@ -88,6 +96,7 @@ from PyQt5.QtWidgets import (  # noqa
     QMenuBar,
     QInputDialog,
     QOpenGLWidget,
+    QTableView,
 )
 
 

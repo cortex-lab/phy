@@ -323,9 +323,7 @@ class ClusterView(Table):
 
     def __init__(self, *args, data=None, columns=(), sort=None):
         # NOTE: debounce select events.
-        HTMLWidget.__init__(
-            self, *args, title=self.__class__.__name__, debounce_events=('select',)
-        )
+        Table.__init__(self, *args, title=self.__class__.__name__, debounce_events=('select',))
         self._set_styles()
         self._reset_table(data=data, columns=columns, sort=sort)
 
@@ -399,7 +397,7 @@ class SimilarityView(ClusterView):
     def set_selected_index_offset(self, n):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
-        self.eval_js(f'table._setSelectedIndexOffset({n});')
+        Table.set_selected_index_offset(self, n)
 
     def reset(self, cluster_ids):
         """Recreate the similarity view, given the selected clusters in the cluster view."""

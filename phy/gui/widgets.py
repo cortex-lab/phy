@@ -8,6 +8,8 @@
 import inspect
 import json
 import logging
+import ast
+import re
 from functools import partial
 
 from phylib.utils import connect, emit
@@ -19,15 +21,31 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from phy.utils.color import _is_bright, colormaps
 
 from .qt import (
+    QApplication,
     Debouncer,
+    QAbstractItemView,
+    QAbstractTableModel,
     QCheckBox,
     QDoubleSpinBox,
+    QEvent,
     QGridLayout,
+    QItemSelectionModel,
     QLabel,
     QLineEdit,
+    QModelIndex,
+    QPalette,
     QObject,
     QPlainTextEdit,
+    QSortFilterProxyModel,
+    QSize,
     QSpinBox,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QTableView,
+    Qt,
+    QTimer,
+    QVBoxLayout,
+    QColor,
     QWebChannel,
     QWidget,
     WebView,
@@ -37,6 +55,7 @@ from .qt import (
 )
 
 logger = logging.getLogger(__name__)
+_NO_VALUE = object()
 
 
 # -----------------------------------------------------------------------------
@@ -452,13 +471,211 @@ def _color_styles():
     )
 
 
-class Table(HTMLWidget):
-    """A sortable table with support for selection. Derives from HTMLWidget.
+class _TableFilterValidator(ast.NodeVisitor):
+    """Validate the supported filter-expression subset."""
 
-    This table uses the following Javascript implementation: https://github.com/kwikteam/tablejs
-    This Javascript class builds upon ListJS: https://listjs.com/
+    _allowed_compare_ops = (
+        ast.Eq,
+        ast.NotEq,
+        ast.Lt,
+        ast.LtE,
+        ast.Gt,
+        ast.GtE,
+    )
 
-    """
+    def __init__(self, allowed_names):
+        self.allowed_names = set(allowed_names)
+
+    def visit_Expression(self, node):
+        self.visit(node.body)
+
+    def visit_BoolOp(self, node):
+        if not isinstance(node.op, (ast.And, ast.Or)):
+            raise ValueError
+        for value in node.values:
+            self.visit(value)
+
+    def visit_UnaryOp(self, node):
+        if not isinstance(node.op, ast.Not):
+            raise ValueError
+        self.visit(node.operand)
+
+    def visit_Compare(self, node):
+        self.visit(node.left)
+        for op in node.ops:
+            if not isinstance(op, self._allowed_compare_ops):
+                raise ValueError
+        for comparator in node.comparators:
+            self.visit(comparator)
+
+    def visit_Name(self, node):
+        if node.id not in self.allowed_names:
+            raise ValueError
+
+    def visit_Constant(self, node):
+        return
+
+    def generic_visit(self, node):
+        raise ValueError
+
+
+def _compile_filter_expr(expr, allowed_names):
+    """Compile a filter expression into a Python predicate."""
+    if not expr:
+        return None, False
+    translated = re.sub(r'(?<![=!<>])!(?!=)', ' not ', expr)
+    translated = translated.replace('&&', ' and ').replace('||', ' or ')
+    translated = re.sub(r'\bnull\b', 'None', translated)
+    translated = re.sub(r'\btrue\b', 'True', translated)
+    translated = re.sub(r'\bfalse\b', 'False', translated)
+    tree = ast.parse(translated, mode='eval')
+    _TableFilterValidator(allowed_names).visit(tree)
+    code = compile(tree, '<table-filter>', 'eval')
+
+    def predicate(row):
+        return bool(eval(code, {'__builtins__': {}}, row))
+
+    return predicate, True
+
+
+class _TableModel(QAbstractTableModel):
+    """Model backing the native Qt table."""
+
+    def __init__(self, table):
+        super().__init__(table)
+        self._table = table
+        self._rows = []
+        self._rows_by_id = {}
+
+    def rowCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self._rows)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self._table.columns)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role != Qt.DisplayRole:
+            return None
+        if orientation == Qt.Horizontal and 0 <= section < len(self._table.columns):
+            return self._table.columns[section]
+        return section + 1
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        row = self._rows[index.row()]
+        column = self._table.columns[index.column()]
+        value = row.get(column)
+
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return '' if value is None else value
+        if role == Qt.BackgroundRole and column == 'id':
+            color = self._table._selection_background(row.get('id'))
+            if color is not None:
+                return color
+        if role == Qt.ForegroundRole:
+            fg = self._table._foreground_color(row, column)
+            if fg is not None:
+                return fg
+        return None
+
+    def set_rows(self, rows):
+        self.beginResetModel()
+        self._rows = list(rows)
+        self._rows_by_id = {row['id']: row for row in self._rows}
+        self.endResetModel()
+
+    def row_by_id(self, row_id):
+        return self._rows_by_id.get(row_id)
+
+    def ids(self):
+        return [row['id'] for row in self._rows]
+
+
+class _TableProxyModel(QSortFilterProxyModel):
+    """Proxy model with typed sorting and expression filtering."""
+
+    def __init__(self, table):
+        super().__init__(table)
+        self._table = table
+        self._predicate = None
+        self.setDynamicSortFilter(True)
+
+    def set_filter_predicate(self, predicate):
+        self._predicate = predicate
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        if self._predicate is None:
+            return True
+        row = self.sourceModel()._rows[source_row]
+        try:
+            return self._predicate(row)
+        except Exception:
+            return True
+
+    def lessThan(self, left, right):
+        column = self._table.columns[left.column()]
+        left_row = self.sourceModel()._rows[left.row()]
+        right_row = self.sourceModel()._rows[right.row()]
+        left_value = left_row.get(column)
+        right_value = right_row.get(column)
+        if left_value is None and right_value is None:
+            return False
+        if left_value is None:
+            return False
+        if right_value is None:
+            return True
+        try:
+            return bool(left_value < right_value)
+        except TypeError:
+            return bool(str(left_value) < str(right_value))
+
+
+class _TableItemDelegate(QStyledItemDelegate):
+    """Custom paint delegate to preserve dark styling and selection colors."""
+
+    def __init__(self, table):
+        super().__init__(table)
+        self._table = table
+
+    def paint(self, painter, option, index):
+        row = self._table._row_for_proxy_index(index)
+        if row is None:
+            return super().paint(painter, option, index)
+
+        column = self._table.columns[index.column()]
+        row_id = row.get('id')
+        is_selected = row_id in self._table._selected_ids
+
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+
+        palette = QPalette(opt.palette)
+        fg = self._table._foreground_color(row, column)
+        bg = None
+
+        if is_selected:
+            bg = self._table._selection_background(row_id) if column == 'id' else QColor('#444444')
+            if fg is None:
+                fg = QColor('#ffffff')
+        elif fg is None:
+            fg = QColor('#ffffff')
+
+        if bg is not None:
+            opt.backgroundBrush = bg
+            palette.setColor(QPalette.Base, bg)
+            palette.setColor(QPalette.Highlight, bg)
+        if fg is not None:
+            palette.setColor(QPalette.Text, fg)
+            palette.setColor(QPalette.WindowText, fg)
+            palette.setColor(QPalette.HighlightedText, fg)
+        opt.palette = palette
+        super().paint(painter, opt, index)
+
+
+class Table(QWidget):
+    """A sortable native Qt table with the same Python-facing API as the old HTML table."""
 
     _ready = False
 
@@ -472,185 +689,522 @@ class Table(HTMLWidget):
         title='',
         debounce_events=(),
     ):
-        super().__init__(*args, title=title, debounce_events=debounce_events)
+        super().__init__(*args)
+        self.builder = HTMLBuilder(title=title)
+        self._event = JSEventEmitter(*args, debounce_events=debounce_events)
+        self._event._parent = self
+        self._debounce_events = set(debounce_events)
+        self._event._debouncer.isBusy = False
+        self.columns = list(columns or ['id'])
+        self.value_names = list(value_names or self.columns)
+        self.data = list(data or [])
+        self._selected_ids = []
+        self._selected_index_offset = 0
+        self._filter_text = ''
+        self._filter_is_active = False
+        self._current_sort = None
+        self._no_emit = False
+        self._group_colors = {
+            'good': QColor('#86D16D'),
+            'mua': QColor('#afafaf'),
+            'noise': QColor('#777777'),
+        }
+
+        self.filter_edit = QLineEdit(self)
+        self.filter_edit.setObjectName('table-filter')
+        self.filter_edit.returnPressed.connect(self._apply_filter_from_editor)
+        self.filter_edit.installEventFilter(self)
+
+        self.table_view = QTableView(self)
+        self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.table_view.clicked.connect(self._on_row_clicked)
+        self.table_view.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
+        self.table_view.verticalHeader().hide()
+        self.table_view.setShowGrid(False)
+        self.table_view.setAlternatingRowColors(False)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(2, 2, 2, 2)
+        layout.addWidget(self.filter_edit)
+        layout.addWidget(self.table_view)
+
+        self._model = _TableModel(self)
+        self._proxy = _TableProxyModel(self)
+        self._proxy.setSourceModel(self._model)
+        self.table_view.setModel(self._proxy)
+        self.table_view.setItemDelegate(_TableItemDelegate(self))
+        self._apply_dark_style()
+
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
-    def eval_js(self, expr, callback=None):
-        """Evaluate a Javascript expression.
+    @property
+    def debouncer(self):
+        return self._event._debouncer
 
-        The `table` Javascript variable can be used to interact with the underlying Javascript
-        table.
+    def eventFilter(self, obj, event):
+        if obj is self.filter_edit and event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
+            self.filter_edit.clear()
+            self.filter('')
+            return True
+        return super().eventFilter(obj, event)
 
-        The table has sortable columns, a filter text box, support for single and multi selection
-        of rows. Rows can be skippable (used for ignored clusters in phy).
+    def _normalize_value_names(self, value_names):
+        names = []
+        for value_name in value_names:
+            if isinstance(value_name, str):
+                names.append(value_name)
+            elif isinstance(value_name, dict):
+                names.extend(value_name.get('data', []))
+        return names
 
-        The table can raise Javascript events that are relayed to Python. Objects are
-        transparently serialized and deserialized in JSON. Basic types (numbers, strings, lists)
-        are transparently converted between Python and Javascript.
-
-        Parameters
-        ----------
-
-        expr : str
-            A Javascript expression.
-        callback : function
-            A Python function that is called once the Javascript expression has been
-            evaluated. It takes as input the output of the Javascript expression.
-
-        """
-        # Avoid JS errors when the table is not yet fully loaded.
-        expr = f'if (typeof table !== "undefined") {expr}'
-        return super().eval_js(expr, callback=callback)
+    def _apply_dark_style(self):
+        self.setStyleSheet(
+            """
+            QWidget {
+                background-color: black;
+                color: white;
+                font-size: 10pt;
+            }
+            QLineEdit#table-filter {
+                background-color: black;
+                color: white;
+                border: 1px solid #444;
+                padding: 5px;
+                selection-background-color: #444;
+                selection-color: white;
+            }
+            QTableView {
+                background-color: black;
+                color: white;
+                border: 0;
+                outline: 0;
+                selection-background-color: #444;
+                selection-color: white;
+                gridline-color: #111;
+            }
+            QTableView::item {
+                padding: 4px 6px;
+                border: 0;
+            }
+            QTableView::item:hover {
+                background-color: #222;
+            }
+            QHeaderView::section {
+                background-color: black;
+                color: white;
+                border: 0;
+                padding: 5px;
+            }
+            """
+        )
 
     def _init_table(self, columns=None, value_names=None, data=None, sort=None):
-        """Build the table."""
-
         columns = columns or ['id']
         value_names = value_names or columns
         data = data or []
 
-        b = self.builder
-        b.set_body_src('index.html')
+        self.data = list(data)
+        self.columns = list(columns)
+        self.value_names = list(value_names)
+        self._filterable_names = set(self._normalize_value_names(self.value_names))
+        self._filterable_names.update(self.columns)
 
-        b.add_style(_color_styles())
-
-        self.data = data
-        self.columns = columns
-        self.value_names = value_names
+        self._model.set_rows(self.data)
 
         emit('pre_build', self)
-
-        data_json = dumps(self.data)
-        columns_json = dumps(self.columns)
-        value_names_json = dumps(self.value_names)
-        sort_json = dumps(sort)
-
-        b.body += f"""
-        <script>
-            var data = {data_json};
-
-            var options = {{
-              valueNames: {value_names_json},
-              columns: {columns_json},
-              sort: {sort_json},
-            }};
-
-            var table = new Table('table', options, data);
-
-        </script>
-        """
-        self.build(lambda html: emit('ready', self))
-
-        connect(
-            event='select', sender=self, func=lambda *args: self.update(), last=True
-        )
+        connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
         connect(event='ready', sender=self, func=lambda *args: self._set_ready())
 
+        if sort and sort[0]:
+            self.sort_by(*sort)
+        self._refresh_selection()
+        self._schedule_callback(lambda: emit('ready', self))
+
     def _set_ready(self):
-        """Set the widget as ready."""
         self._ready = True
 
     def is_ready(self):
-        """Whether the widget has been fully loaded."""
         return self._ready
 
+    def _schedule_callback(self, callback, value=_NO_VALUE):
+        if callback is None:
+            return
+        if value is _NO_VALUE:
+            QTimer.singleShot(0, callback)
+        else:
+            QTimer.singleShot(0, lambda: callback(value))
+
+    def _emit_event(self, name, payload):
+        emit(name, self, payload)
+
+    def _source_row_for_id(self, row_id):
+        ids = self._model.ids()
+        try:
+            return ids.index(row_id)
+        except ValueError:
+            return None
+
+    def _proxy_index_for_id(self, row_id, column=0):
+        source_row = self._source_row_for_id(row_id)
+        if source_row is None:
+            return QModelIndex()
+        source_index = self._model.index(source_row, column)
+        return self._proxy.mapFromSource(source_index)
+
+    def _row_for_proxy_index(self, proxy_index):
+        if not proxy_index.isValid():
+            return None
+        source_index = self._proxy.mapToSource(proxy_index)
+        if not source_index.isValid():
+            return None
+        return self._model._rows[source_index.row()]
+
+    def _visible_ids(self):
+        ids = []
+        for row in range(self._proxy.rowCount()):
+            proxy_index = self._proxy.index(row, 0)
+            source_index = self._proxy.mapToSource(proxy_index)
+            ids.append(self._model._rows[source_index.row()]['id'])
+        return ids
+
+    def _visible_row_ids(self):
+        out = []
+        for row in range(self._proxy.rowCount()):
+            proxy_index = self._proxy.index(row, 0)
+            source_index = self._proxy.mapToSource(proxy_index)
+            out.append(self._model._rows[source_index.row()]['id'])
+        return out
+
+    def _is_masked_id(self, row_id):
+        row = self._model.row_by_id(row_id)
+        return bool(row and row.get('is_masked'))
+
+    def _selected_visible_ids(self):
+        visible = set(self._visible_ids())
+        return [row_id for row_id in self._selected_ids if row_id in visible]
+
+    def _selection_background(self, row_id):
+        if row_id not in self._selected_ids:
+            return None
+        pos = self._selected_ids.index(row_id) + self._selected_index_offset
+        colors = list(colormaps.default * 255)
+        r, g, b = colors[pos % len(colors)]
+        return QColor(int(r), int(g), int(b))
+
+    def _foreground_color(self, row, column):
+        if column == 'id' and row.get('id') in self._selected_ids:
+            pos = self._selected_ids.index(row.get('id')) + self._selected_index_offset
+            colors = list(colormaps.default * 255)
+            r, g, b = colors[pos % len(colors)]
+            if _is_bright((int(r), int(g), int(b))):
+                return QColor('#000000')
+        group = row.get('group')
+        if group in self._group_colors:
+            return self._group_colors[group]
+        if row.get('is_masked'):
+            return QColor('#888888')
+        return None
+
+    def _refresh_selection(self):
+        selection_model = self.table_view.selectionModel()
+        if selection_model is None:
+            return
+        selection_model.clearSelection()
+        for row_id in self._selected_visible_ids():
+            index = self._proxy_index_for_id(row_id)
+            if index.isValid():
+                selection_model.select(
+                    index,
+                    QItemSelectionModel.Select | QItemSelectionModel.Rows,
+                )
+        self.table_view.viewport().update()
+
+    def _selected_payload(self, kwargs=None):
+        selected = self.get_selected_ids()
+        next_id = self.get_sibling_id(selected[-1] if selected else None, 'next')
+        return {'selected': selected, 'next': next_id, 'kwargs': kwargs or {}}
+
+    def _emit_selected(self, kwargs=None):
+        payload = self._selected_payload(kwargs)
+        self._emit_event('select', payload)
+        return payload
+
+    def _apply_filter_from_editor(self):
+        self.filter(self.filter_edit.text())
+
+    def _set_filter(self, text, update_text_field=True):
+        self._filter_text = text or ''
+        if update_text_field and self.filter_edit.text() != self._filter_text:
+            self.filter_edit.setText(self._filter_text)
+        if not self._filter_text:
+            self._proxy.set_filter_predicate(None)
+            self._filter_is_active = False
+            return
+        try:
+            predicate, valid = _compile_filter_expr(self._filter_text, self._filterable_names)
+        except Exception:
+            predicate, valid = None, False
+        self._proxy.set_filter_predicate(predicate if valid else None)
+        self._filter_is_active = valid
+
+    def _on_header_clicked(self, section):
+        name = self.columns[section]
+        current = self._current_sort
+        sort_dir = 'asc'
+        if current and current[0] == name and current[1] == 'asc':
+            sort_dir = 'desc'
+        self.sort_by(name, sort_dir)
+
+    def _selection_anchor_row(self):
+        visible = self._visible_ids()
+        selected = self._selected_visible_ids()
+        if not selected:
+            return None
+        return visible.index(selected[-1])
+
+    def _on_row_clicked(self, index):
+        row_id = self._visible_ids()[index.row()]
+        mods = QApplication.keyboardModifiers()
+        if mods & Qt.ControlModifier or mods & Qt.MetaModifier:
+            self.select_toggle(row_id)
+        elif mods & Qt.ShiftModifier:
+            self.select_until(row_id)
+        else:
+            self.select([row_id])
+
+    def get_selected_ids(self):
+        visible = set(self._visible_ids())
+        return [row_id for row_id in self._selected_ids if row_id in visible]
+
+    def select_toggle(self, row_id):
+        if row_id in self._selected_ids:
+            self._selected_ids.remove(row_id)
+        else:
+            self._selected_ids.append(row_id)
+        self._refresh_selection()
+        return self._emit_selected()
+
+    def select_until(self, row_id):
+        visible = self._visible_ids()
+        if row_id not in visible:
+            return None
+        anchor = self._selection_anchor_row()
+        if anchor is None:
+            return self.select([row_id])
+        clicked = visible.index(row_id)
+        imin, imax = sorted((anchor, clicked))
+        for visible_id in visible[imin : imax + 1]:
+            if visible_id not in self._selected_ids:
+                self._selected_ids.append(visible_id)
+        self._refresh_selection()
+        return self._emit_selected()
+
+    def get_sibling_id(self, row_id=None, direction='next'):
+        selected = self.get_selected_ids()
+        if row_id is None:
+            row_id = selected[0] if selected else None
+        if row_id is None:
+            return None
+        visible = self._visible_ids()
+        if row_id not in visible:
+            return None
+        step = 1 if direction == 'next' else -1
+        idx = visible.index(row_id) + step
+        while 0 <= idx < len(visible):
+            candidate = visible[idx]
+            if not self._is_masked_id(candidate):
+                return candidate
+            idx += step
+        return None
+
+    def _move_to_sibling(self, row_id=None, direction='next'):
+        if not self.get_selected_ids():
+            return self._select_first_or_last('first')
+        new_id = self.get_sibling_id(row_id, direction)
+        if new_id is None:
+            return None
+        return self.select([new_id])
+
+    def _select_first_or_last(self, which):
+        visible = self._visible_ids()
+        ordered = visible if which == 'first' else list(reversed(visible))
+        for row_id in ordered:
+            if not self._is_masked_id(row_id):
+                return self.select([row_id])
+        return None
+
     def sort_by(self, name, sort_dir='asc'):
-        """Sort by a given variable."""
         logger.log(5, 'Sort by `%s` %s.', name, sort_dir)
-        self.eval_js(f'table.sort_("{name}", "{sort_dir}");')
+        if name not in self.columns:
+            return
+        column = self.columns.index(name)
+        order = Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder
+        self._current_sort = (name, sort_dir)
+        self._proxy.sort(column, order)
+        self._refresh_selection()
+        if not self._no_emit:
+            self._emit_event('table_sort', self._visible_ids())
 
     def filter(self, text=''):
-        """Filter the view with a Javascript expression."""
         logger.log(5, 'Filter table with `%s`.', text)
-        self.eval_js(f'table.filter_("{text}", true);')
+        self._set_filter(text, update_text_field=True)
+        self._refresh_selection()
+        if self._filter_is_active and not self._no_emit:
+            self._emit_event('table_filter', self._visible_ids())
+
+    def _async_return(self, value, callback=None):
+        self._schedule_callback(callback, value)
+        return value
 
     def get_ids(self, callback=None):
-        """Get the list of ids."""
-        self.eval_js('table._getIds();', callback=callback)
+        return self._async_return(self._visible_ids(), callback)
 
     def get_next_id(self, callback=None):
-        """Get the next non-skipped row id."""
-        self.eval_js('table.getSiblingId(undefined, "next");', callback=callback)
+        return self._async_return(self.get_sibling_id(None, 'next'), callback)
 
     def get_previous_id(self, callback=None):
-        """Get the previous non-skipped row id."""
-        self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
+        return self._async_return(self.get_sibling_id(None, 'previous'), callback)
 
     def first(self, callback=None):
-        """Select the first item."""
-        self.eval_js('table.selectFirst();', callback=callback)
+        return self._async_return(self._select_first_or_last('first'), callback)
 
     def last(self, callback=None):
-        """Select the last item."""
-        self.eval_js('table.selectLast();', callback=callback)
+        return self._async_return(self._select_first_or_last('last'), callback)
 
     def next(self, callback=None):
-        """Select the next non-skipped row."""
-        self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)
+        return self._async_return(self._move_to_sibling(None, 'next'), callback)
 
     def previous(self, callback=None):
-        """Select the previous non-skipped row."""
-        self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
+        return self._async_return(self._move_to_sibling(None, 'previous'), callback)
 
     def select(self, ids, callback=None, **kwargs):
-        """Select some rows in the table from Python.
-
-        This function calls `table.select()` in Javascript, which raises a Javascript event
-        relayed to Python. This sequence of actions is the same when the user selects
-        rows directly in the HTML view.
-
-        """
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        self.eval_js(f'table.select({dumps(ids)}, {dumps(kwargs)});', callback=callback)
+        visible = set(self._visible_ids())
+        self._selected_ids = [row_id for row_id in ids if row_id in visible]
+        self._refresh_selection()
+        payload = self._emit_selected(kwargs)
+        return self._async_return(payload, callback)
 
     def scroll_to(self, id):
-        """Scroll until a given row is visible."""
-        self.eval_js(f'table._scrollTo({id});')
+        index = self._proxy_index_for_id(id)
+        if index.isValid():
+            self.table_view.scrollTo(index)
 
     def set_busy(self, busy):
-        """Set the busy state of the GUI."""
-        self.eval_js(f'table.setBusy({"true" if busy else "false"});')
+        self.debouncer.isBusy = bool(busy)
 
     def get(self, id, callback=None):
-        """Get the object given its id."""
-        self.eval_js(f'table.get("id", {id})[0]["_values"]', callback=callback)
+        row = self._model.row_by_id(id)
+        out = dict(row) if row is not None else None
+        return self._async_return(out, callback)
+
+    def _ensure_list(self, objects):
+        if isinstance(objects, dict):
+            return [objects]
+        return list(objects)
 
     def add(self, objects):
-        """Add objects object to the table."""
+        objects = self._ensure_list(objects)
         if not objects:
             return
-        self.eval_js(f'table.add_({dumps(objects)});')
+        data = self._model._rows + objects
+        self._model.set_rows(data)
+        if self._current_sort:
+            self._no_emit = True
+            self.sort_by(*self._current_sort)
+            self._no_emit = False
+        self._refresh_selection()
 
     def change(self, objects):
-        """Change some objects."""
+        objects = self._ensure_list(objects)
         if not objects:
             return
-        self.eval_js(f'table.change_({dumps(objects)});')
+        updated = {obj['id']: obj for obj in objects}
+        rows = []
+        for row in self._model._rows:
+            patch = updated.get(row['id'])
+            rows.append({**row, **patch} if patch else dict(row))
+        self._model.set_rows(rows)
+        if self._current_sort:
+            self._no_emit = True
+            self.sort_by(*self._current_sort)
+            self._no_emit = False
+        self._refresh_selection()
 
     def remove(self, ids):
-        """Remove some objects from their ids."""
+        ids = set(ids)
         if not ids:
             return
-        self.eval_js(f'table.remove_({dumps(ids)});')
+        self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
+        self._model.set_rows([row for row in self._model._rows if row['id'] not in ids])
+        self._refresh_selection()
 
     def remove_all(self):
-        """Remove all rows in the table."""
-        self.eval_js('table.removeAll();')
+        self._selected_ids = []
+        self._model.set_rows([])
+        self._refresh_selection()
 
     def remove_all_and_add(self, objects):
-        """Remove all rows in the table and add new objects."""
+        objects = self._ensure_list(objects)
         if not objects:
             return self.remove_all()
-        self.eval_js(f'table.removeAllAndAdd({dumps(objects)});')
+        self._selected_ids = []
+        self._model.set_rows(objects)
+        if self._current_sort:
+            self._no_emit = True
+            self.sort_by(*self._current_sort)
+            self._no_emit = False
+        self._refresh_selection()
 
     def get_selected(self, callback=None):
-        """Get the currently selected rows."""
-        self.eval_js('table.selected()', callback=callback)
+        return self._async_return(self.get_selected_ids(), callback)
 
     def get_current_sort(self, callback=None):
-        """Get the current sort as a tuple `(name, dir)`."""
-        self.eval_js('table._currentSort()', callback=callback)
+        value = list(self._current_sort) if self._current_sort else None
+        return self._async_return(value, callback)
+
+    def set_selected_index_offset(self, n):
+        self._selected_index_offset = n
+        self.table_view.viewport().update()
+
+    def clear_temporary_files(self):
+        """Compatibility no-op for the old HTML-backed implementation."""
+        return
+
+    def sizeHint(self):
+        return QSize(400, 400)
+
+    def minimumSizeHint(self):
+        return QSize(150, 150)
+
+    def eval_js(self, expr, callback=None):
+        expr = expr.strip()
+        result = None
+        emit_match = re.fullmatch(r'table\.emit\("([^"]+)",\s*(.+)\);?', expr)
+        if emit_match:
+            event_name, raw_value = emit_match.groups()
+            try:
+                result = json.loads(raw_value)
+            except Exception:
+                result = raw_value
+            self._emit_event(event_name, result)
+        elif expr == 'table.debouncer.isBusy':
+            result = self.debouncer.isBusy
+        elif expr.startswith('table._setSelectedIndexOffset('):
+            number = int(re.search(r'\((\d+)\)', expr).group(1))
+            self.set_selected_index_offset(number)
+        elif expr == 'table.selected()':
+            result = self.get_selected_ids()
+        elif expr == 'table._getIds();':
+            result = self._visible_ids()
+        elif expr == 'table._currentSort()':
+            result = list(self._current_sort) if self._current_sort else None
+        else:
+            logger.warning('Unsupported eval_js expression in native table: %s', expr)
+        self._schedule_callback(callback, result)
+        return result
 
 
 # -----------------------------------------------------------------------------
