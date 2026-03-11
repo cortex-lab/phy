@@ -422,3 +422,59 @@ def test_table_filter(qtbot, table):
 
     table.filter()
     _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_comparison_operators(qtbot, table):
+    table.filter('count > 80')
+    _assert(table.get_ids, [0, 1])
+
+    table.filter('count <= 80')
+    _assert(table.get_ids, list(range(2, 10)))
+
+    table.filter('id != 5')
+    _assert(table.get_ids, [i for i in range(10) if i != 5])
+
+
+def test_table_filter_data_attribute_field_is_not_available(qtbot, table):
+    table.filter("is_masked == 'true'")
+    _assert(table.get_ids, list(range(10)))
+
+    table.filter("is_masked == 'false'")
+    _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_combined_expression(qtbot, table):
+    table.filter('(count >= 50) && id != 3')
+    _assert(table.get_ids, [0, 1, 2, 4, 5])
+
+
+def test_table_filter_invalid_expression_shows_all_rows(qtbot, table):
+    table.filter('id ===')
+    _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_missing_field_shows_all_rows(qtbot, table):
+    table.filter('missing == 1')
+    _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_string_and_null_values(qtbot):
+    data = [
+        {'id': 0, 'group': 'good', 'label': None},
+        {'id': 1, 'group': 'mua', 'label': 'x'},
+        {'id': 2, 'group': 'noise', 'label': None},
+    ]
+    table = Table(
+        columns=['id', 'group', 'label'],
+        value_names=['id', 'group', 'label'],
+        data=data,
+    )
+    _wait_until_table_ready(qtbot, table)
+
+    table.filter("group == 'good'")
+    _assert(table.get_ids, [0, 1, 2])
+
+    table.filter('label == null')
+    _assert(table.get_ids, [0, 2])
+
+    table.close()
