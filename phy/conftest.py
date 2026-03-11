@@ -88,3 +88,8 @@ def pytest_generate_tests(metafunc):  # pragma: no cover
         count = int(metafunc.config.option.repeat)
         metafunc.fixturenames.append('tmp_ct')
         metafunc.parametrize('tmp_ct', range(count))
+
+
+def pytest_collection_modifyitems(session, config, items):
+    """Run app tests after the rest of the suite."""
+    items.sort(key=lambda item: ('/phy/apps/' in str(item.fspath).replace(os.sep, '/'), str(item.fspath)))
