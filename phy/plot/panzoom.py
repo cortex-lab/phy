@@ -452,7 +452,8 @@ class PanZoom:
             return
         if e.mouse_press_position:
             x0, y0 = self._normalize(e.mouse_press_position)
-            x1, y1 = self._normalize(e.last_pos)
+            last_pos = e.last_pos if e.last_pos is not None else e.mouse_press_position
+            x1, y1 = self._normalize(last_pos)
             x, y = self._normalize(e.pos)
             dx, dy = x - x1, y - y1
             if e.button == 'Left':

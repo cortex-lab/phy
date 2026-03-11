@@ -14,7 +14,7 @@ from timeit import default_timer
 import numpy as np
 from phylib.utils import Bunch, connect, emit
 
-from phy.gui.qt import QOpenGLWindow, Qt
+from phy.gui.qt import QOpenGLWidget, QOpenGLWindow, Qt, _QOpenGLWindow
 
 from . import gloo
 from .gloo import gl
@@ -833,7 +833,7 @@ class BaseCanvas(QOpenGLWindow):
         """
         from os import environ
 
-        if environ.get('QT_QPA_PLATFORM') == 'offscreen':
+        if environ.get('QT_QPA_PLATFORM') == 'offscreen' and isinstance(self, _QOpenGLWindow):
             self.hide()
             return
         super().close()

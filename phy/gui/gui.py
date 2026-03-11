@@ -68,9 +68,10 @@ def _try_get_opengl_canvas(view):
     from phy.plot.base import BaseCanvas
 
     if isinstance(view, BaseCanvas):
-        return QWidget.createWindowContainer(view)
+        return view if isinstance(view, QWidget) else QWidget.createWindowContainer(view)
     elif isinstance(getattr(view, 'canvas', None), BaseCanvas):
-        return QWidget.createWindowContainer(view.canvas)
+        canvas = view.canvas
+        return canvas if isinstance(canvas, QWidget) else QWidget.createWindowContainer(canvas)
     return view
 
 
