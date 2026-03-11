@@ -3,24 +3,22 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11
+  - python=3.10
   - pip
   - git
-  - numpy<2.0
+  - numpy
   - matplotlib
   - scipy
   - h5py
   - pyqt
-  - pyopengl=3.1.6
+  - pyopengl>=3.1.9
   - pyqtwebengine
   - pytest
   - qtconsole
   - requests
   - responses
   - traitlets
-  - cython
   - pillow
-  - scikit-learn
-  - joblib=1.4.2
+  - joblib
   - pip:
     - git+https://github.com/cortex-lab/phy.git

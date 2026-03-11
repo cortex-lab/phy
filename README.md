@@ -41,10 +41,10 @@ There are no specific GPU requirements as long as relatively recent graphics and
 
 Run the following commands in a terminal (currently working for Linux machines):
 
-1. Create a new conda environment with the conda dependencies:
+1. Create a new conda environment with Python 3.10+ and the GUI/runtime dependencies:
 
     ```
-    conda create -n phy2 -y python=3.11 cython h5py joblib matplotlib numpy pillow pip pyopengl pyqt pyqtwebengine pytest python qtconsole requests responses scikit-learn scipy traitlets
+    conda create -n phy2 -y python=3.11 joblib matplotlib numpy pillow pip pyopengl pyqt pyqtwebengine pytest qtconsole requests responses scipy traitlets
     ```
 
 2. Activate the new conda environment with `conda activate phy2`
@@ -60,8 +60,8 @@ cd path/to/my/spikesorting/output
 phy template-gui params.py
 ```
 
-6. If there are problems with this method we also have an `environment.yml` file which allows for
-automatic install of the necessary packages. Give that a try.
+6. If there are problems with this method we also have a legacy `deprecated/environment.yml` file
+with a conda-based setup. It is kept for reference only.
 
 
 ### Dealing with the error `ModuleNotFoundError: No module named 'PyQt5.QtWebEngineWidget`
@@ -82,9 +82,7 @@ To install the development version of phy in a fresh environment, do:
 ```bash
 git clone git@github.com:cortex-lab/phy.git
 cd phy
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-pip install -e .
+uv sync --dev --extra qt5
 cd ..
 git clone git@github.com:cortex-lab/phylib.git
 cd phylib
