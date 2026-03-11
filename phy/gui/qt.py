@@ -98,25 +98,10 @@ if os.environ.get('QT_QPA_PLATFORM') == 'offscreen':
     class QOpenGLWindow(QWidget):
         """Use a lightweight QWidget-backed compatibility surface in headless mode.
 
-        Qt's offscreen platform plugin can fail to create a context for QOpenGLWindow and
-        segfault during event processing. For tests, we only need QWidget event semantics and a
-        place to call paintGL(); we do not need a real native OpenGL window.
+        Qt's offscreen platform plugin can segfault when native OpenGL surfaces try to create
+        or use a context on macOS. Headless tests only need widget/event semantics, so the
+        compatibility canvas intentionally avoids calling `initializeGL()` and `paintGL()`.
         """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._gl_initialized = False
-
-        def paintEvent(self, event):
-            if not self._gl_initialized:
-                initialize = getattr(self, 'initializeGL', None)
-                if initialize:
-                    initialize()
-                self._gl_initialized = True
-            paint = getattr(self, 'paintGL', None)
-            if paint:
-                paint()
-            return super().paintEvent(event)
 
         def grabFramebuffer(self):
             return self.grab()
@@ -419,7 +404,9 @@ def screenshot(widget, path=None, dir=None):
 
     """
     path = path or screenshot_default_path(widget, dir=dir)
-    path = Path(path).resolve()
+    path = Path(path).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
     if isinstance(widget, QOpenGLWindow):
         # Special call for OpenGL widgets.
         widget.grabFramebuffer().save(str(path))

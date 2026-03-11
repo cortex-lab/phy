@@ -143,7 +143,10 @@ class BaseVisual:
 
     def close(self):
         """Close the visual."""
-        self.program._deactivate()
+        # In headless/offscreen tests the program may never have been activated,
+        # so there is no valid GL context or program handle to deactivate.
+        if getattr(self.program, 'handle', -1) > 0:
+            self.program._deactivate()
         del self.program
         gc.collect()
 

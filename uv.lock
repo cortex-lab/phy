@@ -1352,6 +1352,7 @@ dev = [
     { name = "coveralls" },
     { name = "memory-profiler" },
     { name = "mkdocs" },
+    { name = "pyqt5" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-qt" },
@@ -1373,6 +1374,7 @@ dev = [
     { name = "coveralls" },
     { name = "memory-profiler" },
     { name = "mkdocs" },
+    { name = "pyqt5" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-qt" },
@@ -1393,10 +1395,11 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'dev'" },
     { name = "mtscomp" },
     { name = "numpy" },
-    { name = "phylib", git = "https://github.com/jesusdpa1/phylib_update.git" },
+    { name = "phylib", specifier = ">=2.7.0,<3" },
     { name = "pillow" },
     { name = "pip" },
     { name = "pyopengl", specifier = ">=3.1.9" },
+    { name = "pyqt5", marker = "extra == 'dev'", specifier = ">=5.12.0" },
     { name = "pyqt5", marker = "extra == 'gui'", specifier = ">=5.12.0" },
     { name = "pyqt5", marker = "extra == 'qt'", specifier = ">=5.12.0" },
     { name = "pyqt5", marker = "extra == 'qt5'", specifier = ">=5.12.0" },
@@ -1420,6 +1423,7 @@ dev = [
     { name = "coveralls", specifier = ">=3.0" },
     { name = "memory-profiler", specifier = ">=0.60" },
     { name = "mkdocs", specifier = ">=1.4" },
+    { name = "pyqt5", specifier = ">=5.12.0" },
     { name = "pytest", specifier = ">=6.0" },
     { name = "pytest-cov", specifier = ">=3.0" },
     { name = "pytest-qt", specifier = ">=4.0" },
@@ -1428,8 +1432,8 @@ dev = [
 
 [[package]]
 name = "phylib"
-version = "2.6.0"
-source = { git = "https://github.com/jesusdpa1/phylib_update.git#10ab50bbf286687fa6c3cb03ba4065708df27009" }
+version = "2.7.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dask" },
     { name = "joblib" },
@@ -1437,10 +1441,15 @@ dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "requests" },
+    { name = "responses" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "toolz" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e2/80/258006976d88285c6f24fbe5aa8e77f1eb6ac5ff799aad223543d224a6a0/phylib-2.7.0.tar.gz", hash = "sha256:e1b9ed5a53e2010030eebc61bad393b3787626f676ef4b0027b90b18fc8e167a", size = 70253, upload-time = "2025-12-12T15:28:02.73Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/0e/6860178ec209314fdf39988deb3a3175b74446a6e4a5ccdaff3cce5ac519/phylib-2.7.0-py2.py3-none-any.whl", hash = "sha256:00f981c5d2260ab0e9e79ab35233f016fa4268fb8c0dc12632223a0e465111fd", size = 82121, upload-time = "2025-12-12T15:28:01.003Z" },
 ]
 
 [[package]]

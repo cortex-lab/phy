@@ -57,6 +57,7 @@ Documentation = "https://phy.cortexlab.net"
 dev = [
     "pytest",
     "pytest-qt",
+    "PyQt5>=5.12.0",
     "pytest-cov",
     "ruff",
     "coverage",
@@ -177,6 +178,7 @@ indent-style = "space"
 dev-dependencies = [
     "pytest>=6.0",
     "pytest-qt>=4.0",
+    "PyQt5>=5.12.0",
     "pytest-cov>=3.0",
     "ruff>=0.1.0",
     "coverage>=6.0",
