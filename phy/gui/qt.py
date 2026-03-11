@@ -71,6 +71,7 @@ from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (  # noqa
     QAction,
     QAbstractItemView,
+    QHeaderView,
     QStatusBar,
     QMainWindow,
     QDockWidget,
@@ -96,6 +97,7 @@ from PyQt5.QtWidgets import (  # noqa
     QMenuBar,
     QInputDialog,
     QOpenGLWidget,
+    QStyle,
     QTableView,
 )
 

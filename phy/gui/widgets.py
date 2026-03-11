@@ -29,6 +29,7 @@ from .qt import (
     QDoubleSpinBox,
     QEvent,
     QGridLayout,
+    QHeaderView,
     QItemSelectionModel,
     QLabel,
     QLineEdit,
@@ -39,6 +40,7 @@ from .qt import (
     QSortFilterProxyModel,
     QSize,
     QSpinBox,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -650,13 +652,14 @@ class _TableItemDelegate(QStyledItemDelegate):
 
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
+        opt.state &= ~QStyle.State_HasFocus
 
         palette = QPalette(opt.palette)
         fg = self._table._foreground_color(row, column)
         bg = None
 
         if is_selected:
-            bg = self._table._selection_background(row_id) if column == 'id' else QColor('#444444')
+            bg = self._table._selection_background(row_id)
             if fg is None:
                 fg = QColor('#ffffff')
         elif fg is None:
@@ -723,6 +726,10 @@ class Table(QWidget):
         self.table_view.verticalHeader().hide()
         self.table_view.setShowGrid(False)
         self.table_view.setAlternatingRowColors(False)
+        self.table_view.setFocusPolicy(Qt.NoFocus)
+        self.table_view.setWordWrap(False)
+        self.table_view.horizontalHeader().setStretchLastSection(False)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
@@ -790,6 +797,10 @@ class Table(QWidget):
             QTableView::item:hover {
                 background-color: #222;
             }
+            QTableView::item:selected {
+                background-color: #444;
+                color: white;
+            }
             QHeaderView::section {
                 background-color: black;
                 color: white;
@@ -811,6 +822,7 @@ class Table(QWidget):
         self._filterable_names.update(self.columns)
 
         self._model.set_rows(self.data)
+        self._fit_columns()
 
         emit('pre_build', self)
         connect(event='select', sender=self, func=lambda *args: self.update(), last=True)
@@ -860,6 +872,10 @@ class Table(QWidget):
             return None
         return self._model._rows[source_index.row()]
 
+    def _fit_columns(self):
+        self.table_view.resizeColumnsToContents()
+        self.table_view.resizeRowsToContents()
+
     def _visible_ids(self):
         ids = []
         for row in range(self._proxy.rowCount()):
@@ -890,7 +906,7 @@ class Table(QWidget):
         pos = self._selected_ids.index(row_id) + self._selected_index_offset
         colors = list(colormaps.default * 255)
         r, g, b = colors[pos % len(colors)]
-        return QColor(int(r), int(g), int(b))
+        return QColor(int(r), int(g), int(b), 160)
 
     def _foreground_color(self, row, column):
         if column == 'id' and row.get('id') in self._selected_ids:
@@ -1043,6 +1059,7 @@ class Table(QWidget):
         self._current_sort = (name, sort_dir)
         self._proxy.sort(column, order)
         self._refresh_selection()
+        self._fit_columns()
         if not self._no_emit:
             self._emit_event('table_sort', self._visible_ids())
 
@@ -1050,6 +1067,7 @@ class Table(QWidget):
         logger.log(5, 'Filter table with `%s`.', text)
         self._set_filter(text, update_text_field=True)
         self._refresh_selection()
+        self._fit_columns()
         if self._filter_is_active and not self._no_emit:
             self._emit_event('table_filter', self._visible_ids())
 
@@ -1116,6 +1134,7 @@ class Table(QWidget):
             self.sort_by(*self._current_sort)
             self._no_emit = False
         self._refresh_selection()
+        self._fit_columns()
 
     def change(self, objects):
         objects = self._ensure_list(objects)
@@ -1132,6 +1151,7 @@ class Table(QWidget):
             self.sort_by(*self._current_sort)
             self._no_emit = False
         self._refresh_selection()
+        self._fit_columns()
 
     def remove(self, ids):
         ids = set(ids)
@@ -1140,11 +1160,13 @@ class Table(QWidget):
         self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
         self._model.set_rows([row for row in self._model._rows if row['id'] not in ids])
         self._refresh_selection()
+        self._fit_columns()
 
     def remove_all(self):
         self._selected_ids = []
         self._model.set_rows([])
         self._refresh_selection()
+        self._fit_columns()
 
     def remove_all_and_add(self, objects):
         objects = self._ensure_list(objects)
@@ -1157,6 +1179,7 @@ class Table(QWidget):
             self.sort_by(*self._current_sort)
             self._no_emit = False
         self._refresh_selection()
+        self._fit_columns()
 
     def get_selected(self, callback=None):
         return self._async_return(self.get_selected_ids(), callback)
