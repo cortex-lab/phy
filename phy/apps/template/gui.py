@@ -171,9 +171,6 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         sims = np.max(self.model.similar_templates[temp_i, :], axis=0)
 
         def _sim_ij(cj):
-            # Templates of the cluster.
-            if cj < self.model.n_templates:
-                return float(sims[cj])
             temp_j = np.nonzero(self.get_template_counts(cj))[0]
             return float(np.max(sims[temp_j]))
 

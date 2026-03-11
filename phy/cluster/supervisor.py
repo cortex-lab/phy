@@ -916,6 +916,11 @@ class Supervisor:
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
         assert sender == self.action_creator
+        # Ignore wizard navigation requests triggered while another selection task is still
+        # being processed. This keeps an explicit select followed immediately by next()
+        # from advancing two steps in one block cycle.
+        if name == 'next' and self.task_logger._processing:
+            return
         # The GUI should not be busy when calling a new action.
         if 'select' not in name and self._is_busy:
             logger.log(5, 'The GUI is busy, waiting before calling the action.')
