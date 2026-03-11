@@ -521,7 +521,9 @@ class Lasso:
         if 'Control' in e.modifiers:
             if e.button == 'Left':
                 layout = getattr(self.canvas, 'layout', None)
-                if hasattr(layout, 'box_map'):
+                # Qt widgets expose a built-in `layout()` method, so only treat `layout`
+                # as a plot layout when it provides the layout protocol we expect.
+                if hasattr(layout, 'box_map') and hasattr(layout, 'active_box'):
                     box, pos = layout.box_map(e.pos)
                     # Only update the box for the first click, so that the box containing
                     # the lasso is determined by the first click only.
@@ -531,10 +533,11 @@ class Lasso:
                     if box != self.box:
                         return
                 else:  # pragma: no cover
+                    layout = None
                     pos = self.canvas.window_to_ndc(e.pos)
                 # Force the active box to be the box of the first click, not the box of the
                 # current click.
-                if layout:
+                if layout is not None:
                     layout.active_box = self.box
                 self.add(pos)  # call update_lasso_visual
                 emit('lasso_updated', self.canvas, self.polygon)
