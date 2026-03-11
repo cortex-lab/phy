@@ -32,7 +32,6 @@ dependencies = [
     "click",
     "colorcet",
     "cython",
-    "dask",
     "h5py",
     "joblib",
     "matplotlib",
