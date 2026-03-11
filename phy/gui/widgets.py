@@ -452,8 +452,16 @@ class _TableItemDelegate(QStyledItemDelegate):
         elif fg is None:
             fg = QColor('#ffffff')
 
+        # Paint the selection tint ourselves for every cell in the row so Qt does not fall
+        # back to per-cell selected-item styling.
         if bg is not None:
-            opt.backgroundBrush = bg
+            painter.save()
+            painter.fillRect(opt.rect, bg)
+            painter.restore()
+            opt.backgroundBrush = Qt.NoBrush
+            opt.state &= ~QStyle.State_Selected
+
+        if bg is not None:
             palette.setColor(QPalette.Base, bg)
             palette.setColor(QPalette.Highlight, bg)
         if fg is not None:
@@ -572,19 +580,20 @@ class Table(QWidget):
                 color: white;
                 border: 0;
                 outline: 0;
-                selection-background-color: #444;
+                selection-background-color: transparent;
                 selection-color: white;
                 gridline-color: #111;
             }
             QTableView::item {
                 padding: 4px 6px;
                 border: 0;
+                background-color: transparent;
             }
             QTableView::item:hover {
                 background-color: #222;
             }
             QTableView::item:selected {
-                background-color: #444;
+                background-color: transparent;
                 color: white;
             }
             QHeaderView::section {
