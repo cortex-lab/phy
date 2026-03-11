@@ -15,13 +15,14 @@ Phy provides two GUIs:
 * **Kwik GUI** (legacy): for datasets sorted with klusta and klustakwik2.
 
 
-[![phy 2.0b1 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
+[![phy 2.1.0rc1 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
 
 
 ## What's new
-* [5 June 2024] phy 2.0 beta 6, bug fixes, install work, fixing some deprecations
-* [7 Sep 2021] Release of phy 2.0 beta 5, with some install and bug fixes
-* [7 Feb 2020] Release of phy 2.0 beta 1, with many new views, new features, various improvements and bug fixes...
+* [11 Mar 2026] phy 2.1.0rc1: maintenance has resumed, with substantial help from AI-assisted development and modernization work. This release candidate focuses on dependency updates, replacing a fragile web-based GUI component with a Qt-native replacement, and improving display reliability. The data file formats are unchanged. We are actively looking for beta testers, especially on modern Linux and Windows systems, remote sessions, and plugin-based workflows. Some plugins that relied on internal HTML/web components may need updates.
+* [5 Jun 2024] phy 2.0 beta 6, bug fixes, installation work, fixing some deprecations
+* [7 Sep 2021] phy 2.0 beta 5, with installation and bug fixes
+* [7 Feb 2020] phy 2.0 beta 1, with many new views, new features, and various improvements
 
 
 ## Links

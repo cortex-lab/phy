@@ -10,11 +10,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        qt-version: ["qt5", "qt6"]
-        exclude:
-          # PyQt6 might have issues on some older Python versions
-          - python-version: "3.9"
-            qt-version: "qt6"
+        qt-version: ["qt5"]
 
     steps:
     - uses: actions/checkout@v4

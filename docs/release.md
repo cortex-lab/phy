@@ -1,6 +1,33 @@
 # Release notes
 
-Current version is phy v2.0b1 (beta 1) (7 Feb 2020).
+Current version is phy v2.1.0rc1 (release candidate 1) (11 Mar 2026).
+
+
+## phy 2.1.0rc1
+
+After a long break, maintenance of phy has resumed, with substantial help from AI-assisted
+development and modernization work.
+
+This release candidate focuses on stabilizing the current phy 2.x line rather than introducing
+major new workflows.
+
+### Main points
+
+* No changes to the underlying data and file formats
+* Dependency and installation modernization work
+* Replacement of a fragile legacy web-based GUI component with a Qt-native replacement
+* Expected improvement in display reliability on systems where the embedded web component caused
+  blank panes, white windows, or related rendering failures
+* Call for beta testers before the final `2.1.0` release
+
+### Notes for users
+
+* We are particularly interested in feedback on modern Linux and Windows systems, remote desktop
+  sessions, and plugin-based workflows.
+* Some plugins relying on internal HTML or other web-based GUI components may need to be updated.
+
+
+## phy 2.0 beta 1
 
 
 ## New views
