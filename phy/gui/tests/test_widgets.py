@@ -196,7 +196,9 @@ def test_ipython_view_1(qtbot):
     view = IPythonView()
     view.show()
     view.start_kernel()
+    kernel = view.kernel
     view.stop()
+    assert not kernel.iopub_thread.thread.is_alive()
     qtbot.wait(10)
     view.close()
 

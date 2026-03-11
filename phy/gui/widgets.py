@@ -53,6 +53,9 @@ def _ensure_async_ipykernel_methods(kernel):
     if do_history is not None and not inspect.iscoroutinefunction(do_history):
 
         async def do_history_async(*args, **kwargs):
+            shell = getattr(kernel, 'shell', None)
+            if getattr(shell, 'history_manager', None) is None:
+                return {'status': 'ok', 'history': []}
             return do_history(*args, **kwargs)
 
         kernel.do_history = do_history_async
@@ -79,6 +82,10 @@ class IPythonView(RichJupyterWidget):
         self.kernel = self.kernel_manager.kernel
         _ensure_async_ipykernel_methods(self.kernel)
         self.shell = self.kernel.shell
+        # This embedded shell should not persist readline history during tests or GUI teardown.
+        history_manager = getattr(self.shell, 'history_manager', None)
+        if history_manager is not None:
+            history_manager.enabled = False
 
         try:
             self.kernel_client = self.kernel_manager.client()
@@ -126,26 +133,52 @@ class IPythonView(RichJupyterWidget):
     def stop(self):
         """Stop the kernel."""
         logger.debug('Stopping the kernel.')
-        try:
-            kernel = self.kernel
-            if self.kernel_client is not None:
+        kernel = self.kernel
+
+        if self.kernel_client is not None:
+            try:
                 self.kernel_client.stop_channels()
-                self.kernel_client = None
-            if self.kernel_manager is not None:
+            except Exception as e:  # pragma: no cover
+                logger.error('Could not stop IPython kernel channels: %s.', str(e))
+            self.kernel_client = None
+
+        if kernel is not None:
+            shell = getattr(kernel, 'shell', None)
+            if shell is not None:
+                try:
+                    shell._atexit_once()
+                except Exception as e:  # pragma: no cover
+                    logger.error('Could not finalize IPython shell cleanup: %s.', str(e))
+
+            for stream_name in ('stdout', 'stderr'):
+                stream = getattr(kernel, stream_name, None)
+                if stream is None:
+                    continue
+                try:
+                    stream.close()
+                except Exception as e:  # pragma: no cover
+                    logger.error(
+                        'Could not close IPython kernel %s stream: %s.',
+                        stream_name,
+                        str(e),
+                    )
+
+            iopub_thread = getattr(kernel, 'iopub_thread', None)
+            if iopub_thread is not None and getattr(iopub_thread, 'thread', None):
+                try:
+                    iopub_thread.stop()
+                except Exception as e:  # pragma: no cover
+                    logger.error('Could not stop IPython IOPub thread: %s.', str(e))
+
+        if self.kernel_manager is not None:
+            try:
                 self.kernel_manager.shutdown_kernel()
-                self.kernel_manager = None
-            if kernel is not None:
-                for stream_name in ('stdout', 'stderr'):
-                    stream = getattr(kernel, stream_name, None)
-                    if stream is not None:
-                        stream.close()
-                iopub_thread = getattr(kernel, 'iopub_thread', None)
-                if iopub_thread is not None and not iopub_thread.closed:
-                    iopub_thread.close()
-            self.kernel = None
-            self.shell = None
-        except Exception as e:  # pragma: no cover
-            logger.error('Could not stop the IPython kernel: %s.', str(e))
+            except Exception as e:  # pragma: no cover
+                logger.error('Could not shut down IPython kernel: %s.', str(e))
+            self.kernel_manager = None
+
+        self.kernel = None
+        self.shell = None
 
     def closeEvent(self, event):
         self.stop()
