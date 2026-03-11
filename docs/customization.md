@@ -138,12 +138,9 @@ This object (`controller.supervisor`) is responsible for creating the cluster an
 * **Clustering**: manages the cluster assignments and the related undo stack.
 * **ClusterMeta**: manages the cluster groups and labels, and the related undo stack.
 * **History**: a generic undo stack used by the two classes above.
-* **HTMLWidget**: a generic HTML widget with Javascript-Python communication handled by PyQt5.
 * **Table**: a table used by the cluster and similarity views.
 * **Context**: manages the memory and disk cache, using joblib.
 * **ClusterColorSelector**: manages the cluster color mapping.
-
-*Note*: the code of the table is in a separate Javascript project, `tablejs` that uses the `ListJS` library.
 
 #### Context
 

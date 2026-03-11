@@ -44,7 +44,7 @@ Run the following commands in a terminal (currently working for Linux machines):
 1. Create a new conda environment with Python 3.10+ and the GUI/runtime dependencies:
 
     ```
-    conda create -n phy2 -y python=3.11 joblib matplotlib numpy pillow pip pyopengl pyqt pyqtwebengine pytest qtconsole requests responses scipy traitlets
+    conda create -n phy2 -y python=3.11 joblib matplotlib numpy pillow pip pyopengl pyqt pytest qtconsole requests responses scipy traitlets
     ```
 
 2. Activate the new conda environment with `conda activate phy2`
@@ -62,11 +62,6 @@ phy template-gui params.py
 
 6. If there are problems with this method we also have a legacy `deprecated/environment.yml` file
 with a conda-based setup. It is kept for reference only.
-
-
-### Dealing with the error `ModuleNotFoundError: No module named 'PyQt5.QtWebEngineWidget`
-
-In some environments, you might get an error message related to QtWebEngineWidget. Run the command `pip install PyQtWebEngine` and try launching phy again. This command should not run if the error message doesn't appear, as it could break the PyQt5 installation.
 
 
 ### Upgrading from phy 1 to phy 2

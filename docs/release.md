@@ -50,7 +50,7 @@ Current version is phy v2.0b1 (beta 1) (7 Feb 2020).
     * Dynamically **filter** the list of clusters based on cluster metrics and labels (using JavaScript syntax)
     * Snippets to quickly **sort and filter** clusters
     * New default columns: mean firing rate, and template waveform amplitude
-    * The styling can be customized with CSS in a plugin (see plugin examples in the documentation)
+    * The styling can be customized in a plugin (see plugin examples in the documentation)
 * **Amplitude view**:
     * Show an histogram of amplitudes overlaid with the amplitudes
     * Support for multiple types of amplitudes (template waveform amplitude, raw waveform amplitude, feature amplitude)

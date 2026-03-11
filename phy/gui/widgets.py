@@ -1,4 +1,4 @@
-"""HTML widgets for GUIs."""
+"""Qt widgets for GUIs."""
 
 
 # -----------------------------------------------------------------------------
@@ -13,7 +13,7 @@ import re
 from functools import partial
 
 from phylib.utils import connect, emit
-from phylib.utils._misc import _CustomEncoder, _pretty_floats, read_text
+from phylib.utils._misc import _CustomEncoder, _pretty_floats
 from phylib.utils._types import _is_integer
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -35,7 +35,6 @@ from .qt import (
     QLineEdit,
     QModelIndex,
     QPalette,
-    QObject,
     QPlainTextEdit,
     QSortFilterProxyModel,
     QSize,
@@ -48,12 +47,8 @@ from .qt import (
     QTimer,
     QVBoxLayout,
     QColor,
-    QWebChannel,
     QWidget,
-    WebView,
     _block,
-    _static_abs_path,
-    pyqtSlot,
 )
 
 logger = logging.getLogger(__name__)
@@ -206,70 +201,6 @@ class IPythonView(RichJupyterWidget):
         super().closeEvent(event)
 
 
-# -----------------------------------------------------------------------------
-# HTML widget
-# -----------------------------------------------------------------------------
-
-# Default CSS style of HTML widgets.
-_DEFAULT_STYLE = """
-
-    * {
-        font-size: 8pt !important;
-    }
-
-    html, body, table {
-        background-color: black;
-        color: white;
-        font-family: sans-serif;
-        font-size: 12pt;
-        margin: 2px 4px;
-    }
-
-    input.filter {
-        width: 100% !important;
-    }
-
-    table tr[data-is_masked='true'] {
-        color: #888;
-    }
-"""
-
-
-# Bind the JS events to Python.
-_DEFAULT_SCRIPT = """
-    document.addEventListener("DOMContentLoaded", function () {
-        new QWebChannel(qt.webChannelTransport, function (channel) {
-            var eventEmitter = channel.objects.eventEmitter;
-            window.eventEmitter = eventEmitter;
-
-            // All phy_events emitted from JS are relayed to
-            // Python's emitJS().
-            document.addEventListener("phy_event", function (e) {
-                console.debug("Emit from JS global: " + e.detail.name + " " + e.detail.data);
-                eventEmitter.emitJS(e.detail.name, JSON.stringify(e.detail.data));
-            });
-
-        });
-    });
-"""
-
-
-# Default HTML template of the widgets.
-_PAGE_TEMPLATE = """
-<html>
-<head>
-    <title>{title:s}</title>
-    {header:s}
-</head>
-<body>
-
-{body:s}
-
-</body>
-</html>
-"""
-
-
 def _uniq(seq):
     """Return the list of unique integers in a sequence, by keeping the order."""
     seen = set()
@@ -309,150 +240,6 @@ class Barrier:
     def result(self, key):
         """Return the result of a task specified by its key."""
         return self._results.get(key, None)
-
-
-class HTMLBuilder:
-    """Build an HTML widget."""
-
-    def __init__(self, title=''):
-        self.title = title
-        self.headers = []
-        self.body = ''
-        self.add_style(_DEFAULT_STYLE)
-
-    def add_style(self, s):
-        """Add a CSS style."""
-        self.add_header(f'<style>\n{s}\n</style>')
-
-    def add_style_src(self, filename):
-        """Add a link to a stylesheet URL."""
-        self.add_header(f'<link rel="stylesheet" type="text/css" href="{filename}" />')
-
-    def add_script(self, s):
-        """Add Javascript code."""
-        self.add_header(f'<script>{s}</script>')
-
-    def add_script_src(self, filename):
-        """Add a link to a Javascript file."""
-        self.add_header(f'<script src="{filename}"></script>')
-
-    def add_header(self, s):
-        """Add HTML headers."""
-        self.headers.append(s)
-
-    def set_body_src(self, filename):
-        """Set the path to an HTML file containing the body of the widget."""
-        path = _static_abs_path(filename)
-        self.set_body(read_text(path))
-
-    def set_body(self, body):
-        """Set the HTML body of the widget."""
-        self.body = body
-
-    def _build_html(self):
-        """Build the HTML page."""
-        header = '\n'.join(self.headers)
-        html = _PAGE_TEMPLATE.format(title=self.title, header=header, body=self.body)
-        return html
-
-    @property
-    def html(self):
-        """Return the reconstructed HTML code of the widget."""
-        return self._build_html()
-
-
-class JSEventEmitter(QObject):
-    """Object used to relay the Javascript events to Python. Some vents can be debounced so that
-    there is a minimal delay between two consecutive events of the same type."""
-
-    _parent = None
-
-    def __init__(self, *args, debounce_events=()):
-        super().__init__(*args)
-        self._debouncer = Debouncer()
-        self._debounce_events = debounce_events
-
-    @pyqtSlot(str, str)
-    def emitJS(self, name, arg_json):
-        logger.log(5, 'Emit from Python %s %s.', name, arg_json)
-        args = str(name), self._parent, json.loads(str(arg_json))
-        # NOTE: debounce some events but not other events coming from JS.
-        # This is typically used for select events of table widgets.
-        if name in self._debounce_events:
-            self._debouncer.submit(emit, *args)
-        else:
-            emit(*args)
-
-
-class HTMLWidget(WebView):
-    """An HTML widget that is displayed with Qt, with Javascript support and Python-Javascript
-    interactions capabilities. These interactions are asynchronous in Qt5, which requires
-    extensive use of callback functions in Python, as well as synchronization primitives
-    for unit tests.
-
-    Constructor
-    ------------
-
-    parent : Widget
-    title : window title
-    debounce_events : list-like
-        The list of event names, raised by the underlying HTML widget, that should be debounced.
-
-    """
-
-    def __init__(self, *args, title='', debounce_events=()):
-        # Due to a limitation of QWebChannel, need to register a Python object
-        # BEFORE this web view is created?!
-        self._event = JSEventEmitter(*args, debounce_events=debounce_events)
-        self._event._parent = self
-        self.channel = QWebChannel(*args)
-        self.channel.registerObject('eventEmitter', self._event)
-
-        super().__init__(*args)
-        self.page().setWebChannel(self.channel)
-
-        self.builder = HTMLBuilder(title=title)
-        self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
-        self.builder.add_script(_DEFAULT_SCRIPT)
-
-    @property
-    def debouncer(self):
-        """Widget debouncer."""
-        return self._event._debouncer
-
-    def build(self, callback=None):
-        """Rebuild the HTML code of the widget."""
-        self.set_html(self.builder.html, callback=callback)
-
-    def view_source(self, callback=None):
-        """View the HTML source of the widget."""
-        return self.eval_js(
-            "document.getElementsByTagName('html')[0].innerHTML", callback=callback
-        )
-
-    # Javascript methods
-    # -------------------------------------------------------------------------
-
-    def eval_js(self, expr, callback=None):
-        """Evaluate a Javascript expression.
-
-        Parameters
-        ----------
-
-        expr : str
-            A Javascript expression.
-        callback : function
-            A Python function that is called once the Javascript expression has been
-            evaluated. It takes as input the output of the Javascript expression.
-
-        """
-        logger.log(5, f'{self.__class__.__name__} eval JS {expr}')
-        return self.page().runJavaScript(expr, callback or (lambda _: _))
-
-
-# -----------------------------------------------------------------------------
-# HTML table
-# -----------------------------------------------------------------------------
 
 
 def dumps(o):
@@ -678,7 +465,7 @@ class _TableItemDelegate(QStyledItemDelegate):
 
 
 class Table(QWidget):
-    """A sortable native Qt table with the same Python-facing API as the old HTML table."""
+    """A sortable native Qt table with a compatibility API for legacy callers."""
 
     _ready = False
 
@@ -693,11 +480,10 @@ class Table(QWidget):
         debounce_events=(),
     ):
         super().__init__(*args)
-        self.builder = HTMLBuilder(title=title)
-        self._event = JSEventEmitter(*args, debounce_events=debounce_events)
-        self._event._parent = self
+        self.setWindowTitle(title)
+        self._debouncer = Debouncer()
         self._debounce_events = set(debounce_events)
-        self._event._debouncer.isBusy = False
+        self._debouncer.isBusy = False
         self.columns = list(columns or ['id'])
         self.value_names = list(value_names or self.columns)
         self.data = list(data or [])
@@ -747,7 +533,7 @@ class Table(QWidget):
 
     @property
     def debouncer(self):
-        return self._event._debouncer
+        return self._debouncer
 
     def eventFilter(self, obj, event):
         if obj is self.filter_edit and event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
@@ -848,7 +634,15 @@ class Table(QWidget):
             QTimer.singleShot(0, lambda: callback(value))
 
     def _emit_event(self, name, payload):
-        emit(name, self, payload)
+        if name in self._debounce_events:
+            self._debouncer.submit(emit, name, self, payload)
+        else:
+            emit(name, self, payload)
+
+    def add_style(self, style):
+        """Append a stylesheet fragment."""
+        existing = self.styleSheet()
+        self.setStyleSheet(f'{existing}\n{style}' if existing else style)
 
     def _source_row_for_id(self, row_id):
         ids = self._model.ids()
@@ -1193,7 +987,7 @@ class Table(QWidget):
         self.table_view.viewport().update()
 
     def clear_temporary_files(self):
-        """Compatibility no-op for the old HTML-backed implementation."""
+        """Compatibility no-op kept for callers from the removed WebEngine path."""
         return
 
     def sizeHint(self):

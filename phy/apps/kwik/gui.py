@@ -27,6 +27,8 @@ try:
     from klusta.kwik import KwikModel
     from klusta.launch import cluster
 except ImportError:  # pragma: no cover
+    KwikModel = None
+    cluster = None
     logger.debug('Package klusta not installed: the KwikGUI will not work.')
 
 
@@ -44,7 +46,12 @@ def _backup(path):
         shutil.copy(str(path), str(path_backup))
 
 
-class KwikModelGUI(KwikModel):
+def _require_klusta():
+    if KwikModel is None:  # pragma: no cover
+        raise ImportError('Package klusta is required for the Kwik GUI.')
+
+
+class KwikModelGUI(KwikModel if KwikModel is not None else object):
     @property
     def features(self):
         return self.all_features
@@ -96,6 +103,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
     )
 
     def __init__(self, kwik_path=None, **kwargs):
+        _require_klusta()
         assert kwik_path
         kwik_path = Path(kwik_path)
         dir_path = kwik_path.parent
@@ -252,6 +260,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
 def kwik_gui(path, channel_group=None, clustering=None, **kwargs):  # pragma: no cover
     """Launch the Kwik GUI."""
     assert path
+    _require_klusta()
     create_app()
     controller = KwikController(path, channel_group=channel_group, clustering=clustering, **kwargs)
     gui = controller.create_gui()
@@ -263,4 +272,5 @@ def kwik_gui(path, channel_group=None, clustering=None, **kwargs):  # pragma: no
 def kwik_describe(path, channel_group=None, clustering=None):
     """Describe a template dataset."""
     assert path
+    _require_klusta()
     KwikModel(path, channel_group=channel_group, clustering=clustering).describe()

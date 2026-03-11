@@ -7,9 +7,7 @@
 import logging
 import os
 import os.path as op
-import shutil
 import sys
-import tempfile
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
@@ -43,7 +41,6 @@ from PyQt5.QtCore import (
     pyqtSignal,
     pyqtSlot,
     QSize,
-    QUrl,
     QEvent,
     QCoreApplication,
     QModelIndex,
@@ -62,12 +59,6 @@ from PyQt5.QtGui import (  # noqa
     QWindow,
     QOpenGLWindow as _QOpenGLWindow,
 )
-from PyQt5.QtWebEngineWidgets import (
-    QWebEngineView,  # noqa
-    QWebEnginePage,
-    # QWebSettings,
-)
-from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (  # noqa
     QAction,
     QAbstractItemView,
@@ -536,62 +527,6 @@ def _get_icon(icon, size=64, color='black'):
 def _static_abs_path(rel_path):
     """Return the absolute path of a static file saved in this repository."""
     return Path(__file__).parent / 'static' / rel_path
-
-
-class WebPage(QWebEnginePage):
-    """A Qt web page widget."""
-
-    _raise_on_javascript_error = False
-
-    def javaScriptConsoleMessage(self, level, msg, line, source):
-        super().javaScriptConsoleMessage(level, msg, line, source)
-        msg = f'[JS:L{line:02d}] {msg}'
-        f = (partial(logger.log, 5), logger.warning, logger.error)[level]
-        if self._raise_on_javascript_error and level >= 2:
-            raise RuntimeError(msg)
-        f(msg)
-
-
-class WebView(QWebEngineView):
-    """A generic HTML widget."""
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.html = None
-        assert isinstance(self.window(), QWidget)
-        self._page = WebPage(self)
-        self.setPage(self._page)
-        self.move(100, 100)
-        self.resize(400, 400)
-
-    def set_html(self, html, callback=None):
-        """Set the HTML code."""
-        self._callback = callback
-        self.loadFinished.connect(self._loadFinished)
-        static_dir = f'{str(Path(__file__).parent / "static")}/'
-
-        # Create local file from HTML
-        self.clear_temporary_files()
-        self._tempdir = Path(tempfile.mkdtemp())
-        shutil.copytree(static_dir, self._tempdir / 'html')
-        file_path = self._tempdir / 'html' / 'page.html'
-        with open(file_path, 'w') as f:
-            f.write(html)
-        file_url = QUrl().fromLocalFile(str(file_path))
-        self.page().setUrl(file_url)
-
-    def clear_temporary_files(self):
-        """Delete the temporary HTML files"""
-        if hasattr(self, '_tempdir') and self._tempdir.is_dir():
-            shutil.rmtree(self._tempdir, ignore_errors=True)
-
-    def _callable(self, data):
-        self.html = data
-        if self._callback:
-            self._callback(self.html)
-
-    def _loadFinished(self, result):
-        self.page().toHtml(self._callable)
 
 
 # -----------------------------------------------------------------------------

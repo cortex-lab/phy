@@ -45,8 +45,6 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.DockWidget](#phyguidockwidget)
 * [phy.gui.GUI](#phyguigui)
 * [phy.gui.GUIState](#phyguiguistate)
-* [phy.gui.HTMLBuilder](#phyguihtmlbuilder)
-* [phy.gui.HTMLWidget](#phyguihtmlwidget)
 * [phy.gui.IPythonView](#phyguiipythonview)
 * [phy.gui.KeyValueWidget](#phyguikeyvaluewidget)
 * [phy.gui.Snippets](#phyguisnippets)
@@ -1430,158 +1428,6 @@ Update the state of a view instance.
 
 ---
 
-### phy.gui.HTMLBuilder
-
-Build an HTML widget.
-
----
-
-#### HTMLBuilder.add_header
-
-
-**`HTMLBuilder.add_header(self, s)`**
-
-Add HTML headers.
-
----
-
-#### HTMLBuilder.add_script
-
-
-**`HTMLBuilder.add_script(self, s)`**
-
-Add Javascript code.
-
----
-
-#### HTMLBuilder.add_script_src
-
-
-**`HTMLBuilder.add_script_src(self, filename)`**
-
-Add a link to a Javascript file.
-
----
-
-#### HTMLBuilder.add_style
-
-
-**`HTMLBuilder.add_style(self, s)`**
-
-Add a CSS style.
-
----
-
-#### HTMLBuilder.add_style_src
-
-
-**`HTMLBuilder.add_style_src(self, filename)`**
-
-Add a link to a stylesheet URL.
-
----
-
-#### HTMLBuilder.set_body
-
-
-**`HTMLBuilder.set_body(self, body)`**
-
-Set the HTML body of the widget.
-
----
-
-#### HTMLBuilder.set_body_src
-
-
-**`HTMLBuilder.set_body_src(self, filename)`**
-
-Set the path to an HTML file containing the body of the widget.
-
----
-
-#### HTMLBuilder.html
-
-
-**`HTMLBuilder.html`**
-
-Return the reconstructed HTML code of the widget.
-
----
-
-### phy.gui.HTMLWidget
-
-An HTML widget that is displayed with Qt, with Javascript support and Python-Javascript
-interactions capabilities. These interactions are asynchronous in Qt5, which requires
-extensive use of callback functions in Python, as well as synchronization primitives
-for unit tests.
-
-**Constructor**
-
-
-* `parent : Widget`
-
-* `title : window title`
-
-* `debounce_events : list-like`
-    The list of event names, raised by the underlying HTML widget, that should be debounced.
-
----
-
-#### HTMLWidget.build
-
-
-**`HTMLWidget.build(self, callback=None)`**
-
-Rebuild the HTML code of the widget.
-
----
-
-#### HTMLWidget.eval_js
-
-
-**`HTMLWidget.eval_js(self, expr, callback=None)`**
-
-Evaluate a Javascript expression.
-
-**Parameters**
-
-
-* `expr : str`
-    A Javascript expression.
-
-* `callback : function`
-    A Python function that is called once the Javascript expression has been
-    evaluated. It takes as input the output of the Javascript expression.
-
----
-
-#### HTMLWidget.set_html
-
-
-**`HTMLWidget.set_html(self, html, callback=None)`**
-
-Set the HTML code.
-
----
-
-#### HTMLWidget.view_source
-
-
-**`HTMLWidget.view_source(self, callback=None)`**
-
-View the HTML source of the widget.
-
----
-
-#### HTMLWidget.debouncer
-
-
-**`HTMLWidget.debouncer`**
-
-Widget debouncer.
-
----
-
 ### phy.gui.IPythonView
 
 A view with an IPython console living in the same Python process as the GUI.
@@ -1594,6 +1440,15 @@ A view with an IPython console living in the same Python process as the GUI.
 **`IPythonView.attach(self, gui, **kwargs)`**
 
 Add the view to the GUI, start the kernel, and inject the specified variables.
+
+---
+
+#### IPythonView.closeEvent
+
+
+**`IPythonView.closeEvent(self, event)`**
+
+closeEvent(self, a0: Optional[QCloseEvent])
 
 ---
 
@@ -1780,10 +1635,7 @@ the end.
 
 ### phy.gui.Table
 
-A sortable table with support for selection. Derives from HTMLWidget.
-
-This table uses the following Javascript implementation: https://github.com/kwikteam/tablejs
-This Javascript class builds upon ListJS: https://listjs.com/
+A sortable native Qt table with a compatibility API for legacy callers.
 
 ---
 
@@ -1792,16 +1644,16 @@ This Javascript class builds upon ListJS: https://listjs.com/
 
 **`Table.add(self, objects)`**
 
-Add objects object to the table.
+
 
 ---
 
-#### Table.build
+#### Table.add_style
 
 
-**`Table.build(self, callback=None)`**
+**`Table.add_style(self, style)`**
 
-Rebuild the HTML code of the widget.
+Append a stylesheet fragment.
 
 ---
 
@@ -1810,7 +1662,16 @@ Rebuild the HTML code of the widget.
 
 **`Table.change(self, objects)`**
 
-Change some objects.
+
+
+---
+
+#### Table.clear_temporary_files
+
+
+**`Table.clear_temporary_files(self)`**
+
+Compatibility no-op kept for callers from the removed WebEngine path.
 
 ---
 
@@ -1819,27 +1680,16 @@ Change some objects.
 
 **`Table.eval_js(self, expr, callback=None)`**
 
-Evaluate a Javascript expression.
-
-The `table` Javascript variable can be used to interact with the underlying Javascript
-table.
-
-The table has sortable columns, a filter text box, support for single and multi selection
-of rows. Rows can be skippable (used for ignored clusters in phy).
-
-The table can raise Javascript events that are relayed to Python. Objects are
-transparently serialized and deserialized in JSON. Basic types (numbers, strings, lists)
-are transparently converted between Python and Javascript.
-
-**Parameters**
 
 
-* `expr : str`
-    A Javascript expression.
+---
 
-* `callback : function`
-    A Python function that is called once the Javascript expression has been
-    evaluated. It takes as input the output of the Javascript expression.
+#### Table.eventFilter
+
+
+**`Table.eventFilter(self, obj, event)`**
+
+eventFilter(self, a0: Optional[QObject], a1: Optional[QEvent]) -> bool
 
 ---
 
@@ -1848,7 +1698,7 @@ are transparently converted between Python and Javascript.
 
 **`Table.filter(self, text='')`**
 
-Filter the view with a Javascript expression.
+
 
 ---
 
@@ -1857,7 +1707,7 @@ Filter the view with a Javascript expression.
 
 **`Table.first(self, callback=None)`**
 
-Select the first item.
+
 
 ---
 
@@ -1866,7 +1716,7 @@ Select the first item.
 
 **`Table.get(self, id, callback=None)`**
 
-Get the object given its id.
+
 
 ---
 
@@ -1875,7 +1725,7 @@ Get the object given its id.
 
 **`Table.get_current_sort(self, callback=None)`**
 
-Get the current sort as a tuple `(name, dir)`.
+
 
 ---
 
@@ -1884,7 +1734,7 @@ Get the current sort as a tuple `(name, dir)`.
 
 **`Table.get_ids(self, callback=None)`**
 
-Get the list of ids.
+
 
 ---
 
@@ -1893,7 +1743,7 @@ Get the list of ids.
 
 **`Table.get_next_id(self, callback=None)`**
 
-Get the next non-skipped row id.
+
 
 ---
 
@@ -1902,7 +1752,7 @@ Get the next non-skipped row id.
 
 **`Table.get_previous_id(self, callback=None)`**
 
-Get the previous non-skipped row id.
+
 
 ---
 
@@ -1911,7 +1761,25 @@ Get the previous non-skipped row id.
 
 **`Table.get_selected(self, callback=None)`**
 
-Get the currently selected rows.
+
+
+---
+
+#### Table.get_selected_ids
+
+
+**`Table.get_selected_ids(self)`**
+
+
+
+---
+
+#### Table.get_sibling_id
+
+
+**`Table.get_sibling_id(self, row_id=None, direction='next')`**
+
+
 
 ---
 
@@ -1920,7 +1788,7 @@ Get the currently selected rows.
 
 **`Table.is_ready(self)`**
 
-Whether the widget has been fully loaded.
+
 
 ---
 
@@ -1929,7 +1797,16 @@ Whether the widget has been fully loaded.
 
 **`Table.last(self, callback=None)`**
 
-Select the last item.
+
+
+---
+
+#### Table.minimumSizeHint
+
+
+**`Table.minimumSizeHint(self)`**
+
+minimumSizeHint(self) -> QSize
 
 ---
 
@@ -1938,7 +1815,7 @@ Select the last item.
 
 **`Table.next(self, callback=None)`**
 
-Select the next non-skipped row.
+
 
 ---
 
@@ -1947,7 +1824,7 @@ Select the next non-skipped row.
 
 **`Table.previous(self, callback=None)`**
 
-Select the previous non-skipped row.
+
 
 ---
 
@@ -1956,7 +1833,7 @@ Select the previous non-skipped row.
 
 **`Table.remove(self, ids)`**
 
-Remove some objects from their ids.
+
 
 ---
 
@@ -1965,7 +1842,7 @@ Remove some objects from their ids.
 
 **`Table.remove_all(self)`**
 
-Remove all rows in the table.
+
 
 ---
 
@@ -1974,7 +1851,7 @@ Remove all rows in the table.
 
 **`Table.remove_all_and_add(self, objects)`**
 
-Remove all rows in the table and add new objects.
+
 
 ---
 
@@ -1983,7 +1860,7 @@ Remove all rows in the table and add new objects.
 
 **`Table.scroll_to(self, id)`**
 
-Scroll until a given row is visible.
+
 
 ---
 
@@ -1992,11 +1869,25 @@ Scroll until a given row is visible.
 
 **`Table.select(self, ids, callback=None, **kwargs)`**
 
-Select some rows in the table from Python.
 
-This function calls `table.select()` in Javascript, which raises a Javascript event
-relayed to Python. This sequence of actions is the same when the user selects
-rows directly in the HTML view.
+
+---
+
+#### Table.select_toggle
+
+
+**`Table.select_toggle(self, row_id)`**
+
+
+
+---
+
+#### Table.select_until
+
+
+**`Table.select_until(self, row_id)`**
+
+
 
 ---
 
@@ -2005,16 +1896,25 @@ rows directly in the HTML view.
 
 **`Table.set_busy(self, busy)`**
 
-Set the busy state of the GUI.
+
 
 ---
 
-#### Table.set_html
+#### Table.set_selected_index_offset
 
 
-**`Table.set_html(self, html, callback=None)`**
+**`Table.set_selected_index_offset(self, n)`**
 
-Set the HTML code.
+
+
+---
+
+#### Table.sizeHint
+
+
+**`Table.sizeHint(self)`**
+
+sizeHint(self) -> QSize
 
 ---
 
@@ -2023,16 +1923,7 @@ Set the HTML code.
 
 **`Table.sort_by(self, name, sort_dir='asc')`**
 
-Sort by a given variable.
 
----
-
-#### Table.view_source
-
-
-**`Table.view_source(self, callback=None)`**
-
-View the HTML source of the widget.
 
 ---
 
@@ -2041,7 +1932,7 @@ View the HTML source of the widget.
 
 **`Table.debouncer`**
 
-Widget debouncer.
+
 
 ---
 
@@ -2273,21 +2164,25 @@ Remove all visuals except those marked `clearable=False`.
 
 ---
 
+#### BaseCanvas.close
+
+
+**`BaseCanvas.close(self)`**
+
+Close the OpenGL canvas.
+
+The Qt offscreen platform plugin crashes when closing a shown QOpenGLWindow after
+rendering. Hiding the window avoids the native crash and is sufficient for headless
+test cleanup.
+
+---
+
 #### BaseCanvas.emit
 
 
 **`BaseCanvas.emit(self, name, **kwargs)`**
 
 Raise an internal event and call `on_xxx()` on attached objects.
-
----
-
-#### BaseCanvas.event
-
-
-**`BaseCanvas.event(self, e)`**
-
-Touch event.
 
 ---
 
@@ -4165,6 +4060,19 @@ Remove all visuals except those marked `clearable=False`.
 
 ---
 
+#### PlotCanvas.close
+
+
+**`PlotCanvas.close(self)`**
+
+Close the OpenGL canvas.
+
+The Qt offscreen platform plugin crashes when closing a shown QOpenGLWindow after
+rendering. Hiding the window avoids the native crash and is sufficient for headless
+test cleanup.
+
+---
+
 #### PlotCanvas.emit
 
 
@@ -4198,15 +4106,6 @@ Enable lasso in the canvas.
 **`PlotCanvas.enable_panzoom(self)`**
 
 Enable pan zoom in the canvas.
-
----
-
-#### PlotCanvas.event
-
-
-**`PlotCanvas.event(self, e)`**
-
-Touch event.
 
 ---
 
@@ -6545,16 +6444,16 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
 
 **`ClusterView.add(self, objects)`**
 
-Add objects object to the table.
+
 
 ---
 
-#### ClusterView.build
+#### ClusterView.add_style
 
 
-**`ClusterView.build(self, callback=None)`**
+**`ClusterView.add_style(self, style)`**
 
-Rebuild the HTML code of the widget.
+Append a stylesheet fragment.
 
 ---
 
@@ -6563,7 +6462,16 @@ Rebuild the HTML code of the widget.
 
 **`ClusterView.change(self, objects)`**
 
-Change some objects.
+
+
+---
+
+#### ClusterView.clear_temporary_files
+
+
+**`ClusterView.clear_temporary_files(self)`**
+
+Compatibility no-op kept for callers from the removed WebEngine path.
 
 ---
 
@@ -6572,27 +6480,16 @@ Change some objects.
 
 **`ClusterView.eval_js(self, expr, callback=None)`**
 
-Evaluate a Javascript expression.
-
-The `table` Javascript variable can be used to interact with the underlying Javascript
-table.
-
-The table has sortable columns, a filter text box, support for single and multi selection
-of rows. Rows can be skippable (used for ignored clusters in phy).
-
-The table can raise Javascript events that are relayed to Python. Objects are
-transparently serialized and deserialized in JSON. Basic types (numbers, strings, lists)
-are transparently converted between Python and Javascript.
-
-**Parameters**
 
 
-* `expr : str`
-    A Javascript expression.
+---
 
-* `callback : function`
-    A Python function that is called once the Javascript expression has been
-    evaluated. It takes as input the output of the Javascript expression.
+#### ClusterView.eventFilter
+
+
+**`ClusterView.eventFilter(self, obj, event)`**
+
+eventFilter(self, a0: Optional[QObject], a1: Optional[QEvent]) -> bool
 
 ---
 
@@ -6601,7 +6498,7 @@ are transparently converted between Python and Javascript.
 
 **`ClusterView.filter(self, text='')`**
 
-Filter the view with a Javascript expression.
+
 
 ---
 
@@ -6610,7 +6507,7 @@ Filter the view with a Javascript expression.
 
 **`ClusterView.first(self, callback=None)`**
 
-Select the first item.
+
 
 ---
 
@@ -6619,7 +6516,7 @@ Select the first item.
 
 **`ClusterView.get(self, id, callback=None)`**
 
-Get the object given its id.
+
 
 ---
 
@@ -6628,7 +6525,7 @@ Get the object given its id.
 
 **`ClusterView.get_current_sort(self, callback=None)`**
 
-Get the current sort as a tuple `(name, dir)`.
+
 
 ---
 
@@ -6637,7 +6534,7 @@ Get the current sort as a tuple `(name, dir)`.
 
 **`ClusterView.get_ids(self, callback=None)`**
 
-Get the list of ids.
+
 
 ---
 
@@ -6646,7 +6543,7 @@ Get the list of ids.
 
 **`ClusterView.get_next_id(self, callback=None)`**
 
-Get the next non-skipped row id.
+
 
 ---
 
@@ -6655,7 +6552,7 @@ Get the next non-skipped row id.
 
 **`ClusterView.get_previous_id(self, callback=None)`**
 
-Get the previous non-skipped row id.
+
 
 ---
 
@@ -6664,7 +6561,25 @@ Get the previous non-skipped row id.
 
 **`ClusterView.get_selected(self, callback=None)`**
 
-Get the currently selected rows.
+
+
+---
+
+#### ClusterView.get_selected_ids
+
+
+**`ClusterView.get_selected_ids(self)`**
+
+
+
+---
+
+#### ClusterView.get_sibling_id
+
+
+**`ClusterView.get_sibling_id(self, row_id=None, direction='next')`**
+
+
 
 ---
 
@@ -6673,7 +6588,7 @@ Get the currently selected rows.
 
 **`ClusterView.is_ready(self)`**
 
-Whether the widget has been fully loaded.
+
 
 ---
 
@@ -6682,7 +6597,16 @@ Whether the widget has been fully loaded.
 
 **`ClusterView.last(self, callback=None)`**
 
-Select the last item.
+
+
+---
+
+#### ClusterView.minimumSizeHint
+
+
+**`ClusterView.minimumSizeHint(self)`**
+
+minimumSizeHint(self) -> QSize
 
 ---
 
@@ -6691,7 +6615,7 @@ Select the last item.
 
 **`ClusterView.next(self, callback=None)`**
 
-Select the next non-skipped row.
+
 
 ---
 
@@ -6700,7 +6624,7 @@ Select the next non-skipped row.
 
 **`ClusterView.previous(self, callback=None)`**
 
-Select the previous non-skipped row.
+
 
 ---
 
@@ -6709,7 +6633,7 @@ Select the previous non-skipped row.
 
 **`ClusterView.remove(self, ids)`**
 
-Remove some objects from their ids.
+
 
 ---
 
@@ -6718,7 +6642,7 @@ Remove some objects from their ids.
 
 **`ClusterView.remove_all(self)`**
 
-Remove all rows in the table.
+
 
 ---
 
@@ -6727,7 +6651,7 @@ Remove all rows in the table.
 
 **`ClusterView.remove_all_and_add(self, objects)`**
 
-Remove all rows in the table and add new objects.
+
 
 ---
 
@@ -6736,7 +6660,7 @@ Remove all rows in the table and add new objects.
 
 **`ClusterView.scroll_to(self, id)`**
 
-Scroll until a given row is visible.
+
 
 ---
 
@@ -6745,11 +6669,25 @@ Scroll until a given row is visible.
 
 **`ClusterView.select(self, ids, callback=None, **kwargs)`**
 
-Select some rows in the table from Python.
 
-This function calls `table.select()` in Javascript, which raises a Javascript event
-relayed to Python. This sequence of actions is the same when the user selects
-rows directly in the HTML view.
+
+---
+
+#### ClusterView.select_toggle
+
+
+**`ClusterView.select_toggle(self, row_id)`**
+
+
+
+---
+
+#### ClusterView.select_until
+
+
+**`ClusterView.select_until(self, row_id)`**
+
+
 
 ---
 
@@ -6758,16 +6696,16 @@ rows directly in the HTML view.
 
 **`ClusterView.set_busy(self, busy)`**
 
-Set the busy state of the GUI.
+
 
 ---
 
-#### ClusterView.set_html
+#### ClusterView.set_selected_index_offset
 
 
-**`ClusterView.set_html(self, html, callback=None)`**
+**`ClusterView.set_selected_index_offset(self, n)`**
 
-Set the HTML code.
+
 
 ---
 
@@ -6780,21 +6718,21 @@ Set the cluster view state, with a specified sort.
 
 ---
 
+#### ClusterView.sizeHint
+
+
+**`ClusterView.sizeHint(self)`**
+
+sizeHint(self) -> QSize
+
+---
+
 #### ClusterView.sort_by
 
 
 **`ClusterView.sort_by(self, name, sort_dir='asc')`**
 
-Sort by a given variable.
 
----
-
-#### ClusterView.view_source
-
-
-**`ClusterView.view_source(self, callback=None)`**
-
-View the HTML source of the widget.
 
 ---
 
@@ -6803,7 +6741,7 @@ View the HTML source of the widget.
 
 **`ClusterView.debouncer`**
 
-Widget debouncer.
+
 
 ---
 
@@ -9191,16 +9129,16 @@ in the cluster view.
 
 **`SimilarityView.add(self, objects)`**
 
-Add objects object to the table.
+
 
 ---
 
-#### SimilarityView.build
+#### SimilarityView.add_style
 
 
-**`SimilarityView.build(self, callback=None)`**
+**`SimilarityView.add_style(self, style)`**
 
-Rebuild the HTML code of the widget.
+Append a stylesheet fragment.
 
 ---
 
@@ -9209,7 +9147,16 @@ Rebuild the HTML code of the widget.
 
 **`SimilarityView.change(self, objects)`**
 
-Change some objects.
+
+
+---
+
+#### SimilarityView.clear_temporary_files
+
+
+**`SimilarityView.clear_temporary_files(self)`**
+
+Compatibility no-op kept for callers from the removed WebEngine path.
 
 ---
 
@@ -9218,27 +9165,16 @@ Change some objects.
 
 **`SimilarityView.eval_js(self, expr, callback=None)`**
 
-Evaluate a Javascript expression.
-
-The `table` Javascript variable can be used to interact with the underlying Javascript
-table.
-
-The table has sortable columns, a filter text box, support for single and multi selection
-of rows. Rows can be skippable (used for ignored clusters in phy).
-
-The table can raise Javascript events that are relayed to Python. Objects are
-transparently serialized and deserialized in JSON. Basic types (numbers, strings, lists)
-are transparently converted between Python and Javascript.
-
-**Parameters**
 
 
-* `expr : str`
-    A Javascript expression.
+---
 
-* `callback : function`
-    A Python function that is called once the Javascript expression has been
-    evaluated. It takes as input the output of the Javascript expression.
+#### SimilarityView.eventFilter
+
+
+**`SimilarityView.eventFilter(self, obj, event)`**
+
+eventFilter(self, a0: Optional[QObject], a1: Optional[QEvent]) -> bool
 
 ---
 
@@ -9247,7 +9183,7 @@ are transparently converted between Python and Javascript.
 
 **`SimilarityView.filter(self, text='')`**
 
-Filter the view with a Javascript expression.
+
 
 ---
 
@@ -9256,7 +9192,7 @@ Filter the view with a Javascript expression.
 
 **`SimilarityView.first(self, callback=None)`**
 
-Select the first item.
+
 
 ---
 
@@ -9265,7 +9201,7 @@ Select the first item.
 
 **`SimilarityView.get(self, id, callback=None)`**
 
-Get the object given its id.
+
 
 ---
 
@@ -9274,7 +9210,7 @@ Get the object given its id.
 
 **`SimilarityView.get_current_sort(self, callback=None)`**
 
-Get the current sort as a tuple `(name, dir)`.
+
 
 ---
 
@@ -9283,7 +9219,7 @@ Get the current sort as a tuple `(name, dir)`.
 
 **`SimilarityView.get_ids(self, callback=None)`**
 
-Get the list of ids.
+
 
 ---
 
@@ -9292,7 +9228,7 @@ Get the list of ids.
 
 **`SimilarityView.get_next_id(self, callback=None)`**
 
-Get the next non-skipped row id.
+
 
 ---
 
@@ -9301,7 +9237,7 @@ Get the next non-skipped row id.
 
 **`SimilarityView.get_previous_id(self, callback=None)`**
 
-Get the previous non-skipped row id.
+
 
 ---
 
@@ -9310,7 +9246,25 @@ Get the previous non-skipped row id.
 
 **`SimilarityView.get_selected(self, callback=None)`**
 
-Get the currently selected rows.
+
+
+---
+
+#### SimilarityView.get_selected_ids
+
+
+**`SimilarityView.get_selected_ids(self)`**
+
+
+
+---
+
+#### SimilarityView.get_sibling_id
+
+
+**`SimilarityView.get_sibling_id(self, row_id=None, direction='next')`**
+
+
 
 ---
 
@@ -9319,7 +9273,7 @@ Get the currently selected rows.
 
 **`SimilarityView.is_ready(self)`**
 
-Whether the widget has been fully loaded.
+
 
 ---
 
@@ -9328,7 +9282,16 @@ Whether the widget has been fully loaded.
 
 **`SimilarityView.last(self, callback=None)`**
 
-Select the last item.
+
+
+---
+
+#### SimilarityView.minimumSizeHint
+
+
+**`SimilarityView.minimumSizeHint(self)`**
+
+minimumSizeHint(self) -> QSize
 
 ---
 
@@ -9337,7 +9300,7 @@ Select the last item.
 
 **`SimilarityView.next(self, callback=None)`**
 
-Select the next non-skipped row.
+
 
 ---
 
@@ -9346,7 +9309,7 @@ Select the next non-skipped row.
 
 **`SimilarityView.previous(self, callback=None)`**
 
-Select the previous non-skipped row.
+
 
 ---
 
@@ -9355,7 +9318,7 @@ Select the previous non-skipped row.
 
 **`SimilarityView.remove(self, ids)`**
 
-Remove some objects from their ids.
+
 
 ---
 
@@ -9364,7 +9327,7 @@ Remove some objects from their ids.
 
 **`SimilarityView.remove_all(self)`**
 
-Remove all rows in the table.
+
 
 ---
 
@@ -9373,7 +9336,7 @@ Remove all rows in the table.
 
 **`SimilarityView.remove_all_and_add(self, objects)`**
 
-Remove all rows in the table and add new objects.
+
 
 ---
 
@@ -9391,7 +9354,7 @@ Recreate the similarity view, given the selected clusters in the cluster view.
 
 **`SimilarityView.scroll_to(self, id)`**
 
-Scroll until a given row is visible.
+
 
 ---
 
@@ -9400,11 +9363,25 @@ Scroll until a given row is visible.
 
 **`SimilarityView.select(self, ids, callback=None, **kwargs)`**
 
-Select some rows in the table from Python.
 
-This function calls `table.select()` in Javascript, which raises a Javascript event
-relayed to Python. This sequence of actions is the same when the user selects
-rows directly in the HTML view.
+
+---
+
+#### SimilarityView.select_toggle
+
+
+**`SimilarityView.select_toggle(self, row_id)`**
+
+
+
+---
+
+#### SimilarityView.select_until
+
+
+**`SimilarityView.select_until(self, row_id)`**
+
+
 
 ---
 
@@ -9413,16 +9390,7 @@ rows directly in the HTML view.
 
 **`SimilarityView.set_busy(self, busy)`**
 
-Set the busy state of the GUI.
 
----
-
-#### SimilarityView.set_html
-
-
-**`SimilarityView.set_html(self, html, callback=None)`**
-
-Set the HTML code.
 
 ---
 
@@ -9445,21 +9413,21 @@ Set the cluster view state, with a specified sort.
 
 ---
 
+#### SimilarityView.sizeHint
+
+
+**`SimilarityView.sizeHint(self)`**
+
+sizeHint(self) -> QSize
+
+---
+
 #### SimilarityView.sort_by
 
 
 **`SimilarityView.sort_by(self, name, sort_dir='asc')`**
 
-Sort by a given variable.
 
----
-
-#### SimilarityView.view_source
-
-
-**`SimilarityView.view_source(self, callback=None)`**
-
-View the HTML source of the widget.
 
 ---
 
@@ -9468,7 +9436,7 @@ View the HTML source of the widget.
 
 **`SimilarityView.debouncer`**
 
-Widget debouncer.
+
 
 ---
 
@@ -9489,7 +9457,7 @@ Component that brings manual clustering facilities to a GUI:
 * `ClusterMeta` instance: change cluster metadata (e.g. group).
 * Cluster selection.
 * Many manual clustering-related actions, snippets, shortcuts, etc.
-* Two HTML tables : `ClusterView` and `SimilarityView`.
+* Two native Qt tables: `ClusterView` and `SimilarityView`.
 
 **Constructor**
 
@@ -9568,7 +9536,7 @@ Only used in the automated testing suite.
 
 **`Supervisor.filter(self, text)`**
 
-Filter the clusters using a Javascript expression on the column names.
+Filter the clusters using a boolean expression on the column names.
 
 ---
 
@@ -11603,7 +11571,7 @@ equivalent to this:
 #### phy.apps.format_exception
 
 
-**`phy.apps.format_exception(etype, value, tb, limit=None, chain=True)`**
+**`phy.apps.format_exception(exc, /, value=<implicit>, tb=<implicit>, limit=None, chain=True, **kwargs)`**
 
 Format a stack trace and the exception information.
 
@@ -12005,36 +11973,6 @@ methods to do system calls on path objects. Depending on your system,
 instantiating a Path will return either a PosixPath or a WindowsPath
 object. You can also instantiate a PosixPath or WindowsPath directly,
 but cannot instantiate a WindowsPath on a POSIX system or vice versa.
-
----
-
-#### Path.None
-
-
-**`Path.None`**
-
-attrgetter(attr, ...) --> attrgetter object
-
-Return a callable object that fetches the given attribute(s) from its operand.
-After f = attrgetter('name'), the call f(r) returns r.name.
-After g = attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).
-After h = attrgetter('name.first', 'name.last'), the call h(r) returns
-(r.name.first, r.name.last).
-
----
-
-#### Path.None
-
-
-**`Path.None`**
-
-attrgetter(attr, ...) --> attrgetter object
-
-Return a callable object that fetches the given attribute(s) from its operand.
-After f = attrgetter('name'), the call f(r) returns r.name.
-After g = attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).
-After h = attrgetter('name.first', 'name.last'), the call h(r) returns
-(r.name.first, r.name.last).
 
 ---
 
@@ -12740,12 +12678,40 @@ Close all memmapped files.
 
 ---
 
+#### TemplateModel.cluster_waveforms
+
+
+**`TemplateModel.cluster_waveforms(self)`**
+
+Computes the cluster waveforms for split and merged clusters
+:return:
+
+---
+
 #### TemplateModel.describe
 
 
 **`TemplateModel.describe(self)`**
 
 Display basic information about the dataset.
+
+---
+
+#### TemplateModel.get_amplitudes_true
+
+
+**`TemplateModel.get_amplitudes_true(self, sample2unit=1.0, use='templates')`**
+
+Convert spike amplitude values to input amplitudes units
+via scaling by unwhitened template waveform.
+:param sample2unit float: factor to convert the raw data to a physical unit (defaults 1.)
+:returns: spike_amplitudes_volts: np.array [nspikes] spike amplitudes in raw data units
+:returns: templates_volts: np.array[ntemplates, nsamples, nchannels]: templates
+in raw data units
+:returns: template_amps_volts: np.array[ntemplates]: average templates amplitudes
+ in raw data units
+To scale the template for template matching,
+raw_data_volts = templates_volts * spike_amplitudes_volts / template_amps_volts
 
 ---
 
@@ -12761,7 +12727,7 @@ Return the most relevant channels of a cluster.
 #### TemplateModel.get_cluster_mean_waveforms
 
 
-**`TemplateModel.get_cluster_mean_waveforms(self, cluster_id)`**
+**`TemplateModel.get_cluster_mean_waveforms(self, cluster_id, unwhiten=True)`**
 
 Return the mean template waveforms of a cluster, as a weighted average of the
 template waveforms from which the cluster originates from.
@@ -12786,6 +12752,15 @@ Return the spike ids that belong to a given template.
 
 ---
 
+#### TemplateModel.get_depths
+
+
+**`TemplateModel.get_depths(self)`**
+
+Compute spike depths based on spike pc features and probe depths.
+
+---
+
 #### TemplateModel.get_features
 
 
@@ -12795,10 +12770,19 @@ Return sparse features for given spikes.
 
 ---
 
+#### TemplateModel.get_merge_map
+
+
+**`TemplateModel.get_merge_map(self)`**
+
+"Gets the maps of merges and splits between spikes.clusters and spikes.templates
+
+---
+
 #### TemplateModel.get_template
 
 
-**`TemplateModel.get_template(self, template_id, channel_ids=None, amplitude_threshold=None)`**
+**`TemplateModel.get_template(self, template_id, channel_ids=None, amplitude_threshold=None, unwhiten=True)`**
 
 Get data about a template.
 
@@ -12889,9 +12873,36 @@ Save the spike clusters.
 #### TemplateModel.save_spikes_subset_waveforms
 
 
-**`TemplateModel.save_spikes_subset_waveforms(self, max_n_spikes_per_template=None, max_n_channels=None)`**
+**`TemplateModel.save_spikes_subset_waveforms(self, max_n_spikes_per_template=None, max_n_channels=None, sample2unit=1.0)`**
 
 
+
+---
+
+#### TemplateModel.clusters_amplitudes
+
+
+**`TemplateModel.clusters_amplitudes`**
+
+Returns the average amplitude per cluster
+
+---
+
+#### TemplateModel.clusters_channels
+
+
+**`TemplateModel.clusters_channels`**
+
+Returns a vector of peak channels for all clusters waveforms
+
+---
+
+#### TemplateModel.clusters_waveforms_durations
+
+
+**`TemplateModel.clusters_waveforms_durations`**
+
+Returns a vector of waveform durations (ms) for all clusters
 
 ---
 
@@ -12909,7 +12920,7 @@ Returns the average amplitude per cluster
 
 **`TemplateModel.templates_channels`**
 
-Returns a vector of peak channels for all templates
+Returns a vector of peak channels for all templates waveforms
 
 ---
 

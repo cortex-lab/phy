@@ -38,11 +38,11 @@ class ExampleActionPlugin(IPlugin):
             )
             def select_n_first_clusters(n_clusters):
                 # All cluster view methods are called with a callback function because of the
-                # asynchronous nature of Python-Javascript interactions in Qt5.
+                # asynchronous nature of the table API.
                 @controller.supervisor.cluster_view.get_ids
                 def get_cluster_ids(cluster_ids):
                     """This function is called when the ordered list of cluster ids is returned
-                    by the Javascript view."""
+                    by the cluster view."""
 
                     # We select the first n_clusters clusters.
                     controller.supervisor.select(cluster_ids[:n_clusters])

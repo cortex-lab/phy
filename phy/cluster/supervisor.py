@@ -14,7 +14,7 @@ from phylib.utils import Bunch, connect, emit, unconnect
 
 from phy.gui.actions import Actions
 from phy.gui.qt import _block, _wait, set_busy
-from phy.gui.widgets import Barrier, HTMLWidget, Table, _uniq
+from phy.gui.widgets import Barrier, Table, _uniq
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
@@ -341,14 +341,14 @@ class ClusterView(Table):
             assert col in columns
         assert columns[0] == 'id'
 
-        # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
+        # Keep group metadata available so the table can style rows based on cluster group.
         value_names = columns + [{'data': ['group']}]
         # Default sort.
         sort = sort or ('n_spikes', 'desc')
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
 
     def _set_styles(self):
-        self.builder.add_style(self._styles)
+        self.add_style(self._styles)
 
     @property
     def state(self):
@@ -607,7 +607,7 @@ class Supervisor:
     * `ClusterMeta` instance: change cluster metadata (e.g. group).
     * Cluster selection.
     * Many manual clustering-related actions, snippets, shortcuts, etc.
-    * Two HTML tables : `ClusterView` and `SimilarityView`.
+    * Two native Qt tables: `ClusterView` and `SimilarityView`.
 
     Constructor
     -----------
@@ -787,7 +787,7 @@ class Supervisor:
         """Save the GUI state with the cluster view and similarity view."""
         gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
 
-        # Clear temporary HTML files
+        # Compatibility no-op on the native table implementation.
         self.cluster_view.clear_temporary_files()
         self.similarity_view.clear_temporary_files()
 
@@ -983,7 +983,7 @@ class Supervisor:
         self.cluster_view.sort_by(column, sort_dir=sort_dir)
 
     def filter(self, text):
-        """Filter the clusters using a Javascript expression on the column names."""
+        """Filter the clusters using a boolean expression on the column names."""
         self.cluster_view.filter(text)
 
     def clear_filter(self):
@@ -1169,8 +1169,7 @@ class Supervisor:
     # Wizard actions
     # -------------------------------------------------------------------------
 
-    # There are callbacks because these functions call Javascript functions that return
-    # asynchronously in Qt5.
+    # There are callbacks because the table API remains asynchronous for compatibility.
 
     def reset_wizard(self, callback=None):
         """Reset the wizard."""
