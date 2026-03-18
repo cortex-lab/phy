@@ -37,6 +37,7 @@ dependencies = [
     "numpy",
     "pillow",
     "pip",
+    "PyQt5>=5.12.0",
     "pyopengl>=3.1.9",
     "qtconsole",
     "requests",
@@ -65,15 +66,6 @@ dev = [
     "memory_profiler",
     "mkdocs",
 ]
-
-# Qt5 support
-qt5 = ["PyQt5>=5.12.0"]
-
-# Convenience extras that install Qt5 by default
-gui = ["PyQt5>=5.12.0"]
-
-# Default Qt extra for the current codebase
-qt = ["PyQt5>=5.12.0"]
 
 [project.scripts]
 phy = "phy.apps:phycli"
