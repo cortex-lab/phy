@@ -2,7 +2,7 @@
 
 Currently, phy provides two GUIs:
 
-* the **Template GUI** for [**KiloSort**](https://github.com/MouseLand/Kilosort2/)/[**SpykingCircus**](https://spyking-circus.readthedocs.io/) datasets.
+* the **Template GUI** for [**KiloSort**](https://github.com/MouseLand/Kilosort/)/[**SpykingCircus**](https://spyking-circus.readthedocs.io/) datasets.
 * the **Kwik GUI** for Kwik datasets, obtained with the [**klusta**](https://github.com/kwikteam/klusta/) spike-sorting program (not actively maintained).
 
 These GUIs let you visualize ephys data that has already been spike-sorted. You can also refine the clustering manually if needed. You can also use the GUI as a platform for interactive ephys data analysis. The **IPython view** lets you interact with the data interactively from within the GUI.
@@ -108,7 +108,6 @@ You can filter the list of clusters shown in the cluster view, in the `filter` t
 * `group == 'good'` : only show good clusters
 * `n_spikes > 10000` : only show clusters that have more than 10,000 spikes
 * `group != 'noise' && depth >= 1000` : only show non-noise clusters at a depth larger than 1000
-``
 
 ![image](https://user-images.githubusercontent.com/1942359/58951225-d8920780-8790-11e9-8b3c-a048f929875b.png)
 

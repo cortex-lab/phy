@@ -5,32 +5,109 @@ Current version is phy v2.1.0rc1 (release candidate 1) (11 Mar 2026).
 
 ## phy 2.1.0rc1
 
-After a long break, maintenance of phy has resumed, with substantial help from AI-assisted
-development and modernization work.
+With substantial help from AI-assisted development, it has been possible to put time and effort
+into this maintenance release for the current 2.x line.
 
-This release candidate focuses on stabilizing the current phy 2.x line rather than introducing
-major new workflows.
+`phy 2.1.0rc1` is focused on making the existing software work better for users. It is not meant
+to bring in major new features or feature requests at this stage. More work will likely still be
+needed based on user feedback during the release candidate period.
 
 ### Main points
 
-* No changes to the underlying data and file formats
-* Dependency and installation modernization work
-* Replacement of a fragile legacy web-based GUI component with a Qt-native replacement
-* Expected improvement in display reliability on systems where the embedded web component caused
-  blank panes, white windows, or related rendering failures
-* Call for beta testers before the final `2.1.0` release
+* No changes to the dataset or file formats
+* Dependency updates and packaging cleanup
+* Replacement of a fragile legacy web-based GUI component with a Qt-native implementation
+* Expected improvement on systems where the old embedded web component caused blank panes, white windows, or related display failures
 
-### Notes for users
+### What to test
 
-* We are particularly interested in feedback on modern Linux and Windows systems, remote desktop
-  sessions, and plugin-based workflows.
-* Some plugins relying on internal HTML or other web-based GUI components may need to be updated.
+* Installation on current Linux, macOS and Windows environments
+* GUI startup and rendering behavior
+* Cluster selection and view updates
+* Feature, waveform, amplitude, and trace views
+* Remote desktop, Wayland, and GPU-specific setups
+* Plugin-based workflows
+
+### Compatibility notes
+
+* Dataset formats are unchanged
+* Some plugins relying on internal HTML or other web-based GUI components may need updates
+
+### Notes for plugin maintainers
+
+The main compatibility risk for plugins is on the GUI side. The legacy web-based component has
+been replaced with a Qt-native implementation, so plugins depending on internal HTML or other
+web-based GUI pieces may need to be updated.
+
+Plugins using supported Python-side controller, event, or view APIs are more likely to keep
+working unchanged, but they should still be tested.
+
+### Testing window
+
+Testing for `2.1.0rc1` is expected to stay open for at least the next couple of months before a final `2.1.0` release.
+
+### Feedback
+
+When reporting issues, please include:
+
+* operating system
+* Python version
+* installation method
+* local or remote session details
+* whether plugins are in use
+* a minimal error message or reproduction if possible
+
+### Local release smoke test
+
+The repository now contains a local packaging smoke test that mirrors the end-user install flow in
+an isolated virtual environment and uses the small template dataset from `../phy-data/template/`.
+
+Run this before upload to validate the built wheel:
+
+```bash
+make release-smoke-local
+make release-open-local
+```
+
+`make release-smoke-local` builds the wheel, creates `.release-smoke/local`, installs
+`phy` from the local wheel into that fresh environment, checks imports and CLI entry points,
+and runs:
+
+```bash
+phy template-describe ../phy-data/template/params.py
+```
+
+`make release-open-local` launches the GUI from that isolated environment so that you can confirm
+the dataset opens correctly.
+
+After upload to TestPyPI or PyPI, validate the published package in another fresh environment:
+
+```bash
+make release-smoke-pypi
+make release-open-pypi
+```
+
+For TestPyPI, use the convenience targets:
+
+```bash
+make release-smoke-testpypi
+make release-open-testpypi
+```
+
+By default, these commands read the current version from `pyproject.toml`. You can still override
+`RELEASE_SMOKE_VERSION` manually if you need to test a different published version.
+
+This now validates the actual intended user path: a plain `pip install phy` in a fresh
+environment, followed by opening a dataset with `phy template-gui`.
 
 
-## phy 2.0 beta 1
+## Historical notes
 
 
-## New views
+### phy 2.0 beta 1
+
+
+#### New views
 
 * **Cluster scatter view**: a scatter plot of all clusters, on two user-defined dimensions (for example, depth vs firing rate). The marker size and colors can also depend on two additional user-defined dimensions.
 
@@ -70,7 +147,7 @@ major new workflows.
     <img src="https://user-images.githubusercontent.com/1942359/74029254-90c12100-49ac-11ea-8b8e-a4997910ffe5.png" style="width: 400px;">
 
 
-## New features
+#### New features
 
 * **Split clusters in the amplitude view or in the template feature view**, in addition to the feature view
 * **Cluster view**:
@@ -115,7 +192,7 @@ major new workflows.
     * Support for **multiple channel shanks**: add a `channel_shanks.npy` file with shape `(n_channels,` ), with the shank integer index of every channel.
 
 
-## Improvements
+#### Improvements
 
 * A new file `cluster_info.tsv` is automatically saved, containing all information from the cluster view.
 * Minimal high-level data access API in the Template Model
@@ -130,7 +207,7 @@ major new workflows.
 * Documentation rewritten from scratch, with many examples
 
 
-## Internal changes
+#### Internal changes
 
 * Support **Python 3.7+**, dropped Python 2.x support (reached End Of Life)
 * Updated to **PyQt5** from PyQt4, which is now unsupported
@@ -140,15 +217,9 @@ major new workflows.
 * Moved the phy GitHub repository from kwikteam to cortex-lab organization
 
 
-## Notes for plugin maintainers
+#### Notes for plugin maintainers
 
 The following changes may affect phy plugins:
 
 * The `add_view` and `view_actions_created` events have been removed.
 * You should now use the new event `view_attached(view, gui)` that is emitted when a view is attached to the GUI.
-
-
-## [coming soon] Upcoming features
-
-* Support for events: PSTH view, trial-based raster plots, etc.
-* More efficient GPU-based plotting
