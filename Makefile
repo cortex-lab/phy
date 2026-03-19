@@ -63,6 +63,28 @@ upload:
 upload-test:
 	uv publish --publish-url https://test.pypi.org/legacy/
 
+release-publish-testpypi-dev:
+	python3 scripts/release_publish.py publish-testpypi-dev
+
+release-latest-testpypi-version:
+	python3 scripts/release_publish.py print-latest-testpypi-version
+
+release-smoke-testpypi-latest:
+	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
+	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$$(python3 scripts/release_publish.py print-latest-testpypi-version)" \
+	RELEASE_SMOKE_VERSION="$$(python3 scripts/release_publish.py print-latest-testpypi-version)" \
+	RELEASE_SMOKE_INDEX_URL="https://test.pypi.org/simple/" \
+	RELEASE_SMOKE_EXTRA_INDEX_URL="https://pypi.org/simple/" \
+	bash scripts/release_smoke_test.sh pypi
+
+release-open-testpypi-latest:
+	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
+	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$$(python3 scripts/release_publish.py print-latest-testpypi-version)" \
+	bash scripts/release_smoke_test.sh open
+
+release-publish-pypi:
+	python3 scripts/release_publish.py publish-pypi
+
 coverage:
 	uv run coverage html
 
@@ -111,4 +133,4 @@ release-open-testpypi:
 	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$(RELEASE_SMOKE_VERSION)" \
 	bash scripts/release_smoke_test.sh open
 
-.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test coverage dev ci release-smoke-local release-open-local release-smoke-pypi release-open-pypi release-smoke-testpypi release-open-testpypi
+.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test release-publish-testpypi-dev release-latest-testpypi-version release-smoke-testpypi-latest release-open-testpypi-latest release-publish-pypi coverage dev ci release-smoke-local release-open-local release-smoke-pypi release-open-pypi release-smoke-testpypi release-open-testpypi

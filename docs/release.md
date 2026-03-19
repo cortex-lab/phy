@@ -57,49 +57,6 @@ When reporting issues, please include:
 * whether plugins are in use
 * a minimal error message or reproduction if possible
 
-### Local release smoke test
-
-The repository now contains a local packaging smoke test that mirrors the end-user install flow in
-an isolated virtual environment and uses the small template dataset from `../phy-data/template/`.
-
-Run this before upload to validate the built wheel:
-
-```bash
-make release-smoke-local
-make release-open-local
-```
-
-`make release-smoke-local` builds the wheel, creates `.release-smoke/local`, installs
-`phy` from the local wheel into that fresh environment, checks imports and CLI entry points,
-and runs:
-
-```bash
-phy template-describe ../phy-data/template/params.py
-```
-
-`make release-open-local` launches the GUI from that isolated environment so that you can confirm
-the dataset opens correctly.
-
-After upload to TestPyPI or PyPI, validate the published package in another fresh environment:
-
-```bash
-make release-smoke-pypi
-make release-open-pypi
-```
-
-For TestPyPI, use the convenience targets:
-
-```bash
-make release-smoke-testpypi
-make release-open-testpypi
-```
-
-By default, these commands read the current version from `pyproject.toml`. You can still override
-`RELEASE_SMOKE_VERSION` manually if you need to test a different published version.
-
-This now validates the actual intended user path: a plain `pip install phy` in a fresh
-environment, followed by opening a dataset with `phy template-gui`.
-
 
 ## Historical notes
 

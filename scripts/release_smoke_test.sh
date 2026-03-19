@@ -104,6 +104,8 @@ install_pypi() {
     fi
     if [[ -n "${RELEASE_SMOKE_EXTRA_INDEX_URL:-}" ]]; then
         pip_args+=(--extra-index-url "$RELEASE_SMOKE_EXTRA_INDEX_URL")
+        # TestPyPI smoke installs need uv to consider versions across both indexes.
+        pip_args+=(--index-strategy unsafe-best-match)
     fi
 
     "$UV_BIN" pip install --python "$ENV_PYTHON" "${pip_args[@]}" "phy==$VERSION"
