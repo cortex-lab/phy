@@ -147,6 +147,31 @@ def fetch_testpypi_versions() -> set[str]:
     return set(releases)
 
 
+def fetch_testpypi_release(version: str) -> dict:
+    url = f'https://test.pypi.org/pypi/{PROJECT_NAME}/{version}/json'
+    try:
+        with urlopen(url) as response:  # noqa: S310
+            return json.load(response)
+    except HTTPError as exc:
+        if exc.code == 404:
+            raise RuntimeError(f'Version {version!r} was not found on TestPyPI.') from exc
+        raise RuntimeError(f'Unable to query TestPyPI: HTTP {exc.code}') from exc
+    except URLError as exc:
+        raise RuntimeError(f'Unable to query TestPyPI: {exc.reason}') from exc
+
+
+def get_testpypi_file_url(version: str, packagetype: str = 'bdist_wheel') -> str:
+    payload = fetch_testpypi_release(version)
+    for file_info in payload.get('urls', []):
+        if file_info.get('packagetype') == packagetype:
+            url = file_info.get('url', '').strip()
+            if url:
+                return url
+    raise RuntimeError(
+        f'Unable to find a {packagetype!r} file for {PROJECT_NAME} {version!r} on TestPyPI.'
+    )
+
+
 def get_next_dev_version(base_version: str, existing_versions: set[str]) -> str:
     if '.dev' in base_version:
         raise RuntimeError(
@@ -245,7 +270,29 @@ def print_latest_testpypi_version() -> int:
             'Run make release-publish-testpypi-dev first.'
         )
 
-    sys.stdout.write(read_text(LATEST_TESTPYPI_VERSION_PATH).strip())
+    recorded_version = read_text(LATEST_TESTPYPI_VERSION_PATH).strip()
+    if not recorded_version:
+        raise RuntimeError(
+            f'Recorded TestPyPI version file is empty: {LATEST_TESTPYPI_VERSION_PATH}. '
+            'Run make release-publish-testpypi-dev first.'
+        )
+
+    published_versions = fetch_testpypi_versions()
+    if recorded_version not in published_versions:
+        raise RuntimeError(
+            f'Recorded TestPyPI version {recorded_version!r} from {LATEST_TESTPYPI_VERSION_PATH} '
+            'was not found on TestPyPI. The local record is stale or the upload did not complete. '
+            'Run make release-publish-testpypi-dev again, or smoke-test an explicit published '
+            'version with make release-smoke-testpypi RELEASE_SMOKE_VERSION=<version>.'
+        )
+
+    sys.stdout.write(recorded_version)
+    sys.stdout.write('\n')
+    return 0
+
+
+def print_testpypi_wheel_url(version: str) -> int:
+    sys.stdout.write(get_testpypi_file_url(version, packagetype='bdist_wheel'))
     sys.stdout.write('\n')
     return 0
 
@@ -257,6 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser('publish-testpypi-dev')
     subparsers.add_parser('publish-pypi')
     subparsers.add_parser('print-latest-testpypi-version')
+    wheel_url_parser = subparsers.add_parser('print-testpypi-wheel-url')
+    wheel_url_parser.add_argument('version')
 
     args = parser.parse_args(argv)
 
@@ -266,6 +315,8 @@ def main(argv: list[str] | None = None) -> int:
         return publish_pypi()
     if args.command == 'print-latest-testpypi-version':
         return print_latest_testpypi_version()
+    if args.command == 'print-testpypi-wheel-url':
+        return print_testpypi_wheel_url(args.version)
     raise AssertionError(f'Unknown command: {args.command}')
 
 

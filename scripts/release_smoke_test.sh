@@ -61,21 +61,25 @@ if [[ ! -f "$PARAMS_PATH" ]]; then
     exit 1
 fi
 
-if [[ -x "$ENV_DIR/bin/python" ]]; then
-    ENV_PYTHON="$ENV_DIR/bin/python"
-    ENV_PHY="$ENV_DIR/bin/phy"
-else
-    ENV_PYTHON="$ENV_DIR/Scripts/python.exe"
-    ENV_PHY="$ENV_DIR/Scripts/phy.exe"
-fi
+resolve_env_paths() {
+    if [[ -x "$ENV_DIR/bin/python" ]]; then
+        ENV_PYTHON="$ENV_DIR/bin/python"
+        ENV_PHY="$ENV_DIR/bin/phy"
+    else
+        ENV_PYTHON="$ENV_DIR/Scripts/python.exe"
+        ENV_PHY="$ENV_DIR/Scripts/phy.exe"
+    fi
+}
 
 make_venv() {
     rm -rf "$ENV_DIR"
     mkdir -p "$(dirname "$ENV_DIR")"
     "$UV_BIN" venv --python "$PYTHON_BIN" "$ENV_DIR"
+    resolve_env_paths
 }
 
 require_env() {
+    resolve_env_paths
     if [[ ! -x "$ENV_PYTHON" || ! -x "$ENV_PHY" ]]; then
         echo "Virtualenv not found or incomplete: $ENV_DIR" >&2
         echo "Run the matching smoke target first." >&2
@@ -97,6 +101,8 @@ install_local() {
 
 install_pypi() {
     local -a pip_args
+    local package_spec
+    local testpypi_wheel_url
 
     pip_args=()
     if [[ -n "${RELEASE_SMOKE_INDEX_URL:-}" ]]; then
@@ -108,19 +114,42 @@ install_pypi() {
         pip_args+=(--index-strategy unsafe-best-match)
     fi
 
-    "$UV_BIN" pip install --python "$ENV_PYTHON" "${pip_args[@]}" "phy==$VERSION"
+    package_spec="phy==$VERSION"
+
+    # uv fails to resolve the top-level disposable TestPyPI dev release by version
+    # even when the wheel is published, so install the exact published artifact URL
+    # and keep dependency resolution on the configured indexes.
+    if [[ "${RELEASE_SMOKE_INDEX_URL:-}" == "https://test.pypi.org/simple/" ]]; then
+        testpypi_wheel_url="$("$PYTHON_BIN" "$REPO_ROOT/scripts/release_publish.py" \
+            print-testpypi-wheel-url "$VERSION")"
+        package_spec="$testpypi_wheel_url"
+        pip_args=()
+        if [[ -n "${RELEASE_SMOKE_EXTRA_INDEX_URL:-}" ]]; then
+            pip_args+=(--default-index "$RELEASE_SMOKE_EXTRA_INDEX_URL")
+            pip_args+=(--index "$RELEASE_SMOKE_INDEX_URL")
+            pip_args+=(--index-strategy unsafe-best-match)
+        else
+            pip_args+=(--default-index "$RELEASE_SMOKE_INDEX_URL")
+        fi
+    fi
+
+    "$UV_BIN" pip install --python "$ENV_PYTHON" "${pip_args[@]}" "$package_spec"
 }
 
 verify_install() {
-    "$ENV_PYTHON" -c "import phy, phylib; print('phy', phy.__version__); print('phylib', phylib.__version__)"
-    "$ENV_PYTHON" -c "import PyQt5; print('PyQt5', PyQt5.__file__)"
-    "$ENV_PHY" --version
-    "$ENV_PHY" template-describe "$PARAMS_PATH"
+    (
+        cd "$DATASET_DIR"
+        "$ENV_PYTHON" -c "import phy, phylib; print('phy', phy.__version__); print('phylib', phylib.__version__)"
+        "$ENV_PYTHON" -c "import PyQt5; print('PyQt5', PyQt5.__file__)"
+        "$ENV_PHY" --version
+        "$ENV_PHY" template-describe "$PARAMS_PATH"
+    )
 }
 
 open_gui() {
     require_env
     echo "Launching phy on $PARAMS_PATH"
+    cd "$DATASET_DIR"
     exec "$ENV_PHY" template-gui "$PARAMS_PATH"
 }
 
