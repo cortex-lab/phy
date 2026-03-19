@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.11'",
@@ -1336,6 +1336,7 @@ dependencies = [
     { name = "pillow" },
     { name = "pip" },
     { name = "pyopengl" },
+    { name = "pyqt5" },
     { name = "qtconsole" },
     { name = "requests" },
     { name = "responses" },
@@ -1357,15 +1358,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "ruff" },
-]
-gui = [
-    { name = "pyqt5" },
-]
-qt = [
-    { name = "pyqt5" },
-]
-qt5 = [
-    { name = "pyqt5" },
 ]
 
 [package.dev-dependencies]
@@ -1399,10 +1391,8 @@ requires-dist = [
     { name = "pillow" },
     { name = "pip" },
     { name = "pyopengl", specifier = ">=3.1.9" },
+    { name = "pyqt5", specifier = ">=5.12.0" },
     { name = "pyqt5", marker = "extra == 'dev'", specifier = ">=5.12.0" },
-    { name = "pyqt5", marker = "extra == 'gui'", specifier = ">=5.12.0" },
-    { name = "pyqt5", marker = "extra == 'qt'", specifier = ">=5.12.0" },
-    { name = "pyqt5", marker = "extra == 'qt5'", specifier = ">=5.12.0" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pytest-qt", marker = "extra == 'dev'" },
@@ -1415,7 +1405,7 @@ requires-dist = [
     { name = "tqdm" },
     { name = "traitlets" },
 ]
-provides-extras = ["dev", "qt5", "gui", "qt"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
