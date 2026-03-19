@@ -1,3 +1,13 @@
+ifeq ($(OS),Windows_NT)
+SHELL := C:/Program Files/Git/bin/bash.exe
+.SHELLFLAGS := -lc
+PYTHON_BIN ?= python
+else
+PYTHON_BIN ?= python3
+endif
+
+export PYTHON ?= $(PYTHON_BIN)
+
 clean-build:
 	rm -fr build/
 	rm -fr dist/
@@ -64,13 +74,13 @@ upload-test:
 	uv publish --publish-url https://test.pypi.org/legacy/
 
 publish-test:
-	python3 scripts/release_publish.py publish-testpypi-dev
+	$(PYTHON_BIN) scripts/release_publish.py publish-testpypi-dev
 
 version-test:
-	python3 scripts/release_publish.py print-latest-testpypi-version
+	$(PYTHON_BIN) scripts/release_publish.py print-latest-testpypi-version
 
 publish-pypi:
-	python3 scripts/release_publish.py publish-pypi
+	$(PYTHON_BIN) scripts/release_publish.py publish-pypi
 
 coverage:
 	uv run coverage html
@@ -80,10 +90,10 @@ dev: install lint format test
 ci: lint format-check test-full build
 
 RELEASE_SMOKE_DATASET ?= $(CURDIR)/../phy-data/template
-PYPROJECT_VERSION := $(shell python3 scripts/release_publish.py print-current-version)
+PYPROJECT_VERSION := $(shell $(PYTHON_BIN) scripts/release_publish.py print-current-version)
 SMOKE_VERSION ?=
 PYPI_SMOKE_VERSION = $(or $(SMOKE_VERSION),$(PYPROJECT_VERSION))
-TEST_SMOKE_VERSION = $(or $(SMOKE_VERSION),$(shell python3 scripts/release_publish.py print-latest-testpypi-version))
+TEST_SMOKE_VERSION = $(or $(SMOKE_VERSION),$(shell $(PYTHON_BIN) scripts/release_publish.py print-latest-testpypi-version))
 RELEASE_SMOKE_INDEX_URL ?=
 RELEASE_SMOKE_EXTRA_INDEX_URL ?=
 
