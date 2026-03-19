@@ -291,6 +291,12 @@ def print_latest_testpypi_version() -> int:
     return 0
 
 
+def print_current_version() -> int:
+    sys.stdout.write(get_current_version())
+    sys.stdout.write('\n')
+    return 0
+
+
 def print_testpypi_wheel_url(version: str) -> int:
     sys.stdout.write(get_testpypi_file_url(version, packagetype='bdist_wheel'))
     sys.stdout.write('\n')
@@ -303,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
 
     subparsers.add_parser('publish-testpypi-dev')
     subparsers.add_parser('publish-pypi')
+    subparsers.add_parser('print-current-version')
     subparsers.add_parser('print-latest-testpypi-version')
     wheel_url_parser = subparsers.add_parser('print-testpypi-wheel-url')
     wheel_url_parser.add_argument('version')
@@ -313,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
         return publish_testpypi_dev()
     if args.command == 'publish-pypi':
         return publish_pypi()
+    if args.command == 'print-current-version':
+        return print_current_version()
     if args.command == 'print-latest-testpypi-version':
         return print_latest_testpypi_version()
     if args.command == 'print-testpypi-wheel-url':

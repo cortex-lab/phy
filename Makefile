@@ -63,26 +63,13 @@ upload:
 upload-test:
 	uv publish --publish-url https://test.pypi.org/legacy/
 
-release-publish-testpypi-dev:
+publish-test:
 	python3 scripts/release_publish.py publish-testpypi-dev
 
-release-latest-testpypi-version:
+version-test:
 	python3 scripts/release_publish.py print-latest-testpypi-version
 
-release-smoke-testpypi-latest:
-	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$$(python3 scripts/release_publish.py print-latest-testpypi-version)" \
-	RELEASE_SMOKE_VERSION="$$(python3 scripts/release_publish.py print-latest-testpypi-version)" \
-	RELEASE_SMOKE_INDEX_URL="https://test.pypi.org/simple/" \
-	RELEASE_SMOKE_EXTRA_INDEX_URL="https://pypi.org/simple/" \
-	bash scripts/release_smoke_test.sh pypi
-
-release-open-testpypi-latest:
-	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$$(python3 scripts/release_publish.py print-latest-testpypi-version)" \
-	bash scripts/release_smoke_test.sh open
-
-release-publish-pypi:
+publish-pypi:
 	python3 scripts/release_publish.py publish-pypi
 
 coverage:
@@ -93,44 +80,44 @@ dev: install lint format test
 ci: lint format-check test-full build
 
 RELEASE_SMOKE_DATASET ?= $(CURDIR)/../phy-data/template
-RELEASE_SMOKE_VERSION ?= $(shell python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+PYPROJECT_VERSION := $(shell python3 scripts/release_publish.py print-current-version)
+SMOKE_VERSION ?=
+PYPI_SMOKE_VERSION = $(or $(SMOKE_VERSION),$(PYPROJECT_VERSION))
+TEST_SMOKE_VERSION = $(or $(SMOKE_VERSION),$(shell python3 scripts/release_publish.py print-latest-testpypi-version))
 RELEASE_SMOKE_INDEX_URL ?=
 RELEASE_SMOKE_EXTRA_INDEX_URL ?=
 
-release-smoke-local: build
+define run_smoke
 	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/local" \
-	bash scripts/release_smoke_test.sh local
+	RELEASE_SMOKE_ENV="$(1)" \
+	RELEASE_SMOKE_VERSION="$(2)" \
+	RELEASE_SMOKE_INDEX_URL="$(3)" \
+	RELEASE_SMOKE_EXTRA_INDEX_URL="$(4)" \
+	bash scripts/release_smoke_test.sh $(5)
+endef
 
-release-open-local:
+define run_open
 	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/local" \
+	RELEASE_SMOKE_ENV="$(1)" \
 	bash scripts/release_smoke_test.sh open
+endef
 
-release-smoke-pypi:
-	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/pypi-$(RELEASE_SMOKE_VERSION)" \
-	RELEASE_SMOKE_VERSION="$(RELEASE_SMOKE_VERSION)" \
-	RELEASE_SMOKE_INDEX_URL="$(RELEASE_SMOKE_INDEX_URL)" \
-	RELEASE_SMOKE_EXTRA_INDEX_URL="$(RELEASE_SMOKE_EXTRA_INDEX_URL)" \
-	bash scripts/release_smoke_test.sh pypi
+smoke-local: build
+	$(call run_smoke,$(CURDIR)/.release-smoke/local,,,,local)
 
-release-open-pypi:
-	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/pypi-$(RELEASE_SMOKE_VERSION)" \
-	bash scripts/release_smoke_test.sh open
+open-local:
+	$(call run_open,$(CURDIR)/.release-smoke/local)
 
-release-smoke-testpypi:
-	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$(RELEASE_SMOKE_VERSION)" \
-	RELEASE_SMOKE_VERSION="$(RELEASE_SMOKE_VERSION)" \
-	RELEASE_SMOKE_INDEX_URL="https://test.pypi.org/simple/" \
-	RELEASE_SMOKE_EXTRA_INDEX_URL="https://pypi.org/simple/" \
-	bash scripts/release_smoke_test.sh pypi
+smoke-pypi:
+	$(call run_smoke,$(CURDIR)/.release-smoke/pypi-$(PYPI_SMOKE_VERSION),$(PYPI_SMOKE_VERSION),$(RELEASE_SMOKE_INDEX_URL),$(RELEASE_SMOKE_EXTRA_INDEX_URL),pypi)
 
-release-open-testpypi:
-	RELEASE_SMOKE_DATASET="$(RELEASE_SMOKE_DATASET)" \
-	RELEASE_SMOKE_ENV="$(CURDIR)/.release-smoke/testpypi-$(RELEASE_SMOKE_VERSION)" \
-	bash scripts/release_smoke_test.sh open
+open-pypi:
+	$(call run_open,$(CURDIR)/.release-smoke/pypi-$(PYPI_SMOKE_VERSION))
 
-.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test release-publish-testpypi-dev release-latest-testpypi-version release-smoke-testpypi-latest release-open-testpypi-latest release-publish-pypi coverage dev ci release-smoke-local release-open-local release-smoke-pypi release-open-pypi release-smoke-testpypi release-open-testpypi
+smoke-test:
+	$(call run_smoke,$(CURDIR)/.release-smoke/testpypi-$(TEST_SMOKE_VERSION),$(TEST_SMOKE_VERSION),https://test.pypi.org/simple/,https://pypi.org/simple/,pypi)
+
+open-test:
+	$(call run_open,$(CURDIR)/.release-smoke/testpypi-$(TEST_SMOKE_VERSION))
+
+.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test publish-test version-test publish-pypi coverage dev ci smoke-local open-local smoke-pypi open-pypi smoke-test open-test
