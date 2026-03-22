@@ -19,6 +19,46 @@ needed based on user feedback during the release candidate period.
 * Replacement of a fragile legacy web-based GUI component with a Qt-native implementation
 * Expected improvement on systems where the old embedded web component caused blank panes, white windows, or related display failures
 
+### How to install this RC
+
+Use a fresh Python 3.10+ environment and install the exact release-candidate
+version.
+
+On Linux or macOS:
+
+```bash
+python3 -m venv phy-2.1.0rc1
+source phy-2.1.0rc1/bin/activate
+python -m pip install --upgrade pip
+pip install "phy==2.1.0rc1"
+phy --version
+```
+
+On Windows PowerShell:
+
+```powershell
+py -3.10 -m venv phy-2.1.0rc1
+.\phy-2.1.0rc1\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install "phy==2.1.0rc1"
+phy --version
+```
+
+If you are testing on a template-based spike-sorting output containing
+`params.py`, a minimal startup check is:
+
+```bash
+phy template-describe params.py
+phy template-gui params.py
+```
+
+If you use the legacy Kwik workflow:
+
+```bash
+pip install klusta klustakwik2
+phy kwik-gui path/to/file.kwik
+```
+
 ### What to test
 
 * Installation on current Linux, macOS and Windows environments
@@ -58,10 +98,12 @@ When reporting issues, please include:
 * a minimal error message or reproduction if possible
 
 
-## Historical notes
+## Historical notes for older releases
 
+The notes below are kept for reference only and concern older releases, not the
+current `2.1.0rc1` release candidate.
 
-### phy 2.0 beta 1
+### phy 2.0 beta 1 (2020-02)
 
 
 #### New views
