@@ -16,9 +16,9 @@ import numpy as np
 from phylib import _add_log_file
 from phylib.io.model import TemplateModel, load_model
 from phylib.io.traces import MtscompEphysReader
-from phylib.utils import Bunch, connect
+from phylib.utils import Bunch, connect, unconnect
 
-from phy.cluster.views import ScatterView
+from phy.cluster.views import ScatterView, Feature3DView
 from phy.gui import create_app, run_app
 from ..base import WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin, BaseController
 
@@ -70,6 +70,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         'CorrelogramView',
         'ISIView',
         'FeatureView',
+        'Feature3DView',
         'AmplitudeView',
         'FiringRateView',
         'TraceView',
@@ -141,6 +142,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     def _set_view_creator(self):
         super(TemplateController, self)._set_view_creator()
         self.view_creator['TemplateFeatureView'] = self.create_template_feature_view
+        self.view_creator['Feature3DView'] = self.create_feature_3d_view
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -193,6 +195,49 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         if self.model.template_features is None:
             return
         return TemplateFeatureView(coords=self._get_template_features)
+
+    def create_feature_3d_view(self):
+        """Create and configure the 3D feature view.
+
+        This view requires multiple data sources to render the 3D scatter plot:
+          * `features`: The main feature data, typically used for the X and Y axes.
+          * `attributes`: A dictionary of other data vectors (like depth), used for the
+            Z axis and color. This is provided by `get_spike_attributes_for_views`.
+          * `channel_positions`: The physical layout of the probe channels.
+        """
+        logger.debug("Creating Feature3DView")
+        try:
+            # Gather the different data sources required by the view.
+            features = self.get_features
+            attributes = self.get_spike_attributes_for_views()
+            channel_positions = self.model.channel_positions
+            logger.debug(f"Features: {features}")
+            logger.debug(f"Attributes: {attributes}")
+            logger.debug(f"Channel positions: {channel_positions.shape if channel_positions is not None else 'None'}")
+            view = Feature3DView(
+                features=features,
+                attributes=attributes,
+                channel_positions=channel_positions,
+                cluster_ids=self.supervisor.selected
+            )
+            logger.debug("Feature3DView created successfully")
+
+            # Connect the view to the supervisor's select event.
+            # This ensures the view is updated when the cluster selection changes.
+            @connect(sender=self.supervisor)
+            def on_select(sender, cluster_ids, **kwargs):
+                if view.auto_update:
+                    view.on_select(cluster_ids=cluster_ids)
+
+            # Disconnect the view when it's closed to prevent memory leaks.
+            @connect(sender=view)
+            def on_close_view(view_, gui):
+                unconnect(on_select)
+
+            return view
+        except Exception as e:
+            logger.error(f"Error creating Feature3DView: {e}", exc_info=True)
+            raise
 
 
 #------------------------------------------------------------------------------

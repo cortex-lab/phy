@@ -39,7 +39,7 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           )
 from PyQt5.QtGui import (  # noqa
     QKeySequence, QIcon, QColor, QMouseEvent, QGuiApplication,
-    QFontDatabase, QWindow, QOpenGLWindow)
+    QFontDatabase, QWindow, QOpenGLWindow, QSurfaceFormat)
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       QWebEnginePage,
                                       # QWebSettings,
@@ -57,6 +57,13 @@ from PyQt5.QtWidgets import (# noqa
 # BUG: uncommenting this create scaling bugs on high DPI screens
 # on Ubuntu.
 #QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+
+# Force OpenGL 2.1 Compatibility Profile for macOS M1/M2 to support legacy shaders.
+if sys.platform == 'darwin':
+    fmt = QSurfaceFormat()
+    fmt.setVersion(2, 1)
+    fmt.setProfile(QSurfaceFormat.CompatibilityProfile)
+    QSurfaceFormat.setDefaultFormat(fmt)
 
 
 # -----------------------------------------------------------------------------

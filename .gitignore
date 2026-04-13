@@ -53,3 +53,9 @@ msdfgen
 *.sh
 tools/*.png
 tools/*.ttf
+
+# macOS
+.DS_Store
+
+# Virtual environments
+venv/
