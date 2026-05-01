@@ -1,20 +1,20 @@
 
-attribute vec2 a_position;  // text position
-attribute vec4 a_color;
-attribute float a_glyph_index;  // glyph index in the text
-attribute float a_quad_index;  // quad index in the glyph
-attribute float a_char_index;  // index of the glyph in the texture
-attribute float a_lengths;
-attribute float a_string_index;  // index of the string
+in vec2 a_position;  // text position
+in vec4 a_color;
+in float a_glyph_index;  // glyph index in the text
+in float a_quad_index;  // quad index in the glyph
+in float a_char_index;  // index of the glyph in the texture
+in float a_lengths;
+in float a_string_index;  // index of the string
 
 // (1, 1) for lower left, (-1, 1) for lower right,
 // (1, -1) for upper left, (-1, -1) for upper right
-attribute vec2 a_anchor;
+in vec2 a_anchor;
 
 uniform vec2 u_glyph_size;  // (w, h)
 
-varying vec4 v_color;
-varying vec2 v_tex_coords;
+out vec4 v_color;
+out vec2 v_tex_coords;
 
 const float rows = 6;
 const float cols = 16;

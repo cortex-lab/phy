@@ -1,19 +1,19 @@
 
 // NOTE: NOT USED ANYMORE (see msdf.vert instead)
 
-attribute vec2 a_position;  // text position
-attribute float a_glyph_index;  // glyph index in the text
-attribute float a_quad_index;  // quad index in the glyph
-attribute float a_char_index;  // index of the glyph in the texture
-attribute float a_lengths;
+in vec2 a_position;  // text position
+in float a_glyph_index;  // glyph index in the text
+in float a_quad_index;  // quad index in the glyph
+in float a_char_index;  // index of the glyph in the texture
+in float a_lengths;
 
 // (1, 1) for lower left, (-1, 1) for lower right,
 // (1, -1) for upper left, (-1, -1) for upper right
-attribute vec2 a_anchor;
+in vec2 a_anchor;
 
 uniform vec2 u_glyph_size;  // (w, h)
 
-varying vec2 v_tex_coords;
+out vec2 v_tex_coords;
 
 const float rows = 6;
 const float cols = 16;

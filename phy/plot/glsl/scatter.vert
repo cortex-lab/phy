@@ -1,9 +1,9 @@
-attribute vec3 a_position;
-attribute vec4 a_color;
-attribute float a_size;
+in vec3 a_position;
+in vec4 a_color;
+in float a_size;
 
-varying vec4 v_color;
-varying float v_size;
+out vec4 v_color;
+out float v_size;
 
 void main() {
     vec2 xy = a_position.xy;

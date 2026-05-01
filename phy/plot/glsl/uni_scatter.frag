@@ -4,7 +4,9 @@
 uniform vec4 u_color;
 uniform float u_size;
 
-varying float v_mask;
+in float v_mask;
+
+out vec4 fragColor;
 
 vec4 filled2(float distance, float linewidth, float antialias, vec4 bg_color)
 {
@@ -36,5 +38,5 @@ void main()
     float point_size = u_size + 5.;
     float distance = marker_%MARKER(P * point_size, u_size);
     vec4 color = apply_mask(u_color, v_mask);
-    gl_FragColor = filled2(distance, 1.0, 1.0, color);
+    fragColor = filled2(distance, 1.0, 1.0, color);
 }

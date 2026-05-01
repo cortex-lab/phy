@@ -207,7 +207,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         # Gradient of color for the traces.
         if self.trace_color_0 and self.trace_color_1:
             self.trace_visual.inserter.insert_frag(
-                'gl_FragColor.rgb = mix(vec3%s, vec3%s, (v_signal_index / %d));' % (
+                'fragColor.rgb = mix(vec3%s, vec3%s, (v_signal_index / %d));' % (
                     self.trace_color_0, self.trace_color_1, self.n_channels), 'end')
         self.canvas.add_visual(self.trace_visual)
 

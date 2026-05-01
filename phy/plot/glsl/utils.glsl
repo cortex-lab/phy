@@ -18,8 +18,8 @@ vec3 rgb_to_hsv(vec3 c)
 }
 
 
-vec4 fetch_texture(float index, sampler2D texture, float size) {
-    return texture2D(texture, vec2(index / (size - 1.), .5));
+vec4 fetch_texture(float index, sampler2D tex, float size) {
+    return texture(tex, vec2(index / (size - 1.), .5));
 }
 
 

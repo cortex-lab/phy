@@ -1,4 +1,4 @@
-#version 120
+#version 410
 #extension GL_EXT_gpu_shader4 : enable
 #extension GL_EXT_geometry_shader4 : enable
 
@@ -7,14 +7,14 @@ uniform mat4 projection;
 // uniform float linewidth;
 // uniform float miter_limit;
 
-varying in float v_antialias[4][1];
-varying in float v_linewidth[4][1];
-varying in float v_miter_limit[4][1];
+in in float v_antialias[4][1];
+in in float v_linewidth[4][1];
+in in float v_miter_limit[4][1];
 
-varying out vec2 v_caps;
-varying out float v_length;
-varying out vec2 v_texcoord;
-varying out vec2 v_bevel_distance;
+out out vec2 v_caps;
+out out float v_length;
+out out vec2 v_texcoord;
+out out vec2 v_bevel_distance;
 
 float compute_u(vec2 p0, vec2 p1, vec2 p)
 {
