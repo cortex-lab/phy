@@ -313,6 +313,30 @@ def test_table_change_and_sort_2(qtbot, table):
     _assert(table.get_ids, [9, 8, 7, 6, 4, 3, 2, 1, 0, 5])
 
 
+def test_table_change_metadata_preserves_sort(qtbot):
+    data = [
+        {'id': 0, 'count': 30, 'group': 'noise'},
+        {'id': 1, 'count': 10, 'group': 'noise'},
+        {'id': 2, 'count': 20, 'group': 'noise'},
+    ]
+    table = Table(
+        columns=['id', 'count'],
+        value_names=['id', 'count', {'data': ['group']}],
+        data=data,
+    )
+    _wait_until_table_ready(qtbot, table)
+
+    table.sort_by('count', 'desc')
+    _assert(table.get_ids, [0, 2, 1])
+    _assert(table.get_current_sort, ['count', 'desc'])
+
+    table.change([{'id': 1, 'group': 'good'}])
+    _assert(table.get_ids, [0, 2, 1])
+    _assert(table.get_current_sort, ['count', 'desc'])
+
+    table.close()
+
+
 def test_table_filter(qtbot, table):
     table.filter('id == 5')
     _assert(table.get_ids, [5])

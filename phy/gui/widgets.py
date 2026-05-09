@@ -946,15 +946,25 @@ class Table(QWidget):
         if not objects:
             return
         updated = {obj['id']: obj for obj in objects}
-        rows = []
+        changed = False
         for row in self._model._rows:
             patch = updated.get(row['id'])
-            rows.append({**row, **patch} if patch else dict(row))
-        self._model.set_rows(rows)
+            if patch:
+                row.update(patch)
+                changed = True
+        if not changed:
+            return
+        if self._model.rowCount() and self._model.columnCount():
+            top_left = self._model.index(0, 0)
+            bottom_right = self._model.index(
+                self._model.rowCount() - 1, self._model.columnCount() - 1
+            )
+            self._model.dataChanged.emit(top_left, bottom_right)
         if self._current_sort:
-            self._no_emit = True
-            self.sort_by(*self._current_sort)
-            self._no_emit = False
+            self._proxy.sort(
+                self.columns.index(self._current_sort[0]),
+                Qt.AscendingOrder if self._current_sort[1] == 'asc' else Qt.DescendingOrder,
+            )
         self._refresh_selection()
         self._fit_columns()
 
