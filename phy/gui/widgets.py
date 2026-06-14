@@ -358,7 +358,13 @@ class _TableModel(QAbstractTableModel):
         value = row.get(column)
 
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return '' if value is None else value
+            if value is None:
+                return ''
+            # Qt's model/view cannot display numpy scalars (np.int64/np.float64),
+            # which render as blank cells; convert them to native Python types.
+            if hasattr(value, 'item'):
+                value = value.item()
+            return value
         if role == Qt.BackgroundRole and column == 'id':
             color = self._table._selection_background(row.get('id'))
             if color is not None:
