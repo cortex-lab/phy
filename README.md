@@ -133,6 +133,7 @@ pip install -e . --upgrade
 * [Troubleshooting](https://phy.cortexlab.net/troubleshooting/)
 * [GitHub issues](https://github.com/cortex-lab/phy/issues)
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
+* [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Credits
 

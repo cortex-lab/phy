@@ -3,6 +3,13 @@
 Current version is phy v2.1.0rc1 (release candidate 1) (11 Mar 2026).
 
 
+## phy 2.1.0 (upcoming)
+
+### Added
+
+* Code of Conduct for project participation and incident reporting.
+
+
 ## phy 2.1.0rc1
 
 With substantial help from AI-assisted development, it has been possible to put time and effort
