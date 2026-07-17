@@ -37,7 +37,7 @@ dependencies = [
     "numpy",
     "pillow",
     "pip",
-    "PyQt5>=5.12.0",
+    "PyQt5>=5.15.11,<5.16",
     "pyopengl>=3.1.9",
     "qtconsole",
     "requests",
@@ -56,9 +56,10 @@ Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 dev = [
+    "Cython>=3.0",
     "pytest",
     "pytest-qt",
-    "PyQt5>=5.12.0",
+    "PyQt5>=5.15.11,<5.16",
     "pytest-cov",
     "ruff",
     "coverage",
@@ -69,9 +70,10 @@ dev = [
 
 [dependency-groups]
 dev = [
+    "Cython>=3.0",
     "pytest>=6.0",
     "pytest-qt>=4.0",
-    "PyQt5>=5.12.0",
+    "PyQt5>=5.15.11,<5.16",
     "pytest-cov>=3.0",
     "ruff>=0.1.0",
     "coverage>=6.0",
@@ -102,6 +104,11 @@ phy = [
     ".prb",
     ".ttf",
     "*.png",
+]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
 ]
 
 [tool.pytest.ini_options]

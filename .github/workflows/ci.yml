@@ -47,7 +47,7 @@ jobs:
     - name: Install additional test dependencies
       run: |
         uv add "git+https://github.com/kwikteam/klusta.git"
-        uv add "git+https://github.com/kwikteam/klustakwik2.git"
+        uv add --no-build-isolation "git+https://github.com/kwikteam/klustakwik2.git"
 
     - name: Lint with ruff
       run: uv run ruff check phy
