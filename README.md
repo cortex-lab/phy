@@ -8,6 +8,8 @@
 
 [**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites, especially Neuropixels recordings.
 
+> **Release candidate available:** `phy 2.1.0rc1` is available for testing on PyPI. This maintenance-focused release candidate aims to improve installation and GUI reliability on current systems. See the [release notes](https://phy.readthedocs.io/en/latest/release/) for installation instructions, compatibility notes, and testing guidance.
+
 [![phy 2.1.0rc1 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
 
 ## Current status
@@ -22,6 +24,15 @@ The main goals of this release are:
 * collecting feedback from beta testers before a final `2.1.0` release
 
 Dataset formats are unchanged. Some plugins that relied on internal HTML or web-based GUI components may need updates.
+
+If you would like to test this release candidate, install it in a fresh Python 3.10+ environment:
+
+```bash
+python -m pip install --upgrade pip
+pip install "phy==2.1.0rc1"
+```
+
+Please report any issues or compatibility regressions on [GitHub issues](https://github.com/cortex-lab/phy/issues).
 
 ## Supported workflows
 
@@ -48,6 +59,12 @@ If you plan to use the legacy Kwik GUI, also install:
 
 ```bash
 pip install klusta klustakwik2
+```
+
+For release-candidate testing specifically, install the exact RC version instead:
+
+```bash
+pip install "phy==2.1.0rc1"
 ```
 
 ## Quick start
@@ -129,8 +146,9 @@ pip install -e . --upgrade
 
 ## Troubleshooting and docs
 
-* [Documentation](https://phy.cortexlab.net)
-* [Troubleshooting](https://phy.cortexlab.net/troubleshooting/)
+* [Documentation](https://phy.readthedocs.io/en/latest/)
+* [Release notes](https://phy.readthedocs.io/en/latest/release/)
+* [Troubleshooting](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [GitHub issues](https://github.com/cortex-lab/phy/issues)
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
 * [Code of Conduct](CODE_OF_CONDUCT.md)

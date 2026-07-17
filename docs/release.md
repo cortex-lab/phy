@@ -2,7 +2,6 @@
 
 Current version is phy v2.1.0rc1 (release candidate 1) (11 Mar 2026).
 
-
 ## phy 2.1.0 (upcoming)
 
 ### Added
@@ -104,14 +103,12 @@ When reporting issues, please include:
 * whether plugins are in use
 * a minimal error message or reproduction if possible
 
-
 ## Historical notes for older releases
 
 The notes below are kept for reference only and concern older releases, not the
 current `2.1.0rc1` release candidate.
 
 ### phy 2.0 beta 1 (2020-02)
-
 
 #### New views
 
@@ -142,16 +139,13 @@ current `2.1.0rc1` release candidate.
 
     <img src="https://user-images.githubusercontent.com/1942359/74029179-696a5400-49ac-11ea-8b55-71cf864391aa.png" style="width: 400px;">
 
-
 * Improved **Amplitude view**: different types of spike amplitudes as a function of time, with histograms.
 
     <img src="https://user-images.githubusercontent.com/1942359/74029349-c6fea080-49ac-11ea-9723-3f432023ee4b.png" style="width: 400px;">
 
-
 * **IPython view**: interact with the GUI and the data programmatically.
 
     <img src="https://user-images.githubusercontent.com/1942359/74029254-90c12100-49ac-11ea-8b8e-a4997910ffe5.png" style="width: 400px;">
-
 
 #### New features
 
@@ -197,7 +191,6 @@ current `2.1.0rc1` release candidate.
     * Support **multiple raw data files** (virtually concatenated)
     * Support for **multiple channel shanks**: add a `channel_shanks.npy` file with shape `(n_channels,` ), with the shank integer index of every channel.
 
-
 #### Improvements
 
 * A new file `cluster_info.tsv` is automatically saved, containing all information from the cluster view.
@@ -212,7 +205,6 @@ current `2.1.0rc1` release candidate.
 * New `plugins/` folder in the repository, with many plugin examples
 * Documentation rewritten from scratch, with many examples
 
-
 #### Internal changes
 
 * Support **Python 3.7+**, dropped Python 2.x support (reached End Of Life)
@@ -221,7 +213,6 @@ current `2.1.0rc1` release candidate.
 * Dropped the phy-contrib repository
 * Created **phylib**, a small dependency with I/O code and non-graphical utilities, also used by ibllib
 * Moved the phy GitHub repository from kwikteam to cortex-lab organization
-
 
 #### Notes for plugin maintainers
 
