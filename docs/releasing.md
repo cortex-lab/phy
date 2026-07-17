@@ -154,3 +154,22 @@ fall back to:
 make smoke-test SMOKE_VERSION=<version>
 make open-test SMOKE_VERSION=<version>
 ```
+
+## Post-release checklist
+
+After the final PyPI upload succeeds:
+
+1. Confirm the PyPI JSON index lists both the wheel and source distribution, and verify their
+   SHA-256 hashes against the files built from the release tag.
+2. Install the exact version from PyPI in a fresh environment with `make smoke-pypi
+   SMOKE_VERSION=<version>` and complete the GUI check with `make open-pypi
+   SMOKE_VERSION=<version>`.
+3. Create a non-prerelease GitHub release from the existing annotated tag. Attach the exact wheel
+   and source distribution already verified against PyPI; do not rebuild them.
+4. Verify the documentation build for the default branch and check the live release notes,
+   README badges, PyPI page, and GitHub release links.
+5. Publish the prepared community announcement only after PyPI, GitHub, and the documentation are
+   live.
+6. Close or update the release milestone. Keep the release branch until all public artifacts have
+   been checked, then remove it only with maintainer approval.
+7. Make any development-version bump on the default branch in a separate pull request.

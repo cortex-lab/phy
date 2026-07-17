@@ -27,6 +27,9 @@ Thank you to everyone who tested the release candidate and reported issues.
 Release notes and compatibility notes:
 https://phy.readthedocs.io/en/latest/release/
 
+GitHub release:
+https://github.com/cortex-lab/phy/releases/tag/v2.1.0
+
 Please report issues here:
 https://github.com/cortex-lab/phy/issues
 ```
@@ -40,6 +43,15 @@ This maintenance release of the current 2.x line focuses on fixing several long-
 
 The goal of this release is not to add major new features, but to make phy easier to install and more reliable again on current systems.
 
+Highlights include modernized packaging and CI, a native Qt ClusterView replacing the legacy web-based implementation, and improved GUI reliability across Linux, macOS, and Windows.
+
+Install or upgrade with:
+
+    python -m pip install --upgrade "phy==2.1.0"
+
 For release notes and compatibility notes, see:
 https://phy.readthedocs.io/en/latest/release/
+
+PyPI:
+https://pypi.org/project/phy/2.1.0/
 ```

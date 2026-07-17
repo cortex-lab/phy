@@ -4,7 +4,15 @@ Current version is phy v2.1.0 (17 Jul 2026).
 
 ## phy 2.1.0 (17 Jul 2026)
 
-This final release incorporates the fixes identified during the `2.1.0rc1` testing period.
+This maintenance release makes phy easier to install and more reliable on current systems. It
+also incorporates the fixes identified during the `2.1.0rc1` testing period.
+
+### Highlights
+
+* Modernized dependencies, packaging, and continuous integration for Python 3.10 and newer.
+* Replaced the fragile legacy web-based ClusterView with a native Qt implementation.
+* Improved GUI startup, rendering, and resource cleanup across Linux, macOS, and Windows.
+* Kept dataset and file formats unchanged.
 
 ### Added
 
@@ -15,8 +23,34 @@ This final release incorporates the fixes identified during the `2.1.0rc1` testi
 * Preserve the ClusterView sort order when cluster metadata changes ([#1375](https://github.com/cortex-lab/phy/issues/1375)).
 * Display NumPy-typed values correctly in native Qt ClusterView columns ([#1377](https://github.com/cortex-lab/phy/issues/1377)).
 
+### Install or upgrade
 
-## phy 2.1.0rc1
+Use a fresh Python 3.10+ environment when possible, then install the exact stable release:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install --upgrade "phy==2.1.0"
+phy --version
+```
+
+The release is available from [PyPI](https://pypi.org/project/phy/2.1.0/) and its tagged source,
+release notes, and verified distribution files are available from the
+[GitHub release](https://github.com/cortex-lab/phy/releases/tag/v2.1.0).
+
+### Compatibility notes
+
+Dataset formats are unchanged. Plugins using supported Python-side controller, event, or view
+APIs are expected to keep working, but plugins that depend on internal HTML or other legacy
+web-based GUI components may require updates.
+
+Please report regressions on the [GitHub issue tracker](https://github.com/cortex-lab/phy/issues)
+and include the operating system, Python version, installation method, and whether plugins are
+enabled.
+
+## Historical release candidate: phy 2.1.0rc1
+
+The material in this section records the release-candidate testing instructions and is retained
+for reference. New installations should use the final `2.1.0` release above.
 
 With substantial help from AI-assisted development, it has been possible to put time and effort
 into this maintenance release for the current 2.x line.
@@ -97,7 +131,8 @@ working unchanged, but they should still be tested.
 
 ### Testing window
 
-Testing for `2.1.0rc1` is expected to stay open for at least the next couple of months before a final `2.1.0` release.
+The `2.1.0rc1` testing window remained open before the final `2.1.0` release and provided the
+feedback used for the fixes listed above.
 
 ### Feedback
 
