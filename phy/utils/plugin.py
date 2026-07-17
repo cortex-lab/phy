@@ -70,7 +70,7 @@ def _iter_plugin_files(dirs):
             subdir = Path(subdir)
             # Skip test folders.
             base = subdir.name
-            if 'test' in base or '__' in base or '.git' in str(subdir):  # pragma: no cover
+            if base.startswith('test') or base == '__pycache__' or '.git' in subdir.parts:
                 continue
             logger.debug('Scanning `%s`.', subdir)
             for filename in files:
