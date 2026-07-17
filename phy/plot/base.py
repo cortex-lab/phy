@@ -221,16 +221,12 @@ def _get_glsl(to_insert, shader_type=None, location=None, exclude_origins=()):
     return '\n'.join(
         snippet
         for (shader_type_, location_, origin_, snippet) in to_insert
-        if shader_type_ == shader_type
-        and location_ == location
-        and origin_ not in exclude_origins
+        if shader_type_ == shader_type and location_ == location and origin_ not in exclude_origins
     )
 
 
 def _repl_vars(snippet, varout, varin):
-    snippet = snippet.replace(
-        '{{varout}}', varout if varout != 'gl_Position' else 'pos_tmp'
-    )
+    snippet = snippet.replace('{{varout}}', varout if varout != 'gl_Position' else 'pos_tmp')
     return snippet.replace('{{varin}}', varin)
 
 
@@ -250,9 +246,7 @@ class GLSLInserter:
 
     def _init_insert(self):
         self.insert_vert('vec2 {{varout}} = {{varin}};', 'before_transforms', index=0)
-        self.insert_vert(
-            'gl_Position = vec4({{varout}}, 0., 1.);', 'after_transforms', index=0
-        )
+        self.insert_vert('gl_Position = vec4({{varout}}, 0., 1.);', 'after_transforms', index=0)
         self.insert_vert('varying vec2 v_{{varout}};\n', 'header', index=0)
         self.insert_frag('varying vec2 v_{{varout}};\n', 'header', index=0)
 
@@ -320,9 +314,7 @@ class GLSLInserter:
         # Clipping.
         clip = tc.get('Clip')
         if clip:
-            self.insert_frag(
-                clip.glsl('v_{{varout}}'), 'before_transforms', origin=origin
-            )
+            self.insert_frag(clip.glsl('v_{{varout}}'), 'before_transforms', origin=origin)
 
     def insert_into_shaders(self, vertex, fragment, exclude_origins=()):
         """Insert all GLSL snippets in a vertex and fragment shaders.
@@ -370,9 +362,7 @@ class GLSLInserter:
         # Define pos_orig only once.
         for varout, varin in self._variables:
             if varout == 'gl_Position':
-                self.insert_vert(
-                    f'vec2 pos_orig = {varin};', 'before_transforms', index=0
-                )
+                self.insert_vert(f'vec2 pos_orig = {varin};', 'before_transforms', index=0)
 
         # Replace the variable placeholders.
         to_insert = []
@@ -398,11 +388,7 @@ class GLSLInserter:
         def repl(m):
             varout, varin = m.group(1), m.group(2)
             varout = varout if varout != 'gl_Position' else 'pos_tmp'
-            return (
-                indent(vs_insert)
-                .replace('{{varout}}', varout)
-                .replace('{{varin}}', varin)
-            )
+            return indent(vs_insert).replace('{{varout}}', varout).replace('{{varin}}', varin)
 
         vertex = self._transform_regex.sub(repl, vertex)
 
@@ -439,9 +425,7 @@ def get_modifiers(e):
     """Return modifier names from a Qt event."""
     m = e.modifiers()
     return tuple(
-        name
-        for name in ('Shift', 'Control', 'Alt', 'Meta')
-        if m & getattr(Qt, f'{name}Modifier')
+        name for name in ('Shift', 'Control', 'Alt', 'Meta') if m & getattr(Qt, f'{name}Modifier')
     )
 
 
@@ -522,9 +506,7 @@ class LazyProgram(gloo.Program):
     def __setitem__(self, name, data):
         # Remove all past items with the current name.
         if self._is_lazy:
-            self._update_queue[:] = (
-                (n, d) for (n, d) in self._update_queue if n != name
-            )
+            self._update_queue[:] = ((n, d) for (n, d) in self._update_queue if n != name)
             self._update_queue.append((name, data))
         else:
             with suppress(IndexError):
@@ -720,12 +702,7 @@ class BaseCanvas(QOpenGLWindow):
                 if size != self._size:
                     visual.on_resize(*size)
                 # Do not draw if there are no vertices.
-                if (
-                    not visual._hidden
-                    and visual.n_vertices > 0
-                    and size[0] > 10
-                    and size[1] > 10
-                ):
+                if not visual._hidden and visual.n_vertices > 0 and size[0] > 10 and size[1] > 10:
                     logger.log(5, 'Draw visual `%s`.', visual)
                     visual.on_draw()
             self._size = size

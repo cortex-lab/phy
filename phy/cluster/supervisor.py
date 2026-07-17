@@ -108,9 +108,7 @@ class TaskLogger:
     def _eval(self, task):
         """Evaluate a task and call a callback function."""
         sender, name, args, kwargs = task
-        logger.log(
-            5, 'Calling %s.%s(%s)', sender.__class__.__name__, name, args, kwargs
-        )
+        logger.log(5, 'Calling %s.%s(%s)', sender.__class__.__name__, name, args, kwargs)
         f = getattr(sender, name)
         callback = partial(self._callback, task)
         argspec = inspect.getfullargspec(f)
@@ -190,9 +188,7 @@ class TaskLogger:
 
     def _after_undo(self, task, output):
         """Task that should follow an undo."""
-        last_action = self.last_task(
-            name_not_in=('select', 'next', 'previous', 'undo', 'redo')
-        )
+        last_action = self.last_task(name_not_in=('select', 'next', 'previous', 'undo', 'redo'))
         self._select_state(self.last_state(last_action))
 
     def _after_redo(self, task, output):
@@ -235,9 +231,7 @@ class TaskLogger:
     def last_task(self, name=None, name_not_in=()):
         """Return the last executed task."""
         for sender, name_, args, kwargs, output in reversed(self._history):
-            if (name and name_ == name) or (
-                name_not_in and name_ and name_ not in name_not_in
-            ):
+            if (name and name_ == name) or (name_not_in and name_ and name_ not in name_not_in):
                 assert name_
                 return (sender, name_, args, kwargs, output)
 
@@ -257,17 +251,13 @@ class TaskLogger:
                 and similarity_state == (None, None)
                 and name in ('select', 'next', 'previous')
             ):
-                similarity_state = (
-                    (output['selected'], output['next']) if output else (None, None)
-                )
+                similarity_state = (output['selected'], output['next']) if output else (None, None)
             if (
                 sender == self.cluster_view
                 and cluster_state == (None, None)
                 and name in ('select', 'next', 'previous')
             ):
-                cluster_state = (
-                    (output['selected'], output['next']) if output else (None, None)
-                )
+                cluster_state = (output['selected'], output['next']) if output else (None, None)
                 return (*cluster_state, *similarity_state)
 
     def show_history(self):
@@ -406,9 +396,7 @@ class SimilarityView(ClusterView):
         similar = emit('request_similar_clusters', self, cluster_ids[-1])
         # Clear the table.
         if similar:
-            self.remove_all_and_add(
-                [cl for cl in similar[0] if cl['id'] not in cluster_ids]
-            )
+            self.remove_all_and_add([cl for cl in similar[0] if cl['id'] not in cluster_ids])
         else:  # pragma: no cover
             self.remove_all()
         return similar
@@ -677,9 +665,7 @@ class Supervisor:
         self.columns = ['id']  # n_spikes comes from cluster_metrics
         self.columns += list(self.cluster_metrics.keys())
         self.columns += [
-            label
-            for label in self.cluster_labels.keys()
-            if label not in self.columns + ['group']
+            label for label in self.cluster_labels.keys() if label not in self.columns + ['group']
         ]
 
         # Create Clustering and ClusterMeta.
@@ -740,9 +726,7 @@ class Supervisor:
         """Cache on the disk the dictionary with the spikes belonging to each cluster."""
         if not self.context:
             return
-        self.context.save(
-            'spikes_per_cluster', self.clustering.spikes_per_cluster, kind='pickle'
-        )
+        self.context.save('spikes_per_cluster', self.clustering.spikes_per_cluster, kind='pickle')
 
     def _log_action(self, sender, up):
         """Log the clustering action (merge, split)."""
@@ -751,9 +735,7 @@ class Supervisor:
         if up.history:
             logger.info(f'{up.history.title()} cluster assign.')
         elif up.description == 'merge':
-            logger.info(
-                'Merge clusters %s to %s.', ', '.join(map(str, up.deleted)), up.added[0]
-            )
+            logger.info('Merge clusters %s to %s.', ', '.join(map(str, up.deleted)), up.added[0])
         else:
             logger.info('Assigned %s spikes.', len(up.spike_ids))
 
@@ -892,9 +874,7 @@ class Supervisor:
             emit('select', self, self.selected, **kwargs)
         if cluster_ids:
             self.cluster_view.scroll_to(cluster_ids[-1])
-        self.cluster_view.dock.set_status(
-            f'clusters: {", ".join(map(str, cluster_ids))}'
-        )
+        self.cluster_view.dock.set_status(f'clusters: {", ".join(map(str, cluster_ids))}')
 
     def _similar_selected(self, sender, obj):
         """When clusters are selected in the similarity view, register the action in the history
@@ -909,9 +889,7 @@ class Supervisor:
         emit('select', self, self.selected, **kwargs)
         if similar:
             self.similarity_view.scroll_to(similar[-1])
-        self.similarity_view.dock.set_status(
-            f'similar clusters: {", ".join(map(str, similar))}'
-        )
+        self.similarity_view.dock.set_status(f'similar clusters: {", ".join(map(str, similar))}')
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -1000,10 +978,7 @@ class Supervisor:
     @property
     def cluster_info(self):
         """The cluster view table as a list of per-cluster dictionaries."""
-        return [
-            self.get_cluster_info(cluster_id)
-            for cluster_id in self.clustering.cluster_ids
-        ]
+        return [self.get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
     @property
     def shown_cluster_ids(self):
@@ -1186,27 +1161,19 @@ class Supervisor:
 
     def previous_best(self, callback=None):
         """Select the previous best cluster in the cluster view."""
-        self.cluster_view.previous(
-            callback=callback or partial(emit, 'wizard_done', self)
-        )
+        self.cluster_view.previous(callback=callback or partial(emit, 'wizard_done', self))
 
     def next(self, callback=None):
         """Select the next cluster in the similarity view."""
         state = self.task_logger.last_state()
         if not state or not state[0]:
-            self.cluster_view.first(
-                callback=callback or partial(emit, 'wizard_done', self)
-            )
+            self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
         else:
-            self.similarity_view.next(
-                callback=callback or partial(emit, 'wizard_done', self)
-            )
+            self.similarity_view.next(callback=callback or partial(emit, 'wizard_done', self))
 
     def previous(self, callback=None):
         """Select the previous cluster in the similarity view."""
-        self.similarity_view.previous(
-            callback=callback or partial(emit, 'wizard_done', self)
-        )
+        self.similarity_view.previous(callback=callback or partial(emit, 'wizard_done', self))
 
     def unselect_similar(self, callback=None):
         """Select only the clusters in the cluster view."""
@@ -1225,11 +1192,7 @@ class Supervisor:
 
     def is_dirty(self):
         """Return whether there are any pending changes."""
-        return (
-            self._is_dirty
-            if self._is_dirty in (False, True)
-            else len(self._global_history) > 1
-        )
+        return self._is_dirty if self._is_dirty in (False, True) else len(self._global_history) > 1
 
     def undo(self):
         """Undo the last action."""
@@ -1248,8 +1211,7 @@ class Supervisor:
         """
         spike_clusters = self.clustering.spike_clusters
         groups = {
-            c: self.cluster_meta.get('group', c) or 'unsorted'
-            for c in self.clustering.cluster_ids
+            c: self.cluster_meta.get('group', c) or 'unsorted' for c in self.clustering.cluster_ids
         }
         # List of tuples (field_name, dictionary).
         labels = [

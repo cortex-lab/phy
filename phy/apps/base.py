@@ -190,9 +190,7 @@ class WaveformMixin:
         spike_ids = self._get_amplitude_spike_ids(cluster_id)
         return np.mean(self.get_spike_raw_amplitudes(spike_ids))
 
-    def _get_waveforms_with_n_spikes(
-        self, cluster_id, n_spikes_waveforms, current_filter=None
-    ):
+    def _get_waveforms_with_n_spikes(self, cluster_id, n_spikes_waveforms, current_filter=None):
         # HACK: we pass self.raw_data_filter.current_filter so that it is cached properly.
         pos = self.model.channel_positions
 
@@ -205,9 +203,7 @@ class WaveformMixin:
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).
         else:
-            spike_ids = self.selector(
-                n_spikes_waveforms, [cluster_id], subset_chunks=True
-            )
+            spike_ids = self.selector(n_spikes_waveforms, [cluster_id], subset_chunks=True)
 
         # Get the best channels.
         channel_ids = self.get_best_channels(cluster_id)
@@ -250,9 +246,7 @@ class WaveformMixin:
         self.view_creator['WaveformView'] = self.create_waveform_view
 
     def _get_waveforms_dict(self):
-        waveform_functions = _concatenate_parents_attributes(
-            self.__class__, '_waveform_functions'
-        )
+        waveform_functions = _concatenate_parents_attributes(self.__class__, '_waveform_functions')
         return {name: getattr(self, method) for name, method in waveform_functions}
 
     def create_waveform_view(self):
@@ -378,9 +372,7 @@ class FeatureMixin:
         if len(spike_ids) == 0:
             return
         spike_times = self._get_spike_times_reordered(spike_ids)
-        return Bunch(
-            data=spike_times, spike_ids=spike_ids, lim=(0.0, self.model.duration)
-        )
+        return Bunch(data=spike_times, spike_ids=spike_ids, lim=(0.0, self.model.duration))
 
     def _get_spike_features(self, spike_ids, channel_ids):
         if len(spike_ids) == 0:  # pragma: no cover
@@ -412,10 +404,7 @@ class FeatureMixin:
         return self._get_spike_features(spike_ids, channel_ids)
 
     def create_feature_view(self):
-        if (
-            self.model.features is None
-            and getattr(self.model, 'spike_waveforms', None) is None
-        ):
+        if self.model.features is None and getattr(self.model, 'spike_waveforms', None) is None:
             # NOTE: we can still construct the feature view when there are spike waveforms.
             return
         view = FeatureView(
@@ -579,9 +568,7 @@ class TemplateMixin:
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
         # Get all templates from which this cluster stems from.
-        templates = [
-            self.model.get_template(template_id) for template_id in template_ids
-        ]
+        templates = [self.model.get_template(template_id) for template_id in template_ids]
         # Construct the waveforms array.
         ns = self.model.n_samples_waveforms
         data = np.zeros((len(template_ids), ns, self.model.n_channels))
@@ -922,9 +909,7 @@ class BaseController:
         _add_log_file(Path(dir_path) / 'phy.log')
 
         # Create or reuse a Model instance (any object)
-        self.model = (
-            self._create_model(dir_path=dir_path, **kwargs) if model is None else model
-        )
+        self.model = self._create_model(dir_path=dir_path, **kwargs) if model is None else model
 
         # Set up the cache.
         self._set_cache(clear_cache)
@@ -945,9 +930,7 @@ class BaseController:
         # The controller.default_views can be set by the child class, otherwise it is computed
         # by concatenating all parents _new_views.
         if getattr(self, 'default_views', None) is None:
-            self.default_views = _concatenate_parents_attributes(
-                self.__class__, '_new_views'
-            )
+            self.default_views = _concatenate_parents_attributes(self.__class__, '_new_views')
         self._async_callers = {}
         self.config_dir = config_dir
 
@@ -955,9 +938,7 @@ class BaseController:
         if clear_state:
             self._clear_state()
 
-        self.selection = Selection(
-            self
-        )  # keep track of selected clusters, spikes, channels, etc.
+        self.selection = Selection(self)  # keep track of selected clusters, spikes, channels, etc.
 
         # Attach plugins before setting up the supervisor, so that plugins
         # can register callbacks to events raised during setup.
@@ -1021,9 +1002,7 @@ class BaseController:
             'ClusterScatterView': self.create_cluster_scatter_view,
             'CorrelogramView': self.create_correlogram_view,
             'ISIView': self._make_histogram_view(ISIView, self._get_isi),
-            'FiringRateView': self._make_histogram_view(
-                FiringRateView, self._get_firing_rate
-            ),
+            'FiringRateView': self._make_histogram_view(FiringRateView, self._get_firing_rate),
             'AmplitudeView': self.create_amplitude_view,
             'ProbeView': self.create_probe_view,
             'RasterView': self.create_raster_view,
@@ -1032,9 +1011,7 @@ class BaseController:
         # Spike attributes.
         for name, arr in getattr(self.model, 'spike_attributes', {}).items():
             view_name = f'Spike{name.title()}View'
-            self.view_creator[view_name] = self._make_spike_attributes_view(
-                view_name, name, arr
-            )
+            self.view_creator[view_name] = self._make_spike_attributes_view(view_name, name, arr)
 
     def _set_cluster_metrics(self):
         """Set the cluster metrics dictionary with some default metrics."""
@@ -1375,9 +1352,7 @@ class BaseController:
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
         # Find the first cluster, used to determine the best channels.
-        first_cluster = next(
-            cluster_id for cluster_id in cluster_ids if cluster_id is not None
-        )
+        first_cluster = next(cluster_id for cluster_id in cluster_ids if cluster_id is not None)
         # Best channels of the first cluster.
         channel_ids = self.get_best_channels(first_cluster)
         # Best channel of the first cluster.
@@ -1694,9 +1669,7 @@ class BaseController:
         )
         def toggle_spike_reorder(checked):
             """Toggle spike time reordering."""
-            logger.debug(
-                '%s spike time reordering.', 'Enable' if checked else 'Disable'
-            )
+            logger.debug('%s spike time reordering.', 'Enable' if checked else 'Disable')
             emit('toggle_spike_reorder', self, checked)
 
         # Action to switch the raw data filter in the trace and waveform views.
@@ -1713,9 +1686,7 @@ class BaseController:
             # Update the waveform view.
             for v in gui.list_views(WaveformView):
                 if v.auto_update:
-                    v.on_select_threaded(
-                        self.supervisor, self.supervisor.selected, gui=gui
-                    )
+                    v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
                     v.ex_status = filter_name
                     v.update_status()
 
@@ -1734,9 +1705,7 @@ class BaseController:
 
         def group_index(cluster_id):
             group = self.supervisor.cluster_meta.get('group', cluster_id)
-            return group_colors.get(
-                group, 0
-            )  # TODO: better handling of colors for custom groups
+            return group_colors.get(group, 0)  # TODO: better handling of colors for custom groups
 
         depth = self.supervisor.cluster_metrics['depth']
         fr = self.supervisor.cluster_metrics['fr']
@@ -1777,8 +1746,7 @@ class BaseController:
             subtitle=str(self.dir_path),
             config_dir=self.config_dir,
             local_path=self.cache_dir / 'state.json',
-            default_state_path=Path(inspect.getfile(self.__class__)).parent
-            / 'static/state.json',
+            default_state_path=Path(inspect.getfile(self.__class__)).parent / 'static/state.json',
             view_creator=self.view_creator,
             default_views=default_views,
             enable_threading=self._enable_threading,

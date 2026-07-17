@@ -7,8 +7,8 @@
 
 import os
 
-from . import show_and_wait
 from ..axes import Axes
+from . import show_and_wait
 
 # ------------------------------------------------------------------------------
 # Tests axes

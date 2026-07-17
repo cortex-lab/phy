@@ -4,8 +4,8 @@
 # Imports
 # ------------------------------------------------------------------------------
 
-import os
 import logging
+import os
 import warnings
 from functools import wraps
 
@@ -92,4 +92,6 @@ def pytest_generate_tests(metafunc):  # pragma: no cover
 
 def pytest_collection_modifyitems(session, config, items):
     """Run app tests after the rest of the suite."""
-    items.sort(key=lambda item: ('/phy/apps/' in str(item.fspath).replace(os.sep, '/'), str(item.fspath)))
+    items.sort(
+        key=lambda item: ('/phy/apps/' in str(item.fspath).replace(os.sep, '/'), str(item.fspath))
+    )

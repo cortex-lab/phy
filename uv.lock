@@ -1320,7 +1320,7 @@ wheels = [
 
 [[package]]
 name = "phy"
-version = "2.1.0rc1"
+version = "2.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

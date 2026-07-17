@@ -56,8 +56,8 @@ def _filter_nested_dict(value, key=None, search_terms=None):
 
     # key is None for the root only.
     # Expression used to test whether we keep a key or not.
-    keep = lambda k: k is None or (
-        (not search_terms or k in search_terms) and not k.startswith('_')
+    keep = lambda k: (
+        k is None or ((not search_terms or k in search_terms) and not k.startswith('_'))
     )
     # Process leaves.
     if not isinstance(value, Mapping):

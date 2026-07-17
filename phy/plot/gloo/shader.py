@@ -245,19 +245,13 @@ class Shader(GLObject):
         # Nvidia
         # 0(7): error C1008: undefined variable "MV"
         # 0(2) : error C0118: macros prefixed with '__' are reserved
-        re.compile(
-            r'^\s*(\d+)\((?P<line_no>\d+)\)\s*:\s(?P<error_msg>.*)', re.MULTILINE
-        ),
+        re.compile(r'^\s*(\d+)\((?P<line_no>\d+)\)\s*:\s(?P<error_msg>.*)', re.MULTILINE),
         # ATI / Intel
         # ERROR: 0:131: '{' : syntax error parse error
-        re.compile(
-            r'^\s*ERROR:\s(\d+):(?P<line_no>\d+):\s(?P<error_msg>.*)', re.MULTILINE
-        ),
+        re.compile(r'^\s*ERROR:\s(\d+):(?P<line_no>\d+):\s(?P<error_msg>.*)', re.MULTILINE),
         # Nouveau
         # 0:28(16): error: syntax error, unexpected ')', expecting '('
-        re.compile(
-            r'^\s*(\d+):(?P<line_no>\d+)\((\d+)\):\s(?P<error_msg>.*)', re.MULTILINE
-        ),
+        re.compile(r'^\s*(\d+):(?P<line_no>\d+)\((\d+)\):\s(?P<error_msg>.*)', re.MULTILINE),
     ]
 
     def _parse_error(self, error):
@@ -273,9 +267,7 @@ class Shader(GLObject):
         for error_re in self._ERROR_RE:
             matches = list(error_re.finditer(error))
             if matches:
-                errors = [
-                    (int(m.group('line_no')), m.group('error_msg')) for m in matches
-                ]
+                errors = [(int(m.group('line_no')), m.group('error_msg')) for m in matches]
                 return sorted(errors, key=lambda elem: elem[0])
         else:
             raise ValueError(f'Unknown GLSL error format:\n{error}\n')

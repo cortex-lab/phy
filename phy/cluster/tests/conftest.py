@@ -36,7 +36,7 @@ def cluster_labels():
 
 @fixture
 def similarity(cluster_ids):
-    sim = lambda c, d: (c * 1.01 + d)
+    sim = lambda c, d: c * 1.01 + d
 
     def similarity(c):
         return get_closest_clusters(c, cluster_ids, sim)

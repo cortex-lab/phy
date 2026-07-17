@@ -133,9 +133,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.data_bounds = None
         self.sample_rate = sample_rate
         self._status_suffix = ''
-        assert sample_rate > 0.0, (
-            'The sample rate must be provided to the waveform view.'
-        )
+        assert sample_rate > 0.0, 'The sample rate must be provided to the waveform view.'
 
         # Initialize the view.
         super().__init__(**kwargs)
@@ -147,9 +145,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Ensure waveforms is a dictionary, even if there is a single waveforms type.
         waveforms = waveforms or {}
-        waveforms = (
-            waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
-        )
+        waveforms = waveforms if isinstance(waveforms, dict) else {'waveforms': waveforms}
         self.waveforms = waveforms
 
         # Rotating property waveforms types.
@@ -198,9 +194,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     def get_clusters_data(self):
         if self.waveforms_type not in self.waveforms:
             return
-        bunchs = [
-            self.waveforms_types.get()(cluster_id) for cluster_id in self.cluster_ids
-        ]
+        bunchs = [self.waveforms_types.get()(cluster_id) for cluster_id in self.cluster_ids]
         clu_offsets = _get_clu_offsets(bunchs)
         n_clu = max(clu_offsets) + 1
         # Offset depending on the overlap.
@@ -229,9 +223,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         # Find the x coordinates.
         t = get_linear_x(n_spikes_clu * n_channels, n_samples)
-        t = _overlap_transform(
-            t, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap
-        )
+        t = _overlap_transform(t, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         # HACK: on the GPU, we get the actual masks with fract(masks)
         # since we add the relative cluster index. We need to ensure
         # that the masks is never 1.0, otherwise it is interpreted as
@@ -298,9 +290,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         # Scale to [-1, 1], same coordinates as the waveform points.
         x = -1 + 2 * x / self.wave_duration
         # Take overlap into account.
-        x = _overlap_transform(
-            x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap
-        )
+        x = _overlap_transform(x, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         x = np.tile(x, len(channel_ids_loc))
         # Generate the box index.
         box_index = _index_of(channel_ids_loc, self.channel_ids)
@@ -384,12 +374,8 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         """Attach the view to the GUI."""
         super().attach(gui)
 
-        self.actions.add(
-            self.toggle_waveform_overlap, checkable=True, checked=self.overlap
-        )
-        self.actions.add(
-            self.toggle_show_labels, checkable=True, checked=self.do_show_labels
-        )
+        self.actions.add(self.toggle_waveform_overlap, checkable=True, checked=self.overlap)
+        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(self.next_waveforms_type)
         self.actions.add(self.previous_waveforms_type)
         self.actions.add(self.toggle_mean_waveforms, checkable=True)
@@ -507,9 +493,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             # Get mouse position in NDC.
             channel_idx, _ = self.canvas.boxed.box_map(e.pos)
             channel_id = self.channel_ids[channel_idx]
-            logger.debug(
-                'Click on channel_id %d with key %s and button %s.', channel_id, key, b
-            )
+            logger.debug('Click on channel_id %d with key %s and button %s.', channel_id, key, b)
             emit('select_channel', self, channel_id=channel_id, key=key, button=b)
 
     @property

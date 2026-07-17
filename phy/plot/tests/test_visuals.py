@@ -11,7 +11,6 @@ import numpy as np
 
 from phy.utils.color import _random_color
 
-from . import show_and_wait
 from ..transform import NDC, Rotate, range_transform
 from ..visuals import (
     HistogramVisual,
@@ -27,6 +26,7 @@ from ..visuals import (
     UniformPlotVisual,
     UniformScatterVisual,
 )
+from . import show_and_wait
 
 # ------------------------------------------------------------------------------
 # Fixtures

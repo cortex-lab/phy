@@ -155,9 +155,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         self.cluster_idxs = np.argsort(self.all_cluster_ids)
         self.sorted_cluster_ids = self.all_cluster_ids[self.cluster_idxs]
         # Cluster colors, ordered by cluster id.
-        self.cluster_colors = self.get_cluster_colors(
-            self.sorted_cluster_ids, alpha=0.75
-        )
+        self.cluster_colors = self.get_cluster_colors(self.sorted_cluster_ids, alpha=0.75)
 
     def get_clusters_data(self, load_all=None):
         """Return all templates data."""
@@ -212,8 +210,7 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
             )
         # Number of vertices per cluster = number of vertices per signal
         n_vertices_clu = [
-            len(self._cluster_box_index[cluster_id])
-            for cluster_id in self.sorted_cluster_ids
+            len(self._cluster_box_index[cluster_id]) for cluster_id in self.sorted_cluster_ids
         ]
         # The argument passed to set_color() must have 1 row per vertex.
         self.visual.set_color(np.repeat(cluster_colors, n_vertices_clu, axis=0))

@@ -1,12 +1,19 @@
 # Release notes
 
-Current version is phy v2.1.0rc1 (release candidate 1) (11 Mar 2026).
+Current version is phy v2.1.0 (17 Jul 2026).
 
-## phy 2.1.0 (upcoming)
+## phy 2.1.0 (17 Jul 2026)
+
+This final release incorporates the fixes identified during the `2.1.0rc1` testing period.
 
 ### Added
 
 * Code of Conduct for project participation and incident reporting.
+
+### Fixed
+
+* Preserve the ClusterView sort order when cluster metadata changes ([#1375](https://github.com/cortex-lab/phy/issues/1375)).
+* Display NumPy-typed values correctly in native Qt ClusterView columns ([#1377](https://github.com/cortex-lab/phy/issues/1377)).
 
 
 ## phy 2.1.0rc1
@@ -105,8 +112,7 @@ When reporting issues, please include:
 
 ## Historical notes for older releases
 
-The notes below are kept for reference only and concern older releases, not the
-current `2.1.0rc1` release candidate.
+The notes below are kept for reference only and concern older releases.
 
 ### phy 2.0 beta 1 (2020-02)
 

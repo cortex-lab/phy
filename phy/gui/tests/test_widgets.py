@@ -9,8 +9,8 @@ from functools import partial
 from phylib.utils import connect, unconnect
 from pytest import fixture, mark
 
-from . import show_and_wait
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table
+from . import show_and_wait
 from .test_qt import _block
 
 # ------------------------------------------------------------------------------

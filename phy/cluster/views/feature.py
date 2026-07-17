@@ -113,9 +113,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         self.features = features
         self._lim = 1
 
-        self.grid_dim = (
-            _get_default_grid()
-        )  # 2D array where every item a string like `0A,1B`
+        self.grid_dim = _get_default_grid()  # 2D array where every item a string like `0A,1B`
         self.n_rows, self.n_cols = np.array(self.grid_dim).shape
         self.canvas.set_layout('grid', shape=(self.n_rows, self.n_cols))
         self.canvas.enable_lasso()
@@ -308,9 +306,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         # Specify the channel ids if these are fixed, otherwise
         # choose the first cluster's best channels.
         c = self.channel_ids if fixed_channels else None
-        bunchs = [
-            self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids
-        ]
+        bunchs = [self.features(cluster_id, channel_ids=c) for cluster_id in self.cluster_ids]
         bunchs = [b for b in bunchs if b]
         if not bunchs:  # pragma: no cover
             return []
@@ -322,9 +318,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         common_channels = list(channel_ids)
         # Intersection (with order kept) of channels belonging to all clusters.
         for bunch in bunchs:
-            common_channels = [
-                c for c in bunch.get('channel_ids', []) if c in common_channels
-            ]
+            common_channels = [c for c in bunch.get('channel_ids', []) if c in common_channels]
         # The selected channels will be (1) the channels common to all clusters, followed
         # by (2) remaining channels from the first cluster (excluding those already selected
         # in (1)).
@@ -343,10 +337,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         for d in bunchs:
             chl = d.get('channel_labels', [f'{ch}' for ch in d.get('channel_ids', [])])
             self.channel_labels.update(
-                {
-                    channel_id: chl[i]
-                    for i, channel_id in enumerate(d.get('channel_ids', []))
-                }
+                {channel_id: chl[i] for i, channel_id in enumerate(d.get('channel_ids', []))}
             )
 
         return bunchs
@@ -358,9 +349,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
         added = kwargs.get('up', {}).get('added', None)
         # Fix the channels if the view updates after a cluster event
         # and there are new clusters.
-        fixed_channels = (
-            self.fixed_channels or kwargs.get('fixed_channels') or added is not None
-        )
+        fixed_channels = self.fixed_channels or kwargs.get('fixed_channels') or added is not None
 
         # Get the clusters data.
         bunchs = self.get_clusters_data(fixed_channels=fixed_channels)
@@ -500,9 +489,7 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
 
         for cluster_id in self.cluster_ids:
             # Load all spikes.
-            bunch = self.features(
-                cluster_id, channel_ids=self.channel_ids, load_all=True
-            )
+            bunch = self.features(cluster_id, channel_ids=self.channel_ids, load_all=True)
             if not bunch:
                 continue
             px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id, load_all=True)

@@ -5,10 +5,10 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import ast
 import inspect
 import json
 import logging
-import ast
 import re
 from functools import partial
 
@@ -21,12 +21,13 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from phy.utils.color import _is_bright, colormaps
 
 from .qt import (
-    QApplication,
-    QBrush,
     Debouncer,
     QAbstractItemView,
     QAbstractTableModel,
+    QApplication,
+    QBrush,
     QCheckBox,
+    QColor,
     QDoubleSpinBox,
     QEvent,
     QGridLayout,
@@ -37,17 +38,16 @@ from .qt import (
     QModelIndex,
     QPalette,
     QPlainTextEdit,
-    QSortFilterProxyModel,
     QSize,
+    QSortFilterProxyModel,
     QSpinBox,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QTableView,
     Qt,
+    QTableView,
     QTimer,
     QVBoxLayout,
-    QColor,
     QWidget,
     _block,
 )
@@ -115,15 +115,11 @@ class IPythonView(RichJupyterWidget):
 
     def inject(self, **kwargs):
         """Inject variables into the IPython namespace."""
-        logger.debug(
-            'Injecting variables into the kernel: %s.', ', '.join(kwargs.keys())
-        )
+        logger.debug('Injecting variables into the kernel: %s.', ', '.join(kwargs.keys()))
         try:
             self.kernel.shell.push(kwargs)
         except Exception as e:  # pragma: no cover
-            logger.error(
-                'Could not inject variables to the IPython kernel: %s.', str(e)
-            )
+            logger.error('Could not inject variables to the IPython kernel: %s.', str(e))
 
     def attach(self, gui, **kwargs):
         """Add the view to the GUI, start the kernel, and inject the specified variables."""
@@ -337,10 +333,10 @@ class _TableModel(QAbstractTableModel):
         self._rows = []
         self._rows_by_id = {}
 
-    def rowCount(self, parent=QModelIndex()):
+    def rowCount(self, parent=QModelIndex()):  # noqa: B008
         return 0 if parent.isValid() else len(self._rows)
 
-    def columnCount(self, parent=QModelIndex()):
+    def columnCount(self, parent=QModelIndex()):  # noqa: B008
         return 0 if parent.isValid() else len(self._table.columns)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -551,7 +547,11 @@ class Table(QWidget):
         return self._debouncer
 
     def eventFilter(self, obj, event):
-        if obj is self.filter_edit and event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
+        if (
+            obj is self.filter_edit
+            and event.type() == QEvent.KeyPress
+            and event.key() == Qt.Key_Escape
+        ):
             self.filter_edit.clear()
             self.filter('')
             return True
@@ -1094,7 +1094,7 @@ class KeyValueWidget(QWidget):
             widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
-            widget.setMinimum(-10**9)
+            widget.setMinimum(-(10**9))
             widget.setMaximum(10**9)
             widget.setValue(default or 0)
         elif vtype == 'float':
@@ -1122,9 +1122,7 @@ class KeyValueWidget(QWidget):
     @property
     def names(self):
         """List of field names."""
-        return sorted(
-            {i[0] if '[' not in i[0] else i[0][: i[0].index('[')] for i in self._items}
-        )
+        return sorted({i[0] if '[' not in i[0] else i[0][: i[0].index('[')] for i in self._items})
 
     def get_widget(self, name):
         """Get the widget of a field."""

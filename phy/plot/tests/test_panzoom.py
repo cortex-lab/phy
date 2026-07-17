@@ -19,7 +19,7 @@ from . import key_press, mouse_drag, show_and_wait
 # ------------------------------------------------------------------------------
 
 pytestmark = mark.filterwarnings(
-    r"ignore:tostring\(\) is deprecated\. Use tobytes\(\) instead\.:DeprecationWarning"
+    r'ignore:tostring\(\) is deprecated\. Use tobytes\(\) instead\.:DeprecationWarning'
 )
 
 

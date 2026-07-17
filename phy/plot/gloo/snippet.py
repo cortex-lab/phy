@@ -156,9 +156,7 @@ class Snippet:
 
         symbols = {}
         objects = self._objects
-        for name, dtype in (
-            objects['uniforms'] + objects['attributes'] + objects['varyings']
-        ):
+        for name, dtype in objects['uniforms'] + objects['attributes'] + objects['varyings']:
             symbols[name] = self.symbols[name]
         # return self._symbols
         return symbols

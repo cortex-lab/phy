@@ -23,6 +23,7 @@ def test_probe_view(qtbot, gui):
     n = 50
     positions = staggered_positions(n)
     positions = positions.astype(np.int32)
+
     def best_channels(cluster_id):
         return range(1, 9, 2)
 

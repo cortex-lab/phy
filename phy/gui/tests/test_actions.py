@@ -9,7 +9,6 @@ from functools import partial
 from phylib.utils.testing import captured_logging, captured_output
 from pytest import raises
 
-from . import show_and_wait
 from ..actions import (
     Actions,
     _expected_args,
@@ -20,6 +19,7 @@ from ..actions import (
     _show_snippets,
 )
 from ..qt import mock_dialogs
+from . import show_and_wait
 
 # ------------------------------------------------------------------------------
 # Test actions

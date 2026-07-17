@@ -6,7 +6,6 @@
 
 from pytest import raises
 
-from . import show_and_wait
 from ..qt import (
     AsyncCaller,
     Debouncer,
@@ -31,6 +30,7 @@ from ..qt import (
     screenshot_default_path,
     thread_pool,
 )
+from . import show_and_wait
 
 # ------------------------------------------------------------------------------
 # Tests

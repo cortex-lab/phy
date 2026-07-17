@@ -25,7 +25,7 @@ from . import mouse_click, show_and_wait
 
 N = 10000
 pytestmark = mark.filterwarnings(
-    r"ignore:tostring\(\) is deprecated\. Use tobytes\(\) instead\.:DeprecationWarning"
+    r'ignore:tostring\(\) is deprecated\. Use tobytes\(\) instead\.:DeprecationWarning'
 )
 
 

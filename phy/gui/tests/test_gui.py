@@ -11,7 +11,6 @@ from pytest import raises
 
 from phy.plot import BaseCanvas
 
-from . import show_and_wait
 from ..gui import (
     GUI,
     Actions,
@@ -19,6 +18,7 @@ from ..gui import (
     _try_get_opengl_canvas,
 )
 from ..qt import QApplication, QMessageBox, Qt, QWidget
+from . import show_and_wait
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phy"
-version = "2.1.0rc1" # No dynamic lookup needed
+version = "2.1.0" # No dynamic lookup needed
 description = "Interactive visualization and manual spike sorting of large-scale ephys data"
 readme = "README.md"
 license = "BSD-3-Clause"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["phy", "data analysis", "electrophysiology", "neuroscience"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Natural Language :: English",
     "Framework :: IPython",
@@ -50,9 +50,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://phy.cortexlab.net"
+Homepage = "https://phy.readthedocs.io/en/latest/"
 Repository = "https://github.com/cortex-lab/phy"
-Documentation = "https://phy.cortexlab.net"
+Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 dev = [

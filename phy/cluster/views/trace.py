@@ -201,9 +201,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
         # Channel labels.
         self.channel_labels = (
-            channel_labels
-            if channel_labels is not None
-            else [f'{ch}' for ch in range(n_channels)]
+            channel_labels if channel_labels is not None else [f'{ch}' for ch in range(n_channels)]
         )
         assert len(self.channel_labels) == self.n_channels
 
@@ -304,9 +302,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         i = bunch.select_index
         c = bunch.spike_cluster
         cs = self.color_schemes.get()
-        color = (
-            selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
-        )
+        color = selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
 
         # We could tweak the color of each spike waveform depending on the template amplitude
         # on each of its best channels.
@@ -444,15 +440,11 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         """Attach the view to the GUI."""
         super().attach(gui)
 
-        self.actions.add(
-            self.toggle_show_labels, checkable=True, checked=self.do_show_labels
-        )
+        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(
             self.toggle_highlighted_spikes, checkable=True, checked=self.show_all_spikes
         )
-        self.actions.add(
-            self.toggle_auto_scale, checkable=True, checked=self.auto_scale
-        )
+        self.actions.add(self.toggle_auto_scale, checkable=True, checked=self.auto_scale)
         self.actions.add(self.switch_origin)
         self.actions.separator()
 
@@ -662,11 +654,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             # Find the spike and cluster closest to the mouse.
             db = self.data_bounds
             # Get the information about the displayed spikes.
-            wt = [
-                (t, s, c, ch)
-                for t, s, c, ch in self._waveform_times
-                if channel_id in ch
-            ]
+            wt = [(t, s, c, ch) for t, s, c, ch in self._waveform_times if channel_id in ch]
             if not wt:
                 return
             # Get the time coordinate of the mouse position.

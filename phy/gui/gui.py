@@ -534,30 +534,18 @@ class GUI(QMainWindow):
         # Mapping {name: menuBar}.
         self._menus = {}
         ds = self.default_shortcuts
-        self.file_actions = Actions(
-            self, name='File', menu='&File', default_shortcuts=ds
-        )
-        self.view_actions = Actions(
-            self, name='View', menu='&View', default_shortcuts=ds
-        )
-        self.help_actions = Actions(
-            self, name='Help', menu='&Help', default_shortcuts=ds
-        )
+        self.file_actions = Actions(self, name='File', menu='&File', default_shortcuts=ds)
+        self.view_actions = Actions(self, name='View', menu='&View', default_shortcuts=ds)
+        self.help_actions = Actions(self, name='Help', menu='&Help', default_shortcuts=ds)
 
         # Views,
         self._views = []
-        self._view_class_indices = defaultdict(
-            int
-        )  # Dictionary {view_name: next_usable_index}
+        self._view_class_indices = defaultdict(int)  # Dictionary {view_name: next_usable_index}
 
         # Create the GUI state.
         state_path = _gui_state_path(self.name, config_dir=config_dir)
-        default_state_path = kwargs.pop(
-            'default_state_path', _get_default_state_path(self)
-        )
-        self.state = GUIState(
-            state_path, default_state_path=default_state_path, **kwargs
-        )
+        default_state_path = kwargs.pop('default_state_path', _get_default_state_path(self))
+        self.state = GUIState(state_path, default_state_path=default_state_path, **kwargs)
 
         # View creator: dictionary {view_class: function_that_adds_view}
         self.default_views = default_views or ()
@@ -760,16 +748,10 @@ class GUI(QMainWindow):
         """Create and add as many views as specified in view_count."""
         self.view_actions.separator()
         # Keep the order of self.default_views.
-        view_names = [
-            vn for vn in self.default_views if vn in self._requested_view_count
-        ]
+        view_names = [vn for vn in self.default_views if vn in self._requested_view_count]
         # We add the views in the requested view count, but not in the default views.
         view_names.extend(
-            [
-                vn
-                for vn in self._requested_view_count.keys()
-                if vn not in self.default_views
-            ]
+            [vn for vn in self._requested_view_count.keys() if vn not in self.default_views]
         )
         # Remove duplicates in view names.
         view_names = _remove_duplicates(view_names)
@@ -782,9 +764,7 @@ class GUI(QMainWindow):
             for i in range(n_views):
                 self.create_and_add_view(view_name)
 
-    def add_view(
-        self, view, position=None, closable=True, floatable=True, floating=None
-    ):
+    def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
         """Add a dock widget to the main window.
 
         Parameters
@@ -839,9 +819,7 @@ class GUI(QMainWindow):
             if not insert_before:
                 self.menuBar().addMenu(menu)
             else:
-                self.menuBar().insertMenu(
-                    self.get_menu(insert_before).menuAction(), menu
-                )
+                self.menuBar().insertMenu(self.get_menu(insert_before).menuAction(), menu)
             self._menus[name] = menu
         return self._menus[name]
 

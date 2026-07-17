@@ -6,9 +6,9 @@
 
 from pytest import fixture
 
-from . import show_and_wait
 from ..actions import Actions, Snippets
 from ..gui import GUI
+from . import show_and_wait
 
 # ------------------------------------------------------------------------------
 # Utilities and fixtures

@@ -95,6 +95,7 @@ from PyQt5.QtWidgets import (  # noqa
 
 
 if os.environ.get('QT_QPA_PLATFORM') == 'offscreen':
+
     class QOpenGLWindow(QWidget):
         """Use a lightweight QWidget-backed compatibility surface in headless mode.
 
@@ -619,9 +620,7 @@ class Debouncer:
     def __init__(self, delay=None):
         self.delay = delay or self.delay  # minimum delay between job executions, in ms.
         self._last_submission_time = 0
-        self.is_waiting = (
-            False  # whether we're already waiting for the end of the interactions
-        )
+        self.is_waiting = False  # whether we're already waiting for the end of the interactions
         self.pending_functions = {}  # assign keys to pending functions.
         self._timer = QTimer()
         self._timer.timeout.connect(self._timer_callback)

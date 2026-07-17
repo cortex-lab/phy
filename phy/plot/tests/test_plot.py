@@ -12,10 +12,10 @@ from pytest import fixture
 
 from phy.gui import GUI
 
-from . import show_and_wait
 from ..plot import PlotCanvas, PlotCanvasMpl
 from ..utils import get_linear_x
 from ..visuals import PlotVisual, TextVisual
+from . import show_and_wait
 
 # ------------------------------------------------------------------------------
 # Fixtures

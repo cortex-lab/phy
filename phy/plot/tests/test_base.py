@@ -191,10 +191,12 @@ def test_canvas_lazy(qtbot, canvas):
     assert len(list(canvas.iter_update_queue())) == 2
 
 
-@mark.skip(reason='Visual benchmark is disabled: it is unstable and tracks a known gloo memory leak.')
+@mark.skip(
+    reason='Visual benchmark is disabled: it is unstable and tracks a known gloo memory leak.'
+)
 def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
     if sys.version_info >= (3, 13):
-        skip("memory_profiler still uses fork() here on Python 3.13")
+        skip('memory_profiler still uses fork() here on Python 3.13')
     try:
         from memory_profiler import memory_usage
     except ImportError:  # pragma: no cover

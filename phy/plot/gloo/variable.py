@@ -374,9 +374,7 @@ class Attribute(Variable):
             stride = self.data.stride
             offset = ctypes.c_void_p(self.data.offset)
             gl.glEnableVertexAttribArray(self.handle)
-            gl.glVertexAttribPointer(
-                self.handle, size, gtype, gl.GL_FALSE, stride, offset
-            )
+            gl.glVertexAttribPointer(self.handle, size, gtype, gl.GL_FALSE, stride, offset)
 
     def _deactivate(self):
         if isinstance(self.data, VertexBuffer):
@@ -428,9 +426,7 @@ class Attribute(Variable):
             offset = ctypes.c_void_p(self.data.offset)
             gl.glEnableVertexAttribArray(self.handle)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.data.handle)
-            gl.glVertexAttribPointer(
-                self.handle, size, gtype, gl.GL_FALSE, stride, offset
-            )
+            gl.glVertexAttribPointer(self.handle, size, gtype, gl.GL_FALSE, stride, offset)
 
     def _create(self):
         """Create attribute on GPU (get handle)"""

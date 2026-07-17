@@ -48,9 +48,7 @@ class Program(GLObject):
     """
 
     # ---------------------------------
-    def __init__(
-        self, vertex=None, fragment=None, geometry=None, count=0, version='120'
-    ):
+    def __init__(self, vertex=None, fragment=None, geometry=None, count=0, version='120'):
         """
         Initialize the program and optionally buffer.
         """
@@ -101,9 +99,7 @@ class Program(GLObject):
         # Build associated structured vertex buffer if count is given
         if self._count > 0:
             dtype = []
-            for attribute in sorted(
-                self._attributes.values(), filter=attrgetter('name')
-            ):
+            for attribute in sorted(self._attributes.values(), filter=attrgetter('name')):
                 dtype.append(attribute.dtype)
             self._buffer = np.zeros(self._count, dtype=dtype).view(VertexBuffer)
             self.bind(self._buffer)
@@ -345,9 +341,7 @@ class Program(GLObject):
         elif name in self._attributes.keys():
             self._attributes[name].set_data(data)
         else:
-            raise IndexError(
-                f'Unknown item {name} (no corresponding hook, uniform or attribute)'
-            )
+            raise IndexError(f'Unknown item {name} (no corresponding hook, uniform or attribute)')
 
     def __getitem__(self, name):
         if name in self._vert_hooks.keys():
@@ -361,9 +355,7 @@ class Program(GLObject):
         elif name in self._attributes.keys():
             return self._attributes[name].data
         else:
-            raise IndexError(
-                'Unknown item (no corresponding hook, uniform or attribute)'
-            )
+            raise IndexError('Unknown item (no corresponding hook, uniform or attribute)')
 
     def __contains__(self, name):
         try:
