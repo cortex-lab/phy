@@ -1,50 +1,66 @@
-# -*- coding: utf-8 -*-
-
 """Testing the Template GUI."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
-from pathlib import Path
 import re
 import unittest
+from pathlib import Path
 
 import numpy as np
-
-from phylib.io.model import load_model, get_template_params
+from phylib.io.model import get_template_params, load_model
 from phylib.io.tests.conftest import _make_dataset
 from phylib.utils.testing import captured_output
 
-from phy.apps.tests.test_base import MinimalControllerTests, BaseControllerTests, GlobalViewsTests
-from ..gui import (
-    template_describe, TemplateController, TemplateFeatureView)
+from phy.apps.tests.test_base import BaseControllerTests, GlobalViewsTests, MinimalControllerTests
+
+from ..gui import TemplateController, TemplateFeatureView, template_describe
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Tests
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _template_controller(tempdir, dir_path, **kwargs):
     kwargs.update(get_template_params(dir_path / 'params.py'))
     return TemplateController(
-        config_dir=tempdir / 'config', plugin_dirs=[plugins_dir()],
+        config_dir=tempdir / 'config',
+        plugin_dirs=[plugins_dir()],
         clear_cache=kwargs.pop('clear_cache', True),
-        clear_state=True, enable_threading=False, **kwargs)
+        clear_state=True,
+        enable_threading=False,
+        **kwargs,
+    )
 
 
 def test_template_describe(qtbot, tempdir):
     model = load_model(_make_dataset(tempdir, param='dense', has_spike_attributes=False))
-    with captured_output() as (stdout, stderr):
-        template_describe(model.dir_path / 'params.py')
+    try:
+        with captured_output() as (stdout, stderr):
+            template_describe(model.dir_path / 'params.py')
+    finally:
+        model.close()
     assert '314' in stdout.getvalue()
+
+
+def test_template_controller_close(tempdir):
+    dataset = _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+    controller = _template_controller(tempdir, dataset.parent)
+    mmaps = list(controller.model.traces._mmaps)
+
+    controller.close()
+
+    assert all(arr._mmap.closed for arr in mmaps)
 
 
 class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
     """Base template controller tests."""
+
     @classmethod
     def _create_dataset(cls, tempdir):  # pragma: no cover
         """To be overridden in child classes."""
@@ -78,7 +94,8 @@ class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
     def test_spike_attribute_views(self):
         """Open all available spike attribute views."""
         view_names = [
-            name for name in self.controller.view_creator.keys() if name.startswith('Spike')]
+            name for name in self.controller.view_creator.keys() if name.startswith('Spike')
+        ]
         for name in view_names:
             self.gui.create_and_add_view(name)
             self.qtbot.wait(250)
@@ -107,11 +124,12 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
 
         # Close the GUI.
         self.__class__._close_gui()
+        self.__class__._controller.close()
 
-        # Recreate the controller on the model.
+        # Recreate the controller from the saved dataset.
         self.__class__._controller = _template_controller(
-            self.__class__._tempdir, self.__class__._dataset.parent,
-            clear_cache=False)
+            self.__class__._tempdir, self.__class__._dataset.parent, clear_cache=False
+        )
         self.__class__._create_gui()
 
         # Check that the data has been saved.
@@ -164,9 +182,10 @@ class TemplateControllerMiscTests(TemplateControllerTests, unittest.TestCase):
         return
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test plugins
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def plugins_dir():
     """Path to the directory with the builtin plugins."""
@@ -190,7 +209,6 @@ def _make_plugin_test_case(plugin_name):
     """Generate a special test class with a plugin attached to the controller."""
 
     class TemplateControllerPluginTests(MinimalControllerTests, unittest.TestCase):
-
         @classmethod
         def _create_dataset(cls, tempdir):
             return _make_dataset(tempdir, param='dense', has_spike_attributes=False)
@@ -216,4 +234,4 @@ def _make_plugin_test_case(plugin_name):
 
 # Dynamically define test classes for each builtin plugin.
 for plugin_name in plugin_names():
-    globals()['TemplateController%sTests' % plugin_name] = _make_plugin_test_case(plugin_name)
+    globals()[f'TemplateController{plugin_name}Tests'] = _make_plugin_test_case(plugin_name)

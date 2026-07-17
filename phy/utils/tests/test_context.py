@@ -1,28 +1,26 @@
-# -*- coding: utf-8 -*-
-
 """Test context."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from pickle import dump, load
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from phylib.io.array import read_array, write_array
 from pytest import fixture
 
-from phylib.io.array import write_array, read_array
 from ..context import Context, _fullname
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture(scope='function')
 def context(tempdir):
-    ctx = Context('{}/cache/'.format(tempdir), verbose=1)
+    ctx = Context(f'{tempdir}/cache/', verbose=1)
     return ctx
 
 
@@ -30,15 +28,17 @@ def context(tempdir):
 def temp_phy_config_dir(tempdir):
     """Use a temporary phy user directory."""
     import phy.utils.context
+
     f = phy.utils.context.phy_config_dir
     phy.utils.context.phy_config_dir = lambda: tempdir
     yield
     phy.utils.context.phy_config_dir = f
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test utils and cache
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_read_write(tempdir):
     x = np.arange(10)
@@ -63,12 +63,11 @@ def test_context_load_save_pickle(tempdir, context, temp_phy_config_dir):
 
 
 def test_context_cache(context):
-
     _res = []
 
     def f(x):
         _res.append(x)
-        return x ** 2
+        return x**2
 
     x = np.arange(5)
     x2 = x * x
@@ -88,7 +87,7 @@ def test_context_cache(context):
 
 
 def test_context_cache_method(tempdir, context):
-    class A(object):
+    class A:
         def __init__(self, ctx):
             self.f = ctx.cache(self.f)
             self._l = []
@@ -109,7 +108,7 @@ def test_context_cache_method(tempdir, context):
     assert a._l == [3]
 
     # Recreate the context.
-    context = Context('{}/cache/'.format(tempdir), verbose=1)
+    context = Context(f'{tempdir}/cache/', verbose=1)
     # Recreate the class.
     a = A(context)
     assert a.f(3) == 3
@@ -118,21 +117,20 @@ def test_context_cache_method(tempdir, context):
 
 
 def test_context_memcache(tempdir, context):
-
     _res = []
 
     @context.memcache
     def f(x):
         _res.append(x)
-        return x ** 2
+        return x**2
 
     # Compute the function a first time.
     x = 10
-    ae(f(x), x ** 2)
+    ae(f(x), x**2)
     assert len(_res) == 1
 
     # The second time, the memory cache is used.
-    ae(f(x), x ** 2)
+    ae(f(x), x**2)
     assert len(_res) == 1
 
     # We artificially clear the memory cache.
@@ -141,7 +139,7 @@ def test_context_memcache(tempdir, context):
     context.load_memcache(_fullname(f))
 
     # This time, the result is loaded from disk.
-    ae(f(x), x ** 2)
+    ae(f(x), x**2)
     assert len(_res) == 1
 
 

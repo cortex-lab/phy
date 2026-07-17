@@ -15,4 +15,4 @@ class ExampleHelloPlugin(IPlugin):
             def on_cluster(sender, up):
                 """This is called every time a cluster assignment or cluster group/label
                 changes."""
-                print("Clusters update: %s" % up)
+                print(f'Clusters update: {up}')

@@ -1,25 +1,24 @@
-# -*- coding: utf-8 -*-
-
 """Clustering utility functions."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+import logging
+from copy import deepcopy
 
 import numpy as np
-
-from copy import deepcopy
-import logging
+from phylib.utils import Bunch, _as_list, _is_list, emit, silent
 
 from ._history import History
-from phylib.utils import Bunch, _as_list, _is_list, emit, silent
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utility functions
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _update_cluster_selection(clusters, up):
     clusters = list(clusters)
@@ -30,7 +29,7 @@ def _update_cluster_selection(clusters, up):
 
 
 def _join(clusters):
-    return '[{}]'.format(', '.join(map(str, clusters)))
+    return f'[{", ".join(map(str, clusters))}]'
 
 
 def create_cluster_meta(cluster_groups):
@@ -45,9 +44,10 @@ def create_cluster_meta(cluster_groups):
     return meta
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # UpdateInfo class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class UpdateInfo(Bunch):
     """Object created every time the dataset is modified via a clustering or cluster metadata
@@ -79,47 +79,48 @@ class UpdateInfo(Bunch):
         when redoing the undone action.
 
     """
+
     def __init__(self, **kwargs):
-        d = dict(
-            description='',
-            history=None,
-            spike_ids=[],
-            added=[],
-            deleted=[],
-            descendants=[],
-            metadata_changed=[],
-            metadata_value=None,
-            undo_state=None,
-        )
+        d = {
+            'description': '',
+            'history': None,
+            'spike_ids': [],
+            'added': [],
+            'deleted': [],
+            'descendants': [],
+            'metadata_changed': [],
+            'metadata_value': None,
+            'undo_state': None,
+        }
         d.update(kwargs)
-        super(UpdateInfo, self).__init__(d)
+        super().__init__(d)
         # NOTE: we have to ensure we only use native types and not NumPy arrays so that
         # the history stack works correctly.
         assert all(not isinstance(v, np.ndarray) for v in self.values())
 
     def __repr__(self):
         desc = self.description
-        h = ' ({})'.format(self.history) if self.history else ''
+        h = f' ({self.history})' if self.history else ''
         if not desc:
             return '<UpdateInfo>'
         elif desc in ('merge', 'assign'):
             a, d = _join(self.added), _join(self.deleted)
-            return '<{desc}{h} {d} => {a}>'.format(
-                desc=desc, a=a, d=d, h=h)
+            return f'<{desc}{h} {d} => {a}>'
         elif desc.startswith('metadata'):
             c = _join(self.metadata_changed)
             m = self.metadata_value
-            return '<{desc}{h} {c} => {m}>'.format(
-                desc=desc, c=c, m=m, h=h)
+            return f'<{desc}{h} {c} => {m}>'
         return '<UpdateInfo>'
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # ClusterMetadataUpdater class
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class ClusterMeta(object):
+
+class ClusterMeta:
     """Handle cluster metadata changes."""
+
     def __init__(self):
         self._fields = {}
         self._reset_data()
@@ -147,7 +148,7 @@ class ClusterMeta(object):
 
     def from_dict(self, dic):
         """Import data from a `{cluster_id: {field: value}}` dictionary."""
-        #self._reset_data()
+        # self._reset_data()
         # Do not raise events here.
         with silent():
             for cluster, vals in dic.items():
@@ -192,10 +193,11 @@ class ClusterMeta(object):
                 self._data[cluster] = {}
             self._data[cluster][field] = value
 
-        up = UpdateInfo(description='metadata_' + field,
-                        metadata_changed=clusters,
-                        metadata_value=value,
-                        )
+        up = UpdateInfo(
+            description=f'metadata_{field}',
+            metadata_changed=clusters,
+            metadata_value=value,
+        )
         undo_state = emit('request_undo_state', self, up)
 
         if add_to_stack:
@@ -229,7 +231,7 @@ class ClusterMeta(object):
             # This maps old cluster ids to their values.
             old_values = {old: self.get(field, old) for old, _ in descendants}
             # This is the set of new clusters.
-            new_clusters = set(new for _, new in descendants)
+            new_clusters = {new for _, new in descendants}
             # This is the set of old non-default values.
             old_values_set = set(old_values.values())
             if default in old_values_set:
@@ -305,8 +307,10 @@ class ClusterMeta(object):
 # Property cycle
 # -----------------------------------------------------------------------------
 
-class RotatingProperty(object):
+
+class RotatingProperty:
     """A key-value property of a view that can switch between several predefined values."""
+
     def __init__(self):
         self._choices = {}
         self._current = None

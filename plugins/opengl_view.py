@@ -2,11 +2,10 @@
 
 import numpy as np
 
-from phy.utils.color import selected_cluster_color
-
 from phy import IPlugin
 from phy.cluster.views import ManualClusteringView
 from phy.plot.visuals import PlotVisual
+from phy.utils.color import selected_cluster_color
 
 
 class MyOpenGLView(ManualClusteringView):
@@ -19,7 +18,7 @@ class MyOpenGLView(ManualClusteringView):
         the data as NumPy arrays. Many such functions are defined in the TemplateController.
         """
 
-        super(MyOpenGLView, self).__init__()
+        super().__init__()
 
         """
         The View instance contains a special `canvas` object which is a `̀PlotCanvas` instance.
@@ -149,7 +148,7 @@ class MyOpenGLView(ManualClusteringView):
             We decide to use, on the x axis, values ranging from -1 to 1. This is the
             standard viewport in OpenGL and phy.
             """
-            x = np.linspace(-1., 1., len(y))
+            x = np.linspace(-1.0, 1.0, len(y))
 
             """
             phy requires you to specify explicitly the x and y range of the plots.
@@ -181,7 +180,8 @@ class MyOpenGLView(ManualClusteringView):
             top to bottom. Note that in the grid view, the box index is a pair (row, col).
             """
             self.visual.add_batch_data(
-                x=x, y=y, color=color, data_bounds=data_bounds, box_index=idx)
+                x=x, y=y, color=color, data_bounds=data_bounds, box_index=idx
+            )
 
         """
         After the loop, this special call automatically builds the data to upload to the GPU

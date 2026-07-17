@@ -1,30 +1,27 @@
-# -*- coding: utf-8 -*-
-
 """Test scatter view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
+from phylib.utils import Bunch
 from pytest import raises
 
-from phylib.utils import Bunch
 from phy.plot.tests import mouse_click
+
 from ..scatter import ScatterView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test scatter view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_scatter_view_0(qtbot, gui):
-    v = ScatterView(
-        coords=lambda cluster_ids, load_all=False: None
-    )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    v = ScatterView(coords=lambda cluster_ids, load_all=False: None)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[0])
 
@@ -42,10 +39,11 @@ def test_scatter_view_1(qtbot, gui):
     x = np.zeros(1)
     v = ScatterView(
         coords=lambda cluster_ids: Bunch(
-            x=x, y=x, spike_ids=[0], spike_clusters=[0], data_bounds=(0, 0, 0, 0))
+            x=x, y=x, spike_ids=[0], spike_clusters=[0], data_bounds=(0, 0, 0, 0)
+        )
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[0])
     _stop_and_close(qtbot, v)
@@ -54,15 +52,18 @@ def test_scatter_view_1(qtbot, gui):
 def test_scatter_view_2(qtbot, gui):
     n = 1000
     v = ScatterView(
-        coords=lambda cluster_ids, load_all=False: [Bunch(
-            x=np.random.randn(n),
-            y=np.random.randn(n),
-            spike_ids=np.arange(n),
-            data_bounds=None,
-        ) for c in cluster_ids]
+        coords=lambda cluster_ids, load_all=False: [
+            Bunch(
+                x=np.random.randn(n),
+                y=np.random.randn(n),
+                spike_ids=np.arange(n),
+                data_bounds=None,
+            )
+            for c in cluster_ids
+        ]
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[])
@@ -99,8 +100,8 @@ def test_scatter_view_3(qtbot, gui):
             data_bounds=None,
         )
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
 
     v.on_select(cluster_ids=[0, 2])

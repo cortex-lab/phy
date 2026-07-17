@@ -4,7 +4,7 @@
 * [ExampleClusterMetadataPlugin](cluster_metadata.py): Show how to save the best channel of every cluster in a cluster_channel.tsv file when saving.
 * [ExampleClusterMetricsPlugin](cluster_metrics.py): Show how to add a custom cluster metrics.
 * [ExampleClusterStatsPlugin](cluster_stats.py): Show how to add a custom cluster histogram view showing cluster statistics.
-* [ExampleClusterViewStylingPlugin](cluster_view_styling.py): Show how to customize the styling of the cluster view with CSS.
+* [ExampleClusterViewStylingPlugin](cluster_view_styling.py): Show how to customize the styling of the cluster view with Qt stylesheet fragments.
 * [ExampleColorSchemePlugin](color_scheme.py): Show how to add a custom color scheme to a view.
 * [ExampleCustomButtonPlugin](custom_button.py): Show how to add custom buttons in a view's title bar.
 * [ExampleCustomColumnsPlugin](custom_columns.py): Show how to customize the columns in the cluster and similarity views.

@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
 """Minimal API documentation generation."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-from importlib import import_module
 import inspect
 import os.path as op
 import re
+from importlib import import_module
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utility functions
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _name(obj):
     if hasattr(obj, '__name__'):
@@ -23,7 +22,7 @@ def _name(obj):
 
 
 def _full_name(subpackage, obj):
-    return '{}.{}'.format(subpackage.__name__, _name(obj))
+    return f'{subpackage.__name__}.{_name(obj)}'
 
 
 def _anchor(name):
@@ -56,9 +55,10 @@ def _doc(obj):
         return doc
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Introspection methods
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _is_public(obj):
     name = _name(obj) if not isinstance(obj, str) else obj
@@ -88,7 +88,7 @@ def _iter_doc_members(obj, package=None):
 def _iter_subpackages(package, subpackages):
     """Iterate through a list of subpackages."""
     for subpackage in subpackages:
-        yield import_module('{}.{}'.format(package, subpackage))
+        yield import_module(f'{package}.{subpackage}')
 
 
 def _iter_vars(mod):
@@ -120,14 +120,15 @@ def _iter_properties(klass, package=None):
             yield member.fget
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # API doc generation
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _function_header(subpackage, func):
     """Generate the docstring of a function."""
     args = str(inspect.signature(func))
-    return "{name}{args}".format(name=_full_name(subpackage, func), args=args)
+    return f'{_full_name(subpackage, func)}{args}'
 
 
 _FUNCTION_PATTERN = '%s\n\n\n**`%s`**\n\n%s\n\n---'
@@ -141,51 +142,48 @@ def _doc_function(subpackage, func):
 def _doc_method(klass, func):
     """Generate the docstring of a method."""
     args = str(inspect.signature(func))
-    title = "{klass}.{name}".format(klass=klass.__name__, name=_name(func))
-    header = "{klass}.{name}{args}".format(klass=klass.__name__, name=_name(func), args=args)
+    title = f'{klass.__name__}.{_name(func)}'
+    header = f'{klass.__name__}.{_name(func)}{args}'
     docstring = _doc(func)
     return _FUNCTION_PATTERN % (title, header, docstring)
 
 
 def _doc_property(klass, prop):
     """Generate the docstring of a property."""
-    header = "{klass}.{name}".format(klass=klass.__name__, name=_name(prop))
+    header = f'{klass.__name__}.{_name(prop)}'
     docstring = _doc(prop)
     return _FUNCTION_PATTERN % (header, header, docstring)
 
 
 def _link(name, anchor=None):
-    return "[{name}](#{anchor})".format(name=name, anchor=anchor or _anchor(name))
+    return f'[{name}](#{anchor or _anchor(name)})'
 
 
 def _generate_preamble(package, subpackages):
-
-    yield "# API documentation of {}".format(package)
+    yield f'# API documentation of {package}'
 
     yield _doc(import_module(package))
 
-    yield "## Table of contents"
+    yield '## Table of contents'
 
     # Table of contents: list of modules.
     for subpackage in _iter_subpackages(package, subpackages):
         subpackage_name = subpackage.__name__
 
-        yield "### " + _link(subpackage_name)
+        yield f'### {_link(subpackage_name)}'
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield '* ' + _link(
-                _full_name(subpackage, func), _anchor(_full_name(subpackage, func)))
+            yield f'* {_link(_full_name(subpackage, func), _anchor(_full_name(subpackage, func)))}'
 
         # All public classes.
         for klass in _iter_classes(subpackage):
-
             # Class documentation.
-            yield "* " + _link(_full_name(subpackage, klass))
+            yield f'* {_link(_full_name(subpackage, klass))}'
 
-        yield ""
+        yield ''
 
-    yield ""
+    yield ''
 
 
 def _generate_paragraphs(package, subpackages):
@@ -195,36 +193,35 @@ def _generate_paragraphs(package, subpackages):
     for subpackage in _iter_subpackages(package, subpackages):
         subpackage_name = subpackage.__name__
 
-        yield "## {}".format(subpackage_name)
+        yield f'## {subpackage_name}'
 
         # Subpackage documentation.
         yield _doc(import_module(subpackage_name))
 
-        yield "---"
+        yield '---'
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield '#### ' + _doc_function(subpackage, func)
+            yield f'#### {_doc_function(subpackage, func)}'
 
         # All public classes.
         for klass in _iter_classes(subpackage):
-
             # Class documentation.
-            yield "### {}".format(_full_name(subpackage, klass))
+            yield f'### {_full_name(subpackage, klass)}'
             yield _doc(klass)
 
-            yield "---"
+            yield '---'
 
             for method in _iter_methods(klass, package):
-                yield '#### ' + _doc_method(klass, method)
+                yield f'#### {_doc_method(klass, method)}'
 
             for prop in _iter_properties(klass, package):
-                yield '#### ' + _doc_property(klass, prop)
+                yield f'#### {_doc_property(klass, prop)}'
 
 
 def _print_paragraph(paragraph):
     out = ''
-    out += paragraph + '\n'
+    out += f'{paragraph}\n'
     if not paragraph.startswith('* '):
         out += '\n'
     return out
@@ -244,7 +241,6 @@ def generate_api_doc(package, subpackages, path=None):
 
 
 if __name__ == '__main__':
-
     package = 'phy'
     subpackages = ['utils', 'gui', 'plot', 'cluster', 'apps', 'apps.template', 'apps.kwik']
 

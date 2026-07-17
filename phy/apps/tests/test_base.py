@@ -1,45 +1,51 @@
-# -*- coding: utf-8 -*-
-
 """Integration tests for the GUIs."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-from itertools import cycle, islice
 import logging
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from itertools import cycle, islice
+from pathlib import Path
 
 import numpy as np
+from phylib.io.mock import (
+    artificial_features,
+    artificial_spike_clusters,
+    artificial_spike_samples,
+    artificial_traces,
+    artificial_waveforms,
+)
+from phylib.utils import Bunch, connect, emit, reset, unconnect
+from pytest import mark
 from pytestqt.plugin import QtBot
 
-from phylib.io.mock import (
-    artificial_features, artificial_traces, artificial_spike_clusters, artificial_spike_samples,
-    artificial_waveforms
-)
-
-from phylib.utils import connect, unconnect, Bunch, reset, emit
-
 from phy.cluster.views import (
-    WaveformView, FeatureView, AmplitudeView, TraceView, TemplateView,
+    AmplitudeView,
+    FeatureView,
+    TemplateView,
+    TraceView,
+    WaveformView,
 )
 from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
-from ..base import BaseController, WaveformMixin, FeatureMixin, TraceMixin, TemplateMixin
+
+from ..base import BaseController, FeatureMixin, TemplateMixin, TraceMixin, WaveformMixin
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Mock models and controller classes
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class MyModel(object):
+
+class MyModel:
     seed = np.random.seed(0)
     n_channels = 8
     n_spikes = 20000
@@ -54,7 +60,7 @@ class MyModel(object):
     metadata = {'group': {3: 'noise', 4: 'mua', 5: 'good'}}
     sample_rate = 10000
     spike_attributes = {}
-    amplitudes = np.random.normal(size=n_spikes, loc=1, scale=.1)
+    amplitudes = np.random.normal(size=n_spikes, loc=1, scale=0.1)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_templates = spike_clusters
     spike_samples = artificial_spike_samples(n_spikes)
@@ -63,6 +69,9 @@ class MyModel(object):
     duration = spike_times[-1]
     spike_waveforms = None
     traces = artificial_traces(int(sample_rate * duration), n_channels)
+
+    def __init__(self):
+        self.closed = False
 
     def _get_some_channels(self, offset, size):
         return list(islice(cycle(range(self.n_channels)), offset, offset + size))
@@ -78,13 +87,17 @@ class MyModel(object):
         nc = self.n_channels // 2
         return Bunch(
             template=artificial_waveforms(1, self.n_samples_waveforms, nc)[0, ...],
-            channel_ids=self._get_some_channels(template_id, nc))
+            channel_ids=self._get_some_channels(template_id, nc),
+        )
 
     def save_spike_clusters(self, spike_clusters):
         pass
 
     def save_metadata(self, name, values):
         pass
+
+    def close(self):
+        self.closed = True
 
 
 class MyController(BaseController):
@@ -99,51 +112,66 @@ class MyController(BaseController):
 
 class MyControllerW(WaveformMixin, MyController):
     """With waveform view."""
-    pass
 
 
 class MyControllerF(FeatureMixin, MyController):
     """With feature view."""
-    pass
 
 
 class MyControllerT(TraceMixin, MyController):
     """With trace view."""
-    pass
 
 
 class MyControllerTmp(TemplateMixin, MyController):
     """With templates."""
-    pass
 
 
 class MyControllerFull(TemplateMixin, WaveformMixin, FeatureMixin, TraceMixin, MyController):
     """With everything."""
-    pass
 
 
 def _mock_controller(tempdir, cls):
     model = MyModel()
     return cls(
-        dir_path=tempdir, config_dir=tempdir / 'config', model=model,
-        clear_cache=True, enable_threading=False)
+        dir_path=tempdir,
+        config_dir=tempdir / 'config',
+        model=model,
+        clear_cache=True,
+        enable_threading=False,
+    )
 
 
-#------------------------------------------------------------------------------
+def test_controller_close(tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    model = controller.model
+    handlers = list(controller._log_handlers)
+
+    assert handlers
+    assert all(handler in logging.getLogger('phy').handlers for handler in handlers)
+
+    controller.close()
+    controller.close()  # Cleanup is idempotent.
+
+    assert model.closed
+    assert all(handler not in logging.getLogger('phy').handlers for handler in handlers)
+    assert all(handler.stream is None for handler in handlers)
+
+
+# ------------------------------------------------------------------------------
 # Base classes
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class MinimalControllerTests(object):
 
+class MinimalControllerTests:
     # Methods to override
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @classmethod
     def get_controller(cls, tempdir):
         raise NotImplementedError()
 
     # Convenient properties
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @property
     def qtbot(self):
@@ -186,7 +214,7 @@ class MinimalControllerTests(object):
         return self.gui.list_views(AmplitudeView)[0]
 
     # Convenience methods
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def stop(self):  # pragma: no cover
         """Used for debugging."""
@@ -230,10 +258,10 @@ class MinimalControllerTests(object):
 
     def move(self, w):
         s = self.supervisor
-        getattr(s.actions, 'move_%s' % w)()
+        getattr(s.actions, f'move_{w}')()
         s.block()
 
-    def lasso(self, view, scale=1.):
+    def lasso(self, view, scale=1.0):
         w, h = view.canvas.get_size()
         w *= scale
         h *= scale
@@ -243,7 +271,7 @@ class MinimalControllerTests(object):
         mouse_click(self.qtbot, view.canvas, (1, h - 1), modifiers=('Control',))
 
     # Fixtures
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     @classmethod
     def setUpClass(cls):
@@ -259,6 +287,7 @@ class MinimalControllerTests(object):
         if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
             cls._qtbot.stop()
         cls._close_gui()
+        cls._controller.close()
         shutil.rmtree(cls._tempdir_)
 
     @classmethod
@@ -268,15 +297,16 @@ class MinimalControllerTests(object):
         b = Barrier()
         connect(b('cluster_view'), event='ready', sender=s.cluster_view)
         connect(b('similarity_view'), event='ready', sender=s.similarity_view)
-        cls._gui.show()
+        with cls._qtbot.waitExposed(cls._gui):
+            cls._gui.show()
         # cls._qtbot.addWidget(cls._gui)
-        cls._qtbot.waitForWindowShown(cls._gui)
         b.wait()
 
     @classmethod
     def _close_gui(cls):
         cls._gui.close()
         cls._gui.deleteLater()
+        cls._qtbot.wait(100)
 
         # NOTE: make sure all callback functions are unconnected at the end of the tests
         # to avoid side-effects and spurious dependencies between tests.
@@ -284,12 +314,13 @@ class MinimalControllerTests(object):
 
 
 class BaseControllerTests(MinimalControllerTests):
-
     # Common test methods
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def test_common_01(self):
         """Select one cluster."""
+        self.supervisor.select_actions.reset_wizard()
+        self.supervisor.block()
         self.next_best()
         self.assertEqual(len(self.selected), 1)
 
@@ -355,7 +386,7 @@ class BaseControllerTests(MinimalControllerTests):
         self.gui.view_actions.switch_raw_data_filter()
 
 
-class GlobalViewsTests(object):
+class GlobalViewsTests:
     def test_global_filter_1(self):
         self.next()
         cv = self.supervisor.cluster_view
@@ -366,9 +397,10 @@ class GlobalViewsTests(object):
         emit('table_sort', cv, self.cluster_ids[::-1])
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Mock test cases
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.TestCase):
     """Empty mock controller."""
@@ -377,8 +409,14 @@ class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.Tes
     def get_controller(cls, tempdir):
         return _mock_controller(tempdir, MyController)
 
+    @mark.filterwarnings(
+        'ignore:Parsing dates involving a day of month without a year specified is ambiguious:DeprecationWarning'
+    )
     def test_create_ipython_view(self):
-        self.gui.create_and_add_view('IPythonView')
+        view = self.gui.create_and_add_view('IPythonView')
+        view.stop()
+        view.dock.close()
+        self.qtbot.wait(100)
 
     def test_create_raster_view(self):
         view = self.gui.create_and_add_view('RasterView')
@@ -431,7 +469,7 @@ class MockControllerFTests(MinimalControllerTests, unittest.TestCase):
     def test_feature_view_split(self):
         self.next()
         n = max(self.cluster_ids)
-        self.lasso(self.feature_view, .1)
+        self.lasso(self.feature_view, 0.1)
         self.split()
         # Split one cluster => Two new clusters should be selected after the split.
         self.assertEqual(self.selected[:2], [n + 1, n + 2])
@@ -501,6 +539,7 @@ class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
 
 class MockControllerFullTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with all views."""
+
     @classmethod
     def get_controller(cls, tempdir):
         return _mock_controller(tempdir, MyControllerFull)

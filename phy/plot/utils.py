@@ -1,25 +1,23 @@
-# -*- coding: utf-8 -*-
-
 """Plotting utilities."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 from pathlib import Path
 
 import numpy as np
-
 from phylib.utils import Bunch, _as_array
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Data validation
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _get_texture(arr, default, n_items, from_bounds):
     """Prepare data to be uploaded as a texture.
@@ -45,7 +43,7 @@ def _get_texture(arr, default, n_items, from_bounds):
     assert np.all(arr <= M)
     arr = (arr - m) / (M - m)
     assert np.all(arr >= 0)
-    assert np.all(arr <= 1.)
+    assert np.all(arr <= 1.0)
     return arr
 
 
@@ -55,9 +53,7 @@ def _get_array(val, shape, default=None, dtype=np.float64):
     if hasattr(val, '__len__') and len(val) == 0:  # pragma: no cover
         val = None
     # Do nothing if the array is already correct.
-    if (isinstance(val, np.ndarray) and
-            val.shape == shape and
-            val.dtype == dtype):
+    if isinstance(val, np.ndarray) and val.shape == shape and val.dtype == dtype:
         return val
     out = np.zeros(shape, dtype=dtype)
     # This solves `ValueError: could not broadcast input array from shape (n)
@@ -100,10 +96,10 @@ def get_linear_x(n_signals, n_samples):
     Return a `(n_signals, n_samples)` array.
 
     """
-    return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+    return np.tile(np.linspace(-1.0, 1.0, n_samples), (n_signals, 1))
 
 
-class BatchAccumulator(object):
+class BatchAccumulator:
     """Accumulate data arrays for batch visuals.
 
     This class is used to simplify the creation of batch visuals, where different visual elements
@@ -190,9 +186,10 @@ class BatchAccumulator(object):
         return Bunch({key: getattr(self, key) for key in self.items.keys()})
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Misc
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _load_shader(filename):
     """Load a shader file."""
@@ -235,6 +232,7 @@ def _tesselate_histogram(hist):
 def _in_polygon(points, polygon):
     """Return the points that are inside a polygon."""
     from matplotlib.path import Path
+
     points = _as_array(points)
     polygon = _as_array(polygon)
     assert points.ndim == 2

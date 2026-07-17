@@ -6,7 +6,7 @@ Here are a few tips if something goes wrong.
 
 Look at existing [GitHub issues](https://github.com/cortex-lab/phy/issues) to see if someone else had the same problem. If not, feel free to open a new issue by giving a descriptive title and a comprehensive description of the problem, including screenshots if needed.
 
-If you are testing `phy 2.1.0rc1`, please also include:
+If you are reporting a problem with `phy 2.1.0`, please also include:
 
 * operating system
 * Python version

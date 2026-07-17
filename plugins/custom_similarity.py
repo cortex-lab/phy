@@ -1,6 +1,7 @@
 """Show how to add a custom similarity measure."""
 
 from operator import itemgetter
+
 import numpy as np
 
 from phy import IPlugin
@@ -17,20 +18,20 @@ def _dot_product(mw1, c1, mw2, c2):
     assert mw2.ndim == 2  # (n_samples, n_channels_loc_2)
 
     # We normalize the waveforms.
-    mw1 /= np.sqrt(np.sum(mw1 ** 2))
-    mw2 /= np.sqrt(np.sum(mw2 ** 2))
+    mw1 /= np.sqrt(np.sum(mw1**2))
+    mw2 /= np.sqrt(np.sum(mw2**2))
 
     # We find the union of the channel ids for both clusters so that we can convert from sparse
     # to dense format.
-    channel_ids = np.union1d(c1, c2)
+    channel_ids = np.union1d(c1, c2).astype(np.int64, copy=False)
 
     # We directly return 0 if the channels of the two clusters are disjoint.
     if not len(np.intersect1d(c1, c2)):
         return 0
 
     # We tile the channels so as to use `from_sparse()`.
-    c1 = np.tile(c1, (mw1.shape[0], 1))
-    c2 = np.tile(c2, (mw2.shape[0], 1))
+    c1 = np.tile(np.asarray(c1, dtype=np.int64), (mw1.shape[0], 1))
+    c2 = np.tile(np.asarray(c2, dtype=np.int64), (mw2.shape[0], 1))
 
     # We convert from sparse to dense format in order to compute the distance.
     mw1 = from_sparse(mw1, c1, channel_ids)  # (n_samples, n_channel_locs_common)
@@ -42,7 +43,6 @@ def _dot_product(mw1, c1, mw2, c2):
 
 class ExampleSimilarityPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         # We cache this function in memory and on disk.
         @controller.context.memcache
         def mean_waveform_similarity(cluster_id):

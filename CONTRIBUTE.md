@@ -1,5 +1,7 @@
 ## Contribute
 
+Participation in phy is governed by the project [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ### Setup
 
 On your development computer:

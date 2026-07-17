@@ -352,15 +352,15 @@ class ExampleClusterStatsPlugin(IPlugin):
 
 ## Customizing the styling of the cluster view
 
-The cluster view is written in HTML/CSS/Javascript. The styling can be customized in a plugin as follows.
+The cluster view is a native Qt table. The styling can be customized in a plugin as follows.
 
-In this example, we change the text color of "good" clusters in the cluster view.
+In this example, we change the header styling of the cluster view.
 
 ![image](https://user-images.githubusercontent.com/1942359/59463245-dd585a80-8e25-11e9-9fe3-56aa4c3733c7.png)
 
 ```python
 # import from plugins/cluster_view_styling.py
-"""Show how to customize the styling of the cluster view with CSS."""
+"""Show how to customize the styling of the cluster view with Qt stylesheet fragments."""
 
 from phy import IPlugin
 from phy.cluster.supervisor import ClusterView
@@ -368,17 +368,12 @@ from phy.cluster.supervisor import ClusterView
 
 class ExampleClusterViewStylingPlugin(IPlugin):
     def attach_to_controller(self, controller):
-        # We add a custom CSS style to the ClusterView.
+        # We add a custom stylesheet fragment to the ClusterView.
         ClusterView._styles += """
-
-            /* This CSS selector represents all rows for good clusters. */
-            table tr[data-group='good'] {
-
-                /* We change the text color. Many other CSS attributes can be changed,
-                such as background-color, the font weight, etc. */
-                color: red;
+            QHeaderView::section {
+                color: #f5c542;
+                font-weight: bold;
             }
-
         """
 
 ```
@@ -432,12 +427,12 @@ class ExampleActionPlugin(IPlugin):
                 submenu='My submenu', shortcut='ctrl+c', prompt=True, prompt_default=lambda: 10)
             def select_n_first_clusters(n_clusters):
 
-                # All cluster view methods are called with a callback function because of the
-                # asynchronous nature of Python-Javascript interactions in Qt5.
+                # All cluster view methods are called with a callback function because the
+                # table API is asynchronous.
                 @controller.supervisor.cluster_view.get_ids
                 def get_cluster_ids(cluster_ids):
                     """This function is called when the ordered list of cluster ids is returned
-                    by the Javascript view."""
+                    by the cluster view."""
 
                     # We select the first n_clusters clusters.
                     controller.supervisor.select(cluster_ids[:n_clusters])

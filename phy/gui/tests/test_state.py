@@ -1,39 +1,40 @@
-# -*- coding: utf-8 -*-
-
 """Test gui."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 import os
 import shutil
 
-from ..state import GUIState, _gui_state_path, _get_default_state_path
 from phylib.utils import Bunch, load_json, save_json
+
+from ..state import GUIState, _get_default_state_path, _gui_state_path
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test GUI state
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class MyClass(object):
+
+class MyClass:
     pass
 
 
 def test_get_default_state_path():
     assert str(_get_default_state_path(MyClass())).endswith(
-        os.sep.join(('gui', 'tests', 'static', 'state.json')))
+        os.sep.join(('gui', 'tests', 'static', 'state.json'))
+    )
 
 
 def test_gui_state_view_1(tempdir):
     view = Bunch(name='MyView0')
     path = _gui_state_path('GUI', tempdir)
     state = GUIState(path)
-    state.update_view_state(view, dict(hello='world'))
+    state.update_view_state(view, {'hello': 'world'})
     assert not state.get_view_state(Bunch(name='MyView'))
     assert not state.get_view_state(Bunch(name='MyView (1)'))
     assert state.get_view_state(view) == Bunch(hello='world')
@@ -44,7 +45,7 @@ def test_gui_state_view_1(tempdir):
     shutil.copy(state._path, default_path)
     state._path.unlink()
 
-    logger.info("Create new GUI state.")
+    logger.info('Create new GUI state.')
     # The default state.json should be automatically copied and loaded.
     state = GUIState(path, default_state_path=default_path)
     assert state.MyView0.hello == 'world'

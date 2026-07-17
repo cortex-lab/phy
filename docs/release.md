@@ -1,12 +1,29 @@
 # Release notes
 
-Current version is phy v2.1.0rc1 (release candidate 1) (11 Mar 2026).
+Current version is phy v2.1.0 (17 Jul 2026).
+
+## phy 2.1.0 (17 Jul 2026)
+
+This final release incorporates the fixes identified during the `2.1.0rc1` testing period.
+
+### Added
+
+* Code of Conduct for project participation and incident reporting.
+
+### Fixed
+
+* Preserve the ClusterView sort order when cluster metadata changes ([#1375](https://github.com/cortex-lab/phy/issues/1375)).
+* Display NumPy-typed values correctly in native Qt ClusterView columns ([#1377](https://github.com/cortex-lab/phy/issues/1377)).
+
 
 ## phy 2.1.0rc1
 
-With substantial help from AI-assisted development, it has been possible to put time and effort into this maintenance release for the current 2.x line.
+With substantial help from AI-assisted development, it has been possible to put time and effort
+into this maintenance release for the current 2.x line.
 
-`phy 2.1.0rc1` is focused on making the existing software work better for users. It is not meant to bring in major new features or feature requests at this stage. More work will likely still be needed based on user feedback during the release candidate period.
+`phy 2.1.0rc1` is focused on making the existing software work better for users. It is not meant
+to bring in major new features or feature requests at this stage. More work will likely still be
+needed based on user feedback during the release candidate period.
 
 ### Main points
 
@@ -17,7 +34,8 @@ With substantial help from AI-assisted development, it has been possible to put 
 
 ### How to install this RC
 
-Use a fresh Python 3.10+ environment and install the exact release-candidate version.
+Use a fresh Python 3.10+ environment and install the exact release-candidate
+version.
 
 On Linux or macOS:
 
@@ -39,7 +57,8 @@ pip install "phy==2.1.0rc1"
 phy --version
 ```
 
-If you are testing on a template-based spike-sorting output containing `params.py`, a minimal startup check is:
+If you are testing on a template-based spike-sorting output containing
+`params.py`, a minimal startup check is:
 
 ```bash
 phy template-describe params.py
@@ -69,9 +88,12 @@ phy kwik-gui path/to/file.kwik
 
 ### Notes for plugin maintainers
 
-The main compatibility risk for plugins is on the GUI side. The legacy web-based component has been replaced with a Qt-native implementation, so plugins depending on internal HTML or other web-based GUI pieces may need to be updated.
+The main compatibility risk for plugins is on the GUI side. The legacy web-based component has
+been replaced with a Qt-native implementation, so plugins depending on internal HTML or other
+web-based GUI pieces may need to be updated.
 
-Plugins using supported Python-side controller, event, or view APIs are more likely to keep working unchanged, but they should still be tested.
+Plugins using supported Python-side controller, event, or view APIs are more likely to keep
+working unchanged, but they should still be tested.
 
 ### Testing window
 
@@ -90,7 +112,7 @@ When reporting issues, please include:
 
 ## Historical notes for older releases
 
-The notes below are kept for reference only and concern older releases, not the current `2.1.0rc1` release candidate.
+The notes below are kept for reference only and concern older releases.
 
 ### phy 2.0 beta 1 (2020-02)
 

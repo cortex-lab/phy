@@ -1,23 +1,22 @@
-# -*- coding: utf-8 -*-
-
 """Test fixtures."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
-
-from pytest import fixture
+# ------------------------------------------------------------------------------
 
 from phylib.io.array import get_closest_clusters
+from pytest import fixture
+
 import phy.gui.qt
 
 # Reduce the debouncer delay for tests.
 phy.gui.qt.Debouncer.delay = 1
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def cluster_ids():
@@ -37,8 +36,9 @@ def cluster_labels():
 
 @fixture
 def similarity(cluster_ids):
-    sim = lambda c, d: (c * 1.01 + d)
+    sim = lambda c, d: c * 1.01 + d
 
     def similarity(c):
         return get_closest_clusters(c, cluster_ids, sim)
+
     return similarity

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Common visuals.
 
 All visuals derive from the base class `BaseVisual()`. They all follow the same structure.
@@ -10,36 +8,36 @@ The `validate()` method is used to fill default values and validate the requeste
 """
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import gzip
 from pathlib import Path
 
 import numpy as np
-
-from .base import BaseVisual
-from .gloo import gl
-from .transform import NDC
-from .utils import (
-    _tesselate_histogram, _get_texture, _get_array, _get_pos, _get_index)
-from phy.gui.qt import is_high_dpi
 from phylib.io.array import _as_array
 from phylib.utils import Bunch
 from phylib.utils.geometry import _get_data_bounds
 
+from phy.gui.qt import is_high_dpi
 
-#------------------------------------------------------------------------------
+from .base import BaseVisual
+from .gloo import gl
+from .transform import NDC
+from .utils import _get_array, _get_index, _get_pos, _get_texture, _tesselate_histogram
+
+# ------------------------------------------------------------------------------
 # Utils
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
+DEFAULT_COLOR = (0.03, 0.57, 0.98, 0.75)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Patch visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class PatchVisual(BaseVisual):
     """Patch visual, displaying an arbitrary filled shape.
@@ -64,10 +62,11 @@ class PatchVisual(BaseVisual):
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
+
     default_color = DEFAULT_COLOR
 
     def __init__(self, primitive_type='triangle_fan'):
-        super(PatchVisual, self).__init__()
+        super().__init__()
         self.set_shader('patch')
         self.set_primitive_type(primitive_type)
         self.set_data_range(NDC)
@@ -77,8 +76,8 @@ class PatchVisual(BaseVisual):
         return y.size if y is not None else len(pos)
 
     def validate(
-            self, x=None, y=None, pos=None, color=None, depth=None,
-            data_bounds=None, **kwargs):
+        self, x=None, y=None, pos=None, color=None, depth=None, data_bounds=None, **kwargs
+    ):
         """Validate the requested data before passing it to set_data()."""
         if pos is None:
             x, y = _get_pos(x, y)
@@ -96,8 +95,8 @@ class PatchVisual(BaseVisual):
             assert data_bounds.shape[0] == n
 
         return Bunch(
-            pos=pos, color=color, depth=depth, data_bounds=data_bounds,
-            _n_items=n, _n_vertices=n)
+            pos=pos, color=color, depth=depth, data_bounds=data_bounds, _n_items=n, _n_vertices=n
+        )
 
     def set_data(self, *args, **kwargs):
         """Update the visual data."""
@@ -120,9 +119,10 @@ class PatchVisual(BaseVisual):
         self.program['a_color'] = color.astype(np.float32)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Scatter visuals
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class ScatterVisual(BaseVisual):
     """Scatter visual, displaying a fixed marker at various positions, colors, and marker sizes.
@@ -147,8 +147,9 @@ class ScatterVisual(BaseVisual):
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
+
     _init_keywords = ('marker',)
-    default_marker_size = 10.
+    default_marker_size = 10.0
     default_marker = 'disc'
     default_color = DEFAULT_COLOR
     _supported_markers = (
@@ -174,7 +175,7 @@ class ScatterVisual(BaseVisual):
     )
 
     def __init__(self, marker=None, marker_scaling=None):
-        super(ScatterVisual, self).__init__()
+        super().__init__()
 
         # Set the marker type.
         self.marker = marker or self.default_marker
@@ -192,8 +193,16 @@ class ScatterVisual(BaseVisual):
         return y.size if y is not None else len(pos)
 
     def validate(
-            self, x=None, y=None, pos=None, color=None, size=None, depth=None,
-            data_bounds=None, **kwargs):
+        self,
+        x=None,
+        y=None,
+        pos=None,
+        color=None,
+        size=None,
+        depth=None,
+        data_bounds=None,
+        **kwargs,
+    ):
         """Validate the requested data before passing it to set_data()."""
         if pos is None:
             x, y = _get_pos(x, y)
@@ -212,8 +221,14 @@ class ScatterVisual(BaseVisual):
             assert data_bounds.shape[0] == n
 
         return Bunch(
-            pos=pos, color=color, size=size, depth=depth, data_bounds=data_bounds,
-            _n_items=n, _n_vertices=n)
+            pos=pos,
+            color=color,
+            size=size,
+            depth=depth,
+            data_bounds=data_bounds,
+            _n_items=n,
+            _n_vertices=n,
+        )
 
     def set_data(self, *args, **kwargs):
         """Update the visual data."""
@@ -266,7 +281,7 @@ class UniformScatterVisual(BaseVisual):
     """
 
     _init_keywords = ('marker', 'color', 'size')
-    default_marker_size = 10.
+    default_marker_size = 10.0
     default_marker = 'disc'
     default_color = DEFAULT_COLOR
     _supported_markers = (
@@ -292,7 +307,7 @@ class UniformScatterVisual(BaseVisual):
     )
 
     def __init__(self, marker=None, color=None, size=None):
-        super(UniformScatterVisual, self).__init__()
+        super().__init__()
 
         # Set the marker type.
         self.marker = marker or self.default_marker
@@ -321,11 +336,11 @@ class UniformScatterVisual(BaseVisual):
         assert pos.shape[1] == 2
         n = pos.shape[0]
 
-        masks = _get_array(masks, (n, 1), 1., np.float32)
+        masks = _get_array(masks, (n, 1), 1.0, np.float32)
         assert masks.shape == (n, 1)
 
         # The mask is clu_idx + fractional mask
-        masks *= .99999
+        masks *= 0.99999
 
         # Validate the data.
         if data_bounds is not None:
@@ -356,9 +371,10 @@ class UniformScatterVisual(BaseVisual):
         return data
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Plot visuals
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _as_list(arr):
     if isinstance(arr, np.ndarray):
@@ -400,21 +416,22 @@ class PlotVisual(BaseVisual):
     _noconcat = ('x', 'y')
 
     def __init__(self):
-        super(PlotVisual, self).__init__()
+        super().__init__()
 
         self.set_shader('plot')
         self.set_primitive_type('line_strip')
         self.set_data_range(NDC)
 
     def validate(
-            self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs):
+        self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs
+    ):
         """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
         y = _as_list(y)
 
         if x is None:
-            x = [np.linspace(-1., 1., len(_)) for _ in y]
+            x = [np.linspace(-1.0, 1.0, len(_)) for _ in y]
         x = _as_list(x)
 
         # Remove empty elements.
@@ -431,15 +448,17 @@ class PlotVisual(BaseVisual):
             ymax = [_max(_) for _ in y]
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
-        color = _get_array(color, (n_signals, 4),
-                           PlotVisual.default_color,
-                           dtype=np.float32,
-                           )
+        color = _get_array(
+            color,
+            (n_signals, 4),
+            PlotVisual.default_color,
+            dtype=np.float32,
+        )
         assert color.shape == (n_signals, 4)
 
-        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        masks = _get_array(masks, (n_signals, 1), 1.0, np.float32)
         # The mask is clu_idx + fractional mask
-        masks *= .99999
+        masks *= 0.99999
         assert masks.shape == (n_signals, 1)
 
         depth = _get_array(depth, (n_signals, 1), 0)
@@ -451,8 +470,15 @@ class PlotVisual(BaseVisual):
             assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(
-            x=x, y=y, color=color, depth=depth, data_bounds=data_bounds, masks=masks,
-            _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
+            x=x,
+            y=y,
+            color=color,
+            depth=depth,
+            data_bounds=data_bounds,
+            masks=masks,
+            _n_items=n_signals,
+            _n_vertices=self.vertex_count(y=y),
+        )
 
     def set_color(self, color):
         """Update the visual's color."""
@@ -545,7 +571,7 @@ class UniformPlotVisual(BaseVisual):
     _noconcat = ('x', 'y')
 
     def __init__(self, color=None, depth=None):
-        super(UniformPlotVisual, self).__init__()
+        super().__init__()
 
         self.set_shader('uni_plot')
         self.set_primitive_type('line_strip')
@@ -559,7 +585,7 @@ class UniformPlotVisual(BaseVisual):
         y = _as_list(y)
 
         if x is None:
-            x = [np.linspace(-1., 1., len(_)) for _ in y]
+            x = [np.linspace(-1.0, 1.0, len(_)) for _ in y]
         x = _as_list(x)
 
         # Remove empty elements.
@@ -569,9 +595,9 @@ class UniformPlotVisual(BaseVisual):
 
         n_signals = len(x)
 
-        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        masks = _get_array(masks, (n_signals, 1), 1.0, np.float32)
         # The mask is clu_idx + fractional mask
-        masks *= .99999
+        masks *= 0.99999
         assert masks.shape == (n_signals, 1)
 
         if isinstance(data_bounds, str) and data_bounds == 'auto':
@@ -587,8 +613,13 @@ class UniformPlotVisual(BaseVisual):
             assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(
-            x=x, y=y, masks=masks, data_bounds=data_bounds,
-            _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
+            x=x,
+            y=y,
+            masks=masks,
+            data_bounds=data_bounds,
+            _n_items=n_signals,
+            _n_vertices=self.vertex_count(y=y),
+        )
 
     def vertex_count(self, y=None, **kwargs):
         """Number of vertices for the requested data."""
@@ -643,9 +674,10 @@ class UniformPlotVisual(BaseVisual):
         return data
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Histogram visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class HistogramVisual(BaseVisual):
     """A histogram visual.
@@ -663,7 +695,7 @@ class HistogramVisual(BaseVisual):
     default_color = DEFAULT_COLOR
 
     def __init__(self):
-        super(HistogramVisual, self).__init__()
+        super().__init__()
 
         self.set_shader('histogram')
         self.set_primitive_type('triangles')
@@ -683,7 +715,7 @@ class HistogramVisual(BaseVisual):
 
         # Validate ylim.
         if ylim is None:
-            ylim = hist.max() if hist.size > 0 else 1.
+            ylim = hist.max() if hist.size > 0 else 1.0
         ylim = np.atleast_1d(ylim)
         if len(ylim) == 1:
             ylim = np.tile(ylim, n_hists)
@@ -692,8 +724,12 @@ class HistogramVisual(BaseVisual):
         assert ylim.shape == (n_hists, 1)
 
         return Bunch(
-            hist=hist, ylim=ylim, color=color,
-            _n_items=n_hists, _n_vertices=self.vertex_count(hist))
+            hist=hist,
+            ylim=ylim,
+            color=color,
+            _n_items=n_hists,
+            _n_vertices=self.vertex_count(hist),
+        )
 
     def vertex_count(self, hist, **kwargs):
         """Number of vertices for the requested data."""
@@ -735,9 +771,9 @@ class HistogramVisual(BaseVisual):
         return data
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 FONT_MAP_PATH = Path(__file__).parent / 'static/SourceCodePro-Regular.npy.gz'
 FONT_MAP_SIZE = (6, 16)
@@ -779,13 +815,14 @@ class TextVisual(BaseVisual):
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
-    default_color = (1., 1., 1., 1.)
-    default_font_size = 6.
+
+    default_color = (1.0, 1.0, 1.0, 1.0)
+    default_font_size = 6.0
     _init_keywords = ('color',)
     _noconcat = ('text',)
 
     def __init__(self, color=None, font_size=None):
-        super(TextVisual, self).__init__()
+        super().__init__()
         self.set_shader('msdf')
         self.set_primitive_type('triangles')
         self.set_data_range(NDC)
@@ -809,8 +846,7 @@ class TextVisual(BaseVisual):
     def _get_glyph_indices(self, s):
         return [FONT_MAP_CHARS.index(char) for char in s]
 
-    def validate(
-            self, pos=None, text=None, color=None, anchor=None, data_bounds=None, **kwargs):
+    def validate(self, pos=None, text=None, color=None, anchor=None, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
 
         if text is None:
@@ -835,7 +871,7 @@ class TextVisual(BaseVisual):
         assert color.shape[1] == 4
         assert len(color) == n_text
 
-        anchor = anchor if anchor is not None else (0., 0.)
+        anchor = anchor if anchor is not None else (0.0, 0.0)
         anchor = np.atleast_2d(anchor)
         if anchor.shape[0] == 1:
             anchor = np.repeat(anchor, n_text, axis=0)
@@ -849,8 +885,14 @@ class TextVisual(BaseVisual):
         assert data_bounds.shape == (n_text, 4)
 
         return Bunch(
-            pos=pos, text=text, anchor=anchor, data_bounds=data_bounds, color=color,
-            _n_items=n_text, _n_vertices=self.vertex_count(text=text))
+            pos=pos,
+            text=text,
+            anchor=anchor,
+            data_bounds=data_bounds,
+            color=color,
+            _n_items=n_text,
+            _n_vertices=self.vertex_count(text=text),
+        )
 
     def vertex_count(self, **kwargs):
         """Number of vertices for the requested data."""
@@ -948,12 +990,13 @@ class TextVisual(BaseVisual):
     def on_draw(self):
         # NOTE: use linear interpolation for the SDF texture.
         self.program._uniforms['u_tex']._data.set_interpolation('linear')
-        super(TextVisual, self).on_draw()
+        super().on_draw()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Line visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class LineVisual(BaseVisual):
     """Line segments.
@@ -966,11 +1009,11 @@ class LineVisual(BaseVisual):
 
     """
 
-    default_color = (.3, .3, .3, 1.)
+    default_color = (0.3, 0.3, 0.3, 1.0)
     _init_keywords = ('color',)
 
     def __init__(self):
-        super(LineVisual, self).__init__()
+        super().__init__()
         self.set_shader('line')
         self.set_primitive_type('lines')
         self.set_data_range(NDC)
@@ -995,8 +1038,12 @@ class LineVisual(BaseVisual):
         assert data_bounds.shape == (n_lines, 4)
 
         return Bunch(
-            pos=pos, color=color, data_bounds=data_bounds,
-            _n_items=n_lines, _n_vertices=self.vertex_count(pos=pos))
+            pos=pos,
+            color=color,
+            data_bounds=data_bounds,
+            _n_items=n_lines,
+            _n_vertices=self.vertex_count(pos=pos),
+        )
 
     def vertex_count(self, pos=None, **kwargs):
         """Number of vertices for the requested data."""
@@ -1035,9 +1082,10 @@ class LineVisual(BaseVisual):
         return data
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Agg line visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def ortho(left, right, bottom, top, znear, zfar):  # pragma: no cover
     """Create orthographic projection matrix
@@ -1062,9 +1110,9 @@ def ortho(left, right, bottom, top, znear, zfar):  # pragma: no cover
     M : array
         Orthographic projection matrix (4x4).
     """
-    assert(right != left)
-    assert(bottom != top)
-    assert(znear != zfar)
+    assert right != left
+    assert bottom != top
+    assert znear != zfar
 
     M = np.zeros((4, 4), dtype=np.float32)
     M[0, 0] = +2.0 / (right - left)
@@ -1091,11 +1139,11 @@ class LineAggGeomVisual(BaseVisual):  # pragma: no cover
 
     """
 
-    default_color = (.75, .75, .75, 1.)
+    default_color = (0.75, 0.75, 0.75, 1.0)
     _init_keywords = ('color',)
 
     def __init__(self):
-        super(LineAggGeomVisual, self).__init__()
+        super().__init__()
         self.set_shader('line_agg_geom')
         self.set_primitive_type('line_strip_adjacency_ext')
         # Geometry shader params.
@@ -1107,17 +1155,17 @@ class LineAggGeomVisual(BaseVisual):  # pragma: no cover
     def _get_index_buffer(self, P, closed=True):
         if closed:
             if np.allclose(P[0], P[1]):
-                I = (np.arange(len(P) + 2) - 1)
+                I = np.arange(len(P) + 2) - 1
                 I[0], I[-1] = 0, len(P) - 1
             else:
-                I = (np.arange(len(P) + 3) - 1)
+                I = np.arange(len(P) + 3) - 1
                 I[0], I[-2], I[-1] = len(P) - 1, 0, 1
         else:
-            I = (np.arange(len(P) + 2) - 1)
+            I = np.arange(len(P) + 2) - 1
             I[0], I[-1] = 0, len(P) - 1
         return I
 
-    def validate(self, pos=None, color=None, line_width=10., data_bounds=None, **kwargs):
+    def validate(self, pos=None, color=None, line_width=10.0, data_bounds=None, **kwargs):
         """Validate the requested data before passing it to set_data()."""
         assert pos is not None
         pos = _as_array(pos)
@@ -1138,8 +1186,13 @@ class LineAggGeomVisual(BaseVisual):  # pragma: no cover
         # assert data_bounds.shape == (n_lines, 2)
 
         return Bunch(
-            pos=pos, color=color, line_width=line_width, data_bounds=data_bounds,
-            _n_items=1, _n_vertices=self.vertex_count(pos=pos))
+            pos=pos,
+            color=color,
+            line_width=line_width,
+            data_bounds=data_bounds,
+            _n_items=1,
+            _n_vertices=self.vertex_count(pos=pos),
+        )
 
     def vertex_count(self, pos=None, **kwargs):
         """Number of vertices for the requested data."""
@@ -1199,7 +1252,7 @@ class PlotAggVisual(BaseVisual):
     _noconcat = ('x', 'y')
 
     def __init__(self, line_width=None, closed=False):
-        super(PlotAggVisual, self).__init__()
+        super().__init__()
 
         self.set_shader('plot_agg')
         self.set_primitive_type('triangle_strip')
@@ -1208,14 +1261,15 @@ class PlotAggVisual(BaseVisual):
         self.line_width = line_width or self.default_line_width
 
     def validate(
-            self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs):
+        self, x=None, y=None, color=None, depth=None, masks=None, data_bounds=None, **kwargs
+    ):
         """Validate the requested data before passing it to set_data()."""
 
         assert y is not None
         y = np.atleast_2d(_as_array(y))
         n_signals, n_samples = y.shape
         if x is None:
-            x = np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+            x = np.tile(np.linspace(-1.0, 1.0, n_samples), (n_signals, 1))
         x = np.atleast_2d(_as_array(x))
 
         if isinstance(data_bounds, str) and data_bounds == 'auto':
@@ -1223,15 +1277,17 @@ class PlotAggVisual(BaseVisual):
             ymin, ymax = y.min(axis=1), y.max(axis=1)
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
-        color = _get_array(color, (n_signals, 4),
-                           PlotVisual.default_color,
-                           dtype=np.float32,
-                           )
+        color = _get_array(
+            color,
+            (n_signals, 4),
+            PlotVisual.default_color,
+            dtype=np.float32,
+        )
         assert color.shape == (n_signals, 4)
 
-        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        masks = _get_array(masks, (n_signals, 1), 1.0, np.float32)
         # The mask is clu_idx + fractional mask
-        masks *= .99999
+        masks *= 0.99999
         assert masks.shape == (n_signals, 1)
 
         depth = _get_array(depth, (n_signals, 1), 0)
@@ -1243,8 +1299,15 @@ class PlotAggVisual(BaseVisual):
             assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(
-            x=x, y=y, color=color, depth=depth, masks=masks, data_bounds=data_bounds,
-            _n_items=n_signals, _n_vertices=self.vertex_count(y=y))
+            x=x,
+            y=y,
+            color=color,
+            depth=depth,
+            masks=masks,
+            data_bounds=data_bounds,
+            _n_items=n_signals,
+            _n_vertices=self.vertex_count(y=y),
+        )
 
     def vertex_count(self, y=None, **kwargs):
         """Number of vertices for the requested data."""
@@ -1376,9 +1439,10 @@ class PlotAggVisual(BaseVisual):
         return data
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Image visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class ImageVisual(BaseVisual):
     """Display a 2D image.
@@ -1390,7 +1454,7 @@ class ImageVisual(BaseVisual):
     """
 
     def __init__(self):
-        super(ImageVisual, self).__init__()
+        super().__init__()
 
         self.set_shader('image')
         self.set_primitive_type('triangles')
@@ -1413,22 +1477,26 @@ class ImageVisual(BaseVisual):
         self.n_vertices = self.vertex_count(**data)
         image = data.image
 
-        pos = np.array([
-            [-1, -1],
-            [-1, +1],
-            [+1, -1],
-            [-1, +1],
-            [+1, +1],
-            [+1, -1],
-        ])
-        tex_coords = np.array([
-            [0, 1],
-            [0, 0],
-            [+1, 1],
-            [0, 0],
-            [+1, 0],
-            [+1, 1],
-        ])
+        pos = np.array(
+            [
+                [-1, -1],
+                [-1, +1],
+                [+1, -1],
+                [-1, +1],
+                [+1, +1],
+                [+1, -1],
+            ]
+        )
+        tex_coords = np.array(
+            [
+                [0, 1],
+                [0, 0],
+                [+1, 1],
+                [0, 0],
+                [+1, 0],
+                [+1, 1],
+            ]
+        )
         self.program['a_position'] = pos.astype(np.float32)
         self.program['a_tex_coords'] = tex_coords.astype(np.float32)
         self.program['u_tex'] = image.astype(np.float32)
@@ -1437,9 +1505,10 @@ class ImageVisual(BaseVisual):
         return data
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Polygon visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class PolygonVisual(BaseVisual):
     """Polygon.
@@ -1450,10 +1519,11 @@ class PolygonVisual(BaseVisual):
     data_bounds : array-like (2D, shape[1] == 4)
 
     """
+
     default_color = (1, 1, 1, 1)
 
     def __init__(self):
-        super(PolygonVisual, self).__init__()
+        super().__init__()
         self.set_shader('polygon')
         self.set_primitive_type('line_loop')
         self.set_data_range(NDC)
@@ -1473,8 +1543,11 @@ class PolygonVisual(BaseVisual):
         assert data_bounds.shape == (1, 4)
 
         return Bunch(
-            pos=pos, data_bounds=data_bounds,
-            _n_items=pos.shape[0], _n_vertices=self.vertex_count(pos=pos))
+            pos=pos,
+            data_bounds=data_bounds,
+            _n_items=pos.shape[0],
+            _n_vertices=self.vertex_count(pos=pos),
+        )
 
     def vertex_count(self, pos=None, **kwargs):
         """Number of vertices for the requested data."""

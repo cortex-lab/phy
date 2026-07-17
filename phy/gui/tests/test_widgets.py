@@ -1,25 +1,22 @@
-# -*- coding: utf-8 -*-
-
 """Test widgets."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from functools import partial
-from pathlib import Path
-from pytest import fixture, mark
 
 from phylib.utils import connect, unconnect
-from phylib.utils.testing import captured_logging
-import phy
+from pytest import fixture, mark
+
+from ..widgets import Barrier, IPythonView, KeyValueWidget, Table
+from . import show_and_wait
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table, Barrier, IPythonView, KeyValueWidget
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def _assert(f, expected):
     _out = []
@@ -31,24 +28,24 @@ def _wait_until_table_ready(qtbot, table):
     b = Barrier()
     connect(b(1), event='ready', sender=table)
 
-    table.show()
     qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
+    show_and_wait(qtbot, table)
     b.wait()
 
 
 @fixture
 def table(qtbot):
-    columns = ["id", "count"]
-    data = [{"id": i,
-             "count": 100 - 10 * i,
-             "float": float(i),
-             "is_masked": True if i in (2, 3, 5) else False,
-             } for i in range(10)]
-    table = Table(
-        columns=columns,
-        value_names=['id', 'count', {'data': ['is_masked']}],
-        data=data)
+    columns = ['id', 'count']
+    data = [
+        {
+            'id': i,
+            'count': 100 - 10 * i,
+            'float': float(i),
+            'is_masked': i in (2, 3, 5),
+        }
+        for i in range(10)
+    ]
+    table = Table(columns=columns, value_names=['id', 'count', {'data': ['is_masked']}], data=data)
     _wait_until_table_ready(qtbot, table)
 
     yield table
@@ -56,148 +53,60 @@ def table(qtbot):
     table.close()
 
 
-#------------------------------------------------------------------------------
-# Test widgets
-#------------------------------------------------------------------------------
-
-def test_widget_empty(qtbot):
-    widget = HTMLWidget()
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    widget.close()
-
-
-def test_widget_html(qtbot):
-    widget = HTMLWidget()
-    widget.builder.add_style('html, body, p {background-color: purple;}')
-    path = Path(__file__).parent.parent / 'static/styles.css'
-    widget.builder.add_style_src(path)
-    widget.builder.add_header('<!-- comment -->')
-    widget.builder.set_body('Hello world!')
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    _block(lambda: 'Hello world!' in str(widget.html))
-
-    _out = []
-
-    widget.view_source(lambda x: _out.append(x))
-    _block(lambda: _out[0].startswith('<head>') if _out else None)
-
-    # qtbot.stop()
-    widget.close()
-
-
-def test_widget_javascript_1(qtbot):
-    widget = HTMLWidget()
-    widget.builder.add_script('var number = 1;')
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    _block(lambda: widget.html is not None)
-
-    _out = []
-
-    def _callback(res):
-        _out.append(res)
-
-    widget.eval_js('number', _callback)
-    _block(lambda: _out == [1])
-
-    # Test logging from JS.
-    with captured_logging('phy.gui') as buf:
-        widget.eval_js('console.warn("hello world!");')
-        _block(lambda: 'hello world!' in buf.getvalue().lower())
-
-    # qtbot.stop()
-    widget.close()
-
-
-@mark.parametrize("event_name", ('select', 'nodebounce'))
-def test_widget_javascript_debounce(qtbot, event_name):
-    phy.gui.qt.Debouncer.delay = 300
-
-    widget = HTMLWidget(debounce_events=('select',))
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
-    _block(lambda: widget.html is not None)
-
-    event_code = lambda i: r'''
-    var event = new CustomEvent("phy_event", {detail: {name: '%s', data: {'i': %s}}});
-    document.dispatchEvent(event);
-    ''' % (event_name, i)
-
-    _l = []
-
-    def f(sender, *args):
-        _l.append(args)
-    connect(f, sender=widget, event=event_name)
-
-    for i in range(5):
-        widget.eval_js(event_code(i))
-        qtbot.wait(10)
-    qtbot.wait(500)
-
-    assert len(_l) == (2 if event_name == 'select' else 5)
-
-    # qtbot.stop()
-    widget.close()
-
-    phy.gui.qt.Debouncer.delay = 1
-
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test key value widget
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_key_value_1(qtbot):
     widget = KeyValueWidget()
-    widget.show()
-
     qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    show_and_wait(qtbot, widget)
 
-    widget.add_pair("my text", "some text")
-    widget.add_pair("my text multiline", "some\ntext", 'multiline')
-    widget.add_pair("my float", 3.5)
-    widget.add_pair("my int", 3)
-    widget.add_pair("my bool", True)
-    widget.add_pair("my list", [1, 5])
+    widget.add_pair('my text', 'some text')
+    widget.add_pair('my text multiline', 'some\ntext', 'multiline')
+    widget.add_pair('my float', 3.5)
+    widget.add_pair('my int', 3)
+    widget.add_pair('my bool', True)
+    widget.add_pair('my list', [1, 5])
 
     widget.get_widget('my bool').setChecked(False)
     widget.get_widget('my list[0]').setValue(2)
 
     assert widget.to_dict() == {
-        'my text': 'some text', 'my text multiline': 'some\ntext',
-        'my float': 3.5, 'my int': 3, 'my bool': False, 'my list': [2, 5]}
+        'my text': 'some text',
+        'my text multiline': 'some\ntext',
+        'my float': 3.5,
+        'my int': 3,
+        'my bool': False,
+        'my list': [2, 5],
+    }
 
     # qtbot.stop()
     widget.close()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test IPython view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-@mark.filterwarnings("ignore")
+
+@mark.filterwarnings('ignore')
 def test_ipython_view_1(qtbot):
     view = IPythonView()
     view.show()
     view.start_kernel()
+    kernel = view.kernel
     view.stop()
+    assert not kernel.iopub_thread.thread.is_alive()
     qtbot.wait(10)
     view.close()
 
 
-@mark.filterwarnings("ignore")
+@mark.filterwarnings('ignore')
 def test_ipython_view_2(qtbot, tempdir):
     from ..gui import GUI
+
     gui = GUI(config_dir=tempdir)
     gui.set_default_actions()
 
@@ -213,9 +122,10 @@ def test_ipython_view_2(qtbot, tempdir):
     qtbot.wait(10)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test table
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_barrier_1(qtbot, table):
     table.select([1])
@@ -243,9 +153,8 @@ def test_table_empty_1(qtbot):
 
 def test_table_invalid_column(qtbot):
     table = Table(data=[{'id': 0, 'a': 'b'}], columns=['id', 'u'])
-    table.show()
     qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
+    show_and_wait(qtbot, table)
     table.close()
 
 
@@ -254,7 +163,6 @@ def test_table_0(qtbot, table):
 
 
 def test_table_1(qtbot, table):
-
     assert table.is_ready()
 
     table.select([1, 2])
@@ -373,7 +281,7 @@ def test_table_remove_all_and_add_1(qtbot, table):
 
 
 def test_table_remove_all_and_add_2(qtbot, table):
-    table.remove_all_and_add({"id": 1000})
+    table.remove_all_and_add({'id': 1000})
     _assert(table.get_ids, [1000])
 
 
@@ -405,12 +313,123 @@ def test_table_change_and_sort_2(qtbot, table):
     _assert(table.get_ids, [9, 8, 7, 6, 4, 3, 2, 1, 0, 5])
 
 
+def test_table_change_metadata_preserves_sort(qtbot):
+    data = [
+        {'id': 0, 'count': 30, 'group': 'noise'},
+        {'id': 1, 'count': 10, 'group': 'noise'},
+        {'id': 2, 'count': 20, 'group': 'noise'},
+    ]
+    table = Table(
+        columns=['id', 'count'],
+        value_names=['id', 'count', {'data': ['group']}],
+        data=data,
+    )
+    _wait_until_table_ready(qtbot, table)
+
+    table.sort_by('count', 'desc')
+    _assert(table.get_ids, [0, 2, 1])
+    _assert(table.get_current_sort, ['count', 'desc'])
+
+    table.change([{'id': 1, 'group': 'good'}])
+    _assert(table.get_ids, [0, 2, 1])
+    _assert(table.get_current_sort, ['count', 'desc'])
+
+    table.close()
+
+
 def test_table_filter(qtbot, table):
-    table.filter("id == 5")
+    table.filter('id == 5')
     _assert(table.get_ids, [5])
 
-    table.filter("count == 80")
+    table.filter('count == 80')
     _assert(table.get_ids, [2])
 
     table.filter()
     _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_comparison_operators(qtbot, table):
+    table.filter('count > 80')
+    _assert(table.get_ids, [0, 1])
+
+    table.filter('count >= 80')
+    _assert(table.get_ids, [0, 1, 2])
+
+    table.filter('count < 80')
+    _assert(table.get_ids, list(range(3, 10)))
+
+    table.filter('count <= 80')
+    _assert(table.get_ids, list(range(2, 10)))
+
+    table.filter('id != 5')
+    _assert(table.get_ids, [i for i in range(10) if i != 5])
+
+
+def test_table_filter_combined_expression(qtbot, table):
+    table.filter('(count >= 50) && id != 3')
+    _assert(table.get_ids, [0, 1, 2, 4, 5])
+
+
+def test_table_filter_or_expression(qtbot, table):
+    table.filter('(id == 1) || (id == 3)')
+    _assert(table.get_ids, [1, 3])
+
+
+def test_table_filter_operator_precedence(qtbot, table):
+    table.filter('(id == 1 || id == 3) && count < 90')
+    _assert(table.get_ids, [3])
+
+
+def test_table_filter_invalid_expression_shows_all_rows(qtbot, table):
+    table.filter('id ===')
+    _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_missing_field_shows_all_rows(qtbot, table):
+    table.filter('missing == 1')
+    _assert(table.get_ids, list(range(10)))
+
+
+def test_table_filter_string_and_null_values(qtbot):
+    data = [
+        {'id': 0, 'group': 'good', 'label': None},
+        {'id': 1, 'group': 'mua', 'label': 'x'},
+        {'id': 2, 'group': 'noise', 'label': None},
+    ]
+    table = Table(
+        columns=['id', 'label'],
+        value_names=['id', 'label', {'data': ['group']}],
+        data=data,
+    )
+    _wait_until_table_ready(qtbot, table)
+
+    table.filter("group == 'good'")
+    _assert(table.get_ids, [0])
+
+    table.filter("group != 'noise'")
+    _assert(table.get_ids, [0, 1])
+
+    table.filter("label == 'x'")
+    _assert(table.get_ids, [1])
+
+    table.filter('label == null')
+    _assert(table.get_ids, [0, 2])
+
+    table.filter('label != null')
+    _assert(table.get_ids, [1])
+
+    table.close()
+
+
+def test_table_filter_event_emits_visible_ids(qtbot, table):
+    emitted = []
+
+    @connect(sender=table)
+    def on_table_filter(sender, row_ids):
+        emitted.append(row_ids)
+
+    table.filter('count >= 80')
+    _assert(table.get_ids, [0, 1, 2])
+    _block(lambda: emitted == [[0, 1, 2]])
+
+    unconnect(on_table_filter)

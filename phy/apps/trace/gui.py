@@ -1,27 +1,28 @@
-# -*- coding: utf-8 -*-
-
 """Trace GUI."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 
 from phylib.io.traces import get_ephys_reader
-from phylib.utils import Bunch
+from phylib.utils import Bunch, connect
 
 from phy.apps.template import get_template_params
 from phy.cluster.views.trace import TraceView, select_traces
-from phy.gui import create_app, run_app, GUI
+from phy.gui import GUI, create_app, run_app
+
+from .._utils import _close_trace_reader
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Trace GUI
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def create_trace_gui(obj, **kwargs):
     """Create the Trace GUI.
@@ -50,18 +51,23 @@ def create_trace_gui(obj, **kwargs):
         return create_trace_gui(next(iter(params.pop('dat_path'))), **params)
 
     kwargs = {
-        k: v for k, v in kwargs.items()
-        if k in ('sample_rate', 'n_channels_dat', 'dtype', 'offset')}
+        k: v
+        for k, v in kwargs.items()
+        if k in ('sample_rate', 'n_channels_dat', 'dtype', 'offset')
+    }
     traces = get_ephys_reader(obj, **kwargs)
 
     create_app()
     gui = GUI(name=gui_name, subtitle=obj.resolve(), enable_threading=False)
+    gui._trace_reader = traces
     gui.set_default_actions()
 
+    @connect(sender=gui)
+    def on_close(sender):
+        _close_trace_reader(traces)
+
     def _get_traces(interval):
-        return Bunch(
-            data=select_traces(
-                traces, interval, sample_rate=traces.sample_rate))
+        return Bunch(data=select_traces(traces, interval, sample_rate=traces.sample_rate))
 
     # TODO: load channel information
 

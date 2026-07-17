@@ -1,28 +1,26 @@
-# -*- coding: utf-8 -*-
-
 """Axes."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
 from matplotlib.ticker import MaxNLocator
+from phylib import connect
+from phylib.utils._types import _is_integer
 
+from phy.gui.qt import is_high_dpi
 
 from .transform import NDC, Range, _fix_coordinate_in_visual
 from .visuals import LineVisual, TextVisual
-from phylib import connect
-from phylib.utils._types import _is_integer
-from phy.gui.qt import is_high_dpi
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Utils
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-class AxisLocator(object):
+
+class AxisLocator:
     """Determine the location of ticks in a view.
 
     Constructor
@@ -85,9 +83,7 @@ class AxisLocator(object):
         dy = 2 * (y1 - y0)
 
         # Get the bounds in data coordinates.
-        ((dx0, dy0), (dx1, dy1)) = self._tr.apply([
-            [x0 - dx, y0 - dy],
-            [x1 + dx, y1 + dy]])
+        ((dx0, dy0), (dx1, dy1)) = self._tr.apply([[x0 - dx, y0 - dy], [x1 + dx, y1 + dy]])
 
         # Compute the ticks in data coordinates.
         self.xticks = self.locx.tick_values(dx0, dx1)
@@ -102,9 +98,9 @@ class AxisLocator(object):
         self.ytext = [fmt % v for v in self.yticks]
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Axes visual
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 
 def _set_line_data(xticks, yticks):
@@ -125,10 +121,10 @@ def _quant_zoom(z):
     """Return the zoom level as a positive or negative integer."""
     if z == 0:
         return 0  # pragma: no cover
-    return int(z) if z >= 1 else -int(1. / z)
+    return int(z) if z >= 1 else -int(1.0 / z)
 
 
-class Axes(object):
+class Axes:
     """Dynamic axes that move along the camera when panning and zooming.
 
     Constructor
@@ -144,7 +140,8 @@ class Axes(object):
         Whether to show the horizontal grid lines.
 
     """
-    default_color = (1, 1, 1, .25)
+
+    default_color = (1, 1, 1, 0.25)
 
     def __init__(self, data_bounds=None, color=None, show_x=True, show_y=True):
         self.show_x = show_x
@@ -223,8 +220,7 @@ class Axes(object):
             # Exclude the axes visual from the interact/layout, but keep the PanZoom.
             interact = getattr(canvas, 'interact', None)
             exclude_origins = (interact,) if interact else ()
-            canvas.add_visual(
-                visual, clearable=False, exclude_origins=exclude_origins)
+            canvas.add_visual(visual, clearable=False, exclude_origins=exclude_origins)
 
         self.locator.set_view_bounds(NDC)
         self.update_visuals()

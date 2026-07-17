@@ -1,21 +1,19 @@
-# -*- coding: utf-8 -*-
-
 """Test Histogram view."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import numpy as np
-
 from phylib.utils import Bunch
+
 from ..histogram import HistogramView
 from . import _stop_and_close
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test Histogram view
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_histogram_view_0(qtbot, gui):
     data = np.random.uniform(low=0, high=10, size=5000)
@@ -24,11 +22,11 @@ def test_histogram_view_0(qtbot, gui):
         cluster_stat=lambda cluster_id: Bunch(
             data=data,
             # plot=plot,
-            text='this is:\ncluster %d' % cluster_id,
+            text=f'this is:\ncluster {cluster_id}',
         )
     )
-    v.show()
-    qtbot.waitForWindowShown(v.canvas)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
     v.attach(gui)
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
@@ -58,9 +56,9 @@ def test_histogram_view_0(qtbot, gui):
     # Use ms unit.
     v.bin_unit = 'ms'
     v.set_x_min(100)
-    assert v.x_min == .1
+    assert v.x_min == 0.1
     v.set_x_max(500)
-    assert v.x_max == .5
+    assert v.x_max == 0.5
     v.set_n_bins(400)
     assert v.bin_size == 1  # 1 ms
     v.set_bin_size(2)

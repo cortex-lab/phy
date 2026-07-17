@@ -1,15 +1,9 @@
-include LICENSE
+include LICENSE.md
 include README.md
-include requirements.txt
-include requirements-dev.txt
 
-recursive-include tests *
-recursive-include phy/electrode/probes *.prb
 recursive-include phy/plot/glsl *.vert *.frag *.glsl
-recursive-include phy/plot/static *.npy *.gz *.txt
-recursive-include phy/cluster/static *.html *.css
+recursive-include phy/plot/static *.gz
 recursive-include phy/gui/static *.html *.css *.js *.ttf *.png
-recursive-include phy/gui/static/icons *.html *.css *.js *.ttf *.png
 recursive-include phy/apps/*/static *.json
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]

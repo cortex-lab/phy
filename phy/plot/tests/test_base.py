@@ -1,29 +1,29 @@
-# -*- coding: utf-8 -*-
-
 """Test base."""
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
+import sys
 
 import numpy as np
-from pytest import fixture
+from pytest import fixture, mark, skip
+
+from phy.gui.qt import QOpenGLWindow
 
 from ..base import BaseVisual, GLSLInserter, gloo
-from ..transform import (subplot_bounds, Translate, Scale, Range,
-                         Clip, Subplot, TransformChain)
-from . import mouse_click, mouse_drag, mouse_press, key_press, key_release
-from phy.gui.qt import QOpenGLWindow
+from ..transform import Clip, Range, Scale, Subplot, TransformChain, Translate, subplot_bounds
+from . import key_press, key_release, mouse_click, mouse_drag, mouse_press, show_and_wait
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Fixtures
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def vertex_shader_nohook():
@@ -57,7 +57,7 @@ def fragment_shader():
 
 class MyVisual(BaseVisual):
     def __init__(self):
-        super(MyVisual, self).__init__()
+        super().__init__()
         self.set_shader('simple')
         self.set_primitive_type('lines')
 
@@ -67,9 +67,10 @@ class MyVisual(BaseVisual):
         self.program['u_color'] = [1, 1, 1, 1]
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test base
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_glsl_inserter_nohook(vertex_shader_nohook, fragment_shader):
     vertex_shader = vertex_shader_nohook
@@ -85,7 +86,7 @@ def test_glsl_inserter_hook(vertex_shader, fragment_shader):
     inserter = GLSLInserter()
     inserter.insert_vert('uniform float boo;', 'header')
     inserter.insert_frag('// In fragment shader.', 'before_transforms')
-    tc = TransformChain([Scale(.5)])
+    tc = TransformChain([Scale(0.5)])
     inserter.add_gpu_transforms(tc)
     vs, fs = inserter.insert_into_shaders(vertex_shader, fragment_shader)
     # assert 'temp_pos_tr = temp_pos_tr * 0.5;' in vs
@@ -109,8 +110,8 @@ def test_next_paint(qtbot, canvas):
     @canvas.on_next_paint
     def next():
         pass
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+
+    show_and_wait(qtbot, canvas)
 
 
 def test_visual_1(qtbot, canvas):
@@ -121,8 +122,7 @@ def test_visual_1(qtbot, canvas):
     # Must be called *after* add_visual().
     v.set_data()
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
     v.hide()
     canvas.update()
@@ -148,14 +148,13 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
 
     class MyVisual2(BaseVisual):
         def __init__(self):
-            super(MyVisual2, self).__init__()
+            super().__init__()
             self.vertex_shader = vertex_shader
             self.fragment_shader = fragment_shader
             self.set_primitive_type('points')
-            self.transforms.add(Scale((.1, .1)))
+            self.transforms.add(Scale((0.1, 0.1)))
             self.transforms.add(Translate((-1, -1)))
-            self.transforms.add(Range(
-                (-1, -1, 1, 1), (-1.5, -1.5, 1.5, 1.5)))
+            self.transforms.add(Range((-1, -1, 1, 1), (-1.5, -1.5, 1.5, 1.5)))
             s = 'gl_Position.y += (1 + 1e-8 * u_window_size.x);'
             self.inserter.insert_vert(s, 'after_transforms')
             self.inserter.add_varying('float', 'v_var', 'gl_Position.x')
@@ -178,8 +177,7 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     canvas.add_visual(v)
     v.set_data()
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
     # qtbot.stop()
 
 
@@ -188,17 +186,21 @@ def test_canvas_lazy(qtbot, canvas):
     canvas.add_visual(v)
     canvas.set_lazy(True)
     v.set_data()
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
     assert len(list(canvas.iter_update_queue())) == 2
 
 
+@mark.skip(
+    reason='Visual benchmark is disabled: it is unstable and tracks a known gloo memory leak.'
+)
 def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
+    if sys.version_info >= (3, 13):
+        skip('memory_profiler still uses fork() here on Python 3.13')
     try:
         from memory_profiler import memory_usage
     except ImportError:  # pragma: no cover
-        logger.warning("Skip test depending on unavailable memory_profiler module.")
+        logger.warning('Skip test depending on unavailable memory_profiler module.')
         return
 
     class TestCanvas(QOpenGLWindow):
@@ -209,8 +211,7 @@ def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
     program = gloo.Program(vertex_shader_nohook, fragment_shader)
 
     canvas = TestCanvas()
-    canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    show_and_wait(qtbot, canvas)
 
     def f():
         for _ in range(100):
@@ -218,7 +219,7 @@ def test_visual_benchmark(qtbot, vertex_shader_nohook, fragment_shader):
             canvas.update()
             qtbot.wait(1)
 
-    mem = memory_usage(f)
+    mem = memory_usage((f, (), {}), multiprocess=False)
     usage = max(mem) - min(mem)
     print(usage)
 

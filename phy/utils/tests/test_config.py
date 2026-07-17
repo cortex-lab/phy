@@ -1,43 +1,44 @@
-# -*- coding: utf-8 -*-
-
 """Test config."""
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import logging
 from textwrap import dedent
 
+from phylib.utils._misc import write_text
 from pytest import fixture
 from traitlets import Float
 from traitlets.config import Configurable
 
 from .. import config as _config
-from phylib.utils._misc import write_text
-from ..config import (ensure_dir_exists,
-                      load_config,
-                      load_master_config,
-                      save_config,
-                      )
+from ..config import (
+    ensure_dir_exists,
+    load_config,
+    load_master_config,
+    save_config,
+)
 
 logger = logging.getLogger(__name__)
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test logging
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_logging():
-    logger.debug("Debug message")
-    logger.info("Info message")
-    logger.warning("Warn message")
-    logger.error("Error message")
+    logger.debug('Debug message')
+    logger.info('Info message')
+    logger.warning('Warn message')
+    logger.error('Error message')
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Test config
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 def test_phy_config_dir():
     assert str(_config.phy_config_dir()).endswith('.phy')
@@ -53,9 +54,10 @@ def test_temp_config_dir(temp_config_dir):
     assert _config.phy_config_dir() == temp_config_dir
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Config tests
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 @fixture
 def py_config(tempdir):
@@ -93,7 +95,6 @@ def config(py_config, json_config, request):
 
 
 def test_load_config(config):
-
     assert load_config() is not None
 
     class MyConfigurable(Configurable):
@@ -128,13 +129,13 @@ def test_load_master_config_1(temp_config_dir):
 
     # Load the master config file.
     c = load_master_config()
-    assert c.MyConfigurable.my_var == 1.
+    assert c.MyConfigurable.my_var == 1.0
 
 
 def test_save_config(tempdir):
-    c = {'A': {'b': 3.}}
+    c = {'A': {'b': 3.0}}
     path = tempdir / 'config.json'
     save_config(path, c)
 
     c1 = load_config(path)
-    assert c1.A.b == 3.
+    assert c1.A.b == 3.0

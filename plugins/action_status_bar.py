@@ -14,7 +14,6 @@ class ExampleActionPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-
             # Add a separator at the end of the File menu.
             # Note: currently, there is no way to add actions at another position in the menu.
             gui.file_actions.separator()
@@ -27,7 +26,7 @@ class ExampleActionPlugin(IPlugin):
                 # the menu item.
 
                 # We update the text in the status bar.
-                gui.status_message = "Hello world"
+                gui.status_message = 'Hello world'
 
             # We add a separator at the end of the Select menu.
             gui.select_actions.separator()
@@ -35,15 +34,15 @@ class ExampleActionPlugin(IPlugin):
             # Add an action to a new submenu called "My submenu". This action displays a prompt
             # dialog with the default value 10.
             @gui.select_actions.add(
-                submenu='My submenu', shortcut='ctrl+c', prompt=True, prompt_default=lambda: 10)
+                submenu='My submenu', shortcut='ctrl+c', prompt=True, prompt_default=lambda: 10
+            )
             def select_n_first_clusters(n_clusters):
-
                 # All cluster view methods are called with a callback function because of the
-                # asynchronous nature of Python-Javascript interactions in Qt5.
+                # asynchronous nature of the table API.
                 @controller.supervisor.cluster_view.get_ids
                 def get_cluster_ids(cluster_ids):
                     """This function is called when the ordered list of cluster ids is returned
-                    by the Javascript view."""
+                    by the cluster view."""
 
                     # We select the first n_clusters clusters.
                     controller.supervisor.select(cluster_ids[:n_clusters])

@@ -2,35 +2,28 @@
 
 [![Install and Test with Pip](https://github.com/cortex-lab/phy/actions/workflows/python-test.yml/badge.svg)](https://github.com/cortex-lab/phy/actions/workflows/python-test.yml)
 [![codecov.io](https://img.shields.io/codecov/c/github/cortex-lab/phy.svg)](http://codecov.io/github/cortex-lab/phy)
-[![Documentation Status](https://readthedocs.org/projects/phy/badge/?version=latest)](https://phy.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://img.shields.io/badge/docs-Read_the_Docs-blue.svg)](https://phy.readthedocs.io/en/latest/)
 [![GitHub release](https://img.shields.io/github/release/cortex-lab/phy.svg)](https://github.com/cortex-lab/phy/releases/latest)
 [![PyPI release](https://img.shields.io/pypi/v/phy.svg)](https://pypi.python.org/pypi/phy)
 
 [**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites, especially Neuropixels recordings.
 
-> **Release candidate available:** `phy 2.1.0rc1` is available for testing on PyPI. This maintenance-focused release candidate aims to improve installation and GUI reliability on current systems. See the [release notes](https://phy.readthedocs.io/en/latest/release/) for installation instructions, compatibility notes, and testing guidance.
+> **Current release:** `phy 2.1.0` is a maintenance-focused release that improves installation and GUI reliability on current systems. See the [release notes](https://phy.readthedocs.io/en/latest/release/) for details and compatibility notes.
 
-[![phy 2.1.0rc1 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
+[![phy 2.1.0 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
 
 ## Current status
 
-As of March 2026, `phy 2.1.0rc1` is a maintenance-focused release candidate for the current 2.x line.
+As of July 2026, `phy 2.1.0` is the current stable release for the 2.x line.
 
 The main goals of this release are:
 
 * dependency and packaging modernization
 * replacing a fragile legacy web-based GUI component with a Qt-native implementation
 * improving display reliability on modern systems
-* collecting feedback from beta testers before a final `2.1.0` release
+* incorporating fixes identified during release-candidate testing
 
 Dataset formats are unchanged. Some plugins that relied on internal HTML or web-based GUI components may need updates.
-
-If you would like to test this release candidate, install it in a fresh Python 3.10+ environment:
-
-```bash
-python -m pip install --upgrade pip
-pip install "phy==2.1.0rc1"
-```
 
 Please report any issues or compatibility regressions on [GitHub issues](https://github.com/cortex-lab/phy/issues).
 
@@ -42,7 +35,7 @@ phy currently provides three main entry points:
 * **Kwik GUI**: a legacy workflow for datasets sorted with klusta and klustakwik2
 * **Trace GUI**: an experimental raw-data viewer for opening continuous electrophysiology recordings directly
 
-Current testing and maintenance work is focused on modern Linux, macOS, and Windows environments. Linux is still the best-covered platform, but cross-platform testing is active during the `2.1.0rc1` cycle.
+Current testing and maintenance work is focused on modern Linux, macOS, and Windows environments. Linux is still the best-covered platform.
 
 ## Installation
 
@@ -59,12 +52,6 @@ If you plan to use the legacy Kwik GUI, also install:
 
 ```bash
 pip install klusta klustakwik2
-```
-
-For release-candidate testing specifically, install the exact RC version instead:
-
-```bash
-pip install "phy==2.1.0rc1"
 ```
 
 ## Quick start
@@ -151,6 +138,7 @@ pip install -e . --upgrade
 * [Troubleshooting](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [GitHub issues](https://github.com/cortex-lab/phy/issues)
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
+* [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Credits
 
