@@ -74,7 +74,7 @@ def test_attach_plugins(tempdir):
 
     contents = dedent(f"""
     c = get_config()
-    c.Plugins.dirs = ['{tempdir}']
+    c.Plugins.dirs = [{str(tempdir)!r}]
     c.MyController.plugins = ['MyPlugin1']
     """)
     write_text(tempdir / 'phy_config.py', contents)

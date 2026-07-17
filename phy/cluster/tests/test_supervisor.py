@@ -728,6 +728,8 @@ def test_supervisor_move_5(supervisor):
 
 def test_supervisor_reset(qtbot, supervisor):
     supervisor.select_actions.select([10, 11])
+    supervisor.block()
+    _assert_selected(supervisor, [10, 11])
 
     supervisor.select_actions.reset_wizard()
     supervisor.block()

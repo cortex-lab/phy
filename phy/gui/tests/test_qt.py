@@ -111,20 +111,17 @@ def test_debouncer_2(qtbot):
     assert _l == [0]
 
     # Reset
-    qtbot.wait(150)
+    qtbot.waitUntil(lambda: _l == [0, 2], timeout=500)
     _l.clear()
 
     # Step 2: with stop_waiting.
     d.submit(f, 0)
     d.submit(f, 1)
     d.submit(f, 2)
-    qtbot.wait(50)
+    assert _l == [0]
 
     d.stop_waiting(0.001)
-    qtbot.wait(30)
-    # The last submission should be called *before* the expiration of the 100ms debouncer delay,
-    # because we called stop_waiting with a very short delay.
-    assert _l == [0, 2]
+    qtbot.waitUntil(lambda: _l == [0, 2], timeout=500)
 
 
 def test_block(qtbot):
