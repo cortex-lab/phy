@@ -56,8 +56,10 @@ def test_attach_plugins(tempdir):
     class MyController:
         pass
 
+    plugin_dir = tempdir / 'plugins__dir'
+    plugin_dir.mkdir()
     write_text(
-        tempdir / 'plugin1.py',
+        plugin_dir / 'plugin1.py',
         dedent(
             """
             from phy import IPlugin
@@ -74,7 +76,7 @@ def test_attach_plugins(tempdir):
 
     contents = dedent(f"""
     c = get_config()
-    c.Plugins.dirs = [{str(tempdir)!r}]
+    c.Plugins.dirs = [{str(plugin_dir)!r}]
     c.MyController.plugins = ['MyPlugin1']
     """)
     write_text(tempdir / 'phy_config.py', contents)
