@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 def test_trace_gui_1(qtbot, template_path):  # noqa
     gui = create_trace_gui(template_path)
+    mmaps = list(gui._trace_reader._mmaps)
     qtbot.addWidget(gui)
     with qtbot.waitExposed(gui):
         gui.show()
     gui.close()
+    assert all(arr._mmap.closed for arr in mmaps)

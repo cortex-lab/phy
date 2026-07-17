@@ -70,6 +70,9 @@ class MyModel:
     spike_waveforms = None
     traces = artificial_traces(int(sample_rate * duration), n_channels)
 
+    def __init__(self):
+        self.closed = False
+
     def _get_some_channels(self, offset, size):
         return list(islice(cycle(range(self.n_channels)), offset, offset + size))
 
@@ -92,6 +95,9 @@ class MyModel:
 
     def save_metadata(self, name, values):
         pass
+
+    def close(self):
+        self.closed = True
 
 
 class MyController(BaseController):
@@ -133,6 +139,22 @@ def _mock_controller(tempdir, cls):
         clear_cache=True,
         enable_threading=False,
     )
+
+
+def test_controller_close(tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    model = controller.model
+    handlers = list(controller._log_handlers)
+
+    assert handlers
+    assert all(handler in logging.getLogger('phy').handlers for handler in handlers)
+
+    controller.close()
+    controller.close()  # Cleanup is idempotent.
+
+    assert model.closed
+    assert all(handler not in logging.getLogger('phy').handlers for handler in handlers)
+    assert all(handler.stream is None for handler in handlers)
 
 
 # ------------------------------------------------------------------------------
@@ -265,6 +287,7 @@ class MinimalControllerTests:
         if os.environ.get('PHY_TEST_STOP', None):  # pragma: no cover
             cls._qtbot.stop()
         cls._close_gui()
+        cls._controller.close()
         shutil.rmtree(cls._tempdir_)
 
     @classmethod

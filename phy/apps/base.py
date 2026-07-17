@@ -906,10 +906,16 @@ class BaseController:
         assert self.dir_path.exists()
 
         # Add a log file.
+        phy_logger = logging.getLogger('phy')
+        existing_handlers = set(phy_logger.handlers)
         _add_log_file(Path(dir_path) / 'phy.log')
+        self._log_handlers = [
+            handler for handler in phy_logger.handlers if handler not in existing_handlers
+        ]
 
         # Create or reuse a Model instance (any object)
         self.model = self._create_model(dir_path=dir_path, **kwargs) if model is None else model
+        self._model_closed = False
 
         # Set up the cache.
         self._set_cache(clear_cache)
@@ -962,6 +968,24 @@ class BaseController:
         self._set_selector()
 
         emit('controller_ready', self)
+
+    def close(self, close_model=True):
+        """Release files owned by the controller.
+
+        Closing a GUI does not necessarily end a controller's lifetime: callers may
+        recreate a GUI around the same model. Resource cleanup is therefore explicit.
+        """
+        if close_model and not self._model_closed:
+            close = getattr(self.model, 'close', None)
+            if callable(close):
+                close()
+            self._model_closed = True
+
+        phy_logger = logging.getLogger('phy')
+        for handler in self._log_handlers:
+            phy_logger.removeHandler(handler)
+            handler.close()
+        self._log_handlers.clear()
 
     # Internal initialization methods
     # -------------------------------------------------------------------------

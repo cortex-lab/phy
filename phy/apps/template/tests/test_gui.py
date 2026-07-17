@@ -40,8 +40,11 @@ def _template_controller(tempdir, dir_path, **kwargs):
 
 def test_template_describe(qtbot, tempdir):
     model = load_model(_make_dataset(tempdir, param='dense', has_spike_attributes=False))
-    with captured_output() as (stdout, stderr):
-        template_describe(model.dir_path / 'params.py')
+    try:
+        with captured_output() as (stdout, stderr):
+            template_describe(model.dir_path / 'params.py')
+    finally:
+        model.close()
     assert '314' in stdout.getvalue()
 
 
@@ -111,6 +114,7 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
 
         # Close the GUI.
         self.__class__._close_gui()
+        self.__class__._controller.close(close_model=False)
 
         # Recreate the controller on the model.
         self.__class__._controller = _template_controller(
