@@ -7,10 +7,10 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-        qt-version: ["qt5"]
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -38,18 +38,11 @@ jobs:
       run: uv python install ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: uv sync --dev --extra ${{ matrix.qt-version }}
+      run: uv sync --dev
 
     - name: Install phylib from branch
-      run: |
-        if [ "${{ github.ref_name }}" = "master" ]; then
-          uv add "git+https://github.com/cortex-lab/phylib.git@master"
-        elif [ "${{ github.ref_name }}" = "dev" ]; then  
-          uv add "git+https://github.com/cortex-lab/phylib.git@dev"
-        else
-          uv add "git+https://github.com/cortex-lab/phylib.git@${{ github.ref_name }}"
-        fi
-      shell: bash
+      if: github.ref_name == 'master' || github.ref_name == 'dev'
+      run: uv add "git+https://github.com/cortex-lab/phylib.git@${{ github.ref_name }}"
 
     - name: Install additional test dependencies
       run: |
@@ -96,7 +89,7 @@ jobs:
         version: "latest"
 
     - name: Set up Python
-      run: uv python install 3.9
+      run: uv python install 3.10
 
     - name: Build package
       run: uv build
