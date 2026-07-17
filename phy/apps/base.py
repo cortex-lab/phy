@@ -48,6 +48,8 @@ from phy.gui.widgets import IPythonView
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 
+from ._utils import _close_trace_reader
+
 logger = logging.getLogger(__name__)
 
 
@@ -976,6 +978,7 @@ class BaseController:
         recreate a GUI around the same model. Resource cleanup is therefore explicit.
         """
         if close_model and not self._model_closed:
+            _close_trace_reader(getattr(self.model, 'traces', None))
             close = getattr(self.model, 'close', None)
             if callable(close):
                 close()

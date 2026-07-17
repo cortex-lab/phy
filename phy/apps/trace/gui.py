@@ -14,25 +14,9 @@ from phy.apps.template import get_template_params
 from phy.cluster.views.trace import TraceView, select_traces
 from phy.gui import GUI, create_app, run_app
 
+from .._utils import _close_trace_reader
+
 logger = logging.getLogger(__name__)
-
-
-def _close_trace_reader(traces):
-    """Close a phylib trace reader, including readers without a public close method."""
-    close = getattr(traces, 'close', None)
-    if callable(close):
-        close()
-        return
-
-    for arr in getattr(traces, '_mmaps', ()):
-        mmap = getattr(arr, '_mmap', None)
-        if mmap is not None and not mmap.closed:
-            mmap.close()
-
-    reader = getattr(traces, 'reader', None)
-    close = getattr(reader, 'close', None)
-    if callable(close):
-        close()
 
 
 # ------------------------------------------------------------------------------

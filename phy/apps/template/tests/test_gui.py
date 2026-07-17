@@ -48,6 +48,16 @@ def test_template_describe(qtbot, tempdir):
     assert '314' in stdout.getvalue()
 
 
+def test_template_controller_close(tempdir):
+    dataset = _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+    controller = _template_controller(tempdir, dataset.parent)
+    mmaps = list(controller.model.traces._mmaps)
+
+    controller.close()
+
+    assert all(arr._mmap.closed for arr in mmaps)
+
+
 class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
     """Base template controller tests."""
 
@@ -114,9 +124,9 @@ class TemplateControllerDenseTests(TemplateControllerTests, unittest.TestCase):
 
         # Close the GUI.
         self.__class__._close_gui()
-        self.__class__._controller.close(close_model=False)
+        self.__class__._controller.close()
 
-        # Recreate the controller on the model.
+        # Recreate the controller from the saved dataset.
         self.__class__._controller = _template_controller(
             self.__class__._tempdir, self.__class__._dataset.parent, clear_cache=False
         )

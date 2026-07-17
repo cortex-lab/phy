@@ -319,6 +319,8 @@ class BaseControllerTests(MinimalControllerTests):
 
     def test_common_01(self):
         """Select one cluster."""
+        self.supervisor.select_actions.reset_wizard()
+        self.supervisor.block()
         self.next_best()
         self.assertEqual(len(self.selected), 1)
 
