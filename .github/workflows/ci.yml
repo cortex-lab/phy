@@ -55,17 +55,10 @@ jobs:
     - name: Check formatting with ruff
       run: uv run ruff format --check phy
 
-    - name: Test with pytest (Linux)
-      if: runner.os == 'Linux'
-      run: uv run make test-full
-      env:
-        DISPLAY: :99.0
-        QT_QPA_PLATFORM: offscreen
-
-    - name: Test with pytest (Windows/macOS)
-      if: runner.os != 'Linux'
+    - name: Test with pytest
       run: uv run pytest --cov=phy --cov-report=xml phy
       env:
+        DISPLAY: ${{ runner.os == 'Linux' && ':99.0' || '' }}
         QT_QPA_PLATFORM: offscreen
 
     - name: Upload coverage to Codecov
