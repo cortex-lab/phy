@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phy"
-version = "2.1.0" # No dynamic lookup needed
+version = "2.1.1.dev0" # No dynamic lookup needed
 description = "Interactive visualization and manual spike sorting of large-scale ephys data"
 readme = "README.md"
 license = "BSD-3-Clause"
