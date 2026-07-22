@@ -68,6 +68,14 @@ kwik = [
     "six",
     "setuptools<81",
 ]
+# Optional dependencies for the ExampleReclusterPlugin (plugins/recluster.py).
+# scikit-learn provides the PCA reduction and the Gaussian-mixture fallback;
+# isosplit 0.1.4 is the version the plugin targets -- its signature
+# isosplit(data, *, dip_threshold=2, ...) matches the plugin's call exactly.
+recluster = [
+    "scikit-learn>=1.9.0",
+    "isosplit==0.1.4",
+]
 dev = [
     "Cython>=3.0",
     "pytest",
