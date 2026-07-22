@@ -1,5 +1,12 @@
 # phy plugin examples
 
+To enable any of these, phy needs both the plugin *directory* (`c.Plugins.dirs`)
+and the plugin *name* (`c.<GUIName>.plugins`) in `~/.phy/phy_config.py`. A ready-made
+config that enables `ExampleReclusterPlugin` ships in the repo root as
+[phy_config.example.py](../phy_config.example.py) -- copy it to `~/.phy/phy_config.py`
+(the plugin path is derived from `phy.__file__`, so no editing is needed). The
+recluster plugin's extra dependencies install with `pip install -e .[recluster]`.
+
 * [ExampleActionPlugin](action_status_bar.py): Show how to create new actions in the GUI.
 * [ExampleClusterMetadataPlugin](cluster_metadata.py): Show how to save the best channel of every cluster in a cluster_channel.tsv file when saving.
 * [ExampleClusterMetricsPlugin](cluster_metrics.py): Show how to add a custom cluster metrics.
