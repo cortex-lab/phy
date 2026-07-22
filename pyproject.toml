@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.10"
 
@@ -34,7 +35,7 @@ dependencies = [
     "joblib",
     "matplotlib",
     "mtscomp",
-    "numpy",
+    "numpy>=1.23",
     "pillow",
     "pip",
     "PyQt5>=5.15.11,<5.16",
@@ -55,6 +56,30 @@ Repository = "https://github.com/cortex-lab/phy"
 Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
+# Legacy Kwik GUI. Both klusta and klustakwik2 are unmaintained (last releases
+# 2018) and constrain the environment in ways phy itself does not, so everything
+# legacy is confined to this extra to give one self-contained, fully working Kwik
+# setup (open, curate, and recluster) without holding back the main package:
+#
+#   numpy>=1.23,<1.24  Pinned conservatively to the last numpy the legacy stack
+#                 was written against, so the whole Kwik surface -- not just the
+#                 parts phy exercises in CI -- stays on tested ground. This is
+#                 deliberately tighter than strictly required (reclustering itself
+#                 runs on newer numpy), and it is what caps the Kwik GUI at Python
+#                 3.10-3.11: numpy 1.23 ships no cp312 wheels.
+#   setuptools<81 klusta/__init__.py imports pkg_resources, dropped in 81.
+#   six           klusta declares no dependencies at all, and imports six.
+#
+# klustakwik2 has no wheels outside manylinux/win, and its setup.py imports numpy
+# at build time, so elsewhere it needs:
+#   pip install --no-build-isolation klustakwik2
+kwik = [
+    "klusta",
+    "klustakwik2",
+    "six",
+    "numpy>=1.23,<1.24",
+    "setuptools<81",
+]
 dev = [
     "Cython>=3.0",
     "pytest",
