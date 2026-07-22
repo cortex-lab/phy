@@ -18,5 +18,6 @@
 * [ExampleNspikesViewsPlugin](n_spikes_views.py): Show how to change the number of displayed spikes in each view.
 * [ExampleOpenGLViewPlugin](opengl_view.py): Show how to write a custom OpenGL view. This is for advanced users only.
 * [ExampleRawDataFilterPlugin](raw_data_filter.py): Show how to add a custom raw data filter for the TraceView and Waveform View
+* [ExampleReclusterPlugin](recluster.py): Show how to add a recluster action based on the PC features, using ISO-SPLIT (the algorithm MountainSort uses) or a Gaussian mixture. This is the Template GUI counterpart of the Kwik GUI's recluster.
 * [ExampleSimilarityPlugin](custom_similarity.py): Show how to add a custom similarity measure.
 * [ExampleWaveformUMAPPlugin](umap_view.py): Show how to write a custom dimension reduction view.
