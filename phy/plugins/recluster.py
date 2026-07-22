@@ -1,4 +1,4 @@
-"""Show how to add a recluster action based on the PC features.
+"""Recluster action based on the PC features.
 
 This is the Template GUI counterpart of the Kwik GUI's `recluster` action. No
 spike detection is re-run: the spikes and their PC features already exist in the
@@ -10,8 +10,14 @@ are by testing each candidate split for unimodality, so it does not assume the
 clusters are Gaussian. Bursting and drifting units are not, which is why a
 Gaussian mixture tends to cut them in half. The mixture is kept as a fallback and
 for the case where you want to impose the number of subclusters yourself.
+
+This plugin is bundled with phy and attached by default (see
+`TemplateController.default_plugins`). Its dependencies are optional and install
+with `pip install "phy[recluster]"`; without them the actions are not added and a
+message says how to get them.
 """
 
+import importlib.util
 import logging
 
 import numpy as np
@@ -32,6 +38,14 @@ MAX_DIMS = 10
 # and the count is not monotonic in the threshold. To split a cluster ISO-SPLIT
 # considers unimodal, imposing the number of subclusters is the controlled option.
 DIP_THRESHOLD = 2.0
+
+
+def _has(name):
+    """Whether a module is importable, without importing it."""
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):  # pragma: no cover
+        return False
 
 
 def _reduce(x):
@@ -87,6 +101,16 @@ def _fit_predict(x, n_clusters=None):
 
 class ExampleReclusterPlugin(IPlugin):
     def attach_to_controller(self, controller):
+        # scikit-learn drives both the PCA reduction and the mixture fallback, so
+        # without it there is no working code path: skip rather than register
+        # actions that would raise when pressed.
+        if not _has('sklearn'):
+            logger.debug(
+                'scikit-learn is not installed: the recluster actions are disabled. '
+                'Install them with `pip install "phy[recluster]"`.'
+            )
+            return
+
         def _get_spike_ids(cluster_ids):
             """Return all spikes of the selected clusters that have features."""
             spike_ids = controller.supervisor.clustering.spikes_in_clusters(cluster_ids)

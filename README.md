@@ -39,7 +39,7 @@ Current testing and maintenance work is focused on modern Linux, macOS, and Wind
 
 ## Installation
 
-Install phy in a fresh Python 3.10-3.12 environment:
+Install phy in a fresh Python 3.10-3.13 environment:
 
 ```bash
 python -m pip install --upgrade pip
@@ -48,15 +48,54 @@ pip install phy
 
 This installs the GUI runtime dependencies as part of the main package.
 
-phy pins `numpy<2`, which is why Python 3.13 is not supported: numpy 1.x
-publishes no cp313 wheels.
+phy runs on numpy 2 and Python 3.13.
+
+### Reclustering
+
+phy can recluster the selected clusters from their PC features, using ISO-SPLIT
+(the algorithm MountainSort uses) or a Gaussian mixture. No spike detection is
+re-run, so this needs no legacy dependencies: scikit-learn and isosplit are pure
+Python and numpy 2 compatible, and it works on Python 3.13.
+
+```bash
+pip install "phy[kwik]"
+```
+
+Reclustering is **opt-in**: pass `--recluster` to enable it for a run. Without the
+flag the GUI behaves exactly as before, so it never changes a normal session.
+
+```bash
+phy template-gui path/to/params.py              # no reclustering
+phy template-gui path/to/params.py --recluster  # reclustering enabled
+```
+
+No configuration file is needed -- the plugin ships inside the phy package
+(`phy/plugins/recluster.py`) and the flag enables it directly. It adds three
+actions:
+
+| shortcut | action |
+| --- | --- |
+| `alt+k` | ISO-SPLIT, which picks the number of subclusters itself |
+| `shift+alt+k` | split into a number of subclusters you give, using a Gaussian mixture |
+| `ctrl+alt+k` | ISO-SPLIT at a given dip threshold; lower it below 2 to split more readily |
+
+If you want it on for every run without typing the flag, enable it in
+`~/.phy/phy_config.py` instead:
+
+```python
+c = get_config()
+c.TemplateGUI.plugins = ['ExampleReclusterPlugin']
+```
+
+Running `--recluster` without the optional dependencies installed leaves the
+actions out and logs how to get them, rather than failing.
 
 ### Installing from a git checkout
 
 To run phy from this repository rather than from PyPI:
 
 ```bash
-conda create -n phy python=3.12 -y
+conda create -n phy python=3.13 -y
 conda activate phy
 
 git clone https://github.com/cortex-lab/phy.git
@@ -72,36 +111,18 @@ clone:
 pip install "phy @ git+https://github.com/cortex-lab/phy.git"
 ```
 
-### Kwik GUI dependencies
+### The legacy Kwik GUI (`.kwik` files)
 
-The legacy Kwik GUI needs `klusta` and `klustakwik2`, which are unmaintained and
-predate modern packaging. Install them after phy:
+**Not supported.** The Kwik GUI needs `klusta` and `klustakwik2`, which are
+unmaintained: klusta's spike detection uses `np.bool`/`np.int`/`np.object`
+(removed in numpy 1.24) and klustakwik2 compiles against the numpy 1.x C API.
+Together they cap an install at numpy 1.23 and Python 3.11, which is
+incompatible with the numpy 2 and Python 3.13 support above.
 
-```bash
-pip install "phy[kwik]"
-```
-
-On macOS and on Apple Silicon there are no `klustakwik2` wheels, and its
-`setup.py` imports numpy at build time, so build isolation has to be disabled:
-
-```bash
-pip install "cython>=3.0"
-pip install --no-build-isolation klustakwik2
-pip install "phy[kwik]"
-```
-
-Two constraints matter here and both are enforced by the `kwik` extra:
-
-* `numpy<2` — `klustakwik2` compiles against the numpy 1.x C API, and a later
-  `pip install` that pulls numpy 2.x will break it with
-  `ImportError: numpy.core.multiarray failed to import`.
-* `setuptools<81` — `klusta/__init__.py` imports `pkg_resources`, which
-  setuptools removed in 81.
-
-Opening and curating `.kwik` files works. Re-clustering from the GUI (the
-`recluster` action) runs klusta's spike-detection code, which still uses
-`np.bool`/`np.int`/`np.object`; those aliases were removed in numpy 1.24, so
-that path raises `AttributeError` unless you pin `numpy<1.24`.
+The `kwik` extra therefore installs the reclustering dependencies only, not the
+legacy stack. Use `phy template-gui params.py` on a Kilosort output directory.
+If you need to open `.kwik` files, use an older phy release in a separate
+Python 3.11 environment.
 
 ## Quick start
 

@@ -22,9 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-# numpy 1.x ships no cp313 wheels, so the numpy<2 pin caps us at 3.12.
-requires-python = ">=3.10,<3.13"
+# The legacy numpy<2 / numpy<1.24 pins live in the `kwik` extra, not here, so that
+# regular phy users get numpy 2 and Python 3.13.
+requires-python = ">=3.10"
 
 # specific version required for pyopengl >=3.1.9
 dependencies = [
@@ -35,7 +37,7 @@ dependencies = [
     "joblib",
     "matplotlib",
     "mtscomp",
-    "numpy>=1.23,<2",
+    "numpy>=1.23",
     "pillow",
     "pip",
     "PyQt5>=5.15.11,<5.16",
@@ -56,23 +58,19 @@ Repository = "https://github.com/cortex-lab/phy"
 Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
-# Legacy Kwik GUI. klusta declares no dependencies of its own, so the ones phy
-# does not already pull in have to be listed here. klusta/__init__.py imports
-# pkg_resources, which setuptools dropped in 81.
-# klustakwik2 has no wheels outside manylinux/win, and its setup.py imports
-# numpy at build time, so on macOS it needs:
-#   pip install --no-build-isolation klustakwik2
-kwik = [
-    "klusta",
-    "klustakwik2",
-    "six",
-    "setuptools<81",
-]
-# Optional dependencies for the ExampleReclusterPlugin (plugins/recluster.py).
+# Reclustering. Installs the optional dependencies of the recluster plugin
+# (phy/plugins/recluster.py), which both GUIs attach by default.
 # scikit-learn provides the PCA reduction and the Gaussian-mixture fallback;
 # isosplit 0.1.4 is the version the plugin targets -- its signature
 # isosplit(data, *, dip_threshold=2, ...) matches the plugin's call exactly.
-recluster = [
+# Both are pure Python and declare no numpy upper bound, so this extra resolves
+# on Python 3.13 with numpy 2.
+#
+# NOTE: this extra no longer installs the legacy Kwik stack (klusta,
+# klustakwik2). Those cap the install at numpy<1.24 and Python 3.11, which is
+# incompatible with the numpy 2 / Python 3.13 support above. Opening `.kwik`
+# files is therefore not supported; use `phy template-gui params.py`.
+kwik = [
     "scikit-learn>=1.9.0",
     "isosplit==0.1.4",
 ]
