@@ -137,12 +137,23 @@ def attach_plugins(controller, plugins=None, config_dir=None, dirs=None):
     config = load_master_config(config_dir=config_dir)
     name = getattr(controller, 'gui_name', None) or controller.__class__.__name__
     c = config.get(name)
+    # Import the plugins bundled with phy, so that they register themselves in
+    # IPluginRegistry and can be enabled by name -- by the `--recluster` command-line
+    # flag, or from the user config -- without configuring Plugins.dirs. Bundled
+    # plugins are never attached on their own: they have to be asked for.
+    try:
+        importlib.import_module('phy.plugins')
+    except Exception as e:  # pragma: no cover
+        logger.warning('Could not import the bundled plugins: %s.', e)
     # Discover plugin files in the plugin directories, as specified in the phy config file.
     dirs = (dirs or []) + config.get('Plugins', {}).get('dirs', [])
     discover_plugins(dirs)
     default_plugins = c.plugins if c else []
     if len(default_plugins):
         plugins = default_plugins + plugins
+    # Collapse duplicates, so that a plugin named both in the user config and on the
+    # command line is attached once.
+    plugins = list(dict.fromkeys(plugins))
     logger.debug('Loading %d plugins.', len(plugins))
     attached = []
     for plugin in plugins:
