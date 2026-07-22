@@ -39,7 +39,7 @@ Current testing and maintenance work is focused on modern Linux, macOS, and Wind
 
 ## Installation
 
-Install phy in a fresh Python 3.10+ environment:
+Install phy in a fresh Python 3.10-3.12 environment:
 
 ```bash
 python -m pip install --upgrade pip
@@ -48,11 +48,60 @@ pip install phy
 
 This installs the GUI runtime dependencies as part of the main package.
 
-If you plan to use the legacy Kwik GUI, also install:
+phy pins `numpy<2`, which is why Python 3.13 is not supported: numpy 1.x
+publishes no cp313 wheels.
+
+### Installing from a git checkout
+
+To run phy from this repository rather than from PyPI:
 
 ```bash
-pip install klusta klustakwik2
+conda create -n phy python=3.12 -y
+conda activate phy
+
+git clone https://github.com/cortex-lab/phy.git
+cd phy
+pip install -e .
 ```
+
+`-e` (editable) means `git pull` updates your install with no reinstall step.
+Drop the `-e` for a plain copy. To install straight from GitHub without a local
+clone:
+
+```bash
+pip install "phy @ git+https://github.com/cortex-lab/phy.git"
+```
+
+### Kwik GUI dependencies
+
+The legacy Kwik GUI needs `klusta` and `klustakwik2`, which are unmaintained and
+predate modern packaging. Install them after phy:
+
+```bash
+pip install "phy[kwik]"
+```
+
+On macOS and on Apple Silicon there are no `klustakwik2` wheels, and its
+`setup.py` imports numpy at build time, so build isolation has to be disabled:
+
+```bash
+pip install "cython>=3.0"
+pip install --no-build-isolation klustakwik2
+pip install "phy[kwik]"
+```
+
+Two constraints matter here and both are enforced by the `kwik` extra:
+
+* `numpy<2` — `klustakwik2` compiles against the numpy 1.x C API, and a later
+  `pip install` that pulls numpy 2.x will break it with
+  `ImportError: numpy.core.multiarray failed to import`.
+* `setuptools<81` — `klusta/__init__.py` imports `pkg_resources`, which
+  setuptools removed in 81.
+
+Opening and curating `.kwik` files works. Re-clustering from the GUI (the
+`recluster` action) runs klusta's spike-detection code, which still uses
+`np.bool`/`np.int`/`np.object`; those aliases were removed in numpy 1.24, so
+that path raises `AttributeError` unless you pin `numpy<1.24`.
 
 ## Quick start
 

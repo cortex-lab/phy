@@ -23,7 +23,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-requires-python = ">=3.10"
+# numpy 1.x ships no cp313 wheels, so the numpy<2 pin caps us at 3.12.
+requires-python = ">=3.10,<3.13"
 
 # specific version required for pyopengl >=3.1.9
 dependencies = [
@@ -34,7 +35,7 @@ dependencies = [
     "joblib",
     "matplotlib",
     "mtscomp",
-    "numpy",
+    "numpy>=1.23,<2",
     "pillow",
     "pip",
     "PyQt5>=5.15.11,<5.16",
@@ -55,6 +56,18 @@ Repository = "https://github.com/cortex-lab/phy"
 Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
+# Legacy Kwik GUI. klusta declares no dependencies of its own, so the ones phy
+# does not already pull in have to be listed here. klusta/__init__.py imports
+# pkg_resources, which setuptools dropped in 81.
+# klustakwik2 has no wheels outside manylinux/win, and its setup.py imports
+# numpy at build time, so on macOS it needs:
+#   pip install --no-build-isolation klustakwik2
+kwik = [
+    "klusta",
+    "klustakwik2",
+    "six",
+    "setuptools<81",
+]
 dev = [
     "Cython>=3.0",
     "pytest",
