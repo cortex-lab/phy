@@ -45,6 +45,20 @@ behavior they verify rather than listed separately.
 - Handle native table secondary clicks and trackpad secondary clicks
   consistently.
 
+### Documentation
+
+- Added beginner guides for installation, dataset preparation, first launch,
+  curation, saving, and troubleshooting.
+- Documented the default similarity metric, keyboard-shortcut customization,
+  view computation limits, waveform pre-extraction and its subset limitation,
+  performance tuning, CLI options, configuration, outputs, and advanced
+  workflows.
+- Added source-install instructions for fresh environments using the latest
+  `phy` and `phylib` commits on Linux, macOS, and Windows.
+- Added a task-oriented documentation navigation, synchronized API, shortcut,
+  and plugin references, and strict documentation checks in continuous
+  integration.
+
 ## [2.1.0] — 2026-07-17
 
 This maintenance release restored reliable installation and operation on

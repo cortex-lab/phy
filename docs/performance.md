@@ -51,6 +51,26 @@ Some actions explicitly request `load_all=True` and bypass a display limit.
 That does not turn the corresponding view setting into a global analysis
 setting; check the action or plugin doing the calculation.
 
+### Pre-extract waveforms before opening phy
+
+If on-demand waveform reads are the bottleneck, create phylib's reusable
+waveform subset first:
+
+```bash
+phy extract-waveforms params.py 500 --nc 16
+```
+
+Phy automatically uses the three `_phy_spikes_subset.*.npy` files produced
+beside `params.py`. This pre-extracts up to 500 spikes per original template on
+the relevant channels, sampled from 20 representative raw-data chunks.
+
+Despite the command's historical description, this feature does not
+materialize every spike waveform in the recording, and there is currently no
+supported “extract all” CLI switch. Increasing `500` increases the ceiling but
+does not remove the representative-chunk sampling. See
+[Pre-extract waveform subsets](cli.md#pre-extract-waveform-subsets) for output
+files, overwrite behavior, sizing guidance, and limitations.
+
 ## Change the waveform count for this session
 
 In the Waveform View, type the snippet:
