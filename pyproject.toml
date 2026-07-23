@@ -107,7 +107,7 @@ phy = [
 ]
 
 [tool.uv]
-required-version = "==0.11.31"
+required-version = ">=0.11.8,<0.12"
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
 ]
