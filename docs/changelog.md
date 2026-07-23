@@ -19,9 +19,9 @@ behavior they verify rather than listed separately.
 - Skip clusters labeled `noise` or `mua` during wizard navigation and batch
   similarity selection. **Select > Skip Noise and MUA** controls the behavior
   and remembers the preference across sessions.
-- Use `Control`-right-click to add or remove a Cluster View row from the
-  current selection, or to promote a Similarity View row while preserving the
-  existing selections and similarity reference.
+- Use `Control`-right-click to transfer a selected Cluster View row to the
+  Similarity View, or to promote a Similarity View row into the Cluster View,
+  while preserving the existing selections and similarity reference.
 - Right-click a cross-correlogram to promote its similar cluster into the
   Cluster View selection. Native mouse and trackpad secondary clicks are
   supported.
@@ -59,6 +59,8 @@ behavior they verify rather than listed separately.
   Correlogram View displays at most 20 selected clusters by default.
 - Row actions preserve the intended Cluster View and Similarity View
   selections.
+- `Control`-left-click consistently adds or removes a row from the selection
+  in its current Cluster or Similarity View.
 - On macOS, the `Control+Space` batch-selection shortcut uses the physical
   Control key rather than Command.
 - Cluster and Similarity View selections use a shorter debounce interval,

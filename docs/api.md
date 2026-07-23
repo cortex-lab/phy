@@ -9647,6 +9647,15 @@ Only used in the automated testing suite.
 
 ---
 
+#### Supervisor.demote_cluster
+
+
+**`Supervisor.demote_cluster(self, cluster_id, callback=None)`**
+
+Move a selected cluster row into the similarity view.
+
+---
+
 #### Supervisor.filter
 
 

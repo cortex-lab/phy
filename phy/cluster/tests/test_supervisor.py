@@ -647,24 +647,70 @@ def test_supervisor_promote_unselected_similar_with_control_right_click(qtbot, s
     assert supervisor.selected_similar == [20, 11]
 
 
-def test_supervisor_toggle_cluster_with_control_right_click(qtbot, supervisor):
-    _select(supervisor, [10, 30], [])
+def test_supervisor_demote_cluster_with_control_right_click(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20, 11])
     cluster_view = supervisor.cluster_view
     control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
 
-    index = cluster_view._proxy_index_for_id(11)
+    index = cluster_view._proxy_index_for_id(10)
     pos = cluster_view.table_view.visualRect(index).center()
     qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
     supervisor.block()
 
-    assert supervisor.selected_clusters == [10, 30, 11]
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20, 11, 10]
+    assert supervisor.selected == [30, 20, 11, 10]
 
     index = cluster_view._proxy_index_for_id(30)
     pos = cluster_view.table_view.visualRect(index).center()
     qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
     supervisor.block()
 
-    assert supervisor.selected_clusters == [10, 11]
+    # Keep one cluster as the similarity reference.
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20, 11, 10]
+
+    index = cluster_view._proxy_index_for_id(1)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+    supervisor.block()
+
+    # Rows outside the Cluster View selection cannot be transferred.
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20, 11, 10]
+
+
+def test_supervisor_control_left_click_toggles_selection_in_each_view(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20])
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+
+    cluster_view = supervisor.cluster_view
+    index = cluster_view._proxy_index_for_id(10)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.LeftButton, control_modifier, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
+
+    similarity_view = supervisor.similarity_view
+    index = similarity_view._proxy_index_for_id(20)
+    pos = similarity_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(
+        similarity_view.table_view.viewport(), Qt.LeftButton, control_modifier, pos=pos
+    )
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20]
+
+    qtbot.mouseClick(
+        similarity_view.table_view.viewport(), Qt.LeftButton, control_modifier, pos=pos
+    )
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
 
 
 def test_supervisor_edge_cases(supervisor):

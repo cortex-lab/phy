@@ -901,7 +901,7 @@ class Supervisor:
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
         connect(
-            self._toggle_cluster_on_right_click,
+            self._demote_cluster_on_right_click,
             event='row_right_click',
             sender=self.cluster_view,
         )
@@ -1013,9 +1013,9 @@ class Supervisor:
         """Promote a right-clicked similarity row through the normal action queue."""
         emit('action', self.action_creator, 'promote_similar', cluster_id)
 
-    def _toggle_cluster_on_right_click(self, sender, cluster_id):
-        """Toggle a right-clicked cluster row through the normal action queue."""
-        emit('action', self.action_creator, 'toggle_cluster_selection', cluster_id)
+    def _demote_cluster_on_right_click(self, sender, cluster_id):
+        """Demote a right-clicked cluster row through the normal action queue."""
+        emit('action', self.action_creator, 'demote_cluster', cluster_id)
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -1378,6 +1378,27 @@ class Supervisor:
             self.similarity_view.select(similar, callback=callback)
 
         # Wait to update the other views until the remaining similarity selection is restored.
+        self.cluster_view.select(
+            cluster_ids,
+            callback=restore_similar,
+            update_views=False,
+        )
+
+    def demote_cluster(self, cluster_id, callback=None):
+        """Move a selected cluster row into the similarity view."""
+        cluster_ids = list(self.selected_clusters)
+        if cluster_id not in cluster_ids or len(cluster_ids) == 1:
+            if callback:
+                callback(None)
+            return
+
+        cluster_ids.remove(cluster_id)
+        similar = [value for value in self.selected_similar if value != cluster_id]
+        similar.append(cluster_id)
+
+        def restore_similar(_):
+            self.similarity_view.select(similar, callback=callback)
+
         self.cluster_view.select(
             cluster_ids,
             callback=restore_similar,
