@@ -293,6 +293,7 @@ def test_correlogram_cache_key_includes_spike_limit(tempdir):
 
     # Changing either limit creates a distinct cache entry.
     assert calls == [1, 2, 1, 2]
+    controller.close()
 
 
 def test_correlogram_sampling_preserves_nearby_pairs():
@@ -341,6 +342,7 @@ def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     eligible = subset_spikes[controller.supervisor.clustering.spike_clusters[subset_spikes] == 0]
     expected_indices = [0, (len(eligible) - 1) // 2, len(eligible) - 1]
     np.testing.assert_array_equal(selected[0], eligible[expected_indices])
+    controller.close()
 
 
 def test_waveform_selected_clusters_share_total_budget(tempdir):
@@ -354,6 +356,7 @@ def test_waveform_selected_clusters_share_total_budget(tempdir):
     ]
 
     assert counts == [4, 3, 3]
+    controller.close()
 
 
 def test_amplitude_background_has_stable_total_budget(tempdir):
@@ -389,6 +392,7 @@ def test_amplitude_background_has_stable_total_budget(tempdir):
         controller.supervisor.clustering.spikes_per_cluster[selected_cluster]
     )
     assert len(all_data[1].spike_ids) == expected_background
+    controller.close()
 
 
 def test_amplitude_selected_clusters_share_total_budget(tempdir):
@@ -404,6 +408,7 @@ def test_amplitude_selected_clusters_share_total_budget(tempdir):
     assert len(selected_a.spike_ids) == 5
     assert len(selected_b.spike_ids) == 5
     assert len(background.spike_ids) == 7
+    controller.close()
 
 
 def test_amplitude_background_redistributes_unused_budget():
