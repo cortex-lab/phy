@@ -115,21 +115,23 @@ template_gui("params.py")
 
 ## Developer setup
 
-To work on phy itself in a fresh checkout:
+For a fresh editable installation using the latest commits of both phylib and phy:
 
 ```bash
-git clone git@github.com:cortex-lab/phy.git
-cd phy
-uv sync --dev
+mkdir phy-source
+cd phy-source
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+
+git clone https://github.com/cortex-lab/phylib.git
+git clone https://github.com/cortex-lab/phy.git
+python -m pip install --editable ./phylib
+python -m pip install --editable "./phy[dev]"
 ```
 
-If you are working on phy together with a local checkout of `phylib`, install that checkout in editable mode:
-
-```bash
-git clone git@github.com:cortex-lab/phylib.git
-cd phylib
-pip install -e . --upgrade
-```
+Windows PowerShell instructions, update commands, and verification of the exact commits are in the
+[source installation guide](https://phy.readthedocs.io/en/latest/installation/#install-the-latest-phy-and-phylib-source).
 
 ## Troubleshooting and docs
 

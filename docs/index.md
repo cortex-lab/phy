@@ -1,23 +1,39 @@
-# Introduction
+# phy documentation
 
-[**phy**](https://github.com/cortex-lab/phy) is an open-source Python library providing a graphical user interface for visualization and manual curation of large-scale electrophysiological data. It is optimized for high-density multielectrode arrays containing hundreds to thousands of recording sites (mostly [Neuropixels probes](https://www.ucl.ac.uk/neuropixels/)).
+phy is an open-source graphical interface for visualizing and manually curating large-scale
+electrophysiology datasets. It is optimized for high-density probes, including Neuropixels, and
+provides both an interactive curation workflow and Python extension points for specialized labs.
 
-> **Current release:** [phy 2.1.0](release.md) is a maintenance-focused release that improves installation and GUI reliability on current systems. See the [release notes](release.md) for details and compatibility notes.
+> **Current stable release:** phy 2.1.0. The source tree is developing phy 2.1.1. See the
+> [release notes](release.md) and [changelog](changelog.md).
 
-[![phy 2.1.0 screenshot](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
+[![Template GUI](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)
 
-## Spike sorting programs
+## Start here
 
-phy can open datasets spike-sorted with the following programs:
+New users should follow these pages in order:
 
-* [KiloSort](https://github.com/MouseLand/Kilosort)
-* [SpykingCircus](https://spyking-circus.readthedocs.io/en/latest/)
-* [klusta](https://klusta.readthedocs.io/en/latest/)
+1. [Install phy](installation.md) in a fresh Python environment.
+2. [Prepare and validate a dataset](dataset.md).
+3. Follow the [first-ten-minutes quickstart](quickstart.md).
+4. Learn the [GUI selection model](gui.md) and
+   [similarity-guided workflow](similarity.md).
+5. Read how [saving and output files](outputs.md) work before curating valuable data.
 
-KiloSort and SpykingCircus are spike sorting programs based on template matching. They use a file format based on `.npy` ([NumPy binary arrays](https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html)) and `.tsv` files (tab-separated files).
+## Supported workflows
 
-klusta is a legacy spike sorting program based on an automatic clustering algorithm. It uses the [kwik format](https://klusta.readthedocs.io/en/latest/kwik/#kwik-format) based on HDF5. While klusta and the kwik format are still supported by phy, they are no longer actively maintained.
+The **Template GUI** is the primary workflow for template-based spike sorters such as
+[KiloSort](https://github.com/MouseLand/Kilosort) and
+[SpyKING CIRCUS](https://spyking-circus.readthedocs.io/). It reads NumPy arrays, TSV metadata,
+and `params.py`.
 
-## Installation instructions
+The **Kwik GUI** remains available for legacy klusta/Kwik datasets but is no longer the primary
+maintained workflow. The experimental **Trace GUI** opens a continuous raw recording directly.
+See the [command-line reference](cli.md) for all entry points.
 
-See the [GitHub repository](https://github.com/cortex-lab/phy/) for installation instructions, or go to the [release notes](release.md) for details about `2.1.0`.
+## Customize and extend phy
+
+Common settings—including spike sampling, caches, state, and keyboard shortcuts—are covered under
+[Configuration and customization](configuration.md). Plugin authors and analysts can continue
+with the [power-user guide](advanced.md), [plugin examples](plugins.md), and
+[Python API](api.md).

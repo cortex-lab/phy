@@ -1,20 +1,34 @@
 site_name: phy
 nav:
+  - Home: index.md
   - Getting started:
-      - Introduction: index.md
-      - Release notes: release.md
+      - Installation: installation.md
+      - Prepare a dataset: dataset.md
+      - First ten minutes: quickstart.md
       - Troubleshooting: troubleshooting.md
   - User guide:
       - Terminology: terminology.md
-      - Interactive visualization: visualization.md
+      - Using the GUI: gui.md
+      - Similarity and the wizard: similarity.md
       - Manual clustering: clustering.md
+      - Views reference: visualization.md
+      - Saving and output files: outputs.md
       - Keyboard shortcuts and snippets: shortcuts.md
-  - Tutorials:
-      - Manual Clustering Practical Guide (by S. Lenzi and N. Steinmetz): sorting_user_guide.md
-  - Developer guide:
-      - Customization: customization.md
+  - How-to and customization:
+      - Configuration and state: configuration.md
+      - Performance and spike sampling: performance.md
+      - Change keyboard shortcuts: keyboard_customization.md
+      - Plugin introduction: customization.md
       - Plugin examples: plugins.md
+  - Power users:
+      - Power-user guide: advanced.md
+      - Command-line reference: cli.md
       - Data analysis: analysis.md
       - API documentation: api.md
+  - Project:
+      - Changelog: changelog.md
+      - Release notes: release.md
+      - Maintainer release workflow: releasing.md
+      - Archived practical guide: sorting_user_guide.md
 theme: readthedocs
 docs_dir: docs
