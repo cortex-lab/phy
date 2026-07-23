@@ -49,6 +49,10 @@ def test_waveform_view(qtbot, tempdir, gui):
     # Each cluster contributes one zero-axis line per channel, independently
     # of the number of waveform traces displayed.
     assert v.line_visual._acc.pos.shape == (3 * nc, 4)
+    # Every raw trace in one cluster shares the same retained time-axis row.
+    x_rows = v.waveform_visual._acc.items['x']
+    n_rows_per_cluster = ns * nc
+    assert len({id(row) for row in x_rows[:n_rows_per_cluster]}) == 1
     v.on_select(cluster_ids=[0, 2])
 
     v.toggle_waveform_overlap(True)

@@ -271,6 +271,31 @@ def test_plot_gpu_attributes_preserve_values(qtbot, canvas_pz):
     canvas_pz.close()
 
 
+def test_plot_shared_x_axis(qtbot, canvas_pz):
+    x = np.array([-1.0, 0.0, 1.0])
+    y = np.array([[0.0, 0.5, 1.0], [1.0, 0.5, 0.0]])
+    visual = PlotVisual()
+    canvas_pz.add_visual(visual)
+
+    data = visual.validate(x=x, y=y, data_bounds=NDC)
+    assert len(data.x) == len(y)
+    assert all(row is x for row in data.x)
+    visual.set_data(x=x, y=y, data_bounds=NDC)
+
+    position = np.asarray(
+        visual.program._attributes['a_position']._data
+    )['a_position']
+    expected = np.c_[
+        np.tile(x, len(y)),
+        y.ravel(),
+        np.zeros(y.size),
+    ].astype(np.float32)
+    np.testing.assert_array_equal(position, expected)
+
+    show_and_wait(qtbot, canvas_pz)
+    canvas_pz.close()
+
+
 def test_plot_list(qtbot, canvas_pz):
     y = [0.25 * np.random.randn(i) for i in (5, 20, 50)]
     c = [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 1, 1]]

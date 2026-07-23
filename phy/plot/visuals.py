@@ -432,7 +432,13 @@ class PlotVisual(BaseVisual):
 
         if x is None:
             x = [np.linspace(-1.0, 1.0, len(_)) for _ in y]
-        x = _as_list(x)
+        elif isinstance(x, np.ndarray) and x.ndim == 1:
+            # Multiple signals may share one x axis. Keep references to the
+            # small source row and expand it only when the final position
+            # buffer is assembled in set_data().
+            x = [x] * len(y)
+        else:
+            x = _as_list(x)
 
         # Remove empty elements.
         assert len(x) == len(y)

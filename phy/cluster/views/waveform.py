@@ -221,8 +221,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         assert wave.shape[2] == n_channels
         assert masks.shape == (n_spikes_clu, n_channels)
 
-        # Find the x coordinates.
-        t = get_linear_x(n_spikes_clu * n_channels, n_samples)
+        # Raw waveform traces within this cluster all share one time axis.
+        # PlotVisual can retain that single row until it assembles the final
+        # vertex buffer, avoiding a full tiled x array. PlotAggVisual still
+        # requires the historical two-dimensional input.
+        if self._current_visual == self.waveform_visual:
+            t = get_linear_x(1, n_samples).ravel()
+        else:
+            t = get_linear_x(n_spikes_clu * n_channels, n_samples)
         t = _overlap_transform(t, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         # HACK: on the GPU, we get the actual masks with fract(masks)
         # since we add the relative cluster index. We need to ensure
