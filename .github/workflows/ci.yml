@@ -20,7 +20,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     # Set up display for GUI testing on Linux
     - name: Set up display (Linux)
@@ -37,85 +37,87 @@ jobs:
         DISPLAY: :99.0
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
-        version: "latest"
+        enable-cache: true
 
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: uv sync --dev
-
-    - name: Install phylib from branch
-      if: github.ref_name == 'master' || github.ref_name == 'dev'
-      run: uv add "git+https://github.com/cortex-lab/phylib.git@${{ github.ref_name }}"
-
-    - name: Install additional test dependencies
-      run: |
-        uv add "git+https://github.com/kwikteam/klusta.git"
-        uv add --no-build-isolation "git+https://github.com/kwikteam/klustakwik2.git"
+      run: uv sync --frozen --dev --python ${{ matrix.python-version }}
 
     - name: Lint with ruff
-      run: uv run ruff check phy
+      run: uv run --frozen ruff check phy
 
     - name: Check formatting with ruff
-      run: uv run ruff format --check phy
+      run: uv run --frozen ruff format --check phy
+
+    # phy currently relies on SpikeSelector changes newer than phylib 2.7.0.
+    # Keep normal CI reproducible until those changes are included in a release.
+    - name: Install tested phylib revision
+      run: uv pip install --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@db10401589b47fd8d56f7c66531b0c22fc7f9e91"
 
     - name: Test with pytest
-      run: uv run pytest --cov=phy --cov-report=xml phy
+      run: uv run --no-sync pytest --cov=phy --cov-report=xml phy
       env:
         DISPLAY: ${{ runner.os == 'Linux' && ':99.0' || '' }}
         QT_QPA_PLATFORM: offscreen
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: false
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
     runs-on: ubuntu-latest
     needs: test
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
-        version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       run: uv python install 3.10
 
     - name: Build package
-      run: uv build
+      run: uv build --no-sources
+
+    - name: Test wheel installation
+      run: |
+        uv venv --python 3.10 .venv-package
+        uv pip install --python .venv-package/bin/python dist/*.whl
+        .venv-package/bin/python -c "import phy; from phy.apps import phycli"
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dist
         path: dist/
+        if-no-files-found: error
 
   docs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
-        version: "latest"
+        enable-cache: true
 
     - name: Set up Python
       run: uv python install 3.10
 
     - name: Install dependencies
-      run: uv sync --dev
+      run: uv sync --frozen --dev --python 3.10
 
     - name: Generate and validate documentation
       run: make doc-check

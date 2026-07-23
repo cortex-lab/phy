@@ -1,3 +1,5 @@
+UV_RUN ?= uv run
+
 clean-build:
 	rm -fr build/
 	rm -fr dist/
@@ -24,39 +26,39 @@ install:
 	uv sync --dev
 
 lint:
-	uv run ruff check phy
+	$(UV_RUN) ruff check phy
 
 format:
-	uv run ruff format phy
+	$(UV_RUN) ruff format phy
 
 format-check:
-	uv run ruff format --check phy
+	$(UV_RUN) ruff format --check phy
 
 lint-fix:
-	uv run ruff check --fix phy
+	$(UV_RUN) ruff check --fix phy
 
 # Test everything except apps
 test: lint format-check
-	uv run pytest -xvv --cov-report= --cov=phy phy --ignore=phy/apps/ --cov-append
-	uv run coverage report --omit "*/phy/apps/*,*/phy/plot/gloo/*"
+	$(UV_RUN) pytest -xvv --cov-report= --cov=phy phy --ignore=phy/apps/ --cov-append
+	$(UV_RUN) coverage report --omit "*/phy/apps/*,*/phy/plot/gloo/*"
 
 # Test just the apps
 test-apps: lint
-	uv run pytest --cov-report term-missing phy/apps/ --cov-append
+	$(UV_RUN) pytest --cov-report term-missing phy/apps/ --cov-append
 
 # Test everything
 test-full: test test-apps
-	uv run coverage report --omit "*/phy/plot/gloo/*"
+	$(UV_RUN) coverage report --omit "*/phy/plot/gloo/*"
 
 test-fast:
-	uv run pytest phy
+	$(UV_RUN) pytest phy
 
 doc:
-	uv run python tools/api.py && uv run python tools/extract_shortcuts.py && uv run python tools/plugins_doc.py
+	$(UV_RUN) python tools/api.py && $(UV_RUN) python tools/extract_shortcuts.py && $(UV_RUN) python tools/plugins_doc.py
 
 doc-check: doc
-	uv run python tools/check_docs.py
-	uv run mkdocs build --strict
+	$(UV_RUN) python tools/check_docs.py
+	$(UV_RUN) mkdocs build --strict
 	git diff --exit-code -- docs/ plugins/README.md
 
 build:
@@ -78,7 +80,7 @@ publish-pypi:
 	python3 scripts/release_publish.py publish-pypi
 
 coverage:
-	uv run coverage html
+	$(UV_RUN) coverage html
 
 dev: install lint format test
 
