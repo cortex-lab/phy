@@ -40,6 +40,8 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- Merge and assignment operations update the small cluster-ID collection
+  incrementally instead of rescanning every spike.
 - Merge-related Cluster and Similarity View mutations batch expensive column
   and row fitting until the complete table update is applied.
 - Views with a cluster-display limit now show the first eligible clusters in

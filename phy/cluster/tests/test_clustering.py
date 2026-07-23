@@ -8,6 +8,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from phylib.io.array import (
     _spikes_in_clusters,
+    _unique,
 )
 from phylib.io.mock import artificial_spike_clusters
 from phylib.utils import connect
@@ -428,6 +429,24 @@ def test_clustering_new_id():
     clustering.split(list(range(1, 5)))
     ae(clustering.spike_clusters, [32, 31, 31, 31, 31, 33])
     assert clustering.new_cluster_id() == 34
+
+
+def test_clustering_actions_update_cluster_ids_incrementally(monkeypatch):
+    clustering = Clustering(artificial_spike_clusters(1000, 10))
+    real_unique = _unique
+
+    def guard_unique(values):
+        if len(values) == clustering.n_spikes:
+            raise AssertionError('normal clustering actions must not rescan every spike')
+        return real_unique(values)
+
+    monkeypatch.setattr('phy.cluster.clustering._unique', guard_unique)
+
+    clustering.merge([0, 1])
+    assert set(clustering.cluster_ids) == set(range(2, 11))
+
+    clustering.assign([0, 1, 2], [0, 1, 2])
+    assert len(clustering.cluster_ids) == len(clustering.spikes_per_cluster)
 
 
 def test_clustering_long():

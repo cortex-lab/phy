@@ -219,8 +219,21 @@ class Clustering:
     # --------------------------------------------------------------------------
 
     def _update_cluster_ids(self, to_remove=None, to_add=None):
-        # Update the list of non-empty cluster ids.
-        self._cluster_ids = _unique(self._spike_clusters)
+        # Rebuild after an external spike-cluster mutation, but update the much
+        # smaller cluster-id collection incrementally for normal operations.
+        # Merge and assign already provide the complete set of removed and
+        # added clusters, so rescanning every spike here is redundant.
+        if to_remove is None and to_add is None or not hasattr(self, '_cluster_ids'):
+            self._cluster_ids = _unique(self._spike_clusters)
+        else:
+            cluster_ids = set(self._cluster_ids.tolist())
+            if to_remove is not None:
+                cluster_ids.difference_update(to_remove)
+            if to_add:
+                cluster_ids.update(to_add)
+            self._cluster_ids = np.asarray(
+                sorted(cluster_ids), dtype=self._spike_clusters.dtype
+            )
         # Clusters to remove.
         if to_remove is not None:
             for clu in to_remove:
@@ -231,7 +244,7 @@ class Clustering:
                 self._spikes_per_cluster[clu] = spk
         # If spikes_per_cluster is invalid, recompute the entire
         # spikes_per_cluster array.
-        coherent = np.all(np.isin(self._cluster_ids, sorted(self._spikes_per_cluster)))
+        coherent = all(clu in self._spikes_per_cluster for clu in self._cluster_ids)
         if not coherent:
             logger.debug('Recompute spikes_per_cluster manually: this might take a while.')
             sc = self._spike_clusters
