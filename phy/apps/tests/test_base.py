@@ -13,6 +13,7 @@ from itertools import cycle, islice
 from pathlib import Path
 
 import numpy as np
+from phylib.io.array import SpikeSelector
 from phylib.io.mock import (
     artificial_features,
     artificial_spike_clusters,
@@ -24,6 +25,7 @@ from phylib.utils import Bunch, connect, emit, reset, unconnect
 from pytest import mark
 from pytestqt.plugin import QtBot
 
+from phy.cluster.clustering import Clustering
 from phy.cluster.views import (
     AmplitudeView,
     FeatureView,
@@ -155,6 +157,68 @@ def test_controller_close(tempdir):
     assert model.closed
     assert all(handler not in logging.getLogger('phy').handlers for handler in handlers)
     assert all(handler.stream is None for handler in handlers)
+
+
+def test_get_firing_rate_fast_path():
+    spike_times = np.array([0.1, 0.2, 0.4, 0.8, 1.6, 3.2])
+    clustering = Clustering(np.array([0, 1, 1, 2, 2, 3]))
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(spike_times=spike_times, duration=4.0)
+    controller.supervisor = Bunch(clustering=clustering)
+
+    # Keep a reference selector to compare with the previous implementation.
+    reference_selector = SpikeSelector(
+        get_spikes_per_cluster=lambda cluster_id: clustering.spikes_per_cluster.get(
+            cluster_id, np.array([], dtype=np.int64)
+        ),
+        spike_times=np.arange(len(spike_times)),
+        chunk_bounds=[0, len(spike_times)],
+        n_chunks_kept=1,
+    )
+
+    def fail_selector(*args, **kwargs):
+        raise AssertionError("The firing-rate path must not invoke SpikeSelector.")
+
+    controller.selector = fail_selector
+
+    for cluster_id in (0, 1, 99):
+        expected = spike_times[reference_selector(None, [cluster_id])]
+        np.testing.assert_array_equal(controller.get_spike_times(cluster_id), expected)
+        bunch = controller._get_firing_rate(cluster_id)
+        np.testing.assert_array_equal(bunch.data, expected)
+        assert bunch.x_min == 0
+        assert bunch.x_max == controller.model.duration
+
+    selector_calls = []
+
+    def capped_selector(n, cluster_ids, **kwargs):
+        selector_calls.append((n, cluster_ids, kwargs))
+        return np.array([2], dtype=np.int64)
+
+    controller.selector = capped_selector
+    np.testing.assert_array_equal(controller.get_spike_times(1, n=1), spike_times[[2]])
+    assert selector_calls == [(1, [1], {})]
+
+    # The fast path follows live clustering changes rather than stale model assignments.
+    controller.selector = fail_selector
+    merged = clustering.merge([0, 1])
+    expected = spike_times[reference_selector(None, merged.added)]
+    bunch = controller._get_firing_rate(merged.added[0])
+    np.testing.assert_array_equal(bunch.data, expected)
+
+
+def test_get_firing_rate_honors_get_spike_times_override():
+    class OverrideController(BaseController):
+        def get_spike_times(self, cluster_id, n=None):
+            assert cluster_id == 7
+            return np.array([1.25, 2.5])
+
+    controller = object.__new__(OverrideController)
+    controller.model = Bunch(duration=3.0)
+    bunch = controller._get_firing_rate(7)
+    np.testing.assert_array_equal(bunch.data, [1.25, 2.5])
+    assert bunch.x_min == 0
+    assert bunch.x_max == 3.0
 
 
 # ------------------------------------------------------------------------------

@@ -1326,7 +1326,13 @@ class BaseController:
 
     def get_spike_times(self, cluster_id, n=None):
         """Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`."""
-        return self.model.spike_times[self.get_spike_ids(cluster_id, n=n)]
+        if n is None:
+            spike_ids = self.supervisor.clustering.spikes_per_cluster.get(
+                cluster_id, np.array([], dtype=np.int64)
+            )
+        else:
+            spike_ids = self.get_spike_ids(cluster_id, n=n)
+        return self.model.spike_times[spike_ids]
 
     def get_background_spike_ids(self, n=None):
         """Return regularly spaced spikes."""
