@@ -766,6 +766,27 @@ def test_supervisor_merge_event(qtbot, supervisor):
     assert len(_l) == 1
 
 
+def test_supervisor_merge_batches_table_fitting(monkeypatch, supervisor):
+    _select(supervisor, [30], [20])
+    fit_calls = {'cluster': 0, 'similarity': 0}
+
+    monkeypatch.setattr(
+        supervisor.cluster_view,
+        '_fit_columns',
+        lambda: fit_calls.__setitem__('cluster', fit_calls['cluster'] + 1),
+    )
+    monkeypatch.setattr(
+        supervisor.similarity_view,
+        '_fit_columns',
+        lambda: fit_calls.__setitem__('similarity', fit_calls['similarity'] + 1),
+    )
+
+    supervisor.actions.merge()
+    supervisor.block()
+
+    assert fit_calls == {'cluster': 1, 'similarity': 1}
+
+
 def test_supervisor_merge_move(qtbot, supervisor):
     """Check that merge then move selects the next cluster in the original
     cluster view, not the updated cluster view."""

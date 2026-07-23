@@ -179,6 +179,36 @@ def test_table_1(qtbot, table):
     _assert(table.get_selected, [1, 2])
 
 
+def test_table_batch_update_fits_once(table):
+    fit_calls = []
+    table._fit_columns = lambda: fit_calls.append(True)
+
+    with table.batch_update():
+        table.add({'id': 10, 'count': 10})
+        table.change({'id': 10, 'count': 11})
+        table.remove([10])
+
+    assert fit_calls == [True]
+
+
+def test_table_add_remove_and_sparse_change(table):
+    table.select([1, 2])
+    table.add_remove([{'id': 10, 'count': 10}], [1, 3])
+
+    assert table._model.row_by_id(1) is None
+    assert table._model.row_by_id(3) is None
+    assert table._model.row_by_id(10)['count'] == 10
+    assert table.get_selected_ids() == [2]
+
+    fit_calls = []
+    table._fit_columns = lambda: fit_calls.append(True)
+    table.change({'id': 10, 'count': 11})
+    table.change({'id': 999, 'count': 12})
+
+    assert table._model.row_by_id(10)['count'] == 11
+    assert fit_calls == [True]
+
+
 def test_table_row_control_right_click(qtbot, table):
     clicked = []
 

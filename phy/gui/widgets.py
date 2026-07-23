@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import sys
+from contextlib import contextmanager
 from functools import partial
 
 from phylib.utils import connect, emit
@@ -333,6 +334,7 @@ class _TableModel(QAbstractTableModel):
         self._table = table
         self._rows = []
         self._rows_by_id = {}
+        self._row_indices_by_id = {}
 
     def rowCount(self, parent=QModelIndex()):  # noqa: B008
         return 0 if parent.isValid() else len(self._rows)
@@ -380,10 +382,16 @@ class _TableModel(QAbstractTableModel):
         self.beginResetModel()
         self._rows = list(rows)
         self._rows_by_id = {row['id']: row for row in self._rows}
+        self._row_indices_by_id = {
+            row['id']: index for index, row in enumerate(self._rows)
+        }
         self.endResetModel()
 
     def row_by_id(self, row_id):
         return self._rows_by_id.get(row_id)
+
+    def row_index_by_id(self, row_id):
+        return self._row_indices_by_id.get(row_id)
 
     def ids(self):
         return [row['id'] for row in self._rows]
@@ -511,6 +519,8 @@ class Table(QWidget):
         self._filter_is_active = False
         self._current_sort = None
         self._no_emit = False
+        self._batch_update_depth = 0
+        self._fit_columns_pending = False
         self.skip_masked = bool(skip_masked)
         self._group_colors = {
             'good': QColor('#86D16D'),
@@ -687,11 +697,7 @@ class Table(QWidget):
         self.setStyleSheet(f'{existing}\n{style}' if existing else style)
 
     def _source_row_for_id(self, row_id):
-        ids = self._model.ids()
-        try:
-            return ids.index(row_id)
-        except ValueError:
-            return None
+        return self._model.row_index_by_id(row_id)
 
     def _proxy_index_for_id(self, row_id, column=0):
         source_row = self._source_row_for_id(row_id)
@@ -711,6 +717,24 @@ class Table(QWidget):
     def _fit_columns(self):
         self.table_view.resizeColumnsToContents()
         self.table_view.resizeRowsToContents()
+
+    def _request_fit_columns(self):
+        if self._batch_update_depth:
+            self._fit_columns_pending = True
+        else:
+            self._fit_columns()
+
+    @contextmanager
+    def batch_update(self):
+        """Coalesce expensive table fitting across related mutations."""
+        self._batch_update_depth += 1
+        try:
+            yield
+        finally:
+            self._batch_update_depth -= 1
+            if not self._batch_update_depth and self._fit_columns_pending:
+                self._fit_columns_pending = False
+                self._fit_columns()
 
     def _visible_ids(self):
         ids = []
@@ -902,7 +926,7 @@ class Table(QWidget):
         self._current_sort = (name, sort_dir)
         self._proxy.sort(column, order)
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
         if not self._no_emit:
             self._emit_event('table_sort', self._visible_ids())
 
@@ -910,7 +934,7 @@ class Table(QWidget):
         logger.log(5, 'Filter table with `%s`.', text)
         self._set_filter(text, update_text_field=True)
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
         if self._filter_is_active and not self._no_emit:
             self._emit_event('table_filter', self._visible_ids())
 
@@ -976,29 +1000,31 @@ class Table(QWidget):
         data = self._model._rows + objects
         self._model.set_rows(data)
         if self._current_sort:
-            self._no_emit = True
-            self.sort_by(*self._current_sort)
-            self._no_emit = False
+            name, sort_dir = self._current_sort
+            self._proxy.sort(
+                self.columns.index(name),
+                Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder,
+            )
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
 
     def change(self, objects):
         objects = self._ensure_list(objects)
         if not objects:
             return
-        updated = {obj['id']: obj for obj in objects}
-        changed = False
-        for row in self._model._rows:
-            patch = updated.get(row['id'])
-            if patch:
+        changed_rows = []
+        for patch in objects:
+            row_id = patch['id']
+            row = self._model.row_by_id(row_id)
+            if row is not None:
                 row.update(patch)
-                changed = True
-        if not changed:
+                changed_rows.append(self._model.row_index_by_id(row_id))
+        if not changed_rows:
             return
         if self._model.rowCount() and self._model.columnCount():
-            top_left = self._model.index(0, 0)
+            top_left = self._model.index(min(changed_rows), 0)
             bottom_right = self._model.index(
-                self._model.rowCount() - 1, self._model.columnCount() - 1
+                max(changed_rows), self._model.columnCount() - 1
             )
             self._model.dataChanged.emit(top_left, bottom_right)
         if self._current_sort:
@@ -1007,7 +1033,26 @@ class Table(QWidget):
                 Qt.AscendingOrder if self._current_sort[1] == 'asc' else Qt.DescendingOrder,
             )
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
+
+    def add_remove(self, objects, ids):
+        """Add and remove rows with one model reset, sort, and fit."""
+        objects = self._ensure_list(objects)
+        ids = set(ids)
+        if not objects and not ids:
+            return
+        self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
+        data = [row for row in self._model._rows if row['id'] not in ids]
+        data.extend(objects)
+        self._model.set_rows(data)
+        if self._current_sort:
+            name, sort_dir = self._current_sort
+            self._proxy.sort(
+                self.columns.index(name),
+                Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder,
+            )
+        self._refresh_selection()
+        self._request_fit_columns()
 
     def remove(self, ids):
         ids = set(ids)
@@ -1016,13 +1061,13 @@ class Table(QWidget):
         self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
         self._model.set_rows([row for row in self._model._rows if row['id'] not in ids])
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
 
     def remove_all(self):
         self._selected_ids = []
         self._model.set_rows([])
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
 
     def remove_all_and_add(self, objects, fit_columns=True):
         objects = self._ensure_list(objects)
@@ -1048,7 +1093,7 @@ class Table(QWidget):
                 )
         self._refresh_selection()
         if fit_columns:
-            self._fit_columns()
+            self._request_fit_columns()
 
     def get_selected(self, callback=None):
         return self._async_return(self.get_selected_ids(), callback)

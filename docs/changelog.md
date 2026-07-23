@@ -35,6 +35,8 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- Merge-related Cluster and Similarity View mutations batch expensive column
+  and row fitting until the complete table update is applied.
 - Views with a cluster-display limit now show the first eligible clusters in
   the current selection instead of retaining stale view contents. The
   Correlogram View displays at most 20 selected clusters by default.

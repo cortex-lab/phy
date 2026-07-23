@@ -8,6 +8,7 @@
 import inspect
 import logging
 import sys
+from contextlib import ExitStack
 from functools import partial
 from numbers import Integral
 
@@ -947,6 +948,13 @@ class Supervisor:
         self.cluster_view.remove(cluster_ids)
         self.similarity_view.remove(cluster_ids)
 
+    def _clusters_added_and_removed(self, added, removed):
+        """Apply one atomic table mutation for a clustering update."""
+        logger.log(5, 'Clusters added: %s; removed: %s', added, removed)
+        data = [self.get_cluster_info(cluster_id) for cluster_id in added]
+        self.cluster_view.add_remove(data, removed)
+        self.similarity_view.add_remove(data, removed)
+
     def _cluster_metadata_changed(self, field, cluster_ids):
         """Update the cluster and similarity views when clusters metadata is updated."""
         data = []
@@ -1035,8 +1043,7 @@ class Supervisor:
         the selection."""
         # This is called once the action has completed. We update the tables.
         # Update the views with the old and new clusters.
-        self._clusters_added(up.added)
-        self._clusters_removed(up.deleted)
+        self._clusters_added_and_removed(up.added, up.deleted)
         self._cluster_metadata_changed(
             up.description.replace('metadata_', ''),
             up.metadata_changed,
@@ -1222,7 +1229,16 @@ class Supervisor:
             cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
             return
-        out = self.clustering.merge(cluster_ids, to=to)
+        # A merge synchronously emits several related table mutations: metadata
+        # inheritance, addition of the merged cluster, and removal of its
+        # ancestors. Fit each attached table once after the complete operation
+        # instead of rescanning every row after every intermediate mutation.
+        with ExitStack() as stack:
+            for table_name in ('cluster_view', 'similarity_view'):
+                table = getattr(self, table_name, None)
+                if table is not None:
+                    stack.enter_context(table.batch_update())
+            out = self.clustering.merge(cluster_ids, to=to)
         self._global_history.action(self.clustering)
         return out
 
