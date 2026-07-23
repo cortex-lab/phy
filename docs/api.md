@@ -962,6 +962,15 @@ d.trigger()  # show "hello world 0" and "hello world 9" after a delay
 
 ---
 
+#### Debouncer.flush
+
+
+**`Debouncer.flush(self)`**
+
+Synchronously execute all pending actions.
+
+---
+
 #### Debouncer.stop_waiting
 
 
@@ -987,6 +996,15 @@ is higher than the threshold, or wait until executing it otherwiser.
 **`Debouncer.trigger(self)`**
 
 Execute the pending actions.
+
+---
+
+#### Debouncer.has_pending
+
+
+**`Debouncer.has_pending`**
+
+Whether at least one submitted action has not run yet.
 
 ---
 
