@@ -6,10 +6,11 @@
 
 import numpy as np
 from phylib.io.mock import artificial_correlograms
-from phylib.utils import Bunch, connect, unconnect
+from phylib.utils import connect, unconnect
 
 from ..correlogram import CorrelogramView
 from . import _stop_and_close
+from phy.plot.tests import mouse_click
 
 # ------------------------------------------------------------------------------
 # Test correlogram view
@@ -45,8 +46,8 @@ def test_correlogram_view(qtbot, gui):
 
     v.on_select(cluster_ids=[0, 2, 3])
     width, height = v.canvas.get_size()
-    v.on_mouse_click(Bunch(button='Right', pos=(width / 2, height / 6)))
-    v.on_mouse_click(Bunch(button='Right', pos=(width / 6, height / 6)))
+    mouse_click(qtbot, v.canvas, (width / 2, height / 6), button='Right')
+    mouse_click(qtbot, v.canvas, (width / 6, height / 6), button='Right')
 
     assert promoted == [(0, 2)]
 
