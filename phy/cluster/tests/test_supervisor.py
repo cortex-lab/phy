@@ -939,6 +939,21 @@ def test_supervisor_move_1(supervisor):
     _assert_selected(supervisor, [11])
 
 
+def test_supervisor_move_undo_restores_table_group(supervisor):
+    cluster_id = 0
+    original_group = supervisor.cluster_meta.get('group', cluster_id)
+    _select(supervisor, [cluster_id])
+
+    supervisor.actions.move('good', cluster_id)
+    supervisor.block()
+    assert supervisor.cluster_view._model.row_by_id(cluster_id)['group'] == 'good'
+
+    supervisor.actions.undo()
+    supervisor.block()
+    assert supervisor.cluster_meta.get('group', cluster_id) == original_group
+    assert supervisor.cluster_view._model.row_by_id(cluster_id)['group'] == original_group
+
+
 def test_supervisor_move_2(supervisor):
     _select(supervisor, [20], [10])
     _assert_selected(supervisor, [20, 10])

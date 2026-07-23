@@ -947,12 +947,19 @@ class Supervisor:
         self.cluster_view.remove(cluster_ids)
         self.similarity_view.remove(cluster_ids)
 
-    def _cluster_metadata_changed(self, field, cluster_ids, value):
+    def _cluster_metadata_changed(self, field, cluster_ids):
         """Update the cluster and similarity views when clusters metadata is updated."""
-        logger.log(5, '%s changed for %s to %s', field, cluster_ids, value)
-        data = [{'id': cluster_id, field: value} for cluster_id in cluster_ids]
-        for _ in data:
-            _['is_masked'] = _is_group_masked(_.get('group', None))
+        data = []
+        for cluster_id in cluster_ids:
+            group = self.cluster_meta.get('group', cluster_id)
+            data.append(
+                {
+                    'id': cluster_id,
+                    field: self.cluster_meta.get(field, cluster_id),
+                    'group': group,
+                    'is_masked': _is_group_masked(group),
+                }
+            )
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
@@ -1033,7 +1040,6 @@ class Supervisor:
         self._cluster_metadata_changed(
             up.description.replace('metadata_', ''),
             up.metadata_changed,
-            up.metadata_value,
         )
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
