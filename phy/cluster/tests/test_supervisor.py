@@ -233,6 +233,15 @@ def test_cluster_view_1(qtbot, gui, data):
     assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
 
+def test_cluster_view_formats_spike_counts(qtbot, gui):
+    cv = ClusterView(gui, data=[{'id': 1, 'n_spikes': 1234567}])
+    _wait_until_table_ready(qtbot, cv)
+
+    index = cv._proxy.index(0, cv.columns.index('n_spikes'))
+    assert index.data(Qt.DisplayRole) == '1,234,567'
+    assert index.data(Qt.EditRole) == 1234567
+
+
 def test_similarity_view_1(qtbot, gui):
     sv = SimilarityView(gui)
     _wait_until_table_ready(qtbot, sv)

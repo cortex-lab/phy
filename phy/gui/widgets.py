@@ -361,6 +361,10 @@ class _TableModel(QAbstractTableModel):
             # which render as blank cells; convert them to native Python types.
             if hasattr(value, 'item'):
                 value = value.item()
+            # Keep the raw value available for sorting and filtering, while making
+            # spike counts easier to scan in the cluster and similarity tables.
+            if role == Qt.DisplayRole and column == 'n_spikes' and isinstance(value, int):
+                return f'{value:,}'
             return value
         if role == Qt.BackgroundRole and column == 'id':
             color = self._table._selection_background(row.get('id'))
