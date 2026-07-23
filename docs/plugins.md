@@ -111,11 +111,11 @@ from phy import IPlugin
 class ExampleNspikesViewsPlugin(IPlugin):
     def attach_to_controller(self, controller):
         """Feel free to keep below just the values you need to change."""
-        controller.n_spikes_waveforms = 250
+        controller.n_spikes_waveforms = 100
         controller.batch_size_waveforms = 10
         controller.n_spikes_features = 2500
         controller.n_spikes_features_background = 2500
-        controller.n_spikes_amplitudes = 2500
+        controller.n_spikes_amplitudes = 10000
         controller.n_spikes_correlograms = 100000
 
         # Number of "best" channels kept for displaying the waveforms.
@@ -128,7 +128,13 @@ class ExampleNspikesViewsPlugin(IPlugin):
 
 ```
 
-*Note*: you need to manually delete the `.phy` subdirectory within your data directory when changing these parameters, otherwise errors will happen in the GUI.
+These values are saved in the GUI state, and correlograms and waveforms may already be cached.
+After changing this plugin, start phy once with both options so the plugin values become the new
+saved values and affected computations are rebuilt:
+
+```bash
+phy template-gui params.py --clear-state --clear-cache
+```
 
 
 ## Customizing the default font size

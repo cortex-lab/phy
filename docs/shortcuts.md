@@ -1,6 +1,7 @@
 # Keyboard shortcuts and snippets
 
-This page presents the list of shortcuts and snippets in the template GUI. You can also display them in the console by pressing `F1`.
+This page presents the list of shortcuts and snippets in the Template GUI. Press `H` or use the
+Help menu to print the shortcuts that are active in the current session.
 
 
 ## List of keyboard shortcuts

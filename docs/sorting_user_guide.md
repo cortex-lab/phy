@@ -1,6 +1,9 @@
 # Manual Clustering Practical User's Guide
 
-**Note: This user's guide has been written by Stephen Lenzi (Margrie Lab) and Nick Steinmetz for an earlier version of phy. Please open issues or pull requests if updates to this page are needed for phy 2.0.**
+> **Archived guide:** Stephen Lenzi (Margrie Lab) and Nick Steinmetz wrote this practical
+> guide for an earlier version of phy. It is retained for its curation advice, but its interface,
+> installation commands, screenshots, and external resources may not match current phy releases.
+> New users should start with the current quickstart and user guide.
 
 
 ## Contents:
@@ -265,6 +268,7 @@ All commands can be run as snippets. For example, `:move`, `:merge`, `:recluster
 
 ### Detailed guide
 
+<a name="step1"></a>
 #### Step 1 - select a cluster from ClusterView
 
 
@@ -278,6 +282,7 @@ Does the ACG reveal no evidence of a refractory period?
 
 > Hint: hit the spacebar to rapidly select the most similar cluster
 
+<a name="steps2-4"></a>
 #### Step 2 - waveform similarity
 
 ```
@@ -287,6 +292,7 @@ Are the waveforms clearly distinct or do the clusters occupy a clearly different
 * If YES: these clusters are non-overlapping, select the next most similar cluster (hit the `spacebar` again) in [SimilarityView](#SimilarityView) and repeat step 2
 * If NO (i.e. the waveforms are very similar): move to step 3
 
+<a name="step3"></a>
 #### Step 3 -  assess cross correlograms
 ```
 In the ACG/CCGs, is there evidence that both neurons have good refractory periods, but the CCG shows no refractory period?
@@ -313,6 +319,7 @@ Do they occupy different areas in feature space?
 * Otherwise select the next most similar cluster and start over from step 2
 
 
+<a name="step5"></a>
 #### Step 5 - classify as good
 
 Once all potential comparisons have been made, if there is a clear [refractory period](#assess-refractory-period) and there is no evidence that the cluster needs to be split, the cluster can be classified as 'good' (`Alt + G`). When a cluster is classified as 'good' it will appear in the Cluster and Similarity Views in green. If it is in any way unclear, then it should be classified as MUA. When a cluster is classified as 'MUA' (`Alt + M`) or 'noise' (`Alt + N`) it will appear in the Cluster and Similarity Views in light grey. There are additional packages for [objective assessment of clustering quality](https://github.com/cortex-lab/sortingQuality).
@@ -320,6 +327,7 @@ Once all potential comparisons have been made, if there is a clear [refractory p
 >    **Exceptions to this** include bursting neurons, which are a special case. Action potential bursts usually consist of spikes/subclusters that differ in shape/amplitude. Waveforms and features may appear distinct, although the events belong to the same cluster. Clusters belonging to a burst from the same neuron have signature CCGs: the smaller of the two reliably follows the larger by a very short interval (1-3ms). This displays itself as a very clear asymmetric distribution, with a clear refractory period.
 
 
+<a name="step6"></a>
 #### Step 6 - save your progress
 
 The GUI keeps track of all decisions in a file called phy.log. The current classifications can be saved at any time with the command `Ctrl + S`.
@@ -363,6 +371,9 @@ If you are using Matlab, you will need the [npy-matlab repository](https://githu
 `Stability` how consistent the recordings are over the recording period. For example, electrode drift during an experiment would be an example of instability.
 
 `Waveform amplitude` is evaluated by looking at the waveforms. The decision of whether this is too low to be considered in the analysis is subjective.
+<a name="best-channel"></a>
+`Best channel` is the channel on which a template or cluster has its largest waveform amplitude.
+
 <a name="ACG"></a>
 `Auto-correlogram (ACG)`: the pairwise cross correlations of...
 <a name="CCG"></a>
@@ -377,4 +388,4 @@ If you are using Matlab, you will need the [npy-matlab repository](https://githu
 `noise`: noisy waveforms are classified as noise (i.e. the waveform looks like an artefact or is present in an unrealistic/biologically unlikely set channels).
 <a name="similarity"></a>
 
-`Similarity`: is a variable in `SimilarityView` that indicates how similar a cluster is to the one selected in `ClusterView`. This should guide the user to clusters that should be considered for [merging](#merging) using the protocol in the [user guide](user-guide). High similarity does not necessarily mean the clusters should be merged. There is no hard cut off for considering similarity, but clusters with low similarity are very unlikely to need to be merged.
+`Similarity`: is a variable in `SimilarityView` that indicates how similar a cluster is to the one selected in `ClusterView`. This should guide the user to clusters that should be considered for [merging](#merging) using the protocol in the [user guide](#user-guide). High similarity does not necessarily mean the clusters should be merged. There is no hard cut off for considering similarity, but clusters with low similarity are very unlikely to need to be merged.

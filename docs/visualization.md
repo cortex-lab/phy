@@ -64,7 +64,8 @@ The GUI is made of several parts:
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
-Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `F1` to see the list of Keyboard shortcuts.
+Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `H` or use the Help
+menu to print the active keyboard shortcuts and snippets in the terminal.
 
 
 ### Cluster view
@@ -225,7 +226,7 @@ This view shows the principal component features of a selection of spikes in the
 
 Background spikes from all clusters are shown in grey.
 
-The parameter `controller.n_spikes_features=2500`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the feature view. The parameter `controller.n_spikes_features_background=1000`, by default, specifies the maximum number of spikes to pick for the background features. These background spikes are uniformly spaced in time across the entire recording, and across all clusters indistinctively.
+The parameter `controller.n_spikes_features=2500`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the feature view. The parameter `controller.n_spikes_features_background=2500`, by default, specifies the maximum number of spikes to pick for the background features. These background spikes are uniformly spaced in time across the entire recording, and across all clusters indistinctively.
 
 ![image](https://user-images.githubusercontent.com/1942359/74033685-fdd9b400-49b6-11ea-8b18-4492ec4f4cc0.png)
 
@@ -438,7 +439,7 @@ You can toggle between different types of amplitudes by pressing `a`:
 
 #### Number of spikes.
 
-The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
+The parameter `controller.n_spikes_amplitudes=10000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
 
 *Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
 
