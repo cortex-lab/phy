@@ -490,11 +490,12 @@ class Table(QWidget):
         sort=None,
         title='',
         debounce_events=(),
+        debounce_delay=None,
         skip_masked=True,
     ):
         super().__init__(*args)
         self.setWindowTitle(title)
-        self._debouncer = Debouncer()
+        self._debouncer = Debouncer(delay=debounce_delay, parent=self)
         self._debounce_events = set(debounce_events)
         self._debouncer.isBusy = False
         self.columns = list(columns or ['id'])

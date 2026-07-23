@@ -314,14 +314,26 @@ class ClusterView(Table):
     _required_columns = ('n_spikes',)
     _view_name = 'cluster_view'
     _styles = _CLUSTER_VIEW_STYLES
+    _selection_debounce_delay = 50
 
-    def __init__(self, *args, data=None, columns=(), sort=None, skip_masked=True):
+    def __init__(
+        self,
+        *args,
+        data=None,
+        columns=(),
+        sort=None,
+        skip_masked=True,
+        debounce_delay=None,
+    ):
         # NOTE: debounce select events.
+        if debounce_delay is None:
+            debounce_delay = self._selection_debounce_delay
         Table.__init__(
             self,
             *args,
             title=self.__class__.__name__,
             debounce_events=('select',),
+            debounce_delay=debounce_delay,
             skip_masked=skip_masked,
         )
         self._set_styles()
@@ -1038,9 +1050,10 @@ class Supervisor:
         # Let the cluster views know that the GUI is busy.
         self.cluster_view.set_busy(busy)
         self.similarity_view.set_busy(busy)
-        # If the GUI is no longer busy, stop the debouncer waiting period.
+        # If the GUI is no longer busy, deliver the latest selection on the next timer tick.
+        # Keeping this asynchronous avoids re-entering the task queue during a busy transition.
         if not busy:
-            self.cluster_view.debouncer.stop_waiting()
+            self.cluster_view.debouncer.stop_waiting(delay=0)
 
     # Selection actions
     # -------------------------------------------------------------------------
@@ -1409,6 +1422,17 @@ class Supervisor:
         Only used in the automated testing suite.
 
         """
-        _block(lambda: self.task_logger.has_finished() and not self._is_busy)
+        debouncers = (
+            self.cluster_view.debouncer,
+            self.similarity_view.debouncer,
+        )
+        for _ in range(100):
+            for debouncer in debouncers:
+                debouncer.flush()
+            _block(lambda: self.task_logger.has_finished() and not self._is_busy)
+            if not any(debouncer.has_pending for debouncer in debouncers):
+                break
+        else:  # pragma: no cover
+            raise RuntimeError('Could not flush pending selections.')
         assert not self._is_busy
         _wait(50)

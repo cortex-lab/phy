@@ -222,6 +222,7 @@ def data():
 def test_cluster_view_1(qtbot, gui, data):
     cv = ClusterView(gui, data=data)
     _wait_until_table_ready(qtbot, cv)
+    assert cv.debouncer.delay == 50
 
     cv.sort_by('n_spikes', 'asc')
     cv.select([1])
@@ -235,6 +236,7 @@ def test_cluster_view_1(qtbot, gui, data):
 def test_similarity_view_1(qtbot, gui):
     sv = SimilarityView(gui)
     _wait_until_table_ready(qtbot, sv)
+    assert sv.debouncer.delay == 50
 
     @connect(sender=sv)
     def on_request_similar_clusters(sender, cluster_id):
@@ -324,6 +326,32 @@ def _assert_selected(supervisor, sel):
 def test_select(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+
+
+def test_block_flushes_pending_selections(qtbot, supervisor):
+    supervisor.cluster_view.debouncer.delay = 60_000
+    supervisor.similarity_view.debouncer.delay = 60_000
+
+    supervisor.select([30])
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+
+    # This selection falls inside the debounce interval and remains pending until block().
+    supervisor.select([20])
+    assert supervisor.selected_clusters == [30]
+    supervisor.block()
+    assert supervisor.selected_clusters == [20]
+
+    similar_cluster_id = supervisor.similarity_view.get_ids()[0]
+    supervisor.similarity_view.select([similar_cluster_id])
+    supervisor.block()
+    assert supervisor.selected_similar == [similar_cluster_id]
+
+    next_similar_cluster_id = supervisor.similarity_view.get_ids()[1]
+    supervisor.similarity_view.select([next_similar_cluster_id])
+    assert supervisor.selected_similar == [similar_cluster_id]
+    supervisor.block()
+    assert supervisor.selected_similar == [next_similar_cluster_id]
 
 
 def test_supervisor_busy(qtbot, supervisor):
@@ -1038,3 +1066,29 @@ def test_supervisor_nav(qtbot, supervisor):
     supervisor.select_actions.last()
     qtbot.wait(100)
     _assert_selected(supervisor, [1])
+
+
+def test_supervisor_wizard_primary_navigation_clears_similar(supervisor):
+    supervisor.cluster_view.debouncer.delay = 60_000
+    supervisor.similarity_view.debouncer.delay = 60_000
+
+    supervisor.select_actions.reset_wizard()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
+
+    supervisor.select_actions.next()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20]
+
+    supervisor.select_actions.next_best()
+    supervisor.block()
+    assert supervisor.selected_clusters == [20]
+    assert supervisor.selected_similar == []
+    assert supervisor.similarity_view.get_selected_ids() == []
+
+    supervisor.select_actions.previous_best()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []

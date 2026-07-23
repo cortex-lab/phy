@@ -153,6 +153,13 @@ def test_table_empty_1(qtbot):
     table.close()
 
 
+def test_table_debounce_delay(qtbot):
+    table = Table(debounce_delay=17)
+    _wait_until_table_ready(qtbot, table)
+    assert table.debouncer.delay == 17
+    table.close()
+
+
 def test_table_invalid_column(qtbot):
     table = Table(data=[{'id': 0, 'a': 'b'}], columns=['id', 'u'])
     qtbot.addWidget(table)

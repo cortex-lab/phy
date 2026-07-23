@@ -124,6 +124,61 @@ def test_debouncer_2(qtbot):
     qtbot.waitUntil(lambda: _l == [0, 2], timeout=500)
 
 
+def test_debouncer_flush(qtbot):
+    d = Debouncer(delay=1000)
+    calls = []
+
+    d.submit(calls.append, ('first', 0), key='first')
+    d.submit(calls.append, ('first', 1), key='first')
+    d.submit(calls.append, ('second', 0), key='second')
+
+    assert calls == [('first', 0)]
+    assert d.has_pending
+    assert d._timer.isActive()
+
+    d.flush()
+
+    assert calls == [('first', 0), ('first', 1), ('second', 0)]
+    assert not d.has_pending
+    assert not d._timer.isActive()
+
+    # Flushing again must not repeat an action.
+    d.flush()
+    assert calls == [('first', 0), ('first', 1), ('second', 0)]
+
+
+def test_debouncer_zero_delay():
+    d = Debouncer(delay=0)
+    calls = []
+
+    d.submit(calls.append, 0)
+    d.submit(calls.append, 1)
+
+    assert d.delay == 0
+    assert calls == [0, 1]
+
+
+def test_debouncer_flush_preserves_reentrant_submission(qtbot):
+    d = Debouncer(delay=1000)
+    calls = []
+
+    def pending():
+        calls.append('pending')
+        d.submit(calls.append, 'reentrant', key='action')
+
+    d.submit(calls.append, 'first')
+    d.submit(pending, key='action')
+    assert calls == ['first']
+
+    d.flush()
+    assert calls == ['first', 'pending']
+    assert d.has_pending
+
+    d.flush()
+    assert calls == ['first', 'pending', 'reentrant']
+    assert not d.has_pending
+
+
 def test_block(qtbot):
     create_app()
     with raises(RuntimeError):

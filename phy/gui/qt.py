@@ -617,12 +617,14 @@ class Debouncer:
     _log_level = 5
     delay = 500
 
-    def __init__(self, delay=None):
-        self.delay = delay or self.delay  # minimum delay between job executions, in ms.
+    def __init__(self, delay=None, parent=None):
+        # Minimum delay between job executions, in ms. Check explicitly for None so callers
+        # can disable the delay with ``delay=0``.
+        self.delay = self.delay if delay is None else delay
         self._last_submission_time = 0
         self.is_waiting = False  # whether we're already waiting for the end of the interactions
         self.pending_functions = {}  # assign keys to pending functions.
-        self._timer = QTimer()
+        self._timer = QTimer(parent)
         self._timer.timeout.connect(self._timer_callback)
 
     def _elapsed_enough(self):
@@ -655,13 +657,26 @@ class Debouncer:
 
     def trigger(self):
         """Execute the pending actions."""
-        for key, item in self.pending_functions.items():
+        self.flush()
+
+    @property
+    def has_pending(self):
+        """Whether at least one submitted action has not run yet."""
+        return any(item is not None for item in self.pending_functions.values())
+
+    def flush(self):
+        """Synchronously execute all pending actions."""
+        self._timer.stop()
+        # Clear the live queue before invoking callbacks. A callback may submit another action,
+        # including one with the same key, and that new action must remain pending.
+        pending_functions = self.pending_functions
+        self.pending_functions = {}
+        for item in pending_functions.values():
             if item is None:
                 continue
             f, args, kwargs = item
             logger.log(self._log_level, 'Trigger %s.', f.__name__)
             f(*args, **kwargs)
-            self.pending_functions[key] = None
 
     def stop_waiting(self, delay=0.1):
         """Stop waiting and force the pending actions to execute (almost) immediately."""
