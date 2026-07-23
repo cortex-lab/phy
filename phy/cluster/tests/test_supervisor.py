@@ -9,9 +9,10 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from phylib.utils import Bunch, connect, emit
-from pytest import fixture
+from pytest import fixture, raises
 
 from phy.gui import GUI
+from phy.gui.actions import _get_shortcut_string
 from phy.gui.qt import qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.gui.widgets import Barrier
@@ -351,6 +352,67 @@ def test_supervisor_select_order(qtbot, supervisor):
     _assert_selected(supervisor, [1, 0])
     _select(supervisor, [0, 1])
     _assert_selected(supervisor, [0, 1])
+
+
+def test_supervisor_select_first_similar(supervisor, gui):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.filter('id >= 10')
+    visible_ids = similarity_view.get_ids()
+
+    # The prompted variant updates the preference and selects in visible order.
+    supervisor.select_actions.select_n_similar(2)
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == visible_ids[:2]
+    assert supervisor.n_similar_clusters_to_select == 2
+
+    # The shortcut variant uses the saved preference and replaces the similar selection.
+    similarity_view.sort_by('id', 'desc')
+    visible_ids = similarity_view.get_ids()
+    supervisor.select_actions.select_first_similar()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == visible_ids[:2]
+
+    # Selecting more rows than are available is safe.
+    supervisor.select_actions.select_n_similar(100)
+    supervisor.block()
+    assert supervisor.selected_similar == visible_ids
+
+    # The preference is stored in global GUI state.
+    supervisor._save_gui_state(gui)
+    assert gui.state['n_similar_clusters_to_select'] == 100
+
+
+def test_supervisor_select_first_similar_empty(supervisor):
+    _select(supervisor, [30])
+    supervisor.similarity_view.filter('id > 1000')
+    supervisor.select_actions.select_n_similar(3)
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
+
+
+def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
+    gui.state['n_similar_clusters_to_select'] = 4
+    supervisor = Supervisor(
+        np.repeat(cluster_ids, 2),
+        similarity=similarity,
+        n_similar_clusters_to_select=2,
+    )
+    supervisor.attach(gui)
+    assert supervisor.n_similar_clusters_to_select == 4
+
+    shortcut = supervisor.select_actions.get('select_first_similar').shortcut()
+    assert _get_shortcut_string(shortcut) == 'ctrl+space'
+
+    with raises(ValueError, match='positive integer'):
+        supervisor.select_first_similar(0)
+    with raises(ValueError, match='positive integer'):
+        supervisor.select_first_similar(1.5)
 
 
 def test_supervisor_edge_cases(supervisor):
