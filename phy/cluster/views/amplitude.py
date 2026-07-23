@@ -44,6 +44,7 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
 
     # Do not show too many clusters.
     max_n_clusters = 8
+    defer_hidden_updates = True
 
     _default_position = 'right'
 

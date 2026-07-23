@@ -29,6 +29,18 @@ class MyView(BaseColorView, ManualClusteringView):
         return 'hello'
 
 
+class DeferredView(ManualClusteringView):
+    defer_hidden_updates = True
+    max_n_clusters = 2
+
+    def __init__(self):
+        super().__init__()
+        self.updates = []
+
+    def plot(self, **kwargs):
+        self.updates.append((list(self.cluster_ids), kwargs))
+
+
 def test_manual_clustering_view_1(qtbot, tempdir):
     v = MyView()
     v.canvas.show()
@@ -88,3 +100,56 @@ def test_manual_clustering_view_selection_is_limited(qtbot, gui):
     assert v.cluster_ids == [3, 2]
 
     _stop_and_close(qtbot, v)
+
+
+def test_manual_clustering_view_defers_latest_selection_while_hidden(qtbot, gui):
+    v = DeferredView()
+    v.attach(gui)
+
+    class Supervisor:
+        pass
+
+    emit('select', Supervisor(), cluster_ids=[1], marker='visible')
+    assert v.updates == [([1], {'marker': 'visible'})]
+
+    v.dock.hide()
+    qtbot.waitUntil(lambda: not v._dock_visible)
+    emit('select', Supervisor(), cluster_ids=[2], marker='superseded')
+    emit('select', Supervisor(), cluster_ids=[3, 4, 5], marker='latest')
+
+    # Public state follows the limited selection, but no hidden plot occurs and
+    # only the latest payload remains retained.
+    assert v.cluster_ids == [3, 4]
+    assert v.updates == [([1], {'marker': 'visible'})]
+    assert v._pending_selection == ([3, 4], {'marker': 'latest'})
+
+    v.dock.show()
+    qtbot.waitUntil(lambda: len(v.updates) == 2)
+    assert v.updates[-1] == ([3, 4], {'marker': 'latest'})
+    assert v._pending_selection is None
+
+    _stop_and_close(qtbot, v)
+
+
+def test_manual_clustering_view_defers_inactive_tab(qtbot, gui):
+    hidden = DeferredView()
+    visible = DeferredView()
+    hidden.attach(gui)
+    visible.attach(gui)
+    gui.tabifyDockWidget(hidden.dock, visible.dock)
+    visible.dock.raise_()
+    qtbot.waitUntil(lambda: not hidden._dock_visible and visible._dock_visible)
+
+    class Supervisor:
+        pass
+
+    emit('select', Supervisor(), cluster_ids=[7])
+    assert hidden.updates == []
+    assert visible.updates == [([7], {})]
+
+    hidden.dock.raise_()
+    qtbot.waitUntil(lambda: len(hidden.updates) == 1)
+    assert hidden.updates == [([7], {})]
+
+    _stop_and_close(qtbot, hidden)
+    _stop_and_close(qtbot, visible)

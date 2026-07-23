@@ -65,10 +65,13 @@ class ManualClusteringView:
     plot_canvas_class = PlotCanvas
     ex_status = ''  # the GUI can update this to
     max_n_clusters = 0  # By default, show all clusters.
+    defer_hidden_updates = False
 
     def __init__(self, shortcuts=None, **kwargs):
         self._lock = None
         self._closed = False
+        self._dock_visible = True
+        self._pending_selection = None
         self.cluster_ids = ()
 
         # Load default shortcuts, and override with any user shortcuts.
@@ -156,6 +159,14 @@ class ManualClusteringView:
         # than leaving its previous contents on screen.
         if self.max_n_clusters and len(cluster_ids) > self.max_n_clusters:
             cluster_ids = cluster_ids[:self.max_n_clusters]
+        if self.defer_hidden_updates and not self._dock_visible:
+            # Keep the public selection state current while retaining only the
+            # latest small payload needed to redraw the view when it is shown.
+            cluster_ids = list(cluster_ids)
+            self.cluster_ids = cluster_ids
+            self._pending_selection = (cluster_ids, dict(kwargs))
+            return
+        self._pending_selection = None
 
         # The lock is used so that two different background threads do not access the same
         # view simultaneously, which can lead to conflicts, errors in the plotting code,
@@ -206,6 +217,7 @@ class ManualClusteringView:
             emit('is_busy', self, False)
             self._lock = None
             self.update_status()
+            self._flush_pending_selection()
 
         # Start the task on the thread pool, and let the OpenGL canvas know that we're
         # starting to record all OpenGL calls instead of executing them immediately.
@@ -222,6 +234,24 @@ class ManualClusteringView:
             # This is for OpenGL views, without threading.
             worker.run()
             self._lock = None
+
+    def _flush_pending_selection(self):
+        """Render the latest selection deferred while this view was hidden."""
+        if (
+            not self._pending_selection
+            or not self._dock_visible
+            or self._lock
+            or self._closed
+        ):
+            return
+        cluster_ids, kwargs = self._pending_selection
+        self._pending_selection = None
+        self.on_select_threaded(
+            self,
+            cluster_ids=cluster_ids,
+            gui=self.gui,
+            **kwargs,
+        )
 
     def on_cluster(self, up):
         """Callback function when a clustering action occurs. May be overridden.
@@ -251,6 +281,14 @@ class ManualClusteringView:
 
         gui.add_view(self, position=self._default_position)
         self.gui = gui
+        self._dock_visible = self.dock.isVisible()
+
+        def on_visibility_changed(visible):
+            self._dock_visible = visible
+            if visible:
+                self._flush_pending_selection()
+
+        self.dock.visibilityChanged.connect(on_visibility_changed)
 
         # Set the view state.
         self.set_state(gui.state.get_view_state(self))
@@ -281,6 +319,8 @@ class ManualClusteringView:
                 return
             logger.debug('Close view %s.', self.name)
             self._closed = True
+            self._pending_selection = None
+            self.dock.visibilityChanged.disconnect(on_visibility_changed)
             gui.remove_menu(self.name)
             unconnect(on_select)
             gui.state.update_view_state(self, self.state)

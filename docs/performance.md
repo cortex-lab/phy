@@ -28,6 +28,11 @@ Other common cluster display limits are eight clusters for the Waveform,
 Feature, Amplitude, and scatter views, and 20 for histogram and Probe views.
 These limits control what a view plots; they do not change the table selection.
 
+Waveform, Amplitude, and Correlogram views also defer selection plotting while
+their dock is hidden or in an inactive tab. Their public cluster selection is
+updated immediately, but the canvas is redrawn only when it becomes visible.
+Only the latest pending selection is retained.
+
 ## How spikes are chosen
 
 The standard selector samples up to the configured number independently from

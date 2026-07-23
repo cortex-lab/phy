@@ -29,6 +29,9 @@ behavior they verify rather than listed separately.
   with `n_spikes_amplitudes_background` (10,000 by default).
 - Waveform, Amplitude, and Correlogram views use fixed total spike budgets
   across multi-cluster selections, while retaining their per-cluster ceilings.
+- Hidden or inactive-tab Waveform, Amplitude, and Correlogram views defer
+  selection plotting until they become visible, retaining only the latest
+  selection.
 
 ### Changed
 
