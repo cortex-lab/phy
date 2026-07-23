@@ -10,12 +10,12 @@ import sys
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from phylib.utils import Bunch, connect, emit
+from phylib.utils import Bunch, connect, emit, unconnect
 from pytest import fixture, raises
 
 from phy.gui import GUI
 from phy.gui.actions import _get_shortcut_string
-from phy.gui.qt import Qt, qInstallMessageHandler
+from phy.gui.qt import QHeaderView, Qt, qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.gui.widgets import Barrier
 from phy.utils.context import Context
@@ -232,22 +232,53 @@ def test_cluster_view_1(qtbot, gui, data):
     assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
 
-def test_similarity_view_1(qtbot, gui, data, monkeypatch):
-    sv = SimilarityView(gui, data=data)
+def test_similarity_view_1(qtbot, gui):
+    sv = SimilarityView(gui)
     _wait_until_table_ready(qtbot, sv)
 
     @connect(sender=sv)
     def on_request_similar_clusters(sender, cluster_id):
-        return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
+        if cluster_id == 5:
+            return [
+                {'id': 105, 'n_spikes': int('9' * 100), 'similarity': .9},
+                {'id': 115, 'n_spikes': int('8' * 90), 'similarity': .8},
+                {'id': 107, 'n_spikes': int('7' * 80), 'similarity': .7},
+            ]
+        return [
+            {'id': id, 'n_spikes': n_spikes, 'similarity': similarity}
+            for id, n_spikes, similarity in (
+                (106, 3, .3),
+                (116, 2, .2),
+                (108, 1, .1),
+            )
+        ]
 
-    fit_calls = []
-    monkeypatch.setattr(sv, '_fit_columns', lambda: fit_calls.append(True))
+    header = sv.table_view.horizontalHeader()
+    vertical_header = sv.table_view.verticalHeader()
+    header_only_widths = [header.sectionSize(i) for i in range(header.count())]
 
     sv.reset([5])
+    qtbot.wait(1)
     _assert(sv.get_ids, [105, 115, 107])
+    fitted_widths = [header.sectionSize(i) for i in range(header.count())]
+    resize_modes = [header.sectionResizeMode(i) for i in range(header.count())]
+    row_heights = [vertical_header.sectionSize(i) for i in range(3)]
+    assert any(after > before for before, after in zip(header_only_widths, fitted_widths))
+    assert resize_modes == [QHeaderView.Interactive] * header.count()
+
     sv.reset([6])
+    qtbot.wait(1)
     _assert(sv.get_ids, [106, 116, 108])
-    assert fit_calls == []
+    assert [header.sectionSize(i) for i in range(header.count())] == fitted_widths
+    assert [header.sectionResizeMode(i) for i in range(header.count())] == resize_modes
+    assert [vertical_header.sectionSize(i) for i in range(3)] == row_heights
+
+    unconnect(on_request_similar_clusters)
+    sv.reset([7])
+    qtbot.wait(1)
+    _assert(sv.get_ids, [])
+    assert [header.sectionSize(i) for i in range(header.count())] == fitted_widths
+    assert [header.sectionResizeMode(i) for i in range(header.count())] == resize_modes
 
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
@@ -453,6 +484,25 @@ def test_supervisor_promote_unselected_similar_with_right_click(qtbot, superviso
 
     assert supervisor.selected_clusters == [1, 30]
     assert supervisor.selected_similar == [20, 11]
+
+
+def test_supervisor_toggle_cluster_with_right_click(qtbot, supervisor):
+    _select(supervisor, [10, 30], [])
+    cluster_view = supervisor.cluster_view
+
+    index = cluster_view._proxy_index_for_id(11)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [10, 30, 11]
+
+    index = cluster_view._proxy_index_for_id(30)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [10, 11]
 
 
 def test_supervisor_edge_cases(supervisor):

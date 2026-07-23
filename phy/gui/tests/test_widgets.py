@@ -300,8 +300,43 @@ def test_table_remove_all_and_add_1(qtbot, table):
 
 
 def test_table_remove_all_and_add_2(qtbot, table):
-    table.remove_all_and_add({'id': 1000})
+    header = table.table_view.horizontalHeader()
+    width = header.sectionSize(1)
+
+    table.remove_all_and_add({'id': 1000, 'count': 'x' * 100})
+    qtbot.wait(1)
+
     _assert(table.get_ids, [1000])
+    assert header.sectionSize(1) > width
+
+
+def test_table_remove_all_and_add_without_fitting(qtbot, table, monkeypatch):
+    table.sort_by('count', 'asc')
+    table.select([1])
+    fit_calls = []
+    monkeypatch.setattr(table, '_fit_columns', lambda: fit_calls.append(True))
+
+    table.remove_all_and_add(
+        [
+            {'id': 20, 'count': 'a' * 100},
+            {'id': 21, 'count': 'c' * 100},
+            {'id': 22, 'count': 'b' * 100},
+        ],
+        fit_columns=False,
+    )
+    qtbot.wait(1)
+
+    _assert(table.get_ids, [20, 22, 21])
+    _assert(table.get_selected, [])
+    _assert(table.get_current_sort, ['count', 'asc'])
+    assert fit_calls == []
+
+    table.remove_all_and_add([], fit_columns=False)
+    qtbot.wait(1)
+
+    _assert(table.get_ids, [])
+    _assert(table.get_current_sort, ['count', 'asc'])
+    assert fit_calls == []
 
 
 def test_table_add_change_remove(qtbot, table):

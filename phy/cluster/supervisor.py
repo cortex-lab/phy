@@ -15,7 +15,7 @@ import numpy as np
 from phylib.utils import Bunch, connect, emit, unconnect
 
 from phy.gui.actions import Actions
-from phy.gui.qt import _block, _wait, set_busy
+from phy.gui.qt import QHeaderView, _block, _wait, set_busy
 from phy.gui.widgets import Barrier, Table, _uniq
 
 from ._history import GlobalHistory
@@ -386,6 +386,10 @@ class SimilarityView(ClusterView):
     _required_columns = ('n_spikes', 'similarity')
     _view_name = 'similarity_view'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._similarity_columns_fitted = False
+
     def set_selected_index_offset(self, n):
         """Set the index of the selected cluster, used for correct coloring in the similarity
         view."""
@@ -398,12 +402,16 @@ class SimilarityView(ClusterView):
         similar = emit('request_similar_clusters', self, cluster_ids[-1])
         # Clear the table.
         if similar:
-            self.remove_all_and_add(
-                [cl for cl in similar[0] if cl['id'] not in cluster_ids],
-                fit_columns=False,
-            )
+            rows = [cl for cl in similar[0] if cl['id'] not in cluster_ids]
+            fit_columns = bool(rows) and not self._similarity_columns_fitted
+            self.remove_all_and_add(rows, fit_columns=fit_columns)
+            if fit_columns:
+                # The first real similarity payload establishes stable widths for subsequent
+                # populated and empty refreshes.
+                self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+                self._similarity_columns_fitted = True
         else:  # pragma: no cover
-            self.remove_all()
+            self.remove_all_and_add([], fit_columns=False)
         return similar
 
 
@@ -846,6 +854,11 @@ class Supervisor:
         )
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
+        connect(
+            self._toggle_cluster_on_right_click,
+            event='row_right_click',
+            sender=self.cluster_view,
+        )
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
@@ -936,6 +949,10 @@ class Supervisor:
     def _promote_similar_on_right_click(self, sender, cluster_id):
         """Promote a right-clicked similarity row through the normal action queue."""
         emit('action', self.action_creator, 'promote_similar', cluster_id)
+
+    def _toggle_cluster_on_right_click(self, sender, cluster_id):
+        """Toggle a right-clicked cluster row through the normal action queue."""
+        emit('action', self.action_creator, 'toggle_cluster_selection', cluster_id)
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -1271,6 +1288,15 @@ class Supervisor:
             callback=restore_similar,
             update_views=False,
         )
+
+    def toggle_cluster_selection(self, cluster_id, callback=None):
+        """Add or remove a cluster from the cluster-view selection."""
+        cluster_ids = list(self.selected_clusters)
+        if cluster_id in cluster_ids:
+            cluster_ids.remove(cluster_id)
+        else:
+            cluster_ids.append(cluster_id)
+        self.cluster_view.select(cluster_ids, callback=callback)
 
     def first(self, callback=None):
         """Select the first cluster in the cluster view."""

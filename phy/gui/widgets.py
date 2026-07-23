@@ -1004,18 +1004,31 @@ class Table(QWidget):
         self._refresh_selection()
         self._fit_columns()
 
-    def remove_all_and_add(self, objects):
+    def remove_all_and_add(self, objects, fit_columns=True):
         objects = self._ensure_list(objects)
         if not objects:
-            return self.remove_all()
+            if fit_columns:
+                return self.remove_all()
+            self._selected_ids = []
+            self._model.set_rows([])
+            self._refresh_selection()
+            return
         self._selected_ids = []
         self._model.set_rows(objects)
         if self._current_sort:
-            self._no_emit = True
-            self.sort_by(*self._current_sort)
-            self._no_emit = False
+            if fit_columns:
+                self._no_emit = True
+                self.sort_by(*self._current_sort)
+                self._no_emit = False
+            else:
+                name, sort_dir = self._current_sort
+                self._proxy.sort(
+                    self.columns.index(name),
+                    Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder,
+                )
         self._refresh_selection()
-        self._fit_columns()
+        if fit_columns:
+            self._fit_columns()
 
     def get_selected(self, callback=None):
         return self._async_return(self.get_selected_ids(), callback)
