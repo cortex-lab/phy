@@ -525,7 +525,14 @@ class PlotVisual(BaseVisual):
 
         # Transform the positions.
         if data.data_bounds is not None:
-            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            # A shared range can be broadcast across all positions. Waveform
+            # batches normally use one global range, so expanding four bounds
+            # values to every sample only creates a large temporary array and
+            # repeats identical range calculations.
+            if len(data.data_bounds) and np.all(data.data_bounds == data.data_bounds[0]):
+                data_bounds = data.data_bounds[:1].copy()
+            else:
+                data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
             self.data_range.from_bounds = data_bounds
             pos = self.transforms.apply(pos)
 

@@ -273,8 +273,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         )
         box_index = _index_of(channel_ids_loc, self.channel_ids)
         box_index = np.repeat(box_index, 2)
-        box_index = np.tile(box_index, n_spikes_clu)
-        hpos = np.tile([[a, 0, b, 0]], (nw, 1))
+        # The zero axis is shared by all waveforms in a channel. Drawing it once
+        # per spike only overdraws identical opaque lines and makes multi-cluster
+        # selections generate up to hundreds of times more geometry than needed.
+        hpos = np.tile([[a, 0, b, 0]], (n_channels, 1))
         assert box_index.size == hpos.shape[0] * 2
         self.line_visual.add_batch_data(
             pos=hpos,

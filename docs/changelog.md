@@ -44,6 +44,9 @@ behavior they verify rather than listed separately.
 - Template and feature amplitude points use stable, evenly spaced samples.
   Background clusters share one fixed display budget, so the number of gray
   points no longer grows with the number of eligible clusters.
+- Waveform plotting reuses shared coordinate bounds and draws each channel
+  axis once, reducing geometry and temporary allocations for multi-cluster
+  selections.
 
 ### Fixed
 

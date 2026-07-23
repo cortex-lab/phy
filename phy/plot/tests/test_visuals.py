@@ -203,6 +203,30 @@ def test_plot_2(qtbot, canvas_pz):
     )
 
 
+def test_plot_shared_data_bounds_are_broadcast(qtbot, canvas_pz):
+    n_signals = 5
+    n_samples = 10
+    visual = PlotVisual()
+    canvas_pz.add_visual(visual)
+
+    visual.set_data(
+        y=np.random.randn(n_signals, n_samples),
+        data_bounds=[-1, -2, 1, 2],
+    )
+    assert visual.data_range.from_bounds.shape == (1, 4)
+
+    data_bounds = np.tile([-1.0, -2.0, 1.0, 2.0], (n_signals, 1))
+    data_bounds[:, 3] += np.arange(n_signals)
+    visual.set_data(
+        y=np.random.randn(n_signals, n_samples),
+        data_bounds=data_bounds,
+    )
+    assert visual.data_range.from_bounds.shape == (n_signals * n_samples, 4)
+
+    show_and_wait(qtbot, canvas_pz)
+    canvas_pz.close()
+
+
 def test_plot_list(qtbot, canvas_pz):
     y = [0.25 * np.random.randn(i) for i in (5, 20, 50)]
     c = [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 1, 1]]
