@@ -8,9 +8,11 @@ import numpy as np
 from phylib.io.mock import artificial_correlograms
 from phylib.utils import connect, unconnect
 
+from phy.gui.qt import QPoint, Qt
+from phy.plot.tests import mouse_click
+
 from ..correlogram import CorrelogramView
 from . import _stop_and_close
-from phy.plot.tests import mouse_click
 
 # ------------------------------------------------------------------------------
 # Test correlogram view
@@ -50,6 +52,15 @@ def test_correlogram_view(qtbot, gui):
     mouse_click(qtbot, v.canvas, (width / 6, height / 6), button='Right')
 
     assert promoted == [(0, 2)]
+
+    # Trackpad secondary clicks may be held longer than BaseCanvas' 250 ms
+    # synthetic mouse-click threshold. The release should still be actionable.
+    pos = QPoint(round(width / 2), round(height / 6))
+    qtbot.mousePress(v.canvas, Qt.RightButton, pos=pos)
+    qtbot.wait(300)
+    qtbot.mouseRelease(v.canvas, Qt.RightButton, pos=pos)
+
+    assert promoted == [(0, 2), (0, 2)]
 
     unconnect(on_request_promote_similar)
 
