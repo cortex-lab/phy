@@ -6,6 +6,7 @@
 
 import numpy as np
 from phylib.io.mock import artificial_correlograms
+from phylib.utils import Bunch, connect, unconnect
 
 from ..correlogram import CorrelogramView
 from . import _stop_and_close
@@ -35,6 +36,21 @@ def test_correlogram_view(qtbot, gui):
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
+
+    promoted = []
+
+    @connect(sender=v)
+    def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
+        promoted.append((cluster_id_a, cluster_id_b))
+
+    v.on_select(cluster_ids=[0, 2, 3])
+    width, height = v.canvas.get_size()
+    v.on_mouse_click(Bunch(button='Right', pos=(width / 2, height / 6)))
+    v.on_mouse_click(Bunch(button='Right', pos=(width / 6, height / 6)))
+
+    assert promoted == [(0, 2)]
+
+    unconnect(on_request_promote_similar)
 
     v.toggle_normalization(True)
     v.toggle_labels(False)

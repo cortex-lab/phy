@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 from phylib.io.array import _clip
-from phylib.utils import Bunch
+from phylib.utils import Bunch, emit
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
@@ -234,6 +234,15 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         else:
             self.text_visual.hide()
         self.canvas.update()
+
+    def on_mouse_click(self, e):
+        """Promote a similarity cluster by right-clicking a cross-correlogram."""
+        if e.button != 'Right' or len(self.cluster_ids) < 2:
+            return
+        (i, j), _ = self.canvas.grid.box_map(e.pos)
+        if i == j:
+            return
+        emit('request_promote_similar', self, self.cluster_ids[i], self.cluster_ids[j])
 
     def attach(self, gui):
         """Attach the view to the GUI."""

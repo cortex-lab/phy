@@ -1592,11 +1592,25 @@ class BaseController:
 
     def create_correlogram_view(self):
         """Create a correlogram view."""
-        return CorrelogramView(
+        view = CorrelogramView(
             correlograms=self._get_correlograms,
             firing_rate=self._get_correlograms_rate,
             sample_rate=self.model.sample_rate,
         )
+
+        @connect(sender=view)
+        def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
+            selected_clusters = set(self.supervisor.selected_clusters)
+            selected_similar = set(self.supervisor.selected_similar)
+            for cluster_id, other_cluster_id in (
+                (cluster_id_a, cluster_id_b),
+                (cluster_id_b, cluster_id_a),
+            ):
+                if cluster_id in selected_similar and other_cluster_id in selected_clusters:
+                    emit('action', self.supervisor.action_creator, 'promote_similar', cluster_id)
+                    return
+
+        return view
 
     # Probe view
     # -------------------------------------------------------------------------
