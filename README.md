@@ -39,23 +39,24 @@ Current testing and maintenance work is focused on modern Linux, macOS, and Wind
 
 ## Installation
 
-Install phy in a fresh Python 3.10+ environment:
+The recommended installation uses
+[`uv`](https://docs.astral.sh/uv/getting-started/installation/), which installs
+phy and its Python dependencies in an isolated environment:
 
 ```bash
-python -m pip install --upgrade pip
-pip install phy
+uv tool install --python 3.12 phy
+phy --version
 ```
 
 This installs the GUI runtime dependencies as part of the main package.
 
-If you plan to use the legacy Kwik GUI, also install:
-
-```bash
-pip install klusta klustakwik2
-```
+The legacy Kwik GUI needs a regular virtual environment because one of its
+dependencies requires special build handling. See the installation guide for
+the tested `uv` commands.
 
 See the [installation guide](https://phy.readthedocs.io/en/latest/installation/)
-for Windows PowerShell, source checkouts, and installation verification.
+for instructions to install `uv`, legacy Kwik support, a `venv`/pip alternative,
+source checkouts, and installation verification.
 
 ## Quick start
 
@@ -127,14 +128,13 @@ For a fresh editable installation using the latest commits of both phylib and ph
 ```bash
 mkdir phy-source
 cd phy-source
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
 
 git clone https://github.com/cortex-lab/phylib.git
 git clone https://github.com/cortex-lab/phy.git
-python -m pip install --editable ./phylib
-python -m pip install --editable "./phy[dev]"
+
+cd phy
+uv sync --dev
+uv pip install --editable ../phylib
 ```
 
 Windows PowerShell instructions, update commands, and verification of the exact commits are in the

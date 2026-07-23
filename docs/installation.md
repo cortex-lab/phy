@@ -6,9 +6,31 @@ with the GUI.
 
 ## Install the stable release
 
-### Linux and macOS
+### Recommended: uv
 
-Create and activate a virtual environment, then install phy from PyPI:
+Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/) if it is
+not already available, then install phy as an isolated command-line tool:
+
+```bash
+uv tool install --python 3.12 phy
+```
+
+This command is the same on Linux, macOS, and Windows PowerShell. `uv` installs
+Python 3.12 if necessary, creates an environment dedicated to phy, and makes the
+`phy` command available without manually activating that environment.
+
+To upgrade the stable installation later:
+
+```bash
+uv tool upgrade phy
+```
+
+### Alternative: venv and pip
+
+If you prefer Python's standard environment tools, create and activate a virtual
+environment before installing phy.
+
+On Linux and macOS:
 
 ```bash
 python3 -m venv phy-env
@@ -17,30 +39,25 @@ python -m pip install --upgrade pip
 python -m pip install phy
 ```
 
-If `python3` is not available but `python` is Python 3.10 or newer, use `python`
-in the first command.
-
-### Windows PowerShell
+On Windows PowerShell:
 
 ```powershell
-py -3.10 -m venv phy-env
+py -3.12 -m venv phy-env
 .\phy-env\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install phy
 ```
 
-You may choose another installed Python version from 3.10 onward. For example,
-use `py -3.12` for Python 3.12. If PowerShell prevents activation, either adjust
-its execution policy for your user or run the environment's Python directly:
+If PowerShell prevents activation, either adjust its execution policy for your
+user or run `.\phy-env\Scripts\python.exe -m pip install phy` followed by
+`.\phy-env\Scripts\phy.exe --version`.
 
-```powershell
-.\phy-env\Scripts\python.exe -m pip install phy
-.\phy-env\Scripts\phy.exe --version
-```
+To upgrade this pip installation later, activate its environment and run
+`python -m pip install --upgrade phy`.
 
 ### Check the installation
 
-With the environment active:
+After either installation method:
 
 ```bash
 phy --version
@@ -49,12 +66,6 @@ phy --help
 
 The first command prints the installed phy version. The second should list
 commands including `template-gui` and `template-describe`.
-
-To upgrade the stable installation later:
-
-```bash
-python -m pip install --upgrade phy
-```
 
 ## Install the latest phy and phylib source
 
@@ -74,23 +85,17 @@ can live side by side.
 mkdir phy-source
 cd phy-source
 
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-
 git clone https://github.com/cortex-lab/phylib.git
 git clone https://github.com/cortex-lab/phy.git
 
-python -m pip install --editable ./phylib
-python -m pip install --editable ./phy
+cd phy
+uv sync --dev
+uv pip install --editable ../phylib
 ```
 
-To run the phy test suite or build its documentation, install phy's development
-dependencies instead in the final command:
-
-```bash
-python -m pip install --editable "./phy[dev]"
-```
+`uv sync` creates `phy/.venv`, installs phy editably, and installs the locked
+development dependencies. The final command replaces the released phylib
+package with the sibling source checkout.
 
 ### Windows PowerShell
 
@@ -98,57 +103,47 @@ python -m pip install --editable "./phy[dev]"
 New-Item -ItemType Directory phy-source
 Set-Location phy-source
 
-py -3.10 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-
 git clone https://github.com/cortex-lab/phylib.git
 git clone https://github.com/cortex-lab/phy.git
 
-python -m pip install --editable .\phylib
-python -m pip install --editable .\phy
+Set-Location phy
+uv sync --dev
+uv pip install --editable ..\phylib
 ```
 
-For the phy test and documentation dependencies, replace the final command with:
-
-```powershell
-python -m pip install --editable ".\phy[dev]"
-```
+These commands create the same editable development environment as the Linux and
+macOS instructions.
 
 ### Verify which source is running
 
 Run the following commands from either operating system:
 
 ```bash
-phy --version
-python -m pip show phy phylib
-git -C phy log -1 --oneline
-git -C phylib log -1 --oneline
+uv run phy --version
+uv pip show phy phylib
+git log -1 --oneline
+git -C ../phylib log -1 --oneline
 ```
 
-For both packages, `pip show` should include an **Editable project location**
+For both packages, `uv pip show` should include an **Editable project location**
 pointing to the checkout you just cloned. The Git commands identify the exact
 commits being used. Development builds of phy may also show a development
 version or Git suffix in `phy --version`.
 
 ### Update both checkouts
 
-Save or commit your own source changes before updating. From the `phy-source`
-directory, with the virtual environment active:
+Save or commit your own source changes before updating. From the `phy` checkout:
 
 ```bash
-git -C phylib pull --ff-only
-git -C phy pull --ff-only
-python -m pip install --upgrade --editable ./phylib
-python -m pip install --upgrade --editable ./phy
+git -C ../phylib pull --ff-only
+git pull --ff-only
+uv sync --dev
+uv pip install --editable ../phylib
 ```
 
-In Windows PowerShell, the same commands work; `./phylib` and `./phy` may also be
-written as `.\phylib` and `.\phy`.
-
-Re-running the editable installation is worthwhile after an update because
-dependencies and package metadata can change even though ordinary Python source
-edits are already visible.
+In Windows PowerShell, `../phylib` may also be written as `..\phylib`.
+Re-running the sync picks up lockfile and package metadata changes, while the
+last command ensures the sibling phylib checkout remains installed.
 
 ## Start phy
 
@@ -166,10 +161,15 @@ phy template-gui /path/to/output/params.py
 ## Legacy Kwik support
 
 The Template GUI is the recommended workflow for current template-based sorters.
-The legacy Kwik GUI needs additional packages:
+The legacy Kwik GUI needs additional packages. Install them in a separate
+uv-managed environment because `klustakwik2` needs NumPy, setuptools, and Cython
+available while it builds:
 
 ```bash
-python -m pip install klusta klustakwik2
+uv venv --python 3.12 phy-kwik-env
+uv pip install --python phy-kwik-env phy klusta cython
+uv pip install --python phy-kwik-env --no-build-isolation klustakwik2
 ```
 
-It can then be opened with `phy kwik-gui path/to/file.kwik`.
+Activate the environment using the command printed by `uv venv`. It can then be
+opened with `phy kwik-gui path/to/file.kwik`.
