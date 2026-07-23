@@ -171,6 +171,23 @@ def test_table_1(qtbot, table):
     _assert(table.get_selected, [1, 2])
 
 
+def test_table_row_right_click(qtbot, table):
+    clicked = []
+
+    @connect(sender=table)
+    def on_row_right_click(sender, row_id):
+        clicked.append(row_id)
+
+    table.select([1, 2])
+    index = table._proxy.index(4, 0)
+    pos = table.table_view.visualRect(index).center()
+    qtbot.mouseClick(table.table_view.viewport(), Qt.RightButton, pos=pos)
+
+    _block(lambda: clicked == [4])
+    _assert(table.get_selected, [1, 2])
+    unconnect(on_row_right_click)
+
+
 def test_table_scroll(qtbot, table):
     table.add([{'id': 1000 + i, 'count': i} for i in range(1000)])
     qtbot.wait(50)

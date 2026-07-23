@@ -520,6 +520,7 @@ class Table(QWidget):
         self.filter_edit.installEventFilter(self)
 
         self.table_view = QTableView(self)
+        self.table_view.viewport().installEventFilter(self)
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.table_view.clicked.connect(self._on_row_clicked)
@@ -551,6 +552,16 @@ class Table(QWidget):
         return self._debouncer
 
     def eventFilter(self, obj, event):
+        if (
+            obj is self.table_view.viewport()
+            and event.type() == QEvent.MouseButtonPress
+            and event.button() == Qt.RightButton
+        ):
+            index = self.table_view.indexAt(event.pos())
+            if index.isValid():
+                emit('row_right_click', self, self._visible_ids()[index.row()])
+            # Prevent Qt's default right-click handling from changing the table selection.
+            return True
         if (
             obj is self.filter_edit
             and event.type() == QEvent.KeyPress
