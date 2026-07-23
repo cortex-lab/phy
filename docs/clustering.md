@@ -42,6 +42,8 @@ On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is
 
 Right-click any cluster in the similarity view to move it into the cluster view. Existing selections in both tables are preserved, and the previous best cluster remains the similarity reference.
 
+Right-click a cluster in the cluster view to add it to, or remove it from, the current cluster selection.
+
 For each similar cluster, you can either:
 
 * Press `space` to do nothing and go to the next similar cluster.
