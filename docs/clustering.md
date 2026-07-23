@@ -40,6 +40,8 @@ Press `Control+Space` to select the first 15 clusters currently shown in the sim
 
 On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is assigned to switching input sources in macOS System Settings, disable or remap that system shortcut so that phy can receive it.
 
+Right-click any cluster in the similarity view to move it into the cluster view. Existing selections in both tables are preserved, and the previous best cluster remains the similarity reference.
+
 For each similar cluster, you can either:
 
 * Press `space` to do nothing and go to the next similar cluster.
