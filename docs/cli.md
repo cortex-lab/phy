@@ -54,7 +54,9 @@ phy extract-waveforms params.py 500 --nc 16
 ```
 
 Run this command from the environment in which phy and phylib are installed,
-before opening the GUI. It reads the raw binary named by `dat_path` and writes:
+before opening the GUI. Its purpose is to pre-generate the individual spike
+waveforms that the Waveform View needs, avoiding repeated extraction from the
+raw binary during curation. It reads the binary named by `dat_path` and writes:
 
 - `_phy_spikes_subset.waveforms.npy`
 - `_phy_spikes_subset.channels.npy`
@@ -70,6 +72,12 @@ This is the supported way to precompute a reusable waveform **subset**. It is
 useful when random access to the raw data is expensive, when the raw data will
 not accompany a shared dataset, or when compressed raw data would otherwise
 make on-demand extraction slow.
+
+The saved subset is a pool for the GUI, not the exact set drawn at once. For
+each selected cluster, the Waveform View chooses up to
+`controller.n_spikes_waveforms` spikes from that pool (100 by default). Merges
+and splits continue to use whichever constituent spike IDs are present in the
+pool.
 
 It does **not** pre-extract every spike in the recording. The current phylib
 implementation samples from 20 representative raw-data chunks and applies the
@@ -89,6 +97,10 @@ phy template-gui params.py
 Phy detects the three files automatically. See
 [Raw data and waveform subsets](dataset.md#raw-data-and-waveform-subsets) for
 the dataset contract.
+
+When `dat_path` points to compressed MTSComp ephys data and no saved subset
+exists, `template-gui` automatically performs the equivalent extraction with
+500 spikes per template and 16 requested channels during startup.
 
 ## Convert to ALF
 

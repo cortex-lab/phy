@@ -134,7 +134,9 @@ A sorter or preprocessing step may instead provide all three of these files:
 
 Together they let phy display stored individual waveforms without reading the
 original binary. They are a coordinated set: if any member is absent, phy skips
-the subset.
+the subset. Generate them ahead of time with
+[`phy extract-waveforms`](cli.md#pre-extract-waveform-subsets); the resulting
+pool supplies the Waveform View during curation.
 
 ## Cluster labels and other metadata
 

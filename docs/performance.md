@@ -53,8 +53,9 @@ setting; check the action or plugin doing the calculation.
 
 ### Pre-extract waveforms before opening phy
 
-If on-demand waveform reads are the bottleneck, create phylib's reusable
-waveform subset first:
+If on-demand waveform reads are the bottleneck, pre-generate the individual
+spike data used by the Waveform View by creating phylib's reusable waveform
+subset first:
 
 ```bash
 phy extract-waveforms params.py 500 --nc 16
@@ -62,7 +63,9 @@ phy extract-waveforms params.py 500 --nc 16
 
 Phy automatically uses the three `_phy_spikes_subset.*.npy` files produced
 beside `params.py`. This pre-extracts up to 500 spikes per original template on
-the relevant channels, sampled from 20 representative raw-data chunks.
+the relevant channels, sampled from 20 representative raw-data chunks. The
+Waveform View then draws its current per-cluster sample from this saved pool
+instead of reading those waveforms from the raw binary.
 
 Despite the command's historical description, this feature does not
 materialize every spike waveform in the recording, and there is currently no
