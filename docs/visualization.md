@@ -288,6 +288,23 @@ This view shows the autocorrelograms and cross-correlograms between all pairs of
 
 Subplot at row i, column j, shows the cross-correlogram of selected cluster #i versus cluster #j.
 
+At most 20 selected clusters are displayed by default. If more are selected, the view uses the
+first 20 clusters in the selection order. To change this limit, set the view's
+`max_n_clusters` attribute in a plugin, for example:
+
+```python
+from phy import IPlugin, connect
+from phy.cluster.views import CorrelogramView
+
+
+class CorrelogramLimitPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        @connect
+        def on_view_attached(view, gui):
+            if isinstance(view, CorrelogramView):
+                view.max_n_clusters = 30
+```
+
 The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
 The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.

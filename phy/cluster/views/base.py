@@ -151,9 +151,11 @@ class ManualClusteringView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
-        # Maximum number of clusters that can be displayed in the view, for performance reasons.
+        # Limit the number of displayed clusters for performance reasons. Keep the
+        # selection order so that a large selection still refreshes the view rather
+        # than leaving its previous contents on screen.
         if self.max_n_clusters and len(cluster_ids) > self.max_n_clusters:
-            return
+            cluster_ids = cluster_ids[:self.max_n_clusters]
 
         # The lock is used so that two different background threads do not access the same
         # view simultaneously, which can lead to conflicts, errors in the plotting code,

@@ -72,3 +72,19 @@ def test_manual_clustering_view_2(qtbot, gui):
     v.canvas.close()
     v.actions.close()
     qtbot.wait(100)
+
+
+def test_manual_clustering_view_selection_is_limited(qtbot, gui):
+    v = MyView()
+    v.max_n_clusters = 2
+    v.canvas.show()
+    v.attach(gui)
+
+    class Supervisor:
+        pass
+
+    emit('select', Supervisor(), cluster_ids=[3, 2, 1])
+
+    assert v.cluster_ids == [3, 2]
+
+    _stop_and_close(qtbot, v)
