@@ -232,7 +232,7 @@ def test_cluster_view_1(qtbot, gui, data):
     assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
 
-def test_similarity_view_1(qtbot, gui, data):
+def test_similarity_view_1(qtbot, gui, data, monkeypatch):
     sv = SimilarityView(gui, data=data)
     _wait_until_table_ready(qtbot, sv)
 
@@ -240,8 +240,14 @@ def test_similarity_view_1(qtbot, gui, data):
     def on_request_similar_clusters(sender, cluster_id):
         return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
 
+    fit_calls = []
+    monkeypatch.setattr(sv, '_fit_columns', lambda: fit_calls.append(True))
+
     sv.reset([5])
     _assert(sv.get_ids, [105, 115, 107])
+    sv.reset([6])
+    _assert(sv.get_ids, [106, 116, 108])
+    assert fit_calls == []
 
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
@@ -417,6 +423,36 @@ def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
         supervisor.select_first_similar(0)
     with raises(ValueError, match='positive integer'):
         supervisor.select_first_similar(1.5)
+
+
+def test_supervisor_promote_similar_with_right_click(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20, 11, 1])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.filter('id >= 1')
+
+    index = similarity_view._proxy_index_for_id(11)
+    pos = similarity_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(similarity_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [10, 11, 30]
+    assert supervisor.selected_similar == [20, 1]
+    assert supervisor.selected == [10, 11, 30, 20, 1]
+    assert 11 not in similarity_view.get_ids()
+
+
+def test_supervisor_promote_unselected_similar_with_right_click(qtbot, supervisor):
+    _select(supervisor, [30], [20, 11])
+    similarity_view = supervisor.similarity_view
+
+    index = similarity_view._proxy_index_for_id(1)
+    pos = similarity_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(similarity_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [1, 30]
+    assert supervisor.selected_similar == [20, 11]
 
 
 def test_supervisor_edge_cases(supervisor):

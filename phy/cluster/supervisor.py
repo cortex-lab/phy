@@ -398,7 +398,10 @@ class SimilarityView(ClusterView):
         similar = emit('request_similar_clusters', self, cluster_ids[-1])
         # Clear the table.
         if similar:
-            self.remove_all_and_add([cl for cl in similar[0] if cl['id'] not in cluster_ids])
+            self.remove_all_and_add(
+                [cl for cl in similar[0] if cl['id'] not in cluster_ids],
+                fit_columns=False,
+            )
         else:  # pragma: no cover
             self.remove_all()
         return similar
@@ -854,6 +857,11 @@ class Supervisor:
             sender=self.similarity_view,
         )
         connect(self._similar_selected, event='select', sender=self.similarity_view)
+        connect(
+            self._promote_similar_on_right_click,
+            event='row_right_click',
+            sender=self.similarity_view,
+        )
 
         # Change the state after every clustering action, according to the action flow.
         connect(self._after_action, event='cluster', sender=self)
@@ -924,6 +932,10 @@ class Supervisor:
         if similar:
             self.similarity_view.scroll_to(similar[-1])
         self.similarity_view.dock.set_status(f'similar clusters: {", ".join(map(str, similar))}')
+
+    def _promote_similar_on_right_click(self, sender, cluster_id):
+        """Promote a right-clicked similarity row through the normal action queue."""
+        emit('action', self.action_creator, 'promote_similar', cluster_id)
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -1236,6 +1248,29 @@ class Supervisor:
             self.similarity_view.select(cluster_ids[:n], callback=callback)
 
         self.similarity_view.get_ids(callback=select)
+
+    def promote_similar(self, cluster_id, callback=None):
+        """Move a similarity row into the cluster view while preserving all other selections."""
+        cluster_ids = list(self.selected_clusters)
+        similar = [value for value in self.selected_similar if value != cluster_id]
+
+        if not cluster_ids:
+            self.cluster_view.select([cluster_id], callback=callback)
+            return
+
+        # Insert before the current anchor (the final cluster-view selection) so rebuilding the
+        # similarity view keeps the same reference cluster.
+        cluster_ids.insert(-1, cluster_id)
+
+        def restore_similar(_):
+            self.similarity_view.select(similar, callback=callback)
+
+        # Wait to update the other views until the remaining similarity selection is restored.
+        self.cluster_view.select(
+            cluster_ids,
+            callback=restore_similar,
+            update_views=False,
+        )
 
     def first(self, callback=None):
         """Select the first cluster in the cluster view."""
