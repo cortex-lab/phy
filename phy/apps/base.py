@@ -884,8 +884,7 @@ class BaseController:
     )
     # Methods that are cached on disk for performance.
     _cached = (
-        '_get_correlograms',
-        '_get_correlograms_rate',
+        '_get_correlograms_cached',
     )
 
     # Views to load by default.
@@ -1671,11 +1670,26 @@ class BaseController:
     # -------------------------------------------------------------------------
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
+        """Return cached correlograms using the current per-cluster spike limit."""
+        return self._get_correlograms_cached(
+            cluster_ids,
+            bin_size,
+            window_size,
+            self.n_spikes_correlograms,
+        )
+
+    def _get_correlograms_cached(
+        self,
+        cluster_ids,
+        bin_size,
+        window_size,
+        n_spikes_correlograms,
+    ):
         """Return the cross- and auto-correlograms of a set of clusters."""
         # Independent random sampling preserves nearby spike pairs
         # probabilistically. A regular one-spike-at-a-time sample can impose a
         # minimum spacing and make auto- and cross-correlograms appear empty.
-        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
+        spike_ids = self.selector(n_spikes_correlograms, cluster_ids)
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(

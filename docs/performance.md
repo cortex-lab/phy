@@ -111,17 +111,9 @@ Enable it in `~/.phy/phy_config.py`:
 c.TemplateGUI.plugins = ['ExampleNspikesViewsPlugin']
 ```
 
-The first time you change `n_spikes_correlograms`, start with:
-
-```bash
-phy template-gui /path/to/params.py --clear-cache
-```
-
-This removes `<dataset>/.phy`, including cached correlograms and dataset-local
-GUI state. Correlogram cache keys do not include
-`n_spikes_correlograms`, so clearing the cache is necessary for a changed limit
-to affect cluster combinations that were already computed. It is not necessary
-when changing only the waveform, feature, or amplitude limits.
+Correlogram cache keys include `n_spikes_correlograms`, so changing the limit
+does not require `--clear-cache`. Previously computed entries for other limits
+remain available until normal cache-size maintenance removes them.
 
 The post-state `gui_ready` hook reliably wins over saved controller values, so
 `--clear-state` is not required. If you do use `--clear-state`, be aware that it

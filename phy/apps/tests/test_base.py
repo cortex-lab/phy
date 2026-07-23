@@ -234,6 +234,26 @@ def test_get_correlograms_rate_fast_path():
     np.testing.assert_array_equal(actual, expected)
 
 
+def test_correlogram_cache_key_includes_spike_limit(tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    selector = controller.selector
+    calls = []
+
+    def recording_selector(n, cluster_ids, **kwargs):
+        calls.append(n)
+        return selector(n, cluster_ids, **kwargs)
+
+    controller.selector = recording_selector
+    controller.n_spikes_correlograms = 1
+    controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+    controller.n_spikes_correlograms = 2
+    controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+    # The identical request at the same limit should use the disk cache.
+    controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+
+    assert calls == [1, 2]
+
+
 def test_correlogram_sampling_preserves_nearby_pairs():
     n_spikes = 100_000
     spike_times = np.arange(n_spikes, dtype=float) / 1000.0
