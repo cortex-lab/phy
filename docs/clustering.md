@@ -36,6 +36,10 @@ You can move up and down in the **cluster view** with the `Up` and `Down` arrows
 
 You can move up and down in the **similarity view** with the `Space` and `Shift-space` arrows. The cluster selected in the similarity view is called the **similar cluster**. The idea is to go through every "best cluster" in the cluster view, and review the "similar clusters" in the similarity view (sorted by decreasing similarity with the best cluster).
 
+Press `Control+Space` to select the first 15 clusters currently shown in the similarity view while preserving the cluster view selection. This uses the current similarity view sorting and filtering, and replaces any previous similarity view selection. To choose a different number, use **Select > Select N Similar**; the chosen number becomes the shortcut's new default and is remembered across sessions.
+
+On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is assigned to switching input sources in macOS System Settings, disable or remap that system shortcut so that phy can receive it.
+
 For each similar cluster, you can either:
 
 * Press `space` to do nothing and go to the next similar cluster.
