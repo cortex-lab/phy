@@ -8,6 +8,7 @@
 import inspect
 import logging
 from functools import partial
+from numbers import Integral
 
 import numpy as np
 from phylib.utils import Bunch, connect, emit, unconnect
@@ -434,6 +435,7 @@ class ActionCreator:
         'reset': 'ctrl+alt+space',
         'next': 'space',
         'previous': 'shift+space',
+        'select_first_similar': 'ctrl+space',
         'unselect_similar': 'backspace',
         'next_best': 'down',
         'previous_best': 'up',
@@ -529,6 +531,16 @@ class ActionCreator:
 
         # Selection.
         self.add(w, 'select', prompt=True, n_args=1)
+        self.add(w, 'select_first_similar')
+        self.add(
+            w,
+            'select_n_similar',
+            method_name='select_first_similar',
+            prompt=True,
+            n_args=1,
+            prompt_default=lambda: self.supervisor.n_similar_clusters_to_select,
+            docstring='Select the first N clusters currently shown in the similarity view.',
+        )
         self.add(w, 'unselect_similar')
         self.select_actions.separator()
 
@@ -615,6 +627,8 @@ class Supervisor:
         Initial sort as a pair `(column_name, order)` where `order` is either `asc` or `desc`
     context : Context
         Handles the cache.
+    n_similar_clusters_to_select : int
+        Number of rows selected by the select-first-similar action. The default is 15.
 
     Events
     ------
@@ -635,6 +649,8 @@ class Supervisor:
 
     """
 
+    default_n_similar_clusters_to_select = 15
+
     def __init__(
         self,
         spike_clusters=None,
@@ -645,6 +661,7 @@ class Supervisor:
         new_cluster_id=None,
         sort=None,
         context=None,
+        n_similar_clusters_to_select=None,
     ):
         super().__init__()
         self.context = context
@@ -652,6 +669,11 @@ class Supervisor:
         self.actions = None  # will be set when attaching the GUI
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
+        self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(
+            n_similar_clusters_to_select
+            if n_similar_clusters_to_select is not None
+            else self.default_n_similar_clusters_to_select
+        )
 
         # Cluster metrics.
         # This is a dict {name: func cluster_id => value}.
@@ -722,6 +744,15 @@ class Supervisor:
     # Internal methods
     # -------------------------------------------------------------------------
 
+    @staticmethod
+    def _validate_n_similar_clusters_to_select(value):
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise ValueError('n_similar_clusters_to_select must be a positive integer.')
+        value = int(value)
+        if value <= 0:
+            raise ValueError('n_similar_clusters_to_select must be a positive integer.')
+        return value
+
     def _save_spikes_per_cluster(self):
         """Cache on the disk the dictionary with the spikes belonging to each cluster."""
         if not self.context:
@@ -768,6 +799,7 @@ class Supervisor:
     def _save_gui_state(self, gui):
         """Save the GUI state with the cluster view and similarity view."""
         gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
+        gui.state['n_similar_clusters_to_select'] = self.n_similar_clusters_to_select
 
         # Compatibility no-op on the native table implementation.
         self.cluster_view.clear_temporary_files()
@@ -998,6 +1030,19 @@ class Supervisor:
     def attach(self, gui):
         """Attach to the GUI."""
 
+        saved_n_similar = gui.state.get(
+            'n_similar_clusters_to_select', self.n_similar_clusters_to_select
+        )
+        try:
+            self.n_similar_clusters_to_select = (
+                self._validate_n_similar_clusters_to_select(saved_n_similar)
+            )
+        except ValueError:
+            logger.warning(
+                'Ignoring invalid saved n_similar_clusters_to_select value: %r.',
+                saved_n_similar,
+            )
+
         # Make sure the selected field in cluster and similarity views are saved in the local
         # supervisor state, as this information is dataset-dependent.
         gui.state.add_local_keys(['ClusterView.selected'])
@@ -1178,6 +1223,17 @@ class Supervisor:
     def unselect_similar(self, callback=None):
         """Select only the clusters in the cluster view."""
         self.cluster_view.select(self.selected_clusters, callback=callback)
+
+    def select_first_similar(self, n=None, callback=None):
+        """Select the first N clusters currently shown in the similarity view."""
+        if n is not None:
+            self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(n)
+        n = self.n_similar_clusters_to_select
+
+        def select(cluster_ids):
+            self.similarity_view.select(cluster_ids[:n], callback=callback)
+
+        self.similarity_view.get_ids(callback=select)
 
     def first(self, callback=None):
         """Select the first cluster in the cluster view."""
