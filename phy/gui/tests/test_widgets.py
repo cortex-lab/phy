@@ -447,7 +447,7 @@ def test_table_remove_all_and_add_1(qtbot, table):
     _assert(table.get_ids, [])
 
 
-def test_table_remove_all_and_add_2(qtbot, table):
+def test_table_remove_all_and_add_keeps_column_width(qtbot, table):
     header = table.table_view.horizontalHeader()
     width = header.sectionSize(1)
 
@@ -455,7 +455,8 @@ def test_table_remove_all_and_add_2(qtbot, table):
     qtbot.wait(1)
 
     _assert(table.get_ids, [1000])
-    assert header.sectionSize(1) > width
+    assert header.sectionSize(1) == width
+    assert header.sectionResizeMode(1) == QHeaderView.Interactive
 
 
 def test_table_remove_all_and_add_without_fitting(qtbot, table, monkeypatch):

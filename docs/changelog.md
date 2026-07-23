@@ -48,6 +48,9 @@ behavior they verify rather than listed separately.
   clustering indexes before invoking an operation.
 - Native tables establish their fixed row height from the first populated
   payload instead of measuring every row after each update.
+- Native tables retain column widths established by their first populated
+  payload instead of rescanning all cells after later updates. Exceptionally
+  long replacement values may therefore be clipped.
 - Merge-related Cluster and Similarity View mutations batch expensive column
   and row fitting until the complete table update is applied.
 - Views with a cluster-display limit now show the first eligible clusters in

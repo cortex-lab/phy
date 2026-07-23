@@ -521,6 +521,7 @@ class Table(QWidget):
         self._no_emit = False
         self._batch_update_depth = 0
         self._fit_columns_pending = False
+        self._column_widths_fitted = False
         self._row_height_fitted = False
         self.skip_masked = bool(skip_masked)
         self._group_colors = {
@@ -663,6 +664,8 @@ class Table(QWidget):
         self.data = list(data)
         self.columns = list(columns)
         self.value_names = list(value_names)
+        self._column_widths_fitted = False
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self._filterable_names = set(self._normalize_value_names(self.value_names))
         self._filterable_names.update(self.columns)
 
@@ -722,7 +725,16 @@ class Table(QWidget):
         return self._model._rows[source_index.row()]
 
     def _fit_columns(self):
-        self.table_view.resizeColumnsToContents()
+        # Establish widths from the first populated payload, then retain them.
+        # Qt's ResizeToContents mode otherwise revisits every cell after each
+        # model reset even when the table schema and typical values are stable.
+        if not self._column_widths_fitted:
+            self.table_view.resizeColumnsToContents()
+            if self._model.rowCount():
+                self.table_view.horizontalHeader().setSectionResizeMode(
+                    QHeaderView.Interactive
+                )
+                self._column_widths_fitted = True
         # With word wrapping disabled, table content does not affect row
         # height. Measure the first populated table once, then keep that fixed
         # height across model resets instead of visiting every row.
