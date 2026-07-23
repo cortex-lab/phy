@@ -54,6 +54,9 @@ If you plan to use the legacy Kwik GUI, also install:
 pip install klusta klustakwik2
 ```
 
+See the [installation guide](https://phy.readthedocs.io/en/latest/installation/)
+for Windows PowerShell, source checkouts, and installation verification.
+
 ## Quick start
 
 Open the Template GUI on a spike sorting output directory containing `params.py`:
@@ -70,6 +73,10 @@ phy template-describe params.py
 phy kwik-gui path/to/file.kwik
 phy trace-gui path/to/raw.bin --sample-rate 30000 --dtype int16 --n-channels 384
 ```
+
+Before curating your own data, review the
+[dataset requirements](https://phy.readthedocs.io/en/latest/dataset/) and follow
+the [first-ten-minutes guide](https://phy.readthedocs.io/en/latest/quickstart/).
 
 ## Available GUIs and commands
 
@@ -133,9 +140,15 @@ python -m pip install --editable "./phy[dev]"
 Windows PowerShell instructions, update commands, and verification of the exact commits are in the
 [source installation guide](https://phy.readthedocs.io/en/latest/installation/#install-the-latest-phy-and-phylib-source).
 
-## Troubleshooting and docs
+## Documentation and help
 
-* [Documentation](https://phy.readthedocs.io/en/latest/)
+* [Documentation home](https://phy.readthedocs.io/en/latest/)
+* [Installation](https://phy.readthedocs.io/en/latest/installation/)
+* [Preparing a dataset](https://phy.readthedocs.io/en/latest/dataset/)
+* [First-ten-minutes quickstart](https://phy.readthedocs.io/en/latest/quickstart/)
+* [Using the GUI](https://phy.readthedocs.io/en/latest/gui/)
+* [Performance and spike sampling](https://phy.readthedocs.io/en/latest/performance/)
+* [Changelog](https://phy.readthedocs.io/en/latest/changelog/)
 * [Release notes](https://phy.readthedocs.io/en/latest/release/)
 * [Troubleshooting](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [GitHub issues](https://github.com/cortex-lab/phy/issues)

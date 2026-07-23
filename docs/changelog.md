@@ -25,6 +25,8 @@ behavior they verify rather than listed separately.
 - Right-click a cross-correlogram to promote its similar cluster into the
   Cluster View selection. Native mouse and trackpad secondary clicks are
   supported.
+- Configure the total number of gray background points in the Amplitude View
+  with `n_spikes_amplitudes_background` (10,000 by default).
 
 ### Changed
 
@@ -39,6 +41,9 @@ behavior they verify rather than listed separately.
   reducing the delay before dependent views update.
 - Spike selection uses the disjoint-cluster fast path, reducing selection
   overhead on large datasets.
+- Template and feature amplitude points use stable, evenly spaced samples.
+  Background clusters share one fixed display budget, so the number of gray
+  points no longer grows with the number of eligible clusters.
 
 ### Fixed
 
@@ -50,6 +55,7 @@ behavior they verify rather than listed separately.
   consistently.
 - Clear stale Similarity View selections when wizard navigation changes the
   primary cluster.
+- Hide the feature amplitude option when a dataset has no feature arrays.
 
 ### Documentation
 
