@@ -199,12 +199,10 @@ class WaveformMixin:
         # Only keep spikes from the spike waveforms selection.
         if self.model.spike_waveforms is not None:
             subset_spikes = self.model.spike_waveforms.spike_ids
-            spike_ids = self.selector(
-                n_spikes_waveforms,
-                [cluster_id],
-                subset_spikes=subset_spikes,
-                subset_spikes_are_sorted=True,
-                sample_evenly=True,
+            subset_clusters = self.supervisor.clustering.spike_clusters[subset_spikes]
+            eligible_spikes = subset_spikes[subset_clusters == cluster_id]
+            spike_ids = _sample_spikes_evenly(
+                eligible_spikes, n_spikes_waveforms
             )
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).

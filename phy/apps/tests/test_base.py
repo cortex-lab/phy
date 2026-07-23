@@ -13,7 +13,7 @@ from itertools import cycle, islice
 from pathlib import Path
 
 import numpy as np
-from phylib.io.array import SpikeSelector
+from phylib.io.array import SpikeSelector, _sample_spikes_evenly
 from phylib.io.mock import (
     artificial_features,
     artificial_spike_clusters,
@@ -259,25 +259,28 @@ def test_correlogram_sampling_preserves_nearby_pairs():
     assert correlogram[0, 0].sum() > 0
 
 
-def test_sparse_waveform_selection_uses_sorted_subset(tempdir):
+def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     controller = _mock_controller(tempdir, MyControllerW)
     subset_spikes = np.arange(0, controller.model.n_spikes, 2, dtype=np.int64)
     controller.model.spike_waveforms = Bunch(spike_ids=subset_spikes)
-    calls = []
+    selected = []
+    get_waveforms = controller.model.get_waveforms
 
-    def selector(n, cluster_ids, **kwargs):
-        calls.append((n, cluster_ids, kwargs))
-        return subset_spikes[:n]
+    def fail_selector(*args, **kwargs):
+        raise AssertionError("sparse waveform selection scanned a full cluster")
 
-    controller.selector = selector
+    def capture_waveforms(spike_ids, channel_ids):
+        selected.append(spike_ids)
+        return get_waveforms(spike_ids, channel_ids)
+
+    controller.selector = fail_selector
+    controller.model.get_waveforms = capture_waveforms
     bunch = controller._get_waveforms_with_n_spikes(0, 3)
     assert bunch.data.shape[0] == 3
-    assert len(calls) == 1
-    n, cluster_ids, kwargs = calls[0]
-    assert n == 3
-    assert cluster_ids == [0]
-    np.testing.assert_array_equal(kwargs.pop('subset_spikes'), subset_spikes)
-    assert kwargs == {'subset_spikes_are_sorted': True, 'sample_evenly': True}
+    eligible = subset_spikes[
+        controller.supervisor.clustering.spike_clusters[subset_spikes] == 0
+    ]
+    np.testing.assert_array_equal(selected[0], _sample_spikes_evenly(eligible, 3))
 
 
 def test_amplitude_background_has_stable_total_budget(tempdir):
