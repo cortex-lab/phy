@@ -9,6 +9,7 @@ from functools import partial
 from phylib.utils import connect, unconnect
 from pytest import fixture, mark
 
+from ..qt import Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table
 from . import show_and_wait
 from .test_qt import _block
@@ -159,6 +160,7 @@ def test_table_invalid_column(qtbot):
 
 
 def test_table_0(qtbot, table):
+    assert table.filter_edit.focusPolicy() == Qt.ClickFocus
     _assert(table.get_selected, [])
 
 
