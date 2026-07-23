@@ -117,7 +117,9 @@ You can filter the list of clusters shown in the cluster view, in the `filter` t
 
 The similarity view is very similar to the cluster view. It has an additional column: the **similarity**. It represents the similarity to clusters selected in the cluster view. As such, its contents change every time the cluster selection changes in the cluster view. By default, clusters in the similarity view are sorted by decreasing similarity.
 
-The similarity score is obtained from the `similar_templates.npy` file, which is computed by the spike sorting algorithm (e.g. KiloSort).
+The Template GUI obtains the default score from `similar_templates.npy`, which is computed by the
+spike sorter. Its exact behavior for merged clusters, interpretation, candidate limit, and
+customization are described in [Cluster similarity](similarity.md).
 
 
 ## Graphical views
@@ -308,7 +310,10 @@ class CorrelogramLimitPlugin(IPlugin):
 
 The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
-The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
+The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number
+of spikes **per selected cluster** used to compute auto- and cross-correlograms. These spikes are
+picked randomly. See [Spike sampling and performance](performance.md) before increasing it, since
+cost also grows with the number of selected clusters.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
 
