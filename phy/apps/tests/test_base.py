@@ -211,6 +211,50 @@ def test_get_firing_rate_fast_path():
     np.testing.assert_array_equal(bunch.data, expected)
 
 
+def test_get_correlograms_rate_fast_path():
+    clustering = Clustering(np.array([0, 0, 0, 1, 2, 2]))
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(duration=4.0)
+    controller.supervisor = Bunch(clustering=clustering)
+    controller.n_spikes_correlograms = 2
+
+    def fail_selector(*args, **kwargs):
+        raise AssertionError("The correlogram-rate path must not invoke SpikeSelector.")
+
+    controller.selector = fail_selector
+    actual = controller._get_correlograms_rate([0, 1, 2, 99], bin_size=0.1)
+    counts = np.array([2, 1, 2, 0])
+    expected = counts * np.c_[counts] * (0.1 / 4.0)
+    np.testing.assert_array_equal(actual, expected)
+
+    controller.n_spikes_correlograms = None
+    actual = controller._get_correlograms_rate([0, 1, 2], bin_size=0.1)
+    counts = np.array([3, 1, 2])
+    expected = counts * np.c_[counts] * (0.1 / 4.0)
+    np.testing.assert_array_equal(actual, expected)
+
+
+def test_sparse_waveform_selection_uses_sorted_subset(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    subset_spikes = np.arange(0, controller.model.n_spikes, 2, dtype=np.int64)
+    controller.model.spike_waveforms = Bunch(spike_ids=subset_spikes)
+    calls = []
+
+    def selector(n, cluster_ids, **kwargs):
+        calls.append((n, cluster_ids, kwargs))
+        return subset_spikes[:n]
+
+    controller.selector = selector
+    bunch = controller._get_waveforms_with_n_spikes(0, 3)
+    assert bunch.data.shape[0] == 3
+    assert len(calls) == 1
+    n, cluster_ids, kwargs = calls[0]
+    assert n == 3
+    assert cluster_ids == [0]
+    np.testing.assert_array_equal(kwargs.pop('subset_spikes'), subset_spikes)
+    assert kwargs == {'subset_spikes_are_sorted': True, 'sample_evenly': True}
+
+
 def test_amplitude_background_has_stable_total_budget(tempdir):
     controller = _mock_controller(tempdir, MyControllerTmp)
     controller.n_spikes_amplitudes = 7

@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from phylib import _add_log_file
 from phylib.io.array import SpikeSelector, _flatten, _sample_spikes_evenly
-from phylib.stats import correlograms, firing_rate
+from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
 from scipy.signal import butter, lfilter
@@ -200,12 +200,18 @@ class WaveformMixin:
         if self.model.spike_waveforms is not None:
             subset_spikes = self.model.spike_waveforms.spike_ids
             spike_ids = self.selector(
-                n_spikes_waveforms, [cluster_id], subset_spikes=subset_spikes
+                n_spikes_waveforms,
+                [cluster_id],
+                subset_spikes=subset_spikes,
+                subset_spikes_are_sorted=True,
+                sample_evenly=True,
             )
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).
         else:
-            spike_ids = self.selector(n_spikes_waveforms, [cluster_id], subset_chunks=True)
+            spike_ids = self.selector(
+                n_spikes_waveforms, [cluster_id], subset_chunks=True, sample_evenly=True
+            )
 
         # Get the best channels.
         channel_ids = self.get_best_channels(cluster_id)
@@ -1668,7 +1674,9 @@ class BaseController:
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
         """Return the cross- and auto-correlograms of a set of clusters."""
-        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
+        spike_ids = self.selector(
+            self.n_spikes_correlograms, cluster_ids, sample_evenly=True
+        )
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(
@@ -1682,11 +1690,17 @@ class BaseController:
 
     def _get_correlograms_rate(self, cluster_ids, bin_size):
         """Return the baseline firing rate of the cross- and auto-correlograms of clusters."""
-        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
-        sc = self.supervisor.clustering.spike_clusters[spike_ids]
-        return firing_rate(
-            sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration
+        spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+        counts = np.asarray(
+            [
+                len(spikes_per_cluster.get(cluster_id, ()))
+                for cluster_id in cluster_ids
+            ],
+            dtype=np.int64,
         )
+        if self.n_spikes_correlograms is not None and self.n_spikes_correlograms > 0:
+            counts = np.minimum(counts, self.n_spikes_correlograms)
+        return counts * np.c_[counts] * (bin_size / (self.model.duration or 1.0))
 
     def create_correlogram_view(self):
         """Create a correlogram view."""
