@@ -74,6 +74,10 @@ class MyModel:
 
     def __init__(self):
         self.closed = False
+        # Clustering mutates this array in place. Keep controller instances independent so
+        # actions in one test cannot remove clusters from models created by later tests.
+        self.spike_clusters = type(self).spike_clusters.copy()
+        self.spike_templates = type(self).spike_templates.copy()
 
     def _get_some_channels(self, offset, size):
         return list(islice(cycle(range(self.n_channels)), offset, offset + size))
