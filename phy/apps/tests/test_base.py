@@ -37,7 +37,14 @@ from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
 
-from ..base import BaseController, FeatureMixin, TemplateMixin, TraceMixin, WaveformMixin
+from ..base import (
+    BaseController,
+    FeatureMixin,
+    TemplateMixin,
+    TraceMixin,
+    WaveformMixin,
+    _allocate_spike_counts,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +154,21 @@ def _mock_controller(tempdir, cls):
     )
 
 
+def test_allocate_spike_counts_redistributes_total_budget():
+    np.testing.assert_array_equal(
+        _allocate_spike_counts([0, 1, 100], per_cluster=10, total=7),
+        [0, 1, 6],
+    )
+    np.testing.assert_array_equal(
+        _allocate_spike_counts([100, 100, 100], per_cluster=10, total=8),
+        [3, 3, 2],
+    )
+    np.testing.assert_array_equal(
+        _allocate_spike_counts([100, 2], per_cluster=10, total=None),
+        [10, 2],
+    )
+
+
 def test_controller_close(tempdir):
     controller = _mock_controller(tempdir, MyController)
     model = controller.model
@@ -217,6 +239,7 @@ def test_get_correlograms_rate_fast_path():
     controller.model = Bunch(duration=4.0)
     controller.supervisor = Bunch(clustering=clustering)
     controller.n_spikes_correlograms = 2
+    controller.n_spikes_correlograms_total = None
 
     def fail_selector(*args, **kwargs):
         raise AssertionError("The correlogram-rate path must not invoke SpikeSelector.")
@@ -227,7 +250,15 @@ def test_get_correlograms_rate_fast_path():
     expected = counts * np.c_[counts] * (0.1 / 4.0)
     np.testing.assert_array_equal(actual, expected)
 
+    controller.n_spikes_correlograms = 10
+    controller.n_spikes_correlograms_total = 4
+    actual = controller._get_correlograms_rate([0, 1, 2], bin_size=0.1)
+    counts = np.array([2, 1, 1])
+    expected = counts * np.c_[counts] * (0.1 / 4.0)
+    np.testing.assert_array_equal(actual, expected)
+
     controller.n_spikes_correlograms = None
+    controller.n_spikes_correlograms_total = None
     actual = controller._get_correlograms_rate([0, 1, 2], bin_size=0.1)
     counts = np.array([3, 1, 2])
     expected = counts * np.c_[counts] * (0.1 / 4.0)
@@ -252,6 +283,16 @@ def test_correlogram_cache_key_includes_spike_limit(tempdir):
     controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
 
     assert calls == [1, 2]
+
+    controller.n_spikes_correlograms = 10
+    controller.n_spikes_correlograms_total = 1
+    controller._get_correlograms([0], bin_size=0.002, window_size=0.05)
+    controller.n_spikes_correlograms_total = 2
+    controller._get_correlograms([0], bin_size=0.002, window_size=0.05)
+    controller._get_correlograms([0], bin_size=0.002, window_size=0.05)
+
+    # Changing either limit creates a distinct cache entry.
+    assert calls == [1, 2, 1, 2]
 
 
 def test_correlogram_sampling_preserves_nearby_pairs():
@@ -303,6 +344,19 @@ def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     np.testing.assert_array_equal(selected[0], _sample_spikes_evenly(eligible, 3))
 
 
+def test_waveform_selected_clusters_share_total_budget(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    controller.n_spikes_waveforms = 100
+    controller.n_spikes_waveforms_total = 10
+
+    counts = [
+        controller._get_waveform_spike_count(cluster_id, cluster_ids=[0, 1, 2])
+        for cluster_id in [0, 1, 2]
+    ]
+
+    assert counts == [4, 3, 3]
+
+
 def test_amplitude_background_has_stable_total_budget(tempdir):
     controller = _mock_controller(tempdir, MyControllerTmp)
     controller.n_spikes_amplitudes = 7
@@ -336,6 +390,21 @@ def test_amplitude_background_has_stable_total_budget(tempdir):
         controller.supervisor.clustering.spikes_per_cluster[selected_cluster]
     )
     assert len(all_data[1].spike_ids) == expected_background
+
+
+def test_amplitude_selected_clusters_share_total_budget(tempdir):
+    controller = _mock_controller(tempdir, MyControllerTmp)
+    controller.n_spikes_amplitudes = 7
+    controller.n_spikes_amplitudes_total = 10
+    controller.n_spikes_amplitudes_background = 7
+
+    selected_a, selected_b, background = controller._amplitude_getter(
+        [0, 1, None], name='template'
+    )
+
+    assert len(selected_a.spike_ids) == 5
+    assert len(selected_b.spike_ids) == 5
+    assert len(background.spike_ids) == 7
 
 
 def test_amplitude_background_redistributes_unused_budget():

@@ -184,7 +184,10 @@ Snippets
 
 This view shows the waveforms of a selection of spikes, on the relevant channels (based on amplitude and proximity to the peak waveform amplitude channel).
 
-The parameter `controller.n_spikes_waveforms=100`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the waveform view. The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
+The parameters `controller.n_spikes_waveforms=100` and
+`controller.n_spikes_waveforms_total=400`, by default, specify the maximum
+number of spikes per cluster and across all displayed clusters, respectively.
+The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
 
 You can select a channel with **Control+click** (this impacts the feature view). You can change the scaling of the channel positions and the waveforms.
 
@@ -310,10 +313,11 @@ class CorrelogramLimitPlugin(IPlugin):
 
 The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
-The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number
-of spikes **per selected cluster** used to compute auto- and cross-correlograms. These spikes are
-picked randomly. See [Spike sampling and performance](performance.md) before increasing it, since
-cost also grows with the number of selected clusters.
+The parameters `controller.n_spikes_correlograms` (100,000 by default) and
+`controller.n_spikes_correlograms_total` (400,000 by default) bound the number
+of spikes per selected cluster and across the entire auto- and
+cross-correlogram calculation. These spikes are picked randomly. See
+[Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
 
@@ -444,7 +448,9 @@ You can toggle between different types of amplitudes by pressing `a`:
 
 #### Number of spikes.
 
-The parameter `controller.n_spikes_amplitudes=10000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
+The parameters `controller.n_spikes_amplitudes=10000` and
+`controller.n_spikes_amplitudes_total=40000`, by default, bound the number of
+selected spikes per cluster and across the Amplitude View.
 
 *Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
 

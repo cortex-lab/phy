@@ -27,6 +27,8 @@ behavior they verify rather than listed separately.
   supported.
 - Configure the total number of gray background points in the Amplitude View
   with `n_spikes_amplitudes_background` (10,000 by default).
+- Waveform, Amplitude, and Correlogram views use fixed total spike budgets
+  across multi-cluster selections, while retaining their per-cluster ceilings.
 
 ### Changed
 

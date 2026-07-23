@@ -9,18 +9,20 @@ limits do not discard spikes from the dataset or change the saved clustering.
 
 | Controller setting | Default | Applied to |
 | --- | ---: | --- |
-| `n_spikes_waveforms` | 100 | Each displayed cluster in the Waveform View |
+| `n_spikes_waveforms` | 100 | Per-cluster ceiling in the Waveform View |
+| `n_spikes_waveforms_total` | 400 | All displayed Waveform View clusters together |
 | `batch_size_waveforms` | 10 | Persisted compatibility setting; the current selector does not read it |
 | `n_spikes_features` | 2,500 | Each displayed cluster in the Feature View |
 | `n_spikes_features_background` | 2,500 | Background points across the recording |
-| `n_spikes_amplitudes` | 10,000 | Each displayed cluster in the Amplitude View |
-| `n_spikes_correlograms` | 100,000 | Each selected cluster used for ACG/CCG computation |
+| `n_spikes_amplitudes` | 10,000 | Per-cluster ceiling in the Amplitude View |
+| `n_spikes_amplitudes_total` | 40,000 | All selected Amplitude View clusters together |
+| `n_spikes_correlograms` | 100,000 | Per-cluster ceiling for ACG/CCG computation |
+| `n_spikes_correlograms_total` | 400,000 | All clusters in one ACG/CCG computation |
 
-`n_spikes_correlograms` is a **per-cluster** limit in the current
-implementation. Selecting 20 clusters can therefore pass as many as two
-million spikes to the correlogram calculation. This is separate from the
-Correlogram View's display limit of 20 clusters: if more are selected, the view
-uses the first 20 in selection order.
+The total budgets are divided fairly among the displayed clusters. Small
+clusters keep all of their available spikes and their unused shares are
+redistributed to larger clusters. Setting a total budget to `None` restores
+the corresponding per-cluster-only behavior.
 
 Other common cluster display limits are eight clusters for the Waveform,
 Feature, Amplitude, and scatter views, and 20 for histogram and Probe views.
@@ -44,8 +46,9 @@ controlled separately by the controller's `n_chunks_kept` implementation.
   raw waveforms.
 - Background feature points are regularly spaced through the full spike list,
   independently of cluster identity.
-- Correlograms use a random subset of up to
-  `n_spikes_correlograms` from every cluster that reaches the view.
+- Correlograms use a random subset bounded by both
+  `n_spikes_correlograms` per cluster and
+  `n_spikes_correlograms_total` across the view.
 
 Some actions explicitly request `load_all=True` and bypass a display limit.
 That does not turn the corresponding view setting into a global analysis
@@ -99,10 +102,13 @@ class ExampleNspikesViewsPlugin(IPlugin):
         @connect(sender=controller)
         def on_gui_ready(sender, gui):
             controller.n_spikes_waveforms = 500
+            controller.n_spikes_waveforms_total = 2000
             controller.n_spikes_features = 5000
             controller.n_spikes_features_background = 5000
             controller.n_spikes_amplitudes = 20000
+            controller.n_spikes_amplitudes_total = 80000
             controller.n_spikes_correlograms = 250000
+            controller.n_spikes_correlograms_total = 1000000
 ```
 
 Enable it in `~/.phy/phy_config.py`:
@@ -111,9 +117,10 @@ Enable it in `~/.phy/phy_config.py`:
 c.TemplateGUI.plugins = ['ExampleNspikesViewsPlugin']
 ```
 
-Correlogram cache keys include `n_spikes_correlograms`, so changing the limit
-does not require `--clear-cache`. Previously computed entries for other limits
-remain available until normal cache-size maintenance removes them.
+Correlogram cache keys include both correlogram spike limits, so changing
+either limit does not require `--clear-cache`. Previously computed entries for
+other limits remain available until normal cache-size maintenance removes
+them.
 
 The post-state `gui_ready` hook reliably wins over saved controller values, so
 `--clear-state` is not required. If you do use `--clear-state`, be aware that it
