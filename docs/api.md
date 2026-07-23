@@ -1664,12 +1664,30 @@ A sortable native Qt table with a compatibility API for legacy callers.
 
 ---
 
+#### Table.add_remove
+
+
+**`Table.add_remove(self, objects, ids)`**
+
+Add and remove rows with one model reset, sort, and fit.
+
+---
+
 #### Table.add_style
 
 
 **`Table.add_style(self, style)`**
 
 Append a stylesheet fragment.
+
+---
+
+#### Table.batch_update
+
+
+**`Table.batch_update(self)`**
+
+Coalesce expensive table fitting across related mutations.
 
 ---
 
@@ -6476,12 +6494,30 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
 
 ---
 
+#### ClusterView.add_remove
+
+
+**`ClusterView.add_remove(self, objects, ids)`**
+
+Add and remove rows with one model reset, sort, and fit.
+
+---
+
 #### ClusterView.add_style
 
 
 **`ClusterView.add_style(self, style)`**
 
 Append a stylesheet fragment.
+
+---
+
+#### ClusterView.batch_update
+
+
+**`ClusterView.batch_update(self)`**
+
+Coalesce expensive table fitting across related mutations.
 
 ---
 
@@ -9179,12 +9215,30 @@ in the cluster view.
 
 ---
 
+#### SimilarityView.add_remove
+
+
+**`SimilarityView.add_remove(self, objects, ids)`**
+
+Add and remove rows with one model reset, sort, and fit.
+
+---
+
 #### SimilarityView.add_style
 
 
 **`SimilarityView.add_style(self, style)`**
 
 Append a stylesheet fragment.
+
+---
+
+#### SimilarityView.batch_update
+
+
+**`SimilarityView.batch_update(self)`**
+
+Coalesce expensive table fitting across related mutations.
 
 ---
 

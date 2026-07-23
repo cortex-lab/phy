@@ -158,7 +158,7 @@ class ManualClusteringView:
         # selection order so that a large selection still refreshes the view rather
         # than leaving its previous contents on screen.
         if self.max_n_clusters and len(cluster_ids) > self.max_n_clusters:
-            cluster_ids = cluster_ids[:self.max_n_clusters]
+            cluster_ids = cluster_ids[: self.max_n_clusters]
         if self.defer_hidden_updates and not self._dock_visible:
             # Keep the public selection state current while retaining only the
             # latest small payload needed to redraw the view when it is shown.
@@ -237,12 +237,7 @@ class ManualClusteringView:
 
     def _flush_pending_selection(self):
         """Render the latest selection deferred while this view was hidden."""
-        if (
-            not self._pending_selection
-            or not self._dock_visible
-            or self._lock
-            or self._closed
-        ):
+        if not self._pending_selection or not self._dock_visible or self._lock or self._closed:
             return
         cluster_ids, kwargs = self._pending_selection
         self._pending_selection = None

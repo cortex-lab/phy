@@ -654,18 +654,14 @@ def test_supervisor_toggle_cluster_with_control_right_click(qtbot, supervisor):
 
     index = cluster_view._proxy_index_for_id(11)
     pos = cluster_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(
-        cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
-    )
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
     supervisor.block()
 
     assert supervisor.selected_clusters == [10, 30, 11]
 
     index = cluster_view._proxy_index_for_id(30)
     pos = cluster_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(
-        cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
-    )
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
     supervisor.block()
 
     assert supervisor.selected_clusters == [10, 11]

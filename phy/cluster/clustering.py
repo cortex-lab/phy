@@ -232,9 +232,7 @@ class Clustering:
                 cluster_ids.difference_update(to_remove)
             if to_add:
                 cluster_ids.update(to_add)
-            self._cluster_ids = np.asarray(
-                sorted(cluster_ids), dtype=self._spike_clusters.dtype
-            )
+            self._cluster_ids = np.asarray(sorted(cluster_ids), dtype=self._spike_clusters.dtype)
         # Clusters to remove.
         if to_remove is not None:
             for clu in to_remove:

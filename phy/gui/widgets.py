@@ -383,9 +383,7 @@ class _TableModel(QAbstractTableModel):
         self.beginResetModel()
         self._rows = list(rows)
         self._rows_by_id = {row['id']: row for row in self._rows}
-        self._row_indices_by_id = {
-            row['id']: index for index, row in enumerate(self._rows)
-        }
+        self._row_indices_by_id = {row['id']: index for index, row in enumerate(self._rows)}
         self.endResetModel()
 
     def row_by_id(self, row_id):
@@ -758,9 +756,7 @@ class Table(QWidget):
         if not self._column_widths_fitted:
             self.table_view.resizeColumnsToContents()
             if self._model.rowCount():
-                self.table_view.horizontalHeader().setSectionResizeMode(
-                    QHeaderView.Interactive
-                )
+                self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
                 self._column_widths_fitted = True
         # With word wrapping disabled, table content does not affect row
         # height. Measure the first populated table once, then keep that fixed
@@ -1078,9 +1074,7 @@ class Table(QWidget):
             return
         if self._model.rowCount() and self._model.columnCount():
             top_left = self._model.index(min(changed_rows), 0)
-            bottom_right = self._model.index(
-                max(changed_rows), self._model.columnCount() - 1
-            )
+            bottom_right = self._model.index(max(changed_rows), self._model.columnCount() - 1)
             self._model.dataChanged.emit(top_left, bottom_right)
         if self._current_sort:
             self._proxy.sort(

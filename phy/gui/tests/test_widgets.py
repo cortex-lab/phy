@@ -265,9 +265,7 @@ def test_table_row_control_right_click(qtbot, table):
     _assert(table.get_selected, [1, 2])
 
     control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-    qtbot.mouseClick(
-        table.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
-    )
+    qtbot.mouseClick(table.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
     _block(lambda: clicked == [4])
     _assert(table.get_selected, [1, 2])
     unconnect(on_row_right_click)

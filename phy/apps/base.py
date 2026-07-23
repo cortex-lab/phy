@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 from phylib import _add_log_file
-from phylib.io.array import SpikeSelector, _flatten, _sample_spikes_evenly
+from phylib.io.array import SpikeSelector, _flatten
 from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
@@ -75,9 +75,7 @@ def _allocate_spike_counts(available, per_cluster=None, total=None):
         return available.copy()
     available = np.maximum(available, 0)
     capacity = (
-        np.minimum(available, max(0, per_cluster))
-        if per_cluster is not None
-        else available.copy()
+        np.minimum(available, max(0, per_cluster)) if per_cluster is not None else available.copy()
     )
     if total is None or capacity.sum() <= max(0, total):
         return capacity
@@ -95,6 +93,24 @@ def _allocate_spike_counts(available, per_cluster=None, total=None):
         remaining -= int(increment.sum())
         active = active[allocated[active] < capacity[active]]
     return allocated
+
+
+def _sample_spikes_evenly(spike_ids, n_spikes):
+    """Evenly sample sorted spike IDs without allocating for the full input."""
+    n_available = len(spike_ids)
+    if n_spikes < 0:
+        raise ValueError('n_spikes must be non-negative')
+    if not n_available or not n_spikes:
+        return np.array([], dtype=np.int64)
+    if n_spikes >= n_available:
+        return np.asarray(spike_ids, dtype=np.int64)
+    if n_spikes == 1:
+        return np.asarray(spike_ids[[0]], dtype=np.int64)
+
+    indices = np.arange(n_spikes, dtype=np.int64)
+    indices *= n_available - 1
+    indices //= n_spikes - 1
+    return np.asarray(spike_ids[indices], dtype=np.int64)
 
 
 class Selection(Bunch):
@@ -233,9 +249,7 @@ class WaveformMixin:
             subset_spikes = self.model.spike_waveforms.spike_ids
             subset_clusters = self.supervisor.clustering.spike_clusters[subset_spikes]
             eligible_spikes = subset_spikes[subset_clusters == cluster_id]
-            spike_ids = _sample_spikes_evenly(
-                eligible_spikes, n_spikes_waveforms
-            )
+            spike_ids = _sample_spikes_evenly(eligible_spikes, n_spikes_waveforms)
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).
         else:
@@ -275,7 +289,7 @@ class WaveformMixin:
     def _get_waveform_spike_count(self, cluster_id, cluster_ids=None):
         """Return this cluster's fair share of the Waveform View budget."""
         if cluster_ids is None:
-            cluster_ids = list(self.selection.cluster_ids)[:WaveformView.max_n_clusters]
+            cluster_ids = list(self.selection.cluster_ids)[: WaveformView.max_n_clusters]
         cluster_ids = list(cluster_ids)
         if cluster_id not in cluster_ids:
             cluster_ids = [cluster_id]
@@ -937,9 +951,7 @@ class BaseController:
         'peak_channel_similarity',
     )
     # Methods that are cached on disk for performance.
-    _cached = (
-        '_get_correlograms_cached',
-    )
+    _cached = ('_get_correlograms_cached',)
 
     # Views to load by default.
     _new_views = (
@@ -1527,9 +1539,7 @@ class BaseController:
         """
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
-        selected_cluster_ids = [
-            cluster_id for cluster_id in cluster_ids if cluster_id is not None
-        ]
+        selected_cluster_ids = [cluster_id for cluster_id in cluster_ids if cluster_id is not None]
         if load_all:
             selected_counts = {}
         else:
@@ -1579,9 +1589,7 @@ class BaseController:
                         subset_chunks=subset_chunks,
                     )
                 else:
-                    spike_ids = self._get_stable_amplitude_spike_ids(
-                        cluster_id, n_cluster
-                    )
+                    spike_ids = self._get_stable_amplitude_spike_ids(cluster_id, n_cluster)
             else:
                 # Background spikes.
                 spike_ids = self._get_background_amplitude_spike_ids(
@@ -1756,10 +1764,7 @@ class BaseController:
         # probabilistically. A regular one-spike-at-a-time sample can impose a
         # minimum spacing and make auto- and cross-correlograms appear empty.
         spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
-        available = [
-            len(spikes_per_cluster.get(cluster_id, ()))
-            for cluster_id in cluster_ids
-        ]
+        available = [len(spikes_per_cluster.get(cluster_id, ())) for cluster_id in cluster_ids]
         capacity = _allocate_spike_counts(
             available,
             per_cluster=n_spikes_correlograms,
@@ -1778,9 +1783,7 @@ class BaseController:
                 if n_cluster
             ]
             spike_ids = (
-                np.sort(np.concatenate(selected))
-                if selected
-                else np.array([], dtype=np.int64)
+                np.sort(np.concatenate(selected)) if selected else np.array([], dtype=np.int64)
             )
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
@@ -1797,10 +1800,7 @@ class BaseController:
         """Return the baseline firing rate of the cross- and auto-correlograms of clusters."""
         spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
         counts = np.asarray(
-            [
-                len(spikes_per_cluster.get(cluster_id, ()))
-                for cluster_id in cluster_ids
-            ],
+            [len(spikes_per_cluster.get(cluster_id, ())) for cluster_id in cluster_ids],
             dtype=np.int64,
         )
         counts = _allocate_spike_counts(

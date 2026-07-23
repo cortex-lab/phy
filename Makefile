@@ -42,7 +42,7 @@ test: lint format-check
 
 # Test just the apps
 test-apps: lint
-	uv run pytest --cov-report term-missing --cov=phy.apps phy/apps/ --cov-append
+	uv run pytest --cov-report term-missing phy/apps/ --cov-append
 
 # Test everything
 test-full: test test-apps

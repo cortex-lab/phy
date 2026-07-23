@@ -126,13 +126,10 @@ class ExampleNspikesViewsPlugin(IPlugin):
         def on_gui_ready(sender, gui):
             """Keep only the settings below that you want this plugin to own."""
             controller.n_spikes_waveforms = 250  # default: 100 per cluster
-            controller.n_spikes_waveforms_total = 1000  # default: 400 total
             controller.n_spikes_features = 5000  # default: 2,500 per cluster
             controller.n_spikes_features_background = 5000  # default: 2,500 total
             controller.n_spikes_amplitudes = 20000  # default: 10,000 per cluster
-            controller.n_spikes_amplitudes_total = 80000  # default: 40,000 total
             controller.n_spikes_correlograms = 250000  # default: 100,000 per cluster
-            controller.n_spikes_correlograms_total = 1000000  # default: 400,000 total
 
 ```
 

@@ -255,12 +255,8 @@ def test_plot_gpu_attributes_preserve_values(qtbot, canvas_pz):
         np.repeat(depth, counts),
     ].astype(np.float32)
     expected_color = np.repeat(color.astype(np.float32), counts, axis=0)
-    expected_signal_index = np.repeat(
-        np.arange(len(y), dtype=np.float32), counts
-    ).reshape((-1, 1))
-    expected_masks = np.repeat(
-        masks.astype(np.float32)[:, np.newaxis] * 0.99999, counts, axis=0
-    )
+    expected_signal_index = np.repeat(np.arange(len(y), dtype=np.float32), counts).reshape((-1, 1))
+    expected_masks = np.repeat(masks.astype(np.float32)[:, np.newaxis] * 0.99999, counts, axis=0)
 
     np.testing.assert_array_equal(attribute('a_position'), expected_position)
     np.testing.assert_array_equal(attribute('a_color'), expected_color)
@@ -282,9 +278,7 @@ def test_plot_shared_x_axis(qtbot, canvas_pz):
     assert all(row is x for row in data.x)
     visual.set_data(x=x, y=y, data_bounds=NDC)
 
-    position = np.asarray(
-        visual.program._attributes['a_position']._data
-    )['a_position']
+    position = np.asarray(visual.program._attributes['a_position']._data)['a_position']
     expected = np.c_[
         np.tile(x, len(y)),
         y.ravel(),

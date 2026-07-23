@@ -13,7 +13,7 @@ from itertools import cycle, islice
 from pathlib import Path
 
 import numpy as np
-from phylib.io.array import SpikeSelector, _sample_spikes_evenly
+from phylib.io.array import SpikeSelector
 from phylib.io.mock import (
     artificial_features,
     artificial_spike_clusters,
@@ -203,7 +203,7 @@ def test_get_firing_rate_fast_path():
     )
 
     def fail_selector(*args, **kwargs):
-        raise AssertionError("The firing-rate path must not invoke SpikeSelector.")
+        raise AssertionError('The firing-rate path must not invoke SpikeSelector.')
 
     controller.selector = fail_selector
 
@@ -242,7 +242,7 @@ def test_get_correlograms_rate_fast_path():
     controller.n_spikes_correlograms_total = None
 
     def fail_selector(*args, **kwargs):
-        raise AssertionError("The correlogram-rate path must not invoke SpikeSelector.")
+        raise AssertionError('The correlogram-rate path must not invoke SpikeSelector.')
 
     controller.selector = fail_selector
     actual = controller._get_correlograms_rate([0, 1, 2, 99], bin_size=0.1)
@@ -316,7 +316,7 @@ def test_correlogram_sampling_preserves_nearby_pairs():
     )
 
     np.random.seed(0)
-    correlogram = controller._get_correlograms([0], bin_size=.001, window_size=.05)
+    correlogram = controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
     assert correlogram[0, 0].sum() > 0
 
 
@@ -328,7 +328,7 @@ def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     get_waveforms = controller.model.get_waveforms
 
     def fail_selector(*args, **kwargs):
-        raise AssertionError("sparse waveform selection scanned a full cluster")
+        raise AssertionError('sparse waveform selection scanned a full cluster')
 
     def capture_waveforms(spike_ids, channel_ids):
         selected.append(spike_ids)
@@ -338,10 +338,9 @@ def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     controller.model.get_waveforms = capture_waveforms
     bunch = controller._get_waveforms_with_n_spikes(0, 3)
     assert bunch.data.shape[0] == 3
-    eligible = subset_spikes[
-        controller.supervisor.clustering.spike_clusters[subset_spikes] == 0
-    ]
-    np.testing.assert_array_equal(selected[0], _sample_spikes_evenly(eligible, 3))
+    eligible = subset_spikes[controller.supervisor.clustering.spike_clusters[subset_spikes] == 0]
+    expected_indices = [0, (len(eligible) - 1) // 2, len(eligible) - 1]
+    np.testing.assert_array_equal(selected[0], eligible[expected_indices])
 
 
 def test_waveform_selected_clusters_share_total_budget(tempdir):

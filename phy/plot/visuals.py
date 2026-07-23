@@ -525,9 +525,7 @@ class PlotVisual(BaseVisual):
         assert color.shape == (n, 4)
 
         # Generate signal index directly in the GPU attribute dtype.
-        signal_index = np.repeat(
-            np.arange(n_signals, dtype=np.float32), n_samples
-        ).reshape((n, 1))
+        signal_index = np.repeat(np.arange(n_signals, dtype=np.float32), n_samples).reshape((n, 1))
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
@@ -552,9 +550,7 @@ class PlotVisual(BaseVisual):
         # array for the float32 conversion.
         pos_depth = np.empty((n, 3), dtype=np.float32)
         pos_depth[:, :2] = pos
-        pos_depth[:, 2:] = np.repeat(
-            data.depth.astype(np.float32, copy=False), n_samples, axis=0
-        )
+        pos_depth[:, 2:] = np.repeat(data.depth.astype(np.float32, copy=False), n_samples, axis=0)
 
         self.program['a_position'] = pos_depth
         self.program['a_color'] = color.astype(np.float32, copy=False)

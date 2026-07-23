@@ -244,9 +244,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
             return
         (i, j), _ = self.canvas.grid.box_map(e.pos)
-        logger.debug(
-            'Correlogram secondary click at %s maps to cell (%d, %d).', e.pos, i, j
-        )
+        logger.debug('Correlogram secondary click at %s maps to cell (%d, %d).', e.pos, i, j)
         if i == j:
             return
         emit('request_promote_similar', self, self.cluster_ids[i], self.cluster_ids[j])
