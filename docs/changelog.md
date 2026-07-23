@@ -46,6 +46,8 @@ behavior they verify rather than listed separately.
   preserving the previous globally sorted spike order. Code that directly
   mutates the exposed `spike_clusters` array must explicitly rebuild the
   clustering indexes before invoking an operation.
+- Native tables establish their fixed row height from the first populated
+  payload instead of measuring every row after each update.
 - Merge-related Cluster and Similarity View mutations batch expensive column
   and row fitting until the complete table update is applied.
 - Views with a cluster-display limit now show the first eligible clusters in

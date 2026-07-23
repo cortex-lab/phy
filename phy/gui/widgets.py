@@ -521,6 +521,7 @@ class Table(QWidget):
         self._no_emit = False
         self._batch_update_depth = 0
         self._fit_columns_pending = False
+        self._row_height_fitted = False
         self.skip_masked = bool(skip_masked)
         self._group_colors = {
             'good': QColor('#86D16D'),
@@ -722,7 +723,15 @@ class Table(QWidget):
 
     def _fit_columns(self):
         self.table_view.resizeColumnsToContents()
-        self.table_view.resizeRowsToContents()
+        # With word wrapping disabled, table content does not affect row
+        # height. Measure the first populated table once, then keep that fixed
+        # height across model resets instead of visiting every row.
+        if not self._row_height_fitted and self._model.rowCount():
+            self.table_view.resizeRowsToContents()
+            vertical_header = self.table_view.verticalHeader()
+            vertical_header.setDefaultSectionSize(vertical_header.sectionSize(0))
+            vertical_header.setSectionResizeMode(QHeaderView.Fixed)
+            self._row_height_fitted = True
 
     def _request_fit_columns(self):
         if self._batch_update_depth:

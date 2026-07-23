@@ -10,7 +10,7 @@ from functools import partial
 from phylib.utils import connect, unconnect
 from pytest import fixture, mark
 
-from ..qt import Qt
+from ..qt import QHeaderView, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table
 from . import show_and_wait
 from .test_qt import _block
@@ -210,6 +210,21 @@ def test_table_add_remove_and_sparse_change(table):
 
     assert table._model.row_by_id(10)['count'] == 11
     assert fit_calls == [True]
+
+
+def test_table_row_height_is_fitted_once(qtbot):
+    table = Table()
+    _wait_until_table_ready(qtbot, table)
+    fit_calls = []
+    table.table_view.resizeRowsToContents = lambda: fit_calls.append(True)
+
+    table.add({'id': 1})
+    table.add({'id': 2})
+    table.remove_all_and_add([{'id': 3}])
+
+    assert fit_calls == [True]
+    assert table.table_view.verticalHeader().sectionResizeMode(0) == QHeaderView.Fixed
+    table.close()
 
 
 def test_table_row_control_right_click(qtbot, table):
