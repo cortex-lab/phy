@@ -6,6 +6,8 @@
 
 # from contextlib import contextmanager
 
+import sys
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from phylib.utils import Bunch, connect, emit
@@ -13,7 +15,7 @@ from pytest import fixture, raises
 
 from phy.gui import GUI
 from phy.gui.actions import _get_shortcut_string
-from phy.gui.qt import qInstallMessageHandler
+from phy.gui.qt import Qt, qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.gui.widgets import Barrier
 from phy.utils.context import Context
@@ -354,7 +356,7 @@ def test_supervisor_select_order(qtbot, supervisor):
     _assert_selected(supervisor, [0, 1])
 
 
-def test_supervisor_select_first_similar(supervisor, gui):
+def test_supervisor_select_first_similar(qtbot, supervisor, gui):
     _select(supervisor, [30])
     similarity_view = supervisor.similarity_view
 
@@ -372,7 +374,8 @@ def test_supervisor_select_first_similar(supervisor, gui):
     # The shortcut variant uses the saved preference and replaces the similar selection.
     similarity_view.sort_by('id', 'desc')
     visible_ids = similarity_view.get_ids()
-    supervisor.select_actions.select_first_similar()
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.keyClick(gui, Qt.Key_Space, control_modifier)
     supervisor.block()
     assert supervisor.selected_clusters == [30]
     assert supervisor.selected_similar == visible_ids[:2]
@@ -407,7 +410,8 @@ def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
     assert supervisor.n_similar_clusters_to_select == 4
 
     shortcut = supervisor.select_actions.get('select_first_similar').shortcut()
-    assert _get_shortcut_string(shortcut) == 'ctrl+space'
+    expected_shortcut = 'meta+space' if sys.platform == 'darwin' else 'ctrl+space'
+    assert _get_shortcut_string(shortcut) == expected_shortcut
 
     with raises(ValueError, match='positive integer'):
         supervisor.select_first_similar(0)

@@ -7,6 +7,7 @@
 
 import inspect
 import logging
+import sys
 from functools import partial
 from numbers import Integral
 
@@ -435,7 +436,8 @@ class ActionCreator:
         'reset': 'ctrl+alt+space',
         'next': 'space',
         'previous': 'shift+space',
-        'select_first_similar': 'ctrl+space',
+        # Qt maps Meta to the physical Control key on macOS.
+        'select_first_similar': 'meta+space' if sys.platform == 'darwin' else 'ctrl+space',
         'unselect_similar': 'backspace',
         'next_best': 'down',
         'previous_best': 'up',
