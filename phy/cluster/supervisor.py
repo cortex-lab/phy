@@ -306,6 +306,8 @@ class ClusterView(Table):
     sort : 2-tuple
         Initial sort of the table as a pair (column_name, order), where order is
         either `asc` or `desc`.
+    skip_masked : bool
+        Whether navigation should skip noise and MUA rows.
 
     """
 
@@ -313,9 +315,15 @@ class ClusterView(Table):
     _view_name = 'cluster_view'
     _styles = _CLUSTER_VIEW_STYLES
 
-    def __init__(self, *args, data=None, columns=(), sort=None):
+    def __init__(self, *args, data=None, columns=(), sort=None, skip_masked=True):
         # NOTE: debounce select events.
-        Table.__init__(self, *args, title=self.__class__.__name__, debounce_events=('select',))
+        Table.__init__(
+            self,
+            *args,
+            title=self.__class__.__name__,
+            debounce_events=('select',),
+            skip_masked=skip_masked,
+        )
         self._set_styles()
         self._reset_table(data=data, columns=columns, sort=sort)
 
@@ -552,9 +560,18 @@ class ActionCreator:
             prompt=True,
             n_args=1,
             prompt_default=lambda: self.supervisor.n_similar_clusters_to_select,
-            docstring='Select the first N clusters currently shown in the similarity view.',
+            docstring='Select the first N eligible clusters shown in the similarity view.',
         )
         self.add(w, 'unselect_similar')
+        self.add(
+            w,
+            'skip_noise_and_mua',
+            method_name='set_skip_masked_clusters',
+            checkable=True,
+            checked=getattr(self.supervisor, 'skip_masked_clusters', True),
+            docstring='Skip noise and MUA clusters during automatic navigation and selection.',
+        )
+        self.select_actions.get('skip_noise_and_mua').setText('Skip noise and MUA')
         self.select_actions.separator()
 
         # Sort and filter
@@ -642,6 +659,9 @@ class Supervisor:
         Handles the cache.
     n_similar_clusters_to_select : int
         Number of rows selected by the select-first-similar action. The default is 15.
+    skip_masked_clusters : bool
+        Whether automatic navigation and similar-cluster selection skip noise and MUA
+        clusters. The default is True.
 
     Events
     ------
@@ -675,6 +695,7 @@ class Supervisor:
         sort=None,
         context=None,
         n_similar_clusters_to_select=None,
+        skip_masked_clusters=True,
     ):
         super().__init__()
         self.context = context
@@ -687,6 +708,7 @@ class Supervisor:
             if n_similar_clusters_to_select is not None
             else self.default_n_similar_clusters_to_select
         )
+        self.skip_masked_clusters = self._validate_skip_masked_clusters(skip_masked_clusters)
 
         # Cluster metrics.
         # This is a dict {name: func cluster_id => value}.
@@ -766,6 +788,12 @@ class Supervisor:
             raise ValueError('n_similar_clusters_to_select must be a positive integer.')
         return value
 
+    @staticmethod
+    def _validate_skip_masked_clusters(value):
+        if not isinstance(value, bool):
+            raise ValueError('skip_masked_clusters must be a boolean.')
+        return value
+
     def _save_spikes_per_cluster(self):
         """Cache on the disk the dictionary with the spikes belonging to each cluster."""
         if not self.context:
@@ -813,6 +841,7 @@ class Supervisor:
         """Save the GUI state with the cluster view and similarity view."""
         gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
         gui.state['n_similar_clusters_to_select'] = self.n_similar_clusters_to_select
+        gui.state['skip_masked_clusters'] = self.skip_masked_clusters
 
         # Compatibility no-op on the native table implementation.
         self.cluster_view.clear_temporary_files()
@@ -850,7 +879,11 @@ class Supervisor:
 
         # Create the cluster view.
         self.cluster_view = ClusterView(
-            gui, data=self.cluster_info, columns=self.columns, sort=sort
+            gui,
+            data=self.cluster_info,
+            columns=self.columns,
+            sort=sort,
+            skip_masked=self.skip_masked_clusters,
         )
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
@@ -862,7 +895,10 @@ class Supervisor:
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
-            gui, columns=self.columns + ['similarity'], sort=('similarity', 'desc')
+            gui,
+            columns=self.columns + ['similarity'],
+            sort=('similarity', 'desc'),
+            skip_masked=self.skip_masked_clusters,
         )
         connect(
             self._get_similar_clusters,
@@ -1065,13 +1101,22 @@ class Supervisor:
             'n_similar_clusters_to_select', self.n_similar_clusters_to_select
         )
         try:
-            self.n_similar_clusters_to_select = (
-                self._validate_n_similar_clusters_to_select(saved_n_similar)
+            self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(
+                saved_n_similar
             )
         except ValueError:
             logger.warning(
                 'Ignoring invalid saved n_similar_clusters_to_select value: %r.',
                 saved_n_similar,
+            )
+
+        saved_skip_masked = gui.state.get('skip_masked_clusters', self.skip_masked_clusters)
+        try:
+            self.skip_masked_clusters = self._validate_skip_masked_clusters(saved_skip_masked)
+        except ValueError:
+            logger.warning(
+                'Ignoring invalid saved skip_masked_clusters value: %r.',
+                saved_skip_masked,
             )
 
         # Make sure the selected field in cluster and similarity views are saved in the local
@@ -1256,7 +1301,7 @@ class Supervisor:
         self.cluster_view.select(self.selected_clusters, callback=callback)
 
     def select_first_similar(self, n=None, callback=None):
-        """Select the first N clusters currently shown in the similarity view."""
+        """Select the first N eligible clusters currently shown in the similarity view."""
         if n is not None:
             self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(n)
         n = self.n_similar_clusters_to_select
@@ -1264,7 +1309,22 @@ class Supervisor:
         def select(cluster_ids):
             self.similarity_view.select(cluster_ids[:n], callback=callback)
 
-        self.similarity_view.get_ids(callback=select)
+        self.similarity_view.get_navigable_ids(callback=select)
+
+    def set_skip_masked_clusters(self, skip_masked, callback=None):
+        """Set whether automatic navigation and selection skip noise and MUA clusters."""
+        self.skip_masked_clusters = self._validate_skip_masked_clusters(skip_masked)
+        for view_name in ('cluster_view', 'similarity_view'):
+            view = getattr(self, view_name, None)
+            if view is not None:
+                view.skip_masked = self.skip_masked_clusters
+        select_actions = getattr(self, 'select_actions', None)
+        if select_actions:
+            action = select_actions.get('skip_noise_and_mua')
+            if action is not None:
+                action.setChecked(self.skip_masked_clusters)
+        if callback:
+            callback(self.skip_masked_clusters)
 
     def promote_similar(self, cluster_id, callback=None):
         """Move a similarity row into the cluster view while preserving all other selections."""

@@ -10,6 +10,7 @@ import inspect
 import json
 import logging
 import re
+import sys
 from functools import partial
 
 from phylib.utils import connect, emit
@@ -489,6 +490,7 @@ class Table(QWidget):
         sort=None,
         title='',
         debounce_events=(),
+        skip_masked=True,
     ):
         super().__init__(*args)
         self.setWindowTitle(title)
@@ -504,6 +506,7 @@ class Table(QWidget):
         self._filter_is_active = False
         self._current_sort = None
         self._no_emit = False
+        self.skip_masked = bool(skip_masked)
         self._group_colors = {
             'good': QColor('#86D16D'),
             'mua': QColor('#afafaf'),
@@ -557,9 +560,12 @@ class Table(QWidget):
             and event.type() == QEvent.MouseButtonPress
             and event.button() == Qt.RightButton
         ):
-            index = self.table_view.indexAt(event.pos())
-            if index.isValid():
-                emit('row_right_click', self, self._visible_ids()[index.row()])
+            # Qt maps Meta to the physical Control key on macOS.
+            control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+            if event.modifiers() & control_modifier:
+                index = self.table_view.indexAt(event.pos())
+                if index.isValid():
+                    emit('row_right_click', self, self._visible_ids()[index.row()])
             # Prevent Qt's default right-click handling from changing the table selection.
             return True
         if (
@@ -721,6 +727,12 @@ class Table(QWidget):
         row = self._model.row_by_id(row_id)
         return bool(row and row.get('is_masked'))
 
+    def _is_navigable_id(self, row_id):
+        return not self.skip_masked or not self._is_masked_id(row_id)
+
+    def _visible_navigable_ids(self):
+        return [row_id for row_id in self._visible_ids() if self._is_navigable_id(row_id)]
+
     def _selected_visible_ids(self):
         visible = set(self._visible_ids())
         return [row_id for row_id in self._selected_ids if row_id in visible]
@@ -855,7 +867,7 @@ class Table(QWidget):
         idx = visible.index(row_id) + step
         while 0 <= idx < len(visible):
             candidate = visible[idx]
-            if not self._is_masked_id(candidate):
+            if self._is_navigable_id(candidate):
                 return candidate
             idx += step
         return None
@@ -872,7 +884,7 @@ class Table(QWidget):
         visible = self._visible_ids()
         ordered = visible if which == 'first' else list(reversed(visible))
         for row_id in ordered:
-            if not self._is_masked_id(row_id):
+            if self._is_navigable_id(row_id):
                 return self.select([row_id])
         return None
 
@@ -903,6 +915,9 @@ class Table(QWidget):
 
     def get_ids(self, callback=None):
         return self._async_return(self._visible_ids(), callback)
+
+    def get_navigable_ids(self, callback=None):
+        return self._async_return(self._visible_navigable_ids(), callback)
 
     def get_next_id(self, callback=None):
         return self._async_return(self.get_sibling_id(None, 'next'), callback)

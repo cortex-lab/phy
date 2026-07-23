@@ -4,6 +4,7 @@
 # Imports
 # ------------------------------------------------------------------------------
 
+import sys
 from functools import partial
 
 from phylib.utils import connect, unconnect
@@ -171,7 +172,7 @@ def test_table_1(qtbot, table):
     _assert(table.get_selected, [1, 2])
 
 
-def test_table_row_right_click(qtbot, table):
+def test_table_row_control_right_click(qtbot, table):
     clicked = []
 
     @connect(sender=table)
@@ -181,8 +182,17 @@ def test_table_row_right_click(qtbot, table):
     table.select([1, 2])
     index = table._proxy.index(4, 0)
     pos = table.table_view.visualRect(index).center()
-    qtbot.mouseClick(table.table_view.viewport(), Qt.RightButton, pos=pos)
 
+    # A plain right-click is non-mutating and reserved for a future context menu.
+    qtbot.mouseClick(table.table_view.viewport(), Qt.RightButton, pos=pos)
+    qtbot.wait(10)
+    assert clicked == []
+    _assert(table.get_selected, [1, 2])
+
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.mouseClick(
+        table.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
+    )
     _block(lambda: clicked == [4])
     _assert(table.get_selected, [1, 2])
     unconnect(on_row_right_click)
@@ -244,6 +254,89 @@ def test_table_nav_0(qtbot, table):
 
     table.previous()
     _assert(table.get_selected, [4])
+
+
+def test_table_navigation_skip_masked_policy(qtbot, table):
+    # Masked rows are skipped by default, including by the callback-compatible
+    # navigable-ID API. The unfiltered ID API remains unchanged.
+    _assert(table.get_ids, list(range(10)))
+    _assert(table.get_navigable_ids, [0, 1, 4, 6, 7, 8, 9])
+
+    table.select([1])
+    table.next()
+    _assert(table.get_selected, [4])
+    table.previous()
+    _assert(table.get_selected, [1])
+
+    table.first()
+    _assert(table.get_selected, [0])
+    table.previous()
+    _assert(table.get_selected, [0])
+
+    table.last()
+    _assert(table.get_selected, [9])
+    table.next()
+    _assert(table.get_selected, [9])
+
+
+def test_table_navigation_include_masked_and_runtime_toggle(qtbot, table):
+    table.skip_masked = False
+    _assert(table.get_navigable_ids, list(range(10)))
+
+    table.select([1])
+    table.next()
+    _assert(table.get_selected, [2])
+    table.next()
+    _assert(table.get_selected, [3])
+
+    # Changing the policy takes effect immediately and a manually selected
+    # masked row remains a valid anchor for sibling navigation.
+    table.skip_masked = True
+    table.next()
+    _assert(table.get_selected, [4])
+
+    table.skip_masked = False
+    table.previous()
+    _assert(table.get_selected, [3])
+
+
+def test_table_navigation_include_masked_from_constructor(qtbot):
+    table = Table(
+        value_names=['id', {'data': ['is_masked']}],
+        data=[{'id': 0}, {'id': 1, 'is_masked': True}, {'id': 2}],
+        skip_masked=False,
+    )
+    _wait_until_table_ready(qtbot, table)
+
+    _assert(table.get_navigable_ids, [0, 1, 2])
+    table.select([0])
+    table.next()
+    _assert(table.get_selected, [1])
+
+    table.close()
+
+
+def test_table_navigation_respects_visible_sort_and_filter(qtbot, table):
+    table.sort_by('count', 'asc')
+    table.filter('id >= 2 && id <= 7')
+    _assert(table.get_ids, [7, 6, 5, 4, 3, 2])
+    _assert(table.get_navigable_ids, [7, 6, 4])
+
+    table.first()
+    _assert(table.get_selected, [7])
+    table.next()
+    _assert(table.get_selected, [6])
+    table.next()
+    _assert(table.get_selected, [4])
+    table.next()
+    _assert(table.get_selected, [4])
+
+    table.skip_masked = False
+    _assert(table.get_navigable_ids, [7, 6, 5, 4, 3, 2])
+    table.next()
+    _assert(table.get_selected, [3])
+    table.last()
+    _assert(table.get_selected, [2])
 
 
 def test_table_nav_1(qtbot, table):
