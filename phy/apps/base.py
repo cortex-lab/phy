@@ -1108,6 +1108,7 @@ class BaseController:
             spike_times=self.model.spike_samples,  # NOTE: chunk_bounds is in samples, not seconds
             chunk_bounds=chunk_bounds,
             n_chunks_kept=self.n_chunks_kept,
+            spikes_are_disjoint=True,
         )
 
     def _cache_methods(self):
