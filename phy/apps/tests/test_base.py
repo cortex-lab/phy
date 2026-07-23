@@ -234,6 +234,31 @@ def test_get_correlograms_rate_fast_path():
     np.testing.assert_array_equal(actual, expected)
 
 
+def test_correlogram_sampling_preserves_nearby_pairs():
+    n_spikes = 100_000
+    spike_times = np.arange(n_spikes, dtype=float) / 1000.0
+    clustering = Clustering(np.zeros(n_spikes, dtype=np.int32))
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(
+        spike_times=spike_times,
+        spike_samples=np.arange(n_spikes, dtype=np.int64),
+        sample_rate=1000.0,
+        duration=spike_times[-1],
+    )
+    controller.supervisor = Bunch(clustering=clustering)
+    controller.n_spikes_correlograms = 1000
+    controller.selector = SpikeSelector(
+        get_spikes_per_cluster=lambda cluster_id: clustering.spikes_per_cluster[cluster_id],
+        spike_times=controller.model.spike_samples,
+        chunk_bounds=[0, n_spikes],
+        n_chunks_kept=1,
+    )
+
+    np.random.seed(0)
+    correlogram = controller._get_correlograms([0], bin_size=.001, window_size=.05)
+    assert correlogram[0, 0].sum() > 0
+
+
 def test_sparse_waveform_selection_uses_sorted_subset(tempdir):
     controller = _mock_controller(tempdir, MyControllerW)
     subset_spikes = np.arange(0, controller.model.n_spikes, 2, dtype=np.int64)

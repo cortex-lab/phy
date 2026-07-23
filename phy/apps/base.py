@@ -1674,9 +1674,10 @@ class BaseController:
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
         """Return the cross- and auto-correlograms of a set of clusters."""
-        spike_ids = self.selector(
-            self.n_spikes_correlograms, cluster_ids, sample_evenly=True
-        )
+        # Independent random sampling preserves nearby spike pairs
+        # probabilistically. A regular one-spike-at-a-time sample can impose a
+        # minimum spacing and make auto- and cross-correlograms appear empty.
+        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(
