@@ -114,9 +114,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 
 * [phy.apps.add_default_handler](#phyappsadd_default_handler)
 * [phy.apps.capture_exceptions](#phyappscapture_exceptions)
-* [phy.apps.contextmanager](#phyappscontextmanager)
 * [phy.apps.exceptionHandler](#phyappsexceptionhandler)
-* [phy.apps.format_exception](#phyappsformat_exception)
 * [phy.apps.BaseController](#phyappsbasecontroller)
 * [phy.apps.FeatureMixin](#phyappsfeaturemixin)
 * [phy.apps.Path](#phyappspath)
@@ -1738,6 +1736,15 @@ eventFilter(self, a0: Optional[QObject], a1: Optional[QEvent]) -> bool
 
 ---
 
+#### Table.get_navigable_ids
+
+
+**`Table.get_navigable_ids(self, callback=None)`**
+
+
+
+---
+
 #### Table.get_next_id
 
 
@@ -1849,7 +1856,7 @@ minimumSizeHint(self) -> QSize
 #### Table.remove_all_and_add
 
 
-**`Table.remove_all_and_add(self, objects)`**
+**`Table.remove_all_and_add(self, objects, fit_columns=True)`**
 
 
 
@@ -6437,6 +6444,9 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
     Initial sort of the table as a pair (column_name, order), where order is
     either `asc` or `desc`.
 
+* `skip_masked : bool`
+    Whether navigation should skip noise and MUA rows.
+
 ---
 
 #### ClusterView.add
@@ -6533,6 +6543,15 @@ eventFilter(self, a0: Optional[QObject], a1: Optional[QEvent]) -> bool
 
 
 **`ClusterView.get_ids(self, callback=None)`**
+
+
+
+---
+
+#### ClusterView.get_navigable_ids
+
+
+**`ClusterView.get_navigable_ids(self, callback=None)`**
 
 
 
@@ -6649,7 +6668,7 @@ minimumSizeHint(self) -> QSize
 #### ClusterView.remove_all_and_add
 
 
-**`ClusterView.remove_all_and_add(self, objects)`**
+**`ClusterView.remove_all_and_add(self, objects, fit_columns=True)`**
 
 
 
@@ -7094,6 +7113,15 @@ to update itself before the selection of the new clusters.
 
 This method is mostly only useful to views that show all clusters and not just the
 selected clusters (template view, raster view).
+
+---
+
+#### CorrelogramView.on_mouse_release
+
+
+**`CorrelogramView.on_mouse_release(self, e)`**
+
+Promote a similarity cluster after a stationary secondary click.
 
 ---
 
@@ -9223,6 +9251,15 @@ eventFilter(self, a0: Optional[QObject], a1: Optional[QEvent]) -> bool
 
 ---
 
+#### SimilarityView.get_navigable_ids
+
+
+**`SimilarityView.get_navigable_ids(self, callback=None)`**
+
+
+
+---
+
 #### SimilarityView.get_next_id
 
 
@@ -9334,7 +9371,7 @@ minimumSizeHint(self) -> QSize
 #### SimilarityView.remove_all_and_add
 
 
-**`SimilarityView.remove_all_and_add(self, objects)`**
+**`SimilarityView.remove_all_and_add(self, objects, fit_columns=True)`**
 
 
 
@@ -9483,6 +9520,13 @@ Component that brings manual clustering facilities to a GUI:
 
 * `context : Context`
     Handles the cache.
+
+* `n_similar_clusters_to_select : int`
+    Number of rows selected by the select-first-similar action. The default is 15.
+
+* `skip_masked_clusters : bool`
+    Whether automatic navigation and similar-cluster selection skip noise and MUA
+    clusters. The default is True.
 
 **Events**
 
@@ -9657,6 +9701,15 @@ Select the previous best cluster in the cluster view.
 
 ---
 
+#### Supervisor.promote_similar
+
+
+**`Supervisor.promote_similar(self, cluster_id, callback=None)`**
+
+Move a similarity row into the cluster view while preserving all other selections.
+
+---
+
 #### Supervisor.redo
 
 
@@ -9696,6 +9749,24 @@ Select a list of clusters.
 
 ---
 
+#### Supervisor.select_first_similar
+
+
+**`Supervisor.select_first_similar(self, n=None, callback=None)`**
+
+Select the first N eligible clusters currently shown in the similarity view.
+
+---
+
+#### Supervisor.set_skip_masked_clusters
+
+
+**`Supervisor.set_skip_masked_clusters(self, skip_masked, callback=None)`**
+
+Set whether automatic navigation and selection skip noise and MUA clusters.
+
+---
+
 #### Supervisor.sort
 
 
@@ -9711,6 +9782,15 @@ Sort the cluster view by a given column, in a given order (asc or desc).
 **`Supervisor.split(self, spike_ids=None, spike_clusters_rel=0)`**
 
 Make a new cluster out of the specified spikes.
+
+---
+
+#### Supervisor.toggle_cluster_selection
+
+
+**`Supervisor.toggle_cluster_selection(self, cluster_id, callback=None)`**
+
+Add or remove a cluster from the cluster-view selection.
 
 ---
 
@@ -11526,60 +11606,12 @@ Log exceptions instead of crashing the GUI, and display an error dialog on error
 
 ---
 
-#### phy.apps.contextmanager
-
-
-**`phy.apps.contextmanager(func)`**
-
-@contextmanager decorator.
-
-Typical usage:
-
-    @contextmanager
-    def some_generator(<arguments>):
-        <setup>
-        try:
-            yield <value>
-        finally:
-            <cleanup>
-
-This makes this:
-
-    with some_generator(<arguments>) as <variable>:
-        <body>
-
-equivalent to this:
-
-    <setup>
-    try:
-        <variable> = <value>
-        <body>
-    finally:
-        <cleanup>
-
----
-
 #### phy.apps.exceptionHandler
 
 
 **`phy.apps.exceptionHandler(exception_type, exception, traceback)`**
 
 
-
----
-
-#### phy.apps.format_exception
-
-
-**`phy.apps.format_exception(exc, /, value=<implicit>, tb=<implicit>, limit=None, chain=True, **kwargs)`**
-
-Format a stack trace and the exception information.
-
-The arguments have the same meaning as the corresponding arguments
-to print_exception().  The return value is a list of strings, each
-ending in a newline and some containing internal newlines.  When
-these lines are concatenated and printed, exactly the same text is
-printed as does print_exception().
 
 ---
 
@@ -11719,6 +11751,18 @@ The model implements saving option for spike cluster assignments and cluster met
 Add a view of a given type if there is not already one.
 
 To be called before creating a GUI.
+
+---
+
+#### BaseController.close
+
+
+**`BaseController.close(self, close_model=True)`**
+
+Release files owned by the controller.
+
+Closing a GUI does not necessarily end a controller's lifetime: callers may
+recreate a GUI around the same model. Resource cleanup is therefore explicit.
 
 ---
 
@@ -12259,6 +12303,18 @@ Controller for the Template GUI.
 Add a view of a given type if there is not already one.
 
 To be called before creating a GUI.
+
+---
+
+#### TemplateController.close
+
+
+**`TemplateController.close(self, close_model=True)`**
+
+Release files owned by the controller.
+
+Closing a GUI does not necessarily end a controller's lifetime: callers may
+recreate a GUI around the same model. Resource cleanup is therefore explicit.
 
 ---
 
@@ -13007,6 +13063,18 @@ Controller for the Kwik GUI.
 Add a view of a given type if there is not already one.
 
 To be called before creating a GUI.
+
+---
+
+#### KwikController.close
+
+
+**`KwikController.close(self, close_model=True)`**
+
+Release files owned by the controller.
+
+Closing a GUI does not necessarily end a controller's lifetime: callers may
+recreate a GUI around the same model. Resource cleanup is therefore explicit.
 
 ---
 

@@ -99,7 +99,11 @@ def _iter_vars(mod):
 
 
 def _iter_functions(subpackage):
-    return filter(inspect.isfunction, _iter_vars(subpackage))
+    package = subpackage.__name__.split('.')[0]
+    return (
+        member for member in _iter_vars(subpackage)
+        if inspect.isfunction(member) and _is_defined_in_package(member, package)
+    )
 
 
 def _iter_classes(subpackage):

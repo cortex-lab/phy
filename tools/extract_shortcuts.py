@@ -16,11 +16,17 @@ view_classes = [getattr(views, name) for name in view_names]
 
 
 def _get_shortcuts(cls):
+    shortcuts = cls.default_shortcuts.copy()
+    # Keep generated documentation platform-independent. Qt maps Meta to the
+    # physical Control key on macOS, but users should still read Control+Space
+    # in the reference; the platform note explains the implementation detail.
+    if cls is ActionCreator:
+        shortcuts['select_first_similar'] = 'ctrl+space'
     with captured_output() as (stdout, stderr):
         print(cls.__name__)
         print('-' * len(cls.__name__))
         print()
-        _show_shortcuts(cls.default_shortcuts)
+        _show_shortcuts(shortcuts)
         _show_snippets(cls.default_snippets)
     return stdout.getvalue()
 

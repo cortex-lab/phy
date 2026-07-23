@@ -54,6 +54,11 @@ test-fast:
 doc:
 	uv run python tools/api.py && uv run python tools/extract_shortcuts.py && uv run python tools/plugins_doc.py
 
+doc-check: doc
+	uv run python tools/check_docs.py
+	uv run mkdocs build --strict
+	git diff --exit-code -- docs/ plugins/README.md
+
 build:
 	uv build
 
@@ -120,4 +125,4 @@ smoke-test:
 open-test:
 	$(call run_open,$(CURDIR)/.release-smoke/testpypi-$(TEST_SMOKE_VERSION))
 
-.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc build upload upload-test publish-test version-test publish-pypi coverage dev ci smoke-local open-local smoke-pypi open-pypi smoke-test open-test
+.PHONY: clean-build clean-pyc clean-test clean install lint format format-check lint-fix test test-apps test-full test-fast doc doc-check build upload upload-test publish-test version-test publish-pypi coverage dev ci smoke-local open-local smoke-pypi open-pypi smoke-test open-test

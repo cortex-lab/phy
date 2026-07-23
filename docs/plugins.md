@@ -84,7 +84,7 @@ class ExampleHelloPlugin(IPlugin):
             def on_cluster(sender, up):
                 """This is called every time a cluster assignment or cluster group/label
                 changes."""
-                print("Clusters update: %s" % up)
+                print(f'Clusters update: {up}')
 
 ```
 
@@ -156,7 +156,7 @@ from phy.plot.visuals import TextVisual
 class ExampleFontSizePlugin(IPlugin):
     def attach_to_controller(self, controller):
         # Smaller font size than the default (6).
-        TextVisual.default_font_size = 4.
+        TextVisual.default_font_size = 4.0
 
 ```
 
@@ -202,6 +202,7 @@ For example, here is a custom cluster metrics that shows the mean inter-spike in
 """Show how to add a custom cluster metrics."""
 
 import numpy as np
+
 from phy import IPlugin
 
 
@@ -237,6 +238,7 @@ In the following example, we define a custom cluster similarity metrics based on
 """Show how to add a custom similarity measure."""
 
 from operator import itemgetter
+
 import numpy as np
 
 from phy import IPlugin
@@ -253,20 +255,20 @@ def _dot_product(mw1, c1, mw2, c2):
     assert mw2.ndim == 2  # (n_samples, n_channels_loc_2)
 
     # We normalize the waveforms.
-    mw1 /= np.sqrt(np.sum(mw1 ** 2))
-    mw2 /= np.sqrt(np.sum(mw2 ** 2))
+    mw1 /= np.sqrt(np.sum(mw1**2))
+    mw2 /= np.sqrt(np.sum(mw2**2))
 
     # We find the union of the channel ids for both clusters so that we can convert from sparse
     # to dense format.
-    channel_ids = np.union1d(c1, c2)
+    channel_ids = np.union1d(c1, c2).astype(np.int64, copy=False)
 
     # We directly return 0 if the channels of the two clusters are disjoint.
     if not len(np.intersect1d(c1, c2)):
         return 0
 
     # We tile the channels so as to use `from_sparse()`.
-    c1 = np.tile(c1, (mw1.shape[0], 1))
-    c2 = np.tile(c2, (mw2.shape[0], 1))
+    c1 = np.tile(np.asarray(c1, dtype=np.int64), (mw1.shape[0], 1))
+    c2 = np.tile(np.asarray(c2, dtype=np.int64), (mw2.shape[0], 1))
 
     # We convert from sparse to dense format in order to compute the distance.
     mw1 = from_sparse(mw1, c1, channel_ids)  # (n_samples, n_channel_locs_common)
@@ -278,7 +280,6 @@ def _dot_product(mw1, c1, mw2, c2):
 
 class ExampleSimilarityPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         # We cache this function in memory and on disk.
         @controller.context.memcache
         def mean_waveform_similarity(cluster_id):
@@ -324,20 +325,20 @@ In the following example, we define a custom cluster statistics views using the 
 # import from plugins/cluster_stats.py
 """Show how to add a custom cluster histogram view showing cluster statistics."""
 
-from phy import IPlugin, Bunch
+from phy import Bunch, IPlugin
 from phy.cluster.views import HistogramView
 
 
 class FeatureHistogramView(HistogramView):
     """Every view corresponds to a unique view class, so we need to subclass HistogramView."""
+
     n_bins = 100  # default number of bins
-    x_max = .1  # maximum value on the x axis (maximum bin)
+    x_max = 0.1  # maximum value on the x axis (maximum bin)
     alias_char = 'fh'  # provide `:fhn` (set number of bins) and `:fhm` (set max bin) snippets
 
 
 class ExampleClusterStatsPlugin(IPlugin):
     def attach_to_controller(self, controller):
-
         def feature_histogram(cluster_id):
             """Must return a Bunch object with data and optional x_max, plot, text items.
 
@@ -370,7 +371,7 @@ In this example, we change the header styling of the cluster view.
 
 ```python
 # import from plugins/cluster_view_styling.py
-"""Show how to customize the styling of the cluster view with Qt stylesheet fragments."""
+"""Show how to customize the cluster view with Qt stylesheet fragments."""
 
 from phy import IPlugin
 from phy.cluster.supervisor import ClusterView
@@ -413,7 +414,6 @@ class ExampleActionPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-
             # Add a separator at the end of the File menu.
             # Note: currently, there is no way to add actions at another position in the menu.
             gui.file_actions.separator()
@@ -426,7 +426,7 @@ class ExampleActionPlugin(IPlugin):
                 # the menu item.
 
                 # We update the text in the status bar.
-                gui.status_message = "Hello world"
+                gui.status_message = 'Hello world'
 
             # We add a separator at the end of the Select menu.
             gui.select_actions.separator()
@@ -434,11 +434,11 @@ class ExampleActionPlugin(IPlugin):
             # Add an action to a new submenu called "My submenu". This action displays a prompt
             # dialog with the default value 10.
             @gui.select_actions.add(
-                submenu='My submenu', shortcut='ctrl+c', prompt=True, prompt_default=lambda: 10)
+                submenu='My submenu', shortcut='ctrl+c', prompt=True, prompt_default=lambda: 10
+            )
             def select_n_first_clusters(n_clusters):
-
-                # All cluster view methods are called with a callback function because the
-                # table API is asynchronous.
+                # All cluster view methods are called with a callback function because of the
+                # asynchronous nature of the table API.
                 @controller.supervisor.cluster_view.get_ids
                 def get_cluster_ids(cluster_ids):
                     """This function is called when the ordered list of cluster ids is returned
@@ -466,6 +466,7 @@ from phy import IPlugin, connect
 def k_means(x):
     """Cluster an array into two subclusters, using the K-means algorithm."""
     from sklearn.cluster import KMeans
+
     return KMeans(n_clusters=2).fit_predict(x)
 
 
@@ -524,7 +525,7 @@ class ExampleFilterFiringRatePlugin(IPlugin):
             @gui.view_actions.add(alias='fr')  # corresponds to `:fr` snippet
             def filter_firing_rate(rate):
                 """Filter clusters with the firing rate."""
-                controller.supervisor.filter('fr > %.1f' % float(rate))
+                controller.supervisor.filter(f'fr > {float(rate):.1f}')
 
 ```
 
@@ -546,7 +547,6 @@ class ExampleCustomButtonPlugin(IPlugin):
         @connect
         def on_view_attached(view, gui):
             if isinstance(view, WaveformView):
-
                 # view.dock is a DockWidget instance, it has methods such as add_button(),
                 # add_checkbox(), and set_status().
 
@@ -574,8 +574,9 @@ along with all values found in the GUI cluster view.
 
 import logging
 
-from phy import IPlugin, connect
 from phylib.io.model import save_metadata
+
+from phy import IPlugin, connect
 
 logger = logging.getLogger('phy')
 
@@ -584,7 +585,6 @@ class ExampleClusterMetadataPlugin(IPlugin):
     def attach_to_controller(self, controller):
         @connect
         def on_gui_ready(sender, gui):
-
             @connect(sender=gui)
             def on_request_save(sender):
                 """This function is called whenever the Save action is triggered."""
@@ -610,11 +610,12 @@ class ExampleClusterMetadataPlugin(IPlugin):
                 # Dictionary mapping cluster_ids to the best channel id.
                 metadata = {
                     cluster_id: controller.get_best_channel(cluster_id)
-                    for cluster_id in cluster_ids}
+                    for cluster_id in cluster_ids
+                }
 
                 # Save the metadata file.
                 save_metadata(filename, field_name, metadata)
-                logger.info("Saved %s.", filename)
+                logger.info('Saved %s.', filename)
 
 ```
 
@@ -658,6 +659,7 @@ In this example, we show how to customize the subplots in the feature view.
 """Show how to customize the subplot grid specification in the feature view."""
 
 import re
+
 from phy import IPlugin, connect
 from phy.cluster.views import FeatureView
 
@@ -731,19 +733,19 @@ In this example, we show how to display a dimension reduction of the spike wavef
 # import from plugins/umap_view.py
 """Show how to write a custom dimension reduction view."""
 
-from phy import IPlugin, Bunch
+from phy import Bunch, IPlugin
 from phy.cluster.views import ScatterView
 
 
 def umap(x):
     """Perform the dimension reduction of the array x."""
     from umap import UMAP
+
     return UMAP().fit_transform(x)
 
 
 class WaveformUMAPView(ScatterView):
     """Every view corresponds to a unique view class, so we need to subclass ScatterView."""
-    pass
 
 
 class ExampleWaveformUMAPPlugin(IPlugin):
@@ -838,7 +840,7 @@ class FeatureDensityView(ManualClusteringView):
 
     def __init__(self, features=None):
         """features is a function (cluster_id => Bunch(data, ...)) where data is a 3D array."""
-        super(FeatureDensityView, self).__init__()
+        super().__init__()
         self.features = features
 
     def on_select(self, cluster_ids=(), **kwargs):
@@ -901,11 +903,10 @@ In this example, we simply display the template waveform on the peak channel of 
 
 import numpy as np
 
-from phy.utils.color import selected_cluster_color
-
 from phy import IPlugin
 from phy.cluster.views import ManualClusteringView
 from phy.plot.visuals import PlotVisual
+from phy.utils.color import selected_cluster_color
 
 
 class MyOpenGLView(ManualClusteringView):
@@ -918,7 +919,7 @@ class MyOpenGLView(ManualClusteringView):
         the data as NumPy arrays. Many such functions are defined in the TemplateController.
         """
 
-        super(MyOpenGLView, self).__init__()
+        super().__init__()
 
         """
         The View instance contains a special `canvas` object which is a `̀PlotCanvas` instance.
@@ -1048,7 +1049,7 @@ class MyOpenGLView(ManualClusteringView):
             We decide to use, on the x axis, values ranging from -1 to 1. This is the
             standard viewport in OpenGL and phy.
             """
-            x = np.linspace(-1., 1., len(y))
+            x = np.linspace(-1.0, 1.0, len(y))
 
             """
             phy requires you to specify explicitly the x and y range of the plots.
@@ -1080,7 +1081,8 @@ class MyOpenGLView(ManualClusteringView):
             top to bottom. Note that in the grid view, the box index is a pair (row, col).
             """
             self.visual.add_batch_data(
-                x=x, y=y, color=color, data_bounds=data_bounds, box_index=idx)
+                x=x, y=y, color=color, data_bounds=data_bounds, box_index=idx
+            )
 
         """
         After the loop, this special call automatically builds the data to upload to the GPU
