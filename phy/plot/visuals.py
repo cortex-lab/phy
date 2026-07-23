@@ -518,9 +518,10 @@ class PlotVisual(BaseVisual):
         color = np.repeat(color, n_samples, axis=0)
         assert color.shape == (n, 4)
 
-        # Generate signal index.
-        signal_index = np.repeat(np.arange(n_signals), n_samples)
-        signal_index = _get_array(signal_index, (n, 1))
+        # Generate signal index directly in the GPU attribute dtype.
+        signal_index = np.repeat(
+            np.arange(n_signals, dtype=np.float32), n_samples
+        ).reshape((n, 1))
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
@@ -540,14 +541,19 @@ class PlotVisual(BaseVisual):
         masks = np.repeat(data.masks, n_samples, axis=0)
         assert masks.shape == (n, 1)
 
-        # Position and depth.
-        depth = np.repeat(data.depth, n_samples, axis=0)
-        pos_depth = np.c_[pos, depth]
+        # Position and depth. Build the final GPU attribute directly instead of
+        # concatenating a float64 array and then allocating another full-size
+        # array for the float32 conversion.
+        pos_depth = np.empty((n, 3), dtype=np.float32)
+        pos_depth[:, :2] = pos
+        pos_depth[:, 2:] = np.repeat(
+            data.depth.astype(np.float32, copy=False), n_samples, axis=0
+        )
 
-        self.program['a_position'] = pos_depth.astype(np.float32)
-        self.program['a_color'] = color.astype(np.float32)
-        self.program['a_signal_index'] = signal_index.astype(np.float32)
-        self.program['a_mask'] = masks.astype(np.float32)
+        self.program['a_position'] = pos_depth
+        self.program['a_color'] = color.astype(np.float32, copy=False)
+        self.program['a_signal_index'] = signal_index
+        self.program['a_mask'] = masks.astype(np.float32, copy=False)
         self.program['u_mask_max'] = _max(masks)
 
         self.emit_visual_set_data()

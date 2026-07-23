@@ -227,6 +227,50 @@ def test_plot_shared_data_bounds_are_broadcast(qtbot, canvas_pz):
     canvas_pz.close()
 
 
+def test_plot_gpu_attributes_preserve_values(qtbot, canvas_pz):
+    x = [np.array([-1.0, 1.0]), np.array([-1.0, 0.0, 1.0])]
+    y = [np.array([0.0, 0.5]), np.array([-0.5, 0.0, 0.5])]
+    color = np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 0.5]])
+    masks = np.array([0.25, 0.75])
+    depth = np.array([-0.25, -0.75])
+    counts = [len(values) for values in y]
+
+    visual = PlotVisual()
+    canvas_pz.add_visual(visual)
+    visual.set_data(
+        x=x,
+        y=y,
+        color=color,
+        masks=masks,
+        depth=depth,
+        data_bounds=NDC,
+    )
+
+    def attribute(name):
+        return np.asarray(visual.program._attributes[name]._data)[name]
+
+    expected_position = np.c_[
+        np.concatenate(x),
+        np.concatenate(y),
+        np.repeat(depth, counts),
+    ].astype(np.float32)
+    expected_color = np.repeat(color.astype(np.float32), counts, axis=0)
+    expected_signal_index = np.repeat(
+        np.arange(len(y), dtype=np.float32), counts
+    ).reshape((-1, 1))
+    expected_masks = np.repeat(
+        masks.astype(np.float32)[:, np.newaxis] * 0.99999, counts, axis=0
+    )
+
+    np.testing.assert_array_equal(attribute('a_position'), expected_position)
+    np.testing.assert_array_equal(attribute('a_color'), expected_color)
+    np.testing.assert_array_equal(attribute('a_signal_index'), expected_signal_index)
+    np.testing.assert_allclose(attribute('a_mask'), expected_masks)
+
+    show_and_wait(qtbot, canvas_pz)
+    canvas_pz.close()
+
+
 def test_plot_list(qtbot, canvas_pz):
     y = [0.25 * np.random.randn(i) for i in (5, 20, 50)]
     c = [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 1, 1]]
