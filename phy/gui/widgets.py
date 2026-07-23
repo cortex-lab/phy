@@ -38,6 +38,7 @@ from .qt import (
     QLabel,
     QLineEdit,
     QModelIndex,
+    QObject,
     QPalette,
     QPlainTextEdit,
     QSize,
@@ -488,6 +489,30 @@ class _TableItemDelegate(QStyledItemDelegate):
         super().paint(painter, opt, index)
 
 
+class _TableFilterFocusWatcher(QObject):
+    """Release the active table filter when the user clicks elsewhere."""
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            focus_widget = QApplication.focusWidget()
+            if (
+                isinstance(focus_widget, QLineEdit)
+                and focus_widget.objectName() == 'table-filter'
+                and obj is not focus_widget
+            ):
+                focus_widget.clearFocus()
+        return super().eventFilter(obj, event)
+
+
+def _install_table_filter_focus_watcher():
+    """Install one application-owned watcher shared by all tables."""
+    app = QApplication.instance()
+    if getattr(app, '_phy_table_filter_focus_watcher', None) is None:
+        watcher = _TableFilterFocusWatcher(app)
+        app._phy_table_filter_focus_watcher = watcher
+        app.installEventFilter(watcher)
+
+
 class Table(QWidget):
     """A sortable native Qt table with a compatibility API for legacy callers."""
 
@@ -566,6 +591,7 @@ class Table(QWidget):
         self._apply_dark_style()
 
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
+        _install_table_filter_focus_watcher()
 
     @property
     def debouncer(self):
@@ -598,6 +624,7 @@ class Table(QWidget):
         ):
             self.filter_edit.clear()
             self.filter('')
+            self.filter_edit.clearFocus()
             return True
         return super().eventFilter(obj, event)
 
@@ -842,6 +869,7 @@ class Table(QWidget):
 
     def _apply_filter_from_editor(self):
         self.filter(self.filter_edit.text())
+        self.filter_edit.clearFocus()
 
     def _set_filter(self, text, update_text_field=True):
         self._filter_text = text or ''

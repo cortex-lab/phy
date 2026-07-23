@@ -464,6 +464,21 @@ def test_supervisor_select_first_similar(qtbot, supervisor, gui):
     assert gui.state['n_similar_clusters_to_select'] == 100
 
 
+def test_filter_release_restores_space_shortcut(qtbot, supervisor, gui):
+    _select(supervisor, [30], [2])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+
+    qtbot.mouseClick(similarity_view.filter_edit, Qt.LeftButton)
+    assert similarity_view.filter_edit.hasFocus()
+    qtbot.keyClick(similarity_view.filter_edit, Qt.Key_Return)
+    assert not similarity_view.filter_edit.hasFocus()
+
+    qtbot.keyClick(gui, Qt.Key_Space)
+    supervisor.block()
+    assert supervisor.selected_similar == [11]
+
+
 def test_supervisor_skip_masked_navigation_and_selection(supervisor):
     assert supervisor.skip_masked_clusters is True
     assert supervisor.cluster_view.skip_masked is True

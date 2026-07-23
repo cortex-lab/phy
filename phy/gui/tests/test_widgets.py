@@ -172,7 +172,27 @@ def test_table_0(qtbot, table):
     table.filter_edit.clearFocus()
     qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
     assert table.filter_edit.hasFocus()
+
+    table.filter_edit.setText('id >= 2')
+    qtbot.keyClick(table.filter_edit, Qt.Key_Return)
+    assert not table.filter_edit.hasFocus()
+
+    qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
+    table.filter_edit.setText('id >= 3')
+    qtbot.keyClick(table.filter_edit, Qt.Key_Escape)
+    assert not table.filter_edit.hasFocus()
+    assert table.filter_edit.text() == ''
     _assert(table.get_selected, [])
+
+    qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
+    assert table.filter_edit.hasFocus()
+    index = table._proxy.index(0, 0)
+    qtbot.mouseClick(
+        table.table_view.viewport(),
+        Qt.LeftButton,
+        pos=table.table_view.visualRect(index).center(),
+    )
+    assert not table.filter_edit.hasFocus()
 
 
 def test_table_1(qtbot, table):

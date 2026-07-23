@@ -36,7 +36,8 @@ behavior they verify rather than listed separately.
 ### Fixed
 
 - Cluster and Similarity View filters only take keyboard focus after an
-  explicit click, including when a table is first shown or refreshed.
+  explicit click, including when a table is first shown or refreshed. Enter,
+  Escape, and outside clicks release filter focus so global shortcuts resume.
 
 ### Changed
 
