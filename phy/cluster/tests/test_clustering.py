@@ -449,6 +449,19 @@ def test_clustering_actions_update_cluster_ids_incrementally(monkeypatch):
     assert len(clustering.cluster_ids) == len(clustering.spikes_per_cluster)
 
 
+def test_clustering_merge_uses_spikes_per_cluster(monkeypatch):
+    clustering = Clustering(artificial_spike_clusters(1000, 10))
+    expected = _spikes_in_clusters(clustering.spike_clusters, [1, 3, 7])
+
+    def fail_spike_scan(*args):
+        raise AssertionError('merge must not scan the complete spike array')
+
+    monkeypatch.setattr('phy.cluster.clustering._spikes_in_clusters', fail_spike_scan)
+    up = clustering.merge([7, 1, 3])
+
+    ae(up.spike_ids, expected)
+
+
 def test_clustering_long():
     n_spikes = 1000
     n_clusters = 10
@@ -480,7 +493,9 @@ def test_clustering_long():
     # Updating a cluster, method 2.
     clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering.spike_clusters[:10] = 100
-    # HACK: need to update manually here.
+    # Direct mutations bypass the maintained per-cluster arrays, so explicitly
+    # rebuild them before performing regular clustering operations.
+    clustering._update_cluster_ids()
     clustering._new_cluster_id = 101
     ae(clustering.cluster_ids, np.r_[np.arange(n_clusters), 100])
 
@@ -500,6 +515,7 @@ def test_clustering_long():
 
     # Merge to a given cluster.
     clustering.spike_clusters[:] = spike_clusters_base[:]
+    clustering._update_cluster_ids()
     clustering._new_cluster_id = 11
 
     my_spikes_0 = np.nonzero(np.isin(clustering.spike_clusters, [4, 6]))[0]
