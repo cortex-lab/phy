@@ -321,6 +321,12 @@ class FeatureMixin:
         logger.log(5, 'Show channel %s and PC %s in amplitude view.', channel_id, pc)
         return features[:, 0, pc or 0]
 
+    def _get_amplitude_functions(self):
+        amplitude_functions = super()._get_amplitude_functions()
+        if self.model.features is None:
+            amplitude_functions.pop('feature', None)
+        return amplitude_functions
+
     def create_amplitude_view(self):
         view = super().create_amplitude_view()
         if self.model.features is None:

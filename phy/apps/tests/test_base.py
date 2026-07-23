@@ -225,6 +225,18 @@ def test_get_firing_rate_honors_get_spike_times_override():
     assert bunch.x_max == 3.0
 
 
+def test_amplitude_view_excludes_unavailable_features(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyControllerFull)
+    controller.model.features = None
+    try:
+        view = controller.create_amplitude_view()
+        assert list(view.amplitudes) == ['template']
+        view.amplitudes_type = 'feature'
+        assert view.amplitudes_type == 'template'
+    finally:
+        controller.close()
+
+
 # ------------------------------------------------------------------------------
 # Base classes
 # ------------------------------------------------------------------------------
