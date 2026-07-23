@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 from phylib import _add_log_file
-from phylib.io.array import SpikeSelector, _flatten
+from phylib.io.array import SpikeSelector, _flatten, _sample_spikes_evenly
 from phylib.stats import correlograms, firing_rate
 from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
@@ -848,6 +848,8 @@ class BaseController:
 
     # Number of spikes to show in the views.
     n_spikes_amplitudes = 10000
+    # Total number of background spikes to show in the amplitude view.
+    n_spikes_amplitudes_background = 10000
 
     # Pairs (amplitude_type_name, method_name) where amplitude methods return spike amplitudes
     # of a given type.
@@ -862,6 +864,7 @@ class BaseController:
     # Controller attributes to load/save in the GUI state.
     _state_params = (
         'n_spikes_amplitudes',
+        'n_spikes_amplitudes_background',
         'n_spikes_correlograms',
         'raw_data_filter_name',
     )
@@ -1374,6 +1377,91 @@ class BaseController:
         n = self.n_spikes_amplitudes if not load_all else None
         return self.get_spike_ids(cluster_id, n=n)
 
+    def _get_background_amplitude_spike_ids(
+        self, cluster_ids, n=None, subset_spikes=None, subset_chunks=False
+    ):
+        """Return a stable, stratified background selection for the amplitude view.
+
+        Unlike :class:`~phylib.io.array.SpikeSelector`, whose ``n`` applies to
+        *each* cluster, ``n`` here is a total display budget.  Keeping a small,
+        evenly spaced sample from every cluster gives the background temporal
+        coverage without making its size grow with the number of clusters.
+        """
+        if n is None:
+            return self.selector(
+                None,
+                cluster_ids,
+                subset_spikes=subset_spikes,
+                subset_chunks=subset_chunks,
+            )
+        if not cluster_ids or n <= 0:
+            return np.array([], dtype=np.int64)
+
+        # The usual template/feature path reads the live cluster arrays directly:
+        # calling ``selector(None, ...)`` would flatten and copy every cluster
+        # before the small display sample is taken.  Raw amplitudes retain the
+        # selector path so its chunk and waveform-subset filtering is unchanged.
+        if subset_spikes is None and not subset_chunks:
+            spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+            eligible = [
+                spikes_per_cluster.get(cluster_id, np.array([], dtype=np.int64))
+                for cluster_id in cluster_ids
+            ]
+        else:
+            eligible = [
+                self.selector(
+                    None,
+                    [cluster_id],
+                    subset_spikes=subset_spikes,
+                    subset_chunks=subset_chunks,
+                )
+                for cluster_id in cluster_ids
+            ]
+
+        # Allocate the fixed budget evenly, redistributing shares that small
+        # or empty clusters cannot use.  The order is stable across refreshes.
+        available = np.asarray([len(spike_ids) for spike_ids in eligible], dtype=np.int64)
+        allocated = np.zeros(len(eligible), dtype=np.int64)
+        remaining = min(n, int(available.sum()))
+        active = np.flatnonzero(available)
+        while remaining and len(active):
+            share, remainder = divmod(remaining, len(active))
+            increment = np.minimum(
+                available[active] - allocated[active],
+                share + (np.arange(len(active)) < remainder),
+            )
+            allocated[active] += increment
+            remaining -= int(increment.sum())
+            active = active[allocated[active] < available[active]]
+
+        out = [
+            _sample_spikes_evenly(spike_ids, n_cluster)
+            for spike_ids, n_cluster in zip(eligible, allocated)
+            if n_cluster
+        ]
+        if not out:
+            return np.array([], dtype=np.int64)
+        return np.sort(np.concatenate(out)).astype(np.int64, copy=False)
+
+    def _get_stable_amplitude_spike_ids(
+        self, cluster_id, n, subset_spikes=None, subset_chunks=False
+    ):
+        """Return a stable display sample from one cluster."""
+        if subset_spikes is None and not subset_chunks:
+            spike_ids = self.supervisor.clustering.spikes_per_cluster.get(
+                cluster_id, np.array([], dtype=np.int64)
+            )
+        else:
+            spike_ids = self.selector(
+                None,
+                [cluster_id],
+                subset_spikes=subset_spikes,
+                subset_chunks=subset_chunks,
+            )
+        if n is None:
+            return spike_ids
+        return _sample_spikes_evenly(spike_ids, n)
+
     def _amplitude_getter(self, cluster_ids, name=None, load_all=False):
         """Return the data requested by the amplitude view, which depends on the
         type of amplitude.
@@ -1418,17 +1506,20 @@ class BaseController:
         for cluster_id in cluster_ids:
             if cluster_id is not None:
                 # Cluster spikes.
-                spike_ids = self.get_spike_ids(
-                    cluster_id,
-                    n=n,
-                    subset_spikes=subset_spikes,
-                    subset_chunks=subset_chunks,
-                )
+                if name == 'raw':
+                    spike_ids = self.get_spike_ids(
+                        cluster_id,
+                        n=n,
+                        subset_spikes=subset_spikes,
+                        subset_chunks=subset_chunks,
+                    )
+                else:
+                    spike_ids = self._get_stable_amplitude_spike_ids(cluster_id, n)
             else:
                 # Background spikes.
-                spike_ids = self.selector(
-                    n,
+                spike_ids = self._get_background_amplitude_spike_ids(
                     other_clusters,
+                    self.n_spikes_amplitudes_background if not load_all else None,
                     subset_spikes=subset_spikes,
                     subset_chunks=subset_chunks,
                 )

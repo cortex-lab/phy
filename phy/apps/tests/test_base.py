@@ -211,6 +211,56 @@ def test_get_firing_rate_fast_path():
     np.testing.assert_array_equal(bunch.data, expected)
 
 
+def test_amplitude_background_has_stable_total_budget(tempdir):
+    controller = _mock_controller(tempdir, MyControllerTmp)
+    controller.n_spikes_amplitudes = 7
+    controller.n_spikes_amplitudes_background = 7
+    selected_cluster = 0
+
+    data = controller._amplitude_getter([selected_cluster, None], name='template')
+    repeat = controller._amplitude_getter([selected_cluster, None], name='template')
+    selected, background = data
+
+    # The selected cluster retains its independent display budget, while all
+    # grey background clusters share one fixed budget.
+    assert len(selected.spike_ids) == controller.n_spikes_amplitudes
+    assert len(background.spike_ids) == controller.n_spikes_amplitudes_background
+    np.testing.assert_array_equal(background.spike_ids, repeat[1].spike_ids)
+    assert np.all(np.diff(background.spike_ids) >= 0)
+
+    other_clusters = set(controller.get_clusters_on_channel(0)) - {selected_cluster}
+    background_clusters = controller.supervisor.clustering.spike_clusters[background.spike_ids]
+    assert set(background_clusters).issubset(other_clusters)
+
+    # Lasso/split requests must still retrieve every eligible spike.
+    all_data = controller._amplitude_getter(
+        [selected_cluster, None], name='template', load_all=True
+    )
+    expected_background = sum(
+        len(controller.supervisor.clustering.spikes_per_cluster[cluster_id])
+        for cluster_id in other_clusters
+    )
+    assert len(all_data[0].spike_ids) == len(
+        controller.supervisor.clustering.spikes_per_cluster[selected_cluster]
+    )
+    assert len(all_data[1].spike_ids) == expected_background
+
+
+def test_amplitude_background_redistributes_unused_budget():
+    # Cluster 0 is empty, cluster 1 has one spike, and cluster 2 has ample
+    # capacity. The background budget should be filled while retaining the
+    # small nonempty cluster's representation.
+    controller = object.__new__(BaseController)
+    controller.supervisor = Bunch(clustering=Clustering(np.array([1] + [2] * 100, dtype=np.int64)))
+
+    spike_ids = controller._get_background_amplitude_spike_ids([0, 1, 2], n=5)
+
+    assert len(spike_ids) == 5
+    assert len(np.unique(spike_ids)) == 5
+    assert np.all(np.diff(spike_ids) >= 0)
+    assert 0 in spike_ids
+
+
 def test_get_firing_rate_honors_get_spike_times_override():
     class OverrideController(BaseController):
         def get_spike_times(self, cluster_id, n=None):
