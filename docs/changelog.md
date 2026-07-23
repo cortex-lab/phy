@@ -35,6 +35,10 @@ behavior they verify rather than listed separately.
   selections.
 - On macOS, the `Control+Space` batch-selection shortcut uses the physical
   Control key rather than Command.
+- Cluster and Similarity View selections use a shorter debounce interval,
+  reducing the delay before dependent views update.
+- Spike selection uses the disjoint-cluster fast path, reducing selection
+  overhead on large datasets.
 
 ### Fixed
 
@@ -44,6 +48,8 @@ behavior they verify rather than listed separately.
   are requested.
 - Handle native table secondary clicks and trackpad secondary clicks
   consistently.
+- Clear stale Similarity View selections when wizard navigation changes the
+  primary cluster.
 
 ### Documentation
 
