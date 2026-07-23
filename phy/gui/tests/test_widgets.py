@@ -168,7 +168,10 @@ def test_table_invalid_column(qtbot):
 
 
 def test_table_0(qtbot, table):
-    assert table.filter_edit.focusPolicy() == Qt.ClickFocus
+    assert table.filter_edit.focusPolicy() == Qt.NoFocus
+    table.filter_edit.clearFocus()
+    qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
+    assert table.filter_edit.hasFocus()
     _assert(table.get_selected, [])
 
 

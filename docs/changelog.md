@@ -33,6 +33,11 @@ behavior they verify rather than listed separately.
   selection plotting until they become visible, retaining only the latest
   selection.
 
+### Fixed
+
+- Cluster and Similarity View filters only take keyboard focus after an
+  explicit click, including when a table is first shown or refreshed.
+
 ### Changed
 
 - Merge-related Cluster and Similarity View mutations batch expensive column

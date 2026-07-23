@@ -531,9 +531,9 @@ class Table(QWidget):
         self.filter_edit = QLineEdit(self)
         self.filter_edit.setObjectName('table-filter')
         # Do not let the filter become the table's automatic focus target when the GUI is
-        # shown or reactivated.  Global shortcuts should remain available until the user
-        # explicitly clicks the filter.
-        self.filter_edit.setFocusPolicy(Qt.ClickFocus)
+        # shown, reactivated, or its model is reset. Explicit mouse clicks are handled in
+        # eventFilter() below so the editor remains usable.
+        self.filter_edit.setFocusPolicy(Qt.NoFocus)
         self.filter_edit.returnPressed.connect(self._apply_filter_from_editor)
         self.filter_edit.installEventFilter(self)
 
@@ -570,6 +570,12 @@ class Table(QWidget):
         return self._debouncer
 
     def eventFilter(self, obj, event):
+        if (
+            obj is self.filter_edit
+            and event.type() == QEvent.MouseButtonPress
+            and event.button() == Qt.LeftButton
+        ):
+            self.filter_edit.setFocus(Qt.MouseFocusReason)
         if (
             obj is self.table_view.viewport()
             and event.type() == QEvent.MouseButtonPress
