@@ -167,6 +167,17 @@ def test_allocate_spike_counts_redistributes_total_budget():
         _allocate_spike_counts([100, 2], per_cluster=10, total=None),
         [10, 2],
     )
+    assert WaveformMixin.n_spikes_waveforms_total is None
+    np.testing.assert_array_equal(
+        _allocate_spike_counts(
+            [100, 100, 100],
+            per_cluster=WaveformMixin.n_spikes_waveforms,
+            total=WaveformMixin.n_spikes_waveforms_total,
+        ),
+        [100, 100, 100],
+    )
+    assert BaseController.n_spikes_amplitudes_total is None
+    assert BaseController.n_spikes_correlograms_total is None
 
 
 def test_controller_close(tempdir):
@@ -239,7 +250,7 @@ def test_get_correlograms_rate_fast_path():
     controller.model = Bunch(duration=4.0)
     controller.supervisor = Bunch(clustering=clustering)
     controller.n_spikes_correlograms = 2
-    controller.n_spikes_correlograms_total = None
+    assert controller.n_spikes_correlograms_total is None
 
     def fail_selector(*args, **kwargs):
         raise AssertionError('The correlogram-rate path must not invoke SpikeSelector.')

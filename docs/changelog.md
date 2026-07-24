@@ -27,14 +27,18 @@ behavior they verify rather than listed separately.
   supported.
 - Configure the total number of gray background points in the Amplitude View
   with `n_spikes_amplitudes_background` (10,000 by default).
-- Waveform, Amplitude, and Correlogram views use fixed total spike budgets
-  across multi-cluster selections, while retaining their per-cluster ceilings.
+- Waveform, Amplitude, and Correlogram views support optional fixed total spike
+  budgets across multi-cluster selections. They use fixed per-cluster budgets
+  by default so sampling accuracy does not decrease as selections grow.
 - Hidden or inactive-tab Waveform, Amplitude, and Correlogram views defer
   selection plotting until they become visible, retaining only the latest
   selection.
 
 ### Fixed
 
+- Keep dataset-local view settings isolated from global GUI state. In
+  particular, a Firing Rate time range saved or leaked from another recording
+  no longer clips spikes in a fresh dataset.
 - Cluster and Similarity View filters only take keyboard focus after an
   explicit click, including when a table is first shown or refreshed. Enter,
   Escape, and outside clicks release filter focus so global shortcuts resume.

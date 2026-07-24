@@ -184,7 +184,7 @@ class RawDataFilter(RotatingProperty):
 
 class WaveformMixin:
     n_spikes_waveforms = 100
-    n_spikes_waveforms_total = 400
+    n_spikes_waveforms_total = None
     batch_size_waveforms = 10
 
     _state_params = (
@@ -916,7 +916,7 @@ class BaseController:
     # Number of spikes to show in the views.
     n_spikes_amplitudes = 10000
     # Total number of selected spikes to show in the amplitude view.
-    n_spikes_amplitudes_total = 40000
+    n_spikes_amplitudes_total = None
     # Total number of background spikes to show in the amplitude view.
     n_spikes_amplitudes_background = 10000
 
@@ -925,7 +925,7 @@ class BaseController:
     _amplitude_functions = ()
 
     n_spikes_correlograms = 100000
-    n_spikes_correlograms_total = 400000
+    n_spikes_correlograms_total = None
 
     # Number of raw data chunks to keep when loading waveforms from raw data (mostly useful
     # when using compressed dataset, as random access triggers expensive decompression).
