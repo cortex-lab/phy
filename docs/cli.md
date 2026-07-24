@@ -75,10 +75,11 @@ make on-demand extraction slow.
 
 The saved subset is a pool for the GUI, not the exact set drawn at once. For
 each selected cluster, the Waveform View chooses up to
-`controller.n_spikes_waveforms` spikes from that pool (100 by default), subject
-to the 400-spike `controller.n_spikes_waveforms_total` display budget. Merges
-and splits continue to use whichever constituent spike IDs are present in the
-pool.
+`controller.n_spikes_waveforms` spikes from that pool (100 by default).
+`controller.n_spikes_waveforms_total` is `None` by default, preserving the
+per-cluster count as selections grow; set it to an integer to impose a shared
+display budget. Merges and splits continue to use whichever constituent spike
+IDs are present in the pool.
 
 It does **not** pre-extract every spike in the recording. The current phylib
 implementation samples from 20 representative raw-data chunks and applies the

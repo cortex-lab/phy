@@ -130,6 +130,11 @@ class ExampleNspikesViewsPlugin(IPlugin):
             controller.n_spikes_features_background = 5000  # default: 2,500 total
             controller.n_spikes_amplitudes = 20000  # default: 10,000 per cluster
             controller.n_spikes_correlograms = 250000  # default: 100,000 per cluster
+            # These optional shared budgets default to None. Set an integer
+            # only when total rendering or computation cost must be bounded.
+            controller.n_spikes_waveforms_total = None
+            controller.n_spikes_amplitudes_total = None
+            controller.n_spikes_correlograms_total = None
 
 ```
 
