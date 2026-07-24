@@ -82,6 +82,18 @@ def _recursive_update(d, u):
     return d
 
 
+def _nested_keys(value, prefix=''):
+    """Return dotted paths for all leaves in a nested mapping."""
+    out = set()
+    for key, item in value.items():
+        path = f'{prefix}.{key}' if prefix else key
+        if isinstance(item, Mapping):
+            out.update(_nested_keys(item, path))
+        else:
+            out.add(path)
+    return out
+
+
 def _get_local_data(d, local_keys):
     """Return the Bunch of local data from a full GUI state, and a list of local keys
     of the form `ViewName.field_name`."""
@@ -139,6 +151,7 @@ class GUIState(Bunch):
         self, path=None, local_path=None, default_state_path=None, local_keys=None, **kwargs
     ):
         super().__init__(**kwargs)
+        self._loaded_local_keys = set()
         self._path = Path(path) if path else None
         if self._path:
             ensure_dir_exists(str(self._path.parent))
@@ -155,7 +168,11 @@ class GUIState(Bunch):
 
     def get_view_state(self, view):
         """Return the state of a view instance."""
-        return self.get(view.name, Bunch())
+        state = deepcopy(self.get(view.name, Bunch()))
+        for key in getattr(view, 'local_state_attrs', ()):
+            if f'{view.name}.{key}' not in self._loaded_local_keys:
+                state.pop(key, None)
+        return state
 
     def update_view_state(self, view, state):
         """Update the state of a view instance.
@@ -171,6 +188,13 @@ class GUIState(Bunch):
         if name not in self:
             self[name] = Bunch()
         self[name].update(state)
+        local_keys = {
+            key.split('.', 1)[1]
+            for key in self._local_keys
+            if key.startswith(f'{name}.')
+        }
+        if local_keys:
+            self._loaded_local_keys.update(f'{name}.{key}' for key in state if key in local_keys)
         logger.debug('Update GUI state for %s', name)
 
     def _copy_default_state(self):
@@ -204,7 +228,9 @@ class GUIState(Bunch):
         # After having loaded the global state, load the local state if it exists.
         # If values already exist, they are updated.
         if self._local_path and self._local_path.exists():
-            _recursive_update(self, _load_state(self._local_path))
+            local_data = _load_state(self._local_path)
+            self._loaded_local_keys = _nested_keys(local_data)
+            _recursive_update(self, local_data)
 
     @property
     def _global_data(self):

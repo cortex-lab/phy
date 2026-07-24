@@ -285,6 +285,9 @@ class ManualClusteringView:
 
         self.dock.visibilityChanged.connect(on_visibility_changed)
 
+        local_keys = [f'{self.name}.{key}' for key in self.local_state_attrs]
+        gui.state.add_local_keys(local_keys)
+
         # Set the view state.
         self.set_state(gui.state.get_view_state(self))
 

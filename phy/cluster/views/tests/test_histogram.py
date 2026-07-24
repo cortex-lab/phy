@@ -7,7 +7,7 @@
 import numpy as np
 from phylib.utils import Bunch
 
-from ..histogram import HistogramView
+from ..histogram import FiringRateView, HistogramView
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
@@ -66,5 +66,23 @@ def test_histogram_view_0(qtbot, gui):
 
     v.increase()
     v.decrease()
+
+    _stop_and_close(qtbot, v)
+
+
+def test_firing_rate_view_ignores_global_x_max(qtbot, gui):
+    gui.state.FiringRateView = Bunch(n_bins=200, x_max=12.0)
+    v = FiringRateView(
+        cluster_stat=lambda cluster_id: Bunch(
+            data=np.array([1.0, 20.0]),
+            x_min=0.0,
+            x_max=30.0,
+        )
+    )
+
+    v.attach(gui)
+    assert v.x_max is None
+    v.on_select(cluster_ids=[0])
+    assert v.x_max == 30.0
 
     _stop_and_close(qtbot, v)
