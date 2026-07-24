@@ -7,7 +7,7 @@
 import numpy as np
 from phylib.utils import Bunch
 
-from ..histogram import FiringRateView, HistogramView
+from ..histogram import FiringRateView, HistogramView, ISIView
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
@@ -85,4 +85,28 @@ def test_firing_rate_view_ignores_global_x_max(qtbot, gui):
     v.on_select(cluster_ids=[0])
     assert v.x_max == 30.0
 
+    _stop_and_close(qtbot, v)
+
+
+def test_histogram_view_settings(qtbot, gui, monkeypatch):
+    v = ISIView(
+        cluster_stat=lambda cluster_id: Bunch(
+            data=np.array([0.001, 0.010]),
+            x_min=0.0,
+            x_max=0.050,
+        )
+    )
+    v.attach(gui)
+    v.on_select(cluster_ids=[0])
+    monkeypatch.setattr(
+        'phy.cluster.views.histogram.view_settings_dialog',
+        lambda *args, **kwargs: {'bin_size': 2.0, 'x_min': 1.0, 'x_max': 41.0},
+    )
+
+    v.actions.get('View settings').trigger()
+
+    assert v.x_min == 0.001
+    assert v.x_max == 0.041
+    assert v.n_bins == 20
+    assert set(v.local_state_attrs) == {'n_bins', 'x_min', 'x_max'}
     _stop_and_close(qtbot, v)

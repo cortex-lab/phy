@@ -44,7 +44,7 @@ from phy.gui import GUI
 from phy.gui.gui import _prompt_save
 from phy.gui.qt import AsyncCaller
 from phy.gui.state import _gui_state_path
-from phy.gui.widgets import IPythonView
+from phy.gui.widgets import IPythonView, view_settings_dialog
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 
@@ -111,6 +111,71 @@ def _sample_spikes_evenly(spike_ids, n_spikes):
     indices *= n_available - 1
     indices //= n_spikes - 1
     return np.asarray(spike_ids[indices], dtype=np.int64)
+
+
+def _spike_budget_fields(per_cluster, total, max_n_clusters, background=None):
+    """Return dialog fields for a per-cluster budget and optional shared cap."""
+    per_cluster_default = per_cluster if per_cluster is not None else total or 100000
+    total_default = total if total is not None else per_cluster_default * max(1, max_n_clusters)
+    fields = [
+        {
+            'name': 'use_per_cluster',
+            'label': 'Use per-cluster budget',
+            'default': per_cluster is not None,
+            'vtype': 'bool',
+            'tooltip': 'Bound the spikes sampled independently from each selected cluster.',
+        },
+        {
+            'name': 'per_cluster',
+            'label': 'Spikes per cluster',
+            'default': per_cluster_default,
+            'vtype': 'int',
+            'minimum': 1,
+            'maximum': 10**9,
+            'suffix': ' spikes',
+            'tooltip': 'Maximum spikes sampled independently from every selected cluster.',
+            'enabled_by': 'use_per_cluster',
+        },
+        {
+            'name': 'use_total',
+            'label': 'Use shared total budget',
+            'default': total is not None,
+            'vtype': 'bool',
+            'tooltip': 'Also bound the total work shared by all selected clusters.',
+        },
+        {
+            'name': 'total',
+            'label': 'Shared total spikes',
+            'default': total_default,
+            'vtype': 'int',
+            'minimum': 1,
+            'maximum': 10**9,
+            'suffix': ' spikes',
+            'tooltip': 'Maximum spikes shared fairly across the selected clusters.',
+            'enabled_by': 'use_total',
+        },
+    ]
+    if background is not None:
+        fields.append(
+            {
+                'name': 'background',
+                'label': 'Background spikes',
+                'default': background,
+                'vtype': 'int',
+                'minimum': 1,
+                'maximum': 10**9,
+                'suffix': ' spikes',
+                'tooltip': 'Total grey background spikes sampled across unselected clusters.',
+            }
+        )
+    return fields
+
+
+def _spike_budget_values(values):
+    """Return the per-cluster and optional shared budgets from dialog values."""
+    per_cluster = values['per_cluster'] if values['use_per_cluster'] else None
+    total = values['total'] if values['use_total'] else None
+    return per_cluster, total
 
 
 class Selection(Bunch):
@@ -346,6 +411,29 @@ class WaveformMixin:
                 self.n_spikes_waveforms = n_spikes_waveforms
                 view.plot()
 
+            def edit_view_settings():
+                """Edit waveform sampling and performance settings."""
+                values = view_settings_dialog(
+                    'Waveform view settings',
+                    _spike_budget_fields(
+                        self.n_spikes_waveforms,
+                        self.n_spikes_waveforms_total,
+                        view.max_n_clusters,
+                    ),
+                    parent=gui,
+                )
+                if values is None:
+                    return
+                self.n_spikes_waveforms, self.n_spikes_waveforms_total = _spike_budget_values(
+                    values
+                )
+                view.plot()
+
+            view.actions.add(
+                edit_view_settings,
+                name='View settings',
+                show_shortcut=False,
+            )
             view.actions.separator()
 
         @connect(sender=view)
@@ -1674,11 +1762,40 @@ class BaseController:
             view.show_time_range(interval)
 
         @connect(sender=view)
+        def on_view_attached(view_, gui):
+            def edit_view_settings():
+                """Edit amplitude sampling and performance settings."""
+                values = view_settings_dialog(
+                    'Amplitude view settings',
+                    _spike_budget_fields(
+                        self.n_spikes_amplitudes,
+                        self.n_spikes_amplitudes_total,
+                        view.max_n_clusters,
+                        background=self.n_spikes_amplitudes_background,
+                    ),
+                    parent=gui,
+                )
+                if values is None:
+                    return
+                self.n_spikes_amplitudes, self.n_spikes_amplitudes_total = _spike_budget_values(
+                    values
+                )
+                self.n_spikes_amplitudes_background = values['background']
+                view.plot()
+
+            view.actions.add(
+                edit_view_settings,
+                name='View settings',
+                show_shortcut=False,
+            )
+
+        @connect(sender=view)
         def on_close_view(view_, gui):
             unconnect(on_toggle_spike_reorder)
             unconnect(on_selected_channel_changed)
             unconnect(on_select)
             unconnect(on_time_range_selected)
+            unconnect(on_view_attached)
 
         return view
 
@@ -1838,6 +1955,86 @@ class BaseController:
                     emit('action', self.supervisor.action_creator, 'promote_similar', cluster_id)
                     return
             logger.debug('Correlogram pair does not span ClusterView and SimilarityView.')
+
+        @connect(sender=view)
+        def on_view_attached(view_, gui):
+            def validate(values):
+                if values['bin_size'] >= values['window_size']:
+                    return 'Bin size must be smaller than window size.'
+
+            def edit_view_settings():
+                """Edit correlogram sampling, bin, and window settings."""
+                fields = _spike_budget_fields(
+                    self.n_spikes_correlograms,
+                    self.n_spikes_correlograms_total,
+                    view.max_n_clusters,
+                )
+                fields.extend(
+                    [
+                        {
+                            'name': 'bin_size',
+                            'label': 'Bin size',
+                            'default': view.bin_size * 1000,
+                            'vtype': 'float',
+                            'minimum': 0.001,
+                            'maximum': 10**6,
+                            'decimals': 3,
+                            'suffix': ' ms',
+                            'tooltip': 'Width of each correlogram bin.',
+                        },
+                        {
+                            'name': 'window_size',
+                            'label': 'Window size',
+                            'default': view.window_size * 1000,
+                            'vtype': 'float',
+                            'minimum': 0.002,
+                            'maximum': 10**6,
+                            'decimals': 3,
+                            'suffix': ' ms',
+                            'tooltip': 'Total time span shown by the correlogram.',
+                        },
+                        {
+                            'name': 'refractory_period',
+                            'label': 'Refractory period',
+                            'default': view.refractory_period * 1000,
+                            'vtype': 'float',
+                            'minimum': 0.001,
+                            'maximum': 10**6,
+                            'decimals': 3,
+                            'suffix': ' ms',
+                            'tooltip': 'Interval highlighted around zero lag.',
+                        },
+                    ]
+                )
+                values = view_settings_dialog(
+                    'Correlogram view settings',
+                    fields,
+                    parent=gui,
+                    validate=validate,
+                )
+                if values is None:
+                    return
+                (
+                    self.n_spikes_correlograms,
+                    self.n_spikes_correlograms_total,
+                ) = _spike_budget_values(values)
+                view._set_bin_window(
+                    bin_size=values['bin_size'] * 1e-3,
+                    window_size=values['window_size'] * 1e-3,
+                )
+                view.refractory_period = values['refractory_period'] * 1e-3
+                view.plot()
+
+            view.actions.add(
+                edit_view_settings,
+                name='View settings',
+                show_shortcut=False,
+            )
+
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_request_promote_similar)
+            unconnect(on_view_attached)
 
         return view
 
