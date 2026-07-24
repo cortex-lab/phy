@@ -113,6 +113,20 @@ def _sample_spikes_evenly(spike_ids, n_spikes):
     return np.asarray(spike_ids[indices], dtype=np.int64)
 
 
+def _select_spikes_evenly(selector, n_spikes, cluster_ids, **kwargs):
+    """Use phylib's even selector when available, with a 2.7-compatible fallback."""
+    if 'sample_evenly' in inspect.signature(selector).parameters:
+        return selector(n_spikes, cluster_ids, sample_evenly=True, **kwargs)
+
+    selected = [
+        _sample_spikes_evenly(selector(None, [cluster_id], **kwargs), n_spikes)
+        for cluster_id in cluster_ids
+    ]
+    if not selected:
+        return np.array([], dtype=np.int64)
+    return np.concatenate(selected)
+
+
 def _spike_budget_fields(per_cluster, total, max_n_clusters, background=None):
     """Return dialog fields for a per-cluster budget and optional shared cap."""
     per_cluster_default = per_cluster if per_cluster is not None else total or 100000
@@ -318,8 +332,8 @@ class WaveformMixin:
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).
         else:
-            spike_ids = self.selector(
-                n_spikes_waveforms, [cluster_id], subset_chunks=True, sample_evenly=True
+            spike_ids = _select_spikes_evenly(
+                self.selector, n_spikes_waveforms, [cluster_id], subset_chunks=True
             )
 
         # Get the best channels.
@@ -1269,13 +1283,17 @@ class BaseController:
         except AttributeError:
             chunk_bounds = [0.0, self.model.spike_samples[-1] + 1]
 
-        self.selector = SpikeSelector(
-            get_spikes_per_cluster=spikes_per_cluster,
-            spike_times=self.model.spike_samples,  # NOTE: chunk_bounds is in samples, not seconds
-            chunk_bounds=chunk_bounds,
-            n_chunks_kept=self.n_chunks_kept,
-            spikes_are_disjoint=True,
-        )
+        selector_kwargs = {
+            'get_spikes_per_cluster': spikes_per_cluster,
+            # NOTE: chunk_bounds is in samples, not seconds.
+            'spike_times': self.model.spike_samples,
+            'chunk_bounds': chunk_bounds,
+            'n_chunks_kept': self.n_chunks_kept,
+        }
+        # phylib 2.7 does not yet expose this optimization hint.
+        if 'spikes_are_disjoint' in inspect.signature(SpikeSelector).parameters:
+            selector_kwargs['spikes_are_disjoint'] = True
+        self.selector = SpikeSelector(**selector_kwargs)
 
     def _cache_methods(self):
         """Cache methods as specified in `self._memcached` and `self._cached`."""

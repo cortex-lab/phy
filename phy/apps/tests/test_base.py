@@ -46,6 +46,7 @@ from ..base import (
     TraceMixin,
     WaveformMixin,
     _allocate_spike_counts,
+    _select_spikes_evenly,
     _spike_budget_fields,
     _spike_budget_values,
 )
@@ -213,6 +214,64 @@ def test_controller_close(tempdir):
     assert model.closed
     assert all(handler not in logging.getLogger('phy').handlers for handler in handlers)
     assert all(handler.stream is None for handler in handlers)
+
+
+def test_set_selector_supports_released_and_newer_phylib():
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(spike_samples=np.arange(4))
+    controller.supervisor = Bunch(clustering=Clustering(np.array([0, 0, 1, 1])))
+    controller.n_chunks_kept = 2
+
+    class ReleasedSpikeSelector:
+        def __init__(
+            self,
+            get_spikes_per_cluster=None,
+            spike_times=None,
+            chunk_bounds=None,
+            n_chunks_kept=None,
+        ):
+            self.spikes_are_disjoint = None
+
+    with patch('phy.apps.base.SpikeSelector', ReleasedSpikeSelector):
+        controller._set_selector()
+    assert controller.selector.spikes_are_disjoint is None
+
+    class NewerSpikeSelector(ReleasedSpikeSelector):
+        def __init__(self, *args, spikes_are_disjoint=False, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.spikes_are_disjoint = spikes_are_disjoint
+
+    with patch('phy.apps.base.SpikeSelector', NewerSpikeSelector):
+        controller._set_selector()
+    assert controller.selector.spikes_are_disjoint is True
+
+
+def test_select_spikes_evenly_supports_released_and_newer_phylib():
+    spikes = {0: np.arange(5), 1: np.arange(5, 10)}
+
+    def released_selector(n_spikes, cluster_ids, subset_chunks=False):
+        assert subset_chunks
+        assert n_spikes is None
+        return np.concatenate([spikes[cluster_id] for cluster_id in cluster_ids])
+
+    np.testing.assert_array_equal(
+        _select_spikes_evenly(released_selector, 2, [0, 1], subset_chunks=True),
+        [0, 4, 5, 9],
+    )
+
+    def newer_selector(n_spikes, cluster_ids, subset_chunks=False, sample_evenly=False):
+        assert (n_spikes, cluster_ids, subset_chunks, sample_evenly) == (
+            2,
+            [0, 1],
+            True,
+            True,
+        )
+        return np.array([1, 8])
+
+    np.testing.assert_array_equal(
+        _select_spikes_evenly(newer_selector, 2, [0, 1], subset_chunks=True),
+        [1, 8],
+    )
 
 
 def test_get_firing_rate_fast_path():

@@ -40,6 +40,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Start the GUI with released phylib versions that do not yet expose the
+  disjoint-spike selection optimization hint.
 - Keep dataset-local view settings isolated from global GUI state. In
   particular, a Firing Rate time range saved or leaked from another recording
   no longer clips spikes in a fresh dataset.
