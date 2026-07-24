@@ -22,7 +22,9 @@ limits do not discard spikes from the dataset or change the saved clustering.
 The default `None` total settings give every cluster the corresponding
 per-cluster budget, so selecting more clusters does not reduce the sampling
 accuracy of any one cluster. For example, eight large clusters in the
-Waveform View may each display 100 waveforms.
+Waveform View may each display 100 waveforms. `None` disables only the
+secondary shared cap; it does not disable the per-cluster limit or load all
+spikes.
 
 Set a total setting to an integer to opt into a fixed shared budget when
 predictable runtime or memory use matters more. For example,
