@@ -189,9 +189,7 @@ class GUIState(Bunch):
             self[name] = Bunch()
         self[name].update(state)
         local_keys = {
-            key.split('.', 1)[1]
-            for key in self._local_keys
-            if key.startswith(f'{name}.')
+            key.split('.', 1)[1] for key in self._local_keys if key.startswith(f'{name}.')
         }
         if local_keys:
             self._loaded_local_keys.update(f'{name}.{key}' for key in state if key in local_keys)
