@@ -189,6 +189,10 @@ of spikes per cluster. By default,
 `controller.n_spikes_waveforms_total=None`, so every displayed cluster gets
 its own budget. Set the total to an integer, such as `400`, to share that fixed
 number across all displayed clusters.
+Choose **View settings** in the Waveform View menu to edit both limits
+together. Each limit has its own enable checkbox; disabling a limit stores
+`None`. Changes replot immediately, while the `:wn` snippet remains available
+for quickly changing only the per-cluster value.
 The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
 
 You can select a channel with **Control+click** (this impacts the feature view). You can change the scaling of the channel positions and the waveforms.
@@ -323,6 +327,10 @@ auto- and cross-correlogram calculation. These spikes are picked randomly.
 See [Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
+Choose **View settings** in the view menu to edit the two spike-budget modes,
+bin size, window size, and refractory period together. The budget settings are
+global controller preferences; the bin, window, and refractory settings are
+saved for the current dataset.
 
 *Note*: the central peak is artificially removed to avoid artifacts. Decrease the bin size (e.g. to 0.1 ms) if you need to visualize fine temporal structure.
 
@@ -455,6 +463,9 @@ The parameter `controller.n_spikes_amplitudes=10000` bounds the selected
 spikes per cluster. The default `controller.n_spikes_amplitudes_total=None`
 preserves that budget for every selected cluster. Set the total to an integer
 to share a fixed budget across the Amplitude View.
+Choose **View settings** in the Amplitude View menu to edit the per-cluster,
+optional shared total, and gray background budgets together. Changes take
+effect immediately and are saved as global controller preferences.
 
 *Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
 
@@ -496,8 +507,9 @@ This generic view shows histogram related to the selected clusters. Built-in sta
 
 The Firing Rate View does not sample or impose a spike budget. Its number of
 bins and visible time range only control how all cluster spikes are grouped.
-The time range is dataset-local, so a range saved for one recording does not
-clip a fresh dataset.
+Choose **View settings** in the Firing Rate or ISI view menu to edit bin size
+and the displayed range together. These parameters are dataset-local, so
+values saved for one recording do not clip or coarsen a fresh dataset.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 

@@ -32,6 +32,14 @@ predictable runtime or memory use matters more. For example,
 clusters, subject to the 100-per-cluster ceiling. Small clusters keep all
 their available spikes and leave their unused shares for larger clusters.
 
+You can change these values without a plugin: open the Waveform, Amplitude, or
+Correlogram view menu and choose **View settings**. **Use per-cluster budget**
+controls the corresponding `n_spikes_*` value, and **Use shared total budget**
+controls `n_spikes_*_total`. Disabling either checkbox stores `None` for that
+limit. The Amplitude dialog also exposes
+`n_spikes_amplitudes_background`. Changes apply immediately and are saved in
+the global Template GUI state when phy closes normally.
+
 Other common cluster display limits are eight clusters for the Waveform,
 Feature, Amplitude, and scatter views, and 20 for histogram and Probe views.
 These limits control what a view plots; they do not change the table selection.
@@ -68,6 +76,10 @@ The Firing Rate View is different: it uses every spike in each displayed
 cluster, with no spike-sampling budget. Its bin count and visible time range
 control the histogram. The time range is saved in the dataset's `.phy/state.json`
 and is not reused for fresh datasets.
+
+The Correlogram, Firing Rate, and ISI view menus expose their bin and range
+parameters together under **View settings**. These display parameters are
+dataset-local; changing them does not affect the controller spike budgets.
 
 Some actions explicitly request `load_all=True` and bypass a display limit.
 That does not turn the corresponding view setting into a global analysis
