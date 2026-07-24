@@ -67,6 +67,8 @@ from PyQt5.QtWidgets import (  # noqa
     QStatusBar,
     QMainWindow,
     QDockWidget,
+    QDialog,
+    QDialogButtonBox,
     QToolBar,
     QWidget,
     QHBoxLayout,

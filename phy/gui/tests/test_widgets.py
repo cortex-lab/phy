@@ -11,7 +11,7 @@ from phylib.utils import connect, unconnect
 from pytest import fixture, mark
 
 from ..qt import QHeaderView, Qt
-from ..widgets import Barrier, IPythonView, KeyValueWidget, Table
+from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
 
@@ -86,6 +86,38 @@ def test_key_value_1(qtbot):
 
     # qtbot.stop()
     widget.close()
+
+
+def test_view_settings_dialog(qtbot):
+    fields = [
+        {
+            'name': 'use_total',
+            'label': 'Use shared total budget',
+            'default': False,
+            'vtype': 'bool',
+            'tooltip': 'Bound the work shared by all selected clusters.',
+        },
+        {
+            'name': 'total',
+            'label': 'Shared total spikes',
+            'default': 400,
+            'vtype': 'int',
+            'minimum': 1,
+            'maximum': 1000,
+            'suffix': ' spikes',
+            'enabled_by': 'use_total',
+        },
+    ]
+    dialog = ViewSettingsDialog('View settings', fields)
+    qtbot.addWidget(dialog)
+
+    total = dialog.form.get_widget('total')
+    assert not total.isEnabled()
+    dialog.form.get_widget('use_total').setChecked(True)
+    total.setValue(600)
+
+    assert total.isEnabled()
+    assert dialog.values() == {'total': 600, 'use_total': True}
 
 
 # ------------------------------------------------------------------------------
