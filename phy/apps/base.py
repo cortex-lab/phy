@@ -115,6 +115,9 @@ def _sample_spikes_evenly(spike_ids, n_spikes):
 
 def _select_spikes_evenly(selector, n_spikes, cluster_ids, **kwargs):
     """Use phylib's even selector when available, with a 2.7-compatible fallback."""
+    # TODO: After phylib releases the even/disjoint selection APIs and phy raises
+    # its minimum phylib version, remove this fallback and the constructor check
+    # in `_set_selector()`.
     if 'sample_evenly' in inspect.signature(selector).parameters:
         return selector(n_spikes, cluster_ids, sample_evenly=True, **kwargs)
 
@@ -1290,7 +1293,8 @@ class BaseController:
             'chunk_bounds': chunk_bounds,
             'n_chunks_kept': self.n_chunks_kept,
         }
-        # phylib 2.7 does not yet expose this optimization hint.
+        # phylib 2.7 does not yet expose this optimization hint. See the release
+        # TODO in `_select_spikes_evenly()`.
         if 'spikes_are_disjoint' in inspect.signature(SpikeSelector).parameters:
             selector_kwargs['spikes_are_disjoint'] = True
         self.selector = SpikeSelector(**selector_kwargs)
