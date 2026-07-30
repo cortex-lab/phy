@@ -10,19 +10,35 @@ limits do not discard spikes from the dataset or change the saved clustering.
 | Controller setting | Default | Applied to |
 | --- | ---: | --- |
 | `n_spikes_waveforms` | 100 | Per-cluster ceiling in the Waveform View |
-| `n_spikes_waveforms_total` | 400 | All displayed Waveform View clusters together |
+| `n_spikes_waveforms_total` | `None` | Optional shared ceiling for displayed Waveform View clusters |
 | `batch_size_waveforms` | 10 | Persisted compatibility setting; the current selector does not read it |
 | `n_spikes_features` | 2,500 | Each displayed cluster in the Feature View |
 | `n_spikes_features_background` | 2,500 | Background points across the recording |
 | `n_spikes_amplitudes` | 10,000 | Per-cluster ceiling in the Amplitude View |
-| `n_spikes_amplitudes_total` | 40,000 | All selected Amplitude View clusters together |
+| `n_spikes_amplitudes_total` | `None` | Optional shared ceiling for selected Amplitude View clusters |
 | `n_spikes_correlograms` | 100,000 | Per-cluster ceiling for ACG/CCG computation |
-| `n_spikes_correlograms_total` | 400,000 | All clusters in one ACG/CCG computation |
+| `n_spikes_correlograms_total` | `None` | Optional shared ceiling for one ACG/CCG computation |
 
-The total budgets are divided fairly among the displayed clusters. Small
-clusters keep all of their available spikes and their unused shares are
-redistributed to larger clusters. Setting a total budget to `None` restores
-the corresponding per-cluster-only behavior.
+The default `None` total settings give every cluster the corresponding
+per-cluster budget, so selecting more clusters does not reduce the sampling
+accuracy of any one cluster. For example, eight large clusters in the
+Waveform View may each display 100 waveforms. `None` disables only the
+secondary shared cap; it does not disable the per-cluster limit or load all
+spikes.
+
+Set a total setting to an integer to opt into a fixed shared budget when
+predictable runtime or memory use matters more. For example,
+`n_spikes_waveforms_total = 400` divides 400 waveforms across the displayed
+clusters, subject to the 100-per-cluster ceiling. Small clusters keep all
+their available spikes and leave their unused shares for larger clusters.
+
+You can change these values without a plugin: open the Waveform, Amplitude, or
+Correlogram view menu and choose **View settings**. **Use per-cluster budget**
+controls the corresponding `n_spikes_*` value, and **Use shared total budget**
+controls `n_spikes_*_total`. Disabling either checkbox stores `None` for that
+limit. The Amplitude dialog also exposes
+`n_spikes_amplitudes_background`. Changes apply immediately and are saved in
+the global Template GUI state when phy closes normally.
 
 Other common cluster display limits are eight clusters for the Waveform,
 Feature, Amplitude, and scatter views, and 20 for histogram and Probe views.
@@ -51,9 +67,19 @@ controlled separately by the controller's `n_chunks_kept` implementation.
   raw waveforms.
 - Background feature points are regularly spaced through the full spike list,
   independently of cluster identity.
-- Correlograms use a random subset bounded by both
-  `n_spikes_correlograms` per cluster and
-  `n_spikes_correlograms_total` across the view.
+- Correlograms use a random subset bounded by
+  `n_spikes_correlograms` per cluster. If
+  `n_spikes_correlograms_total` is an integer, it also bounds the entire
+  view.
+
+The Firing Rate View is different: it uses every spike in each displayed
+cluster, with no spike-sampling budget. Its bin count and visible time range
+control the histogram. The time range is saved in the dataset's `.phy/state.json`
+and is not reused for fresh datasets.
+
+The Correlogram, Firing Rate, and ISI view menus expose their bin and range
+parameters together under **View settings**. These display parameters are
+dataset-local; changing them does not affect the controller spike budgets.
 
 Some actions explicitly request `load_all=True` and bypass a display limit.
 That does not turn the corresponding view setting into a global analysis
@@ -107,6 +133,8 @@ class ExampleNspikesViewsPlugin(IPlugin):
         @connect(sender=controller)
         def on_gui_ready(sender, gui):
             controller.n_spikes_waveforms = 500
+            # Optional shared totals: remove these three lines, or use None,
+            # to retain the same per-cluster accuracy as selections grow.
             controller.n_spikes_waveforms_total = 2000
             controller.n_spikes_features = 5000
             controller.n_spikes_features_background = 5000

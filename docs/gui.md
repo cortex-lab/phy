@@ -19,6 +19,25 @@ Each graphical view has controls for:
 
 The arrangement and most view settings are restored the next time phy opens.
 
+### View settings
+
+Open a plot's view-specific menu and choose **View settings** to edit related
+parameters together:
+
+* Waveform, Amplitude, and Correlogram views expose independent per-cluster
+  spike budgets and an optional shared total budget.
+* The Amplitude View also exposes its gray background-spike budget.
+* The Correlogram View also exposes bin size, window size, and refractory
+  period.
+* Firing Rate and ISI views expose bin size and the displayed range. These
+  views use every spike in the displayed clusters and therefore have no
+  spike-sampling budget.
+
+Enabled budget checkboxes map directly to integer controller settings.
+Disabling one maps that setting to `None`. Changes apply and replot
+immediately. The existing snippets and mouse-wheel controls remain available
+for quick single-setting changes.
+
 ## Selecting clusters
 
 The Cluster View contains the primary selection. The first selected cluster is blue, the second
@@ -89,5 +108,10 @@ settings, and `--clear-cache` to rebuild dataset computations:
 phy template-gui params.py --clear-state
 phy template-gui params.py --clear-cache
 ```
+
+Spike-budget controller settings are global and carry across datasets.
+Correlogram bin/window/refractory settings and Firing Rate/ISI bin/range
+settings are dataset-specific, because appropriate display scales can depend
+on the recording.
 
 For more detail, see [Configuration and customization](configuration.md).

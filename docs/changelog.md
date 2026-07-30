@@ -8,7 +8,7 @@ This file records user-visible changes to phy. The format is based on
 
 Changes below are available from the latest source checkout but have not yet
 been included in a stable release. The current entries cover all user-visible
-changes committed on 23 July 2026; test-only commits are represented by the
+changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
 ### Added
@@ -27,17 +27,29 @@ behavior they verify rather than listed separately.
   supported.
 - Configure the total number of gray background points in the Amplitude View
   with `n_spikes_amplitudes_background` (10,000 by default).
-- Waveform, Amplitude, and Correlogram views use fixed total spike budgets
-  across multi-cluster selections, while retaining their per-cluster ceilings.
+- Waveform, Amplitude, and Correlogram views support optional fixed total spike
+  budgets across multi-cluster selections. They use fixed per-cluster budgets
+  by default so sampling accuracy does not decrease as selections grow.
+- Configure per-cluster and optional shared spike budgets from **View
+  settings** in the Waveform, Amplitude, and Correlogram view menus.
+  Correlogram, Firing Rate, and ISI settings dialogs also expose their bin,
+  window, range, and related display parameters.
 - Hidden or inactive-tab Waveform, Amplitude, and Correlogram views defer
   selection plotting until they become visible, retaining only the latest
   selection.
 
 ### Fixed
 
+- Start the GUI with released phylib versions that do not yet expose the
+  disjoint-spike selection optimization hint.
+- Keep dataset-local view settings isolated from global GUI state. In
+  particular, a Firing Rate time range saved or leaked from another recording
+  no longer clips spikes in a fresh dataset.
 - Cluster and Similarity View filters only take keyboard focus after an
   explicit click, including when a table is first shown or refreshed. Enter,
   Escape, and outside clicks release filter focus so global shortcuts resume.
+- Display metadata columns containing multiple values in the Cluster and
+  Similarity Views instead of leaving their cells blank.
 
 ### Changed
 

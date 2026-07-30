@@ -78,7 +78,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             'refractory_period',
             'uniform_normalization',
         )
-        self.local_state_attrs += ()
+        self.local_state_attrs += ('bin_size', 'window_size', 'refractory_period')
         self.canvas.set_layout(layout='grid')
 
         # Outside margin to show labels.

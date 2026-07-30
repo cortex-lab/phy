@@ -14,6 +14,7 @@ import sys
 from contextlib import contextmanager
 from functools import partial
 
+import numpy as np
 from phylib.utils import connect, emit
 from phylib.utils._misc import _CustomEncoder, _pretty_floats
 from phylib.utils._types import _is_integer
@@ -30,6 +31,8 @@ from .qt import (
     QBrush,
     QCheckBox,
     QColor,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QEvent,
     QGridLayout,
@@ -362,8 +365,13 @@ class _TableModel(QAbstractTableModel):
                 return ''
             # Qt's model/view cannot display numpy scalars (np.int64/np.float64),
             # which render as blank cells; convert them to native Python types.
-            if hasattr(value, 'item'):
+            if isinstance(value, np.generic):
                 value = value.item()
+            if role == Qt.DisplayRole:
+                if isinstance(value, np.ndarray):
+                    value = value.tolist()
+                if isinstance(value, (list, tuple)):
+                    return ', '.join(map(str, value))
             # Keep the raw value available for sorting and filtering, while making
             # spike counts easier to scan in the cluster and similarity tables.
             if role == Qt.DisplayRole and column == 'n_spikes' and isinstance(value, int):
@@ -1207,7 +1215,18 @@ class KeyValueWidget(QWidget):
         self._items = []
         self._layout = QGridLayout(self)
 
-    def add_pair(self, name, default=None, vtype=None):
+    def add_pair(
+        self,
+        name,
+        default=None,
+        vtype=None,
+        label=None,
+        minimum=None,
+        maximum=None,
+        decimals=None,
+        suffix=None,
+        tooltip=None,
+    ):
         """Add a key-value pair.
 
         Parameters
@@ -1236,13 +1255,15 @@ class KeyValueWidget(QWidget):
             widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
-            widget.setMinimum(-(10**9))
-            widget.setMaximum(10**9)
+            widget.setMinimum(-(10**9) if minimum is None else minimum)
+            widget.setMaximum(10**9 if maximum is None else maximum)
             widget.setValue(default or 0)
         elif vtype == 'float':
             widget = QDoubleSpinBox(self)
-            widget.setMinimum(-1e9)
-            widget.setMaximum(+1e9)
+            widget.setMinimum(-1e9 if minimum is None else minimum)
+            widget.setMaximum(+1e9 if maximum is None else maximum)
+            if decimals is not None:
+                widget.setDecimals(decimals)
             widget.setValue(default or 0)
         elif vtype == 'bool':
             widget = QCheckBox(self)
@@ -1250,13 +1271,19 @@ class KeyValueWidget(QWidget):
         else:  # pragma: no cover
             raise ValueError(f'Not supported vtype: {vtype}.')
 
+        if suffix and hasattr(widget, 'setSuffix'):
+            widget.setSuffix(suffix)
+        if tooltip:
+            widget.setToolTip(tooltip)
         widget.setMaximumWidth(400)
 
-        label = QLabel(name, self)
-        label.setMaximumWidth(150)
+        label_widget = QLabel(label or name, self)
+        label_widget.setMaximumWidth(220)
+        if tooltip:
+            label_widget.setToolTip(tooltip)
 
         row = len(self._items)
-        self._layout.addWidget(label, row, 0)
+        self._layout.addWidget(label_widget, row, 0)
         self._layout.addWidget(widget, row, 1)
         self.setLayout(self._layout)
         self._items.append((name, vtype, default, widget))
@@ -1292,9 +1319,9 @@ class KeyValueWidget(QWidget):
                 elif vtype == 'multiline':
                     return str(widget.toPlainText())
                 elif vtype == 'int':
-                    return int(widget.text())
+                    return int(widget.value())
                 elif vtype == 'float':
-                    return float(widget.text().replace(',', '.'))
+                    return float(widget.value())
                 elif vtype == 'bool':
                     return bool(widget.isChecked())
 
@@ -1305,3 +1332,52 @@ class KeyValueWidget(QWidget):
     def to_dict(self):
         """Return the key-value mapping dictionary as specified by the user inputs and defaults."""
         return {name: self.get_value(name) for name in self.names}
+
+
+class ViewSettingsDialog(QDialog):
+    """A reusable typed settings form for view-specific parameters."""
+
+    def __init__(self, title, fields, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        layout = QVBoxLayout(self)
+        self.form = KeyValueWidget(self)
+        layout.addWidget(self.form)
+
+        for field in fields:
+            options = dict(field)
+            name = options.pop('name')
+            enabled_by = options.pop('enabled_by', None)
+            self.form.add_pair(name, **options)
+            if enabled_by:
+                controller = self.form.get_widget(enabled_by)
+                widget = self.form.get_widget(name)
+                widget.setEnabled(controller.isChecked())
+                controller.toggled.connect(widget.setEnabled)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def values(self):
+        """Return the settings currently entered in the form."""
+        return self.form.to_dict()
+
+
+def view_settings_dialog(title, fields, parent=None, validate=None):
+    """Show a typed settings dialog and return its values, or ``None`` when cancelled.
+
+    ``validate`` may return an error message. The dialog remains open until the
+    values are valid or the user cancels it.
+    """
+    dialog = ViewSettingsDialog(title, fields, parent=parent)
+    while dialog.exec_() == QDialog.Accepted:
+        values = dialog.values()
+        error = validate(values) if validate else None
+        if not error:
+            return values
+        from .qt import message_box
+
+        message_box(error, title=title, level='warning')
+    return None

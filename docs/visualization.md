@@ -184,9 +184,15 @@ Snippets
 
 This view shows the waveforms of a selection of spikes, on the relevant channels (based on amplitude and proximity to the peak waveform amplitude channel).
 
-The parameters `controller.n_spikes_waveforms=100` and
-`controller.n_spikes_waveforms_total=400`, by default, specify the maximum
-number of spikes per cluster and across all displayed clusters, respectively.
+The parameter `controller.n_spikes_waveforms=100` specifies the maximum number
+of spikes per cluster. By default,
+`controller.n_spikes_waveforms_total=None`, so every displayed cluster gets
+its own budget. Set the total to an integer, such as `400`, to share that fixed
+number across all displayed clusters.
+Choose **View settings** in the Waveform View menu to edit both limits
+together. Each limit has its own enable checkbox; disabling a limit stores
+`None`. Changes replot immediately, while the `:wn` snippet remains available
+for quickly changing only the per-cluster value.
 The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
 
 You can select a channel with **Control+click** (this impacts the feature view). You can change the scaling of the channel positions and the waveforms.
@@ -313,13 +319,18 @@ class CorrelogramLimitPlugin(IPlugin):
 
 The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
-The parameters `controller.n_spikes_correlograms` (100,000 by default) and
-`controller.n_spikes_correlograms_total` (400,000 by default) bound the number
-of spikes per selected cluster and across the entire auto- and
-cross-correlogram calculation. These spikes are picked randomly. See
-[Spike sampling and performance](performance.md) before increasing them.
+The parameter `controller.n_spikes_correlograms` (100,000 by default) bounds
+the number of spikes per selected cluster. The default
+`controller.n_spikes_correlograms_total=None` preserves that per-cluster
+budget as the selection grows. Set the total to an integer to bound the entire
+auto- and cross-correlogram calculation. These spikes are picked randomly.
+See [Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
+Choose **View settings** in the view menu to edit the two spike-budget modes,
+bin size, window size, and refractory period together. The budget settings are
+global controller preferences; the bin, window, and refractory settings are
+saved for the current dataset.
 
 *Note*: the central peak is artificially removed to avoid artifacts. Decrease the bin size (e.g. to 0.1 ms) if you need to visualize fine temporal structure.
 
@@ -448,9 +459,13 @@ You can toggle between different types of amplitudes by pressing `a`:
 
 #### Number of spikes.
 
-The parameters `controller.n_spikes_amplitudes=10000` and
-`controller.n_spikes_amplitudes_total=40000`, by default, bound the number of
-selected spikes per cluster and across the Amplitude View.
+The parameter `controller.n_spikes_amplitudes=10000` bounds the selected
+spikes per cluster. The default `controller.n_spikes_amplitudes_total=None`
+preserves that budget for every selected cluster. Set the total to an integer
+to share a fixed budget across the Amplitude View.
+Choose **View settings** in the Amplitude View menu to edit the per-cluster,
+optional shared total, and gray background budgets together. Changes take
+effect immediately and are saved as global controller preferences.
 
 *Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
 
@@ -488,7 +503,13 @@ Keyboard shortcuts
 This generic view shows histogram related to the selected clusters. Built-in statistics views include:
 
 * Inter-spike intervals (computed using all spikes for the selected clusters)
-* Instantenous firing-rate (computed using all spikes for the selected clusters)
+* Instantaneous firing rate (computed using all spikes for the selected clusters)
+
+The Firing Rate View does not sample or impose a spike budget. Its number of
+bins and visible time range only control how all cluster spikes are grouped.
+Choose **View settings** in the Firing Rate or ISI view menu to edit bin size
+and the displayed range together. These parameters are dataset-local, so
+values saved for one recording do not clip or coarsen a fresh dataset.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 

@@ -40,6 +40,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.screen_size](#phyguiscreen_size)
 * [phy.gui.screenshot](#phyguiscreenshot)
 * [phy.gui.thread_pool](#phyguithread_pool)
+* [phy.gui.view_settings_dialog](#phyguiview_settings_dialog)
 * [phy.gui.Actions](#phyguiactions)
 * [phy.gui.Debouncer](#phyguidebouncer)
 * [phy.gui.DockWidget](#phyguidockwidget)
@@ -49,6 +50,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.gui.KeyValueWidget](#phyguikeyvaluewidget)
 * [phy.gui.Snippets](#phyguisnippets)
 * [phy.gui.Table](#phyguitable)
+* [phy.gui.ViewSettingsDialog](#phyguiviewsettingsdialog)
 * [phy.gui.Worker](#phyguiworker)
 
 
@@ -728,6 +730,18 @@ Return a QThreadPool instance that can `start()` Worker instances for multithrea
 w = Worker(print, "hello world")
 thread_pool().start(w)
 ```
+
+---
+
+#### phy.gui.view_settings_dialog
+
+
+**`phy.gui.view_settings_dialog(title, fields, parent=None, validate=None)`**
+
+Show a typed settings dialog and return its values, or ``None`` when cancelled.
+
+``validate`` may return an error message. The dialog remains open until the
+values are valid or the user cancels it.
 
 ---
 
@@ -1505,7 +1519,7 @@ user input.
 #### KeyValueWidget.add_pair
 
 
-**`KeyValueWidget.add_pair(self, name, default=None, vtype=None)`**
+**`KeyValueWidget.add_pair(self, name, default=None, vtype=None, label=None, minimum=None, maximum=None, decimals=None, suffix=None, tooltip=None)`**
 
 Add a key-value pair.
 
@@ -1976,6 +1990,21 @@ sizeHint(self) -> QSize
 **`Table.debouncer`**
 
 
+
+---
+
+### phy.gui.ViewSettingsDialog
+
+A reusable typed settings form for view-specific parameters.
+
+---
+
+#### ViewSettingsDialog.values
+
+
+**`ViewSettingsDialog.values(self)`**
+
+Return the settings currently entered in the form.
 
 ---
 
@@ -7675,6 +7704,15 @@ Decrease the scaling parameter.
 
 ---
 
+#### FiringRateView.edit_view_settings
+
+
+**`FiringRateView.edit_view_settings(self)`**
+
+Edit the histogram bin size and displayed range.
+
+---
+
 #### FiringRateView.get_clusters_data
 
 
@@ -7909,6 +7947,15 @@ Decrease the scaling parameter.
 
 ---
 
+#### HistogramView.edit_view_settings
+
+
+**`HistogramView.edit_view_settings(self)`**
+
+Edit the histogram bin size and displayed range.
+
+---
+
 #### HistogramView.get_clusters_data
 
 
@@ -8133,6 +8180,15 @@ Close the view.
 **`ISIView.decrease(self)`**
 
 Decrease the scaling parameter.
+
+---
+
+#### ISIView.edit_view_settings
+
+
+**`ISIView.edit_view_settings(self)`**
+
+Edit the histogram bin size and displayed range.
 
 ---
 

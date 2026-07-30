@@ -242,6 +242,18 @@ def test_cluster_view_formats_spike_counts(qtbot, gui):
     assert index.data(Qt.EditRole) == 1234567
 
 
+def test_cluster_view_formats_multiple_values(qtbot, gui):
+    cv = ClusterView(
+        gui,
+        data=[{'id': 1, 'n_spikes': 10, 'tags': ['tag_a', 'tag_b']}],
+        columns=['tags'],
+    )
+    _wait_until_table_ready(qtbot, cv)
+
+    index = cv._proxy.index(0, cv.columns.index('tags'))
+    assert index.data(Qt.DisplayRole) == 'tag_a, tag_b'
+
+
 def test_similarity_view_1(qtbot, gui):
     sv = SimilarityView(gui)
     _wait_until_table_ready(qtbot, sv)
