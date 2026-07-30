@@ -14,6 +14,7 @@ import sys
 from contextlib import contextmanager
 from functools import partial
 
+import numpy as np
 from phylib.utils import connect, emit
 from phylib.utils._misc import _CustomEncoder, _pretty_floats
 from phylib.utils._types import _is_integer
@@ -364,8 +365,13 @@ class _TableModel(QAbstractTableModel):
                 return ''
             # Qt's model/view cannot display numpy scalars (np.int64/np.float64),
             # which render as blank cells; convert them to native Python types.
-            if hasattr(value, 'item'):
+            if isinstance(value, np.generic):
                 value = value.item()
+            if role == Qt.DisplayRole:
+                if isinstance(value, np.ndarray):
+                    value = value.tolist()
+                if isinstance(value, (list, tuple)):
+                    return ', '.join(map(str, value))
             # Keep the raw value available for sorting and filtering, while making
             # spike counts easier to scan in the cluster and similarity tables.
             if role == Qt.DisplayRole and column == 'n_spikes' and isinstance(value, int):
