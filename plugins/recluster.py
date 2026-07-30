@@ -1,16 +1,4 @@
-"""Show how to add a recluster action based on the PC features.
-
-This is the Template GUI counterpart of the Kwik GUI's `recluster` action. No
-spike detection is re-run: the spikes and their PC features already exist in the
-sorting output, and only the cluster assignment is recomputed.
-
-The default algorithm is ISO-SPLIT, the one MountainSort uses, if the `isosplit`
-package is installed. It is non-parametric: it decides how many subclusters there
-are by testing each candidate split for unimodality, so it does not assume the
-clusters are Gaussian. Bursting and drifting units are not, which is why a
-Gaussian mixture tends to cut them in half. The mixture is kept as a fallback and
-for the case where you want to impose the number of subclusters yourself.
-"""
+"""Show how to recluster selected spikes from their PC features."""
 
 import logging
 
@@ -20,49 +8,35 @@ from phy import IPlugin, connect
 
 logger = logging.getLogger('phy')
 
-# Number of subclusters tried when the count is chosen automatically by the mixture.
 MAX_CLUSTERS = 8
-# The GMM is fit on at most this many spikes, then applied to all of them.
-MAX_SPIKES_FIT = 20000
-# Features are reduced to at most this many dimensions before clustering.
 MAX_DIMS = 10
-# Passed to isosplit(). LOWERING it yields more subclusters -- note that this is the
-# opposite of what the isosplit 0.1.4 docstring claims. Lowering it is a blunt
-# instrument: on synthetic data, 1.5 already splits a genuinely single unit in two,
-# and the count is not monotonic in the threshold. To split a cluster ISO-SPLIT
-# considers unimodal, imposing the number of subclusters is the controlled option.
+MAX_SPIKES_FIT = 20_000
+MAX_SPIKES_RECLUSTER = 20_000
 DIP_THRESHOLD = 2.0
 
 
 def _reduce(x):
-    """Cut the features down to a few dimensions.
-
-    Deliberately not whitened. Only the leading components carry the cluster
-    separation; the rest are noise, and rescaling them all to unit variance
-    amplifies the noise directions until the separation is buried.
-    """
+    """Reduce features to the leading principal components."""
     from sklearn.decomposition import PCA
 
-    n_components = min(MAX_DIMS, x.shape[1], x.shape[0])
+    n_components = min(MAX_DIMS, x.shape[0], x.shape[1])
     return PCA(n_components=n_components, whiten=False, random_state=0).fit_transform(x)
 
 
 def _isosplit(x, dip_threshold=None):
-    """Cluster an array with ISO-SPLIT. Returns None if the package is missing."""
+    """Cluster with ISO-SPLIT, or return None when it is unavailable."""
     try:
         from isosplit import isosplit
     except ImportError:
         return None
     dip = DIP_THRESHOLD if dip_threshold is None else dip_threshold
-    # isosplit() labels from 1; phy wants them relative to the selection.
     return isosplit(x, dip_threshold=dip) - 1
 
 
 def _fit_predict(x, n_clusters=None):
-    """Cluster an array with a Gaussian mixture, choosing the number of components by BIC."""
+    """Cluster with a Gaussian mixture, selecting the component count by BIC."""
     from sklearn.mixture import GaussianMixture
 
-    # Fit on a subsample of large clusters, so that the action stays responsive.
     if len(x) > MAX_SPIKES_FIT:
         rng = np.random.default_rng(0)
         x_fit = x[rng.choice(len(x), MAX_SPIKES_FIT, replace=False)]
@@ -72,78 +46,100 @@ def _fit_predict(x, n_clusters=None):
     def _gmm(n):
         return GaussianMixture(n_components=n, covariance_type='full', random_state=0).fit(x_fit)
 
-    if n_clusters:
+    if n_clusters is not None:
         best = _gmm(n_clusters)
     else:
-        # The number of components is capped by the sample size, as a full covariance
-        # matrix cannot be estimated from fewer spikes than dimensions.
         max_clusters = max(1, min(MAX_CLUSTERS, len(x_fit) // (x.shape[1] + 1)))
         candidates = [_gmm(n) for n in range(1, max_clusters + 1)]
         best = min(candidates, key=lambda gmm: gmm.bic(x_fit))
         logger.info('Selected %d subclusters by BIC.', best.n_components)
-
     return best.predict(x)
+
+
+def _recluster(controller, n_clusters=None, dip_threshold=None):
+    """Recluster the current selection and split it when multiple groups are found."""
+    cluster_ids = list(controller.supervisor.selected)
+    if not cluster_ids:
+        logger.warning('No cluster selected, cannot recluster.')
+        return
+    if getattr(controller.model, 'features', None) is None:
+        logger.warning('No PC features are available, cannot recluster.')
+        return
+
+    spike_ids = controller.supervisor.clustering.spikes_in_clusters(cluster_ids)
+    features_rows = getattr(controller.model, 'features_rows', None)
+    if features_rows is not None:
+        spike_ids = np.intersect1d(spike_ids, features_rows)
+    if len(spike_ids) < 2:
+        logger.warning('Not enough spikes with features, cannot recluster.')
+        return
+    if len(spike_ids) > MAX_SPIKES_RECLUSTER:
+        logger.warning(
+            'The selection has %d spikes; reclustering is limited to %d.',
+            len(spike_ids),
+            MAX_SPIKES_RECLUSTER,
+        )
+        return
+
+    if n_clusters is not None:
+        try:
+            n_clusters = int(n_clusters)
+        except (TypeError, ValueError):
+            logger.warning('The number of subclusters must be an integer.')
+            return
+        if not 2 <= n_clusters <= len(spike_ids):
+            logger.warning('The number of subclusters must be between 2 and %d.', len(spike_ids))
+            return
+    if dip_threshold is not None:
+        try:
+            dip_threshold = float(dip_threshold)
+        except (TypeError, ValueError):
+            logger.warning('The dip threshold must be a positive number.')
+            return
+        if not np.isfinite(dip_threshold) or dip_threshold <= 0:
+            logger.warning('The dip threshold must be a positive number.')
+            return
+
+    channels = [np.asarray(controller.get_best_channels(c)) for c in cluster_ids]
+    channels = [channel_ids for channel_ids in channels if len(channel_ids)]
+    if not channels:
+        logger.warning('No channels are available, cannot recluster.')
+        return
+    channel_ids = np.unique(np.concatenate(channels))
+    bunch = controller._get_spike_features(spike_ids, channel_ids)
+    data = getattr(bunch, 'data', None)
+    if data is None or not np.size(data):
+        logger.warning('No PC features are available, cannot recluster.')
+        return
+
+    x = np.asarray(data).reshape((len(spike_ids), -1))
+    if not np.all(np.isfinite(x)):
+        logger.warning('PC features contain invalid values, cannot recluster.')
+        return
+    x = _reduce(x)
+    logger.info('Reclustering %d spikes on %d channels.', len(spike_ids), len(channel_ids))
+
+    labels = None if n_clusters is not None else _isosplit(x, dip_threshold=dip_threshold)
+    if labels is None:
+        labels = _fit_predict(x, n_clusters=n_clusters)
+    labels = np.asarray(labels)
+    if labels.shape != spike_ids.shape:
+        logger.warning('The clustering algorithm returned an invalid assignment.')
+        return
+    if len(np.unique(labels)) < 2:
+        logger.info('Reclustering found a single cluster, nothing to split.')
+        return
+    controller.supervisor.actions.split(spike_ids, labels)
 
 
 class ExampleReclusterPlugin(IPlugin):
     def attach_to_controller(self, controller):
-        def _get_spike_ids(cluster_ids):
-            """Return all spikes of the selected clusters that have features."""
-            spike_ids = controller.supervisor.clustering.spikes_in_clusters(cluster_ids)
-            # Some models only store features for a subset of the spikes.
-            features_rows = getattr(controller.model, 'features_rows', None)
-            if features_rows is not None:  # pragma: no cover
-                spike_ids = np.intersect1d(spike_ids, features_rows)
-            return spike_ids
-
-        def _get_channel_ids(cluster_ids):
-            """Return the union of the best channels of the selected clusters."""
-            channel_ids = [controller.get_best_channels(c) for c in cluster_ids]
-            return np.unique(np.concatenate(channel_ids))
-
-        def _recluster(n_clusters=None, dip_threshold=None):
-            cluster_ids = controller.supervisor.selected
-            if not cluster_ids:
-                logger.warning('No cluster selected, cannot recluster.')
-                return
-
-            spike_ids = _get_spike_ids(cluster_ids)
-            if len(spike_ids) < 2:
-                logger.warning('Not enough spikes with features, cannot recluster.')
-                return
-
-            # Same features as the ones the feature view is showing. We call
-            # _get_spike_features() rather than _get_features(), because the latter is
-            # disk-cached and we would be caching every cluster we ever recluster.
-            channel_ids = _get_channel_ids(cluster_ids)
-            bunch = controller._get_spike_features(spike_ids, channel_ids)
-
-            # (n_spikes, n_channels, n_pcs) -> (n_spikes, n_channels * n_pcs)
-            x = _reduce(bunch.data.reshape((len(spike_ids), -1)))
-            logger.info('Reclustering %d spikes on %d channels.', len(spike_ids), len(channel_ids))
-
-            # ISO-SPLIT picks the number of subclusters itself, so it cannot honour an
-            # explicit n_clusters: fall back to the mixture in that case.
-            labels = None if n_clusters else _isosplit(x, dip_threshold=dip_threshold)
-            if labels is None:
-                labels = _fit_predict(x, n_clusters=n_clusters)
-            assert labels.shape == spike_ids.shape
-
-            if len(np.unique(labels)) == 1:
-                logger.info(
-                    'Reclustering found a single cluster, nothing to split. Lower the dip '
-                    'threshold, or impose the number of subclusters, to split it anyway.'
-                )
-                return
-            controller.supervisor.actions.split(spike_ids, labels)
-
         @connect
         def on_gui_ready(sender, gui):
             @controller.supervisor.actions.add(shortcut='alt+k', set_busy=True)
             def recluster():
-                """Recluster the selected clusters with ISO-SPLIT, which picks the number
-                of subclusters itself."""
-                _recluster()
+                """Recluster with ISO-SPLIT, falling back to a Gaussian mixture."""
+                _recluster(controller)
 
             @controller.supervisor.actions.add(
                 shortcut='shift+alt+k',
@@ -153,9 +149,8 @@ class ExampleReclusterPlugin(IPlugin):
                 prompt_default=lambda: 2,
             )
             def recluster_n(n_clusters):
-                """Recluster the selected clusters into a given number of subclusters,
-                using a Gaussian mixture."""
-                _recluster(n_clusters=int(n_clusters))
+                """Recluster into a requested number of subclusters."""
+                _recluster(controller, n_clusters=n_clusters)
 
             @controller.supervisor.actions.add(
                 shortcut='ctrl+alt+k',
@@ -165,6 +160,5 @@ class ExampleReclusterPlugin(IPlugin):
                 prompt_default=lambda: DIP_THRESHOLD,
             )
             def recluster_dip(dip_threshold):
-                """Recluster with ISO-SPLIT at a given dip threshold. Lower it below the
-                default of 2 to make it split more readily."""
-                _recluster(dip_threshold=float(dip_threshold))
+                """Recluster with a requested ISO-SPLIT dip threshold."""
+                _recluster(controller, dip_threshold=dip_threshold)

@@ -19,6 +19,6 @@
 * [ExampleNspikesViewsPlugin](n_spikes_views.py): Show how to increase the number of spikes used by several views.
 * [ExampleOpenGLViewPlugin](opengl_view.py): Show how to write a custom OpenGL view. This is for advanced users only.
 * [ExampleRawDataFilterPlugin](raw_data_filter.py): Show how to add a custom raw data filter for the TraceView and Waveform View
-* [ExampleReclusterPlugin](recluster.py): Show how to add a recluster action based on the PC features.
+* [ExampleReclusterPlugin](recluster.py): Show how to recluster selected spikes from their PC features.
 * [ExampleShortcutsPlugin](shortcuts.py): Show how to rebind or disable existing GUI keyboard shortcuts.
 * [ExampleWaveformUMAPPlugin](umap_view.py): Show how to write a custom dimension reduction view.
