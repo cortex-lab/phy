@@ -18,6 +18,14 @@ On your development computer:
 * Run `py.test phy --cov phy` to run all tests and get a coverage report.
 * Run `flake8 phy` to for linting.
 
+### Changelog
+
+Add every user-visible change to the `Unreleased` section of
+[`docs/changelog.md`](docs/changelog.md). Write concise entries from the user's
+perspective under the appropriate category; do not add separate entries for
+tests, refactors, formatting, or other internal-only work. Maintainers turn the
+unreleased section into a dated version when publishing a release.
+
 
 ### Git
 

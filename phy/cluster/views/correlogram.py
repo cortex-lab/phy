@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 from phylib.io.array import _clip
-from phylib.utils import Bunch
+from phylib.utils import Bunch, emit
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
@@ -42,6 +42,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     # Do not show too many clusters.
     max_n_clusters = 20
+    defer_hidden_updates = True
 
     _default_position = 'left'
     cluster_ids = ()
@@ -77,7 +78,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             'refractory_period',
             'uniform_normalization',
         )
-        self.local_state_attrs += ()
+        self.local_state_attrs += ('bin_size', 'window_size', 'refractory_period')
         self.canvas.set_layout(layout='grid')
 
         # Outside margin to show labels.
@@ -234,6 +235,19 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         else:
             self.text_visual.hide()
         self.canvas.update()
+
+    def on_mouse_release(self, e):
+        """Promote a similarity cluster after a stationary secondary click."""
+        if e.button != 'Right' or len(self.cluster_ids) < 2:
+            return
+        press_pos = self.canvas._mouse_press_position
+        if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
+            return
+        (i, j), _ = self.canvas.grid.box_map(e.pos)
+        logger.debug('Correlogram secondary click at %s maps to cell (%d, %d).', e.pos, i, j)
+        if i == j:
+            return
+        emit('request_promote_similar', self, self.cluster_ids[i], self.cluster_ids[j])
 
     def attach(self, gui):
         """Attach the view to the GUI."""

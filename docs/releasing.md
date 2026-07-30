@@ -3,6 +3,29 @@
 This page is for maintainers preparing TestPyPI or PyPI releases. It is not part of the
 user-facing release notes.
 
+## Maintain the changelog
+
+`docs/changelog.md` is the canonical version-by-version record of user-visible
+changes. Keep its first section titled `Unreleased — <development version>`,
+where the development version matches `pyproject.toml` and
+`phy/__init__.py`.
+
+Every pull request with a user-visible change should add a concise entry under
+`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, or `Security` in the
+unreleased section. Describe the effect on users rather than listing commits
+or test changes. Link an issue or pull request when it gives useful context.
+Pure tests, refactors, formatting, and other internal changes do not need
+separate entries.
+
+When preparing a release:
+
+1. Review the unreleased entries for completeness, accuracy, and duplicates.
+2. Replace the unreleased heading with the final version and release date.
+3. Add a fresh unreleased section for the next development version.
+4. Update the comparison links at the bottom of `docs/changelog.md`.
+5. Verify that the package version, changelog heading, release notes, tag, and
+   built artifacts all agree.
+
 ## Local release smoke test
 
 The repository contains a local packaging smoke test that mirrors the end-user install flow in an
@@ -159,17 +182,20 @@ make open-test SMOKE_VERSION=<version>
 
 After the final PyPI upload succeeds:
 
-1. Confirm the PyPI JSON index lists both the wheel and source distribution, and verify their
+1. Confirm the final changelog section, date, comparison links, and package
+   version agree.
+2. Confirm the PyPI JSON index lists both the wheel and source distribution, and verify their
    SHA-256 hashes against the files built from the release tag.
-2. Install the exact version from PyPI in a fresh environment with `make smoke-pypi
+3. Install the exact version from PyPI in a fresh environment with `make smoke-pypi
    SMOKE_VERSION=<version>` and complete the GUI check with `make open-pypi
    SMOKE_VERSION=<version>`.
-3. Create a non-prerelease GitHub release from the existing annotated tag. Attach the exact wheel
+4. Create a non-prerelease GitHub release from the existing annotated tag. Attach the exact wheel
    and source distribution already verified against PyPI; do not rebuild them.
-4. Verify the documentation build for the default branch and check the live release notes,
+5. Verify the documentation build for the default branch and check the live release notes,
    README badges, PyPI page, and GitHub release links.
-5. Publish the prepared community announcement only after PyPI, GitHub, and the documentation are
+6. Publish the prepared community announcement only after PyPI, GitHub, and the documentation are
    live.
-6. Close or update the release milestone. Keep the release branch until all public artifacts have
+7. Close or update the release milestone. Keep the release branch until all public artifacts have
    been checked, then remove it only with maintainer approval.
-7. Make any development-version bump on the default branch in a separate pull request.
+8. Make any development-version bump and fresh unreleased changelog section
+   on the default branch in a separate pull request.

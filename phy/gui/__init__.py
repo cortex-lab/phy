@@ -19,4 +19,4 @@ from .qt import (
 )
 from .gui import GUI, GUIState, DockWidget
 from .actions import Actions, Snippets
-from .widgets import Table, IPythonView, KeyValueWidget
+from .widgets import Table, IPythonView, KeyValueWidget, ViewSettingsDialog, view_settings_dialog

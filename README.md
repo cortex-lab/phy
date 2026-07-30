@@ -39,20 +39,24 @@ Current testing and maintenance work is focused on modern Linux, macOS, and Wind
 
 ## Installation
 
-Install phy in a fresh Python 3.10+ environment:
+The recommended installation uses
+[`uv`](https://docs.astral.sh/uv/getting-started/installation/), which installs
+phy and its Python dependencies in an isolated environment:
 
 ```bash
-python -m pip install --upgrade pip
-pip install phy
+uv tool install --python 3.12 phy
+phy --version
 ```
 
 This installs the GUI runtime dependencies as part of the main package.
 
-If you plan to use the legacy Kwik GUI, also install:
+The legacy Kwik GUI needs a regular virtual environment because one of its
+dependencies requires special build handling. See the installation guide for
+the tested `uv` commands.
 
-```bash
-pip install klusta klustakwik2
-```
+See the [installation guide](https://phy.readthedocs.io/en/latest/installation/)
+for instructions to install `uv`, legacy Kwik support, a `venv`/pip alternative,
+source checkouts, and installation verification.
 
 ## Quick start
 
@@ -70,6 +74,10 @@ phy template-describe params.py
 phy kwik-gui path/to/file.kwik
 phy trace-gui path/to/raw.bin --sample-rate 30000 --dtype int16 --n-channels 384
 ```
+
+Before curating your own data, review the
+[dataset requirements](https://phy.readthedocs.io/en/latest/dataset/) and follow
+the [first-ten-minutes guide](https://phy.readthedocs.io/en/latest/quickstart/).
 
 ## Available GUIs and commands
 
@@ -115,25 +123,32 @@ template_gui("params.py")
 
 ## Developer setup
 
-To work on phy itself in a fresh checkout:
+For a fresh editable installation using the latest commits of both phylib and phy:
 
 ```bash
-git clone git@github.com:cortex-lab/phy.git
+mkdir phy-source
+cd phy-source
+
+git clone https://github.com/cortex-lab/phylib.git
+git clone https://github.com/cortex-lab/phy.git
+
 cd phy
 uv sync --dev
+uv pip install --editable ../phylib
 ```
 
-If you are working on phy together with a local checkout of `phylib`, install that checkout in editable mode:
+Windows PowerShell instructions, update commands, and verification of the exact commits are in the
+[source installation guide](https://phy.readthedocs.io/en/latest/installation/#install-the-latest-phy-and-phylib-source).
 
-```bash
-git clone git@github.com:cortex-lab/phylib.git
-cd phylib
-pip install -e . --upgrade
-```
+## Documentation and help
 
-## Troubleshooting and docs
-
-* [Documentation](https://phy.readthedocs.io/en/latest/)
+* [Documentation home](https://phy.readthedocs.io/en/latest/)
+* [Installation](https://phy.readthedocs.io/en/latest/installation/)
+* [Preparing a dataset](https://phy.readthedocs.io/en/latest/dataset/)
+* [First-ten-minutes quickstart](https://phy.readthedocs.io/en/latest/quickstart/)
+* [Using the GUI](https://phy.readthedocs.io/en/latest/gui/)
+* [Performance and spike sampling](https://phy.readthedocs.io/en/latest/performance/)
+* [Changelog](https://phy.readthedocs.io/en/latest/changelog/)
 * [Release notes](https://phy.readthedocs.io/en/latest/release/)
 * [Troubleshooting](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [GitHub issues](https://github.com/cortex-lab/phy/issues)

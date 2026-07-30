@@ -6,6 +6,10 @@
 
 import numpy as np
 from phylib.io.mock import artificial_correlograms
+from phylib.utils import connect, unconnect
+
+from phy.gui.qt import QPoint, Qt
+from phy.plot.tests import mouse_click
 
 from ..correlogram import CorrelogramView
 from . import _stop_and_close
@@ -36,6 +40,30 @@ def test_correlogram_view(qtbot, gui):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
+    promoted = []
+
+    @connect(sender=v)
+    def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
+        promoted.append((cluster_id_a, cluster_id_b))
+
+    v.on_select(cluster_ids=[0, 2, 3])
+    width, height = v.canvas.get_size()
+    mouse_click(qtbot, v.canvas, (width / 2, height / 6), button='Right')
+    mouse_click(qtbot, v.canvas, (width / 6, height / 6), button='Right')
+
+    assert promoted == [(0, 2)]
+
+    # Trackpad secondary clicks may be held longer than BaseCanvas' 250 ms
+    # synthetic mouse-click threshold. The release should still be actionable.
+    pos = QPoint(round(width / 2), round(height / 6))
+    qtbot.mousePress(v.canvas, Qt.RightButton, pos=pos)
+    qtbot.wait(300)
+    qtbot.mouseRelease(v.canvas, Qt.RightButton, pos=pos)
+
+    assert promoted == [(0, 2), (0, 2)]
+
+    unconnect(on_request_promote_similar)
+
     v.toggle_normalization(True)
     v.toggle_labels(False)
     v.toggle_labels(True)
@@ -47,6 +75,7 @@ def test_correlogram_view(qtbot, gui):
     assert v.bin_size == 0.001
     assert v.window_size == 0.1
     assert v.refractory_period == 3e-3
+    assert set(v.local_state_attrs) == {'bin_size', 'window_size', 'refractory_period'}
 
     v.increase()
     v.decrease()

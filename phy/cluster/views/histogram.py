@@ -10,6 +10,7 @@ import logging
 import numpy as np
 from phylib.io.array import _clip
 
+from phy.gui.widgets import view_settings_dialog
 from phy.plot.visuals import HistogramVisual, TextVisual
 from phy.utils.color import selected_cluster_color
 
@@ -230,6 +231,11 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             prompt=True,
             prompt_default=lambda: self.x_max,
         )
+        self.actions.add(
+            self.edit_view_settings,
+            name='View settings',
+            show_shortcut=False,
+        )
         self.actions.separator()
 
     @property
@@ -293,6 +299,63 @@ class HistogramView(ScalingMixin, ManualClusteringView):
         logger.log(5, 'Change x max to %s for %s.', x_max, self.__class__.__name__)
         self.plot()
 
+    def edit_view_settings(self):
+        """Edit the histogram bin size and displayed range."""
+        values = view_settings_dialog(
+            f'{self.name} settings',
+            [
+                {
+                    'name': 'bin_size',
+                    'label': 'Bin size',
+                    'default': self.bin_size,
+                    'vtype': 'float',
+                    'minimum': 1e-6,
+                    'maximum': 10**9,
+                    'decimals': 6,
+                    'suffix': f' {self.bin_unit}',
+                    'tooltip': 'Width of each histogram bin.',
+                },
+                {
+                    'name': 'x_min',
+                    'label': 'Range minimum',
+                    'default': self.x_min or 0,
+                    'vtype': 'float',
+                    'minimum': 0,
+                    'maximum': 10**9,
+                    'decimals': 6,
+                    'suffix': f' {self.bin_unit}',
+                    'tooltip': 'Beginning of the displayed histogram range.',
+                },
+                {
+                    'name': 'x_max',
+                    'label': 'Range maximum',
+                    'default': self.x_max or 0,
+                    'vtype': 'float',
+                    'minimum': 1e-6,
+                    'maximum': 10**9,
+                    'decimals': 6,
+                    'suffix': f' {self.bin_unit}',
+                    'tooltip': 'End of the displayed histogram range.',
+                },
+            ],
+            parent=self.gui,
+            validate=lambda values: (
+                'Range maximum must be greater than range minimum.'
+                if values['x_max'] <= values['x_min']
+                else None
+            ),
+        )
+        if values is None:
+            return
+        factor = 1e-3 if self.bin_unit == 'ms' else 1
+        x_min = values['x_min'] * factor
+        x_max = values['x_max'] * factor
+        bin_size = values['bin_size'] * factor
+        self.x_min = x_min
+        self.x_max = x_max
+        self.n_bins = max(2, int(np.round((x_max - x_min) / bin_size)))
+        self.plot()
+
     def on_mouse_wheel(self, e):  # pragma: no cover
         """Change the scaling with the wheel."""
         super().on_mouse_wheel(e)
@@ -316,6 +379,7 @@ class ISIView(HistogramView):
     n_bins = int(x_max / 0.001)  # by default, 1 bin = 1 ms
     alias_char = 'isi'  # provide `:isisn` (set number of bins) and `:isim` (set max bin) snippets
     bin_unit = 'ms'  # user-provided bin values in milliseconds, but stored in seconds
+    _local_state_attrs = HistogramView._state_attrs
 
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
@@ -338,7 +402,7 @@ class FiringRateView(HistogramView):
     x_min = 0
 
     _state_attrs = ('n_bins', 'x_min')
-    _local_state_attrs = ('x_max',)  # depends on the duration of the dataset
+    _local_state_attrs = HistogramView._state_attrs
 
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',

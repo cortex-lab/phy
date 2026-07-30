@@ -432,7 +432,13 @@ class PlotVisual(BaseVisual):
 
         if x is None:
             x = [np.linspace(-1.0, 1.0, len(_)) for _ in y]
-        x = _as_list(x)
+        elif isinstance(x, np.ndarray) and x.ndim == 1:
+            # Multiple signals may share one x axis. Keep references to the
+            # small source row and expand it only when the final position
+            # buffer is assembled in set_data().
+            x = [x] * len(y)
+        else:
+            x = _as_list(x)
 
         # Remove empty elements.
         assert len(x) == len(y)
@@ -518,14 +524,20 @@ class PlotVisual(BaseVisual):
         color = np.repeat(color, n_samples, axis=0)
         assert color.shape == (n, 4)
 
-        # Generate signal index.
-        signal_index = np.repeat(np.arange(n_signals), n_samples)
-        signal_index = _get_array(signal_index, (n, 1))
+        # Generate signal index directly in the GPU attribute dtype.
+        signal_index = np.repeat(np.arange(n_signals, dtype=np.float32), n_samples).reshape((n, 1))
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
         if data.data_bounds is not None:
-            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            # A shared range can be broadcast across all positions. Waveform
+            # batches normally use one global range, so expanding four bounds
+            # values to every sample only creates a large temporary array and
+            # repeats identical range calculations.
+            if len(data.data_bounds) and np.all(data.data_bounds == data.data_bounds[0]):
+                data_bounds = data.data_bounds[:1].copy()
+            else:
+                data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
             self.data_range.from_bounds = data_bounds
             pos = self.transforms.apply(pos)
 
@@ -533,14 +545,17 @@ class PlotVisual(BaseVisual):
         masks = np.repeat(data.masks, n_samples, axis=0)
         assert masks.shape == (n, 1)
 
-        # Position and depth.
-        depth = np.repeat(data.depth, n_samples, axis=0)
-        pos_depth = np.c_[pos, depth]
+        # Position and depth. Build the final GPU attribute directly instead of
+        # concatenating a float64 array and then allocating another full-size
+        # array for the float32 conversion.
+        pos_depth = np.empty((n, 3), dtype=np.float32)
+        pos_depth[:, :2] = pos
+        pos_depth[:, 2:] = np.repeat(data.depth.astype(np.float32, copy=False), n_samples, axis=0)
 
-        self.program['a_position'] = pos_depth.astype(np.float32)
-        self.program['a_color'] = color.astype(np.float32)
-        self.program['a_signal_index'] = signal_index.astype(np.float32)
-        self.program['a_mask'] = masks.astype(np.float32)
+        self.program['a_position'] = pos_depth
+        self.program['a_color'] = color.astype(np.float32, copy=False)
+        self.program['a_signal_index'] = signal_index
+        self.program['a_mask'] = masks.astype(np.float32, copy=False)
         self.program['u_mask_max'] = _max(masks)
 
         self.emit_visual_set_data()

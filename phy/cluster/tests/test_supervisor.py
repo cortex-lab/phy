@@ -6,13 +6,16 @@
 
 # from contextlib import contextmanager
 
+import sys
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from phylib.utils import Bunch, connect, emit
-from pytest import fixture
+from phylib.utils import Bunch, connect, emit, unconnect
+from pytest import fixture, raises
 
 from phy.gui import GUI
-from phy.gui.qt import qInstallMessageHandler
+from phy.gui.actions import _get_shortcut_string
+from phy.gui.qt import QHeaderView, Qt, qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.gui.widgets import Barrier
 from phy.utils.context import Context
@@ -219,6 +222,7 @@ def data():
 def test_cluster_view_1(qtbot, gui, data):
     cv = ClusterView(gui, data=data)
     _wait_until_table_ready(qtbot, cv)
+    assert cv.debouncer.delay == 50
 
     cv.sort_by('n_spikes', 'asc')
     cv.select([1])
@@ -229,16 +233,75 @@ def test_cluster_view_1(qtbot, gui, data):
     assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
 
-def test_similarity_view_1(qtbot, gui, data):
-    sv = SimilarityView(gui, data=data)
+def test_cluster_view_formats_spike_counts(qtbot, gui):
+    cv = ClusterView(gui, data=[{'id': 1, 'n_spikes': 1234567}])
+    _wait_until_table_ready(qtbot, cv)
+
+    index = cv._proxy.index(0, cv.columns.index('n_spikes'))
+    assert index.data(Qt.DisplayRole) == '1,234,567'
+    assert index.data(Qt.EditRole) == 1234567
+
+
+def test_cluster_view_formats_multiple_values(qtbot, gui):
+    cv = ClusterView(
+        gui,
+        data=[{'id': 1, 'n_spikes': 10, 'tags': ['tag_a', 'tag_b']}],
+        columns=['tags'],
+    )
+    _wait_until_table_ready(qtbot, cv)
+
+    index = cv._proxy.index(0, cv.columns.index('tags'))
+    assert index.data(Qt.DisplayRole) == 'tag_a, tag_b'
+
+
+def test_similarity_view_1(qtbot, gui):
+    sv = SimilarityView(gui)
     _wait_until_table_ready(qtbot, sv)
+    assert sv.debouncer.delay == 50
 
     @connect(sender=sv)
     def on_request_similar_clusters(sender, cluster_id):
-        return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
+        if cluster_id == 5:
+            return [
+                {'id': 105, 'n_spikes': int('9' * 100), 'similarity': 0.9},
+                {'id': 115, 'n_spikes': int('8' * 90), 'similarity': 0.8},
+                {'id': 107, 'n_spikes': int('7' * 80), 'similarity': 0.7},
+            ]
+        return [
+            {'id': id, 'n_spikes': n_spikes, 'similarity': similarity}
+            for id, n_spikes, similarity in (
+                (106, 3, 0.3),
+                (116, 2, 0.2),
+                (108, 1, 0.1),
+            )
+        ]
+
+    header = sv.table_view.horizontalHeader()
+    vertical_header = sv.table_view.verticalHeader()
+    header_only_widths = [header.sectionSize(i) for i in range(header.count())]
 
     sv.reset([5])
+    qtbot.wait(1)
     _assert(sv.get_ids, [105, 115, 107])
+    fitted_widths = [header.sectionSize(i) for i in range(header.count())]
+    resize_modes = [header.sectionResizeMode(i) for i in range(header.count())]
+    row_heights = [vertical_header.sectionSize(i) for i in range(3)]
+    assert any(after > before for before, after in zip(header_only_widths, fitted_widths))
+    assert resize_modes == [QHeaderView.Interactive] * header.count()
+
+    sv.reset([6])
+    qtbot.wait(1)
+    _assert(sv.get_ids, [106, 116, 108])
+    assert [header.sectionSize(i) for i in range(header.count())] == fitted_widths
+    assert [header.sectionResizeMode(i) for i in range(header.count())] == resize_modes
+    assert [vertical_header.sectionSize(i) for i in range(3)] == row_heights
+
+    unconnect(on_request_similar_clusters)
+    sv.reset([7])
+    qtbot.wait(1)
+    _assert(sv.get_ids, [])
+    assert [header.sectionSize(i) for i in range(header.count())] == fitted_widths
+    assert [header.sectionResizeMode(i) for i in range(header.count())] == resize_modes
 
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
@@ -284,6 +347,32 @@ def _assert_selected(supervisor, sel):
 def test_select(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+
+
+def test_block_flushes_pending_selections(qtbot, supervisor):
+    supervisor.cluster_view.debouncer.delay = 60_000
+    supervisor.similarity_view.debouncer.delay = 60_000
+
+    supervisor.select([30])
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+
+    # This selection falls inside the debounce interval and remains pending until block().
+    supervisor.select([20])
+    assert supervisor.selected_clusters == [30]
+    supervisor.block()
+    assert supervisor.selected_clusters == [20]
+
+    similar_cluster_id = supervisor.similarity_view.get_ids()[0]
+    supervisor.similarity_view.select([similar_cluster_id])
+    supervisor.block()
+    assert supervisor.selected_similar == [similar_cluster_id]
+
+    next_similar_cluster_id = supervisor.similarity_view.get_ids()[1]
+    supervisor.similarity_view.select([next_similar_cluster_id])
+    assert supervisor.selected_similar == [similar_cluster_id]
+    supervisor.block()
+    assert supervisor.selected_similar == [next_similar_cluster_id]
 
 
 def test_supervisor_busy(qtbot, supervisor):
@@ -351,6 +440,289 @@ def test_supervisor_select_order(qtbot, supervisor):
     _assert_selected(supervisor, [1, 0])
     _select(supervisor, [0, 1])
     _assert_selected(supervisor, [0, 1])
+
+
+def test_supervisor_select_first_similar(qtbot, supervisor, gui):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.filter('id >= 10')
+    navigable_ids = similarity_view.get_navigable_ids()
+
+    # The prompted variant updates the preference and selects eligible rows in visible order.
+    supervisor.select_actions.select_n_similar(2)
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == navigable_ids[:2]
+    assert supervisor.n_similar_clusters_to_select == 2
+
+    # The shortcut variant uses the saved preference and replaces the similar selection.
+    similarity_view.sort_by('id', 'desc')
+    navigable_ids = similarity_view.get_navigable_ids()
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.keyClick(gui, Qt.Key_Space, control_modifier)
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == navigable_ids[:2]
+
+    # Selecting more rows than are available is safe.
+    supervisor.select_actions.select_n_similar(100)
+    supervisor.block()
+    assert supervisor.selected_similar == navigable_ids
+
+    # The preference is stored in global GUI state.
+    supervisor._save_gui_state(gui)
+    assert gui.state['n_similar_clusters_to_select'] == 100
+
+
+def test_filter_release_restores_space_shortcut(qtbot, supervisor, gui):
+    _select(supervisor, [30], [2])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+
+    qtbot.mouseClick(similarity_view.filter_edit, Qt.LeftButton)
+    assert similarity_view.filter_edit.hasFocus()
+    qtbot.keyClick(similarity_view.filter_edit, Qt.Key_Return)
+    assert not similarity_view.filter_edit.hasFocus()
+
+    qtbot.keyClick(gui, Qt.Key_Space)
+    supervisor.block()
+    assert supervisor.selected_similar == [11]
+
+
+def test_supervisor_skip_masked_navigation_and_selection(supervisor):
+    assert supervisor.skip_masked_clusters is True
+    assert supervisor.cluster_view.skip_masked is True
+    assert supervisor.similarity_view.skip_masked is True
+
+    # Cluster-view traversal skips MUA cluster 10 by default.
+    _select(supervisor, [11])
+    supervisor.select_actions.next_best()
+    supervisor.block()
+    assert supervisor.selected_clusters == [2]
+
+    # Similarity-view traversal observes the same policy.
+    _select(supervisor, [30], [2])
+    supervisor.similarity_view.sort_by('id', 'asc')
+    supervisor.select_actions.next()
+    supervisor.block()
+    assert supervisor.selected_similar == [11]
+
+    # Direct selection remains unrestricted.
+    supervisor.select_actions.select([10])
+    supervisor.block()
+    assert supervisor.selected_clusters == [10]
+
+    supervisor.set_skip_masked_clusters(False)
+    assert supervisor.cluster_view.skip_masked is False
+    assert supervisor.similarity_view.skip_masked is False
+
+    _select(supervisor, [11])
+    supervisor.select_actions.next_best()
+    supervisor.block()
+    assert supervisor.selected_clusters == [10]
+
+    _select(supervisor, [30], [2])
+    supervisor.similarity_view.sort_by('id', 'asc')
+    supervisor.select_actions.next()
+    supervisor.block()
+    assert supervisor.selected_similar == [10]
+
+
+def test_supervisor_select_first_similar_obeys_skip_masked_policy(supervisor):
+    _select(supervisor, [30])
+    supervisor.similarity_view.sort_by('id', 'asc')
+    visible_ids = supervisor.similarity_view.get_ids()
+    assert visible_ids[:2] == [0, 1]
+
+    supervisor.select_actions.select_n_similar(2)
+    supervisor.block()
+    assert supervisor.selected_similar == [1, 2]
+
+    supervisor.set_skip_masked_clusters(False)
+    supervisor.select_actions.select_n_similar(2)
+    supervisor.block()
+    assert supervisor.selected_similar == [0, 1]
+
+
+def test_supervisor_select_first_similar_empty(supervisor):
+    _select(supervisor, [30])
+    supervisor.similarity_view.filter('id > 1000')
+    supervisor.select_actions.select_n_similar(3)
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
+
+
+def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
+    gui.state['n_similar_clusters_to_select'] = 4
+    supervisor = Supervisor(
+        np.repeat(cluster_ids, 2),
+        similarity=similarity,
+        n_similar_clusters_to_select=2,
+    )
+    supervisor.attach(gui)
+    assert supervisor.n_similar_clusters_to_select == 4
+
+    shortcut = supervisor.select_actions.get('select_first_similar').shortcut()
+    expected_shortcut = 'meta+space' if sys.platform == 'darwin' else 'ctrl+space'
+    assert _get_shortcut_string(shortcut) == expected_shortcut
+
+    with raises(ValueError, match='positive integer'):
+        supervisor.select_first_similar(0)
+    with raises(ValueError, match='positive integer'):
+        supervisor.select_first_similar(1.5)
+
+
+def test_supervisor_skip_masked_config_menu_and_state(gui, cluster_ids, similarity):
+    gui.state['skip_masked_clusters'] = False
+    supervisor = Supervisor(
+        np.repeat(cluster_ids, 2),
+        similarity=similarity,
+        skip_masked_clusters=True,
+    )
+    supervisor.attach(gui)
+
+    # Saved GUI state overrides the constructor default and initializes both views and action.
+    assert supervisor.skip_masked_clusters is False
+    assert supervisor.cluster_view.skip_masked is False
+    assert supervisor.similarity_view.skip_masked is False
+    action = supervisor.select_actions.get('skip_noise_and_mua')
+    assert not action.isChecked()
+
+    action.trigger()
+    supervisor.block()
+    assert supervisor.skip_masked_clusters is True
+    assert supervisor.cluster_view.skip_masked is True
+    assert supervisor.similarity_view.skip_masked is True
+    assert action.isChecked()
+
+    supervisor._save_gui_state(gui)
+    assert gui.state['skip_masked_clusters'] is True
+
+
+def test_supervisor_skip_masked_constructor_and_invalid_state(gui, cluster_ids, similarity):
+    gui.state['skip_masked_clusters'] = 'invalid'
+    supervisor = Supervisor(
+        np.repeat(cluster_ids, 2),
+        similarity=similarity,
+        skip_masked_clusters=False,
+    )
+    supervisor.attach(gui)
+
+    # Invalid saved state is ignored, leaving the constructor preference in force.
+    assert supervisor.skip_masked_clusters is False
+    assert supervisor.cluster_view.skip_masked is False
+    assert supervisor.similarity_view.skip_masked is False
+    assert not supervisor.select_actions.get('skip_noise_and_mua').isChecked()
+
+
+def test_supervisor_promote_similar_with_control_right_click(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20, 11, 1])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.filter('id >= 1')
+
+    index = similarity_view._proxy_index_for_id(11)
+    pos = similarity_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(similarity_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+    assert supervisor.selected_clusters == [10, 30]
+    assert supervisor.selected_similar == [20, 11, 1]
+
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.mouseClick(
+        similarity_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
+    )
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [10, 11, 30]
+    assert supervisor.selected_similar == [20, 1]
+    assert supervisor.selected == [10, 11, 30, 20, 1]
+    assert 11 not in similarity_view.get_ids()
+
+
+def test_supervisor_promote_unselected_similar_with_control_right_click(qtbot, supervisor):
+    _select(supervisor, [30], [20, 11])
+    similarity_view = supervisor.similarity_view
+
+    index = similarity_view._proxy_index_for_id(1)
+    pos = similarity_view.table_view.visualRect(index).center()
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.mouseClick(
+        similarity_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
+    )
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [1, 30]
+    assert supervisor.selected_similar == [20, 11]
+
+
+def test_supervisor_demote_cluster_with_control_right_click(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20, 11])
+    cluster_view = supervisor.cluster_view
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+
+    index = cluster_view._proxy_index_for_id(10)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20, 11, 10]
+    assert supervisor.selected == [30, 20, 11, 10]
+
+    index = cluster_view._proxy_index_for_id(30)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+    supervisor.block()
+
+    # Keep one cluster as the similarity reference.
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20, 11, 10]
+
+    index = cluster_view._proxy_index_for_id(1)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+    supervisor.block()
+
+    # Rows outside the Cluster View selection cannot be transferred.
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20, 11, 10]
+
+
+def test_supervisor_control_left_click_toggles_selection_in_each_view(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20])
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+
+    cluster_view = supervisor.cluster_view
+    index = cluster_view._proxy_index_for_id(10)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.LeftButton, control_modifier, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
+
+    similarity_view = supervisor.similarity_view
+    index = similarity_view._proxy_index_for_id(20)
+    pos = similarity_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(
+        similarity_view.table_view.viewport(), Qt.LeftButton, control_modifier, pos=pos
+    )
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20]
+
+    qtbot.mouseClick(
+        similarity_view.table_view.viewport(), Qt.LeftButton, control_modifier, pos=pos
+    )
+    supervisor.block()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
 
 
 def test_supervisor_edge_cases(supervisor):
@@ -461,6 +833,27 @@ def test_supervisor_merge_event(qtbot, supervisor):
 
     # After a merge, there should be only one select event.
     assert len(_l) == 1
+
+
+def test_supervisor_merge_batches_table_fitting(monkeypatch, supervisor):
+    _select(supervisor, [30], [20])
+    fit_calls = {'cluster': 0, 'similarity': 0}
+
+    monkeypatch.setattr(
+        supervisor.cluster_view,
+        '_fit_columns',
+        lambda: fit_calls.__setitem__('cluster', fit_calls['cluster'] + 1),
+    )
+    monkeypatch.setattr(
+        supervisor.similarity_view,
+        '_fit_columns',
+        lambda: fit_calls.__setitem__('similarity', fit_calls['similarity'] + 1),
+    )
+
+    supervisor.actions.merge()
+    supervisor.block()
+
+    assert fit_calls == {'cluster': 1, 'similarity': 1}
 
 
 def test_supervisor_merge_move(qtbot, supervisor):
@@ -636,6 +1029,21 @@ def test_supervisor_move_1(supervisor):
     _assert_selected(supervisor, [11])
 
 
+def test_supervisor_move_undo_restores_table_group(supervisor):
+    cluster_id = 0
+    original_group = supervisor.cluster_meta.get('group', cluster_id)
+    _select(supervisor, [cluster_id])
+
+    supervisor.actions.move('good', cluster_id)
+    supervisor.block()
+    assert supervisor.cluster_view._model.row_by_id(cluster_id)['group'] == 'good'
+
+    supervisor.actions.undo()
+    supervisor.block()
+    assert supervisor.cluster_meta.get('group', cluster_id) == original_group
+    assert supervisor.cluster_view._model.row_by_id(cluster_id)['group'] == original_group
+
+
 def test_supervisor_move_2(supervisor):
     _select(supervisor, [20], [10])
     _assert_selected(supervisor, [20, 10])
@@ -772,3 +1180,29 @@ def test_supervisor_nav(qtbot, supervisor):
     supervisor.select_actions.last()
     qtbot.wait(100)
     _assert_selected(supervisor, [1])
+
+
+def test_supervisor_wizard_primary_navigation_clears_similar(supervisor):
+    supervisor.cluster_view.debouncer.delay = 60_000
+    supervisor.similarity_view.debouncer.delay = 60_000
+
+    supervisor.select_actions.reset_wizard()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []
+
+    supervisor.select_actions.next()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20]
+
+    supervisor.select_actions.next_best()
+    supervisor.block()
+    assert supervisor.selected_clusters == [20]
+    assert supervisor.selected_similar == []
+    assert supervisor.similarity_view.get_selected_ids() == []
+
+    supervisor.select_actions.previous_best()
+    supervisor.block()
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == []

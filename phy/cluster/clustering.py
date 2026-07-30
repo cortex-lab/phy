@@ -219,8 +219,20 @@ class Clustering:
     # --------------------------------------------------------------------------
 
     def _update_cluster_ids(self, to_remove=None, to_add=None):
-        # Update the list of non-empty cluster ids.
-        self._cluster_ids = _unique(self._spike_clusters)
+        # Rebuild after an external spike-cluster mutation, but update the much
+        # smaller cluster-id collection incrementally for normal operations.
+        # Merge and assign already provide the complete set of removed and
+        # added clusters, so rescanning every spike here is redundant.
+        full_rebuild = to_remove is None and to_add is None
+        if full_rebuild or not hasattr(self, '_cluster_ids'):
+            self._cluster_ids = _unique(self._spike_clusters)
+        else:
+            cluster_ids = set(self._cluster_ids.tolist())
+            if to_remove is not None:
+                cluster_ids.difference_update(to_remove)
+            if to_add:
+                cluster_ids.update(to_add)
+            self._cluster_ids = np.asarray(sorted(cluster_ids), dtype=self._spike_clusters.dtype)
         # Clusters to remove.
         if to_remove is not None:
             for clu in to_remove:
@@ -229,9 +241,12 @@ class Clustering:
         if to_add:
             for clu, spk in to_add.items():
                 self._spikes_per_cluster[clu] = spk
+        if full_rebuild:
+            self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)
+            return
         # If spikes_per_cluster is invalid, recompute the entire
         # spikes_per_cluster array.
-        coherent = np.all(np.isin(self._cluster_ids, sorted(self._spikes_per_cluster)))
+        coherent = all(clu in self._spikes_per_cluster for clu in self._cluster_ids)
         if not coherent:
             logger.debug('Recompute spikes_per_cluster manually: this might take a while.')
             sc = self._spike_clusters
@@ -337,8 +352,14 @@ class Clustering:
         # assign() is a relatively costly operation, whereas merging is a much
         # cheaper operation.
 
-        # Find all spikes in the specified clusters.
-        spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
+        # The per-cluster spike arrays are already maintained after every
+        # operation. Gathering those arrays avoids scanning the complete
+        # spike-cluster vector for each merge. Restore the globally increasing
+        # ordering returned by _spikes_in_clusters() for exact compatibility.
+        spike_ids = np.concatenate(
+            [self._spikes_per_cluster[cluster_id] for cluster_id in cluster_ids]
+        )
+        spike_ids.sort()
 
         up = self._do_merge(spike_ids, cluster_ids, to)
         undo_state = emit('request_undo_state', self, up)
