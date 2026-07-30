@@ -39,80 +39,24 @@ Current testing and maintenance work is focused on modern Linux, macOS, and Wind
 
 ## Installation
 
-Install phy in a fresh Python 3.10+ environment:
+The recommended installation uses
+[`uv`](https://docs.astral.sh/uv/getting-started/installation/), which installs
+phy and its Python dependencies in an isolated environment:
 
 ```bash
-python -m pip install --upgrade pip
-pip install phy
+uv tool install --python 3.12 phy
+phy --version
 ```
 
-This installs the GUI runtime dependencies as part of the main package. phy
-itself works with numpy 1.x and numpy 2.x; only the legacy Kwik GUI is
-constrained, and those constraints live in the `kwik` extra so that they apply
-to nobody else.
+This installs the GUI runtime dependencies as part of the main package.
 
-### Installing from a git checkout
+The legacy Kwik GUI needs a regular virtual environment because one of its
+dependencies requires special build handling. See the installation guide for
+the tested `uv` commands.
 
-To run phy from this repository rather than from PyPI:
-
-```bash
-conda create -n phy python=3.13 -y
-conda activate phy
-
-git clone https://github.com/cortex-lab/phy.git
-cd phy
-pip install -e .
-```
-
-`-e` (editable) means `git pull` updates your install with no reinstall step.
-Drop the `-e` for a plain copy. To install straight from GitHub without a local
-clone:
-
-```bash
-pip install "phy @ git+https://github.com/cortex-lab/phy.git"
-```
-
-### Kwik GUI dependencies
-
-**The legacy Kwik GUI requires Python 3.10 or 3.11.** It depends on `klusta` and
-`klustakwik2`, both unmaintained since 2018, and the `kwik` extra pins
-`numpy>=1.23,<1.24` to keep the whole legacy stack on the numpy it was written
-against (see below). numpy 1.23 publishes no cp312 wheels, so Python 3.12 and
-3.13 are out for the Kwik GUI. Nothing here affects a plain `pip install phy`.
-
-```bash
-pip install "phy[kwik]"
-```
-
-On macOS and on Apple Silicon there are no `klustakwik2` wheels, and its
-`setup.py` imports numpy at build time, so build isolation has to be disabled:
-
-```bash
-pip install "cython>=3.0"
-pip install --no-build-isolation klustakwik2
-pip install "phy[kwik]"
-```
-
-The `kwik` extra enforces three constraints, all of them caused by the two legacy
-packages rather than by phy:
-
-* `numpy>=1.23,<1.24` — the last numpy the legacy stack was written against. This
-  keeps the entire Kwik surface on tested ground and gives one self-contained
-  setup, at the cost of Python 3.12+ support. It is deliberately conservative:
-  reclustering itself runs on newer numpy, and even numpy 2 works once two
-  upstream call sites (`ndarray.tostring()` in `klusta/kwik/h5.py` and
-  `klustakwik2/precomputations.py`, removed in numpy 2.0) are updated to
-  `.tobytes()`. When those fixes are released upstream the cap can be relaxed.
-* `setuptools<81` — `klusta/__init__.py` imports `pkg_resources`, removed in 81.
-* `six` — `klusta` declares no dependencies of its own at all.
-
-Under this extra, opening `.kwik` files, curating them, and the GUI's `recluster`
-action (`shift+ctrl+K`, which re-runs KlustaKwik2) all work.
-
-Note that `klustakwik2` must also be *compiled* against the numpy major version
-it will run under: a later `pip install` that pulls a different numpy into the
-environment can break it with
-`ImportError: numpy.core.multiarray failed to import`.
+See the [installation guide](https://phy.readthedocs.io/en/latest/installation/)
+for instructions to install `uv`, legacy Kwik support, a `venv`/pip alternative,
+source checkouts, and installation verification.
 
 ## Quick start
 
@@ -130,6 +74,10 @@ phy template-describe params.py
 phy kwik-gui path/to/file.kwik
 phy trace-gui path/to/raw.bin --sample-rate 30000 --dtype int16 --n-channels 384
 ```
+
+Before curating your own data, review the
+[dataset requirements](https://phy.readthedocs.io/en/latest/dataset/) and follow
+the [first-ten-minutes guide](https://phy.readthedocs.io/en/latest/quickstart/).
 
 ## Available GUIs and commands
 
@@ -175,25 +123,32 @@ template_gui("params.py")
 
 ## Developer setup
 
-To work on phy itself in a fresh checkout:
+For a fresh editable installation using the latest commits of both phylib and phy:
 
 ```bash
-git clone git@github.com:cortex-lab/phy.git
+mkdir phy-source
+cd phy-source
+
+git clone https://github.com/cortex-lab/phylib.git
+git clone https://github.com/cortex-lab/phy.git
+
 cd phy
 uv sync --dev
+uv pip install --editable ../phylib
 ```
 
-If you are working on phy together with a local checkout of `phylib`, install that checkout in editable mode:
+Windows PowerShell instructions, update commands, and verification of the exact commits are in the
+[source installation guide](https://phy.readthedocs.io/en/latest/installation/#install-the-latest-phy-and-phylib-source).
 
-```bash
-git clone git@github.com:cortex-lab/phylib.git
-cd phylib
-pip install -e . --upgrade
-```
+## Documentation and help
 
-## Troubleshooting and docs
-
-* [Documentation](https://phy.readthedocs.io/en/latest/)
+* [Documentation home](https://phy.readthedocs.io/en/latest/)
+* [Installation](https://phy.readthedocs.io/en/latest/installation/)
+* [Preparing a dataset](https://phy.readthedocs.io/en/latest/dataset/)
+* [First-ten-minutes quickstart](https://phy.readthedocs.io/en/latest/quickstart/)
+* [Using the GUI](https://phy.readthedocs.io/en/latest/gui/)
+* [Performance and spike sampling](https://phy.readthedocs.io/en/latest/performance/)
+* [Changelog](https://phy.readthedocs.io/en/latest/changelog/)
 * [Release notes](https://phy.readthedocs.io/en/latest/release/)
 * [Troubleshooting](https://phy.readthedocs.io/en/latest/troubleshooting/)
 * [GitHub issues](https://github.com/cortex-lab/phy/issues)

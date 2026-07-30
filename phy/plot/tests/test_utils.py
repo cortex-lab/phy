@@ -24,11 +24,11 @@ def test_load_shader():
 def test_tesselate_histogram():
     n = 7
     hist = np.arange(n)
-    thist = _tesselate_histogram(hist)
-    assert thist.shape == (6 * n, 2)
-    ac(thist[0], [0, 0])
-    ac(thist[-3], [n, n - 1])
-    ac(thist[-1], [n, 0])
+    t_hist = _tesselate_histogram(hist)
+    assert t_hist.shape == (6 * n, 2)
+    ac(t_hist[0], [0, 0])
+    ac(t_hist[-3], [n, n - 1])
+    ac(t_hist[-1], [n, 0])
 
 
 def test_accumulator():

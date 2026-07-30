@@ -11,8 +11,10 @@ import tempfile
 import unittest
 from itertools import cycle, islice
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
+from phylib.io.array import SpikeSelector
 from phylib.io.mock import (
     artificial_features,
     artificial_spike_clusters,
@@ -24,8 +26,10 @@ from phylib.utils import Bunch, connect, emit, reset, unconnect
 from pytest import mark
 from pytestqt.plugin import QtBot
 
+from phy.cluster.clustering import Clustering
 from phy.cluster.views import (
     AmplitudeView,
+    CorrelogramView,
     FeatureView,
     TemplateView,
     TraceView,
@@ -35,7 +39,17 @@ from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
 
-from ..base import BaseController, FeatureMixin, TemplateMixin, TraceMixin, WaveformMixin
+from ..base import (
+    BaseController,
+    FeatureMixin,
+    TemplateMixin,
+    TraceMixin,
+    WaveformMixin,
+    _allocate_spike_counts,
+    _select_spikes_evenly,
+    _spike_budget_fields,
+    _spike_budget_values,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +86,10 @@ class MyModel:
 
     def __init__(self):
         self.closed = False
+        # Clustering mutates this array in place. Keep controller instances independent so
+        # actions in one test cannot remove clusters from models created by later tests.
+        self.spike_clusters = type(self).spike_clusters.copy()
+        self.spike_templates = type(self).spike_templates.copy()
 
     def _get_some_channels(self, offset, size):
         return list(islice(cycle(range(self.n_channels)), offset, offset + size))
@@ -141,6 +159,47 @@ def _mock_controller(tempdir, cls):
     )
 
 
+def test_allocate_spike_counts_redistributes_total_budget():
+    np.testing.assert_array_equal(
+        _allocate_spike_counts([0, 1, 100], per_cluster=10, total=7),
+        [0, 1, 6],
+    )
+    np.testing.assert_array_equal(
+        _allocate_spike_counts([100, 100, 100], per_cluster=10, total=8),
+        [3, 3, 2],
+    )
+    np.testing.assert_array_equal(
+        _allocate_spike_counts([100, 2], per_cluster=10, total=None),
+        [10, 2],
+    )
+    assert WaveformMixin.n_spikes_waveforms_total is None
+    np.testing.assert_array_equal(
+        _allocate_spike_counts(
+            [100, 100, 100],
+            per_cluster=WaveformMixin.n_spikes_waveforms,
+            total=WaveformMixin.n_spikes_waveforms_total,
+        ),
+        [100, 100, 100],
+    )
+    assert BaseController.n_spikes_amplitudes_total is None
+    assert BaseController.n_spikes_correlograms_total is None
+
+
+def test_spike_budget_dialog_supports_independent_optional_limits():
+    fields = _spike_budget_fields(None, 400, max_n_clusters=8)
+    defaults = {field['name']: field['default'] for field in fields}
+    assert defaults['use_per_cluster'] is False
+    assert defaults['use_total'] is True
+    assert _spike_budget_values(
+        {
+            'use_per_cluster': True,
+            'per_cluster': 100,
+            'use_total': False,
+            'total': 400,
+        }
+    ) == (100, None)
+
+
 def test_controller_close(tempdir):
     controller = _mock_controller(tempdir, MyController)
     model = controller.model
@@ -155,6 +214,331 @@ def test_controller_close(tempdir):
     assert model.closed
     assert all(handler not in logging.getLogger('phy').handlers for handler in handlers)
     assert all(handler.stream is None for handler in handlers)
+
+
+def test_set_selector_supports_released_and_newer_phylib():
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(spike_samples=np.arange(4))
+    controller.supervisor = Bunch(clustering=Clustering(np.array([0, 0, 1, 1])))
+    controller.n_chunks_kept = 2
+
+    class ReleasedSpikeSelector:
+        def __init__(
+            self,
+            get_spikes_per_cluster=None,
+            spike_times=None,
+            chunk_bounds=None,
+            n_chunks_kept=None,
+        ):
+            self.spikes_are_disjoint = None
+
+    with patch('phy.apps.base.SpikeSelector', ReleasedSpikeSelector):
+        controller._set_selector()
+    assert controller.selector.spikes_are_disjoint is None
+
+    class NewerSpikeSelector(ReleasedSpikeSelector):
+        def __init__(self, *args, spikes_are_disjoint=False, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.spikes_are_disjoint = spikes_are_disjoint
+
+    with patch('phy.apps.base.SpikeSelector', NewerSpikeSelector):
+        controller._set_selector()
+    assert controller.selector.spikes_are_disjoint is True
+
+
+def test_select_spikes_evenly_supports_released_and_newer_phylib():
+    spikes = {0: np.arange(5), 1: np.arange(5, 10)}
+
+    def released_selector(n_spikes, cluster_ids, subset_chunks=False):
+        assert subset_chunks
+        assert n_spikes is None
+        return np.concatenate([spikes[cluster_id] for cluster_id in cluster_ids])
+
+    np.testing.assert_array_equal(
+        _select_spikes_evenly(released_selector, 2, [0, 1], subset_chunks=True),
+        [0, 4, 5, 9],
+    )
+
+    def newer_selector(n_spikes, cluster_ids, subset_chunks=False, sample_evenly=False):
+        assert (n_spikes, cluster_ids, subset_chunks, sample_evenly) == (
+            2,
+            [0, 1],
+            True,
+            True,
+        )
+        return np.array([1, 8])
+
+    np.testing.assert_array_equal(
+        _select_spikes_evenly(newer_selector, 2, [0, 1], subset_chunks=True),
+        [1, 8],
+    )
+
+
+def test_get_firing_rate_fast_path():
+    spike_times = np.array([0.1, 0.2, 0.4, 0.8, 1.6, 3.2])
+    clustering = Clustering(np.array([0, 1, 1, 2, 2, 3]))
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(spike_times=spike_times, duration=4.0)
+    controller.supervisor = Bunch(clustering=clustering)
+
+    # Keep a reference selector to compare with the previous implementation.
+    reference_selector = SpikeSelector(
+        get_spikes_per_cluster=lambda cluster_id: clustering.spikes_per_cluster.get(
+            cluster_id, np.array([], dtype=np.int64)
+        ),
+        spike_times=np.arange(len(spike_times)),
+        chunk_bounds=[0, len(spike_times)],
+        n_chunks_kept=1,
+    )
+
+    def fail_selector(*args, **kwargs):
+        raise AssertionError('The firing-rate path must not invoke SpikeSelector.')
+
+    controller.selector = fail_selector
+
+    for cluster_id in (0, 1, 99):
+        expected = spike_times[reference_selector(None, [cluster_id])]
+        np.testing.assert_array_equal(controller.get_spike_times(cluster_id), expected)
+        bunch = controller._get_firing_rate(cluster_id)
+        np.testing.assert_array_equal(bunch.data, expected)
+        assert bunch.x_min == 0
+        assert bunch.x_max == controller.model.duration
+
+    selector_calls = []
+
+    def capped_selector(n, cluster_ids, **kwargs):
+        selector_calls.append((n, cluster_ids, kwargs))
+        return np.array([2], dtype=np.int64)
+
+    controller.selector = capped_selector
+    np.testing.assert_array_equal(controller.get_spike_times(1, n=1), spike_times[[2]])
+    assert selector_calls == [(1, [1], {})]
+
+    # The fast path follows live clustering changes rather than stale model assignments.
+    controller.selector = fail_selector
+    merged = clustering.merge([0, 1])
+    expected = spike_times[reference_selector(None, merged.added)]
+    bunch = controller._get_firing_rate(merged.added[0])
+    np.testing.assert_array_equal(bunch.data, expected)
+
+
+def test_get_correlograms_rate_fast_path():
+    clustering = Clustering(np.array([0, 0, 0, 1, 2, 2]))
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(duration=4.0)
+    controller.supervisor = Bunch(clustering=clustering)
+    controller.n_spikes_correlograms = 2
+    assert controller.n_spikes_correlograms_total is None
+
+    def fail_selector(*args, **kwargs):
+        raise AssertionError('The correlogram-rate path must not invoke SpikeSelector.')
+
+    controller.selector = fail_selector
+    actual = controller._get_correlograms_rate([0, 1, 2, 99], bin_size=0.1)
+    counts = np.array([2, 1, 2, 0])
+    expected = counts * np.c_[counts] * (0.1 / 4.0)
+    np.testing.assert_array_equal(actual, expected)
+
+    controller.n_spikes_correlograms = 10
+    controller.n_spikes_correlograms_total = 4
+    actual = controller._get_correlograms_rate([0, 1, 2], bin_size=0.1)
+    counts = np.array([2, 1, 1])
+    expected = counts * np.c_[counts] * (0.1 / 4.0)
+    np.testing.assert_array_equal(actual, expected)
+
+    controller.n_spikes_correlograms = None
+    controller.n_spikes_correlograms_total = None
+    actual = controller._get_correlograms_rate([0, 1, 2], bin_size=0.1)
+    counts = np.array([3, 1, 2])
+    expected = counts * np.c_[counts] * (0.1 / 4.0)
+    np.testing.assert_array_equal(actual, expected)
+
+
+def test_correlogram_cache_key_includes_spike_limit(tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    selector = controller.selector
+    calls = []
+
+    def recording_selector(n, cluster_ids, **kwargs):
+        calls.append(n)
+        return selector(n, cluster_ids, **kwargs)
+
+    controller.selector = recording_selector
+    controller.n_spikes_correlograms = 1
+    controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+    controller.n_spikes_correlograms = 2
+    controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+    # The identical request at the same limit should use the disk cache.
+    controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+
+    assert calls == [1, 2]
+
+    controller.n_spikes_correlograms = 10
+    controller.n_spikes_correlograms_total = 1
+    controller._get_correlograms([0], bin_size=0.002, window_size=0.05)
+    controller.n_spikes_correlograms_total = 2
+    controller._get_correlograms([0], bin_size=0.002, window_size=0.05)
+    controller._get_correlograms([0], bin_size=0.002, window_size=0.05)
+
+    # Changing either limit creates a distinct cache entry.
+    assert calls == [1, 2, 1, 2]
+    controller.close()
+
+
+def test_correlogram_sampling_preserves_nearby_pairs():
+    n_spikes = 100_000
+    spike_times = np.arange(n_spikes, dtype=float) / 1000.0
+    clustering = Clustering(np.zeros(n_spikes, dtype=np.int32))
+    controller = object.__new__(BaseController)
+    controller.model = Bunch(
+        spike_times=spike_times,
+        spike_samples=np.arange(n_spikes, dtype=np.int64),
+        sample_rate=1000.0,
+        duration=spike_times[-1],
+    )
+    controller.supervisor = Bunch(clustering=clustering)
+    controller.n_spikes_correlograms = 1000
+    controller.selector = SpikeSelector(
+        get_spikes_per_cluster=lambda cluster_id: clustering.spikes_per_cluster[cluster_id],
+        spike_times=controller.model.spike_samples,
+        chunk_bounds=[0, n_spikes],
+        n_chunks_kept=1,
+    )
+
+    np.random.seed(0)
+    correlogram = controller._get_correlograms([0], bin_size=0.001, window_size=0.05)
+    assert correlogram[0, 0].sum() > 0
+
+
+def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    subset_spikes = np.arange(0, controller.model.n_spikes, 2, dtype=np.int64)
+    controller.model.spike_waveforms = Bunch(spike_ids=subset_spikes)
+    selected = []
+    get_waveforms = controller.model.get_waveforms
+
+    def fail_selector(*args, **kwargs):
+        raise AssertionError('sparse waveform selection scanned a full cluster')
+
+    def capture_waveforms(spike_ids, channel_ids):
+        selected.append(spike_ids)
+        return get_waveforms(spike_ids, channel_ids)
+
+    controller.selector = fail_selector
+    controller.model.get_waveforms = capture_waveforms
+    bunch = controller._get_waveforms_with_n_spikes(0, 3)
+    assert bunch.data.shape[0] == 3
+    eligible = subset_spikes[controller.supervisor.clustering.spike_clusters[subset_spikes] == 0]
+    expected_indices = [0, (len(eligible) - 1) // 2, len(eligible) - 1]
+    np.testing.assert_array_equal(selected[0], eligible[expected_indices])
+    controller.close()
+
+
+def test_waveform_selected_clusters_share_total_budget(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    controller.n_spikes_waveforms = 100
+    controller.n_spikes_waveforms_total = 10
+
+    counts = [
+        controller._get_waveform_spike_count(cluster_id, cluster_ids=[0, 1, 2])
+        for cluster_id in [0, 1, 2]
+    ]
+
+    assert counts == [4, 3, 3]
+    controller.close()
+
+
+def test_amplitude_background_has_stable_total_budget(tempdir):
+    controller = _mock_controller(tempdir, MyControllerTmp)
+    controller.n_spikes_amplitudes = 7
+    controller.n_spikes_amplitudes_background = 7
+    selected_cluster = 0
+
+    data = controller._amplitude_getter([selected_cluster, None], name='template')
+    repeat = controller._amplitude_getter([selected_cluster, None], name='template')
+    selected, background = data
+
+    # The selected cluster retains its independent display budget, while all
+    # grey background clusters share one fixed budget.
+    assert len(selected.spike_ids) == controller.n_spikes_amplitudes
+    assert len(background.spike_ids) == controller.n_spikes_amplitudes_background
+    np.testing.assert_array_equal(background.spike_ids, repeat[1].spike_ids)
+    assert np.all(np.diff(background.spike_ids) >= 0)
+
+    other_clusters = set(controller.get_clusters_on_channel(0)) - {selected_cluster}
+    background_clusters = controller.supervisor.clustering.spike_clusters[background.spike_ids]
+    assert set(background_clusters).issubset(other_clusters)
+
+    # Lasso/split requests must still retrieve every eligible spike.
+    all_data = controller._amplitude_getter(
+        [selected_cluster, None], name='template', load_all=True
+    )
+    expected_background = sum(
+        len(controller.supervisor.clustering.spikes_per_cluster[cluster_id])
+        for cluster_id in other_clusters
+    )
+    assert len(all_data[0].spike_ids) == len(
+        controller.supervisor.clustering.spikes_per_cluster[selected_cluster]
+    )
+    assert len(all_data[1].spike_ids) == expected_background
+    controller.close()
+
+
+def test_amplitude_selected_clusters_share_total_budget(tempdir):
+    controller = _mock_controller(tempdir, MyControllerTmp)
+    controller.n_spikes_amplitudes = 7
+    controller.n_spikes_amplitudes_total = 10
+    controller.n_spikes_amplitudes_background = 7
+
+    selected_a, selected_b, background = controller._amplitude_getter(
+        [0, 1, None], name='template'
+    )
+
+    assert len(selected_a.spike_ids) == 5
+    assert len(selected_b.spike_ids) == 5
+    assert len(background.spike_ids) == 7
+    controller.close()
+
+
+def test_amplitude_background_redistributes_unused_budget():
+    # Cluster 0 is empty, cluster 1 has one spike, and cluster 2 has ample
+    # capacity. The background budget should be filled while retaining the
+    # small nonempty cluster's representation.
+    controller = object.__new__(BaseController)
+    controller.supervisor = Bunch(clustering=Clustering(np.array([1] + [2] * 100, dtype=np.int64)))
+
+    spike_ids = controller._get_background_amplitude_spike_ids([0, 1, 2], n=5)
+
+    assert len(spike_ids) == 5
+    assert len(np.unique(spike_ids)) == 5
+    assert np.all(np.diff(spike_ids) >= 0)
+    assert 0 in spike_ids
+
+
+def test_get_firing_rate_honors_get_spike_times_override():
+    class OverrideController(BaseController):
+        def get_spike_times(self, cluster_id, n=None):
+            assert cluster_id == 7
+            return np.array([1.25, 2.5])
+
+    controller = object.__new__(OverrideController)
+    controller.model = Bunch(duration=3.0)
+    bunch = controller._get_firing_rate(7)
+    np.testing.assert_array_equal(bunch.data, [1.25, 2.5])
+    assert bunch.x_min == 0
+    assert bunch.x_max == 3.0
+
+
+def test_amplitude_view_excludes_unavailable_features(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyControllerFull)
+    controller.model.features = None
+    try:
+        view = controller.create_amplitude_view()
+        assert list(view.amplitudes) == ['template']
+        view.amplitudes_type = 'feature'
+        assert view.amplitudes_type == 'template'
+    finally:
+        controller.close()
 
 
 # ------------------------------------------------------------------------------
@@ -423,6 +807,27 @@ class MockControllerTests(MinimalControllerTests, GlobalViewsTests, unittest.Tes
         mouse_click(self.qtbot, view.canvas, (10, 10), modifiers=('Control',))
         view.actions.next_color_scheme()
 
+    def test_correlogram_view_settings(self):
+        view = self.gui.list_views(CorrelogramView)[0]
+        values = {
+            'use_per_cluster': True,
+            'per_cluster': 1234,
+            'use_total': False,
+            'total': 5678,
+            'bin_size': 2.0,
+            'window_size': 100.0,
+            'refractory_period': 3.0,
+        }
+        with patch('phy.apps.base.view_settings_dialog', return_value=values):
+            view.actions.get('View settings').trigger()
+        self.assertEqual(self.controller.n_spikes_correlograms, 1234)
+        self.assertIsNone(self.controller.n_spikes_correlograms_total)
+        self.assertEqual(view.bin_size, 0.002)
+        self.assertEqual(view.window_size, 0.1)
+        self.assertEqual(view.refractory_period, 0.003)
+        self.controller.n_spikes_correlograms = 100000
+        self.controller.n_spikes_correlograms_total = None
+
 
 class MockControllerWTests(MinimalControllerTests, unittest.TestCase):
     """Mock controller with waveforms."""
@@ -439,6 +844,20 @@ class MockControllerWTests(MinimalControllerTests, unittest.TestCase):
         self.waveform_view.actions.toggle_mean_waveforms(True)
         self.waveform_view.actions.next_waveforms_type()
         self.waveform_view.actions.change_n_spikes_waveforms(200)
+
+    def test_waveform_view_settings(self):
+        values = {
+            'use_per_cluster': True,
+            'per_cluster': 321,
+            'use_total': True,
+            'total': 654,
+        }
+        with patch('phy.apps.base.view_settings_dialog', return_value=values):
+            self.waveform_view.actions.get('View settings').trigger()
+        self.assertEqual(self.controller.n_spikes_waveforms, 321)
+        self.assertEqual(self.controller.n_spikes_waveforms_total, 654)
+        self.controller.n_spikes_waveforms = 100
+        self.controller.n_spikes_waveforms_total = None
 
     def test_mean_amplitudes(self):
         self.next()
@@ -527,6 +946,23 @@ class MockControllerTmpTests(MinimalControllerTests, unittest.TestCase):
     def test_mean_amplitudes(self):
         self.next()
         self.assertTrue(self.controller.get_mean_spike_template_amplitudes(self.selected[0]) >= 0)
+
+    def test_amplitude_view_settings(self):
+        values = {
+            'use_per_cluster': True,
+            'per_cluster': 123,
+            'use_total': True,
+            'total': 456,
+            'background': 789,
+        }
+        with patch('phy.apps.base.view_settings_dialog', return_value=values):
+            self.amplitude_view.actions.get('View settings').trigger()
+        self.assertEqual(self.controller.n_spikes_amplitudes, 123)
+        self.assertEqual(self.controller.n_spikes_amplitudes_total, 456)
+        self.assertEqual(self.controller.n_spikes_amplitudes_background, 789)
+        self.controller.n_spikes_amplitudes = 10000
+        self.controller.n_spikes_amplitudes_total = None
+        self.controller.n_spikes_amplitudes_background = 10000
 
     def test_split_template_amplitude(self):
         self.next()

@@ -89,3 +89,39 @@ def test_gui_state_view_3(tempdir):
     data_1 = {'a': {'b': 3, 'c': 3}}
     assert state == data_1
     assert state._local_data == {'a': {'b': 3}}
+
+
+def test_gui_state_view_local_attributes_do_not_leak_from_global_state(tempdir):
+    global_path = tempdir / 'global/state.json'
+    local_path = tempdir / 'local/state.json'
+    view = Bunch(name='FiringRateView', local_state_attrs=('x_max',))
+    save_json(
+        global_path,
+        {'FiringRateView': {'n_bins': 200, 'x_max': 12.0}},
+    )
+
+    state = GUIState(global_path, local_path=local_path)
+    state.add_local_keys(['FiringRateView.x_max'])
+
+    assert state.get_view_state(view) == {'n_bins': 200}
+
+
+def test_gui_state_view_loads_and_updates_local_attributes(tempdir):
+    global_path = tempdir / 'global/state.json'
+    local_path = tempdir / 'local/state.json'
+    view = Bunch(name='FiringRateView', local_state_attrs=('x_max',))
+    save_json(
+        global_path,
+        {'FiringRateView': {'n_bins': 200, 'x_max': 12.0}},
+    )
+    save_json(local_path, {'FiringRateView': {'x_max': 30.0}})
+
+    state = GUIState(global_path, local_path=local_path)
+    state.add_local_keys(['FiringRateView.x_max'])
+    assert state.get_view_state(view) == {'n_bins': 200, 'x_max': 30.0}
+
+    state.update_view_state(view, {'n_bins': 300, 'x_max': 40.0})
+    assert state.get_view_state(view) == {'n_bins': 300, 'x_max': 40.0}
+    state.save()
+    assert load_json(global_path) == {'FiringRateView': {'n_bins': 300}}
+    assert load_json(local_path) == {'FiringRateView': {'x_max': 40.0}}

@@ -64,7 +64,8 @@ The GUI is made of several parts:
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
-Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `F1` to see the list of Keyboard shortcuts.
+Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `H` or use the Help
+menu to print the active keyboard shortcuts and snippets in the terminal.
 
 
 ### Cluster view
@@ -116,7 +117,9 @@ You can filter the list of clusters shown in the cluster view, in the `filter` t
 
 The similarity view is very similar to the cluster view. It has an additional column: the **similarity**. It represents the similarity to clusters selected in the cluster view. As such, its contents change every time the cluster selection changes in the cluster view. By default, clusters in the similarity view are sorted by decreasing similarity.
 
-The similarity score is obtained from the `similar_templates.npy` file, which is computed by the spike sorting algorithm (e.g. KiloSort).
+The Template GUI obtains the default score from `similar_templates.npy`, which is computed by the
+spike sorter. Its exact behavior for merged clusters, interpretation, candidate limit, and
+customization are described in [Cluster similarity](similarity.md).
 
 
 ## Graphical views
@@ -181,7 +184,16 @@ Snippets
 
 This view shows the waveforms of a selection of spikes, on the relevant channels (based on amplitude and proximity to the peak waveform amplitude channel).
 
-The parameter `controller.n_spikes_waveforms=100`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the waveform view. The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
+The parameter `controller.n_spikes_waveforms=100` specifies the maximum number
+of spikes per cluster. By default,
+`controller.n_spikes_waveforms_total=None`, so every displayed cluster gets
+its own budget. Set the total to an integer, such as `400`, to share that fixed
+number across all displayed clusters.
+Choose **View settings** in the Waveform View menu to edit both limits
+together. Each limit has its own enable checkbox; disabling a limit stores
+`None`. Changes replot immediately, while the `:wn` snippet remains available
+for quickly changing only the per-cluster value.
+The parameter `controller.batch_size_waveforms=10`, by default, specifies the number of batches used to extract the waveforms. Each batch corresponds to a set of successive spikes. The different batch positions are uniformly spaced in time across the entire recording.
 
 You can select a channel with **Control+click** (this impacts the feature view). You can change the scaling of the channel positions and the waveforms.
 
@@ -225,7 +237,7 @@ This view shows the principal component features of a selection of spikes in the
 
 Background spikes from all clusters are shown in grey.
 
-The parameter `controller.n_spikes_features=2500`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the feature view. The parameter `controller.n_spikes_features_background=1000`, by default, specifies the maximum number of spikes to pick for the background features. These background spikes are uniformly spaced in time across the entire recording, and across all clusters indistinctively.
+The parameter `controller.n_spikes_features=2500`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the feature view. The parameter `controller.n_spikes_features_background=2500`, by default, specifies the maximum number of spikes to pick for the background features. These background spikes are uniformly spaced in time across the entire recording, and across all clusters indistinctively.
 
 ![image](https://user-images.githubusercontent.com/1942359/74033685-fdd9b400-49b6-11ea-8b18-4492ec4f4cc0.png)
 
@@ -288,11 +300,37 @@ This view shows the autocorrelograms and cross-correlograms between all pairs of
 
 Subplot at row i, column j, shows the cross-correlogram of selected cluster #i versus cluster #j.
 
+At most 20 selected clusters are displayed by default. If more are selected, the view uses the
+first 20 clusters in the selection order. To change this limit, set the view's
+`max_n_clusters` attribute in a plugin, for example:
+
+```python
+from phy import IPlugin, connect
+from phy.cluster.views import CorrelogramView
+
+
+class CorrelogramLimitPlugin(IPlugin):
+    def attach_to_controller(self, controller):
+        @connect
+        def on_view_attached(view, gui):
+            if isinstance(view, CorrelogramView):
+                view.max_n_clusters = 30
+```
+
 The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
-The parameter `controller.n_spikes_correlograms` (100,000 by default) specifies the maximum number of spikes *across all selected clusters* to pick for computation of the cross-correlograms. These spikes are picked randomly.
+The parameter `controller.n_spikes_correlograms` (100,000 by default) bounds
+the number of spikes per selected cluster. The default
+`controller.n_spikes_correlograms_total=None` preserves that per-cluster
+budget as the selection grows. Set the total to an integer to bound the entire
+auto- and cross-correlogram calculation. These spikes are picked randomly.
+See [Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
+Choose **View settings** in the view menu to edit the two spike-budget modes,
+bin size, window size, and refractory period together. The budget settings are
+global controller preferences; the bin, window, and refractory settings are
+saved for the current dataset.
 
 *Note*: the central peak is artificially removed to avoid artifacts. Decrease the bin size (e.g. to 0.1 ms) if you need to visualize fine temporal structure.
 
@@ -421,7 +459,13 @@ You can toggle between different types of amplitudes by pressing `a`:
 
 #### Number of spikes.
 
-The parameter `controller.n_spikes_amplitudes=5000`, by default, specifies the maximum number of spikes per cluster to pick for visualization in the amplitude view.
+The parameter `controller.n_spikes_amplitudes=10000` bounds the selected
+spikes per cluster. The default `controller.n_spikes_amplitudes_total=None`
+preserves that budget for every selected cluster. Set the total to an integer
+to share a fixed budget across the Amplitude View.
+Choose **View settings** in the Amplitude View menu to edit the per-cluster,
+optional shared total, and gray background budgets together. Changes take
+effect immediately and are saved as global controller preferences.
 
 *Note*: currently, this number is divided by 5 for the `raw` amplitudes, so as to keep loading delays reasonable.
 
@@ -459,7 +503,13 @@ Keyboard shortcuts
 This generic view shows histogram related to the selected clusters. Built-in statistics views include:
 
 * Inter-spike intervals (computed using all spikes for the selected clusters)
-* Instantenous firing-rate (computed using all spikes for the selected clusters)
+* Instantaneous firing rate (computed using all spikes for the selected clusters)
+
+The Firing Rate View does not sample or impose a spike budget. Its number of
+bins and visible time range only control how all cluster spikes are grouped.
+Choose **View settings** in the Firing Rate or ISI view menu to edit bin size
+and the displayed range together. These parameters are dataset-local, so
+values saved for one recording do not clip or coarsen a fresh dataset.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 

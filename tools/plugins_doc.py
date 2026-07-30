@@ -33,16 +33,20 @@ for m in reversed(list(pattern.finditer(plugins_doc))):
     j = m.end(2)
     plugins_doc = plugins_doc[:i] + plugin_contents + plugins_doc[j:]
 
-    # Update the README.
-    title = f'{class_name_pattern.search(plugin_contents).group(1)}Plugin'
+# Build the README from every plugin file, including examples documented on
+# their own how-to page rather than embedded in docs/plugins.md.
+for filename in sorted((root_dir / 'plugins').glob('*.py')):
+    plugin_contents = filename.read_text()
+    match = class_name_pattern.search(plugin_contents)
+    if not match:
+        continue
+    title = f'{match.group(1)}Plugin'
     desc = plugin_contents.splitlines()[0].replace('"', '')
-    url = filename.name
-    readme.append(f'* [{title}]({url}): {desc}')
-
-readme = sorted(readme)
+    readme.append(f'* [{title}]({filename.name}): {desc}')
 
 # Update the plugin README
-(root_dir / 'plugins/README.md').write_text(f'# phy plugin examples\n\n{"\\n".join(readme)}\n')
+readme_contents = '\n'.join(readme)
+(root_dir / 'plugins/README.md').write_text(f'# phy plugin examples\n\n{readme_contents}\n')
 
 
 # Make sure the copied and pasted code in the Markdown file is correct.

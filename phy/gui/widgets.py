@@ -10,8 +10,11 @@ import inspect
 import json
 import logging
 import re
+import sys
+from contextlib import contextmanager
 from functools import partial
 
+import numpy as np
 from phylib.utils import connect, emit
 from phylib.utils._misc import _CustomEncoder, _pretty_floats
 from phylib.utils._types import _is_integer
@@ -28,6 +31,8 @@ from .qt import (
     QBrush,
     QCheckBox,
     QColor,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QEvent,
     QGridLayout,
@@ -36,6 +41,7 @@ from .qt import (
     QLabel,
     QLineEdit,
     QModelIndex,
+    QObject,
     QPalette,
     QPlainTextEdit,
     QSize,
@@ -332,6 +338,7 @@ class _TableModel(QAbstractTableModel):
         self._table = table
         self._rows = []
         self._rows_by_id = {}
+        self._row_indices_by_id = {}
 
     def rowCount(self, parent=QModelIndex()):  # noqa: B008
         return 0 if parent.isValid() else len(self._rows)
@@ -358,8 +365,17 @@ class _TableModel(QAbstractTableModel):
                 return ''
             # Qt's model/view cannot display numpy scalars (np.int64/np.float64),
             # which render as blank cells; convert them to native Python types.
-            if hasattr(value, 'item'):
+            if isinstance(value, np.generic):
                 value = value.item()
+            if role == Qt.DisplayRole:
+                if isinstance(value, np.ndarray):
+                    value = value.tolist()
+                if isinstance(value, (list, tuple)):
+                    return ', '.join(map(str, value))
+            # Keep the raw value available for sorting and filtering, while making
+            # spike counts easier to scan in the cluster and similarity tables.
+            if role == Qt.DisplayRole and column == 'n_spikes' and isinstance(value, int):
+                return f'{value:,}'
             return value
         if role == Qt.BackgroundRole and column == 'id':
             color = self._table._selection_background(row.get('id'))
@@ -375,10 +391,14 @@ class _TableModel(QAbstractTableModel):
         self.beginResetModel()
         self._rows = list(rows)
         self._rows_by_id = {row['id']: row for row in self._rows}
+        self._row_indices_by_id = {row['id']: index for index, row in enumerate(self._rows)}
         self.endResetModel()
 
     def row_by_id(self, row_id):
         return self._rows_by_id.get(row_id)
+
+    def row_index_by_id(self, row_id):
+        return self._row_indices_by_id.get(row_id)
 
     def ids(self):
         return [row['id'] for row in self._rows]
@@ -475,6 +495,30 @@ class _TableItemDelegate(QStyledItemDelegate):
         super().paint(painter, opt, index)
 
 
+class _TableFilterFocusWatcher(QObject):
+    """Release the active table filter when the user clicks elsewhere."""
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            focus_widget = QApplication.focusWidget()
+            if (
+                isinstance(focus_widget, QLineEdit)
+                and focus_widget.objectName() == 'table-filter'
+                and obj is not focus_widget
+            ):
+                focus_widget.clearFocus()
+        return super().eventFilter(obj, event)
+
+
+def _install_table_filter_focus_watcher():
+    """Install one application-owned watcher shared by all tables."""
+    app = QApplication.instance()
+    if getattr(app, '_phy_table_filter_focus_watcher', None) is None:
+        watcher = _TableFilterFocusWatcher(app)
+        app._phy_table_filter_focus_watcher = watcher
+        app.installEventFilter(watcher)
+
+
 class Table(QWidget):
     """A sortable native Qt table with a compatibility API for legacy callers."""
 
@@ -489,10 +533,12 @@ class Table(QWidget):
         sort=None,
         title='',
         debounce_events=(),
+        debounce_delay=None,
+        skip_masked=True,
     ):
         super().__init__(*args)
         self.setWindowTitle(title)
-        self._debouncer = Debouncer()
+        self._debouncer = Debouncer(delay=debounce_delay, parent=self)
         self._debounce_events = set(debounce_events)
         self._debouncer.isBusy = False
         self.columns = list(columns or ['id'])
@@ -504,6 +550,11 @@ class Table(QWidget):
         self._filter_is_active = False
         self._current_sort = None
         self._no_emit = False
+        self._batch_update_depth = 0
+        self._fit_columns_pending = False
+        self._column_widths_fitted = False
+        self._row_height_fitted = False
+        self.skip_masked = bool(skip_masked)
         self._group_colors = {
             'good': QColor('#86D16D'),
             'mua': QColor('#afafaf'),
@@ -512,10 +563,15 @@ class Table(QWidget):
 
         self.filter_edit = QLineEdit(self)
         self.filter_edit.setObjectName('table-filter')
+        # Do not let the filter become the table's automatic focus target when the GUI is
+        # shown, reactivated, or its model is reset. Explicit mouse clicks are handled in
+        # eventFilter() below so the editor remains usable.
+        self.filter_edit.setFocusPolicy(Qt.NoFocus)
         self.filter_edit.returnPressed.connect(self._apply_filter_from_editor)
         self.filter_edit.installEventFilter(self)
 
         self.table_view = QTableView(self)
+        self.table_view.viewport().installEventFilter(self)
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.table_view.clicked.connect(self._on_row_clicked)
@@ -541,6 +597,7 @@ class Table(QWidget):
         self._apply_dark_style()
 
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
+        _install_table_filter_focus_watcher()
 
     @property
     def debouncer(self):
@@ -549,11 +606,31 @@ class Table(QWidget):
     def eventFilter(self, obj, event):
         if (
             obj is self.filter_edit
+            and event.type() == QEvent.MouseButtonPress
+            and event.button() == Qt.LeftButton
+        ):
+            self.filter_edit.setFocus(Qt.MouseFocusReason)
+        if (
+            obj is self.table_view.viewport()
+            and event.type() == QEvent.MouseButtonPress
+            and event.button() == Qt.RightButton
+        ):
+            # Qt maps Meta to the physical Control key on macOS.
+            control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+            if event.modifiers() & control_modifier:
+                index = self.table_view.indexAt(event.pos())
+                if index.isValid():
+                    emit('row_right_click', self, self._visible_ids()[index.row()])
+            # Prevent Qt's default right-click handling from changing the table selection.
+            return True
+        if (
+            obj is self.filter_edit
             and event.type() == QEvent.KeyPress
             and event.key() == Qt.Key_Escape
         ):
             self.filter_edit.clear()
             self.filter('')
+            self.filter_edit.clearFocus()
             return True
         return super().eventFilter(obj, event)
 
@@ -620,6 +697,8 @@ class Table(QWidget):
         self.data = list(data)
         self.columns = list(columns)
         self.value_names = list(value_names)
+        self._column_widths_fitted = False
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self._filterable_names = set(self._normalize_value_names(self.value_names))
         self._filterable_names.update(self.columns)
 
@@ -661,11 +740,7 @@ class Table(QWidget):
         self.setStyleSheet(f'{existing}\n{style}' if existing else style)
 
     def _source_row_for_id(self, row_id):
-        ids = self._model.ids()
-        try:
-            return ids.index(row_id)
-        except ValueError:
-            return None
+        return self._model.row_index_by_id(row_id)
 
     def _proxy_index_for_id(self, row_id, column=0):
         source_row = self._source_row_for_id(row_id)
@@ -683,8 +758,41 @@ class Table(QWidget):
         return self._model._rows[source_index.row()]
 
     def _fit_columns(self):
-        self.table_view.resizeColumnsToContents()
-        self.table_view.resizeRowsToContents()
+        # Establish widths from the first populated payload, then retain them.
+        # Qt's ResizeToContents mode otherwise revisits every cell after each
+        # model reset even when the table schema and typical values are stable.
+        if not self._column_widths_fitted:
+            self.table_view.resizeColumnsToContents()
+            if self._model.rowCount():
+                self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+                self._column_widths_fitted = True
+        # With word wrapping disabled, table content does not affect row
+        # height. Measure the first populated table once, then keep that fixed
+        # height across model resets instead of visiting every row.
+        if not self._row_height_fitted and self._model.rowCount():
+            self.table_view.resizeRowsToContents()
+            vertical_header = self.table_view.verticalHeader()
+            vertical_header.setDefaultSectionSize(vertical_header.sectionSize(0))
+            vertical_header.setSectionResizeMode(QHeaderView.Fixed)
+            self._row_height_fitted = True
+
+    def _request_fit_columns(self):
+        if self._batch_update_depth:
+            self._fit_columns_pending = True
+        else:
+            self._fit_columns()
+
+    @contextmanager
+    def batch_update(self):
+        """Coalesce expensive table fitting across related mutations."""
+        self._batch_update_depth += 1
+        try:
+            yield
+        finally:
+            self._batch_update_depth -= 1
+            if not self._batch_update_depth and self._fit_columns_pending:
+                self._fit_columns_pending = False
+                self._fit_columns()
 
     def _visible_ids(self):
         ids = []
@@ -705,6 +813,12 @@ class Table(QWidget):
     def _is_masked_id(self, row_id):
         row = self._model.row_by_id(row_id)
         return bool(row and row.get('is_masked'))
+
+    def _is_navigable_id(self, row_id):
+        return not self.skip_masked or not self._is_masked_id(row_id)
+
+    def _visible_navigable_ids(self):
+        return [row_id for row_id in self._visible_ids() if self._is_navigable_id(row_id)]
 
     def _selected_visible_ids(self):
         visible = set(self._visible_ids())
@@ -759,6 +873,7 @@ class Table(QWidget):
 
     def _apply_filter_from_editor(self):
         self.filter(self.filter_edit.text())
+        self.filter_edit.clearFocus()
 
     def _set_filter(self, text, update_text_field=True):
         self._filter_text = text or ''
@@ -840,7 +955,7 @@ class Table(QWidget):
         idx = visible.index(row_id) + step
         while 0 <= idx < len(visible):
             candidate = visible[idx]
-            if not self._is_masked_id(candidate):
+            if self._is_navigable_id(candidate):
                 return candidate
             idx += step
         return None
@@ -857,7 +972,7 @@ class Table(QWidget):
         visible = self._visible_ids()
         ordered = visible if which == 'first' else list(reversed(visible))
         for row_id in ordered:
-            if not self._is_masked_id(row_id):
+            if self._is_navigable_id(row_id):
                 return self.select([row_id])
         return None
 
@@ -870,7 +985,7 @@ class Table(QWidget):
         self._current_sort = (name, sort_dir)
         self._proxy.sort(column, order)
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
         if not self._no_emit:
             self._emit_event('table_sort', self._visible_ids())
 
@@ -878,7 +993,7 @@ class Table(QWidget):
         logger.log(5, 'Filter table with `%s`.', text)
         self._set_filter(text, update_text_field=True)
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
         if self._filter_is_active and not self._no_emit:
             self._emit_event('table_filter', self._visible_ids())
 
@@ -888,6 +1003,9 @@ class Table(QWidget):
 
     def get_ids(self, callback=None):
         return self._async_return(self._visible_ids(), callback)
+
+    def get_navigable_ids(self, callback=None):
+        return self._async_return(self._visible_navigable_ids(), callback)
 
     def get_next_id(self, callback=None):
         return self._async_return(self.get_sibling_id(None, 'next'), callback)
@@ -941,30 +1059,30 @@ class Table(QWidget):
         data = self._model._rows + objects
         self._model.set_rows(data)
         if self._current_sort:
-            self._no_emit = True
-            self.sort_by(*self._current_sort)
-            self._no_emit = False
+            name, sort_dir = self._current_sort
+            self._proxy.sort(
+                self.columns.index(name),
+                Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder,
+            )
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
 
     def change(self, objects):
         objects = self._ensure_list(objects)
         if not objects:
             return
-        updated = {obj['id']: obj for obj in objects}
-        changed = False
-        for row in self._model._rows:
-            patch = updated.get(row['id'])
-            if patch:
+        changed_rows = []
+        for patch in objects:
+            row_id = patch['id']
+            row = self._model.row_by_id(row_id)
+            if row is not None:
                 row.update(patch)
-                changed = True
-        if not changed:
+                changed_rows.append(self._model.row_index_by_id(row_id))
+        if not changed_rows:
             return
         if self._model.rowCount() and self._model.columnCount():
-            top_left = self._model.index(0, 0)
-            bottom_right = self._model.index(
-                self._model.rowCount() - 1, self._model.columnCount() - 1
-            )
+            top_left = self._model.index(min(changed_rows), 0)
+            bottom_right = self._model.index(max(changed_rows), self._model.columnCount() - 1)
             self._model.dataChanged.emit(top_left, bottom_right)
         if self._current_sort:
             self._proxy.sort(
@@ -972,7 +1090,26 @@ class Table(QWidget):
                 Qt.AscendingOrder if self._current_sort[1] == 'asc' else Qt.DescendingOrder,
             )
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
+
+    def add_remove(self, objects, ids):
+        """Add and remove rows with one model reset, sort, and fit."""
+        objects = self._ensure_list(objects)
+        ids = set(ids)
+        if not objects and not ids:
+            return
+        self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
+        data = [row for row in self._model._rows if row['id'] not in ids]
+        data.extend(objects)
+        self._model.set_rows(data)
+        if self._current_sort:
+            name, sort_dir = self._current_sort
+            self._proxy.sort(
+                self.columns.index(name),
+                Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder,
+            )
+        self._refresh_selection()
+        self._request_fit_columns()
 
     def remove(self, ids):
         ids = set(ids)
@@ -981,26 +1118,39 @@ class Table(QWidget):
         self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
         self._model.set_rows([row for row in self._model._rows if row['id'] not in ids])
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
 
     def remove_all(self):
         self._selected_ids = []
         self._model.set_rows([])
         self._refresh_selection()
-        self._fit_columns()
+        self._request_fit_columns()
 
-    def remove_all_and_add(self, objects):
+    def remove_all_and_add(self, objects, fit_columns=True):
         objects = self._ensure_list(objects)
         if not objects:
-            return self.remove_all()
+            if fit_columns:
+                return self.remove_all()
+            self._selected_ids = []
+            self._model.set_rows([])
+            self._refresh_selection()
+            return
         self._selected_ids = []
         self._model.set_rows(objects)
         if self._current_sort:
-            self._no_emit = True
-            self.sort_by(*self._current_sort)
-            self._no_emit = False
+            if fit_columns:
+                self._no_emit = True
+                self.sort_by(*self._current_sort)
+                self._no_emit = False
+            else:
+                name, sort_dir = self._current_sort
+                self._proxy.sort(
+                    self.columns.index(name),
+                    Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder,
+                )
         self._refresh_selection()
-        self._fit_columns()
+        if fit_columns:
+            self._request_fit_columns()
 
     def get_selected(self, callback=None):
         return self._async_return(self.get_selected_ids(), callback)
@@ -1065,7 +1215,18 @@ class KeyValueWidget(QWidget):
         self._items = []
         self._layout = QGridLayout(self)
 
-    def add_pair(self, name, default=None, vtype=None):
+    def add_pair(
+        self,
+        name,
+        default=None,
+        vtype=None,
+        label=None,
+        minimum=None,
+        maximum=None,
+        decimals=None,
+        suffix=None,
+        tooltip=None,
+    ):
         """Add a key-value pair.
 
         Parameters
@@ -1094,13 +1255,15 @@ class KeyValueWidget(QWidget):
             widget.setMaximumHeight(400)
         elif vtype == 'int':
             widget = QSpinBox(self)
-            widget.setMinimum(-(10**9))
-            widget.setMaximum(10**9)
+            widget.setMinimum(-(10**9) if minimum is None else minimum)
+            widget.setMaximum(10**9 if maximum is None else maximum)
             widget.setValue(default or 0)
         elif vtype == 'float':
             widget = QDoubleSpinBox(self)
-            widget.setMinimum(-1e9)
-            widget.setMaximum(+1e9)
+            widget.setMinimum(-1e9 if minimum is None else minimum)
+            widget.setMaximum(+1e9 if maximum is None else maximum)
+            if decimals is not None:
+                widget.setDecimals(decimals)
             widget.setValue(default or 0)
         elif vtype == 'bool':
             widget = QCheckBox(self)
@@ -1108,13 +1271,19 @@ class KeyValueWidget(QWidget):
         else:  # pragma: no cover
             raise ValueError(f'Not supported vtype: {vtype}.')
 
+        if suffix and hasattr(widget, 'setSuffix'):
+            widget.setSuffix(suffix)
+        if tooltip:
+            widget.setToolTip(tooltip)
         widget.setMaximumWidth(400)
 
-        label = QLabel(name, self)
-        label.setMaximumWidth(150)
+        label_widget = QLabel(label or name, self)
+        label_widget.setMaximumWidth(220)
+        if tooltip:
+            label_widget.setToolTip(tooltip)
 
         row = len(self._items)
-        self._layout.addWidget(label, row, 0)
+        self._layout.addWidget(label_widget, row, 0)
         self._layout.addWidget(widget, row, 1)
         self.setLayout(self._layout)
         self._items.append((name, vtype, default, widget))
@@ -1150,9 +1319,9 @@ class KeyValueWidget(QWidget):
                 elif vtype == 'multiline':
                     return str(widget.toPlainText())
                 elif vtype == 'int':
-                    return int(widget.text())
+                    return int(widget.value())
                 elif vtype == 'float':
-                    return float(widget.text().replace(',', '.'))
+                    return float(widget.value())
                 elif vtype == 'bool':
                     return bool(widget.isChecked())
 
@@ -1163,3 +1332,52 @@ class KeyValueWidget(QWidget):
     def to_dict(self):
         """Return the key-value mapping dictionary as specified by the user inputs and defaults."""
         return {name: self.get_value(name) for name in self.names}
+
+
+class ViewSettingsDialog(QDialog):
+    """A reusable typed settings form for view-specific parameters."""
+
+    def __init__(self, title, fields, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        layout = QVBoxLayout(self)
+        self.form = KeyValueWidget(self)
+        layout.addWidget(self.form)
+
+        for field in fields:
+            options = dict(field)
+            name = options.pop('name')
+            enabled_by = options.pop('enabled_by', None)
+            self.form.add_pair(name, **options)
+            if enabled_by:
+                controller = self.form.get_widget(enabled_by)
+                widget = self.form.get_widget(name)
+                widget.setEnabled(controller.isChecked())
+                controller.toggled.connect(widget.setEnabled)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def values(self):
+        """Return the settings currently entered in the form."""
+        return self.form.to_dict()
+
+
+def view_settings_dialog(title, fields, parent=None, validate=None):
+    """Show a typed settings dialog and return its values, or ``None`` when cancelled.
+
+    ``validate`` may return an error message. The dialog remains open until the
+    values are valid or the user cancels it.
+    """
+    dialog = ViewSettingsDialog(title, fields, parent=parent)
+    while dialog.exec_() == QDialog.Accepted:
+        values = dialog.values()
+        error = validate(values) if validate else None
+        if not error:
+            return values
+        from .qt import message_box
+
+        message_box(error, title=title, level='warning')
+    return None

@@ -1,0 +1,3326 @@
+schema_version: 1
+repository: cortex-lab/phy
+audit:
+  date: '2026-07-23'
+  release_baseline: phy 2.1
+  initial_open_issues: 245
+  final_open_issues: 79
+  closed_issues: 166
+  needs_info_follow_up: '2026-08-22'
+  notes:
+  - This is a point-in-time maintainer audit, not a live issue tracker.
+  - GitHub remains authoritative for current state, labels, and discussion.
+  - Age alone was never used as a closure reason.
+summary:
+  keep: 55
+  needs_info: 24
+  fixed_in_2_1: 31
+  fixed_on_master: 1
+  likely_fixed: 19
+  duplicate: 20
+  answered: 62
+  obsolete: 12
+  not_planned: 21
+retained_backlog:
+  priority_order:
+  - Investigate the three high-priority curation-integrity bugs.
+  - Triage related splitting, channel-mapping, and waveform-correctness reports together.
+  - Address focused documentation and small GUI improvements.
+  - Consolidate design work across probe, event/PSTH, and OpenGL issue families.
+  - Keep broad enhancements in the longer-term backlog until their scope is defined.
+  high_priority:
+  - 1133
+  - 1249
+  - 1261
+  issue_families:
+    splitting_and_assignments:
+    - 1133
+    - 1261
+    - 1293
+    channel_mapping:
+    - 1017
+    - 1137
+    - 1187
+    waveform_correctness:
+    - 990
+    - 1045
+    - 1155
+    - 1238
+    - 1332
+    performance:
+    - 952
+    - 980
+    opengl_and_remote_rendering:
+    - 1196
+    - 1291
+    - 1328
+    probe_and_shank_visualization:
+    - 1262
+    - 1276
+    - 1303
+    events_and_psth:
+    - 839
+    - 1325
+  quick_wins:
+  - 1033
+  - 1093
+  - 1343
+  - 1364
+label_taxonomy:
+  type:
+  - 'type: bug'
+  - 'type: enhancement'
+  - 'type: question'
+  - 'type: maintenance'
+  area:
+  - 'area: data'
+  - 'area: documentation'
+  - 'area: gui'
+  - 'area: installation'
+  - 'area: performance'
+  - 'area: plugins'
+  - 'area: visualization'
+  status:
+  - 'status: confirmed'
+  - 'status: needs-info'
+  - 'status: blocked'
+  priority:
+  - 'priority: high'
+  - 'priority: low'
+  scope:
+  - 'scope: legacy-kwik'
+issues:
+- number: 281
+  title: Animation of population spiking
+  url: https://github.com/cortex-lab/phy/issues/281
+  created_at: '2015-05-18T18:04:59Z'
+  updated_at: '2026-07-23T15:48:39Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Population-spiking animations are outside phy’s curation scope.
+- number: 350
+  title: training mode
+  url: https://github.com/cortex-lab/phy/issues/350
+  created_at: '2015-06-17T09:23:27Z'
+  updated_at: '2026-07-23T15:39:16Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: gui'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 391
+  title: Support openephys data
+  url: https://github.com/cortex-lab/phy/issues/391
+  created_at: '2015-06-23T11:00:12Z'
+  updated_at: '2026-07-23T15:48:42Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels:
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Please convert Open Ephys data using an exporter that produces phy’s NumPy format.
+- number: 532
+  title: Demo videos
+  url: https://github.com/cortex-lab/phy/issues/532
+  created_at: '2015-07-13T11:14:31Z'
+  updated_at: '2026-07-23T15:48:44Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels:
+  - 'area: documentation'
+  - 'priority: low'
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: A demo-video effort is not currently planned; the quickstart covers onboarding.
+- number: 644
+  title: SimilarityMatrix
+  url: https://github.com/cortex-lab/phy/issues/644
+  created_at: '2015-09-16T13:05:03Z'
+  updated_at: '2026-07-23T15:39:18Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 754
+  title: more extensive logging
+  url: https://github.com/cortex-lab/phy/issues/754
+  created_at: '2017-06-07T08:38:41Z'
+  updated_at: '2026-07-23T15:39:20Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: gui'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 802
+  title: Reset view defaults
+  url: https://github.com/cortex-lab/phy/issues/802
+  created_at: '2018-09-08T21:05:42Z'
+  updated_at: '2026-07-23T15:43:15Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'area: gui'
+  - 'type: enhancement'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 839
+  title: Events
+  url: https://github.com/cortex-lab/phy/issues/839
+  created_at: '2019-06-14T09:50:15Z'
+  updated_at: '2026-07-23T15:39:22Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+  related_issues:
+  - 1325
+- number: 841
+  title: Logarithmic correlogram view
+  url: https://github.com/cortex-lab/phy/issues/841
+  created_at: '2019-06-14T11:11:11Z'
+  updated_at: '2026-07-23T15:39:23Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 886
+  title: Customize the number of time samples in templates/waveforms
+  url: https://github.com/cortex-lab/phy/issues/886
+  created_at: '2019-08-23T20:21:57Z'
+  updated_at: '2026-07-23T15:39:25Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 887
+  title: Show time-dependent templates
+  url: https://github.com/cortex-lab/phy/issues/887
+  created_at: '2019-08-26T09:14:53Z'
+  updated_at: '2026-07-23T15:48:46Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels:
+  - 'type: enhancement'
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This requires time-dependent template data that phy datasets do not provide.
+- number: 897
+  title: Activate lazo in waveform view
+  url: https://github.com/cortex-lab/phy/issues/897
+  created_at: '2019-09-19T15:27:07Z'
+  updated_at: '2026-07-23T15:39:27Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 902
+  title: Customize the table columns independently in the cluster and similarity views
+  url: https://github.com/cortex-lab/phy/issues/902
+  created_at: '2019-10-07T12:53:39Z'
+  updated_at: '2026-07-23T15:39:29Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: gui'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 903
+  title: Option to toggle log scale in histogram view
+  url: https://github.com/cortex-lab/phy/issues/903
+  created_at: '2019-10-07T14:57:12Z'
+  updated_at: '2026-07-23T15:39:30Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 937
+  title: Regarding timestamp management from Neuralynx data
+  url: https://github.com/cortex-lab/phy/issues/937
+  created_at: '2020-01-17T05:29:35Z'
+  updated_at: '2026-07-23T15:45:56Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 951
+  title: Qt-based cluster view
+  url: https://github.com/cortex-lab/phy/issues/951
+  created_at: '2020-02-07T11:27:45Z'
+  updated_at: '2026-07-23T15:43:17Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'type: enhancement'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 952
+  title: kilosort2 data is extremely slow on Phy
+  url: https://github.com/cortex-lab/phy/issues/952
+  created_at: '2020-02-10T17:40:58Z'
+  updated_at: '2026-07-23T15:39:32Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: performance'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 955
+  title: TraceView
+  url: https://github.com/cortex-lab/phy/issues/955
+  created_at: '2020-02-14T11:57:37Z'
+  updated_at: '2026-07-23T15:45:59Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 960
+  title: the gui doesn't launch
+  url: https://github.com/cortex-lab/phy/issues/960
+  created_at: '2020-02-25T11:20:07Z'
+  updated_at: '2026-07-23T15:48:48Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels:
+  - 'area: installation'
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This concerns an obsolete phy/Python installation. Please reopen if it affects phy 2.1.
+- number: 964
+  title: make metadata_group labels into a metrics column?
+  url: https://github.com/cortex-lab/phy/issues/964
+  created_at: '2020-02-27T19:26:20Z'
+  updated_at: '2026-07-23T15:48:50Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels:
+  - 'type: enhancement'
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This refers to the old table implementation and is no longer actionable.
+- number: 965
+  title: GUI geometry not properly restored
+  url: https://github.com/cortex-lab/phy/issues/965
+  created_at: '2020-02-28T09:53:51Z'
+  updated_at: '2026-07-23T15:43:20Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 971
+  title: '"Illegal instruction 4" error on mac El Capitan with the latest installation.'
+  url: https://github.com/cortex-lab/phy/issues/971
+  created_at: '2020-03-09T15:23:31Z'
+  updated_at: '2026-07-23T15:48:52Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: macOS El Capitan and Python 3.7 are no longer supported.
+- number: 972
+  title: some kwik-gui problems with visualisation and shortcuts
+  url: https://github.com/cortex-lab/phy/issues/972
+  created_at: '2020-03-10T10:58:44Z'
+  updated_at: '2026-07-23T15:44:36Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1023
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1023.'
+- number: 974
+  title: Similarity values are all 1.000 in similarity view
+  url: https://github.com/cortex-lab/phy/issues/974
+  created_at: '2020-03-11T12:09:26Z'
+  updated_at: '2026-07-23T15:42:29Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'scope: legacy-kwik'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share a small dataset or debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 976
+  title: Issue with cluster ids for split and merged clusters
+  url: https://github.com/cortex-lab/phy/issues/976
+  created_at: '2020-03-12T16:43:11Z'
+  updated_at: '2026-07-23T15:46:02Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 979
+  title: GUI not displaying data
+  url: https://github.com/cortex-lab/phy/issues/979
+  created_at: '2020-03-18T16:48:44Z'
+  updated_at: '2026-07-23T15:39:36Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 980
+  title: RAM maxes out with large datasets
+  url: https://github.com/cortex-lab/phy/issues/980
+  created_at: '2020-03-18T17:37:15Z'
+  updated_at: '2026-07-23T15:39:38Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: performance'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 981
+  title: Plotting the templates used for sorting
+  url: https://github.com/cortex-lab/phy/issues/981
+  created_at: '2020-03-21T03:35:00Z'
+  updated_at: '2026-07-23T15:46:04Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 982
+  title: Problem in waveformview phy2
+  url: https://github.com/cortex-lab/phy/issues/982
+  created_at: '2020-03-23T11:17:13Z'
+  updated_at: '2026-07-23T15:44:38Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1045
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1045.'
+- number: 989
+  title: Use Phy to compute template similarity in SpikeInterface
+  url: https://github.com/cortex-lab/phy/issues/989
+  created_at: '2020-03-31T13:30:34Z'
+  updated_at: '2026-07-23T15:39:40Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 990
+  title: WaveformView displays noise
+  url: https://github.com/cortex-lab/phy/issues/990
+  created_at: '2020-04-01T17:22:02Z'
+  updated_at: '2026-07-23T15:39:42Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: visualization'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1045
+  - 1155
+  - 1238
+  - 1332
+- number: 995
+  title: Re-do spike sorting (manual curation) in phy2?
+  url: https://github.com/cortex-lab/phy/issues/995
+  created_at: '2020-04-15T04:20:21Z'
+  updated_at: '2026-07-23T15:46:06Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Older curated datasets remain compatible with phy 2.1. Please reopen with a sample dataset
+    if not.
+- number: 996
+  title: 'core dumped after QGLXContext: Failed to create dummy context'
+  url: https://github.com/cortex-lab/phy/issues/996
+  created_at: '2020-04-16T11:13:36Z'
+  updated_at: '2026-07-23T15:50:12Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels:
+  - 'type: question'
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 998
+  title: DOCs or --help should be improved to get a dumb user going or pypi upload fixed up?
+  url: https://github.com/cortex-lab/phy/issues/998
+  created_at: '2020-04-21T23:27:34Z'
+  updated_at: '2026-07-23T15:43:22Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'area: installation'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1007
+  title: 'ClusterView column definitions? '
+  url: https://github.com/cortex-lab/phy/issues/1007
+  created_at: '2020-05-17T16:26:18Z'
+  updated_at: '2026-07-23T15:46:08Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1011
+  title: GUI window messed up - can't change subpanels
+  url: https://github.com/cortex-lab/phy/issues/1011
+  created_at: '2020-05-28T18:58:28Z'
+  updated_at: '2026-07-23T15:46:10Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1014
+  title: 'Spyking Circus + Phy: WaveformView templates from Utah Array seen on wrong electrodes'
+  url: https://github.com/cortex-lab/phy/issues/1014
+  created_at: '2020-06-04T20:17:50Z'
+  updated_at: '2026-07-23T15:48:54Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This was traced to an inconsistent SpyKING CIRCUS export.
+- number: 1015
+  title: template_ind
+  url: https://github.com/cortex-lab/phy/issues/1015
+  created_at: '2020-06-15T18:15:27Z'
+  updated_at: '2026-07-23T15:46:12Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1016
+  title: Crash GUI when clicking on item in ClusterView list while in Debug mode (PyCharm)
+  url: https://github.com/cortex-lab/phy/issues/1016
+  created_at: '2020-06-17T15:55:43Z'
+  updated_at: '2026-07-23T15:43:25Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1017
+  title: Unit wrongly assigned to channel
+  url: https://github.com/cortex-lab/phy/issues/1017
+  created_at: '2020-06-23T22:26:22Z'
+  updated_at: '2026-07-23T15:39:44Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: data'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1137
+  - 1187
+- number: 1018
+  title: GLError - cluster selected, nothing visualized in any "view" windows
+  url: https://github.com/cortex-lab/phy/issues/1018
+  created_at: '2020-07-02T16:28:40Z'
+  updated_at: '2026-07-23T15:46:14Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1020
+  title: Views not updating when cluster selected (running Phy on VMware virtual machine)
+  url: https://github.com/cortex-lab/phy/issues/1020
+  created_at: '2020-07-06T14:39:24Z'
+  updated_at: '2026-07-23T15:46:17Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'area: performance'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1021
+  title: PyQt5.QtWebEngineWidgets missing from install
+  url: https://github.com/cortex-lab/phy/issues/1021
+  created_at: '2020-07-07T00:15:58Z'
+  updated_at: '2026-07-23T15:46:18Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'area: installation'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1022
+  title: Phy get stuck on linux
+  url: https://github.com/cortex-lab/phy/issues/1022
+  created_at: '2020-07-12T08:05:56Z'
+  updated_at: '2026-07-23T15:42:30Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: performance'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does phy still freeze with 2.1? If so, please share the dataset size and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1023
+  title: View windows frozen
+  url: https://github.com/cortex-lab/phy/issues/1023
+  created_at: '2020-07-22T16:12:47Z'
+  updated_at: '2026-07-23T15:43:29Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1024
+  title: Cluster amplitude is showing as zero
+  url: https://github.com/cortex-lab/phy/issues/1024
+  created_at: '2020-07-22T20:36:01Z'
+  updated_at: '2026-07-23T15:46:19Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: This value comes from the exporter, not phy.
+- number: 1025
+  title: Inconsistent key-binding behavior for TraceView
+  url: https://github.com/cortex-lab/phy/issues/1025
+  created_at: '2020-07-25T01:57:46Z'
+  updated_at: '2026-07-23T15:42:31Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: gui'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share the shortcut and steps to reproduce
+    it.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1026
+  title: Can't launch after install
+  url: https://github.com/cortex-lab/phy/issues/1026
+  created_at: '2020-08-10T07:37:07Z'
+  updated_at: '2026-07-23T15:46:21Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1027
+  title: Custom view to plot amplitude on one site versus another
+  url: https://github.com/cortex-lab/phy/issues/1027
+  created_at: '2020-08-12T18:23:47Z'
+  updated_at: '2026-07-23T15:46:23Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1028
+  title: Waveforms and Filtering
+  url: https://github.com/cortex-lab/phy/issues/1028
+  created_at: '2020-08-19T15:19:28Z'
+  updated_at: '2026-07-23T15:39:50Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: documentation'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the missing or incorrect documentation and submit a focused documentation update.
+- number: 1029
+  title: Incorrect channel positions in TraceImageView?
+  url: https://github.com/cortex-lab/phy/issues/1029
+  created_at: '2020-08-21T13:54:28Z'
+  updated_at: '2026-07-23T15:39:51Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1030
+  title: GUI closes after launching it (error:broker_win.cc)
+  url: https://github.com/cortex-lab/phy/issues/1030
+  created_at: '2020-09-10T19:37:43Z'
+  updated_at: '2026-07-23T15:43:31Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1032
+  title: Waveform View won't update
+  url: https://github.com/cortex-lab/phy/issues/1032
+  created_at: '2020-09-14T20:32:20Z'
+  updated_at: '2026-07-23T15:43:33Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1033
+  title: A feedback when saved would be good
+  url: https://github.com/cortex-lab/phy/issues/1033
+  created_at: '2020-09-15T20:34:32Z'
+  updated_at: '2026-07-23T15:39:53Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: gui'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1035
+  title: 'ValueError: array is too big; `arr.size * arr.dtype.itemsize` is larger than the maximum possible
+    size. ^[[0m'
+  url: https://github.com/cortex-lab/phy/issues/1035
+  created_at: '2020-09-23T08:57:58Z'
+  updated_at: '2026-07-23T15:46:26Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1036
+  title: Line through waveforms in traceview
+  url: https://github.com/cortex-lab/phy/issues/1036
+  created_at: '2020-09-27T19:50:03Z'
+  updated_at: '2026-07-23T15:39:55Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1037
+  title: AmplitudeView raw showing different results for same clusters depending on Best/Similar selection
+  url: https://github.com/cortex-lab/phy/issues/1037
+  created_at: '2020-09-28T09:26:28Z'
+  updated_at: '2026-07-23T15:48:56Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: Raw AmplitudeView was removed because it was too slow or unrepresentative.
+- number: 1040
+  title: issue with template scaling
+  url: https://github.com/cortex-lab/phy/issues/1040
+  created_at: '2020-10-16T19:04:19Z'
+  updated_at: '2026-07-23T15:48:58Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This custom whitening/scaling workflow belongs in dataset preparation.
+- number: 1041
+  title: Feature view changes after re opening a session
+  url: https://github.com/cortex-lab/phy/issues/1041
+  created_at: '2020-10-26T18:52:26Z'
+  updated_at: '2026-07-23T15:46:28Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1042
+  title: Adding lines marking stimuli blocks to AmplitudeView
+  url: https://github.com/cortex-lab/phy/issues/1042
+  created_at: '2020-10-28T20:02:43Z'
+  updated_at: '2026-07-23T15:45:17Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: medium
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 839
+  closure_reason: not_planned
+  audit_comment: 'Tracking this under #839.'
+- number: 1043
+  title: Issue with OSError
+  url: https://github.com/cortex-lab/phy/issues/1043
+  created_at: '2020-10-29T16:04:11Z'
+  updated_at: '2026-07-23T15:49:00Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This concerns an unsupported Python/phylib stack. Please reopen with a phy 2.1 traceback.
+- number: 1044
+  title: No correlogram?
+  url: https://github.com/cortex-lab/phy/issues/1044
+  created_at: '2020-10-30T11:45:25Z'
+  updated_at: '2026-07-23T15:42:32Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share a small dataset or debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1045
+  title: Waveform view does not rescale when i toggle between waveform types
+  url: https://github.com/cortex-lab/phy/issues/1045
+  created_at: '2020-11-02T23:03:44Z'
+  updated_at: '2026-07-23T15:40:00Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: visualization'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 990
+  - 1155
+  - 1238
+  - 1332
+- number: 1047
+  title: No display
+  url: https://github.com/cortex-lab/phy/issues/1047
+  created_at: '2020-11-04T20:24:25Z'
+  updated_at: '2026-07-23T15:42:34Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your OS, GPU, and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1048
+  title: how do I cite Phy?
+  url: https://github.com/cortex-lab/phy/issues/1048
+  created_at: '2020-11-06T23:32:47Z'
+  updated_at: '2026-07-23T15:44:40Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1343
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1343.'
+- number: 1049
+  title: Is TraceView designed to always show 12 traces?
+  url: https://github.com/cortex-lab/phy/issues/1049
+  created_at: '2020-11-10T13:35:59Z'
+  updated_at: '2026-07-23T15:46:30Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Set `controller.model.n_closest_channels` in a plugin.
+- number: 1050
+  title: AmplitudeView not showing raw amplitudes
+  url: https://github.com/cortex-lab/phy/issues/1050
+  created_at: '2020-11-10T14:59:20Z'
+  updated_at: '2026-07-23T15:46:33Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Raw amplitudes are intentionally disabled when they are too slow.
+- number: 1051
+  title: Assertion Error when opening spike sorted file
+  url: https://github.com/cortex-lab/phy/issues/1051
+  created_at: '2020-11-10T15:14:17Z'
+  updated_at: '2026-07-23T15:50:14Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1052
+  title: ClusterView/clust_info.tsv columns disappear during curation
+  url: https://github.com/cortex-lab/phy/issues/1052
+  created_at: '2020-11-11T21:14:00Z'
+  updated_at: '2026-07-23T15:40:04Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1055
+  title: Feature View does not show clusters
+  url: https://github.com/cortex-lab/phy/issues/1055
+  created_at: '2020-11-20T11:17:49Z'
+  updated_at: '2026-07-23T15:49:03Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This was traced to SpyKING CIRCUS’s PC export.
+- number: 1056
+  title: autocorrelograms do not match - denoised in phy?
+  url: https://github.com/cortex-lab/phy/issues/1056
+  created_at: '2020-11-25T17:14:01Z'
+  updated_at: '2026-07-23T15:46:35Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1057
+  title: undo cluster classification
+  url: https://github.com/cortex-lab/phy/issues/1057
+  created_at: '2020-12-04T16:22:59Z'
+  updated_at: '2026-07-23T15:46:37Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Use `Alt+U` to move the cluster back to unsorted.
+- number: 1058
+  title: Go to next spike with ISI < refractory period
+  url: https://github.com/cortex-lab/phy/issues/1058
+  created_at: '2020-12-06T13:40:22Z'
+  updated_at: '2026-07-23T15:40:06Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: gui'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1059
+  title: Questions about scales
+  url: https://github.com/cortex-lab/phy/issues/1059
+  created_at: '2020-12-10T19:13:44Z'
+  updated_at: '2026-07-23T15:40:08Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: documentation'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the missing or incorrect documentation and submit a focused documentation update.
+- number: 1061
+  title: GUI resets to default view
+  url: https://github.com/cortex-lab/phy/issues/1061
+  created_at: '2020-12-14T01:32:03Z'
+  updated_at: '2026-07-23T15:42:35Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: gui'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does phy 2.1 still reset your layout? If so, please share debug output and what files
+    disappear.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1062
+  title: Skipping clusters when marked as noise
+  url: https://github.com/cortex-lab/phy/issues/1062
+  created_at: '2020-12-17T17:53:06Z'
+  updated_at: '2026-07-23T15:43:35Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1063
+  title: 'An error has occurred (Value Error): Cannot load file containing pickled data when allow_pickle=False'
+  url: https://github.com/cortex-lab/phy/issues/1063
+  created_at: '2020-12-18T10:10:36Z'
+  updated_at: '2026-07-23T15:46:39Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1065
+  title: redefining PC space for feature view
+  url: https://github.com/cortex-lab/phy/issues/1065
+  created_at: '2021-01-13T23:28:51Z'
+  updated_at: '2026-07-23T15:40:12Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1067
+  title: Unable to Use Keyboard shortcuts
+  url: https://github.com/cortex-lab/phy/issues/1067
+  created_at: '2021-01-19T22:26:33Z'
+  updated_at: '2026-07-23T15:50:16Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1068
+  title: '"Issues" on MacOS 11'
+  url: https://github.com/cortex-lab/phy/issues/1068
+  created_at: '2021-01-22T22:54:30Z'
+  updated_at: '2026-07-23T15:50:18Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1069
+  title: Custom clustering group
+  url: https://github.com/cortex-lab/phy/issues/1069
+  created_at: '2021-02-01T15:23:51Z'
+  updated_at: '2026-07-23T15:43:37Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1071
+  title: Phy is not able to generate FeatureView nor TemplateFeatureView in its GUI
+  url: https://github.com/cortex-lab/phy/issues/1071
+  created_at: '2021-02-04T16:52:26Z'
+  updated_at: '2026-07-23T15:46:42Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Kilosort 3 does not export the feature files required by these views.
+- number: 1072
+  title: Sort by columns in ClusterView
+  url: https://github.com/cortex-lab/phy/issues/1072
+  created_at: '2021-02-09T16:09:25Z'
+  updated_at: '2026-07-23T15:43:39Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1073
+  title: unable to change the number of spikes presented in the wave form
+  url: https://github.com/cortex-lab/phy/issues/1073
+  created_at: '2021-02-14T14:18:54Z'
+  updated_at: '2026-07-23T15:44:42Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1091
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1091.'
+- number: 1074
+  title: Error when executing action next
+  url: https://github.com/cortex-lab/phy/issues/1074
+  created_at: '2021-02-14T18:23:49Z'
+  updated_at: '2026-07-23T15:42:36Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: performance'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does Next still time out in phy 2.1? If so, please share the dataset size and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1075
+  title: Error when trying to quit
+  url: https://github.com/cortex-lab/phy/issues/1075
+  created_at: '2021-02-17T11:10:07Z'
+  updated_at: '2026-07-23T15:50:20Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1076
+  title: Sort traceview by channel ID?
+  url: https://github.com/cortex-lab/phy/issues/1076
+  created_at: '2021-02-17T14:21:30Z'
+  updated_at: '2026-07-23T15:40:16Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1078
+  title: segmentation fault, seemingly random on multiple datasetes
+  url: https://github.com/cortex-lab/phy/issues/1078
+  created_at: '2021-02-22T11:41:32Z'
+  updated_at: '2026-07-23T15:42:37Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: installation'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your OS, GPU, and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1080
+  title: Incorrect channel selection in featureView (ctrl+click in waveformview)
+  url: https://github.com/cortex-lab/phy/issues/1080
+  created_at: '2021-02-22T16:57:12Z'
+  updated_at: '2026-07-23T15:42:38Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: data'
+  - 'scope: legacy-kwik'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1’s Kwik GUI? If so, please share a small dataset.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1081
+  title: Is there a way to access phy's uncurated clustering after curation?
+  url: https://github.com/cortex-lab/phy/issues/1081
+  created_at: '2021-02-25T12:03:22Z'
+  updated_at: '2026-07-23T15:46:44Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Use the original sorter output or a phy backup to recover the uncurated assignments.
+- number: 1082
+  title: 'Problem with WaveformView '
+  url: https://github.com/cortex-lab/phy/issues/1082
+  created_at: '2021-02-26T11:05:49Z'
+  updated_at: '2026-07-23T15:42:39Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your params.py and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1083
+  title: similarityView shows wrong colour for cluster (the metadata colour)
+  url: https://github.com/cortex-lab/phy/issues/1083
+  created_at: '2021-03-03T17:48:20Z'
+  updated_at: '2026-07-23T15:50:22Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1086
+  title: Waveformview- toggle mean waveforms does not work
+  url: https://github.com/cortex-lab/phy/issues/1086
+  created_at: '2021-03-16T16:31:43Z'
+  updated_at: '2026-07-23T15:46:46Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1087
+  title: Conserve filtering when switching cluster in SimilarityView
+  url: https://github.com/cortex-lab/phy/issues/1087
+  created_at: '2021-03-19T17:59:32Z'
+  updated_at: '2026-07-23T15:50:24Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1089
+  title: plotting PCA Noise Band
+  url: https://github.com/cortex-lab/phy/issues/1089
+  created_at: '2021-04-07T19:48:26Z'
+  updated_at: '2026-07-23T15:49:05Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This targets an internal plotting API that has since been replaced.
+- number: 1090
+  title: 'Feature Request: Density toggle on waveform view'
+  url: https://github.com/cortex-lab/phy/issues/1090
+  created_at: '2021-04-08T21:35:34Z'
+  updated_at: '2026-07-23T15:40:24Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1091
+  title: only one waveform being displayed per cluster in WaveformView
+  url: https://github.com/cortex-lab/phy/issues/1091
+  created_at: '2021-04-12T13:04:08Z'
+  updated_at: '2026-07-23T15:46:49Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1092
+  title: 'TraceView feature request: center the cluster channels & auto-update'
+  url: https://github.com/cortex-lab/phy/issues/1092
+  created_at: '2021-04-17T22:11:37Z'
+  updated_at: '2026-07-23T15:40:26Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1093
+  title: count the number of filtered clusters
+  url: https://github.com/cortex-lab/phy/issues/1093
+  created_at: '2021-04-18T19:03:52Z'
+  updated_at: '2026-07-23T15:40:28Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: gui'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1094
+  title: feature index mismatch
+  url: https://github.com/cortex-lab/phy/issues/1094
+  created_at: '2021-04-20T10:07:00Z'
+  updated_at: '2026-07-23T15:49:07Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This concerns an old IBL pipeline and phy 2.0 workflow.
+- number: 1096
+  title: Co-Curing multiple sessions worth of data
+  url: https://github.com/cortex-lab/phy/issues/1096
+  created_at: '2021-05-13T12:51:09Z'
+  updated_at: '2026-07-23T15:40:30Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1098
+  title: How to get a cluster label after a merge of two clusters.
+  url: https://github.com/cortex-lab/phy/issues/1098
+  created_at: '2021-06-03T23:30:01Z'
+  updated_at: '2026-07-23T15:49:09Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: The Supervisor and table APIs involved here have since been replaced.
+- number: 1099
+  title: Split cluster based on raw amplitude view
+  url: https://github.com/cortex-lab/phy/issues/1099
+  created_at: '2021-06-24T15:34:05Z'
+  updated_at: '2026-07-23T15:40:32Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1102
+  title: Data for Phy
+  url: https://github.com/cortex-lab/phy/issues/1102
+  created_at: '2021-07-17T13:32:30Z'
+  updated_at: '2026-07-23T15:46:52Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: question'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The example dataset is linked from the current quickstart.
+- number: 1103
+  title: Traceview shows invalid traces for spikes
+  url: https://github.com/cortex-lab/phy/issues/1103
+  created_at: '2021-07-29T04:59:32Z'
+  updated_at: '2026-07-23T15:40:34Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1104
+  title: Phy views do not update automatically after changing another cluster
+  url: https://github.com/cortex-lab/phy/issues/1104
+  created_at: '2021-07-29T07:59:29Z'
+  updated_at: '2026-07-23T15:50:26Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels:
+  - 'type: bug'
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1105
+  title: changing what is plotted in FeatureView
+  url: https://github.com/cortex-lab/phy/issues/1105
+  created_at: '2021-08-13T15:04:31Z'
+  updated_at: '2026-07-23T15:49:11Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Replacing PC arrays with amplitude data is unsupported; use a custom view.
+- number: 1107
+  title: problem opening kilosort files when threshold is bellow 10 (for example [9 4])
+  url: https://github.com/cortex-lab/phy/issues/1107
+  created_at: '2021-08-17T18:11:17Z'
+  updated_at: '2026-07-23T15:46:54Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels:
+  - 'type: bug'
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The reporter confirmed the threshold was not the cause, so I’m closing this.
+- number: 1108
+  title: 'XmbText result code -2 '
+  url: https://github.com/cortex-lab/phy/issues/1108
+  created_at: '2021-08-25T08:46:00Z'
+  updated_at: '2026-07-23T15:42:40Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: performance'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Is TraceView still slow in phy 2.1? If so, please share system details and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1111
+  title: Cluster view table re-sorts on changing cluster groups
+  url: https://github.com/cortex-lab/phy/issues/1111
+  created_at: '2021-09-10T23:42:26Z'
+  updated_at: '2026-07-23T15:43:41Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1113
+  title: 'Error in Vertex Shader (similar to #1034)'
+  url: https://github.com/cortex-lab/phy/issues/1113
+  created_at: '2021-09-23T21:41:06Z'
+  updated_at: '2026-07-23T15:50:28Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1115
+  title: Error while running
+  url: https://github.com/cortex-lab/phy/issues/1115
+  created_at: '2021-09-28T20:41:55Z'
+  updated_at: '2026-07-23T15:46:56Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The QWidget message is secondary; the reported failures came from invalid input data.
+- number: 1116
+  title: OpenGL error
+  url: https://github.com/cortex-lab/phy/issues/1116
+  created_at: '2021-09-29T15:57:08Z'
+  updated_at: '2026-07-23T15:46:58Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: This was an OpenGL system-library issue, resolved by the setup above.
+- number: 1117
+  title: GLError - clusterview OK but waveforms or other views are not displayed
+  url: https://github.com/cortex-lab/phy/issues/1117
+  created_at: '2021-09-30T14:51:57Z'
+  updated_at: '2026-07-23T15:42:41Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: installation'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your OS, GPU, and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1118
+  title: WinError 5 and 59
+  url: https://github.com/cortex-lab/phy/issues/1118
+  created_at: '2021-10-06T15:28:56Z'
+  updated_at: '2026-07-23T15:49:14Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This shared Spyder/Conda Qt setup is no longer supported.
+- number: 1122
+  title: Context creation error when launching phy
+  url: https://github.com/cortex-lab/phy/issues/1122
+  created_at: '2021-10-23T22:12:43Z'
+  updated_at: '2026-07-23T15:43:44Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1124
+  title: ClusterView filtering by group doesn't work
+  url: https://github.com/cortex-lab/phy/issues/1124
+  created_at: '2021-11-16T19:30:20Z'
+  updated_at: '2026-07-23T15:43:46Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1125
+  title: AmplidueView scattered at 0 amplidude
+  url: https://github.com/cortex-lab/phy/issues/1125
+  created_at: '2021-11-17T09:33:39Z'
+  updated_at: '2026-07-23T15:40:40Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1126
+  title: segmentation fault when running the GUI remotely on a server with x2go
+  url: https://github.com/cortex-lab/phy/issues/1126
+  created_at: '2021-11-19T14:02:19Z'
+  updated_at: '2026-07-23T15:44:45Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1328
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1328.'
+- number: 1127
+  title: Quickly filter by time in WavevormView, TemplateFeatureView, FeatureView, CorrelogramView
+  url: https://github.com/cortex-lab/phy/issues/1127
+  created_at: '2021-11-22T20:34:35Z'
+  updated_at: '2026-07-23T15:40:42Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1128
+  title: Output data of phy
+  url: https://github.com/cortex-lab/phy/issues/1128
+  created_at: '2021-11-22T22:25:40Z'
+  updated_at: '2026-07-23T15:47:00Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The current output-file documentation covers this.
+- number: 1129
+  title: Failed to establish dbus connection
+  url: https://github.com/cortex-lab/phy/issues/1129
+  created_at: '2021-11-30T06:06:15Z'
+  updated_at: '2026-07-23T15:47:03Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The log shows phy starts successfully; this is a system warning.
+- number: 1130
+  title: problems with trace view
+  url: https://github.com/cortex-lab/phy/issues/1130
+  created_at: '2021-12-26T18:26:52Z'
+  updated_at: '2026-07-23T15:42:42Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'status: needs-info'
+  - 'type: question'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Which TraceView behavior still needs addressing in phy 2.1? A screenshot would help.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1131
+  title: spikes labelled twice
+  url: https://github.com/cortex-lab/phy/issues/1131
+  created_at: '2022-01-14T12:20:48Z'
+  updated_at: '2026-07-23T15:47:05Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: These are independent sorter detections, not spikes duplicated by phy.
+- number: 1132
+  title: ISI < 0.4 ms and Correlogram
+  url: https://github.com/cortex-lab/phy/issues/1132
+  created_at: '2022-01-29T16:47:48Z'
+  updated_at: '2026-07-23T15:49:16Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Kilosort’s quality classification is outside phy’s scope.
+- number: 1133
+  title: Strange Splitting
+  url: https://github.com/cortex-lab/phy/issues/1133
+  created_at: '2022-01-30T14:51:27Z'
+  updated_at: '2026-07-23T15:40:46Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: data'
+  - 'priority: high'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce the split-assignment mismatch and add a regression test protecting spike assignments.
+  related_issues:
+  - 1261
+  - 1293
+- number: 1134
+  title: change the number of spikes in feature view
+  url: https://github.com/cortex-lab/phy/issues/1134
+  created_at: '2022-02-04T16:16:26Z'
+  updated_at: '2026-07-23T15:47:07Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Set `controller.n_spikes_features` in a plugin.
+- number: 1136
+  title: good units grayed-out while mua units appear green
+  url: https://github.com/cortex-lab/phy/issues/1136
+  created_at: '2022-02-08T17:09:47Z'
+  updated_at: '2026-07-23T15:47:10Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1137
+  title: Peak activity and template appear on different channels
+  url: https://github.com/cortex-lab/phy/issues/1137
+  created_at: '2022-02-10T18:21:16Z'
+  updated_at: '2026-07-23T15:40:48Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1017
+  - 1187
+- number: 1138
+  title: 'Conda install and Error: No such command ''template-gui''.'
+  url: https://github.com/cortex-lab/phy/issues/1138
+  created_at: '2022-02-22T16:27:20Z'
+  updated_at: '2026-07-23T15:43:48Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1140
+  title: get cluster_info.tsv without launching gui?
+  url: https://github.com/cortex-lab/phy/issues/1140
+  created_at: '2022-03-04T03:03:56Z'
+  updated_at: '2026-07-23T15:44:48Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1241
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1241.'
+- number: 1141
+  title: Failed to create process.
+  url: https://github.com/cortex-lab/phy/issues/1141
+  created_at: '2022-03-04T19:56:23Z'
+  updated_at: '2026-07-23T15:49:18Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This was caused by a broken local Python launcher rather than phy.
+- number: 1144
+  title: No state set to SimilarityView and WaveformView when starting gui
+  url: https://github.com/cortex-lab/phy/issues/1144
+  created_at: '2022-03-18T09:14:53Z'
+  updated_at: '2026-07-23T15:42:43Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen after selecting a cluster in phy 2.1? If so, please share debug
+    output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1146
+  title: Plugin command change cluster group
+  url: https://github.com/cortex-lab/phy/issues/1146
+  created_at: '2022-04-06T14:01:03Z'
+  updated_at: '2026-07-23T15:47:12Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Use the supervisor’s `label()` or `move()` API.
+- number: 1147
+  title: In WaveformView, channel locations incorrect
+  url: https://github.com/cortex-lab/phy/issues/1147
+  created_at: '2022-04-06T16:52:29Z'
+  updated_at: '2026-07-23T15:42:44Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: data'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share the probe geometry and a small
+    dataset.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1148
+  title: phy2 plugin access individual spike wavefrom from cluster
+  url: https://github.com/cortex-lab/phy/issues/1148
+  created_at: '2022-04-07T12:34:06Z'
+  updated_at: '2026-07-23T15:47:14Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1149
+  title: Finding Spike Channel IDs
+  url: https://github.com/cortex-lab/phy/issues/1149
+  created_at: '2022-04-08T12:00:49Z'
+  updated_at: '2026-07-23T15:47:17Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1150
+  title: Strange 'chunks' in TraceView linked possibly to Nblocks and temp_wh.dat
+  url: https://github.com/cortex-lab/phy/issues/1150
+  created_at: '2022-04-08T12:40:57Z'
+  updated_at: '2026-07-23T15:49:20Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: These artifacts come from Kilosort’s processed `temp_wh.dat`.
+- number: 1152
+  title: Error related to mouse_wheel
+  url: https://github.com/cortex-lab/phy/issues/1152
+  created_at: '2022-04-19T11:28:30Z'
+  updated_at: '2026-07-23T15:47:19Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1154
+  title: Trouble opening .pkl file
+  url: https://github.com/cortex-lab/phy/issues/1154
+  created_at: '2022-04-20T15:33:18Z'
+  updated_at: '2026-07-23T15:47:21Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: '`spikes_per_cluster.pkl` is an internal cache file and can be deleted.'
+- number: 1155
+  title: Clusters in Waveform View Unaligned
+  url: https://github.com/cortex-lab/phy/issues/1155
+  created_at: '2022-04-21T13:19:36Z'
+  updated_at: '2026-07-23T15:40:54Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: visualization'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 990
+  - 1045
+  - 1238
+  - 1332
+- number: 1157
+  title: custom_similarity plugin corrupts scaling of waveform view (mean waveforms) in Kwik-gui
+  url: https://github.com/cortex-lab/phy/issues/1157
+  created_at: '2022-05-13T09:02:17Z'
+  updated_at: '2026-07-23T15:49:22Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This depends on a third-party plugin in the legacy Kwik GUI.
+- number: 1158
+  title: 'kwik-gui: Suddenly ''NoneType'' has no length error in middle of manual clustering'
+  url: https://github.com/cortex-lab/phy/issues/1158
+  created_at: '2022-05-17T09:01:50Z'
+  updated_at: '2026-07-23T15:49:24Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This concerns the legacy Kwik GUI on Python 3.7.
+- number: 1163
+  title: Menus not working on mac
+  url: https://github.com/cortex-lab/phy/issues/1163
+  created_at: '2022-06-27T15:31:43Z'
+  updated_at: '2026-07-23T15:50:30Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1166
+  title: FeatureView and TemplateFeatureView not working
+  url: https://github.com/cortex-lab/phy/issues/1166
+  created_at: '2022-07-14T21:19:23Z'
+  updated_at: '2026-07-23T15:44:50Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1071
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1071.'
+- number: 1168
+  title: 'ImportError: libQt5QmlModels.so.5: cannot open shared object file: No such file or directory'
+  url: https://github.com/cortex-lab/phy/issues/1168
+  created_at: '2022-07-25T13:52:50Z'
+  updated_at: '2026-07-23T15:43:51Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1169
+  title: Add quality metrics in the cluster view
+  url: https://github.com/cortex-lab/phy/issues/1169
+  created_at: '2022-08-03T19:03:05Z'
+  updated_at: '2026-07-23T15:47:23Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1170
+  title: 'Problem about the GUI loading '
+  url: https://github.com/cortex-lab/phy/issues/1170
+  created_at: '2022-09-04T14:57:19Z'
+  updated_at: '2026-07-23T15:44:52Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1113
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1113.'
+- number: 1171
+  title: relation between channel id and electrodes sites id
+  url: https://github.com/cortex-lab/phy/issues/1171
+  created_at: '2022-09-08T06:58:08Z'
+  updated_at: '2026-07-23T15:49:26Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Channel/electrode mapping is defined by the sorter or exporter.
+- number: 1172
+  title: 'DLL load failed while importing QtWebEngineWidgets:'
+  url: https://github.com/cortex-lab/phy/issues/1172
+  created_at: '2022-09-13T12:29:20Z'
+  updated_at: '2026-07-23T15:43:54Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1173
+  title: 'Loading Plugin '
+  url: https://github.com/cortex-lab/phy/issues/1173
+  created_at: '2022-09-14T21:30:23Z'
+  updated_at: '2026-07-23T15:47:26Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The second `attach_to_controller()` overrides the first.
+- number: 1175
+  title: Raw Amplitude View Not showing Up
+  url: https://github.com/cortex-lab/phy/issues/1175
+  created_at: '2022-10-03T15:30:15Z'
+  updated_at: '2026-07-23T15:47:28Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Raw amplitudes are intentionally unavailable when they are too slow or unrepresentative.
+- number: 1176
+  title: Failure to launch phy GUI with index error
+  url: https://github.com/cortex-lab/phy/issues/1176
+  created_at: '2022-10-05T17:54:30Z'
+  updated_at: '2026-07-23T15:43:55Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1177
+  title: Feature view *very* intermittently responsive to clicks to draw or erase lasso on Mac
+  url: https://github.com/cortex-lab/phy/issues/1177
+  created_at: '2022-10-31T12:43:17Z'
+  updated_at: '2026-07-23T15:43:57Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1178
+  title: Export windows in vectorial formal
+  url: https://github.com/cortex-lab/phy/issues/1178
+  created_at: '2022-10-31T20:40:36Z'
+  updated_at: '2026-07-23T15:49:28Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Vector export is not supported, so I’m closing this.
+- number: 1179
+  title: Docker Deployments and OS Versions
+  url: https://github.com/cortex-lab/phy/issues/1179
+  created_at: '2022-11-03T02:32:46Z'
+  updated_at: '2026-07-23T15:49:30Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: A maintained GUI Docker distribution is not currently planned.
+- number: 1181
+  title: Splitting Computation Across GPUs
+  url: https://github.com/cortex-lab/phy/issues/1181
+  created_at: '2022-11-10T09:37:28Z'
+  updated_at: '2026-07-23T15:49:32Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: Multi-GPU sorting belongs to the spike sorter, not phy.
+- number: 1183
+  title: Menu Button Not Working
+  url: https://github.com/cortex-lab/phy/issues/1183
+  created_at: '2022-11-17T00:41:50Z'
+  updated_at: '2026-07-23T15:44:54Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1163
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1163.'
+- number: 1184
+  title: chn 0 giving me no feature and amplitude value
+  url: https://github.com/cortex-lab/phy/issues/1184
+  created_at: '2022-11-27T05:06:46Z'
+  updated_at: '2026-07-23T15:40:56Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: data'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1187
+  title: Best channel does not have the largest amplitude for its waveform template?
+  url: https://github.com/cortex-lab/phy/issues/1187
+  created_at: '2022-12-13T02:19:08Z'
+  updated_at: '2026-07-23T15:40:59Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1017
+  - 1137
+- number: 1188
+  title: Extract PCs for Feature View
+  url: https://github.com/cortex-lab/phy/issues/1188
+  created_at: '2022-12-27T06:21:30Z'
+  updated_at: '2026-07-23T15:49:34Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: PC extraction belongs to the sorter or exporter.
+- number: 1189
+  title: 'Error in Vertex shader:  version ''120'' is not supported'
+  url: https://github.com/cortex-lab/phy/issues/1189
+  created_at: '2022-12-31T07:57:43Z'
+  updated_at: '2026-07-23T15:50:32Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1190
+  title: 'All windows blank in Phy  '
+  url: https://github.com/cortex-lab/phy/issues/1190
+  created_at: '2023-01-18T21:01:41Z'
+  updated_at: '2026-07-23T15:44:57Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1196
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1196.'
+- number: 1191
+  title: Missing files in cache folders when using phy on different computer
+  url: https://github.com/cortex-lab/phy/issues/1191
+  created_at: '2023-01-25T12:02:11Z'
+  updated_at: '2026-07-23T15:42:46Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: data'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share the data paths and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1194
+  title: Inconsistent Behavior with using phy with multiple users on same server
+  url: https://github.com/cortex-lab/phy/issues/1194
+  created_at: '2023-02-08T18:48:55Z'
+  updated_at: '2026-07-23T15:42:47Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: gui'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please compare the users’ config and debug
+    output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1195
+  title: How to edit spike_clusters outside of phy
+  url: https://github.com/cortex-lab/phy/issues/1195
+  created_at: '2023-02-10T21:42:22Z'
+  updated_at: '2026-07-23T15:47:30Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Curated assignments are saved in `spike_clusters.npy`; `.phy` is only cache.
+- number: 1196
+  title: Problem with OpenGL Drivers [Ubuntu 22.04]
+  url: https://github.com/cortex-lab/phy/issues/1196
+  created_at: '2023-02-17T18:43:42Z'
+  updated_at: '2026-07-23T15:41:06Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: installation'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1291
+  - 1328
+- number: 1197
+  title: 'ImportError: /usr/lib/x86_64-linux-gnu/libgssapi_krb5.so.2: undefined symbol: krb5_ser_context_init,
+    version krb5_3_MIT'
+  url: https://github.com/cortex-lab/phy/issues/1197
+  created_at: '2023-02-21T09:07:07Z'
+  updated_at: '2026-07-23T15:49:36Z'
+  final_state: closed
+  disposition: obsolete
+  confidence: high
+  labels: []
+  audit_note: The report concerns an unsupported version, platform, dependency stack, or legacy implementation.
+  closure_reason: not_planned
+  audit_comment: This concerns an obsolete Docker/Conda/QtWebEngine library combination.
+- number: 1198
+  title: libGL error when trying to open template_gui
+  url: https://github.com/cortex-lab/phy/issues/1198
+  created_at: '2023-02-21T13:05:48Z'
+  updated_at: '2026-07-23T15:45:20Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: medium
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1328
+  closure_reason: not_planned
+  audit_comment: 'Tracking remote OpenGL issues under #1328.'
+- number: 1201
+  title: Adjust default zoom for waveforms vs templates in WaveformView?
+  url: https://github.com/cortex-lab/phy/issues/1201
+  created_at: '2023-03-02T17:12:31Z'
+  updated_at: '2026-07-23T15:41:08Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1203
+  title: KiwkGui channel groups save
+  url: https://github.com/cortex-lab/phy/issues/1203
+  created_at: '2023-03-14T16:06:15Z'
+  updated_at: '2026-07-23T15:49:38Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This concerns the legacy Kwik workflow and is not planned.
+- number: 1206
+  title: GPU not being utilized
+  url: https://github.com/cortex-lab/phy/issues/1206
+  created_at: '2023-04-14T17:06:11Z'
+  updated_at: '2026-07-23T15:47:32Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Phy uses OpenGL for rendering but does not provide configurable GPU compute.
+- number: 1208
+  title: Problem with get_cluster_spike_waveforms
+  url: https://github.com/cortex-lab/phy/issues/1208
+  created_at: '2023-05-26T19:43:32Z'
+  updated_at: '2026-07-23T15:41:10Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1213
+  title: Memory leak
+  url: https://github.com/cortex-lab/phy/issues/1213
+  created_at: '2023-07-11T13:58:57Z'
+  updated_at: '2026-07-23T15:44:59Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 980
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #980.'
+- number: 1221
+  title: 'Error when using iPythonView: "AttributeError: ''QtInProcessChannel'' object has no attribute
+    ''closed''"'
+  url: https://github.com/cortex-lab/phy/issues/1221
+  created_at: '2023-10-03T11:50:27Z'
+  updated_at: '2026-07-23T15:50:35Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1222
+  title: ClusterView data units
+  url: https://github.com/cortex-lab/phy/issues/1222
+  created_at: '2023-10-18T09:33:35Z'
+  updated_at: '2026-07-23T15:47:35Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1225
+  title: Couldn't open phy2 file from other device
+  url: https://github.com/cortex-lab/phy/issues/1225
+  created_at: '2023-10-20T15:17:36Z'
+  updated_at: '2026-07-23T15:42:48Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: data'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your params.py and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1234
+  title: Could not create view FeatureView
+  url: https://github.com/cortex-lab/phy/issues/1234
+  created_at: '2023-11-18T06:57:22Z'
+  updated_at: '2026-07-23T15:45:01Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1071
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1071.'
+- number: 1238
+  title: Waveforms view only show mean waveforms
+  url: https://github.com/cortex-lab/phy/issues/1238
+  created_at: '2023-11-24T15:30:46Z'
+  updated_at: '2026-07-23T15:41:14Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: visualization'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 990
+  - 1045
+  - 1155
+  - 1332
+- number: 1241
+  title: Programmatically save cluster_info.tsv
+  url: https://github.com/cortex-lab/phy/issues/1241
+  created_at: '2023-12-19T19:06:22Z'
+  updated_at: '2026-07-23T15:41:16Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+- number: 1242
+  title: Missing Amplitudeview
+  url: https://github.com/cortex-lab/phy/issues/1242
+  created_at: '2023-12-21T21:11:31Z'
+  updated_at: '2026-07-23T15:42:49Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: visualization'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your params.py and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1243
+  title: Crash in phy with Exception in paintGL
+  url: https://github.com/cortex-lab/phy/issues/1243
+  created_at: '2024-01-04T05:53:14Z'
+  updated_at: '2026-07-23T15:42:50Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: installation'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still crash with phy 2.1? If so, please share graphics details and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1249
+  title: Recovering progress after phy crash and restoring spike_cluster.npy
+  url: https://github.com/cortex-lab/phy/issues/1249
+  created_at: '2024-01-28T20:53:40Z'
+  updated_at: '2026-07-23T15:41:22Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: data'
+  - 'priority: high'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce crash/save recovery and verify backups prevent loss of curated assignments.
+- number: 1254
+  title: Output matrices from Kilosort 3 after phy curation
+  url: https://github.com/cortex-lab/phy/issues/1254
+  created_at: '2024-02-07T14:01:42Z'
+  updated_at: '2026-07-23T15:47:37Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1256
+  title: Waveform view selecting multiple clusters
+  url: https://github.com/cortex-lab/phy/issues/1256
+  created_at: '2024-02-16T15:21:40Z'
+  updated_at: '2026-07-23T15:47:39Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Phy displays units across their channels; single-channel units must be defined upstream.
+- number: 1257
+  title: Mismatch in waveform view and feature view after splitting clusters
+  url: https://github.com/cortex-lab/phy/issues/1257
+  created_at: '2024-02-22T18:27:53Z'
+  updated_at: '2026-07-23T15:45:03Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1261
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1261.'
+- number: 1258
+  title: Issue loading and visualizing previously curated data
+  url: https://github.com/cortex-lab/phy/issues/1258
+  created_at: '2024-03-08T00:37:35Z'
+  updated_at: '2026-07-23T15:42:51Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: data'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share your params.py and debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1261
+  title: Label mismatch in WaveformView and FeatureView vs. Correlogram View and n_spikes
+  url: https://github.com/cortex-lab/phy/issues/1261
+  created_at: '2024-03-20T19:15:21Z'
+  updated_at: '2026-07-23T15:41:27Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: data'
+  - 'priority: high'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce the cross-view split mismatch and compare live assignments across all affected
+    views.
+  related_issues:
+  - 1133
+  - 1293
+- number: 1262
+  title: Shank visualization
+  url: https://github.com/cortex-lab/phy/issues/1262
+  created_at: '2024-03-25T14:24:33Z'
+  updated_at: '2026-07-23T15:41:29Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+  related_issues:
+  - 1276
+  - 1303
+- number: 1270
+  title: Are correlograms in Phy normalized?
+  url: https://github.com/cortex-lab/phy/issues/1270
+  created_at: '2024-04-17T17:57:20Z'
+  updated_at: '2026-07-23T15:47:42Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Correlograms show counts, not firing-rate-normalized values.
+- number: 1274
+  title: add a low-pass filter for the waveform view and trace view
+  url: https://github.com/cortex-lab/phy/issues/1274
+  created_at: '2024-05-01T15:11:12Z'
+  updated_at: '2026-07-23T15:47:44Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Plugin locations and custom raw-data filters are now documented.
+- number: 1276
+  title: Regarding the issue of drawing 2D probes.
+  url: https://github.com/cortex-lab/phy/issues/1276
+  created_at: '2024-05-20T08:08:11Z'
+  updated_at: '2026-07-23T15:41:31Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+  related_issues:
+  - 1262
+  - 1303
+- number: 1279
+  title: '[HELP] Asign the waveform of a spike_time'
+  url: https://github.com/cortex-lab/phy/issues/1279
+  created_at: '2024-06-03T11:12:52Z'
+  updated_at: '2026-07-23T15:47:47Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1280
+  title: Cluster view gui data
+  url: https://github.com/cortex-lab/phy/issues/1280
+  created_at: '2024-06-04T13:06:04Z'
+  updated_at: '2026-07-23T15:47:49Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Answered above, so I’m closing this.
+- number: 1283
+  title: Phy gui is blank apart from cluster view and similarity view--if using python 3.12
+  url: https://github.com/cortex-lab/phy/issues/1283
+  created_at: '2024-06-05T15:09:29Z'
+  updated_at: '2026-07-23T15:43:59Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1285
+  title: Extract waveform
+  url: https://github.com/cortex-lab/phy/issues/1285
+  created_at: '2024-06-19T08:51:59Z'
+  updated_at: '2026-07-23T15:47:51Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1287
+  title: Segmentation fault when attempting to open Kilosort4 output in Phy
+  url: https://github.com/cortex-lab/phy/issues/1287
+  created_at: '2024-06-20T21:01:15Z'
+  updated_at: '2026-07-23T15:50:37Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1288
+  title: Unable to open Phy due to QT error
+  url: https://github.com/cortex-lab/phy/issues/1288
+  created_at: '2024-06-21T21:07:48Z'
+  updated_at: '2026-07-23T15:50:39Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1290
+  title: Cannot open TemplateFeatureView
+  url: https://github.com/cortex-lab/phy/issues/1290
+  created_at: '2024-06-28T18:38:13Z'
+  updated_at: '2026-07-23T15:49:40Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: SpikeInterface does not export the required files; please track this there.
+- number: 1291
+  title: OpenGL error loading datasets that previously opened without issue
+  url: https://github.com/cortex-lab/phy/issues/1291
+  created_at: '2024-07-01T17:16:42Z'
+  updated_at: '2026-07-23T15:41:33Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: installation'
+  - 'priority: low'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1196
+  - 1328
+- number: 1293
+  title: after splitting in phy the amp is not recomputed
+  url: https://github.com/cortex-lab/phy/issues/1293
+  created_at: '2024-07-04T02:10:27Z'
+  updated_at: '2026-07-23T15:41:35Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: data'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1133
+  - 1261
+- number: 1295
+  title: which amplitude value is correct?
+  url: https://github.com/cortex-lab/phy/issues/1295
+  created_at: '2024-07-12T00:56:04Z'
+  updated_at: '2026-07-23T15:47:54Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: These are different amplitude definitions, as explained above.
+- number: 1297
+  title: Phy gui is black when using Remote Desktop Connection
+  url: https://github.com/cortex-lab/phy/issues/1297
+  created_at: '2024-07-25T08:50:41Z'
+  updated_at: '2026-07-23T15:45:05Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1328
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1328.'
+- number: 1303
+  title: ProbeView shows multiple shanks in the case of staggard channel locations.
+  url: https://github.com/cortex-lab/phy/issues/1303
+  created_at: '2024-08-19T13:23:24Z'
+  updated_at: '2026-07-23T15:41:37Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: visualization'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+  related_issues:
+  - 1262
+  - 1276
+- number: 1305
+  title: Open the sorting reasult by phy
+  url: https://github.com/cortex-lab/phy/issues/1305
+  created_at: '2024-09-06T02:37:24Z'
+  updated_at: '2026-07-23T15:50:41Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1306
+  title: How to update Template model after Manual curation?
+  url: https://github.com/cortex-lab/phy/issues/1306
+  created_at: '2024-09-06T16:07:01Z'
+  updated_at: '2026-07-23T15:47:56Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Use `spike_clusters.npy` for the curated assignments.
+- number: 1307
+  title: Error loading internal MIME data
+  url: https://github.com/cortex-lab/phy/issues/1307
+  created_at: '2024-09-17T22:27:56Z'
+  updated_at: '2026-07-23T15:50:43Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1308
+  title: 'Issue Updating clusters_ContamPct.tsv: MIME Error the cause?'
+  url: https://github.com/cortex-lab/phy/issues/1308
+  created_at: '2024-09-23T21:17:46Z'
+  updated_at: '2026-07-23T15:47:58Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Phy does not update `cluster_ContamPct.tsv`.
+- number: 1309
+  title: Numpy version < 1.20?
+  url: https://github.com/cortex-lab/phy/issues/1309
+  created_at: '2024-09-25T05:56:02Z'
+  updated_at: '2026-07-23T15:44:01Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1310
+  title: Error in construction  of QApplication before QWidget.
+  url: https://github.com/cortex-lab/phy/issues/1310
+  created_at: '2024-10-10T21:33:12Z'
+  updated_at: '2026-07-23T15:48:01Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: The first error is an unreadable `spike_times.npy`; the QWidget line is secondary.
+- number: 1311
+  title: Segmentation Fault after Set state for FeatureView.
+  url: https://github.com/cortex-lab/phy/issues/1311
+  created_at: '2024-10-18T18:55:00Z'
+  updated_at: '2026-07-23T15:42:52Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: installation'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen in phy 2.1? If so, please share a minimal dataset.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1313
+  title: '[Feature request] Change the rounding when loading cluster_[xxxx].tsv values'
+  url: https://github.com/cortex-lab/phy/issues/1313
+  created_at: '2024-10-30T15:44:14Z'
+  updated_at: '2026-07-23T15:44:03Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1315
+  title: All windows except clusters are blank
+  url: https://github.com/cortex-lab/phy/issues/1315
+  created_at: '2024-11-04T17:30:16Z'
+  updated_at: '2026-07-23T15:44:05Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1316
+  title: 'Waveform view for split clusters '
+  url: https://github.com/cortex-lab/phy/issues/1316
+  created_at: '2024-11-06T13:28:52Z'
+  updated_at: '2026-07-23T15:44:21Z'
+  final_state: closed
+  disposition: fixed_on_master
+  confidence: high
+  labels: []
+  audit_note: Fixed on master after phy 2.1 and scheduled for phy 2.1.1.
+  closure_reason: completed
+  audit_comment: Fixed on master for phy 2.1.1.
+- number: 1318
+  title: '''phy'' is not recognized as an internal or external command, operable program or batch file'
+  url: https://github.com/cortex-lab/phy/issues/1318
+  created_at: '2024-12-15T07:39:21Z'
+  updated_at: '2026-07-23T15:44:08Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1320
+  title: Segmentation fault using  phy template-gui params.py
+  url: https://github.com/cortex-lab/phy/issues/1320
+  created_at: '2024-12-17T19:52:06Z'
+  updated_at: '2026-07-23T15:50:45Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1322
+  title: Error saying that recording.dat does not exist
+  url: https://github.com/cortex-lab/phy/issues/1322
+  created_at: '2024-12-31T18:59:24Z'
+  updated_at: '2026-07-23T15:48:03Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Update `dat_path` in `params.py` to the raw data file.
+- number: 1323
+  title: 'ImportError: DLL load failed while importing _sqlite3: The specified procedure could not be
+    found.'
+  url: https://github.com/cortex-lab/phy/issues/1323
+  created_at: '2025-01-09T00:19:13Z'
+  updated_at: '2026-07-23T15:48:05Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.
+- number: 1324
+  title: 'Model: 667 error'
+  url: https://github.com/cortex-lab/phy/issues/1324
+  created_at: '2025-01-09T13:52:32Z'
+  updated_at: '2026-07-23T15:48:07Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: This warning is expected when waveforms were not pre-extracted.
+- number: 1325
+  title: Added a peristimulus histogram viewer - make pull request?
+  url: https://github.com/cortex-lab/phy/issues/1325
+  created_at: '2025-01-10T12:39:01Z'
+  updated_at: '2026-07-23T15:41:41Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: plugins'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the expected behavior and implementation scope before development.
+  related_issues:
+  - 839
+- number: 1326
+  title: AssertionError while trying to run Phy2 post-sorting
+  url: https://github.com/cortex-lab/phy/issues/1326
+  created_at: '2025-01-19T05:46:58Z'
+  updated_at: '2026-07-23T15:49:43Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: '`similar_templates.npy` has an invalid shape for this dataset.'
+- number: 1327
+  title: Fail to load kilosort4 output
+  url: https://github.com/cortex-lab/phy/issues/1327
+  created_at: '2025-02-01T09:06:30Z'
+  updated_at: '2026-07-23T15:49:44Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: The SpikeInterface export resolved this input-format issue.
+- number: 1328
+  title: GLError (invalid operation) in phy when running via RDP on Windows Server 2019
+  url: https://github.com/cortex-lab/phy/issues/1328
+  created_at: '2025-02-08T04:42:34Z'
+  updated_at: '2026-07-23T15:41:43Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: installation'
+  - 'priority: low'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 1196
+  - 1291
+- number: 1329
+  title: New feature with waveform view lasso split
+  url: https://github.com/cortex-lab/phy/issues/1329
+  created_at: '2025-02-11T09:30:05Z'
+  updated_at: '2026-07-23T15:45:08Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 897
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #897.'
+- number: 1332
+  title: Templates and mean waveforms have a different offset
+  url: https://github.com/cortex-lab/phy/issues/1332
+  created_at: '2025-02-27T20:29:08Z'
+  updated_at: '2026-07-23T15:41:45Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: visualization'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+  related_issues:
+  - 990
+  - 1045
+  - 1155
+  - 1238
+- number: 1333
+  title: Can't change the number of channels displayed in WaveformView
+  url: https://github.com/cortex-lab/phy/issues/1333
+  created_at: '2025-02-28T00:11:02Z'
+  updated_at: '2026-07-23T15:48:10Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Set `controller.model.n_closest_channels` in a plugin.
+- number: 1334
+  title: FeatureView, can you explain how pc_features.npy and pc_feature_ind.npy map onto kilosort terminology
+  url: https://github.com/cortex-lab/phy/issues/1334
+  created_at: '2025-03-08T09:38:23Z'
+  updated_at: '2026-07-23T15:45:10Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1364
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1364.'
+- number: 1337
+  title: Loading Error and Joblib Issue
+  url: https://github.com/cortex-lab/phy/issues/1337
+  created_at: '2025-04-16T16:47:53Z'
+  updated_at: '2026-07-23T15:50:47Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: The Joblib error is fixed in phy 2.1. Raw amplitudes remain intentionally unavailable
+    here.
+- number: 1339
+  title: Problem to start phy-gui
+  url: https://github.com/cortex-lab/phy/issues/1339
+  created_at: '2025-04-24T09:34:55Z'
+  updated_at: '2026-07-23T15:49:46Z'
+  final_state: closed
+  disposition: not_planned
+  confidence: high
+  labels: []
+  audit_note: The request is outside current scope, exporter-owned, input-related, or not planned.
+  closure_reason: not_planned
+  audit_comment: This thread combines unrelated data and environment errors, so I’m closing it.
+- number: 1343
+  title: CITATION file request
+  url: https://github.com/cortex-lab/phy/issues/1343
+  created_at: '2025-05-22T20:43:57Z'
+  updated_at: '2026-07-23T15:41:47Z'
+  final_state: open
+  disposition: keep
+  confidence: medium
+  labels:
+  - 'area: documentation'
+  - 'priority: low'
+  - 'type: enhancement'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Define the missing or incorrect documentation and submit a focused documentation update.
+- number: 1346
+  title: Waveform view not displaying correctly
+  url: https://github.com/cortex-lab/phy/issues/1346
+  created_at: '2025-08-23T02:50:52Z'
+  updated_at: '2026-07-23T15:48:12Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Update `dat_path` in `params.py` to the raw data file.
+- number: 1348
+  title: Joblib compablity/ update enviroment yml
+  url: https://github.com/cortex-lab/phy/issues/1348
+  created_at: '2025-09-04T13:14:24Z'
+  updated_at: '2026-07-23T15:44:10Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1351
+  title: Unsuccessful in installing plugins
+  url: https://github.com/cortex-lab/phy/issues/1351
+  created_at: '2025-09-16T15:19:59Z'
+  updated_at: '2026-07-23T15:42:53Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: plugins'
+  - 'status: needs-info'
+  - 'type: question'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Please share the plugin URL and phy 2.1 debug output.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1355
+  title: list index out of range error
+  url: https://github.com/cortex-lab/phy/issues/1355
+  created_at: '2025-10-21T13:30:57Z'
+  updated_at: '2026-07-23T15:44:11Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1356
+  title: FeatureView doesn't work.
+  url: https://github.com/cortex-lab/phy/issues/1356
+  created_at: '2025-10-27T07:15:33Z'
+  updated_at: '2026-07-23T15:44:13Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1358
+  title: selecting cluster in ClusterView does not update other views
+  url: https://github.com/cortex-lab/phy/issues/1358
+  created_at: '2025-10-28T21:30:18Z'
+  updated_at: '2026-07-23T15:45:12Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1356
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1356.'
+- number: 1359
+  title: Support for numpy > 2
+  url: https://github.com/cortex-lab/phy/issues/1359
+  created_at: '2025-11-07T18:30:35Z'
+  updated_at: '2026-07-23T15:44:15Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1361
+  title: How To revert to base
+  url: https://github.com/cortex-lab/phy/issues/1361
+  created_at: '2025-11-19T21:57:53Z'
+  updated_at: '2026-07-23T15:48:14Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Restore the original Kilosort output or a phy backup to restart curation.
+- number: 1362
+  title: 'Error with: QWidget: Must construct a QApplication before a QWidget'
+  url: https://github.com/cortex-lab/phy/issues/1362
+  created_at: '2025-12-20T12:34:57Z'
+  updated_at: '2026-07-23T15:42:54Z'
+  final_state: open
+  disposition: needs_info
+  confidence: low
+  labels:
+  - 'area: installation'
+  - 'status: needs-info'
+  - 'type: bug'
+  audit_note: A current phy 2.1 reproduction is required before deciding whether to keep or close.
+  audit_comment: Does this still happen with the current uv installation? If so, please share the full
+    traceback.
+  next_action: Review any response; otherwise reassess for closure after 2026-08-22.
+- number: 1363
+  title: White window as observed from remote login
+  url: https://github.com/cortex-lab/phy/issues/1363
+  created_at: '2025-12-29T16:32:04Z'
+  updated_at: '2026-07-23T15:45:15Z'
+  final_state: closed
+  disposition: duplicate
+  confidence: high
+  labels: []
+  audit_note: Consolidated into a stronger canonical issue.
+  duplicate_of: 1328
+  closure_reason: not_planned
+  audit_comment: 'Closing in favor of #1328.'
+- number: 1364
+  title: Clarification on pc_features description in the documentation
+  url: https://github.com/cortex-lab/phy/issues/1364
+  created_at: '2025-12-30T02:07:45Z'
+  updated_at: '2026-07-23T15:41:53Z'
+  final_state: open
+  disposition: keep
+  confidence: high
+  labels:
+  - 'area: documentation'
+  - 'priority: low'
+  - 'status: confirmed'
+  - 'type: bug'
+  audit_note: Retained as a sound, current bug or enhancement.
+  next_action: Reproduce on phy 2.1, isolate the cause, and add a focused regression test.
+- number: 1366
+  title: Python 3.12 not supported - widgets black
+  url: https://github.com/cortex-lab/phy/issues/1366
+  created_at: '2026-01-13T10:05:07Z'
+  updated_at: '2026-07-23T15:44:17Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1367
+  title: What happened to the keybindings?
+  url: https://github.com/cortex-lab/phy/issues/1367
+  created_at: '2026-01-26T06:20:42Z'
+  updated_at: '2026-07-23T15:44:19Z'
+  final_state: closed
+  disposition: fixed_in_2_1
+  confidence: high
+  labels: []
+  audit_note: Concrete evidence indicates this is fixed in the phy 2.1 release.
+  closure_reason: completed
+  audit_comment: Fixed in phy 2.1. Please reopen if this still happens.
+- number: 1368
+  title: Environment Fix for OpenGL Bad Contect
+  url: https://github.com/cortex-lab/phy/issues/1368
+  created_at: '2026-02-06T04:01:41Z'
+  updated_at: '2026-07-23T15:50:49Z'
+  final_state: closed
+  disposition: likely_fixed
+  confidence: medium
+  labels: []
+  audit_note: The failing subsystem or dependency changed substantially in phy 2.1.
+  closure_reason: completed
+  audit_comment: This should be fixed in phy 2.1. Please reopen if it still happens.
+- number: 1373
+  title: 'ImportError: ... pyexpat.cpython-311-x86_64-linux-gnu.so: undefined symbol: XML_SetAllocTrackerActivationThreshold'
+  url: https://github.com/cortex-lab/phy/issues/1373
+  created_at: '2026-03-31T12:13:22Z'
+  updated_at: '2026-07-23T15:48:16Z'
+  final_state: closed
+  disposition: answered
+  confidence: high
+  labels: []
+  audit_note: The thread or current documentation provides a complete answer.
+  closure_reason: completed
+  audit_comment: Resolved above, so I’m closing this.

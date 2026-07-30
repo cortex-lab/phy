@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from phylib import _add_log_file
 from phylib.io.array import SpikeSelector, _flatten
-from phylib.stats import correlograms, firing_rate
+from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
 from scipy.signal import butter, lfilter
@@ -44,7 +44,7 @@ from phy.gui import GUI
 from phy.gui.gui import _prompt_save
 from phy.gui.qt import AsyncCaller
 from phy.gui.state import _gui_state_path
-from phy.gui.widgets import IPythonView
+from phy.gui.widgets import IPythonView, view_settings_dialog
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 
@@ -62,6 +62,137 @@ def _concatenate_parents_attributes(cls, name):
     """Return the concatenation of class attributes of a given name among all parents of a
     class."""
     return _flatten([getattr(_, name, ()) for _ in inspect.getmro(cls)])
+
+
+def _allocate_spike_counts(available, per_cluster=None, total=None):
+    """Allocate a bounded spike budget fairly across clusters.
+
+    Small clusters keep all of their available spikes and leave their unused
+    share for larger clusters. The returned counts never exceed either limit.
+    """
+    available = np.asarray(available, dtype=np.int64)
+    if not len(available):
+        return available.copy()
+    available = np.maximum(available, 0)
+    capacity = (
+        np.minimum(available, max(0, per_cluster)) if per_cluster is not None else available.copy()
+    )
+    if total is None or capacity.sum() <= max(0, total):
+        return capacity
+
+    allocated = np.zeros(len(capacity), dtype=np.int64)
+    remaining = min(max(0, total), int(capacity.sum()))
+    active = np.flatnonzero(capacity)
+    while remaining and len(active):
+        share, remainder = divmod(remaining, len(active))
+        increment = np.minimum(
+            capacity[active] - allocated[active],
+            share + (np.arange(len(active)) < remainder),
+        )
+        allocated[active] += increment
+        remaining -= int(increment.sum())
+        active = active[allocated[active] < capacity[active]]
+    return allocated
+
+
+def _sample_spikes_evenly(spike_ids, n_spikes):
+    """Evenly sample sorted spike IDs without allocating for the full input."""
+    n_available = len(spike_ids)
+    if n_spikes < 0:
+        raise ValueError('n_spikes must be non-negative')
+    if not n_available or not n_spikes:
+        return np.array([], dtype=np.int64)
+    if n_spikes >= n_available:
+        return np.asarray(spike_ids, dtype=np.int64)
+    if n_spikes == 1:
+        return np.asarray(spike_ids[[0]], dtype=np.int64)
+
+    indices = np.arange(n_spikes, dtype=np.int64)
+    indices *= n_available - 1
+    indices //= n_spikes - 1
+    return np.asarray(spike_ids[indices], dtype=np.int64)
+
+
+def _select_spikes_evenly(selector, n_spikes, cluster_ids, **kwargs):
+    """Use phylib's even selector when available, with a 2.7-compatible fallback."""
+    # TODO: After phylib releases the even/disjoint selection APIs and phy raises
+    # its minimum phylib version, remove this fallback and the constructor check
+    # in `_set_selector()`.
+    if 'sample_evenly' in inspect.signature(selector).parameters:
+        return selector(n_spikes, cluster_ids, sample_evenly=True, **kwargs)
+
+    selected = [
+        _sample_spikes_evenly(selector(None, [cluster_id], **kwargs), n_spikes)
+        for cluster_id in cluster_ids
+    ]
+    if not selected:
+        return np.array([], dtype=np.int64)
+    return np.concatenate(selected)
+
+
+def _spike_budget_fields(per_cluster, total, max_n_clusters, background=None):
+    """Return dialog fields for a per-cluster budget and optional shared cap."""
+    per_cluster_default = per_cluster if per_cluster is not None else total or 100000
+    total_default = total if total is not None else per_cluster_default * max(1, max_n_clusters)
+    fields = [
+        {
+            'name': 'use_per_cluster',
+            'label': 'Use per-cluster budget',
+            'default': per_cluster is not None,
+            'vtype': 'bool',
+            'tooltip': 'Bound the spikes sampled independently from each selected cluster.',
+        },
+        {
+            'name': 'per_cluster',
+            'label': 'Spikes per cluster',
+            'default': per_cluster_default,
+            'vtype': 'int',
+            'minimum': 1,
+            'maximum': 10**9,
+            'suffix': ' spikes',
+            'tooltip': 'Maximum spikes sampled independently from every selected cluster.',
+            'enabled_by': 'use_per_cluster',
+        },
+        {
+            'name': 'use_total',
+            'label': 'Use shared total budget',
+            'default': total is not None,
+            'vtype': 'bool',
+            'tooltip': 'Also bound the total work shared by all selected clusters.',
+        },
+        {
+            'name': 'total',
+            'label': 'Shared total spikes',
+            'default': total_default,
+            'vtype': 'int',
+            'minimum': 1,
+            'maximum': 10**9,
+            'suffix': ' spikes',
+            'tooltip': 'Maximum spikes shared fairly across the selected clusters.',
+            'enabled_by': 'use_total',
+        },
+    ]
+    if background is not None:
+        fields.append(
+            {
+                'name': 'background',
+                'label': 'Background spikes',
+                'default': background,
+                'vtype': 'int',
+                'minimum': 1,
+                'maximum': 10**9,
+                'suffix': ' spikes',
+                'tooltip': 'Total grey background spikes sampled across unselected clusters.',
+            }
+        )
+    return fields
+
+
+def _spike_budget_values(values):
+    """Return the per-cluster and optional shared budgets from dialog values."""
+    per_cluster = values['per_cluster'] if values['use_per_cluster'] else None
+    total = values['total'] if values['use_total'] else None
+    return per_cluster, total
 
 
 class Selection(Bunch):
@@ -135,10 +266,12 @@ class RawDataFilter(RotatingProperty):
 
 class WaveformMixin:
     n_spikes_waveforms = 100
+    n_spikes_waveforms_total = None
     batch_size_waveforms = 10
 
     _state_params = (
         'n_spikes_waveforms',
+        'n_spikes_waveforms_total',
         'batch_size_waveforms',
     )
 
@@ -157,10 +290,7 @@ class WaveformMixin:
         '_get_waveforms_with_n_spikes',
     )
 
-    _memcached = (
-        # 'get_mean_spike_raw_amplitudes',
-        '_get_mean_waveforms',
-    )
+    _memcached = ()
 
     def get_spike_raw_amplitudes(self, spike_ids, channel_id=None, **kwargs):
         """Return the maximum amplitude of the raw waveforms on the best channel of
@@ -199,13 +329,15 @@ class WaveformMixin:
         # Only keep spikes from the spike waveforms selection.
         if self.model.spike_waveforms is not None:
             subset_spikes = self.model.spike_waveforms.spike_ids
-            spike_ids = self.selector(
-                n_spikes_waveforms, [cluster_id], subset_spikes=subset_spikes
-            )
+            subset_clusters = self.supervisor.clustering.spike_clusters[subset_spikes]
+            eligible_spikes = subset_spikes[subset_clusters == cluster_id]
+            spike_ids = _sample_spikes_evenly(eligible_spikes, n_spikes_waveforms)
         # Or keep spikes from a subset of the chunks for performance reasons (decompression will
         # happen on the fly here).
         else:
-            spike_ids = self.selector(n_spikes_waveforms, [cluster_id], subset_chunks=True)
+            spike_ids = _select_spikes_evenly(
+                self.selector, n_spikes_waveforms, [cluster_id], subset_chunks=True
+            )
 
         # Get the best channels.
         channel_ids = self.get_best_channels(cluster_id)
@@ -229,11 +361,28 @@ class WaveformMixin:
 
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
+        n_spikes_waveforms = self._get_waveform_spike_count(cluster_id)
         return self._get_waveforms_with_n_spikes(
             cluster_id,
-            self.n_spikes_waveforms,
+            n_spikes_waveforms,
             current_filter=self.raw_data_filter.current,
         )
+
+    def _get_waveform_spike_count(self, cluster_id, cluster_ids=None):
+        """Return this cluster's fair share of the Waveform View budget."""
+        if cluster_ids is None:
+            cluster_ids = list(self.selection.cluster_ids)[: WaveformView.max_n_clusters]
+        cluster_ids = list(cluster_ids)
+        if cluster_id not in cluster_ids:
+            cluster_ids = [cluster_id]
+        spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+        available = [len(spikes_per_cluster.get(cluster_id_, ())) for cluster_id_ in cluster_ids]
+        counts = _allocate_spike_counts(
+            available,
+            per_cluster=self.n_spikes_waveforms,
+            total=self.n_spikes_waveforms_total,
+        )
+        return int(counts[cluster_ids.index(cluster_id)])
 
     def _get_mean_waveforms(self, cluster_id, current_filter=None):
         """Get the mean waveform of a cluster on its best channels."""
@@ -279,6 +428,29 @@ class WaveformMixin:
                 self.n_spikes_waveforms = n_spikes_waveforms
                 view.plot()
 
+            def edit_view_settings():
+                """Edit waveform sampling and performance settings."""
+                values = view_settings_dialog(
+                    'Waveform view settings',
+                    _spike_budget_fields(
+                        self.n_spikes_waveforms,
+                        self.n_spikes_waveforms_total,
+                        view.max_n_clusters,
+                    ),
+                    parent=gui,
+                )
+                if values is None:
+                    return
+                self.n_spikes_waveforms, self.n_spikes_waveforms_total = _spike_budget_values(
+                    values
+                )
+                view.plot()
+
+            view.actions.add(
+                edit_view_settings,
+                name='View settings',
+                show_shortcut=False,
+            )
             view.actions.separator()
 
         @connect(sender=view)
@@ -320,6 +492,12 @@ class FeatureMixin:
         assert features.shape[0] == len(spike_ids)
         logger.log(5, 'Show channel %s and PC %s in amplitude view.', channel_id, pc)
         return features[:, 0, pc or 0]
+
+    def _get_amplitude_functions(self):
+        amplitude_functions = super()._get_amplitude_functions()
+        if self.model.features is None:
+            amplitude_functions.pop('feature', None)
+        return amplitude_functions
 
     def create_amplitude_view(self):
         view = super().create_amplitude_view()
@@ -842,12 +1020,17 @@ class BaseController:
 
     # Number of spikes to show in the views.
     n_spikes_amplitudes = 10000
+    # Total number of selected spikes to show in the amplitude view.
+    n_spikes_amplitudes_total = None
+    # Total number of background spikes to show in the amplitude view.
+    n_spikes_amplitudes_background = 10000
 
     # Pairs (amplitude_type_name, method_name) where amplitude methods return spike amplitudes
     # of a given type.
     _amplitude_functions = ()
 
     n_spikes_correlograms = 100000
+    n_spikes_correlograms_total = None
 
     # Number of raw data chunks to keep when loading waveforms from raw data (mostly useful
     # when using compressed dataset, as random access triggers expensive decompression).
@@ -856,7 +1039,10 @@ class BaseController:
     # Controller attributes to load/save in the GUI state.
     _state_params = (
         'n_spikes_amplitudes',
+        'n_spikes_amplitudes_total',
+        'n_spikes_amplitudes_background',
         'n_spikes_correlograms',
+        'n_spikes_correlograms_total',
         'raw_data_filter_name',
     )
 
@@ -870,10 +1056,7 @@ class BaseController:
         'peak_channel_similarity',
     )
     # Methods that are cached on disk for performance.
-    _cached = (
-        '_get_correlograms',
-        '_get_correlograms_rate',
-    )
+    _cached = ('_get_correlograms_cached',)
 
     # Views to load by default.
     _new_views = (
@@ -1103,12 +1286,18 @@ class BaseController:
         except AttributeError:
             chunk_bounds = [0.0, self.model.spike_samples[-1] + 1]
 
-        self.selector = SpikeSelector(
-            get_spikes_per_cluster=spikes_per_cluster,
-            spike_times=self.model.spike_samples,  # NOTE: chunk_bounds is in samples, not seconds
-            chunk_bounds=chunk_bounds,
-            n_chunks_kept=self.n_chunks_kept,
-        )
+        selector_kwargs = {
+            'get_spikes_per_cluster': spikes_per_cluster,
+            # NOTE: chunk_bounds is in samples, not seconds.
+            'spike_times': self.model.spike_samples,
+            'chunk_bounds': chunk_bounds,
+            'n_chunks_kept': self.n_chunks_kept,
+        }
+        # phylib 2.7 does not yet expose this optimization hint. See the release
+        # TODO in `_select_spikes_evenly()`.
+        if 'spikes_are_disjoint' in inspect.signature(SpikeSelector).parameters:
+            selector_kwargs['spikes_are_disjoint'] = True
+        self.selector = SpikeSelector(**selector_kwargs)
 
     def _cache_methods(self):
         """Cache methods as specified in `self._memcached` and `self._cached`."""
@@ -1326,7 +1515,13 @@ class BaseController:
 
     def get_spike_times(self, cluster_id, n=None):
         """Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`."""
-        return self.model.spike_times[self.get_spike_ids(cluster_id, n=n)]
+        if n is None:
+            spike_ids = self.supervisor.clustering.spikes_per_cluster.get(
+                cluster_id, np.array([], dtype=np.int64)
+            )
+        else:
+            spike_ids = self.get_spike_ids(cluster_id, n=n)
+        return self.model.spike_times[spike_ids]
 
     def get_background_spike_ids(self, n=None):
         """Return regularly spaced spikes."""
@@ -1361,6 +1556,82 @@ class BaseController:
         n = self.n_spikes_amplitudes if not load_all else None
         return self.get_spike_ids(cluster_id, n=n)
 
+    def _get_background_amplitude_spike_ids(
+        self, cluster_ids, n=None, subset_spikes=None, subset_chunks=False
+    ):
+        """Return a stable, stratified background selection for the amplitude view.
+
+        Unlike :class:`~phylib.io.array.SpikeSelector`, whose ``n`` applies to
+        *each* cluster, ``n`` here is a total display budget.  Keeping a small,
+        evenly spaced sample from every cluster gives the background temporal
+        coverage without making its size grow with the number of clusters.
+        """
+        if n is None:
+            return self.selector(
+                None,
+                cluster_ids,
+                subset_spikes=subset_spikes,
+                subset_chunks=subset_chunks,
+            )
+        if not cluster_ids or n <= 0:
+            return np.array([], dtype=np.int64)
+
+        # The usual template/feature path reads the live cluster arrays directly:
+        # calling ``selector(None, ...)`` would flatten and copy every cluster
+        # before the small display sample is taken.  Raw amplitudes retain the
+        # selector path so its chunk and waveform-subset filtering is unchanged.
+        if subset_spikes is None and not subset_chunks:
+            spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+            eligible = [
+                spikes_per_cluster.get(cluster_id, np.array([], dtype=np.int64))
+                for cluster_id in cluster_ids
+            ]
+        else:
+            eligible = [
+                self.selector(
+                    None,
+                    [cluster_id],
+                    subset_spikes=subset_spikes,
+                    subset_chunks=subset_chunks,
+                )
+                for cluster_id in cluster_ids
+            ]
+
+        # Allocate the fixed budget evenly, redistributing shares that small
+        # or empty clusters cannot use.  The order is stable across refreshes.
+        allocated = _allocate_spike_counts(
+            [len(spike_ids) for spike_ids in eligible],
+            total=n,
+        )
+
+        out = [
+            _sample_spikes_evenly(spike_ids, n_cluster)
+            for spike_ids, n_cluster in zip(eligible, allocated)
+            if n_cluster
+        ]
+        if not out:
+            return np.array([], dtype=np.int64)
+        return np.sort(np.concatenate(out)).astype(np.int64, copy=False)
+
+    def _get_stable_amplitude_spike_ids(
+        self, cluster_id, n, subset_spikes=None, subset_chunks=False
+    ):
+        """Return a stable display sample from one cluster."""
+        if subset_spikes is None and not subset_chunks:
+            spike_ids = self.supervisor.clustering.spikes_per_cluster.get(
+                cluster_id, np.array([], dtype=np.int64)
+            )
+        else:
+            spike_ids = self.selector(
+                None,
+                [cluster_id],
+                subset_spikes=subset_spikes,
+                subset_chunks=subset_chunks,
+            )
+        if n is None:
+            return spike_ids
+        return _sample_spikes_evenly(spike_ids, n)
+
     def _amplitude_getter(self, cluster_ids, name=None, load_all=False):
         """Return the data requested by the amplitude view, which depends on the
         type of amplitude.
@@ -1378,6 +1649,20 @@ class BaseController:
         """
         out = []
         n = self.n_spikes_amplitudes if not load_all else None
+        selected_cluster_ids = [cluster_id for cluster_id in cluster_ids if cluster_id is not None]
+        if load_all:
+            selected_counts = {}
+        else:
+            spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+            allocated = _allocate_spike_counts(
+                [
+                    len(spikes_per_cluster.get(cluster_id, ()))
+                    for cluster_id in selected_cluster_ids
+                ],
+                per_cluster=n,
+                total=self.n_spikes_amplitudes_total,
+            )
+            selected_counts = dict(zip(selected_cluster_ids, allocated))
         # Find the first cluster, used to determine the best channels.
         first_cluster = next(cluster_id for cluster_id in cluster_ids if cluster_id is not None)
         # Best channels of the first cluster.
@@ -1404,18 +1689,22 @@ class BaseController:
         # Go through each cluster in order to select spikes from each.
         for cluster_id in cluster_ids:
             if cluster_id is not None:
+                n_cluster = selected_counts.get(cluster_id, n)
                 # Cluster spikes.
-                spike_ids = self.get_spike_ids(
-                    cluster_id,
-                    n=n,
-                    subset_spikes=subset_spikes,
-                    subset_chunks=subset_chunks,
-                )
+                if name == 'raw':
+                    spike_ids = self.get_spike_ids(
+                        cluster_id,
+                        n=n_cluster,
+                        subset_spikes=subset_spikes,
+                        subset_chunks=subset_chunks,
+                    )
+                else:
+                    spike_ids = self._get_stable_amplitude_spike_ids(cluster_id, n_cluster)
             else:
                 # Background spikes.
-                spike_ids = self.selector(
-                    n,
+                spike_ids = self._get_background_amplitude_spike_ids(
                     other_clusters,
+                    self.n_spikes_amplitudes_background if not load_all else None,
                     subset_spikes=subset_spikes,
                     subset_chunks=subset_chunks,
                 )
@@ -1495,11 +1784,40 @@ class BaseController:
             view.show_time_range(interval)
 
         @connect(sender=view)
+        def on_view_attached(view_, gui):
+            def edit_view_settings():
+                """Edit amplitude sampling and performance settings."""
+                values = view_settings_dialog(
+                    'Amplitude view settings',
+                    _spike_budget_fields(
+                        self.n_spikes_amplitudes,
+                        self.n_spikes_amplitudes_total,
+                        view.max_n_clusters,
+                        background=self.n_spikes_amplitudes_background,
+                    ),
+                    parent=gui,
+                )
+                if values is None:
+                    return
+                self.n_spikes_amplitudes, self.n_spikes_amplitudes_total = _spike_budget_values(
+                    values
+                )
+                self.n_spikes_amplitudes_background = values['background']
+                view.plot()
+
+            view.actions.add(
+                edit_view_settings,
+                name='View settings',
+                show_shortcut=False,
+            )
+
+        @connect(sender=view)
         def on_close_view(view_, gui):
             unconnect(on_toggle_spike_reorder)
             unconnect(on_selected_channel_changed)
             unconnect(on_select)
             unconnect(on_time_range_selected)
+            unconnect(on_view_attached)
 
         return view
 
@@ -1563,8 +1881,49 @@ class BaseController:
     # -------------------------------------------------------------------------
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
+        """Return cached correlograms using the current spike limits."""
+        return self._get_correlograms_cached(
+            cluster_ids,
+            bin_size,
+            window_size,
+            self.n_spikes_correlograms,
+            self.n_spikes_correlograms_total,
+        )
+
+    def _get_correlograms_cached(
+        self,
+        cluster_ids,
+        bin_size,
+        window_size,
+        n_spikes_correlograms,
+        n_spikes_correlograms_total,
+    ):
         """Return the cross- and auto-correlograms of a set of clusters."""
-        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
+        # Independent random sampling preserves nearby spike pairs
+        # probabilistically. A regular one-spike-at-a-time sample can impose a
+        # minimum spacing and make auto- and cross-correlograms appear empty.
+        spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+        available = [len(spikes_per_cluster.get(cluster_id, ())) for cluster_id in cluster_ids]
+        capacity = _allocate_spike_counts(
+            available,
+            per_cluster=n_spikes_correlograms,
+        )
+        allocated = _allocate_spike_counts(
+            available,
+            per_cluster=n_spikes_correlograms,
+            total=n_spikes_correlograms_total,
+        )
+        if np.array_equal(allocated, capacity):
+            spike_ids = self.selector(n_spikes_correlograms, cluster_ids)
+        else:
+            selected = [
+                self.selector(int(n_cluster), [cluster_id])
+                for cluster_id, n_cluster in zip(cluster_ids, allocated)
+                if n_cluster
+            ]
+            spike_ids = (
+                np.sort(np.concatenate(selected)) if selected else np.array([], dtype=np.int64)
+            )
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(
@@ -1578,19 +1937,128 @@ class BaseController:
 
     def _get_correlograms_rate(self, cluster_ids, bin_size):
         """Return the baseline firing rate of the cross- and auto-correlograms of clusters."""
-        spike_ids = self.selector(self.n_spikes_correlograms, cluster_ids)
-        sc = self.supervisor.clustering.spike_clusters[spike_ids]
-        return firing_rate(
-            sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration
+        spikes_per_cluster = self.supervisor.clustering.spikes_per_cluster
+        counts = np.asarray(
+            [len(spikes_per_cluster.get(cluster_id, ())) for cluster_id in cluster_ids],
+            dtype=np.int64,
         )
+        counts = _allocate_spike_counts(
+            counts,
+            per_cluster=self.n_spikes_correlograms,
+            total=self.n_spikes_correlograms_total,
+        )
+        return counts * np.c_[counts] * (bin_size / (self.model.duration or 1.0))
 
     def create_correlogram_view(self):
         """Create a correlogram view."""
-        return CorrelogramView(
+        view = CorrelogramView(
             correlograms=self._get_correlograms,
             firing_rate=self._get_correlograms_rate,
             sample_rate=self.model.sample_rate,
         )
+
+        @connect(sender=view)
+        def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
+            selected_clusters = set(self.supervisor.selected_clusters)
+            selected_similar = set(self.supervisor.selected_similar)
+            logger.debug(
+                'Correlogram promotion request for (%s, %s); clusters=%s, similar=%s.',
+                cluster_id_a,
+                cluster_id_b,
+                sorted(selected_clusters),
+                sorted(selected_similar),
+            )
+            for cluster_id, other_cluster_id in (
+                (cluster_id_a, cluster_id_b),
+                (cluster_id_b, cluster_id_a),
+            ):
+                if cluster_id in selected_similar and other_cluster_id in selected_clusters:
+                    logger.debug('Promote similarity cluster %s from correlogram.', cluster_id)
+                    emit('action', self.supervisor.action_creator, 'promote_similar', cluster_id)
+                    return
+            logger.debug('Correlogram pair does not span ClusterView and SimilarityView.')
+
+        @connect(sender=view)
+        def on_view_attached(view_, gui):
+            def validate(values):
+                if values['bin_size'] >= values['window_size']:
+                    return 'Bin size must be smaller than window size.'
+
+            def edit_view_settings():
+                """Edit correlogram sampling, bin, and window settings."""
+                fields = _spike_budget_fields(
+                    self.n_spikes_correlograms,
+                    self.n_spikes_correlograms_total,
+                    view.max_n_clusters,
+                )
+                fields.extend(
+                    [
+                        {
+                            'name': 'bin_size',
+                            'label': 'Bin size',
+                            'default': view.bin_size * 1000,
+                            'vtype': 'float',
+                            'minimum': 0.001,
+                            'maximum': 10**6,
+                            'decimals': 3,
+                            'suffix': ' ms',
+                            'tooltip': 'Width of each correlogram bin.',
+                        },
+                        {
+                            'name': 'window_size',
+                            'label': 'Window size',
+                            'default': view.window_size * 1000,
+                            'vtype': 'float',
+                            'minimum': 0.002,
+                            'maximum': 10**6,
+                            'decimals': 3,
+                            'suffix': ' ms',
+                            'tooltip': 'Total time span shown by the correlogram.',
+                        },
+                        {
+                            'name': 'refractory_period',
+                            'label': 'Refractory period',
+                            'default': view.refractory_period * 1000,
+                            'vtype': 'float',
+                            'minimum': 0.001,
+                            'maximum': 10**6,
+                            'decimals': 3,
+                            'suffix': ' ms',
+                            'tooltip': 'Interval highlighted around zero lag.',
+                        },
+                    ]
+                )
+                values = view_settings_dialog(
+                    'Correlogram view settings',
+                    fields,
+                    parent=gui,
+                    validate=validate,
+                )
+                if values is None:
+                    return
+                (
+                    self.n_spikes_correlograms,
+                    self.n_spikes_correlograms_total,
+                ) = _spike_budget_values(values)
+                view._set_bin_window(
+                    bin_size=values['bin_size'] * 1e-3,
+                    window_size=values['window_size'] * 1e-3,
+                )
+                view.refractory_period = values['refractory_period'] * 1e-3
+                view.plot()
+
+            view.actions.add(
+                edit_view_settings,
+                name='View settings',
+                show_shortcut=False,
+            )
+
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_request_promote_similar)
+            unconnect(on_view_attached)
+
+        return view
 
     # Probe view
     # -------------------------------------------------------------------------

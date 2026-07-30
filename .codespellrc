@@ -1,0 +1,4 @@
+[codespell]
+skip = .git*,.venv*,.uv-cache*,.ruff_cache*,build*,dist*,site*,*.css,*.min.*
+check-hidden = true
+ignore-words-list = ambiguious

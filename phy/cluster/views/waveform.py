@@ -96,6 +96,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     # Do not show too many clusters.
     max_n_clusters = 8
+    defer_hidden_updates = True
 
     _default_position = 'right'
     ax_color = (0.75, 0.75, 0.75, 1.0)
@@ -221,8 +222,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         assert wave.shape[2] == n_channels
         assert masks.shape == (n_spikes_clu, n_channels)
 
-        # Find the x coordinates.
-        t = get_linear_x(n_spikes_clu * n_channels, n_samples)
+        # Raw waveform traces within this cluster all share one time axis.
+        # PlotVisual can retain that single row until it assembles the final
+        # vertex buffer, avoiding a full tiled x array. PlotAggVisual still
+        # requires the historical two-dimensional input.
+        if self._current_visual == self.waveform_visual:
+            t = get_linear_x(1, n_samples).ravel()
+        else:
+            t = get_linear_x(n_spikes_clu * n_channels, n_samples)
         t = _overlap_transform(t, offset=bunch.offset, n=bunch.n_clu, overlap=self.overlap)
         # HACK: on the GPU, we get the actual masks with fract(masks)
         # since we add the relative cluster index. We need to ensure
@@ -273,8 +280,10 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         )
         box_index = _index_of(channel_ids_loc, self.channel_ids)
         box_index = np.repeat(box_index, 2)
-        box_index = np.tile(box_index, n_spikes_clu)
-        hpos = np.tile([[a, 0, b, 0]], (nw, 1))
+        # The zero axis is shared by all waveforms in a channel. Drawing it once
+        # per spike only overdraws identical opaque lines and makes multi-cluster
+        # selections generate up to hundreds of times more geometry than needed.
+        hpos = np.tile([[a, 0, b, 0]], (n_channels, 1))
         assert box_index.size == hpos.shape[0] * 2
         self.line_visual.add_batch_data(
             pos=hpos,
