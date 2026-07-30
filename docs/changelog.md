@@ -8,7 +8,7 @@ This file records user-visible changes to phy. The format is based on
 
 Changes below are available from the latest source checkout but have not yet
 been included in a stable release. The current entries cover all user-visible
-changes committed on 23–24 July 2026; test-only commits are represented by the
+changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
 ### Added
@@ -48,6 +48,8 @@ behavior they verify rather than listed separately.
 - Cluster and Similarity View filters only take keyboard focus after an
   explicit click, including when a table is first shown or refreshed. Enter,
   Escape, and outside clicks release filter focus so global shortcuts resume.
+- Display metadata columns containing multiple values in the Cluster and
+  Similarity Views instead of leaving their cells blank.
 
 ### Changed
 
