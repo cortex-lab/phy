@@ -140,3 +140,47 @@ def test_global_history():
     assert gh.redo() == 'h1 first'
     assert gh.redo() == 'h2 first'
     assert gh.redo() == 'h1 secondh2 second'
+
+
+def test_global_history_restores_context_after_controllers_and_preserves_it_on_extension():
+    calls = []
+
+    class Controller(History):
+        def undo(self):
+            calls.append('controller undo')
+            return super().undo()
+
+        def redo(self):
+            calls.append('controller redo')
+            return super().redo()
+
+    def restore(selection, workflow, direction):
+        calls.append((direction, selection, workflow))
+
+    h1 = Controller()
+    h2 = Controller()
+    h1.add('h1')
+    h2.add('h2')
+    gh = GlobalHistory(restore_context=restore)
+    gh.action(
+        h1,
+        selection_before='before',
+        selection_after='after',
+        workflow_context='normal',
+    )
+    gh.add_to_current_action(h2)
+
+    assert gh.undo() == ('h1', 'h2')
+    assert calls == [
+        'controller undo',
+        'controller undo',
+        ('undo', 'before', 'normal'),
+    ]
+
+    calls.clear()
+    assert gh.redo() == ('h1', 'h2')
+    assert calls == [
+        'controller redo',
+        'controller redo',
+        ('redo', 'after', 'normal'),
+    ]

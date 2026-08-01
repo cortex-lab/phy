@@ -220,7 +220,11 @@ class CurationSelectionController:
             raise ValueError('Transferred IDs must belong to the similarity selection.')
         similar_ids = tuple(i for i in current.similar_ids if i not in source_ids)
         cluster_selection = _ordered_union(current.cluster_ids, cluster_ids)
-        reference_id = current.reference_id or (cluster_ids[-1] if cluster_ids else None)
+        reference_id = (
+            current.reference_id
+            if current.reference_id is not None
+            else (cluster_ids[0] if cluster_ids else None)
+        )
         after = CurationSelectionState(
             cluster_ids=cluster_selection,
             similar_ids=similar_ids,

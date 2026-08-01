@@ -53,6 +53,12 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- The first, blue Cluster View selection is now the explicit Similarity
+  reference. Moving non-reference rows between Cluster and Similarity roles
+  preserves their presentation order, colors, and scientific-view selection.
+- Undo and redo restore the complete selection context around merge, split,
+  and metadata actions; redo also preserves selection-only exploration made
+  after the original action.
 - Merge and assignment operations update the small cluster-ID collection
   incrementally instead of rescanning every spike.
 - Merges gather their spikes from the maintained per-cluster arrays while

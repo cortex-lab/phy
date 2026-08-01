@@ -914,20 +914,24 @@ def test_supervisor_filter(qtbot, supervisor):
 def test_supervisor_merge_1(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+    selection_before = supervisor.selection.snapshot()
 
     supervisor.actions.merge()
     supervisor.block()
 
     _assert_selected(supervisor, [31])
+    selection_after = supervisor.selection.snapshot()
 
     supervisor.actions.undo()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
+    assert supervisor.selection.state == selection_before
 
     supervisor.actions.redo()
     supervisor.block()
     supervisor.task_logger.show_history()
     _assert_selected(supervisor, [31])
+    assert supervisor.selection.state == selection_after
 
     assert supervisor.is_dirty()
 
@@ -946,6 +950,26 @@ def test_supervisor_merge_event(qtbot, supervisor):
 
     # After a merge, there should be only one select event.
     assert len(_l) == 1
+
+
+def test_supervisor_redo_preserves_selection_exploration_after_action(supervisor):
+    _select(supervisor, [30], [20])
+    selection_before = supervisor.selection.snapshot()
+    supervisor.actions.merge()
+    supervisor.block()
+
+    next_similar = supervisor.similarity_view.get_ids()[0]
+    supervisor.similarity_view.select([next_similar])
+    supervisor.block()
+    selection_at_undo = supervisor.selection.snapshot()
+
+    supervisor.actions.undo()
+    supervisor.block()
+    assert supervisor.selection.state == selection_before
+
+    supervisor.actions.redo()
+    supervisor.block()
+    assert supervisor.selection.state == selection_at_undo
 
 
 def test_supervisor_merge_batches_table_fitting(monkeypatch, supervisor):
@@ -992,19 +1016,23 @@ def test_supervisor_merge_move(qtbot, supervisor):
 def test_supervisor_split_0(qtbot, supervisor):
     _select(supervisor, [1, 2])
     _assert_selected(supervisor, [1, 2])
+    selection_before = supervisor.selection.snapshot()
 
     supervisor.actions.split([1, 2])
     supervisor.block()
 
     _assert_selected(supervisor, [31, 32, 33])
+    selection_after = supervisor.selection.snapshot()
 
     supervisor.actions.undo()
     supervisor.block()
     _assert_selected(supervisor, [1, 2])
+    assert supervisor.selection.state == selection_before
 
     supervisor.actions.redo()
     supervisor.block()
     _assert_selected(supervisor, [31, 32, 33])
+    assert supervisor.selection.state == selection_after
 
 
 def test_supervisor_split_1(supervisor):
@@ -1126,20 +1154,24 @@ def test_supervisor_label_cluster_3(supervisor):
 def test_supervisor_move_1(supervisor):
     _select(supervisor, [20])
     _assert_selected(supervisor, [20])
+    selection_before = supervisor.selection.snapshot()
 
     assert not supervisor.move('', '')
 
     supervisor.actions.move('noise', 'all')
     supervisor.block()
     _assert_selected(supervisor, [11])
+    selection_after = supervisor.selection.snapshot()
 
     supervisor.actions.undo()
     supervisor.block()
     _assert_selected(supervisor, [20])
+    assert supervisor.selection.state == selection_before
 
     supervisor.actions.redo()
     supervisor.block()
     _assert_selected(supervisor, [11])
+    assert supervisor.selection.state == selection_after
 
 
 def test_supervisor_move_undo_restores_table_group(supervisor):

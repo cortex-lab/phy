@@ -733,7 +733,10 @@ class Supervisor:
                 self.cluster_meta.set(label, [cl], v, add_to_stack=False)
 
         # Create the GlobalHistory instance.
-        self._global_history = GlobalHistory(process_ups=_process_ups)
+        self._global_history = GlobalHistory(
+            process_ups=_process_ups,
+            restore_context=self._restore_history_context,
+        )
 
         # Create The Action Creator instance.
         self.action_creator = ActionCreator(self)
@@ -1023,6 +1026,11 @@ class Supervisor:
             emit('select', self, list(state.presentation_order))
         if callback:
             self.cluster_view._schedule_callback(callback, state)
+
+    def _restore_history_context(self, selection, workflow_context, direction):
+        """Restore a curation snapshot after the associated data undo or redo."""
+        change = self.selection.restore(selection)
+        self._apply_selection_change(change)
 
     def _select_after_merge(
         self,
@@ -1325,7 +1333,12 @@ class Supervisor:
             out = self.clustering.merge(cluster_ids, to=to)
         if not getattr(getattr(self, 'task_logger', None), '_processing', False):
             self._select_after_merge(out, selection_before)
-        self._global_history.action(self.clustering)
+        self._global_history.action(
+            self.clustering,
+            description='merge',
+            selection_before=selection_before,
+            selection_after=self.selection.snapshot(),
+        )
         return out
 
     def split(self, spike_ids=None, spike_clusters_rel=0):
@@ -1339,11 +1352,17 @@ class Supervisor:
         if len(spike_ids) == 0:
             logger.warning("""No spikes selected, cannot split.""")
             return
+        selection_before = self.selection.snapshot()
         task_logger = getattr(self, 'task_logger', None)
         out = self.clustering.split(spike_ids, spike_clusters_rel=spike_clusters_rel)
         if not getattr(task_logger, '_processing', False):
             self._select_after_split(out)
-        self._global_history.action(self.clustering)
+        self._global_history.action(
+            self.clustering,
+            description='split',
+            selection_before=selection_before,
+            selection_after=self.selection.snapshot(),
+        )
         return out
 
     # Move actions
@@ -1366,8 +1385,14 @@ class Supervisor:
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
             return
+        selection_before = self.selection.snapshot()
         self.cluster_meta.set(name, cluster_ids, value)
-        self._global_history.action(self.cluster_meta)
+        self._global_history.action(
+            self.cluster_meta,
+            description=f'label:{name}',
+            selection_before=selection_before,
+            selection_after=self.selection.snapshot(),
+        )
         # Add column if needed.
         if name != 'group' and name not in self.columns:
             logger.debug('Add column %s.', name)
@@ -1504,6 +1529,12 @@ class Supervisor:
 
     def undo(self):
         """Undo the last action."""
+        # Selection-only exploration does not create history entries. Preserve the exact
+        # state at the time undo is requested so redo remains a true inverse operation.
+        if self._global_history.current_position > 0:
+            self._global_history.update_current_context(
+                selection_after=self.selection.snapshot(),
+            )
         self._global_history.undo()
 
     def redo(self):

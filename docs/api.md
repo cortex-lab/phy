@@ -1948,6 +1948,15 @@ minimumSizeHint(self) -> QSize
 
 ---
 
+#### Table.selection_after_navigation
+
+
+**`Table.selection_after_navigation(self, direction='next')`**
+
+Return the row selection produced by navigation without mutating the table.
+
+---
+
 #### Table.set_busy
 
 
@@ -1957,12 +1966,30 @@ minimumSizeHint(self) -> QSize
 
 ---
 
+#### Table.set_selected_ids
+
+
+**`Table.set_selected_ids(self, ids)`**
+
+Project selected row IDs without emitting a selection event.
+
+---
+
 #### Table.set_selected_index_offset
 
 
 **`Table.set_selected_index_offset(self, n)`**
 
 
+
+---
+
+#### Table.set_selected_index_order
+
+
+**`Table.set_selected_index_order(self, ids)`**
+
+Set stable positional-color indices independently of table-role order.
 
 ---
 
@@ -6793,6 +6820,15 @@ minimumSizeHint(self) -> QSize
 
 ---
 
+#### ClusterView.selection_after_navigation
+
+
+**`ClusterView.selection_after_navigation(self, direction='next')`**
+
+Return the row selection produced by navigation without mutating the table.
+
+---
+
 #### ClusterView.set_busy
 
 
@@ -6802,12 +6838,30 @@ minimumSizeHint(self) -> QSize
 
 ---
 
+#### ClusterView.set_selected_ids
+
+
+**`ClusterView.set_selected_ids(self, ids)`**
+
+Project selected row IDs without emitting a selection event.
+
+---
+
 #### ClusterView.set_selected_index_offset
 
 
 **`ClusterView.set_selected_index_offset(self, n)`**
 
 
+
+---
+
+#### ClusterView.set_selected_index_order
+
+
+**`ClusterView.set_selected_index_order(self, ids)`**
+
+Set stable positional-color indices independently of table-role order.
 
 ---
 
@@ -9508,9 +9562,9 @@ minimumSizeHint(self) -> QSize
 #### SimilarityView.reset
 
 
-**`SimilarityView.reset(self, cluster_ids)`**
+**`SimilarityView.reset(self, cluster_ids, reference_id=None)`**
 
-Recreate the similarity view, given the selected clusters in the cluster view.
+Recreate the view for an explicit reference and Cluster-role exclusions.
 
 ---
 
@@ -9550,12 +9604,30 @@ Recreate the similarity view, given the selected clusters in the cluster view.
 
 ---
 
+#### SimilarityView.selection_after_navigation
+
+
+**`SimilarityView.selection_after_navigation(self, direction='next')`**
+
+Return the row selection produced by navigation without mutating the table.
+
+---
+
 #### SimilarityView.set_busy
 
 
 **`SimilarityView.set_busy(self, busy)`**
 
 
+
+---
+
+#### SimilarityView.set_selected_ids
+
+
+**`SimilarityView.set_selected_ids(self, ids)`**
+
+Project selected row IDs without emitting a selection event.
 
 ---
 
@@ -9566,6 +9638,15 @@ Recreate the similarity view, given the selected clusters in the cluster view.
 
 Set the index of the selected cluster, used for correct coloring in the similarity
 view.
+
+---
+
+#### SimilarityView.set_selected_index_order
+
+
+**`SimilarityView.set_selected_index_order(self, ids)`**
+
+Set stable positional-color indices independently of table-role order.
 
 ---
 
