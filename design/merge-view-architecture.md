@@ -490,6 +490,47 @@ acceptable.
 Each phase should leave the repository testable and avoid combining broad
 behavioral changes with mechanical moves.
 
+### Planned commit sequence
+
+Implementation is organized as twelve reviewable commits. A commit may be split
+if its diff becomes difficult to review, but independent phases should not be
+squashed together merely to preserve the count.
+
+1. `test: characterize curation selection contracts`
+2. `refactor: add curation selection state model`
+3. `refactor: shadow supervisor selection state`
+4. `refactor: make curation selection authoritative`
+5. `refactor: separate reference and presentation order`
+6. `refactor: remove selection state from task history`
+7. `refactor: add contextual curation history`
+8. `feat: add merge session and mode lifecycle`
+9. `feat: add merge candidate interactions`
+10. `feat: restore merge sessions through history`
+11. `feat: add cluster table drag and drop`
+12. `docs: finalize merge view workflow`
+
+Commits 1-7 form the architectural foundation (Milestone 1). Commits 8-10
+provide the complete manual workflow without drag-and-drop (Milestone 2).
+Commits 11-12 add drag-and-drop and final cleanup/documentation (Milestone 3).
+
+The initial Merge-mode action policy is:
+
+- disable split, group/metadata changes, Cluster navigation, and Cluster
+  selection;
+- allow Similarity navigation, filtering, sorting, Ctrl+Space, Backspace, `C`,
+  `G`, and save;
+- reject unsafe direct or plugin calls explicitly without partially mutating the
+  workspace;
+- do not let an uncommitted Merge session undo an earlier curation action;
+- after undoing a Merge-mode merge, allow redo to reapply it; and
+- truncate that redo branch normally if the restored workspace is edited and a
+  different curation action is committed.
+
+Cancellation and shutdown restore or persist the Normal-mode entry snapshot,
+never the transient empty Cluster selection. The snapshot includes selections,
+reference, ordering, filter, sort, and navigation state. Pixel-perfect scroll
+restoration is best effort where Qt exposes a reliable value.
+
 ### Phase 0: characterization
 
 - Add tests for selection order, effective selection, multi-Cluster Similarity
