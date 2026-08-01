@@ -373,6 +373,28 @@ def _assert_selected(supervisor, sel):
 def test_select(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+    assert supervisor.selection.state.cluster_ids == (30,)
+    assert supervisor.selection.state.similar_ids == (20,)
+    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection.state.presentation_order == (30, 20)
+
+
+def test_selection_shadow_tracks_cross_view_transfers(supervisor):
+    _select(supervisor, [10, 30], [20, 11, 1])
+
+    supervisor.promote_similar(11)
+    supervisor.block()
+    assert supervisor.selection.state.cluster_ids == (10, 11, 30)
+    assert supervisor.selection.state.similar_ids == (20, 1)
+    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection.state.presentation_order == tuple(supervisor.selected)
+
+    supervisor.demote_cluster(10)
+    supervisor.block()
+    assert supervisor.selection.state.cluster_ids == (11, 30)
+    assert supervisor.selection.state.similar_ids == (20, 1, 10)
+    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection.state.presentation_order == tuple(supervisor.selected)
 
 
 def test_block_flushes_pending_selections(qtbot, supervisor):

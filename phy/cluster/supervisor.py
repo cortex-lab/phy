@@ -20,6 +20,7 @@ from phy.gui.qt import QHeaderView, _block, _wait, set_busy
 from phy.gui.widgets import Barrier, Table, _uniq
 
 from ._history import GlobalHistory
+from ._selection import CurationSelectionController
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 
@@ -716,6 +717,9 @@ class Supervisor:
         self.actions = None  # will be set when attaching the GUI
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
+        # This is populated alongside the existing TaskLogger-derived selection during the
+        # migration to an explicit authoritative curation-selection model.
+        self.selection = CurationSelectionController()
         self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(
             n_similar_clusters_to_select
             if n_similar_clusters_to_select is not None
@@ -981,6 +985,8 @@ class Supervisor:
         next_cluster = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
+        self.selection.set_cluster_selection(cluster_ids)
+        self.selection.clear_similarity_selection()
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=obj)
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
@@ -1003,6 +1009,7 @@ class Supervisor:
         next_similar = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
+        self.selection.set_similarity_selection(similar)
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
         emit('select', self, self.selected, **kwargs)
         if similar:
