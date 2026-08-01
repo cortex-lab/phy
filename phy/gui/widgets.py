@@ -1026,6 +1026,16 @@ class Table(QWidget):
     def get_previous_id(self, callback=None):
         return self._async_return(self.get_sibling_id(None, 'previous'), callback)
 
+    def selection_after_navigation(self, direction='next'):
+        """Return the row selection produced by navigation without mutating the table."""
+        if direction not in ('next', 'previous'):
+            raise ValueError("Direction must be 'next' or 'previous'.")
+        if not self.get_selected_ids():
+            navigable = self._visible_navigable_ids()
+            return navigable[:1]
+        row_id = self.get_sibling_id(direction=direction)
+        return [row_id] if row_id is not None else []
+
     def first(self, callback=None):
         return self._async_return(self._select_first_or_last('first'), callback)
 

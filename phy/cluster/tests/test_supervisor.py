@@ -103,6 +103,8 @@ def tl():
         pass
 
     class MockSupervisor:
+        post_actions = None
+
         def merge(self, cluster_ids, to, callback=None):
             callback(Bunch(deleted=cluster_ids, added=[to]))
 
@@ -118,87 +120,52 @@ def tl():
         def redo(self, callback=None):
             callback(Bunch())
 
+        def _select_after_merge(self, output, selection_before, **kwargs):
+            self.post_actions = ('merge', output, selection_before, kwargs)
+
+        def _select_after_split(self, output):
+            self.post_actions = ('split', output)
+
+        def _select_after_move(self, selection_before, cluster_ids):
+            self.post_actions = ('move', selection_before, cluster_ids)
+
     out = TaskLogger(MockClusterView(), MockSimilarityView(), MockSupervisor())
 
     return out
 
 
-def test_task_1(tl):
-    assert tl.last_state(None) is None
-
-
-def test_task_2(tl):
+def test_task_logger_runs_callback_compatible_table_task(tl):
     tl.enqueue(tl.cluster_view, 'select', [0])
     tl.process()
-    assert tl.last_state() == ([0], 1, None, None)
+    assert tl._history[-1][1] == 'select'
+    assert tl._history[-1][-1] == {'selected': [0], 'next': 1}
 
 
-def test_task_3(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.process()
-    assert tl.last_state() == ([0], 1, [100], 101)
-
-
-def test_task_merge(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
+def test_task_logger_delegates_merge_follow_up(tl):
     tl.enqueue(tl.supervisor, 'merge', [0, 100], 1000)
     tl.process()
 
-    assert tl.last_state() == ([1000], 1001, None, None)
-
-    tl.enqueue(tl.supervisor, 'undo')
-    tl.process()
-    assert tl.last_state() == ([0], 1, [100], 101)
-
-    tl.enqueue(tl.supervisor, 'redo')
-    tl.process()
-    assert tl.last_state() == ([1000], 1001, None, None)
+    name, output, selection_before, kwargs = tl.supervisor.post_actions
+    assert name == 'merge'
+    assert output.added == [1000]
+    assert selection_before is None
+    assert kwargs['auto_select'] is False
 
 
-def test_task_split(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
+def test_task_logger_delegates_split_follow_up(tl):
     tl.enqueue(tl.supervisor, 'split', [0, 100], [1000, 1001])
     tl.process()
 
-    assert tl.last_state() == ([1000, 1001], 1002, None, None)
+    name, output = tl.supervisor.post_actions
+    assert name == 'split'
+    assert output.added == [1000, 1001]
 
 
-def test_task_move_1(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
+def test_task_logger_delegates_move_follow_up(tl):
     tl.enqueue(tl.supervisor, 'move', [0], 'good')
     tl.process()
 
-    assert tl.last_state() == ([1], 2, None, None)
-
-
-def test_task_move_best(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', 'best', 'good')
-    tl.process()
-
-    assert tl.last_state() == ([1], 2, None, None)
-
-
-def test_task_move_similar(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', 'similar', 'good')
-    tl.process()
-
-    assert tl.last_state() == ([0], 1, [101], 102)
-
-
-def test_task_move_all(tl):
-    tl.enqueue(tl.cluster_view, 'select', [0])
-    tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', 'all', 'good')
-    tl.process()
-
-    assert tl.last_state() == ([1], 2, [101], 102)
+    assert tl.supervisor.post_actions == ('move', None, [0])
 
 
 # ------------------------------------------------------------------------------
@@ -361,9 +328,8 @@ def _select(supervisor, cluster_ids, similar=None):
     supervisor.task_logger.process()
     supervisor.block()
     supervisor.task_logger.show_history()
-
-    assert supervisor.task_logger.last_state()[0] == cluster_ids
-    assert supervisor.task_logger.last_state()[2] == similar
+    assert supervisor.selected_clusters == cluster_ids
+    assert supervisor.selected_similar == (similar or [])
 
 
 def _assert_selected(supervisor, sel):

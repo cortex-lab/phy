@@ -9,6 +9,7 @@ import inspect
 import logging
 import sys
 from contextlib import ExitStack
+from dataclasses import dataclass
 from functools import partial
 from numbers import Integral
 
@@ -60,6 +61,22 @@ def _ensure_all_ints(l):
 # -----------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class QueuedTask:
+    """One callback-compatible action with its explicit pre-action selection."""
+
+    sender: object
+    name: str
+    args: tuple
+    kwargs: dict
+    selection_before: object = None
+    next_similar_before: int | None = None
+
+    def __iter__(self):
+        # Preserve the long-standing internal four-value task unpacking contract.
+        return iter((self.sender, self.name, self.args, self.kwargs))
+
+
 class TaskLogger:
     """Internal object that gandles all clustering actions and the automatic actions that
     should follow as part of the "wizard"."""
@@ -89,7 +106,21 @@ class TaskLogger:
             kwargs,
             output,
         )
-        self._queue.append((sender, name, args, kwargs))
+        selection = getattr(self.supervisor, 'selection', None)
+        selection_before = selection.snapshot() if selection is not None else None
+        next_similar_before = None
+        if self.similarity_view is not None and hasattr(self.similarity_view, '_selected_payload'):
+            next_similar_before = self.similarity_view._selected_payload()['next']
+        self._queue.append(
+            QueuedTask(
+                sender=sender,
+                name=name,
+                args=args,
+                kwargs=kwargs,
+                selection_before=selection_before,
+                next_similar_before=next_similar_before,
+            )
+        )
 
     def dequeue(self):
         """Dequeue the oldest item in the queue."""
@@ -148,67 +179,26 @@ class TaskLogger:
 
     def _after_merge(self, task, output):
         """Tasks that should follow a merge."""
-        merged, to = output.deleted, output.added[0]
-        cluster_ids, next_cluster, similar, next_similar = self.last_state()
-        # Update views after cluster_view.select event only if there is no similar clusters.
-        # Otherwise, this is only the similarity_view that will raise the select event leading
-        # to view updates.
-        do_select_new = self.auto_select_after_action and similar is not None
-        self.enqueue(self.cluster_view, 'select', [to], update_views=not do_select_new)
-        if do_select_new:  # pragma: no cover
-            if set(merged).intersection(similar) and next_similar is not None:
-                similar = [next_similar]
-            self.enqueue(self.similarity_view, 'select', similar)
+        self.supervisor._select_after_merge(
+            output,
+            task.selection_before,
+            auto_select=self.auto_select_after_action,
+            next_similar=task.next_similar_before,
+        )
 
     def _after_split(self, task, output):
         """Tasks that should follow a split."""
-        self.enqueue(self.cluster_view, 'select', output.added)
-
-    def _get_clusters(self, which):
-        cluster_ids, next_cluster, similar, next_similar = self.last_state()
-        if which == 'all':
-            return _uniq(cluster_ids + similar)
-        elif which == 'best':
-            return cluster_ids
-        elif which == 'similar':
-            return similar
-        return which
+        self.supervisor._select_after_split(output)
 
     def _after_move(self, task, output):
         """Tasks that should follow a move."""
-        which = output.metadata_changed
-        moved = set(self._get_clusters(which))
-        cluster_ids, next_cluster, similar, next_similar = self.last_state()
-        cluster_ids = set(cluster_ids or ())
-        similar = set(similar or ())
-        # Move best.
-        if moved <= cluster_ids:
-            self.enqueue(self.cluster_view, 'next')
-        # Move similar.
-        elif moved <= similar:
-            self.enqueue(self.similarity_view, 'next')
-        # Move all.
-        else:
-            self.enqueue(self.cluster_view, 'next')
-            self.enqueue(self.similarity_view, 'next')
+        self.supervisor._select_after_move(task.selection_before, output.metadata_changed)
 
     def _after_undo(self, task, output):
-        """Task that should follow an undo."""
-        last_action = self.last_task(name_not_in=('select', 'next', 'previous', 'undo', 'redo'))
-        self._select_state(self.last_state(last_action))
+        """Selection restoration is owned by contextual GlobalHistory entries."""
 
     def _after_redo(self, task, output):
-        """Task that should follow an redo."""
-        last_undo = self.last_task('undo')
-        # Select the last state before the last undo.
-        self._select_state(self.last_state(last_undo))
-
-    def _select_state(self, state):
-        """Enqueue select actions when a state (selected clusters and similar clusters) is set."""
-        cluster_ids, next_cluster, similar, next_similar = state
-        self.enqueue(self.cluster_view, 'select', cluster_ids, update_views=not similar)
-        if similar:
-            self.enqueue(self.similarity_view, 'select', similar)
+        """Selection restoration is owned by contextual GlobalHistory entries."""
 
     def _log(self, task, output):
         """Add a completed task to the history stack."""
@@ -240,31 +230,6 @@ class TaskLogger:
             if (name and name_ == name) or (name_not_in and name_ and name_ not in name_not_in):
                 assert name_
                 return (sender, name_, args, kwargs, output)
-
-    def last_state(self, task=None):
-        """Return (cluster_ids, next_cluster, similar, next_similar)."""
-        cluster_state = (None, None)
-        similarity_state = (None, None)
-        h = self._history
-        # Last state until the passed task, if applicable.
-        if task:
-            i = self._history.index(task)
-            h = self._history[:i]
-        for sender, name, args, kwargs, output in reversed(h):
-            # Last selection is cluster view selection: return the state.
-            if (
-                sender == self.similarity_view
-                and similarity_state == (None, None)
-                and name in ('select', 'next', 'previous')
-            ):
-                similarity_state = (output['selected'], output['next']) if output else (None, None)
-            if (
-                sender == self.cluster_view
-                and cluster_state == (None, None)
-                and name in ('select', 'next', 'previous')
-            ):
-                cluster_state = (output['selected'], output['next']) if output else (None, None)
-                return (*cluster_state, *similarity_state)
 
     def show_history(self):
         """Show the history stack."""
@@ -1059,6 +1024,56 @@ class Supervisor:
         if callback:
             self.cluster_view._schedule_callback(callback, state)
 
+    def _select_after_merge(
+        self,
+        up,
+        selection_before,
+        *,
+        auto_select=False,
+        next_similar=None,
+    ):
+        """Apply the settled post-merge selection from an explicit before snapshot."""
+        similar_ids = ()
+        if auto_select and selection_before is not None:  # pragma: no cover
+            similar_ids = selection_before.similar_ids
+            if set(up.deleted).intersection(similar_ids) and next_similar is not None:
+                similar_ids = (next_similar,)
+            reference_id = up.added[0]
+            self.similarity_view.reset((reference_id,), reference_id=reference_id)
+            visible = set(self.similarity_view.get_ids())
+            similar_ids = tuple(cluster_id for cluster_id in similar_ids if cluster_id in visible)
+        change = self.selection.set_normal_selection((up.added[0],), similar_ids)
+        self._apply_selection_change(change)
+
+    def _select_after_split(self, up):
+        """Select all clusters created by a split as one settled transition."""
+        change = self.selection.set_normal_selection(tuple(up.added))
+        self._apply_selection_change(change)
+
+    def _select_after_move(self, selection_before, moved_cluster_ids):
+        """Apply wizard navigation after metadata changes without task-log reconstruction."""
+        if selection_before is None:
+            return
+        moved = set(moved_cluster_ids)
+        cluster_ids = set(selection_before.cluster_ids)
+        similar_ids = set(selection_before.similar_ids)
+
+        if moved <= cluster_ids:
+            next_clusters = self.cluster_view.selection_after_navigation()
+            next_similar = ()
+        elif moved <= similar_ids:
+            next_clusters = selection_before.cluster_ids
+            next_similar = self.similarity_view.selection_after_navigation()
+        else:
+            next_clusters = self.cluster_view.selection_after_navigation()
+            if next_clusters:
+                reference_id = next_clusters[0]
+                self.similarity_view.reset(next_clusters, reference_id=reference_id)
+            next_similar = self.similarity_view.selection_after_navigation()
+
+        change = self.selection.set_normal_selection(next_clusters, next_similar)
+        self._apply_selection_change(change)
+
     def _promote_similar_on_right_click(self, sender, cluster_id):
         """Promote a right-clicked similarity row through the normal action queue."""
         emit('action', self.action_creator, 'promote_similar', cluster_id)
@@ -1297,6 +1312,7 @@ class Supervisor:
             cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
             return
+        selection_before = self.selection.snapshot()
         # A merge synchronously emits several related table mutations: metadata
         # inheritance, addition of the merged cluster, and removal of its
         # ancestors. Fit each attached table once after the complete operation
@@ -1307,6 +1323,8 @@ class Supervisor:
                 if table is not None:
                     stack.enter_context(table.batch_update())
             out = self.clustering.merge(cluster_ids, to=to)
+        if not getattr(getattr(self, 'task_logger', None), '_processing', False):
+            self._select_after_merge(out, selection_before)
         self._global_history.action(self.clustering)
         return out
 
@@ -1321,7 +1339,10 @@ class Supervisor:
         if len(spike_ids) == 0:
             logger.warning("""No spikes selected, cannot split.""")
             return
+        task_logger = getattr(self, 'task_logger', None)
         out = self.clustering.split(spike_ids, spike_clusters_rel=spike_clusters_rel)
+        if not getattr(task_logger, '_processing', False):
+            self._select_after_split(out)
         self._global_history.action(self.clustering)
         return out
 
