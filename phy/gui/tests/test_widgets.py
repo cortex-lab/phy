@@ -234,6 +234,22 @@ def test_table_1(qtbot, table):
     _assert(table.get_selected, [1, 2])
 
 
+def test_table_set_selected_ids_is_a_silent_projection(table):
+    events = []
+
+    @connect(sender=table)
+    def on_select(sender, obj):
+        events.append(obj)
+
+    payload = table.set_selected_ids([2, 1, 2, 999])
+
+    assert payload['selected'] == [2, 1]
+    assert table.get_selected_ids() == [2, 1]
+    assert events == []
+
+    unconnect(on_select)
+
+
 def test_table_batch_update_fits_once(table):
     fit_calls = []
     table._fit_columns = lambda: fit_calls.append(True)

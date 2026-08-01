@@ -1026,13 +1026,18 @@ class Table(QWidget):
         return self._async_return(self._move_to_sibling(None, 'previous'), callback)
 
     def select(self, ids, callback=None, **kwargs):
+        self.set_selected_ids(ids)
+        payload = self._emit_selected(kwargs)
+        return self._async_return(payload, callback)
+
+    def set_selected_ids(self, ids):
+        """Project selected row IDs without emitting a selection event."""
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
         visible = set(self._visible_ids())
         self._selected_ids = [row_id for row_id in ids if row_id in visible]
         self._refresh_selection()
-        payload = self._emit_selected(kwargs)
-        return self._async_return(payload, callback)
+        return self._selected_payload()
 
     def scroll_to(self, id):
         index = self._proxy_index_for_id(id)

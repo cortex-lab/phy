@@ -379,6 +379,16 @@ def test_select(qtbot, supervisor):
     assert supervisor.selection.state.presentation_order == (30, 20)
 
 
+def test_supervisor_selection_is_independent_from_task_log(supervisor):
+    _select(supervisor, [30], [20])
+
+    supervisor.task_logger._history.clear()
+
+    assert supervisor.selected_clusters == [30]
+    assert supervisor.selected_similar == [20]
+    assert supervisor.selected == [30, 20]
+
+
 def test_selection_shadow_tracks_cross_view_transfers(supervisor):
     _select(supervisor, [10, 30], [20, 11, 1])
 

@@ -104,6 +104,8 @@ class TaskLogger:
         """
         # Log the task and its output.
         self._log(task, output)
+        if hasattr(self.supervisor, '_selection_task_completed'):
+            self.supervisor._selection_task_completed(task, output)
         # Find the post tasks after that task has completed, and enqueue them.
         self.enqueue_after(task, output)
         # Loop.
@@ -1055,9 +1057,29 @@ class Supervisor:
             up.description.replace('metadata_', ''),
             up.metadata_changed,
         )
+        # Table filtering or cluster removal may make projected rows disappear without a
+        # selection event. Keep the authoritative role state synchronized before applying
+        # the post-action navigation policy.
+        cluster_ids = self.cluster_view.get_selected_ids()
+        similar_ids = self.similarity_view.get_selected_ids()
+        if tuple(cluster_ids) != self.selection.state.cluster_ids:
+            self.selection.set_cluster_selection(cluster_ids)
+        if tuple(similar_ids) != self.selection.state.similar_ids:
+            self.selection.set_similarity_selection(similar_ids)
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
         self.task_logger.process()
+
+    def _selection_task_completed(self, task, output):
+        """Reconcile navigation results that do not emit a table selection event."""
+        sender, name, _, _ = task
+        if output is not None or name not in ('next', 'previous'):
+            return
+        if sender == self.cluster_view:
+            self.selection.set_cluster_selection(())
+            self.selection.clear_similarity_selection()
+        elif sender == self.similarity_view:
+            self.selection.clear_similarity_selection()
 
     def _set_busy(self, busy):
         # If busy is the same, do nothing.
@@ -1209,19 +1231,17 @@ class Supervisor:
     @property
     def selected_clusters(self):
         """Selected clusters in the cluster view only."""
-        state = self.task_logger.last_state()
-        return state[0] or [] if state else []
+        return list(self.selection.state.cluster_ids)
 
     @property
     def selected_similar(self):
         """Selected clusters in the similarity view only."""
-        state = self.task_logger.last_state()
-        return state[2] or [] if state else []
+        return list(self.selection.state.similar_ids)
 
     @property
     def selected(self):
         """Selected clusters in the cluster and similarity views."""
-        return _uniq(self.selected_clusters + self.selected_similar)
+        return list(self.selection.state.presentation_order)
 
     def n_spikes(self, cluster_id):
         """Number of spikes in a given cluster."""
@@ -1328,8 +1348,7 @@ class Supervisor:
 
     def next(self, callback=None):
         """Select the next cluster in the similarity view."""
-        state = self.task_logger.last_state()
-        if not state or not state[0]:
+        if not self.selected_clusters:
             self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
         else:
             self.similarity_view.next(callback=callback or partial(emit, 'wizard_done', self))
