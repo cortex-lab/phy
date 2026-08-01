@@ -18,6 +18,7 @@ from phy.gui.actions import _get_shortcut_string
 from phy.gui.qt import QHeaderView, Qt, qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.gui.widgets import Barrier
+from phy.utils.color import selected_cluster_color
 from phy.utils.context import Context
 
 from .. import supervisor as _supervisor
@@ -233,6 +234,31 @@ def test_cluster_view_1(qtbot, gui, data):
     assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
 
 
+def test_cluster_view_control_right_click_reports_unselected_row_without_selecting_it(
+    qtbot, gui, data
+):
+    cv = ClusterView(gui, data=data)
+    _wait_until_table_ready(qtbot, cv)
+    cv.select([1])
+    qtbot.wait(10)
+
+    clicked = []
+
+    @connect(sender=cv)
+    def on_row_right_click(sender, cluster_id):
+        clicked.append(cluster_id)
+
+    index = cv._proxy_index_for_id(2)
+    pos = cv.table_view.visualRect(index).center()
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.mouseClick(cv.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+
+    assert clicked == [2]
+    assert cv.get_selected_ids() == [1]
+
+    unconnect(on_row_right_click)
+
+
 def test_cluster_view_formats_spike_counts(qtbot, gui):
     cv = ClusterView(gui, data=[{'id': 1, 'n_spikes': 1234567}])
     _wait_until_table_ready(qtbot, cv)
@@ -440,6 +466,55 @@ def test_supervisor_select_order(qtbot, supervisor):
     _assert_selected(supervisor, [1, 0])
     _select(supervisor, [0, 1])
     _assert_selected(supervisor, [0, 1])
+
+
+def test_supervisor_multi_cluster_similarity_reference_and_positional_colors(supervisor):
+    requested = []
+
+    @connect(sender=supervisor.similarity_view)
+    def on_request_similar_clusters(sender, cluster_id):
+        requested.append(cluster_id)
+
+    _select(supervisor, [10, 30], [20])
+
+    # Similarity uses the last Cluster View row as its reference, whereas the
+    # first selected cluster owns the blue positional color slot.
+    assert requested == [30]
+    assert supervisor.selected == [10, 30, 20]
+
+    def rgb(color):
+        return tuple(channel / 255 for channel in color.getRgb()[:3])
+
+    def expected_rgb(index):
+        return tuple(int(channel * 255) / 255 for channel in selected_cluster_color(index)[:3])
+
+    assert rgb(supervisor.cluster_view._selection_background(10)) == expected_rgb(0)
+    assert rgb(supervisor.cluster_view._selection_background(30)) == expected_rgb(1)
+    assert rgb(supervisor.similarity_view._selection_background(20)) == expected_rgb(2)
+
+    unconnect(on_request_similar_clusters)
+
+
+def test_supervisor_select_event_has_legacy_payload_and_suppression(supervisor):
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids, **kwargs):
+        events.append((sender, cluster_ids, kwargs))
+
+    supervisor.cluster_view.select([10, 30], marker='legacy')
+    supervisor.block()
+
+    assert events == [(supervisor, [10, 30], {'marker': 'legacy'})]
+
+    # ``update_views`` is an internal suppression flag: it neither reaches
+    # public listeners nor changes the selected rows.
+    supervisor.cluster_view.select([20], update_views=False)
+    supervisor.block()
+    assert events == [(supervisor, [10, 30], {'marker': 'legacy'})]
+    assert supervisor.selected_clusters == [20]
+
+    unconnect(on_select)
 
 
 def test_supervisor_select_first_similar(qtbot, supervisor, gui):
