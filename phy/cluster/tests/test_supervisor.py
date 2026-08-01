@@ -394,17 +394,57 @@ def test_selection_shadow_tracks_cross_view_transfers(supervisor):
 
     supervisor.promote_similar(11)
     supervisor.block()
-    assert supervisor.selection.state.cluster_ids == (10, 11, 30)
+    assert supervisor.selection.state.cluster_ids == (10, 30, 11)
     assert supervisor.selection.state.similar_ids == (20, 1)
-    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection.state.reference_id == 10
     assert supervisor.selection.state.presentation_order == tuple(supervisor.selected)
 
-    supervisor.demote_cluster(10)
+    supervisor.demote_cluster(30)
     supervisor.block()
-    assert supervisor.selection.state.cluster_ids == (11, 30)
-    assert supervisor.selection.state.similar_ids == (20, 1, 10)
-    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection.state.cluster_ids == (10, 11)
+    assert supervisor.selection.state.similar_ids == (20, 1, 30)
+    assert supervisor.selection.state.reference_id == 10
     assert supervisor.selection.state.presentation_order == tuple(supervisor.selected)
+
+
+def test_cross_view_role_transfers_preserve_public_selection_and_colors(supervisor):
+    _select(supervisor, [10, 30], [20, 11])
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    supervisor.promote_similar(11)
+    supervisor.block()
+    supervisor.demote_cluster(30)
+    supervisor.block()
+
+    assert events == []
+    assert supervisor.selected == [10, 30, 20, 11]
+    assert supervisor.cluster_view._selected_color_index(10) == 0
+    assert supervisor.similarity_view._selected_color_index(30) == 1
+    assert supervisor.similarity_view._selected_color_index(20) == 2
+    assert supervisor.cluster_view._selected_color_index(11) == 3
+
+    unconnect(on_select)
+
+
+def test_stale_table_selection_revision_is_ignored(supervisor):
+    _select(supervisor, [10], [20])
+    state = supervisor.selection.state
+
+    supervisor._clusters_selected(
+        supervisor.cluster_view,
+        {
+            'selected': [30],
+            'next': None,
+            'kwargs': {},
+            'revision': supervisor.cluster_view._selection_revision - 1,
+        },
+    )
+
+    assert supervisor.selection.state is state
 
 
 def test_block_flushes_pending_selections(qtbot, supervisor):
@@ -500,7 +540,7 @@ def test_supervisor_select_order(qtbot, supervisor):
     _assert_selected(supervisor, [0, 1])
 
 
-def test_supervisor_multi_cluster_similarity_reference_and_positional_colors(supervisor):
+def test_supervisor_multi_cluster_reference_is_explicit_and_blue(supervisor):
     requested = []
 
     @connect(sender=supervisor.similarity_view)
@@ -509,9 +549,9 @@ def test_supervisor_multi_cluster_similarity_reference_and_positional_colors(sup
 
     _select(supervisor, [10, 30], [20])
 
-    # Similarity uses the last Cluster View row as its reference, whereas the
-    # first selected cluster owns the blue positional color slot.
-    assert requested == [30]
+    # The first Cluster View row is the explicit Similarity reference and owns
+    # the blue positional color slot.
+    assert requested == [10]
     assert supervisor.selected == [10, 30, 20]
 
     def rgb(color):
@@ -744,9 +784,9 @@ def test_supervisor_promote_similar_with_control_right_click(qtbot, supervisor):
     )
     supervisor.block()
 
-    assert supervisor.selected_clusters == [10, 11, 30]
+    assert supervisor.selected_clusters == [10, 30, 11]
     assert supervisor.selected_similar == [20, 1]
-    assert supervisor.selected == [10, 11, 30, 20, 1]
+    assert supervisor.selected == [10, 30, 20, 11, 1]
     assert 11 not in similarity_view.get_ids()
 
 
@@ -762,7 +802,7 @@ def test_supervisor_promote_unselected_similar_with_control_right_click(qtbot, s
     )
     supervisor.block()
 
-    assert supervisor.selected_clusters == [1, 30]
+    assert supervisor.selected_clusters == [30, 1]
     assert supervisor.selected_similar == [20, 11]
 
 
@@ -771,23 +811,23 @@ def test_supervisor_demote_cluster_with_control_right_click(qtbot, supervisor):
     cluster_view = supervisor.cluster_view
     control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
 
-    index = cluster_view._proxy_index_for_id(10)
-    pos = cluster_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
-    supervisor.block()
-
-    assert supervisor.selected_clusters == [30]
-    assert supervisor.selected_similar == [20, 11, 10]
-    assert supervisor.selected == [30, 20, 11, 10]
-
     index = cluster_view._proxy_index_for_id(30)
     pos = cluster_view.table_view.visualRect(index).center()
     qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
     supervisor.block()
 
+    assert supervisor.selected_clusters == [10]
+    assert supervisor.selected_similar == [20, 11, 30]
+    assert supervisor.selected == [10, 30, 20, 11]
+
+    index = cluster_view._proxy_index_for_id(10)
+    pos = cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+    supervisor.block()
+
     # Keep one cluster as the similarity reference.
-    assert supervisor.selected_clusters == [30]
-    assert supervisor.selected_similar == [20, 11, 10]
+    assert supervisor.selected_clusters == [10]
+    assert supervisor.selected_similar == [20, 11, 30]
 
     index = cluster_view._proxy_index_for_id(1)
     pos = cluster_view.table_view.visualRect(index).center()
@@ -795,8 +835,8 @@ def test_supervisor_demote_cluster_with_control_right_click(qtbot, supervisor):
     supervisor.block()
 
     # Rows outside the Cluster View selection cannot be transferred.
-    assert supervisor.selected_clusters == [30]
-    assert supervisor.selected_similar == [20, 11, 10]
+    assert supervisor.selected_clusters == [10]
+    assert supervisor.selected_similar == [20, 11, 30]
 
 
 def test_supervisor_control_left_click_toggles_selection_in_each_view(qtbot, supervisor):

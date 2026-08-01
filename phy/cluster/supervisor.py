@@ -419,11 +419,14 @@ class SimilarityView(ClusterView):
         view."""
         Table.set_selected_index_offset(self, n)
 
-    def reset(self, cluster_ids):
-        """Recreate the similarity view, given the selected clusters in the cluster view."""
+    def reset(self, cluster_ids, reference_id=None):
+        """Recreate the view for an explicit reference and Cluster-role exclusions."""
         if not len(cluster_ids):
             return
-        similar = emit('request_similar_clusters', self, cluster_ids[-1])
+        reference_id = cluster_ids[-1] if reference_id is None else reference_id
+        if reference_id not in cluster_ids:
+            raise ValueError('The similarity reference must be selected in the Cluster View.')
+        similar = emit('request_similar_clusters', self, reference_id)
         # Clear the table.
         if similar:
             rows = [cl for cl in similar[0] if cl['id'] not in cluster_ids]
@@ -983,16 +986,19 @@ class Supervisor:
         update_views is False."""
         if sender != self.cluster_view:
             return
+        if obj.get('revision') not in (None, sender._selection_revision):
+            logger.debug('Ignoring stale Cluster View selection revision.')
+            return
         cluster_ids = obj['selected']
         next_cluster = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
-        self.selection.set_cluster_selection(cluster_ids)
-        self.selection.clear_similarity_selection()
+        change = self.selection.set_normal_selection(cluster_ids)
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=obj)
         # Update the similarity view when the cluster view selection changes.
-        self.similarity_view.reset(cluster_ids)
-        self.similarity_view.set_selected_index_offset(len(self.selected_clusters))
+        self.similarity_view.reset(cluster_ids, reference_id=change.after.reference_id)
+        self.similarity_view.set_selected_ids(())
+        self._update_selection_colors()
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
         # event, but instead after the second similarity_view.select event.
@@ -1007,16 +1013,51 @@ class Supervisor:
         stack, and emit the global supervisor.select event."""
         if sender != self.similarity_view:
             return
+        if obj.get('revision') not in (None, sender._selection_revision):
+            logger.debug('Ignoring stale Similarity View selection revision.')
+            return
         similar = obj['selected']
         next_similar = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
         self.selection.set_similarity_selection(similar)
+        self._update_selection_colors()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
         emit('select', self, self.selected, **kwargs)
         if similar:
             self.similarity_view.scroll_to(similar[-1])
         self.similarity_view.dock.set_status(f'similar clusters: {", ".join(map(str, similar))}')
+
+    def _update_selection_colors(self):
+        """Project authoritative presentation positions into both role tables."""
+        order = self.selection.state.presentation_order
+        self.cluster_view.set_selected_index_order(order)
+        self.similarity_view.set_selected_index_order(order)
+
+    def _apply_selection_change(self, change, callback=None):
+        """Project one complete controller transition and publish it atomically."""
+        state = change.after
+        cluster_payload = self.cluster_view.set_selected_ids(state.cluster_ids)
+        if state.cluster_ids:
+            self.similarity_view.reset(state.cluster_ids, reference_id=state.reference_id)
+        similar_payload = self.similarity_view.set_selected_ids(state.similar_ids)
+        self._update_selection_colors()
+        self.task_logger.log(
+            self.cluster_view,
+            'select',
+            list(state.cluster_ids),
+            output=cluster_payload,
+        )
+        self.task_logger.log(
+            self.similarity_view,
+            'select',
+            list(state.similar_ids),
+            output=similar_payload,
+        )
+        if change.presentation_changed:
+            emit('select', self, list(state.presentation_order))
+        if callback:
+            self.cluster_view._schedule_callback(callback, state)
 
     def _promote_similar_on_right_click(self, sender, cluster_id):
         """Promote a right-clicked similarity row through the normal action queue."""
@@ -1359,7 +1400,8 @@ class Supervisor:
 
     def unselect_similar(self, callback=None):
         """Select only the clusters in the cluster view."""
-        self.cluster_view.select(self.selected_clusters, callback=callback)
+        change = self.selection.clear_similarity_selection()
+        self._apply_selection_change(change, callback=callback)
 
     def select_first_similar(self, n=None, callback=None):
         """Select the first N eligible clusters currently shown in the similarity view."""
@@ -1389,47 +1431,31 @@ class Supervisor:
 
     def promote_similar(self, cluster_id, callback=None):
         """Move a similarity row into the cluster view while preserving all other selections."""
-        cluster_ids = list(self.selected_clusters)
-        similar = [value for value in self.selected_similar if value != cluster_id]
-
-        if not cluster_ids:
-            self.cluster_view.select([cluster_id], callback=callback)
-            return
-
-        # Insert before the current anchor (the final cluster-view selection) so rebuilding the
-        # similarity view keeps the same reference cluster.
-        cluster_ids.insert(-1, cluster_id)
-
-        def restore_similar(_):
-            self.similarity_view.select(similar, callback=callback)
-
-        # Wait to update the other views until the remaining similarity selection is restored.
-        self.cluster_view.select(
-            cluster_ids,
-            callback=restore_similar,
-            update_views=False,
-        )
+        state = self.selection.state
+        if cluster_id in state.similar_ids:
+            change = self.selection.transfer_similarity_to_cluster((cluster_id,))
+        elif cluster_id not in state.cluster_ids:
+            cluster_ids = list(state.cluster_ids)
+            cluster_ids.append(cluster_id)
+            change = self.selection.set_normal_selection(
+                cluster_ids,
+                state.similar_ids,
+                reference_id=state.reference_id or cluster_id,
+                presentation_order=(*state.presentation_order, cluster_id),
+            )
+        else:
+            change = self.selection.restore(state)
+        self._apply_selection_change(change, callback=callback)
 
     def demote_cluster(self, cluster_id, callback=None):
         """Move a selected cluster row into the similarity view."""
-        cluster_ids = list(self.selected_clusters)
-        if cluster_id not in cluster_ids or len(cluster_ids) == 1:
+        state = self.selection.state
+        if cluster_id not in state.cluster_ids or cluster_id == state.reference_id:
             if callback:
                 callback(None)
             return
-
-        cluster_ids.remove(cluster_id)
-        similar = [value for value in self.selected_similar if value != cluster_id]
-        similar.append(cluster_id)
-
-        def restore_similar(_):
-            self.similarity_view.select(similar, callback=callback)
-
-        self.cluster_view.select(
-            cluster_ids,
-            callback=restore_similar,
-            update_views=False,
-        )
+        change = self.selection.transfer_cluster_to_similarity((cluster_id,))
+        self._apply_selection_change(change, callback=callback)
 
     def toggle_cluster_selection(self, cluster_id, callback=None):
         """Add or remove a cluster from the cluster-view selection."""

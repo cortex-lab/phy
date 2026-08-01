@@ -50,20 +50,35 @@ class CurationSelectionState:
 
         cluster_ids = _as_unique_ids(self.cluster_ids)
         similar_ids = _as_unique_ids(self.similar_ids)
+        reference_id = self.reference_id
+        if reference_id is None and cluster_ids:
+            reference_id = cluster_ids[0]
+        if reference_id is not None and reference_id not in cluster_ids:
+            raise ValueError('The reference ID must belong to the cluster selection.')
         effective_ids = _ordered_union(cluster_ids, similar_ids)
+        default_presentation = _ordered_union(
+            (reference_id,) if reference_id is not None else (),
+            cluster_ids,
+            similar_ids,
+        )
         presentation_order = (
-            effective_ids
+            default_presentation
             if self.presentation_order is None
             else _as_unique_ids(self.presentation_order)
         )
 
         if set(presentation_order) != set(effective_ids):
             raise ValueError('Presentation order must contain exactly the effective IDs.')
-        if self.reference_id is not None and self.reference_id not in cluster_ids:
-            raise ValueError('The reference ID must belong to the cluster selection.')
+        if (
+            presentation_order
+            and reference_id is not None
+            and presentation_order[0] != reference_id
+        ):
+            raise ValueError('The reference ID must occupy the first presentation slot.')
 
         object.__setattr__(self, 'cluster_ids', cluster_ids)
         object.__setattr__(self, 'similar_ids', similar_ids)
+        object.__setattr__(self, 'reference_id', reference_id)
         object.__setattr__(self, 'presentation_order', presentation_order)
 
     @property
@@ -132,14 +147,30 @@ class CurationSelectionController:
         return self._apply(snapshot)
 
     def set_cluster_selection(self, cluster_ids, reference_id=None):
-        """Set Cluster View IDs, using the final ID as the default reference."""
+        """Set Cluster View IDs, using the first (blue) ID as the default reference."""
         cluster_ids = _as_unique_ids(cluster_ids)
         if reference_id is None:
-            reference_id = cluster_ids[-1] if cluster_ids else None
+            reference_id = cluster_ids[0] if cluster_ids else None
         after = CurationSelectionState(
             cluster_ids=cluster_ids,
             similar_ids=self._state.similar_ids,
             reference_id=reference_id,
+        )
+        return self._apply(after)
+
+    def set_normal_selection(
+        self,
+        cluster_ids,
+        similar_ids=(),
+        reference_id=None,
+        presentation_order=None,
+    ):
+        """Atomically replace all Normal-mode selection roles and presentation state."""
+        after = CurationSelectionState(
+            cluster_ids=_as_unique_ids(cluster_ids),
+            similar_ids=_as_unique_ids(similar_ids),
+            reference_id=reference_id,
+            presentation_order=presentation_order,
         )
         return self._apply(after)
 
@@ -163,6 +194,8 @@ class CurationSelectionController:
         current = self._state
         if not source_ids <= set(current.cluster_ids):
             raise ValueError('Transferred IDs must belong to the cluster selection.')
+        if current.reference_id in source_ids:
+            raise ValueError('The reference ID cannot move to the similarity selection.')
         remaining_clusters = tuple(i for i in current.cluster_ids if i not in source_ids)
         similar_ids = _ordered_union(current.similar_ids, cluster_ids)
         reference_id = (

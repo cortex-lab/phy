@@ -25,6 +25,12 @@ def test_state_rejects_invalid_ids_reference_and_presentation():
         CurationSelectionState(cluster_ids=(1,), reference_id=2)
     with raises(ValueError, match='exactly'):
         CurationSelectionState(cluster_ids=(1,), presentation_order=(2,))
+    with raises(ValueError, match='first presentation'):
+        CurationSelectionState(
+            cluster_ids=(1, 2),
+            reference_id=2,
+            presentation_order=(1, 2),
+        )
     with raises(ValueError, match='Normal-mode'):
         CurationSelectionState(mode=WorkflowMode.MERGE)
 
@@ -36,20 +42,21 @@ def test_state_is_immutable():
         state.reference_id = 2
 
 
-def test_set_cluster_selection_uses_last_id_or_explicit_reference():
+def test_set_cluster_selection_uses_blue_first_id_or_explicit_reference():
     controller = CurationSelectionController()
 
     change = controller.set_cluster_selection((3, 1))
-    assert change.after.reference_id == 1
+    assert change.after.reference_id == 3
     assert change.presentation_changed
     assert change.reference_changed
 
     change = controller.set_cluster_selection((1, 2))
-    assert change.after.reference_id == 2
+    assert change.after.reference_id == 1
     assert change.after.presentation_order == (1, 2)
 
-    change = controller.set_cluster_selection((1, 2), reference_id=1)
-    assert change.after.reference_id == 1
+    change = controller.set_cluster_selection((1, 2), reference_id=2)
+    assert change.after.reference_id == 2
+    assert change.after.presentation_order == (2, 1)
 
 
 def test_set_similarity_and_clear_similarity_selection():
@@ -67,6 +74,17 @@ def test_set_similarity_and_clear_similarity_selection():
     change = controller.clear_similarity_selection()
     assert change.after.similar_ids == ()
     assert change.after.presentation_order == (1,)
+
+
+def test_set_normal_selection_replaces_all_roles_atomically():
+    controller = CurationSelectionController()
+
+    change = controller.set_normal_selection((3, 1), (2,), reference_id=1)
+
+    assert change.after.cluster_ids == (3, 1)
+    assert change.after.similar_ids == (2,)
+    assert change.after.reference_id == 1
+    assert change.after.presentation_order == (1, 3, 2)
 
 
 def test_role_transfers_leave_effective_presentation_unchanged():
@@ -103,6 +121,8 @@ def test_role_transfer_rejects_ids_not_in_the_source_selection():
         controller.transfer_cluster_to_similarity((2,))
     with raises(ValueError, match='similarity selection'):
         controller.transfer_similarity_to_cluster((1,))
+    with raises(ValueError, match='reference'):
+        controller.transfer_cluster_to_similarity((1,))
 
 
 def test_snapshot_restore_and_noop_change_classification():

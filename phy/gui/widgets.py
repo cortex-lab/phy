@@ -546,6 +546,8 @@ class Table(QWidget):
         self.data = list(data or [])
         self._selected_ids = []
         self._selected_index_offset = 0
+        self._selected_index_by_id = None
+        self._selection_revision = 0
         self._filter_text = ''
         self._filter_is_active = False
         self._current_sort = None
@@ -827,14 +829,14 @@ class Table(QWidget):
     def _selection_background(self, row_id):
         if row_id not in self._selected_ids:
             return None
-        pos = self._selected_ids.index(row_id) + self._selected_index_offset
+        pos = self._selected_color_index(row_id)
         colors = list(colormaps.default * 255)
         r, g, b = colors[pos % len(colors)]
         return QColor(int(r), int(g), int(b), 160)
 
     def _foreground_color(self, row, column):
         if column == 'id' and row.get('id') in self._selected_ids:
-            pos = self._selected_ids.index(row.get('id')) + self._selected_index_offset
+            pos = self._selected_color_index(row.get('id'))
             colors = list(colormaps.default * 255)
             r, g, b = colors[pos % len(colors)]
             if _is_bright((int(r), int(g), int(b))):
@@ -845,6 +847,11 @@ class Table(QWidget):
         if row.get('is_masked'):
             return QColor('#888888')
         return None
+
+    def _selected_color_index(self, row_id):
+        if self._selected_index_by_id is not None and row_id in self._selected_index_by_id:
+            return self._selected_index_by_id[row_id]
+        return self._selected_ids.index(row_id) + self._selected_index_offset
 
     def _refresh_selection(self):
         selection_model = self.table_view.selectionModel()
@@ -864,9 +871,15 @@ class Table(QWidget):
     def _selected_payload(self, kwargs=None):
         selected = self.get_selected_ids()
         next_id = self.get_sibling_id(selected[-1] if selected else None, 'next')
-        return {'selected': selected, 'next': next_id, 'kwargs': kwargs or {}}
+        return {
+            'selected': selected,
+            'next': next_id,
+            'kwargs': kwargs or {},
+            'revision': self._selection_revision,
+        }
 
     def _emit_selected(self, kwargs=None):
+        self._selection_revision += 1
         payload = self._selected_payload(kwargs)
         self._emit_event('select', payload)
         return payload
@@ -1036,6 +1049,7 @@ class Table(QWidget):
         assert all(_is_integer(_) for _ in ids)
         visible = set(self._visible_ids())
         self._selected_ids = [row_id for row_id in ids if row_id in visible]
+        self._selection_revision += 1
         self._refresh_selection()
         return self._selected_payload()
 
@@ -1166,6 +1180,12 @@ class Table(QWidget):
 
     def set_selected_index_offset(self, n):
         self._selected_index_offset = n
+        self._selected_index_by_id = None
+        self.table_view.viewport().update()
+
+    def set_selected_index_order(self, ids):
+        """Set stable positional-color indices independently of table-role order."""
+        self._selected_index_by_id = {row_id: index for index, row_id in enumerate(_uniq(ids))}
         self.table_view.viewport().update()
 
     def clear_temporary_files(self):
