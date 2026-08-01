@@ -2,6 +2,8 @@
 
 Status: proposed for phy 2.2.0
 
+Companion document: [Merge View architecture proposal](merge-view-architecture.md)
+
 This document fixes the intended user-facing behavior of the manual Merge View
 workflow before implementation. It deliberately does not specify Merge
 Propositions, their JSON format, or their review states; those will be designed
