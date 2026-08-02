@@ -84,6 +84,8 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- Group cluster traversal commands under **Select > Navigation**.
+
 - Group available views under **View > Add view** and keep global view options
   separate from view creation.
 

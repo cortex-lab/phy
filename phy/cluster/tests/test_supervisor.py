@@ -1170,6 +1170,16 @@ def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
     assert not supervisor.action_creator.edit_actions.get('merge').icon().isNull()
     assert not gui.help_actions.get('show_all_shortcuts').icon().isNull()
 
+    select_menu = gui.get_menu('Sele&ct')
+    navigation_menu = next(
+        action.menu() for action in select_menu.actions() if action.text() == 'Navigation'
+    )
+    navigation_actions = [action for action in navigation_menu.actions() if not action.isSeparator()]
+    assert navigation_actions == [
+        supervisor.select_actions.get(name)
+        for name in ('first', 'last', 'reset_wizard', 'next', 'previous', 'next_best', 'previous_best')
+    ]
+
     with raises(ValueError, match='positive integer'):
         supervisor.select_first_similar(0)
     with raises(ValueError, match='positive integer'):

@@ -619,21 +619,20 @@ class ActionCreator:
             )
 
         self.select_actions.separator()
-        self.add(w, 'first')
-        self.add(w, 'last')
 
-        self.select_actions.separator()
-
-        self.add(w, 'reset_wizard', icon='f015')
-        self.select_actions.separator()
-
-        self.add(w, 'next', icon='f061')
-        self.add(w, 'previous', icon='f060')
-        self.select_actions.separator()
-
-        self.add(w, 'next_best', icon='f0a9')
-        self.add(w, 'previous_best', icon='f0a8')
-        self.select_actions.separator()
+        # Navigation. Keep traversal commands together rather than splitting
+        # the root menu into several small, related sections.
+        submenu = 'Navigation'
+        self.add(w, 'first', submenu=submenu)
+        self.add(w, 'last', submenu=submenu)
+        self.select_actions.separator(submenu=submenu)
+        self.add(w, 'reset_wizard', icon='f015', submenu=submenu)
+        self.select_actions.separator(submenu=submenu)
+        self.add(w, 'next', icon='f061', submenu=submenu)
+        self.add(w, 'previous', icon='f060', submenu=submenu)
+        self.select_actions.separator(submenu=submenu)
+        self.add(w, 'next_best', icon='f0a9', submenu=submenu)
+        self.add(w, 'previous_best', icon='f0a8', submenu=submenu)
 
     def _create_toolbar(self, gui):
         gui._toolbar.addAction(self.select_actions.get('reset_wizard'))
