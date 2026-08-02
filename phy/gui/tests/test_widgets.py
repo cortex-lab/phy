@@ -70,6 +70,8 @@ def test_table_cluster_drag_drop_policy_and_payload(table, qtbot):
 
     assert table._drag_ids_for_index(table._proxy_index_for_id(1)) == (1, 2)
     assert table._drag_ids_for_index(table._proxy_index_for_id(3)) == (3,)
+    count_index = table._proxy_index_for_id(3).sibling(3, table.columns.index('count'))
+    assert table.table_view._drag_preview_index(count_index).column() == table.columns.index('id')
     assert table._proxy_index_for_id(1).flags() & Qt.ItemIsDragEnabled
     assert target._proxy_index_for_id(10).flags() & Qt.ItemIsDropEnabled
     unrelated = Table(columns=['id'], data=[{'id': 20}])

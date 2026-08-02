@@ -560,13 +560,24 @@ class _TableView(QTableView):
             return
         drag = QDrag(self)
         drag.setMimeData(self._owner._cluster_ids_to_mime(ids))
+        index = self._drag_preview_index(index)
         rect = self.visualRect(index)
         if rect.isValid():
             drag.setPixmap(self.viewport().grab(rect))
             if self._drag_start_pos is not None:
-                drag.setHotSpot(self._drag_start_pos - rect.topLeft())
+                drag.setHotSpot(QPoint(rect.width() // 2, self._drag_start_pos.y() - rect.top()))
         drag.exec_(Qt.MoveAction)
         self._clear_drop_preview()
+
+    def _drag_preview_index(self, index):
+        """Return the ID cell for a row-oriented drag preview."""
+        if not index.isValid():
+            return index
+        try:
+            column = self._owner.columns.index('id')
+        except ValueError:
+            column = 0
+        return self.model().index(index.row(), column)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -976,9 +987,6 @@ class Table(QWidget):
                 padding: 4px 6px;
                 border: 0;
                 background-color: transparent;
-            }
-            QTableView::item:hover {
-                background-color: #222;
             }
             QTableView::item:selected {
                 background-color: transparent;
