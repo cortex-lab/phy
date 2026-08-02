@@ -165,7 +165,10 @@ def test_actions_gui(qtbot, gui, actions):
     # Show all action shortcuts and commands in the GUI.
     reference = gui.help_actions.show_all_shortcuts()
     rows = [
-        [reference.entries.item(row, column).text() for column in range(reference.entries.columnCount())]
+        [
+            reference.entries.item(row, column).text()
+            for column in range(reference.entries.columnCount())
+        ]
         for row in range(reference.entries.rowCount())
     ]
     assert any(row[1] == 'Press' and row[2] == 'g' for row in rows)
