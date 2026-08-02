@@ -50,6 +50,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Display Firing Rate View values in spikes per second instead of normalized
+  probability density, with the configured bin count matching the rendered bins.
 - Start the GUI with released phylib versions that do not yet expose the
   disjoint-spike selection optimization hint.
 - Keep dataset-local view settings isolated from global GUI state. In
