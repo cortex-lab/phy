@@ -1958,27 +1958,6 @@ class BaseController:
         )
 
         @connect(sender=view)
-        def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
-            selected_clusters = set(self.supervisor.selected_clusters)
-            selected_similar = set(self.supervisor.selected_similar)
-            logger.debug(
-                'Correlogram promotion request for (%s, %s); clusters=%s, similar=%s.',
-                cluster_id_a,
-                cluster_id_b,
-                sorted(selected_clusters),
-                sorted(selected_similar),
-            )
-            for cluster_id, other_cluster_id in (
-                (cluster_id_a, cluster_id_b),
-                (cluster_id_b, cluster_id_a),
-            ):
-                if cluster_id in selected_similar and other_cluster_id in selected_clusters:
-                    logger.debug('Promote similarity cluster %s from correlogram.', cluster_id)
-                    emit('action', self.supervisor.action_creator, 'promote_similar', cluster_id)
-                    return
-            logger.debug('Correlogram pair does not span ClusterView and SimilarityView.')
-
-        @connect(sender=view)
         def on_view_attached(view_, gui):
             def validate(values):
                 if values['bin_size'] >= values['window_size']:
@@ -2055,7 +2034,6 @@ class BaseController:
 
         @connect(sender=view)
         def on_close_view(view_, gui):
-            unconnect(on_request_promote_similar)
             unconnect(on_view_attached)
 
         return view

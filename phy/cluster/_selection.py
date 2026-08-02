@@ -84,7 +84,8 @@ class CurationSelectionState:
     """The authoritative, immutable curation selection.
 
     ``presentation_order`` is the effective selection in the order delivered
-    to scientific views. In Merge mode it is derived from the visible roles:
+    to scientific views. The Supervisor derives Normal-mode order from the
+    visible role tables. In Merge mode it is derived from the visible roles:
     Merge View order first, followed by Similarity View selection order.
     """
 
@@ -275,54 +276,6 @@ class CurationSelectionController:
         """Clear only the Similarity View selection."""
         return self.set_similarity_selection(())
 
-    def transfer_cluster_to_similarity(self, cluster_ids):
-        """Move Cluster View IDs to Similarity View without changing presentation."""
-        self._require_normal_mode()
-        cluster_ids = _as_unique_ids(cluster_ids)
-        source_ids = set(cluster_ids)
-        current = self._state
-        if not source_ids <= set(current.cluster_ids):
-            raise ValueError('Transferred IDs must belong to the cluster selection.')
-        if current.reference_id in source_ids:
-            raise ValueError('The reference ID cannot move to the similarity selection.')
-        remaining_clusters = tuple(i for i in current.cluster_ids if i not in source_ids)
-        similar_ids = _ordered_union(current.similar_ids, cluster_ids)
-        reference_id = (
-            current.reference_id
-            if current.reference_id in remaining_clusters
-            else (remaining_clusters[-1] if remaining_clusters else None)
-        )
-        after = CurationSelectionState(
-            cluster_ids=remaining_clusters,
-            similar_ids=similar_ids,
-            reference_id=reference_id,
-            presentation_order=current.presentation_order,
-        )
-        return self._apply(after)
-
-    def transfer_similarity_to_cluster(self, cluster_ids):
-        """Move Similarity View IDs to Cluster View without changing presentation."""
-        self._require_normal_mode()
-        cluster_ids = _as_unique_ids(cluster_ids)
-        source_ids = set(cluster_ids)
-        current = self._state
-        if not source_ids <= set(current.similar_ids):
-            raise ValueError('Transferred IDs must belong to the similarity selection.')
-        similar_ids = tuple(i for i in current.similar_ids if i not in source_ids)
-        cluster_selection = _ordered_union(current.cluster_ids, cluster_ids)
-        reference_id = (
-            current.reference_id
-            if current.reference_id is not None
-            else (cluster_ids[0] if cluster_ids else None)
-        )
-        after = CurationSelectionState(
-            cluster_ids=cluster_selection,
-            similar_ids=similar_ids,
-            reference_id=reference_id,
-            presentation_order=current.presentation_order,
-        )
-        return self._apply(after)
-
     def enter_merge_mode(self, workflow_context=None):
         """Stage the complete Normal-mode selection and enter Merge mode."""
         self._require_normal_mode()
@@ -336,11 +289,7 @@ class CurationSelectionController:
             presentation_order=current.presentation_order,
             workflow_context=workflow_context,
         )
-        ordered_ids = _ordered_union(
-            (current.reference_id,),
-            current.cluster_ids,
-            current.similar_ids,
-        )
+        ordered_ids = current.presentation_order
         merge = MergeSession(current.reference_id, ordered_ids, snapshot)
         after = CurationSelectionState(
             mode=WorkflowMode.MERGE,

@@ -89,56 +89,6 @@ def test_set_normal_selection_replaces_all_roles_atomically():
     assert change.after.presentation_order == (1, 3, 2)
 
 
-def test_role_transfers_leave_effective_presentation_unchanged():
-    controller = CurationSelectionController(
-        CurationSelectionState(
-            cluster_ids=(1, 2),
-            similar_ids=(3,),
-            reference_id=1,
-            presentation_order=(1, 2, 3),
-        )
-    )
-
-    change = controller.transfer_cluster_to_similarity((2,))
-    assert change.after.cluster_ids == (1,)
-    assert change.after.similar_ids == (3, 2)
-    assert change.after.presentation_order == (1, 2, 3)
-    assert change.roles_changed
-    assert not change.presentation_changed
-
-    change = controller.transfer_similarity_to_cluster((3,))
-    assert change.after.cluster_ids == (1, 3)
-    assert change.after.similar_ids == (2,)
-    assert change.after.presentation_order == (1, 2, 3)
-    assert change.roles_changed
-    assert not change.presentation_changed
-
-
-def test_zero_reference_survives_similarity_to_cluster_transfer():
-    controller = CurationSelectionController(
-        CurationSelectionState(cluster_ids=(0,), similar_ids=(4,), reference_id=0)
-    )
-
-    change = controller.transfer_similarity_to_cluster((4,))
-
-    assert change.after.cluster_ids == (0, 4)
-    assert change.after.reference_id == 0
-    assert change.after.presentation_order == (0, 4)
-
-
-def test_role_transfer_rejects_ids_not_in_the_source_selection():
-    controller = CurationSelectionController(
-        CurationSelectionState(cluster_ids=(1,), similar_ids=(2,), reference_id=1)
-    )
-
-    with raises(ValueError, match='cluster selection'):
-        controller.transfer_cluster_to_similarity((2,))
-    with raises(ValueError, match='similarity selection'):
-        controller.transfer_similarity_to_cluster((1,))
-    with raises(ValueError, match='reference'):
-        controller.transfer_cluster_to_similarity((1,))
-
-
 def test_snapshot_restore_and_noop_change_classification():
     controller = CurationSelectionController(
         CurationSelectionState(cluster_ids=(1,), similar_ids=(2,), reference_id=1)
@@ -202,6 +152,21 @@ def test_enter_and_cancel_merge_mode_restore_exact_entry_selection():
     change = controller.cancel_merge_mode()
     assert change.after == initial
     assert change.mode_changed
+    assert not change.presentation_changed
+
+
+def test_enter_merge_mode_stages_normal_presentation_order():
+    initial = CurationSelectionState(
+        cluster_ids=(1, 2),
+        similar_ids=(3, 4),
+        reference_id=1,
+        presentation_order=(1, 2, 4, 3),
+    )
+    controller = CurationSelectionController(initial)
+
+    change = controller.enter_merge_mode()
+
+    assert change.after.merge_ids == initial.presentation_order
     assert not change.presentation_changed
 
 

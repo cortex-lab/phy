@@ -21,7 +21,7 @@ from phy.gui.qt import QAbstractItemView, QHeaderView, Qt, _block, _wait, set_bu
 from phy.gui.widgets import Barrier, Table, _uniq
 
 from ._history import GlobalHistory
-from ._selection import CurationSelectionController
+from ._selection import CurationSelectionController, SelectionChange
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 
@@ -726,6 +726,7 @@ class Supervisor:
         self.merge_view = None
         self._merge_close_callback = None
         self._merge_dock_state = None
+        self._suspend_presentation_order_sync = False
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
         # This is populated alongside the existing TaskLogger-derived selection during the
@@ -926,8 +927,12 @@ class Supervisor:
     def _restore_workflow_context(self, context):
         if not context:
             return
-        self._restore_table_workflow_state(self.cluster_view, context.get('cluster'))
-        self._restore_table_workflow_state(self.similarity_view, context.get('similarity'))
+        self._suspend_presentation_order_sync = True
+        try:
+            self._restore_table_workflow_state(self.cluster_view, context.get('cluster'))
+            self._restore_table_workflow_state(self.similarity_view, context.get('similarity'))
+        finally:
+            self._suspend_presentation_order_sync = False
 
     def get_cluster_info(self, cluster_id, exclude=()):
         """Return the data associated to a given cluster."""
@@ -957,11 +962,7 @@ class Supervisor:
         )
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
-        connect(
-            self._demote_cluster_on_right_click,
-            event='row_right_click',
-            sender=self.cluster_view,
-        )
+        connect(self._table_order_changed, event='table_sort', sender=self.cluster_view)
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
@@ -976,8 +977,9 @@ class Supervisor:
             sender=self.similarity_view,
         )
         connect(self._similar_selected, event='select', sender=self.similarity_view)
+        connect(self._table_order_changed, event='table_sort', sender=self.similarity_view)
         connect(
-            self._promote_similar_on_right_click,
+            self._add_similar_to_merge_on_right_click,
             event='row_right_click',
             sender=self.similarity_view,
         )
@@ -1087,6 +1089,7 @@ class Supervisor:
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids, reference_id=change.after.reference_id)
         self.similarity_view.set_selected_ids(())
+        change = self._normalize_presentation_order(change)
         self._update_selection_colors()
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
@@ -1109,7 +1112,8 @@ class Supervisor:
         next_similar = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
-        self.selection.set_similarity_selection(similar)
+        change = self.selection.set_similarity_selection(similar)
+        change = self._normalize_presentation_order(change)
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
@@ -1117,6 +1121,57 @@ class Supervisor:
         if similar:
             self.similarity_view.scroll_to(similar[-1])
         self.similarity_view.dock.set_status(f'similar clusters: {", ".join(map(str, similar))}')
+
+    @staticmethod
+    def _ids_in_table_order(view, cluster_ids):
+        """Return selected IDs in row order, retaining filtered-out IDs at the end."""
+        cluster_ids = tuple(cluster_ids)
+        selected = set(cluster_ids)
+        visible = [cluster_id for cluster_id in view.get_ids() if cluster_id in selected]
+        visible_set = set(visible)
+        return tuple(visible) + tuple(
+            cluster_id for cluster_id in cluster_ids if cluster_id not in visible_set
+        )
+
+    def _normalize_presentation_order(self, change):
+        """Derive scientific-view order from the active workflow's visible role order."""
+        state = change.after
+        similar_ids = self._ids_in_table_order(self.similarity_view, state.similar_ids)
+        if state.is_merge_mode:
+            normalized = self.selection.set_similarity_selection(similar_ids)
+        else:
+            cluster_ids = self._ids_in_table_order(self.cluster_view, state.cluster_ids)
+            presentation_order = tuple(
+                dict.fromkeys(
+                    (
+                        *((state.reference_id,) if state.reference_id is not None else ()),
+                        *cluster_ids,
+                        *similar_ids,
+                    )
+                )
+            )
+            normalized = self.selection.set_normal_selection(
+                state.cluster_ids,
+                state.similar_ids,
+                reference_id=state.reference_id,
+                presentation_order=presentation_order,
+            )
+        return SelectionChange.create(change.before, normalized.after)
+
+    def _table_order_changed(self, sender, row_ids):
+        """Keep scientific-view order synchronized with selected table rows."""
+        if self._suspend_presentation_order_sync:
+            return
+        if sender is self.cluster_view and self.selection.state.is_merge_mode:
+            return
+        state = self.selection.state
+        change = SelectionChange.create(state, state)
+        change = self._normalize_presentation_order(change)
+        if not change.presentation_changed:
+            return
+        self._update_selection_colors()
+        self._project_merge_view()
+        emit('select', self, list(change.after.presentation_order))
 
     def _update_selection_colors(self):
         """Project authoritative presentation positions into both role tables."""
@@ -1140,13 +1195,16 @@ class Supervisor:
         similar = len(state.similar_ids)
         return f'MERGE MODE — {staged} staged + {similar} selected similar = {staged + similar} clusters'
 
-    def _apply_selection_change(self, change, callback=None):
+    def _apply_selection_change(self, change, callback=None, normalize_order=True):
         """Project one complete controller transition and publish it atomically."""
         state = change.after
         cluster_payload = self.cluster_view.set_selected_ids(state.cluster_ids)
         if state.reference_id is not None:
             self.similarity_view.reset(state.merge_ids, reference_id=state.reference_id)
         similar_payload = self.similarity_view.set_selected_ids(state.similar_ids)
+        if normalize_order:
+            change = self._normalize_presentation_order(change)
+            state = change.after
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(
@@ -1254,7 +1312,7 @@ class Supervisor:
         context = self.selection.state.merge.entry_snapshot.workflow_context
         change = self.selection.cancel_merge_mode()
         self._set_merge_mode_ui(False)
-        self._apply_selection_change(change)
+        self._apply_selection_change(change, normalize_order=False)
         self._restore_workflow_context(context)
         if close_view:
             self._close_merge_view()
@@ -1267,7 +1325,7 @@ class Supervisor:
         elif not selection.is_merge_mode:
             self._set_merge_mode_ui(False)
         change = self.selection.restore(selection)
-        self._apply_selection_change(change)
+        self._apply_selection_change(change, normalize_order=False)
         if selection.is_merge_mode:
             context = (
                 workflow_context.get('tables')
@@ -1332,16 +1390,14 @@ class Supervisor:
         change = self.selection.set_normal_selection(next_clusters, next_similar)
         self._apply_selection_change(change)
 
-    def _promote_similar_on_right_click(self, sender, cluster_id):
-        """Promote a right-clicked similarity row through the normal action queue."""
-        emit('action', self.action_creator, 'promote_similar', cluster_id)
+    def _add_similar_to_merge_on_right_click(self, sender, cluster_id):
+        """Transfer a right-clicked Similarity row only into an active Merge workspace."""
+        if not self.selection.state.is_merge_mode:
+            return
+        self.add_to_merge((cluster_id,))
 
     def _remove_merge_candidate_on_right_click(self, sender, cluster_id):
         emit('action', self.action_creator, 'remove_from_merge', cluster_id)
-
-    def _demote_cluster_on_right_click(self, sender, cluster_id):
-        """Demote a right-clicked cluster row through the normal action queue."""
-        emit('action', self.action_creator, 'demote_cluster', cluster_id)
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -1359,7 +1415,6 @@ class Supervisor:
             'reset_wizard',
             'next_best',
             'previous_best',
-            'demote_cluster',
             'undo',
         }:
             logger.warning('Action `%s` is unavailable in Merge mode.', name)
@@ -1864,47 +1919,6 @@ class Supervisor:
                 action.setChecked(self.skip_masked_clusters)
         if callback:
             callback(self.skip_masked_clusters)
-
-    def promote_similar(self, cluster_id, callback=None):
-        """Move a similarity row into the cluster view while preserving all other selections."""
-        if self.selection.state.is_merge_mode:
-            return self.add_to_merge((cluster_id,), callback=callback)
-        state = self.selection.state
-        if cluster_id in state.similar_ids:
-            change = self.selection.transfer_similarity_to_cluster((cluster_id,))
-        elif cluster_id not in state.cluster_ids:
-            cluster_ids = list(state.cluster_ids)
-            cluster_ids.append(cluster_id)
-            change = self.selection.set_normal_selection(
-                cluster_ids,
-                state.similar_ids,
-                reference_id=state.reference_id or cluster_id,
-                presentation_order=(*state.presentation_order, cluster_id),
-            )
-        else:
-            change = self.selection.restore(state)
-        self._apply_selection_change(change, callback=callback)
-
-    def demote_cluster(self, cluster_id, callback=None):
-        """Move a selected cluster row into the similarity view."""
-        state = self.selection.state
-        if cluster_id not in state.cluster_ids or cluster_id == state.reference_id:
-            if callback:
-                callback(None)
-            return
-        change = self.selection.transfer_cluster_to_similarity((cluster_id,))
-        self._apply_selection_change(change, callback=callback)
-
-    def toggle_cluster_selection(self, cluster_id, callback=None):
-        """Add or remove a cluster from the cluster-view selection."""
-        if self._reject_cluster_action_in_merge_mode('toggle_cluster_selection'):
-            return
-        cluster_ids = list(self.selected_clusters)
-        if cluster_id in cluster_ids:
-            cluster_ids.remove(cluster_id)
-        else:
-            cluster_ids.append(cluster_id)
-        self.cluster_view.select(cluster_ids, callback=callback)
 
     def first(self, callback=None):
         """Select the first cluster in the cluster view."""

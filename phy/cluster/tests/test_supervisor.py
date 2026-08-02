@@ -356,47 +356,6 @@ def test_supervisor_selection_is_independent_from_task_log(supervisor):
     assert supervisor.selected == [30, 20]
 
 
-def test_selection_shadow_tracks_cross_view_transfers(supervisor):
-    _select(supervisor, [10, 30], [20, 11, 1])
-
-    supervisor.promote_similar(11)
-    supervisor.block()
-    assert supervisor.selection.state.cluster_ids == (10, 30, 11)
-    assert supervisor.selection.state.similar_ids == (20, 1)
-    assert supervisor.selection.state.reference_id == 10
-    assert supervisor.selection.state.presentation_order == tuple(supervisor.selected)
-
-    supervisor.demote_cluster(30)
-    supervisor.block()
-    assert supervisor.selection.state.cluster_ids == (10, 11)
-    assert supervisor.selection.state.similar_ids == (20, 1, 30)
-    assert supervisor.selection.state.reference_id == 10
-    assert supervisor.selection.state.presentation_order == tuple(supervisor.selected)
-
-
-def test_cross_view_role_transfers_preserve_public_selection_and_colors(supervisor):
-    _select(supervisor, [10, 30], [20, 11])
-    events = []
-
-    @connect(sender=supervisor)
-    def on_select(sender, cluster_ids):
-        events.append(cluster_ids)
-
-    supervisor.promote_similar(11)
-    supervisor.block()
-    supervisor.demote_cluster(30)
-    supervisor.block()
-
-    assert events == []
-    assert supervisor.selected == [10, 30, 20, 11]
-    assert supervisor.cluster_view._selected_color_index(10) == 0
-    assert supervisor.similarity_view._selected_color_index(30) == 1
-    assert supervisor.similarity_view._selected_color_index(20) == 2
-    assert supervisor.cluster_view._selected_color_index(11) == 3
-
-    unconnect(on_select)
-
-
 def test_supervisor_merge_mode_lifecycle_restores_entry_state(supervisor):
     _select(supervisor, [10, 30], [20, 11])
     entry = supervisor.selection.snapshot()
@@ -547,12 +506,36 @@ def test_supervisor_merge_drag_drop_intents(supervisor):
     assert not supervisor.similarity_view.table_view.dragEnabled()
 
 
-def test_supervisor_merge_control_right_click_transfers(supervisor):
+def test_supervisor_control_right_click_transfers_only_in_merge_mode(qtbot, supervisor):
     _select(supervisor, [10, 30], [20])
-    supervisor.toggle_merge_mode()
-    candidate = supervisor.similarity_view.get_ids()[0]
+    candidate = next(
+        cluster_id
+        for cluster_id in supervisor.similarity_view.get_ids()
+        if cluster_id not in supervisor.selected_similar
+    )
+    index = supervisor.similarity_view._proxy_index_for_id(candidate)
+    pos = supervisor.similarity_view.table_view.visualRect(index).center()
+    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
 
-    supervisor._promote_similar_on_right_click(supervisor.similarity_view, candidate)
+    qtbot.mouseClick(
+        supervisor.similarity_view.table_view.viewport(),
+        Qt.RightButton,
+        control_modifier,
+        pos=pos,
+    )
+    supervisor.block()
+    assert candidate not in supervisor.selected_clusters
+
+    supervisor.toggle_merge_mode()
+    index = supervisor.similarity_view._proxy_index_for_id(candidate)
+    pos = supervisor.similarity_view.table_view.visualRect(index).center()
+
+    qtbot.mouseClick(
+        supervisor.similarity_view.table_view.viewport(),
+        Qt.RightButton,
+        control_modifier,
+        pos=pos,
+    )
     supervisor.block()
     assert candidate in supervisor.selected_merge
 
@@ -845,6 +828,55 @@ def test_supervisor_multi_cluster_reference_is_explicit_and_blue(supervisor):
     unconnect(on_request_similar_clusters)
 
 
+def test_normal_presentation_follows_table_order_and_resorting(supervisor):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+
+    # Select out of row order: presentation and positional colors still follow the table.
+    similarity_view.select([20, 1, 11])
+    supervisor.block()
+    assert supervisor.selected_similar == [20, 1, 11]
+    assert supervisor.selected == [30, 1, 11, 20]
+    assert similarity_view._selected_color_index(1) == 1
+    assert similarity_view._selected_color_index(11) == 2
+    assert similarity_view._selected_color_index(20) == 3
+
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    similarity_view.sort_by('id', 'desc')
+
+    assert supervisor.selected == [30, 20, 11, 1]
+    assert events == [[30, 20, 11, 1]]
+    assert similarity_view._selected_color_index(20) == 1
+    assert similarity_view._selected_color_index(11) == 2
+    assert similarity_view._selected_color_index(1) == 3
+    unconnect(on_select)
+
+
+def test_merge_presentation_keeps_merge_order_before_similarity_table_order(supervisor):
+    _select(supervisor, [30])
+    supervisor.toggle_merge_mode()
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+
+    similarity_view.select([20, 1, 11])
+    supervisor.block()
+    assert supervisor.selected == [30, 1, 11, 20]
+
+    supervisor.add_to_merge((11,), insertion=1)
+    assert supervisor.selected_merge == [30, 11]
+    assert supervisor.selected == [30, 11, 1, 20]
+
+    similarity_view.sort_by('id', 'desc')
+    assert supervisor.selected_merge == [30, 11]
+    assert supervisor.selected == [30, 11, 20, 1]
+
+
 def test_supervisor_select_event_has_legacy_payload_and_suppression(supervisor):
     events = []
 
@@ -1045,80 +1077,6 @@ def test_supervisor_skip_masked_constructor_and_invalid_state(gui, cluster_ids, 
     assert supervisor.cluster_view.skip_masked is False
     assert supervisor.similarity_view.skip_masked is False
     assert not supervisor.select_actions.get('skip_noise_and_mua').isChecked()
-
-
-def test_supervisor_promote_similar_with_control_right_click(qtbot, supervisor):
-    _select(supervisor, [10, 30], [20, 11, 1])
-    similarity_view = supervisor.similarity_view
-    similarity_view.sort_by('id', 'asc')
-    similarity_view.filter('id >= 1')
-
-    index = similarity_view._proxy_index_for_id(11)
-    pos = similarity_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(similarity_view.table_view.viewport(), Qt.RightButton, pos=pos)
-    supervisor.block()
-    assert supervisor.selected_clusters == [10, 30]
-    assert supervisor.selected_similar == [20, 11, 1]
-
-    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-    qtbot.mouseClick(
-        similarity_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
-    )
-    supervisor.block()
-
-    assert supervisor.selected_clusters == [10, 30, 11]
-    assert supervisor.selected_similar == [20, 1]
-    assert supervisor.selected == [10, 30, 20, 11, 1]
-    assert 11 not in similarity_view.get_ids()
-
-
-def test_supervisor_promote_unselected_similar_with_control_right_click(qtbot, supervisor):
-    _select(supervisor, [30], [20, 11])
-    similarity_view = supervisor.similarity_view
-
-    index = similarity_view._proxy_index_for_id(1)
-    pos = similarity_view.table_view.visualRect(index).center()
-    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-    qtbot.mouseClick(
-        similarity_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos
-    )
-    supervisor.block()
-
-    assert supervisor.selected_clusters == [30, 1]
-    assert supervisor.selected_similar == [20, 11]
-
-
-def test_supervisor_demote_cluster_with_control_right_click(qtbot, supervisor):
-    _select(supervisor, [10, 30], [20, 11])
-    cluster_view = supervisor.cluster_view
-    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-
-    index = cluster_view._proxy_index_for_id(30)
-    pos = cluster_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
-    supervisor.block()
-
-    assert supervisor.selected_clusters == [10]
-    assert supervisor.selected_similar == [20, 11, 30]
-    assert supervisor.selected == [10, 30, 20, 11]
-
-    index = cluster_view._proxy_index_for_id(10)
-    pos = cluster_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
-    supervisor.block()
-
-    # Keep one cluster as the similarity reference.
-    assert supervisor.selected_clusters == [10]
-    assert supervisor.selected_similar == [20, 11, 30]
-
-    index = cluster_view._proxy_index_for_id(1)
-    pos = cluster_view.table_view.visualRect(index).center()
-    qtbot.mouseClick(cluster_view.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
-    supervisor.block()
-
-    # Rows outside the Cluster View selection cannot be transferred.
-    assert supervisor.selected_clusters == [10]
-    assert supervisor.selected_similar == [20, 11, 30]
 
 
 def test_supervisor_control_left_click_toggles_selection_in_each_view(qtbot, supervisor):
@@ -1337,7 +1295,7 @@ def test_supervisor_split_0(qtbot, supervisor):
     supervisor.actions.split([1, 2])
     supervisor.block()
 
-    _assert_selected(supervisor, [31, 32, 33])
+    _assert_selected(supervisor, [31, 33, 32])
     selection_after = supervisor.selection.snapshot()
 
     supervisor.actions.undo()
@@ -1347,7 +1305,7 @@ def test_supervisor_split_0(qtbot, supervisor):
 
     supervisor.actions.redo()
     supervisor.block()
-    _assert_selected(supervisor, [31, 32, 33])
+    _assert_selected(supervisor, [31, 33, 32])
     assert supervisor.selection.state == selection_after
 
 
@@ -1361,7 +1319,7 @@ def test_supervisor_split_1(supervisor):
 
     supervisor.actions.split()
     supervisor.block()
-    _assert_selected(supervisor, [31, 32, 33])
+    _assert_selected(supervisor, [31, 33, 32])
 
 
 def test_supervisor_split_2(gui, similarity):
