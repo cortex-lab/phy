@@ -431,10 +431,10 @@ class MergeView(Table):
     def _on_header_clicked(self, section):
         """Merge order changes only through explicit reorder intents."""
 
-    def set_merge_ids(self, cluster_ids, data, presentation_order):
+    def set_merge_ids(self, cluster_ids, data, color_order):
         """Project one complete ordered Merge session."""
         self.remove_all_and_add(data, fit_columns=not self._column_widths_fitted)
-        self.set_selected_index_order(presentation_order)
+        self.set_selected_index_order(color_order)
         self.set_selected_ids(cluster_ids)
 
     def _drag_ids_for_index(self, index):
@@ -727,6 +727,7 @@ class Supervisor:
         self._merge_close_callback = None
         self._merge_dock_state = None
         self._suspend_presentation_order_sync = False
+        self._selection_color_order = ()
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
         # This is populated alongside the existing TaskLogger-derived selection during the
@@ -1090,7 +1091,7 @@ class Supervisor:
         self.similarity_view.reset(cluster_ids, reference_id=change.after.reference_id)
         self.similarity_view.set_selected_ids(())
         change = self._normalize_presentation_order(change)
-        self._update_selection_colors()
+        self._update_selection_colors(reset=True)
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
         # event, but instead after the second similarity_view.select event.
@@ -1173,9 +1174,20 @@ class Supervisor:
         self._project_merge_view()
         emit('select', self, list(change.after.presentation_order))
 
-    def _update_selection_colors(self):
-        """Project authoritative presentation positions into both role tables."""
-        order = self.selection.state.presentation_order
+    def _update_selection_colors(self, reset=False):
+        """Project stable selection-color positions into all workflow tables."""
+        state = self.selection.state
+        if reset:
+            order = tuple(state.presentation_order)
+        else:
+            active_ids = set(state.effective_ids)
+            order = tuple(
+                cluster_id
+                for cluster_id in self._selection_color_order
+                if state.is_merge_mode or cluster_id in active_ids
+            )
+            order = tuple(dict.fromkeys((*order, *state.presentation_order)))
+        self._selection_color_order = order
         self.cluster_view.set_selected_index_order(order)
         self.similarity_view.set_selected_index_order(order)
         if self.merge_view is not None:
@@ -1186,7 +1198,7 @@ class Supervisor:
         if self.merge_view is None or not state.is_merge_mode:
             return
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
-        self.merge_view.set_merge_ids(state.merge_ids, data, state.presentation_order)
+        self.merge_view.set_merge_ids(state.merge_ids, data, self._selection_color_order)
         self.merge_view.dock.set_status(self._merge_status_text())
 
     def _merge_status_text(self):
@@ -1205,7 +1217,9 @@ class Supervisor:
         if normalize_order:
             change = self._normalize_presentation_order(change)
             state = change.after
-        self._update_selection_colors()
+        self._update_selection_colors(
+            reset=not state.is_merge_mode and change.reference_changed,
+        )
         self._project_merge_view()
         self.task_logger.log(
             self.cluster_view,
@@ -1614,6 +1628,11 @@ class Supervisor:
 
         self._merge_close_callback = on_close_view
 
+        @connect(sender=self)
+        def on_cluster(sender, up):
+            self._is_dirty = True
+            self._update_save_feedback()
+
         gui.add_view(self.cluster_view, position='left', closable=False)
         gui.add_view(self.similarity_view, position='left', closable=False)
 
@@ -1939,6 +1958,14 @@ class Supervisor:
         """Return whether there are any pending changes."""
         return self._is_dirty if self._is_dirty in (False, True) else len(self._global_history) > 1
 
+    def _update_save_feedback(self, saved=False):
+        """Reflect the current curation-save state in the attached GUI."""
+        if self.gui is None:
+            return
+        self.gui._set_dirty(not saved and self.is_dirty())
+        if saved:
+            self.gui.status_message = 'Curation changes saved.'
+
     def undo(self):
         """Undo the last action."""
         if self.selection.state.is_merge_mode:
@@ -1985,6 +2012,7 @@ class Supervisor:
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
         self._is_dirty = False
+        self._update_save_feedback(saved=True)
 
     def block(self):
         """Block until there are no pending actions.

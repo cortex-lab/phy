@@ -431,6 +431,10 @@ def test_supervisor_merge_candidate_interactions_follow_visible_role_order(super
     supervisor.similarity_view.select([candidate])
     supervisor.block()
     assert events == [[10, 30, 20, candidate]]
+    colors_before = {
+        cluster_id: supervisor.merge_view._selected_color_index(cluster_id)
+        for cluster_id in supervisor.selected
+    }
     events.clear()
 
     supervisor.add_to_merge((candidate,))
@@ -443,16 +447,21 @@ def test_supervisor_merge_candidate_interactions_follow_visible_role_order(super
     assert supervisor.selected_similar == [30]
     assert supervisor.selected == [10, 20, candidate, 30]
     assert events == [[10, 20, candidate, 30]]
+    assert supervisor.similarity_view._selected_color_index(30) == colors_before[30]
     events.clear()
 
     supervisor.reorder_merge((candidate,), 1)
     assert supervisor.selected_merge == [10, candidate, 20]
     assert supervisor.selected == [10, candidate, 20, 30]
     assert events == [[10, candidate, 20, 30]]
-    assert supervisor.merge_view._selected_color_index(10) == 0
-    assert supervisor.merge_view._selected_color_index(candidate) == 1
-    assert supervisor.merge_view._selected_color_index(20) == 2
-    assert supervisor.similarity_view._selected_color_index(30) == 3
+    assert {
+        cluster_id: (
+            supervisor.merge_view._selected_color_index(cluster_id)
+            if cluster_id in supervisor.selected_merge
+            else supervisor.similarity_view._selected_color_index(cluster_id)
+        )
+        for cluster_id in supervisor.selected
+    } == colors_before
     unconnect(on_select)
 
 
@@ -852,10 +861,30 @@ def test_normal_presentation_follows_table_order_and_resorting(supervisor):
 
     assert supervisor.selected == [30, 20, 11, 1]
     assert events == [[30, 20, 11, 1]]
-    assert similarity_view._selected_color_index(20) == 1
+    assert similarity_view._selected_color_index(20) == 3
     assert similarity_view._selected_color_index(11) == 2
-    assert similarity_view._selected_color_index(1) == 3
+    assert similarity_view._selected_color_index(1) == 1
     unconnect(on_select)
+
+
+def test_normal_similarity_insertion_does_not_recolor_existing_rows(supervisor):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+
+    similarity_view.select([1])
+    supervisor.block()
+    similarity_view.select([1, 20])
+    supervisor.block()
+    color_before = similarity_view._selected_color_index(20)
+
+    # Insert 11 before 20 in visible row order without changing 20's color slot.
+    similarity_view.select([1, 20, 11])
+    supervisor.block()
+
+    assert supervisor.selected == [30, 1, 11, 20]
+    assert similarity_view._selected_color_index(20) == color_before
+    assert similarity_view._selected_color_index(11) > color_before
 
 
 def test_merge_presentation_keeps_merge_order_before_similarity_table_order(supervisor):
@@ -1150,7 +1179,14 @@ def test_supervisor_edge_cases(supervisor):
 
 
 def test_supervisor_save(qtbot, gui, supervisor):
+    assert not gui.windowTitle().startswith('* ')
+    supervisor.label('group', 'noise', [30])
+    supervisor.block()
+    assert gui.windowTitle().startswith('* ')
+
     emit('request_save', gui)
+    assert gui.status_message == 'Curation changes saved.'
+    assert not gui.windowTitle().startswith('* ')
 
 
 def test_supervisor_skip(qtbot, gui, supervisor):
