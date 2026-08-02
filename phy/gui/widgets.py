@@ -1336,7 +1336,11 @@ class Table(QWidget):
         column = self.columns.index(name)
         order = Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder
         self._current_sort = (name, sort_dir)
-        self.table_view.horizontalHeader().setSortIndicator(column, order)
+        # QHeaderView's stock arrow describes the next sort direction in the
+        # active Qt style.  Invert it so the displayed arrow describes the
+        # current data order: up for ascending and down for descending.
+        indicator_order = Qt.DescendingOrder if sort_dir == 'asc' else Qt.AscendingOrder
+        self.table_view.horizontalHeader().setSortIndicator(column, indicator_order)
         self._proxy.sort(column, order)
         self._refresh_selection()
         self._request_fit_columns()

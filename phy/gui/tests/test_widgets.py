@@ -621,7 +621,7 @@ def test_table_sort(qtbot, table):
 
     _assert(table.get_current_sort, ['count', 'asc'])
     assert header.sortIndicatorSection() == table.columns.index('count')
-    assert header.sortIndicatorOrder() == Qt.AscendingOrder
+    assert header.sortIndicatorOrder() == Qt.DescendingOrder
     _assert(table.get_selected, [6])
     _assert(table.get_ids, list(range(9, -1, -1)))
 
@@ -630,7 +630,7 @@ def test_table_sort(qtbot, table):
 
     table.sort_by('count', 'desc')
     assert header.sortIndicatorSection() == table.columns.index('count')
-    assert header.sortIndicatorOrder() == Qt.DescendingOrder
+    assert header.sortIndicatorOrder() == Qt.AscendingOrder
     _assert(table.get_ids, list(range(10)))
 
     assert _l == [list(range(9, -1, -1)), list(range(10))]
