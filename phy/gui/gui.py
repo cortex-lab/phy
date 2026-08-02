@@ -645,6 +645,8 @@ class GUI(QMainWindow):
                 pass
             QMessageBox.about(self, 'About', msg)
 
+        emit('default_actions_created', self)
+
     # Events
     # -------------------------------------------------------------------------
 

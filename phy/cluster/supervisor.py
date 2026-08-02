@@ -1633,6 +1633,12 @@ class Supervisor:
             self._is_dirty = True
             self._update_save_feedback()
 
+        @connect(sender=gui)
+        def on_default_actions_created(sender):
+            self._update_save_feedback()
+
+        self._update_save_feedback()
+
         gui.add_view(self.cluster_view, position='left', closable=False)
         gui.add_view(self.similarity_view, position='left', closable=False)
 
@@ -1967,7 +1973,11 @@ class Supervisor:
         """Reflect the current curation-save state in the attached GUI."""
         if self.gui is None:
             return
-        self.gui._set_dirty(not saved and self.is_dirty())
+        is_dirty = not saved and self.is_dirty()
+        self.gui._set_dirty(is_dirty)
+        save_action = self.gui.file_actions.get('save')
+        if save_action is not None:
+            save_action.setEnabled(is_dirty)
         if saved:
             self.gui.status_message = 'Curation changes saved.'
 
