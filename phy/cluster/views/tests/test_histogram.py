@@ -112,6 +112,23 @@ def test_firing_rate_view_displays_spikes_per_second(qtbot):
     _stop_and_close(qtbot, v)
 
 
+def test_firing_rate_view_formats_recording_time_axis(qtbot):
+    v = FiringRateView(
+        cluster_stat=lambda cluster_id: Bunch(
+            data=np.array([1.0, 3600.0]),
+            x_min=0.0,
+            x_max=7200.0,
+        )
+    )
+    v.on_select(cluster_ids=[0])
+    v._set_recording_time_unit('h')
+
+    assert v.recording_time_unit == 'h'
+    assert all(label.endswith(' h') for label in v.canvas.axes.locator.xtext)
+
+    _stop_and_close(qtbot, v)
+
+
 def test_histogram_view_settings(qtbot, gui, monkeypatch):
     v = ISIView(
         cluster_stat=lambda cluster_id: Bunch(

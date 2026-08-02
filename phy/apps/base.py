@@ -38,7 +38,7 @@ from phy.cluster.views import (
     WaveformView,
     select_traces,
 )
-from phy.cluster.views.base import BaseColorView, ManualClusteringView
+from phy.cluster.views.base import BaseColorView, ManualClusteringView, RecordingTimeAxisMixin
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
@@ -1036,6 +1036,9 @@ class BaseController:
     # when using compressed dataset, as random access triggers expensive decompression).
     n_chunks_kept = 20
 
+    # Unit used to display elapsed recording time in compatible views.
+    recording_time_unit = 's'
+
     # Controller attributes to load/save in the GUI state.
     _state_params = (
         'n_spikes_amplitudes',
@@ -1044,6 +1047,7 @@ class BaseController:
         'n_spikes_correlograms',
         'n_spikes_correlograms_total',
         'raw_data_filter_name',
+        'recording_time_unit',
     )
 
     # Methods that are cached in memory (and on disk) for performance.
@@ -2134,6 +2138,17 @@ class BaseController:
                 gui.create_and_add_view(view_name)
 
     def create_misc_actions(self, gui):
+        @gui.view_actions.add(
+            name='Set recording time unit',
+            alias='timeunit',
+            prompt=True,
+            prompt_default=lambda: self.recording_time_unit,
+            show_shortcut=False,
+        )
+        def set_recording_time_unit(unit):
+            """Set recording-time labels to s, min, or h."""
+            self._set_recording_time_unit(unit, gui)
+
         # Toggle spike reorder.
         @gui.view_actions.add(
             shortcut=self.default_shortcuts['toggle_spike_reorder'],
@@ -2164,6 +2179,28 @@ class BaseController:
                     v.update_status()
 
         gui.view_actions.separator()
+
+    def _set_recording_time_unit(self, unit, gui):
+        """Set the elapsed recording-time display unit in compatible open views."""
+        aliases = {
+            's': 's',
+            'second': 's',
+            'seconds': 's',
+            'min': 'min',
+            'minute': 'min',
+            'minutes': 'min',
+            'h': 'h',
+            'hour': 'h',
+            'hours': 'h',
+        }
+        try:
+            unit = aliases[unit.strip().lower()]
+        except (AttributeError, KeyError) as e:
+            raise ValueError("Recording time unit must be 's', 'min', or 'h'.") from e
+        self.recording_time_unit = unit
+        for view in gui.list_views():
+            if isinstance(view, RecordingTimeAxisMixin):
+                view._set_recording_time_unit(unit)
 
     def _add_default_color_schemes(self, view):
         """Add the default color schemes to every view."""
@@ -2245,6 +2282,9 @@ class BaseController:
                 self._add_default_color_schemes(view)
 
             if isinstance(view, ManualClusteringView):
+                if isinstance(view, RecordingTimeAxisMixin):
+                    view._set_recording_time_unit(self.recording_time_unit)
+
                 # Add auto update button.
                 view.dock.add_button(
                     name='auto_update',
@@ -2310,7 +2350,7 @@ class BaseController:
                 gui.state.add_local_keys(local_keys)
 
             # Update the controller params in the GUI state.
-            for param in self._state_params:
+            for param in state_params:
                 gui.state[param] = getattr(self, param, None)
 
             # Save the memcache.

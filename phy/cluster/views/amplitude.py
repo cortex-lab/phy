@@ -16,7 +16,7 @@ from phy.plot.transform import NDC, Range, Rotate, Scale, Translate
 from phy.plot.visuals import HistogramVisual, PatchVisual, ScatterVisual
 from phy.utils.color import add_alpha, selected_cluster_color
 
-from .base import LassoMixin, ManualClusteringView, MarkerSizeMixin
+from .base import LassoMixin, ManualClusteringView, MarkerSizeMixin, RecordingTimeAxisMixin
 from .histogram import _compute_histogram
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 
-class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
+class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualClusteringView):
     """This view displays an amplitude plot for all selected clusters.
 
     Constructor

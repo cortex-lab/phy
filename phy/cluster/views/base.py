@@ -17,9 +17,21 @@ from phy.cluster._utils import RotatingProperty
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, Worker, screenshot, screenshot_default_path, thread_pool
 from phy.plot import NDC, PlotCanvas, extend_bounds
+from phy.plot.axes import format_time_ticks
 from phy.utils.color import ClusterColorSelector
 
 logger = logging.getLogger(__name__)
+
+
+class RecordingTimeAxisMixin:
+    """Mixin for views whose x axis represents elapsed recording time."""
+
+    recording_time_unit = 's'
+
+    def _set_recording_time_unit(self, unit):
+        """Set the displayed unit for the elapsed recording-time x axis."""
+        self.recording_time_unit = unit
+        self.canvas.axes.set_x_formatter(lambda values: format_time_ticks(values, unit=unit))
 
 
 # -----------------------------------------------------------------------------

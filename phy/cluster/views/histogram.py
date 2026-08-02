@@ -14,7 +14,7 @@ from phy.gui.widgets import view_settings_dialog
 from phy.plot.visuals import HistogramVisual, TextVisual
 from phy.utils.color import selected_cluster_color
 
-from .base import ManualClusteringView, ScalingMixin
+from .base import ManualClusteringView, RecordingTimeAxisMixin, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -394,7 +394,7 @@ class ISIView(HistogramView):
     }
 
 
-class FiringRateView(HistogramView):
+class FiringRateView(RecordingTimeAxisMixin, HistogramView):
     """Histogram view showing the time-dependent firing rate."""
 
     n_bins = 200

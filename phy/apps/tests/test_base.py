@@ -31,6 +31,7 @@ from phy.cluster.views import (
     AmplitudeView,
     CorrelogramView,
     FeatureView,
+    FiringRateView,
     TemplateView,
     TraceView,
     WaveformView,
@@ -527,6 +528,27 @@ def test_get_firing_rate_honors_get_spike_times_override():
     np.testing.assert_array_equal(bunch.data, [1.25, 2.5])
     assert bunch.x_min == 0
     assert bunch.x_max == 3.0
+
+
+def test_recording_time_unit_updates_compatible_views(qtbot):
+    controller = object.__new__(BaseController)
+    controller.recording_time_unit = 's'
+    amplitude = AmplitudeView(amplitudes=lambda cluster_ids, load_all=False: None)
+    firing_rate = FiringRateView(cluster_stat=lambda cluster_id: Bunch(data=np.array([0.0])))
+
+    class GUI:
+        def list_views(self):
+            return [amplitude, firing_rate]
+
+    controller._set_recording_time_unit('hours', GUI())
+
+    assert controller.recording_time_unit == 'h'
+    assert amplitude.recording_time_unit == firing_rate.recording_time_unit == 'h'
+    assert all(label.endswith(' h') for label in amplitude.canvas.axes.locator.xtext)
+    assert all(label.endswith(' h') for label in firing_rate.canvas.axes.locator.xtext)
+
+    amplitude.close()
+    firing_rate.close()
 
 
 def test_amplitude_view_excludes_unavailable_features(qtbot, tempdir):

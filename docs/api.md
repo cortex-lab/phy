@@ -2200,6 +2200,15 @@ Used when the view is recreated from scratch.
 
 ---
 
+#### Axes.set_x_formatter
+
+
+**`Axes.set_x_formatter(self, formatter)`**
+
+Set the formatter for x-axis tick labels.
+
+---
+
 #### Axes.update_visuals
 
 
@@ -4228,7 +4237,7 @@ Raise an internal event and call `on_xxx()` on attached objects.
 #### PlotCanvas.enable_axes
 
 
-**`PlotCanvas.enable_axes(self, data_bounds=None, show_x=True, show_y=True)`**
+**`PlotCanvas.enable_axes(self, data_bounds=None, show_x=True, show_y=True, format_x=None, format_y=None)`**
 
 Show axes in the canvas.
 
