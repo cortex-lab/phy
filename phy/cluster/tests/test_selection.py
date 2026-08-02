@@ -116,6 +116,50 @@ def test_similarity_deselection_and_reselection_preserve_color_slots():
     assert not change.colors_changed
 
 
+def test_similarity_navigation_reuses_outgoing_or_inactive_color_slot():
+    controller = CurationSelectionController(
+        CurationSelectionState(
+            cluster_ids=(1,),
+            similar_ids=(2,),
+            reference_id=1,
+            color_order=(1, 2, 3),
+        )
+    )
+
+    change = controller.navigate_similarity_selection((3,))
+    assert change.after.similar_ids == (3,)
+    assert change.after.presentation_order == (1, 3)
+    assert change.after.color_order == (1, 3, 2)
+    assert change.colors_changed
+
+    change = controller.navigate_similarity_selection((2,))
+    assert change.after.color_order == (1, 2, 3)
+
+    controller.clear_similarity_selection()
+    change = controller.navigate_similarity_selection((4,))
+    assert change.after.color_order == (1, 4, 3, 2)
+
+
+def test_similarity_navigation_preserves_primary_colors_and_is_normal_only():
+    controller = CurationSelectionController(
+        CurationSelectionState(
+            cluster_ids=(1, 4),
+            similar_ids=(2,),
+            reference_id=1,
+            color_order=(1, 4, 2, 3),
+        )
+    )
+
+    change = controller.navigate_similarity_selection((3,))
+    assert change.after.color_order == (1, 4, 3, 2)
+    with raises(ValueError, match='at most one'):
+        controller.navigate_similarity_selection((2, 3))
+
+    controller.enter_merge_mode()
+    with raises(RuntimeError, match='unavailable'):
+        controller.navigate_similarity_selection((5,))
+
+
 def test_set_normal_selection_replaces_all_roles_atomically():
     controller = CurationSelectionController()
 

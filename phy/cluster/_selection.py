@@ -298,6 +298,33 @@ class CurationSelectionController:
         )
         return self._apply(after)
 
+    def navigate_similarity_selection(self, similar_ids, presentation_order=None):
+        """Replace the Normal-mode wizard candidate while reusing its color slot."""
+        self._require_normal_mode()
+        current = self._state
+        similar_ids = _as_unique_ids(similar_ids)
+        if len(similar_ids) > 1:
+            raise ValueError('Similarity navigation selects at most one candidate.')
+        effective_ids = _ordered_union(current.cluster_ids, similar_ids)
+        if presentation_order is None:
+            presentation_order = _ordered_union(
+                tuple(
+                    cluster_id
+                    for cluster_id in current.presentation_order
+                    if cluster_id in effective_ids
+                ),
+                effective_ids,
+            )
+        color_order = self._navigation_color_order(similar_ids)
+        after = CurationSelectionState(
+            cluster_ids=current.cluster_ids,
+            similar_ids=similar_ids,
+            reference_id=current.reference_id,
+            presentation_order=presentation_order,
+            color_order=color_order,
+        )
+        return self._apply(after)
+
     def set_presentation_order(self, presentation_order):
         """Set scientific-view order without changing roles or color slots."""
         current = self._state
@@ -439,6 +466,41 @@ class CurationSelectionController:
         if reference_id != current.reference_id:
             return tuple(presentation_order)
         return _ordered_union(current.color_order, presentation_order)
+
+    def _navigation_color_order(self, similar_ids):
+        """Give a replacement wizard candidate the outgoing candidate's slot."""
+        current = self._state
+        if not similar_ids:
+            return current.color_order
+        candidate = similar_ids[0]
+        color_order = list(current.color_order)
+        outgoing_slots = [
+            color_order.index(cluster_id)
+            for cluster_id in current.similar_ids
+            if cluster_id in color_order
+        ]
+        if outgoing_slots:
+            target = min(outgoing_slots)
+        else:
+            primary_ids = set(current.cluster_ids)
+            target = next(
+                (
+                    index
+                    for index, cluster_id in enumerate(color_order)
+                    if cluster_id not in primary_ids
+                ),
+                len(color_order),
+            )
+        if candidate in color_order:
+            source = color_order.index(candidate)
+            color_order[target], color_order[source] = color_order[source], color_order[target]
+        elif target < len(color_order):
+            displaced = color_order[target]
+            color_order[target] = candidate
+            color_order.append(displaced)
+        else:
+            color_order.append(candidate)
+        return tuple(color_order)
 
     def _apply(self, after):
         before = self._state
