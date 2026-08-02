@@ -652,10 +652,10 @@ class Table(QWidget):
 
         self.filter_edit = QLineEdit(self)
         self.filter_edit.setObjectName('table-filter')
-        # Do not let the filter become the table's automatic focus target when the GUI is
-        # shown, reactivated, or its model is reset. Explicit mouse clicks are handled in
-        # eventFilter() below so the editor remains usable.
-        self.filter_edit.setFocusPolicy(Qt.NoFocus)
+        # Accept focus only from a mouse click.  Using ``NoFocus`` and setting focus from
+        # an event filter prevents QLineEdit from completing some native mouse gestures,
+        # notably a double-click selection followed by keyboard editing.
+        self.filter_edit.setFocusPolicy(Qt.ClickFocus)
         self.filter_edit.returnPressed.connect(self._apply_filter_from_editor)
         self.filter_edit.installEventFilter(self)
 
@@ -829,12 +829,6 @@ class Table(QWidget):
             }
         ):
             return True
-        if (
-            obj is self.filter_edit
-            and event.type() == QEvent.MouseButtonPress
-            and event.button() == Qt.LeftButton
-        ):
-            self.filter_edit.setFocus(Qt.MouseFocusReason)
         if (
             obj is self.table_view.viewport()
             and event.type() == QEvent.MouseButtonPress

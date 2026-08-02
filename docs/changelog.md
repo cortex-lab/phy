@@ -54,8 +54,9 @@ behavior they verify rather than listed separately.
   particular, a Firing Rate time range saved or leaked from another recording
   no longer clips spikes in a fresh dataset.
 - Cluster and Similarity View filters only take keyboard focus after an
-  explicit click, including when a table is first shown or refreshed. Enter,
-  Escape, and outside clicks release filter focus so global shortcuts resume.
+  explicit click, including when a table is first shown or refreshed. Their
+  native double-click text selection remains editable. Enter, Escape, and
+  outside clicks release filter focus so global shortcuts resume.
 - Display metadata columns containing multiple values in the Cluster and
   Similarity Views instead of leaving their cells blank.
 
