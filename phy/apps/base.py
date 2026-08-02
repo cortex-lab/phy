@@ -2163,6 +2163,8 @@ class BaseController:
             self._recording_time_action_group.addAction(action)
             self._recording_time_actions[unit] = action
 
+        gui.view_actions.separator()
+
         # Toggle spike reorder.
         @gui.view_actions.add(
             shortcut=self.default_shortcuts['toggle_spike_reorder'],
@@ -2191,8 +2193,6 @@ class BaseController:
                     v.on_select_threaded(self.supervisor, self.supervisor.selected, gui=gui)
                     v.ex_status = filter_name
                     v.update_status()
-
-        gui.view_actions.separator()
 
     def _set_recording_time_unit(self, unit, gui):
         """Set the elapsed recording-time display unit in compatible open views."""
@@ -2318,8 +2318,8 @@ class BaseController:
 
         # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
-        self.create_misc_actions(gui)
         gui.set_default_actions()
+        self.create_misc_actions(gui)
         gui.create_views()
 
         # Bind the `select_more` event to add clusters to the existing selection.

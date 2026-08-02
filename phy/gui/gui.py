@@ -692,12 +692,14 @@ class GUI(QMainWindow):
             """Close the GUI."""
             self.close()
 
-        # Add "Add view" action.
+        # Add-view actions belong together in a submenu: there can be many of
+        # them, and they are secondary to the currently open views.
         for view_name in sorted(self.view_creator.keys()):
             self.view_actions.add(
                 partial(self.create_and_add_view, view_name),
                 name=f'Add {view_name}',
                 docstring=f'Add {view_name}',
+                submenu='Add view',
                 show_shortcut=False,
             )
         self.view_actions.separator()
@@ -829,7 +831,6 @@ class GUI(QMainWindow):
 
     def create_views(self):
         """Create and add as many views as specified in view_count."""
-        self.view_actions.separator()
         # Keep the order of self.default_views.
         view_names = [vn for vn in self.default_views if vn in self._requested_view_count]
         # We add the views in the requested view count, but not in the default views.

@@ -196,6 +196,11 @@ def test_gui_creator(tempdir, qtbot):
     assert len(views) == 2
 
     add_action = gui.view_actions.get('Add MyCanvas')
+    view_menu = gui.get_menu('&View')
+    add_view_menu = next(
+        action.menu() for action in view_menu.actions() if action.text() == 'Add view'
+    )
+    assert add_action in add_view_menu.actions()
 
     # Close the first dock widget.
     views[0].dock.toggleViewAction().activate(0)

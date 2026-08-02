@@ -84,6 +84,9 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- Group available views under **View > Add view** and keep global view options
+  separate from view creation.
+
 - The first, blue Cluster View selection is now the explicit Similarity
   reference. In Normal mode, scientific views follow the selected Cluster and
   Similarity rows in visible table order; re-sorting either table updates that
