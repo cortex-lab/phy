@@ -1859,10 +1859,14 @@ class Supervisor:
 
     def first(self, callback=None):
         """Select the first cluster in the cluster view."""
+        if self._reject_cluster_action_in_merge_mode('first'):
+            return
         self.cluster_view.first()
 
     def last(self, callback=None):
         """Select the last cluster in the cluster view."""
+        if self._reject_cluster_action_in_merge_mode('last'):
+            return
         self.cluster_view.last()
 
     # Other actions
@@ -1874,6 +1878,9 @@ class Supervisor:
 
     def undo(self):
         """Undo the last action."""
+        if self.selection.state.is_merge_mode:
+            logger.warning('Undo is unavailable while a Merge workspace is active.')
+            return
         # Selection-only exploration does not create history entries. Preserve the exact
         # state at the time undo is requested so redo remains a true inverse operation.
         if self._global_history.current_position > 0:
@@ -1884,6 +1891,14 @@ class Supervisor:
 
     def redo(self):
         """Undo the last undone action."""
+        if self.selection.state.is_merge_mode:
+            index = self._global_history.current_position + 1
+            history = self._global_history._history
+            if index >= len(history) or not self._is_merge_history_context(
+                history[index].workflow_context
+            ):
+                logger.warning('Redo is unavailable for this Merge workspace.')
+                return
         self._global_history.redo()
 
     def save(self):

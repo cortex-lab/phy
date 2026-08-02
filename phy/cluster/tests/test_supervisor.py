@@ -25,6 +25,7 @@ from .. import supervisor as _supervisor
 from ..supervisor import (
     ActionCreator,
     ClusterView,
+    MergeView,
     SimilarityView,
     Supervisor,
     TaskLogger,
@@ -394,6 +395,259 @@ def test_cross_view_role_transfers_preserve_public_selection_and_colors(supervis
     assert supervisor.cluster_view._selected_color_index(11) == 3
 
     unconnect(on_select)
+
+
+def test_supervisor_merge_mode_lifecycle_restores_entry_state(supervisor):
+    _select(supervisor, [10, 30], [20, 11])
+    entry = supervisor.selection.snapshot()
+    supervisor.cluster_view.filter('id >= 10')
+    supervisor.similarity_view.filter('id >= 1')
+    context = supervisor._workflow_context()
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    state = supervisor.toggle_merge_mode()
+
+    assert state.is_merge_mode
+    assert supervisor.selected_merge == [10, 30, 20, 11]
+    assert supervisor.selected_clusters == []
+    assert supervisor.selected_similar == []
+    assert supervisor.selected == [10, 30, 20, 11]
+    assert isinstance(supervisor.merge_view, MergeView)
+    assert supervisor.merge_view.get_ids() == [10, 30, 20, 11]
+    assert supervisor.merge_view.dock.get_widget('cancel_merge_mode') is not None
+    assert not supervisor.cluster_view.isEnabled()
+    assert events == []
+
+    supervisor.similarity_view.filter('id < 20')
+    supervisor.toggle_merge_mode()
+
+    assert supervisor.selection.state == entry
+    assert supervisor.merge_view is None
+    assert supervisor.cluster_view.isEnabled()
+    assert supervisor._workflow_context() == context
+    assert events == []
+    unconnect(on_select)
+
+
+def test_supervisor_merge_candidate_interactions_preserve_colors(supervisor):
+    _select(supervisor, [10, 30], [20])
+    supervisor.toggle_merge_mode()
+    candidate = supervisor.similarity_view.get_ids()[0]
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    supervisor.similarity_view.select([candidate])
+    supervisor.block()
+    assert events == [[10, 30, 20, candidate]]
+    events.clear()
+
+    supervisor.add_to_merge((candidate,))
+    assert supervisor.selected_merge == [10, 30, 20, candidate]
+    assert supervisor.selected_similar == []
+    assert events == []
+
+    supervisor.remove_from_merge(30)
+    assert supervisor.selected_merge == [10, 20, candidate]
+    assert supervisor.selected_similar == [30]
+    assert supervisor.selected == [10, 30, 20, candidate]
+    assert events == []
+
+    supervisor.reorder_merge((candidate,), 1)
+    assert supervisor.selected_merge == [10, candidate, 20]
+    assert supervisor.selected == [10, 30, 20, candidate]
+    assert events == []
+    assert supervisor.merge_view._selected_color_index(10) == 0
+    assert supervisor.similarity_view._selected_color_index(30) == 1
+    assert supervisor.merge_view._selected_color_index(20) == 2
+    assert supervisor.merge_view._selected_color_index(candidate) == 3
+    unconnect(on_select)
+
+
+def test_supervisor_merge_drag_drop_intents(supervisor):
+    _select(supervisor, [10, 30], [20])
+    supervisor.toggle_merge_mode()
+    candidate = supervisor.similarity_view.get_ids()[0]
+
+    supervisor.merge_view.emit_cluster_drop(supervisor.similarity_view, (candidate,), 1)
+    assert supervisor.selected_merge == [10, candidate, 30, 20]
+
+    supervisor.merge_view.emit_cluster_drop(supervisor.merge_view, (20,), 1)
+    assert supervisor.selected_merge == [10, 20, candidate, 30]
+
+    supervisor.similarity_view.emit_cluster_drop(supervisor.merge_view, (candidate,), 0)
+    assert supervisor.selected_merge == [10, 20, 30]
+    assert supervisor.selected_similar == [candidate]
+
+    supervisor.toggle_merge_mode()
+    assert not supervisor.similarity_view.table_view.dragEnabled()
+
+
+def test_supervisor_merge_control_right_click_transfers(supervisor):
+    _select(supervisor, [10, 30], [20])
+    supervisor.toggle_merge_mode()
+    candidate = supervisor.similarity_view.get_ids()[0]
+
+    supervisor._promote_similar_on_right_click(supervisor.similarity_view, candidate)
+    supervisor.block()
+    assert candidate in supervisor.selected_merge
+
+    supervisor._remove_merge_candidate_on_right_click(supervisor.merge_view, candidate)
+    supervisor.block()
+    assert candidate not in supervisor.selected_merge
+    assert candidate in supervisor.selected_similar
+
+
+def test_closing_merge_view_cancels_mode(supervisor):
+    _select(supervisor, [30], [20])
+    entry = supervisor.selection.snapshot()
+    supervisor.toggle_merge_mode()
+    merge_view = supervisor.merge_view
+
+    merge_view.dock.close()
+
+    assert supervisor.selection.state == entry
+    assert supervisor.merge_view is None
+    assert supervisor.cluster_view.isEnabled()
+
+
+def test_merge_mode_action_and_cancel_control(supervisor):
+    _select(supervisor, [30], [20])
+
+    supervisor.select_actions.toggle_merge_mode()
+    supervisor.block()
+    assert supervisor.selection.state.is_merge_mode
+
+    supervisor.merge_view.dock.get_widget('cancel_merge_mode').click()
+    supervisor.block()
+    assert not supervisor.selection.state.is_merge_mode
+    assert supervisor.merge_view is None
+
+
+def test_merge_mode_rejects_cluster_mutations(supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    state = supervisor.selection.state
+
+    supervisor.select([10])
+    supervisor.split([0, 1])
+    supervisor.label('group', 'noise', [30])
+    supervisor.sort('id')
+    supervisor.filter('id > 0')
+    supervisor.first()
+    supervisor.next_best()
+    supervisor.merge([30, 20, 10])
+
+    assert supervisor.selection.state is state
+    assert set(supervisor.clustering.cluster_ids) >= {30, 20}
+
+
+def test_merge_mode_next_navigates_similarity_not_cluster(supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    before = supervisor.selection.state
+
+    supervisor.next()
+    supervisor.block()
+
+    assert supervisor.selection.state.is_merge_mode
+    assert supervisor.selection.state.merge is before.merge
+    assert supervisor.selected_clusters == []
+    assert len(supervisor.selected_similar) == 1
+
+
+def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
+    _select(supervisor, [30], [20])
+    assignments_before = supervisor.clustering.spike_clusters.copy()
+    supervisor.toggle_merge_mode()
+    candidate = supervisor.similarity_view.get_ids()[0]
+    supervisor.similarity_view.select([candidate])
+    supervisor.block()
+    merge_before = supervisor.selection.snapshot()
+
+    up = supervisor.merge()
+    supervisor.block()
+
+    merged_id = up.added[0]
+    assert not supervisor.selection.state.is_merge_mode
+    assert supervisor.selected == [merged_id]
+    assert supervisor.merge_view is None
+    assert set(up.deleted) == {30, 20, candidate}
+    assignments_after = supervisor.clustering.spike_clusters.copy()
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    supervisor.undo()
+    supervisor.block()
+
+    ae(supervisor.clustering.spike_clusters, assignments_before)
+    assert supervisor.selection.state == merge_before
+    assert supervisor.selected_merge == [30, 20]
+    assert supervisor.selected_similar == [candidate]
+    assert supervisor.merge_view is not None
+    assert supervisor.actions.get('redo').isEnabled()
+    assert events[-1] == list(merge_before.presentation_order)
+
+    supervisor.redo()
+    supervisor.block()
+
+    ae(supervisor.clustering.spike_clusters, assignments_after)
+    assert not supervisor.selection.state.is_merge_mode
+    assert supervisor.selected == [merged_id]
+    assert supervisor.merge_view is None
+    assert events[-1] == [merged_id]
+    unconnect(on_select)
+
+
+def test_uncommitted_merge_workspace_does_not_undo_prior_action(supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.merge()
+    supervisor.block()
+    merged_selection = supervisor.selection.snapshot()
+    supervisor.toggle_merge_mode()
+
+    supervisor.undo()
+
+    assert supervisor.selection.state.is_merge_mode
+    assert supervisor.selection.state.merge.entry_snapshot.selection == merged_selection
+
+
+def test_failed_merge_preserves_complete_merge_workspace(monkeypatch, supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    state = supervisor.selection.state
+    rows = supervisor.merge_view.get_ids()
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('merge failed')
+
+    monkeypatch.setattr(supervisor.clustering, 'merge', fail)
+    with raises(RuntimeError, match='merge failed'):
+        supervisor.merge()
+
+    assert supervisor.selection.state is state
+    assert supervisor.merge_view.get_ids() == rows
+    assert not supervisor.cluster_view.isEnabled()
+
+
+def test_saving_gui_state_cancels_transient_merge_selection(supervisor):
+    _select(supervisor, [30], [20])
+    entry = supervisor.selection.snapshot()
+    supervisor.toggle_merge_mode()
+
+    supervisor._save_gui_state(supervisor.gui)
+
+    assert supervisor.selection.state == entry
+    assert supervisor.merge_view is None
 
 
 def test_stale_table_selection_revision_is_ignored(supervisor):
