@@ -410,6 +410,18 @@ def test_table_selection_events_include_structured_mutations(table):
     unconnect(on_select)
 
 
+def test_table_uses_explicit_selected_color_mapping(table):
+    table.set_selected_ids([1, 3])
+    table.set_selected_index_mapping({1: 1, 3: 4})
+
+    assert table._selected_color_index(1) == 1
+    assert table._selected_color_index(3) == 4
+    with raises(TypeError, match='mapping'):
+        table.set_selected_index_mapping([1, 3])
+    with raises(ValueError, match='non-negative'):
+        table.set_selected_index_mapping({1: -1})
+
+
 def test_table_batch_update_fits_once(table):
     fit_calls = []
     table._fit_columns = lambda: fit_calls.append(True)
