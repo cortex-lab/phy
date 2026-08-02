@@ -46,22 +46,25 @@ cluster_ids
 similar_ids
 reference_id
 presentation_order
-color_order
+color_slots
 merge
 ```
 
 `presentation_order` contains the active cluster IDs in the exact order sent to
-scientific views. `color_order` is a reference-scoped registry: its tuple
-position is the selected-cluster palette slot. It may retain inactive cluster
-IDs so deselection and reselection do not change colors.
+scientific views. `color_slots` is a tuple of cluster IDs or `None`; its tuple
+position is the selected-cluster palette slot. A hole is an explicitly released
+slot, while an inactive cluster ID is a reserved binding that may be reused by
+that cluster. Consumers receive an immutable `{cluster_id: palette_index}`
+projection and never infer colors from presentation order.
 
 ### 3.1 State invariants
 
-1. All role, presentation, and color sequences contain unique cluster IDs.
+1. All role and presentation sequences contain unique cluster IDs; non-`None`
+   color-slot bindings are unique.
 2. `set(presentation_order) == set(effective_ids)`.
-3. `set(effective_ids) <= set(color_order)`.
+3. Every effective ID has exactly one color-slot binding.
 4. If a reference exists, it belongs to the active primary role and occupies
-   index zero in both `presentation_order` and `color_order`.
+   index zero in both `presentation_order` and `color_slots`.
 5. Normal mode has no Merge session and its reference belongs to `cluster_ids`.
 6. Merge mode has no Cluster role selection, and the reference is the first
    Merge member.
@@ -73,26 +76,37 @@ IDs so deselection and reselection do not change colors.
 
 ## 4. Color lifecycle
 
-Color slots are stable for the lifetime of one reference:
+Color-slot policy depends on the selection operation; final selected IDs alone
+are intentionally insufficient to choose a color transition:
 
-- Selecting a previously unseen cluster appends it to `color_order`.
-- Deselecting a cluster removes it from active presentation but retains its
-  color slot.
-- Reselecting a cluster reuses its existing slot.
+- `REPLACE` releases previous Similarity bindings and assigns the replacement
+  selection from the first slot not occupied by an active Cluster-role member.
+  Consequently, directly clicking different single Similarity candidates and
+  navigating with Space/Shift+Space use the same color (red when the reference
+  is the only Cluster-role member).
+- `EXTEND` preserves existing bindings and assigns newly added IDs to released
+  holes before extending the slot tuple.
+- `TOGGLE` preserves removed-cluster bindings as reservations, so removing an
+  item from a multi-selection does not recolor the remaining items and
+  reselecting it restores its color.
+- `CLEAR` releases Normal-mode Similarity bindings, allowing the next selection
+  to start from the first Similarity slot.
 - Sorting, filtering, Merge transfers, and Merge reordering never change color
   slots.
 - Editing the Cluster selection while retaining the same reference preserves
-  existing slots and appends new clusters.
+  valid bindings and assigns newly active members deterministically.
 - Changing the reference starts a new color session. The new reference becomes
   slot zero, and active clusters receive fresh slots in presentation order.
-- Entering Merge mode preserves the Normal color registry.
-- Cancelling Merge restores the complete entry registry.
+- Entering Merge mode freezes all existing bindings. New Merge-mode candidates
+  use released holes or new slots, but no existing binding changes during the
+  session.
+- Cancelling Merge restores the complete entry assignment.
 - A committed merge selects a new reference and therefore starts a new registry.
-- Undo and redo restore the exact registry stored in their selection snapshots.
+- Undo and redo restore the exact assignment stored in their selection
+  snapshots.
 
-Color slots are not reused before the reference changes. The registry is bounded
-by the number of clusters encountered for one reference and remains independent
-of the number of spikes.
+The assignment remains bounded by the number of clusters encountered for one
+reference and remains independent of the number of spikes.
 
 ## 5. Presentation lifecycle
 
@@ -114,12 +128,26 @@ the immutable state and is restored by cancellation and history.
 
 ## 6. Controller transitions
 
-The selection controller should expose explicit transitions for distinct user
-intents:
+All Similarity-table paths produce a structured operation before reaching the
+selection controller:
+
+```python
+SelectionMutation(
+    intent=SelectionIntent.REPLACE | EXTEND | TOGGLE | CLEAR | NAVIGATE,
+    before_ids=(...),
+    after_ids=(...),
+    added_ids=(...),
+    removed_ids=(...),
+)
+```
+
+`NAVIGATE` has `REPLACE` color semantics; it remains distinct so keyboard
+navigation behavior is explicit and testable. The controller exposes one
+`apply_similarity_mutation()` reducer plus transitions for the other domains:
 
 ```python
 set_normal_selection(...)
-set_similarity_selection(...)
+apply_similarity_mutation(...)
 set_presentation_order(...)
 enter_merge_mode(...)
 cancel_merge_mode()
@@ -161,10 +189,10 @@ projects the resulting state. It does not independently own color state.
 Required changes:
 
 1. Remove `Supervisor._selection_color_order`.
-2. Make `Supervisor.selection_color_order` delegate to
-   `selection.state.color_order`.
+2. Make `Supervisor.selection_color_indices` delegate to the immutable mapping
+   projected from `selection.state.color_slots`.
 3. Remove the `reset` policy from `_update_selection_colors()`; projection uses
-   the state's color order verbatim.
+   the state's explicit color indices verbatim.
 4. Replace `_normalize_presentation_order()` with a pure table-order
    calculation followed by `set_presentation_order()`.
 5. Canonicalize selection intent before projection so one user operation
@@ -182,10 +210,9 @@ to reject delayed events from an obsolete table state or workflow mode.
 
 ## 8. View projection
 
-Workflow tables receive `state.color_order` through
-`set_selected_index_order()`. Built-in scientific views obtain an immutable copy
-of the same mapping for each selection render and use it only for palette lookup;
-layout continues to follow `presentation_order`.
+Workflow tables and built-in scientific views receive the same immutable
+`{cluster_id: palette_index}` mapping for each selection render and use it only
+for palette lookup; layout continues to follow `presentation_order`.
 
 Standalone views without a Supervisor may fall back to positional colors.
 Attached built-in views must not silently fall back when an authoritative color
@@ -201,7 +228,14 @@ state invariant and should be covered by tests.
 - Select a Ctrl+Space batch, deselect a middle row, and verify all remaining
   colors are unchanged.
 - Reselect the removed row and verify its original color returns.
-- Select a new row after a deselection and verify it receives a new slot.
+- Directly click A, then C, then B as single Similarity selections and verify
+  each candidate uses the first Similarity slot.
+- Navigate with Space and Shift+Space and verify the candidate uses the same
+  slot as direct replacement.
+- Plain-click one member of a multi-selection and verify replacement semantics;
+  Ctrl-remove a member and verify toggle semantics preserve remaining colors.
+- Clear Similarity selection and verify the next selection starts at the first
+  Similarity slot.
 - Sort and filter both role tables without recoloring.
 - Modify Cluster selection without changing the reference and retain colors.
 - Change the reference and verify the new reference is blue and slots reset.
