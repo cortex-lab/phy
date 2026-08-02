@@ -8,6 +8,7 @@
 import gc
 import logging
 from functools import partial
+from types import MappingProxyType
 
 import numpy as np
 from phylib.utils import Bunch, connect, emit, unconnect
@@ -89,7 +90,7 @@ class ManualClusteringView:
         self._dock_visible = True
         self._pending_selection = None
         self.cluster_ids = ()
-        self._cluster_color_index_by_id = {}
+        self._cluster_color_index_by_id = MappingProxyType({})
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -161,12 +162,25 @@ class ManualClusteringView:
             return
         self.plot(**kwargs)
 
-    def _update_cluster_color_indices(self, sender):
-        order = getattr(sender, 'selection_color_order', ())
-        if order:
-            self._cluster_color_index_by_id = {
-                cluster_id: index for index, cluster_id in enumerate(order)
-            }
+    def _update_cluster_color_indices(self, sender, cluster_ids):
+        """Copy and validate the authoritative selected-cluster color mapping."""
+        try:
+            order = tuple(sender.selection_color_order)
+        except AttributeError:
+            # Standalone views and other non-authoritative senders retain the
+            # traditional positional colors.
+            self._cluster_color_index_by_id = MappingProxyType({})
+            return
+        color_indices = MappingProxyType(
+            {cluster_id: index for index, cluster_id in enumerate(order)}
+        )
+        missing_ids = set(cluster_ids).difference(color_indices)
+        if missing_ids:
+            raise ValueError(
+                'Authoritative selection color mapping is missing active cluster IDs: '
+                f'{sorted(missing_ids)}.'
+            )
+        self._cluster_color_index_by_id = color_indices
 
     def cluster_color_index(self, cluster_id, fallback):
         """Return the stable selected-color slot for a cluster."""
@@ -182,7 +196,7 @@ class ManualClusteringView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
-        self._update_cluster_color_indices(sender)
+        self._update_cluster_color_indices(sender, cluster_ids)
         # Limit the number of displayed clusters for performance reasons. Keep the
         # selection order so that a large selection still refreshes the view rather
         # than leaving its previous contents on screen.
@@ -521,7 +535,7 @@ class BaseGlobalView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
-        self._update_cluster_color_indices(sender)
+        self._update_cluster_color_indices(sender, cluster_ids)
         self.cluster_ids = cluster_ids  # selected clusters
 
 

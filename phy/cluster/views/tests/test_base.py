@@ -6,6 +6,7 @@
 
 import numpy as np
 from phylib.utils import emit
+from pytest import raises
 
 from phy.utils.color import colormaps, selected_cluster_color
 
@@ -76,10 +77,13 @@ def test_manual_clustering_view_2(qtbot, gui):
     v.attach(gui)
 
     class Supervisor:
-        selection_color_order = (0, 2, 1)
+        selection_color_order = [0, 2, 1]
 
-    emit('select', Supervisor(), cluster_ids=[0, 1])
+    sender = Supervisor()
+    emit('select', sender, cluster_ids=[0, 1])
     assert v.cluster_color_index(0, 0) == 0
+    assert v.cluster_color_index(1, 1) == 2
+    sender.selection_color_order[:] = (0, 1, 2)
     assert v.cluster_color_index(1, 1) == 2
 
     v.actions.get('Change color scheme to myscheme').trigger()
@@ -113,6 +117,28 @@ def test_manual_clustering_view_menu_utility_footer(qtbot, gui):
     )
 
     _stop_and_close(qtbot, v)
+
+
+def test_authoritative_selection_colors_require_every_active_cluster():
+    view = ManualClusteringView()
+
+    class Supervisor:
+        selection_color_order = (1,)
+
+    with raises(ValueError, match='missing active cluster IDs: \\[2\\]'):
+        view._update_cluster_color_indices(Supervisor(), [1, 2])
+
+
+def test_standalone_selection_uses_positional_colors():
+    view = ManualClusteringView()
+
+    class Supervisor:
+        selection_color_order = (1, 2)
+
+    view._update_cluster_color_indices(Supervisor(), [1, 2])
+    view._update_cluster_color_indices(object(), [1, 2])
+
+    assert view.cluster_color_index(2, 1) == 1
 
 
 def test_manual_clustering_view_selection_is_limited(qtbot, gui):
