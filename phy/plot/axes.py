@@ -20,6 +20,25 @@ from .visuals import LineVisual, TextVisual
 # ------------------------------------------------------------------------------
 
 
+def format_number(value):
+    """Format an axis value with grouping while retaining useful precision."""
+    return f'{value:,.9g}'
+
+
+def format_time_ticks(values, unit='s'):
+    """Format elapsed-time ticks expressed internally in seconds.
+
+    The coordinates are deliberately left in seconds: only their displayed
+    representation changes. This keeps pan/zoom and data interaction
+    independent of the chosen display unit.
+    """
+    factors = {'s': 1, 'min': 60, 'h': 3600}
+    if unit not in factors:
+        raise ValueError(f'Unknown time unit: {unit!r}')
+    factor = factors[unit]
+    return [f'{format_number(value / factor)} {unit}' for value in values]
+
+
 class AxisLocator:
     """Determine the location of ticks in a view.
 
@@ -43,11 +62,13 @@ class AxisLocator:
     _bins_margin = 5
     _default_steps = (1, 2, 2.5, 5, 10)
 
-    def __init__(self, nbinsx=None, nbinsy=None, data_bounds=None):
+    def __init__(self, nbinsx=None, nbinsy=None, data_bounds=None, format_x=None, format_y=None):
         """data_bounds is the initial bounds of the view in data coordinates."""
         self.data_bounds = data_bounds
         self._tr = Range(from_bounds=NDC, to_bounds=self.data_bounds)
         self._tri = self._tr.inverse()
+        self.format_x = format_x or (lambda values: [format_number(value) for value in values])
+        self.format_y = format_y or (lambda values: [format_number(value) for value in values])
         self.set_nbins(nbinsx, nbinsy)
 
     def set_nbins(self, nbinsx=None, nbinsy=None):
@@ -93,9 +114,8 @@ class AxisLocator:
         self.xticks_view, self.yticks_view = self._transform_ticks(self.xticks, self.yticks)
 
         # Get the text in data coordinates.
-        fmt = '%.9g'
-        self.xtext = [fmt % v for v in self.xticks]
-        self.ytext = [fmt % v for v in self.yticks]
+        self.xtext = self.format_x(self.xticks)
+        self.ytext = self.format_y(self.yticks)
 
 
 # ------------------------------------------------------------------------------
@@ -143,9 +163,13 @@ class Axes:
 
     default_color = (1, 1, 1, 0.25)
 
-    def __init__(self, data_bounds=None, color=None, show_x=True, show_y=True):
+    def __init__(
+        self, data_bounds=None, color=None, show_x=True, show_y=True, format_x=None, format_y=None
+    ):
         self.show_x = show_x
         self.show_y = show_y
+        self.format_x = format_x
+        self.format_y = format_y
         self.reset_data_bounds(data_bounds, do_update=False)
         self._create_visuals()
         self.color = color or self.default_color
@@ -157,12 +181,24 @@ class Axes:
         Used when the view is recreated from scratch.
 
         """
-        self.locator = AxisLocator(data_bounds=data_bounds)
+        self.locator = AxisLocator(
+            data_bounds=data_bounds, format_x=self.format_x, format_y=self.format_y
+        )
         self.locator.set_view_bounds(NDC)
         if do_update:
             self.update_visuals()
         self._last_log_zoom = (1, 1)
         self._last_pan = (0, 0)
+
+    def set_x_formatter(self, formatter):
+        """Set the formatter for x-axis tick labels."""
+        self.format_x = formatter
+        self.locator.format_x = formatter or (
+            lambda values: [format_number(value) for value in values]
+        )
+        self.locator.set_view_bounds(self._attached.panzoom.get_range() if self._attached else NDC)
+        if self._attached:
+            self.update_visuals()
 
     def _create_visuals(self):
         """Create the line and text visuals on the x and/or y axes."""
