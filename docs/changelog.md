@@ -44,6 +44,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Show an unsaved-changes marker in the window title and confirm successful
+  curation saves in the status bar.
 - Rename the Help shortcut reference action to **Show shortcuts and commands**
   and show Enter/Escape guidance when the `:` command prompt is active.
 - Pressing `:` repeatedly no longer leaves the command prompt visible after

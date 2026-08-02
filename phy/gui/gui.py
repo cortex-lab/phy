@@ -845,6 +845,10 @@ class GUI(QMainWindow):
         box.setText(message)
         return box
 
+    def _set_dirty(self, dirty):
+        """Show whether the window has unsaved curation changes."""
+        self.setWindowTitle(f'* {self._window_title}' if dirty else self._window_title)
+
     # Status bar
     # -------------------------------------------------------------------------
 
