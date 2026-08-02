@@ -51,6 +51,14 @@ Remaining clusters, i.e. spikes outside the polygon, are also assigned to new cl
 
 Note: if not all spikes are displayed (there is a limit to the number of spikes displayed in each view), then all spikes are loaded before computing which spikes belong to the drawn polygon.
 
+When exactly one cluster is selected in Normal mode, the Amplitude View also
+supports a threshold split. Hold **Alt** and right-drag to place a horizontal
+threshold, then press `K` to split the finite-amplitude spikes strictly below
+it. The preview is sampled for responsiveness, but the committed split is
+evaluated over every eligible spike in the cluster. Use
+**Control+right-click** or **View > Clear amplitude split threshold** to clear
+the threshold; an empty or whole-cluster threshold is not committed.
+
 
 ## Wizard
 

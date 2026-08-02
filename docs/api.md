@@ -5796,12 +5796,42 @@ This view displays an amplitude plot for all selected clusters.
 
 ---
 
+#### AmplitudeView.activate_split_selection
+
+
+**`AmplitudeView.activate_split_selection(self)`**
+
+Make this view's transient split selection the active built-in one.
+
+---
+
 #### AmplitudeView.attach
 
 
 **`AmplitudeView.attach(self, gui)`**
 
 Attach the view to the GUI.
+
+---
+
+#### AmplitudeView.clear_amplitude_split_threshold
+
+
+**`AmplitudeView.clear_amplitude_split_threshold(self)`**
+
+Clear the amplitude split threshold.
+
+---
+
+#### AmplitudeView.clear_split_selection
+
+
+**`AmplitudeView.clear_split_selection(self)`**
+
+Clear this view's transient split selection.
+
+Views with another kind of split preview can override this hook, call
+``super()``, and clear their own preview state as well.
 
 ---
 
@@ -5880,6 +5910,33 @@ selected clusters (template view, raster view).
 **`AmplitudeView.on_mouse_click(self, e)`**
 
 Select a time from the amplitude view to display in the trace view.
+
+---
+
+#### AmplitudeView.on_mouse_move
+
+
+**`AmplitudeView.on_mouse_move(self, e)`**
+
+
+
+---
+
+#### AmplitudeView.on_mouse_press
+
+
+**`AmplitudeView.on_mouse_press(self, e)`**
+
+
+
+---
+
+#### AmplitudeView.on_mouse_release
+
+
+**`AmplitudeView.on_mouse_release(self, e)`**
+
+
 
 ---
 
@@ -7557,6 +7614,15 @@ component features. This view keeps track of which channels are currently shown.
 
 ---
 
+#### FeatureView.activate_split_selection
+
+
+**`FeatureView.activate_split_selection(self)`**
+
+Make this view's transient split selection the active built-in one.
+
+---
+
 #### FeatureView.attach
 
 
@@ -7572,6 +7638,18 @@ Attach the view to the GUI.
 **`FeatureView.clear_channels(self)`**
 
 Reset the current channels.
+
+---
+
+#### FeatureView.clear_split_selection
+
+
+**`FeatureView.clear_split_selection(self)`**
+
+Clear this view's transient split selection.
+
+Views with another kind of split preview can override this hook, call
+``super()``, and clear their own preview state as well.
 
 ---
 
@@ -9280,12 +9358,33 @@ This view displays a scatter plot for all selected clusters.
 
 ---
 
+#### ScatterView.activate_split_selection
+
+
+**`ScatterView.activate_split_selection(self)`**
+
+Make this view's transient split selection the active built-in one.
+
+---
+
 #### ScatterView.attach
 
 
 **`ScatterView.attach(self, gui)`**
 
 
+
+---
+
+#### ScatterView.clear_split_selection
+
+
+**`ScatterView.clear_split_selection(self)`**
+
+Clear this view's transient split selection.
+
+Views with another kind of split preview can override this hook, call
+``super()``, and clear their own preview state as well.
 
 ---
 
@@ -11868,9 +11967,9 @@ Change the scaling with the wheel.
 #### WaveformView.on_select
 
 
-**`WaveformView.on_select(self, cluster_ids=None, **kwargs)`**
+**`WaveformView.on_select(self, sender=None, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overridden.
+Clear transient highlighting when the displayed selection changes.
 
 ---
 
@@ -11917,6 +12016,19 @@ Reset the scaling to the default value.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
+
+---
+
+#### WaveformView.set_highlighted_spike_ids
+
+
+**`WaveformView.set_highlighted_spike_ids(self, spike_ids=None, color=None)`**
+
+Highlight displayed individual waveform traces by spike id.
+
+This rerenders the cached displayed data only; it never invokes a
+waveform provider.  Providers without per-trace ``spike_ids`` simply
+retain their ordinary cluster color.
 
 ---
 

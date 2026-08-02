@@ -18,6 +18,11 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Split the lower-amplitude portion of one selected cluster directly from the
+  Amplitude View: use `Alt`-right-drag to preview a threshold, then press `K`
+  to commit an exact all-spike split. Individual waveform traces receive the
+  same transient preview; **Control+right-click** or **View > Clear amplitude
+  split threshold** clears it.
 - Display elapsed recording time in seconds, minutes, or hours in Amplitude
   and Firing Rate views. Choose the shared preference from **View > Recording
   time unit** and see open views update immediately. Axis labels use thousands

@@ -471,13 +471,28 @@ effect immediately and are saved as global controller preferences.
 
 This view supports splitting like in the feature view. When splitting, all spikes (and not just displayed spikes) are loaded before computing the spikes that belong to the lasso polygon.
 
+With exactly one cluster selected in Normal mode, you can also split by amplitude:
+hold **Alt** and right-drag to place a horizontal threshold. Spikes with a
+finite amplitude strictly below the threshold are highlighted in the Amplitude
+View and, when individual spike waveforms are displayed, in the Waveform View.
+Spikes exactly on the threshold remain in the upper group. Press `K` to split
+the highlighted lower group. The split evaluates every eligible spike in the
+cluster, not only the plotted or waveform samples, so the committed result
+matches the active amplitude type and context. A threshold selecting no spikes
+or the entire cluster is left in place and cannot be committed.
+
+The threshold remains active after the drag so you can adjust it. Use
+**Control+right-click** or **View > Clear amplitude split threshold** to clear
+it; either action also clears the Amplitude View lasso. Threshold previews only
+color individual waveform traces: mean and template waveforms are unchanged.
+
 #### Background spikes
 
 Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel. The gray spikes come from all clusters that have some signal on the first selected cluster's peak channel, and not necessarily those for which the best channel corresponds exactly to that channel.
 
 #### Time range
 
-The time interval currently displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+click` in the amplitude view: that will automatically change the time range in the trace view.
+The time interval currently displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+left-click` in the amplitude view: that will automatically change the time range in the trace view.
 
 #### Keyboard shortcuts
 
