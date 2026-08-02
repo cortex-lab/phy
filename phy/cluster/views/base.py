@@ -7,6 +7,7 @@
 
 import gc
 import logging
+from collections.abc import Mapping
 from functools import partial
 from types import MappingProxyType
 
@@ -163,17 +164,23 @@ class ManualClusteringView:
         self.plot(**kwargs)
 
     def _update_cluster_color_indices(self, sender, cluster_ids):
-        """Copy and validate the authoritative selected-cluster color mapping."""
+        """Adopt and validate the authoritative selected-cluster color mapping.
+
+        A Supervisor publishes color slots separately from presentation order.
+        Keep its immutable projection intact: plotting code can therefore look up
+        a cluster's palette slot without inferring it from the render order.
+        Standalone views, which have no Supervisor projection, retain positional
+        colors.
+        """
         try:
-            order = tuple(sender.selection_color_order)
+            color_indices = sender.selection_color_indices
         except AttributeError:
             # Standalone views and other non-authoritative senders retain the
             # traditional positional colors.
             self._cluster_color_index_by_id = MappingProxyType({})
             return
-        color_indices = MappingProxyType(
-            {cluster_id: index for index, cluster_id in enumerate(order)}
-        )
+        if not isinstance(color_indices, Mapping):
+            raise TypeError('selection_color_indices must be a mapping.')
         missing_ids = set(cluster_ids).difference(color_indices)
         if missing_ids:
             raise ValueError(
