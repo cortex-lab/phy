@@ -63,9 +63,9 @@ Click one row in the Cluster View. Then click a highly ranked row in the
 Similarity View. The other views should now compare the two clusters using
 different colors.
 
-Press `H` at any time to show the effective keyboard shortcuts. Menus also show
-their shortcuts, and hovering over an action shows its command name in the status
-bar.
+Press `H` or choose **Help > Show shortcuts and commands** to print the effective
+keyboard shortcuts and command aliases. Menus also show their shortcuts, and hovering
+over an action shows its command name in the status bar.
 
 ## 3. Inspect one cluster
 
@@ -86,7 +86,7 @@ Useful first-session keys include:
 
 | Action | Default shortcut |
 | --- | --- |
-| Show all shortcuts | `H` |
+| Show shortcuts and commands | `H` |
 | Select the next similarity candidate | `Space` |
 | Return to only the Cluster View selection | `Backspace` |
 | Enter or cancel Merge mode | `V` |
@@ -96,7 +96,8 @@ Useful first-session keys include:
 | Save | `Ctrl+S` |
 
 On macOS, menu labels may use platform-native key names. The help window is the
-authoritative list for the running build.
+authoritative list for the running build. Press `:` to open the command prompt in the
+status bar; it shows Enter/Escape guidance while active.
 
 ## 4. Compare a possible merge
 

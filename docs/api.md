@@ -1658,8 +1658,7 @@ May be overridden.
 
 **`Snippets.command`**
 
-This is used to write a snippet message in the status bar. A cursor is appended at
-the end.
+Current snippet command, without the status-bar cursor or guidance.
 
 ---
 

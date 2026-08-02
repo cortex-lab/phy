@@ -44,6 +44,10 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Rename the Help shortcut reference action to **Show shortcuts and commands**
+  and show Enter/Escape guidance when the `:` command prompt is active.
+- Pressing `:` repeatedly no longer leaves the command prompt visible after
+  Escape closes it.
 - Keep the disabled Cluster View overlay fixed while scrolling in Merge mode,
   increase its dimming, and make native table rows initiate drag-and-drop.
 - Display Firing Rate View values in spikes per second instead of normalized

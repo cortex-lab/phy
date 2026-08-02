@@ -245,7 +245,23 @@ def test_actions_disable(qtbot, gui, actions):
 def test_snippets_message(qtbot, gui):
     gui.status_message = 'Hello world!'
     gui.snippets.mode_on()
+    assert gui.snippets.command == ':'
+    assert 'Enter: run' in gui.status_message
+    assert 'Esc: cancel' in gui.status_message
     gui.snippets.mode_off()
+    assert gui.status_message == 'Hello world!'
+
+
+def test_snippets_repeated_activation_leaves_escape_available(qtbot, gui):
+    gui.status_message = 'Hello world!'
+    snippets = gui.snippets
+
+    snippets.actions.enable_snippet_mode()
+    snippets.actions.enable_snippet_mode()
+    assert snippets.is_mode_on()
+
+    snippets.actions._snippet_disable()
+    assert not snippets.is_mode_on()
     assert gui.status_message == 'Hello world!'
 
 

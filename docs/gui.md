@@ -91,8 +91,8 @@ Most graphical views share these controls:
 * Shift-wheel to change the color scheme in color-enabled views.
 
 View-specific controls appear in the view menu and in the
-[shortcut reference](shortcuts.md). Press `H` or use the Help menu to print the bindings active in
-the current session.
+[shortcut reference](shortcuts.md). Press `H` or choose **Help > Show shortcuts and commands** to
+print the bindings active in the current session.
 
 ## Automatic updates and large selections
 

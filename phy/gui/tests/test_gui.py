@@ -129,6 +129,7 @@ def test_gui_1(tempdir, qtbot):
     assert gui.state.geometry_state['state']
 
     gui.help_actions.show_all_shortcuts()
+    assert gui.help_actions.get('show_all_shortcuts').text() == 'Show shortcuts and commands'
     gui.file_actions.save()
     gui.file_actions.exit()
 

@@ -625,9 +625,11 @@ class GUI(QMainWindow):
         # Help menu.
         @self.help_actions.add(shortcut=('HelpContents', 'h'))
         def show_all_shortcuts():
-            """Show the shortcuts of all actions."""
+            """Print the active keyboard shortcuts and command aliases."""
             for actions in self.actions:
                 actions.show_shortcuts()
+
+        self.help_actions.get('show_all_shortcuts').setText('Show shortcuts and commands')
 
         @self.help_actions.add(shortcut='?')
         def about():  # pragma: no cover
