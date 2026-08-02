@@ -334,7 +334,11 @@ class ManualClusteringView:
         )
         self.actions.add(self.screenshot, show_shortcut=False)
         self.actions.add(self.close, show_shortcut=False)
-        self.actions.separator()
+
+        # Subclasses and plugins add their content-specific actions after this
+        # method returns. When the menu is first opened, place shared utility
+        # actions at the bottom, with a single separator before them.
+        self.dock._menu.aboutToShow.connect(self._organize_menu_actions)
 
         on_select = partial(self.on_select_threaded, gui=gui)
         connect(on_select, event='select')
@@ -366,6 +370,34 @@ class ManualClusteringView:
             self.dock.setFloating(False)
 
         emit('view_attached', self, gui)
+
+    def _organize_menu_actions(self):
+        """Put view utilities in a consistent footer and normalize separators."""
+        menu = self.dock._menu
+        utilities = [
+            self.actions.get(name)
+            for name in ('toggle_auto_update', 'screenshot', 'close')
+        ]
+        for action in utilities:
+            menu.removeAction(action)
+
+        # Remove leading, trailing, and duplicate separators left behind by
+        # independently contributed view actions.
+        previous_is_separator = True
+        for action in list(menu.actions()):
+            if action.isSeparator():
+                if previous_is_separator:
+                    menu.removeAction(action)
+                previous_is_separator = True
+            else:
+                previous_is_separator = False
+        if menu.actions() and menu.actions()[-1].isSeparator():
+            menu.removeAction(menu.actions()[-1])
+
+        if menu.actions():
+            menu.addSeparator()
+        for action in utilities:
+            menu.addAction(action)
 
     @property
     def status(self):

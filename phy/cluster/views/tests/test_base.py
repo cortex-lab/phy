@@ -88,6 +88,27 @@ def test_manual_clustering_view_2(qtbot, gui):
     qtbot.wait(100)
 
 
+def test_manual_clustering_view_menu_utility_footer(qtbot, gui):
+    v = MyView()
+    v.attach(gui)
+    v.add_color_scheme(lambda cid: cid, name='myscheme')
+
+    v.dock._menu.aboutToShow.emit()
+    actions = v.dock._menu.actions()
+    assert actions[-3:] == [
+        v.actions.get('toggle_auto_update'),
+        v.actions.get('screenshot'),
+        v.actions.get('close'),
+    ]
+    assert actions[-4].isSeparator()
+    assert not any(
+        action.isSeparator() and next_action.isSeparator()
+        for action, next_action in zip(actions, actions[1:])
+    )
+
+    _stop_and_close(qtbot, v)
+
+
 def test_manual_clustering_view_selection_is_limited(qtbot, gui):
     v = MyView()
     v.max_n_clusters = 2

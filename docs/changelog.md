@@ -84,6 +84,9 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- Put content-specific actions first in every view menu, followed by a
+  consistent Auto-update, Screenshot, and Close utility footer.
+
 - Group cluster traversal commands under **Select > Navigation**.
 
 - Group available views under **View > Add view** and keep global view options
