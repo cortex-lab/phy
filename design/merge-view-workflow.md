@@ -107,8 +107,9 @@ row.
 In Merge mode, the presentation order delivered to scientific views is always
 the Merge View row order followed by selected Similarity View rows in visible
 table order.
-Adding, removing, or reordering rows may therefore reassign positional colors
-and redraw order-dependent scientific views.
+Adding, removing, or reordering rows may redraw order-dependent scientific
+views, but a cluster's workflow-table color slot remains fixed for the entire
+Merge session.
 
 ## Exploring Similarity
 
