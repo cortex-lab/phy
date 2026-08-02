@@ -15,9 +15,9 @@ table. It introduces:
 
 - an explicit workflow mode;
 - a third cluster role alongside Cluster and Similarity;
-- role transfers that must not redraw scientific views;
+- an explicit presentation order derived from the two active roles;
 - a fixed blue Similarity reference;
-- stable colors independent of Merge row order;
+- positional colors that follow Merge row order and Similarity selection order;
 - exact cancellation to an entry snapshot; and
 - restoration of the complete workspace after undoing a committed merge.
 
@@ -143,9 +143,10 @@ The refactor should establish the following invariants:
    independent domain authorities.
 3. Similarity reference is an explicit cluster ID.
 4. The reference occupies the blue presentation slot.
-5. Merge row order and presentation/color order are independent.
-6. Moving a cluster between Similarity and Merge does not change the effective
-   selection or emit a public selection update.
+5. Presentation/color order is Merge row order followed by Similarity selection
+   order.
+6. Moving a cluster between Similarity and Merge does not change membership,
+   but emits a public selection update when it changes presentation order.
 7. Related state changes are applied transactionally; observers see only valid
    before and after states.
 8. Cancellation restores the exact entry snapshot.
@@ -536,8 +537,7 @@ restoration is best effort where Qt exposes a reliable value.
 - Add tests for selection order, effective selection, multi-Cluster Similarity
   reference, positional colors, Ctrl+Space, Backspace, merge follow-up,
   undo/redo selection restoration, debouncing, and plugin-facing events.
-- Record exact event counts for transfers and merges where redraw suppression is
-  important.
+- Record exact event counts for transfers, reorders, and merges.
 
 ### Phase 1: state model in observation mode
 
@@ -557,7 +557,7 @@ restoration is best effort where Qt exposes a reliable value.
 
 - Make Similarity reference explicit.
 - Establish the reviewed blue-reference invariant.
-- Separate presentation order from table-role order.
+- Derive Merge-mode presentation order from table-role order.
 - Update characterization tests for the intentionally approved behavior change.
 
 ### Phase 4: transactional actions and contextual history
@@ -578,7 +578,7 @@ restoration is best effort where Qt exposes a reliable value.
 
 - Add reusable native-table drag support.
 - Connect it to controller transfer and reorder intents.
-- Verify multi-row behavior and no-redraw invariants across platforms.
+- Verify multi-row behavior and presentation updates across platforms.
 
 ### Phase 7: TaskLogger decomposition and cleanup
 
@@ -724,7 +724,7 @@ Do not silently weaken these central invariants to simplify implementation:
 
 - the reference is blue and fixed in Merge View;
 - all entry selections transfer into Merge View;
-- role-only transfers do not redraw scientific views;
+- Merge-mode transfers and reorders publish their resulting presentation order;
 - cancellation restores the exact entry state;
 - `G` has one user-facing meaning in each visibly distinct mode; and
 - undoing a Merge-mode merge restores the complete pre-commit workspace.

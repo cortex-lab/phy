@@ -38,7 +38,7 @@ Keyboard shortcuts
 - reset                                    ctrl+alt+space
 - select_first_similar                     ctrl+space
 - split                                    k
-- toggle_merge_mode                        c
+- toggle_merge_mode                        v
 - undo                                     ctrl+z
 - unselect_similar                         backspace
 

@@ -56,11 +56,13 @@ Control-right-clicking a Similarity View row promotes it into the primary select
 preserving the current comparison. See [Similarity and the wizard](similarity.md) for the complete
 workflow.
 
-Press `C` to stage the current selections in Merge View. In this temporary mode, Cluster View is
-disabled, every Merge View row is included in the pending merge, and Similarity View remains
-available for exploring additional candidates. Control-right-click or drag rows between Merge and
-Similarity views, or drag inside Merge View to reorder candidates. Press `G` to commit or `C` to
-cancel. See [Staging candidates in Merge View](clustering.md#staging-candidates-in-merge-view).
+Press `V` to stage the current selections in Merge View. It opens below Cluster View and remembers
+where you move it while toggling the mode. In this temporary mode, Cluster View is dimmed and
+read-only but remains scrollable, every Merge View row is included in the pending merge, and
+Similarity View remains available for exploring additional candidates. Control-right-click or drag
+rows between Merge and Similarity views, or drag inside Merge View to reorder candidates. Press `G`
+to commit or `V` to cancel. See
+[Staging candidates in Merge View](clustering.md#staging-candidates-in-merge-view).
 
 ## Sorting and filtering
 

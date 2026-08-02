@@ -14,10 +14,10 @@ All spikes belonging to either of the selected clusters will be assigned to that
 
 ### Staging candidates in Merge View
 
-Press `C` with at least one Cluster View row selected to open **MERGE MODE**. phy stages the blue
+Press `V` with at least one Cluster View row selected to open **MERGE MODE**. phy stages the blue
 reference first, followed by the other Cluster View selections and the current Similarity View
-selection. Cluster View is disabled while the workspace is active, and the plots keep the same
-clusters and colors.
+selection. Cluster View is dimmed and read-only while the workspace is active, but it remains
+scrollable; its overlay reminds you that `V` returns to the normal workflow.
 
 Every row in Merge View is part of the pending merge. Continue exploring Similarity View, where
 sorting, filtering, `Control+Space`, and multi-selection remain available. The Merge View status
@@ -25,11 +25,12 @@ shows the number of staged clusters, selected similar clusters, and the total th
 
 Move candidates between the two views with `Control`-right-click or drag-and-drop. Drag within
 Merge View to reorder candidates. The first blue reference cannot be moved or removed, and
-transfers or reordering do not change cluster colors or redraw the scientific views unnecessarily.
-Press `Backspace` to clear only the Similarity View selection when the merge should contain only
-the staged rows.
+the selection order shown by scientific views is always the Merge View order followed by the
+Similarity View selection order. Transfers and reordering can therefore update cluster colors and
+redraw order-dependent views. Press `Backspace` to clear only the Similarity View selection when
+the merge should contain only the staged rows.
 
-Press `G` to commit the staged clusters plus the selected Similarity candidates. Press `C` again,
+Press `G` to commit the staged clusters plus the selected Similarity candidates. Press `V` again,
 use **Cancel Merge Mode**, or close Merge View to cancel and restore the exact state from before
 entry. Undoing a committed Merge-mode merge restores the complete workspace as it appeared just
 before `G`; Redo reapplies the merge and returns to the normal workflow.
@@ -58,7 +59,7 @@ You can move up and down in the **cluster view** with the `Up` and `Down` arrows
 
 You can move up and down in the **similarity view** with the `Space` and `Shift-space` arrows. The cluster selected in the similarity view is called the **similar cluster**. The idea is to go through every "best cluster" in the cluster view, and review the "similar clusters" in the similarity view (sorted by decreasing similarity with the best cluster).
 
-Press `Control+Space` to select the first 15 eligible clusters currently shown in the similarity view while preserving the cluster view selection. This uses the current similarity view sorting and filtering, and replaces any previous similarity view selection. To choose a different number, use **Select > Select N Similar**; the chosen number becomes the shortcut's new default and is remembered across sessions.
+Press `Control+Space` to select the first 15 eligible clusters currently shown in the similarity view while preserving the cluster view selection. Repeat it to select the next batch. This uses the current similarity view sorting and filtering. To choose a different number, use **Select > Select N Similar**; the chosen number becomes the shortcut's new default and is remembered across sessions.
 
 Wizard navigation skips clusters labeled `noise` or `mua` by default. To include them when moving through either table or when selecting N similar clusters, uncheck **Select > Skip Noise and MUA**. This preference is remembered across sessions. Direct selection with the mouse, a cluster ID, or a snippet can always select these clusters. Code that creates a `Supervisor` can choose the initial behavior with `skip_masked_clusters=False`; saved GUI state takes precedence when present.
 

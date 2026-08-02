@@ -10068,7 +10068,7 @@ Transfer staged candidates back to Similarity View.
 
 **`Supervisor.reorder_merge(self, cluster_ids, insertion, callback=None)`**
 
-Reorder staged candidates while preserving their color slots.
+Reorder staged candidates and their scientific presentation order.
 
 ---
 

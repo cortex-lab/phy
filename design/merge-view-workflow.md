@@ -45,7 +45,7 @@ normal workflow on cancellation. At minimum, this includes:
 - Cluster View selection and its order;
 - Similarity View selection and its order;
 - the Similarity reference;
-- cluster-to-color assignments; and
+- presentation order and cluster colors; and
 - any filter, sort, scroll, or navigation state changed by entering the mode.
 
 All selected clusters are transferred into Merge View in this order:
@@ -61,7 +61,7 @@ After the transfer:
   navigated, filtered, sorted, or used as a drag source or target;
 - Similarity View remains enabled and remains calculated relative to the blue
   reference; and
-- the effective selection, graphical displays, and cluster colors are unchanged.
+- the effective selection and graphical displays initially remain unchanged.
 
 Staged clusters are not offered again as active Similarity candidates while they
 remain in Merge View.
@@ -102,9 +102,10 @@ Ctrl+right-click transfers only the clicked row. Dragging a selected Similarity
 row transfers all selected rows; dragging an unselected row transfers only that
 row.
 
-Cluster-to-color assignments belong to cluster IDs, not row positions. Adding,
-removing, or reordering rows must not reassign colors. Clicking or reordering a
-Merge row does not change the scientific views.
+In Merge mode, the presentation order delivered to scientific views is always
+the Merge View row order followed by the Similarity View selection order.
+Adding, removing, or reordering rows may therefore reassign positional colors
+and redraw order-dependent scientific views.
 
 ## Exploring Similarity
 

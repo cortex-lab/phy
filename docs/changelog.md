@@ -13,12 +13,14 @@ behavior they verify rather than listed separately.
 
 ### Added
 
-- Stage and order manual merge candidates in the new **Merge View**. Press `C`
+- Stage and order manual merge candidates in the new **Merge View**. Press `V`
   to enter or cancel Merge mode, transfer candidates with
   `Control`-right-click or drag-and-drop, and press `G` to merge every staged
-  cluster plus the current Similarity View selection. Cluster colors remain
-  stable, cancellation restores the entry state, and undo restores the full
-  pre-merge workspace.
+  cluster plus the current Similarity View selection. Merge View opens below
+  Cluster View and remembers its in-session dock position; the dimmed Cluster
+  View remains scrollable. Scientific views follow Merge View order and then
+  Similarity View selection order. Cancellation restores the entry state, and
+  undo restores the full pre-merge workspace.
 
 - Select the first eligible clusters in the Similarity View with
   `Control+Space`; repeat the shortcut to select successive batches. The

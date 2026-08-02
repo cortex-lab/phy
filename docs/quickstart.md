@@ -89,7 +89,7 @@ Useful first-session keys include:
 | Show all shortcuts | `H` |
 | Select the next similarity candidate | `Space` |
 | Return to only the Cluster View selection | `Backspace` |
-| Enter or cancel Merge mode | `C` |
+| Enter or cancel Merge mode | `V` |
 | Merge selected clusters | `G` |
 | Split a feature selection | `K` |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z` |
@@ -114,9 +114,9 @@ If the evidence strongly supports one unit split by the sorter, select the
 clusters and press `G` to merge. phy gives the result a new cluster ID. Press
 `Ctrl+Z` immediately if the result is not what you intended.
 
-For a longer comparison, press `C` first. Merge View keeps the candidates staged while you
+For a longer comparison, press `V` first. Merge View keeps the candidates staged while you
 continue exploring Similarity View. Its status shows exactly how many clusters `G` will merge.
-Press `C` again or close Merge View to cancel without changing the clustering.
+Press `V` again or close Merge View to cancel without changing the clustering.
 
 Splitting requires selecting spikes in a view that supports lasso or polygon
 selection, commonly the Feature View, and pressing `K`. It is worth learning
