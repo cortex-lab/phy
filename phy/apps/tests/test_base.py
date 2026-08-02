@@ -433,7 +433,163 @@ def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     eligible = subset_spikes[controller.supervisor.clustering.spike_clusters[subset_spikes] == 0]
     expected_indices = [0, (len(eligible) - 1) // 2, len(eligible) - 1]
     np.testing.assert_array_equal(selected[0], eligible[expected_indices])
+    np.testing.assert_array_equal(bunch.spike_ids, selected[0])
     controller.close()
+
+
+def test_mean_waveforms_do_not_expose_individual_spike_ids(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    bunch = controller._get_mean_waveforms(0)
+    assert bunch.data.shape[0] == 1
+    assert 'spike_ids' not in bunch
+    controller.close()
+
+
+def test_amplitude_preview_highlights_waveforms_with_cached_resolver(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    amplitude = controller.create_amplitude_view()
+    waveform = controller.create_waveform_view()
+    gui = GUI(name='AmplitudePreview', config_dir=tempdir)
+    amplitude.attach(gui)
+    waveform.attach(gui)
+    waveform.on_select(cluster_ids=[0])
+    spike_ids = waveform._displayed_bunchs[0].spike_ids
+    calls = []
+
+    def resolve(ids, name, first_cluster):
+        calls.append((ids.copy(), name, first_cluster))
+        return np.arange(len(ids), dtype=float)
+
+    controller._resolve_spike_amplitudes = resolve
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=0,
+        amplitudes_type='raw',
+        threshold=1.5,
+    )
+    np.testing.assert_array_equal(waveform._highlighted_spike_ids, spike_ids[:2])
+    assert waveform._highlighted_spike_color == amplitude.split_preview_color
+    assert len(calls) == 1
+
+    # Moving only the threshold must reuse the amplitudes already resolved for
+    # the displayed waveform identities.
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=0,
+        amplitudes_type='raw',
+        threshold=2.5,
+    )
+    np.testing.assert_array_equal(waveform._highlighted_spike_ids, spike_ids[:3])
+    assert len(calls) == 1
+
+    amplitude.split_threshold = 1.5
+    emit('selected_channel_changed', waveform)
+    assert amplitude.split_threshold is None
+
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=1,
+        amplitudes_type='raw',
+        threshold=2.5,
+    )
+    assert not len(waveform._highlighted_spike_ids)
+
+    amplitude.split_threshold = 0.5
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=0,
+        amplitudes_type='raw',
+        threshold=amplitude.split_threshold,
+    )
+    assert len(waveform._highlighted_spike_ids)
+    amplitude.dock.close()
+    assert not len(waveform._highlighted_spike_ids)
+    waveform.dock.close()
+    gui.close()
+    controller.close()
+
+
+def test_amplitude_threshold_split_commits_exact_partition_and_undo_redo(qtbot, tempdir):
+    """The sampled preview must commit the exact, all-spike threshold partition."""
+    controller = _mock_controller(tempdir, MyControllerFull)
+    controller.n_spikes_amplitudes = 3
+    controller.n_spikes_waveforms = 8
+    supervisor = controller.supervisor
+    cluster_id = 0
+    original_clusters = controller.model.spike_clusters.copy()
+    cluster_spike_ids = np.flatnonzero(original_clusters == cluster_id)
+    # The sparse display samples cannot be authoritative: this deterministic
+    # pattern gives both sides of the threshold throughout the cluster.
+    controller.model.amplitudes = np.full(controller.model.n_spikes, 3.0)
+    controller.model.amplitudes[cluster_spike_ids] = np.arange(len(cluster_spike_ids)) % 4
+    expected = cluster_spike_ids[controller.model.amplitudes[cluster_spike_ids] < 1.5]
+    remaining = np.setdiff1d(cluster_spike_ids, expected)
+    gui = controller.create_gui(do_prompt_save=False)
+    try:
+        with qtbot.waitExposed(gui):
+            gui.show()
+        supervisor.select([cluster_id])
+        supervisor.block()
+        amplitude = gui.list_views(AmplitudeView)[0]
+        waveform = gui.list_views(WaveformView)[0]
+        amplitude.amplitudes_type = 'template'
+        amplitude.plot()
+        waveform.waveforms_type = 'waveforms'
+        waveform.plot()
+
+        displayed_amplitudes = next(
+            bunch for bunch in amplitude._displayed_bunchs if bunch.cluster_id == cluster_id
+        )
+        waveform_spike_ids = waveform._displayed_bunchs[0].spike_ids
+        missing_from_amplitude = np.setdiff1d(waveform_spike_ids, displayed_amplitudes.spike_ids)
+        assert len(missing_from_amplitude)
+        assert np.any(np.isin(expected, missing_from_amplitude))
+
+        # Set the transient threshold through the view-level preview contract;
+        # waveform classification resolves its own displayed spike identities.
+        amplitude.split_threshold = 1.5
+        amplitude._replot_displayed_amplitudes()
+        emit(
+            'amplitude_split_preview_changed',
+            amplitude,
+            cluster_id=cluster_id,
+            amplitudes_type=amplitude.amplitudes_type,
+            threshold=amplitude.split_threshold,
+        )
+        expected_waveform = waveform_spike_ids[
+            controller.model.amplitudes[waveform_spike_ids] < amplitude.split_threshold
+        ]
+        np.testing.assert_array_equal(waveform._highlighted_spike_ids, expected_waveform)
+
+        # This is the same request_split path invoked by the K shortcut.
+        supervisor.actions.split()
+        supervisor.block()
+        after_split = controller.model.spike_clusters.copy()
+        split_cluster = after_split[expected]
+        remaining_cluster = after_split[remaining]
+        assert len(np.unique(split_cluster)) == len(np.unique(remaining_cluster)) == 1
+        assert split_cluster[0] != remaining_cluster[0]
+        assert not np.any(after_split[cluster_spike_ids] == cluster_id)
+        assert amplitude.split_threshold is None
+        assert not len(waveform._highlighted_spike_ids)
+
+        supervisor.actions.undo()
+        supervisor.block()
+        np.testing.assert_array_equal(controller.model.spike_clusters, original_clusters)
+        assert amplitude.split_threshold is None
+
+        supervisor.actions.redo()
+        supervisor.block()
+        redone = controller.model.spike_clusters
+        np.testing.assert_array_equal(redone[expected], split_cluster)
+        np.testing.assert_array_equal(redone[remaining], remaining_cluster)
+    finally:
+        gui.close()
+        controller.close()
 
 
 def test_waveform_selected_clusters_share_total_budget(tempdir):

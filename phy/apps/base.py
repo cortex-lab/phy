@@ -354,6 +354,10 @@ class WaveformMixin:
             data = self.raw_data_filter.apply(data, axis=1)
         return Bunch(
             data=data,
+            # Keep the identity of individual waveform traces.  This is used
+            # for transient cross-view highlighting; it is deliberately not
+            # propagated to aggregate waveform providers.
+            spike_ids=spike_ids,
             channel_ids=channel_ids,
             channel_labels=channel_labels,
             channel_positions=pos[channel_ids],
@@ -389,6 +393,9 @@ class WaveformMixin:
         b = self._get_waveforms(cluster_id)
         if b.data is not None:
             b.data = b.data.mean(axis=0)[np.newaxis, ...]
+        # The mean is one trace synthesized from many spikes, so it has no
+        # one-to-one spike identity.
+        b.pop('spike_ids', None)
         b['alpha'] = 1.0
         return b
 
@@ -406,6 +413,68 @@ class WaveformMixin:
             return
         view = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
         view.ex_status = self.raw_data_filter.current
+        preview_amplitude_cache = {}
+
+        def clear_amplitude_split_preview():
+            preview_amplitude_cache.clear()
+            view.set_highlighted_spike_ids()
+
+        def update_amplitude_split_preview(sender, cluster_id, amplitudes_type, threshold):
+            """Classify only the waveform traces currently on screen."""
+            if getattr(sender, '_controller', None) is not self:
+                return
+            if (
+                threshold is None
+                or view._closed
+                or view.waveforms_type != 'waveforms'
+                or list(view.cluster_ids) != [cluster_id]
+                or not view._displayed_bunchs
+            ):
+                clear_amplitude_split_preview()
+                return
+            bunch = view._displayed_bunchs[0]
+            spike_ids = bunch.get('spike_ids', None)
+            if spike_ids is None:
+                clear_amplitude_split_preview()
+                return
+            spike_ids = np.asarray(spike_ids, dtype=np.int64)
+            key = (
+                cluster_id,
+                amplitudes_type,
+                tuple(self.get_best_channels(cluster_id)),
+                self.selection.get('channel_id', None),
+                self.selection.get('feature_pc', None),
+                self.raw_data_filter.current,
+                tuple(spike_ids),
+            )
+            amplitudes = preview_amplitude_cache.get(key)
+            if amplitudes is None:
+                amplitudes = self._resolve_spike_amplitudes(spike_ids, amplitudes_type, cluster_id)
+                if amplitudes is None:
+                    clear_amplitude_split_preview()
+                    return
+                preview_amplitude_cache.clear()
+                preview_amplitude_cache[key] = amplitudes
+            highlighted = spike_ids[np.isfinite(amplitudes) & (amplitudes < threshold)]
+            view.set_highlighted_spike_ids(highlighted, color=sender.split_preview_color)
+
+        @connect(event='amplitude_split_preview_changed')
+        def on_amplitude_split_preview_changed(sender, cluster_id, amplitudes_type, threshold):
+            update_amplitude_split_preview(sender, cluster_id, amplitudes_type, threshold)
+
+        @connect(sender=self.supervisor)
+        def on_select(sender, cluster_ids, **kwargs):
+            # A new waveform selection has different displayed identities and
+            # must not reuse the previous preview cache.
+            clear_amplitude_split_preview()
+
+        @connect
+        def on_selected_channel_changed(sender):
+            clear_amplitude_split_preview()
+
+        @connect
+        def on_selected_feature_changed(sender):
+            clear_amplitude_split_preview()
 
         @connect(sender=view)
         def on_select_channel(sender, channel_id=None, key=None, button=None):
@@ -457,6 +526,10 @@ class WaveformMixin:
         def on_close_view(view_, gui):
             unconnect(on_select_channel)
             unconnect(on_view_attached)
+            unconnect(on_amplitude_split_preview_changed)
+            unconnect(on_select)
+            unconnect(on_selected_channel_changed)
+            unconnect(on_selected_feature_changed)
 
         return view
 
@@ -507,6 +580,7 @@ class FeatureMixin:
         @connect
         def on_selected_feature_changed(sender):
             # Replot the amplitude view with the selected feature.
+            view.clear_amplitude_split_threshold()
             view.amplitudes_type = 'feature'
             view.plot()
 
@@ -1679,8 +1753,6 @@ class BaseController:
         # Remove selected clusters from other_clusters to prevent them from being included
         #  in both the grey dots and grey histogram
         other_clusters = [e for e in other_clusters if e not in cluster_ids]
-        # Get the amplitude method.
-        f = self._get_amplitude_functions()[name]
         # Take spikes from the waveform selection if we're loading the raw amplitudes,
         # or by minimizing the number of chunks to load if fetching waveforms directly
         # from the raw data.
@@ -1715,19 +1787,7 @@ class BaseController:
                 )
             # Get the spike times.
             spike_times = self._get_spike_times_reordered(spike_ids)
-            if name in ('feature', 'raw'):
-                # Retrieve the feature PC selected in the feature view
-                # or the channel selected in the waveform view.
-                channel_id = self.selection.get('channel_id', channel_id)
-            pc = self.selection.get('feature_pc', None)
-            # Call the spike amplitude getter function.
-            amplitudes = f(
-                spike_ids,
-                channel_ids=channel_ids,
-                channel_id=channel_id,
-                pc=pc,
-                first_cluster=first_cluster,
-            )
+            amplitudes = self._resolve_spike_amplitudes(spike_ids, name, first_cluster)
             if amplitudes is None:
                 continue
             assert amplitudes.shape == spike_ids.shape == spike_times.shape
@@ -1739,6 +1799,21 @@ class BaseController:
                 )
             )
         return out
+
+    def _resolve_spike_amplitudes(self, spike_ids, name, first_cluster):
+        """Evaluate one amplitude type in the canonical amplitude-view context."""
+        spike_ids = np.asarray(spike_ids, dtype=np.int64)
+        channel_ids = self.get_best_channels(first_cluster)
+        channel_id = channel_ids[0]
+        if name in ('feature', 'raw'):
+            channel_id = self.selection.get('channel_id', channel_id)
+        return self._get_amplitude_functions()[name](
+            spike_ids,
+            channel_ids=channel_ids,
+            channel_id=channel_id,
+            pc=self.selection.get('feature_pc', None),
+            first_cluster=first_cluster,
+        )
 
     def create_amplitude_view(self):
         """Create the amplitude view."""
@@ -1752,11 +1827,18 @@ class BaseController:
         # or they're loaded from a small part of the dataset which is not very useful.
         if len(amplitudes_dict) > 1 and 'raw' in amplitudes_dict:
             del amplitudes_dict['raw']
+
+        def split_is_eligible():
+            state = self.supervisor.selection.state
+            return len(self.supervisor.selected) == 1 and not state.is_merge_mode
+
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitudes_type=None,  # TODO: GUI state
             duration=self.model.duration,
+            split_is_eligible=split_is_eligible,
         )
+        view._controller = self
 
         @connect
         def on_toggle_spike_reorder(sender, do_reorder):
@@ -1770,6 +1852,7 @@ class BaseController:
             # Do nothing if the displayed amplitude does not depend on the channel.
             if view.amplitudes_type not in ('feature', 'raw'):
                 return
+            view.clear_amplitude_split_threshold()
             # Otherwise, replot the amplitude view, which will use
             # Selection.selected_channel_id to use the requested channel in the computation of
             # the amplitudes.
@@ -1782,6 +1865,12 @@ class BaseController:
             if update_views and view.amplitudes_type == 'raw' and len(cluster_ids):
                 # Update the channel used in the amplitude when the cluster selection changes.
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
+            if not split_is_eligible():
+                view.clear_amplitude_split_threshold()
+
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            view.clear_amplitude_split_threshold()
 
         @connect
         def on_time_range_selected(sender, interval):
@@ -1818,9 +1907,11 @@ class BaseController:
 
         @connect(sender=view)
         def on_close_view(view_, gui):
+            view.clear_amplitude_split_threshold()
             unconnect(on_toggle_spike_reorder)
             unconnect(on_selected_channel_changed)
             unconnect(on_select)
+            unconnect(on_cluster)
             unconnect(on_time_range_selected)
             unconnect(on_view_attached)
 
