@@ -35,37 +35,14 @@ def _ordered_union(*cluster_id_lists) -> tuple[int, ...]:
 class NormalWorkflowSnapshot:
     """Normal-mode selection plus opaque view state needed for cancellation."""
 
-    cluster_ids: tuple[int, ...]
-    similar_ids: tuple[int, ...]
-    reference_id: int | None
-    presentation_order: tuple[int, ...]
-    color_order: tuple[int, ...] | None = None
+    selection: CurationSelectionState
     workflow_context: object = None
 
     def __post_init__(self):
-        state = CurationSelectionState(
-            cluster_ids=self.cluster_ids,
-            similar_ids=self.similar_ids,
-            reference_id=self.reference_id,
-            presentation_order=self.presentation_order,
-            color_order=self.color_order,
-        )
-        object.__setattr__(self, 'cluster_ids', state.cluster_ids)
-        object.__setattr__(self, 'similar_ids', state.similar_ids)
-        object.__setattr__(self, 'reference_id', state.reference_id)
-        object.__setattr__(self, 'presentation_order', state.presentation_order)
-        object.__setattr__(self, 'color_order', state.color_order)
-
-    @property
-    def selection(self):
-        """Return the Normal-mode selection represented by this snapshot."""
-        return CurationSelectionState(
-            cluster_ids=self.cluster_ids,
-            similar_ids=self.similar_ids,
-            reference_id=self.reference_id,
-            presentation_order=self.presentation_order,
-            color_order=self.color_order,
-        )
+        if not isinstance(self.selection, CurationSelectionState):
+            raise TypeError('Snapshot selection must be a CurationSelectionState.')
+        if self.selection.mode is not WorkflowMode.NORMAL:
+            raise ValueError('Normal workflow snapshots require a Normal-mode selection.')
 
 
 @dataclass(frozen=True)
@@ -345,14 +322,7 @@ class CurationSelectionController:
         current = self._state
         if not current.cluster_ids:
             raise ValueError('Merge mode requires a Cluster View selection.')
-        snapshot = NormalWorkflowSnapshot(
-            cluster_ids=current.cluster_ids,
-            similar_ids=current.similar_ids,
-            reference_id=current.reference_id,
-            presentation_order=current.presentation_order,
-            color_order=current.color_order,
-            workflow_context=workflow_context,
-        )
+        snapshot = NormalWorkflowSnapshot(current, workflow_context=workflow_context)
         ordered_ids = current.presentation_order
         merge = MergeSession(current.reference_id, ordered_ids, snapshot)
         after = CurationSelectionState(

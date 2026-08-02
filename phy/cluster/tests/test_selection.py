@@ -146,7 +146,7 @@ def test_snapshot_restore_and_noop_change_classification():
 
 
 def test_merge_session_validates_reference_and_state_roles():
-    snapshot = NormalWorkflowSnapshot((1,), (), 1, (1,))
+    snapshot = NormalWorkflowSnapshot(CurationSelectionState(cluster_ids=(1,)))
     with raises(ValueError, match='first staged'):
         MergeSession(1, (2, 1), snapshot)
     merge = MergeSession(1, (1, 2), snapshot)
@@ -186,11 +186,22 @@ def test_enter_and_cancel_merge_mode_restore_exact_entry_selection():
     assert change.after.similar_ids == ()
     assert set(change.after.effective_ids) == set(initial.effective_ids)
     assert change.after.merge.entry_snapshot.workflow_context is context
+    assert change.after.merge.entry_snapshot.selection is initial
 
     change = controller.cancel_merge_mode()
     assert change.after == initial
     assert change.mode_changed
     assert not change.presentation_changed
+
+
+def test_normal_workflow_snapshot_requires_a_normal_selection_state():
+    with raises(TypeError, match='CurationSelectionState'):
+        NormalWorkflowSnapshot((1,))
+
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1,)))
+    controller.enter_merge_mode()
+    with raises(ValueError, match='Normal-mode'):
+        NormalWorkflowSnapshot(controller.state)
 
 
 def test_enter_merge_mode_stages_normal_presentation_order():
