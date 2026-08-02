@@ -602,6 +602,9 @@ class Table(QWidget):
         self._drag_role = None
         self._accepted_drag_roles = set()
         self._drag_selected_rows = True
+        self._interaction_overlay = None
+        self._interaction_blocked = False
+        self._selection_mode_before_block = None
         self._group_colors = {
             'good': QColor('#86D16D'),
             'mua': QColor('#afafaf'),
@@ -667,6 +670,43 @@ class Table(QWidget):
             QAbstractItemView.DragDrop if enabled else QAbstractItemView.NoDragDrop
         )
 
+    def _set_interaction_overlay(self, text=None):
+        """Block table editing while retaining scrolling, with an explanatory overlay."""
+        blocked = bool(text)
+        if blocked == self._interaction_blocked:
+            if blocked:
+                self._interaction_overlay.setText(text)
+            return
+        self._interaction_blocked = blocked
+        if blocked:
+            self._selection_mode_before_block = self.table_view.selectionMode()
+            self.table_view.setSelectionMode(QAbstractItemView.NoSelection)
+            self.filter_edit.setEnabled(False)
+            self.table_view.horizontalHeader().setEnabled(False)
+            if self._interaction_overlay is None:
+                overlay = QLabel(self.table_view.viewport())
+                overlay.setAlignment(Qt.AlignCenter)
+                overlay.setWordWrap(True)
+                overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
+                overlay.setStyleSheet(
+                    'background-color: rgba(0, 0, 0, 150); color: #dddddd; '
+                    'font-size: 18px; font-weight: bold; padding: 24px;'
+                )
+                self._interaction_overlay = overlay
+            self._interaction_overlay.setText(text)
+            self._interaction_overlay.setGeometry(self.table_view.viewport().rect())
+            self._interaction_overlay.show()
+            self._interaction_overlay.raise_()
+        else:
+            if self._interaction_overlay is not None:
+                self._interaction_overlay.hide()
+            self.filter_edit.setEnabled(True)
+            self.table_view.horizontalHeader().setEnabled(True)
+            self.table_view.setSelectionMode(
+                self._selection_mode_before_block or QAbstractItemView.ExtendedSelection
+            )
+            self._selection_mode_before_block = None
+
     def _drag_ids_for_index(self, index):
         if self._drag_role is None or not index.isValid():
             return ()
@@ -720,6 +760,21 @@ class Table(QWidget):
         return self._debouncer
 
     def eventFilter(self, obj, event):
+        if obj is self.table_view.viewport() and event.type() == QEvent.Resize:
+            if self._interaction_overlay is not None:
+                self._interaction_overlay.setGeometry(self.table_view.viewport().rect())
+        if (
+            self._interaction_blocked
+            and obj is self.table_view.viewport()
+            and event.type()
+            in {
+                QEvent.MouseButtonPress,
+                QEvent.MouseButtonRelease,
+                QEvent.MouseButtonDblClick,
+                QEvent.MouseMove,
+            }
+        ):
+            return True
         if (
             obj is self.filter_edit
             and event.type() == QEvent.MouseButtonPress

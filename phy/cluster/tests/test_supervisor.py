@@ -15,7 +15,7 @@ from pytest import fixture, raises
 
 from phy.gui import GUI
 from phy.gui.actions import _get_shortcut_string
-from phy.gui.qt import QHeaderView, Qt, qInstallMessageHandler
+from phy.gui.qt import QAbstractItemView, QHeaderView, Qt, qInstallMessageHandler
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 from phy.gui.widgets import Barrier
 from phy.utils.color import selected_cluster_color
@@ -419,7 +419,10 @@ def test_supervisor_merge_mode_lifecycle_restores_entry_state(supervisor):
     assert isinstance(supervisor.merge_view, MergeView)
     assert supervisor.merge_view.get_ids() == [10, 30, 20, 11]
     assert supervisor.merge_view.dock.get_widget('cancel_merge_mode') is not None
-    assert not supervisor.cluster_view.isEnabled()
+    assert supervisor.cluster_view.isEnabled()
+    assert supervisor.cluster_view._interaction_blocked
+    assert supervisor.cluster_view._interaction_overlay.isVisible()
+    assert 'Press V' in supervisor.cluster_view._interaction_overlay.text()
     assert events == []
 
     supervisor.similarity_view.filter('id < 20')
@@ -428,12 +431,35 @@ def test_supervisor_merge_mode_lifecycle_restores_entry_state(supervisor):
     assert supervisor.selection.state == entry
     assert supervisor.merge_view is None
     assert supervisor.cluster_view.isEnabled()
+    assert not supervisor.cluster_view._interaction_blocked
     assert supervisor._workflow_context() == context
     assert events == []
     unconnect(on_select)
 
 
-def test_supervisor_merge_candidate_interactions_preserve_colors(supervisor):
+def test_supervisor_merge_view_opens_below_cluster_and_restores_position(qtbot, supervisor):
+    _select(supervisor, [30], [20])
+
+    supervisor.toggle_merge_mode()
+    qtbot.wait(10)
+    cluster_rect = supervisor.cluster_view.dock.geometry()
+    merge_rect = supervisor.merge_view.dock.geometry()
+    assert merge_rect.top() >= cluster_rect.bottom()
+
+    supervisor.merge_view.dock.setFloating(True)
+    supervisor.merge_view.dock.move(70, 80)
+    qtbot.wait(10)
+    floating_position = supervisor.merge_view.dock.pos()
+
+    supervisor.toggle_merge_mode()
+    supervisor.toggle_merge_mode()
+    qtbot.wait(10)
+
+    assert supervisor.merge_view.dock.isFloating()
+    assert supervisor.merge_view.dock.pos() == floating_position
+
+
+def test_supervisor_merge_candidate_interactions_follow_visible_role_order(supervisor):
     _select(supervisor, [10, 30], [20])
     supervisor.toggle_merge_mode()
     candidate = supervisor.similarity_view.get_ids()[0]
@@ -456,24 +482,53 @@ def test_supervisor_merge_candidate_interactions_preserve_colors(supervisor):
     supervisor.remove_from_merge(30)
     assert supervisor.selected_merge == [10, 20, candidate]
     assert supervisor.selected_similar == [30]
-    assert supervisor.selected == [10, 30, 20, candidate]
-    assert events == []
+    assert supervisor.selected == [10, 20, candidate, 30]
+    assert events == [[10, 20, candidate, 30]]
+    events.clear()
 
     supervisor.reorder_merge((candidate,), 1)
     assert supervisor.selected_merge == [10, candidate, 20]
-    assert supervisor.selected == [10, 30, 20, candidate]
-    assert events == []
+    assert supervisor.selected == [10, candidate, 20, 30]
+    assert events == [[10, candidate, 20, 30]]
     assert supervisor.merge_view._selected_color_index(10) == 0
-    assert supervisor.similarity_view._selected_color_index(30) == 1
+    assert supervisor.merge_view._selected_color_index(candidate) == 1
     assert supervisor.merge_view._selected_color_index(20) == 2
-    assert supervisor.merge_view._selected_color_index(candidate) == 3
+    assert supervisor.similarity_view._selected_color_index(30) == 3
     unconnect(on_select)
+
+
+def test_merge_backspace_removes_similarity_tail_without_recoloring_merge(supervisor):
+    _select(supervisor, [10, 30], [20])
+    supervisor.toggle_merge_mode()
+    candidate = supervisor.similarity_view.get_ids()[0]
+    supervisor.similarity_view.select([candidate])
+    supervisor.block()
+    colors_before = {
+        cluster_id: supervisor.merge_view._selected_color_index(cluster_id)
+        for cluster_id in supervisor.selected_merge
+    }
+
+    supervisor.select_actions.unselect_similar()
+    supervisor.block()
+
+    assert supervisor.selected == supervisor.selected_merge
+    assert supervisor.selected_similar == []
+    assert {
+        cluster_id: supervisor.merge_view._selected_color_index(cluster_id)
+        for cluster_id in supervisor.selected_merge
+    } == colors_before
 
 
 def test_supervisor_merge_drag_drop_intents(supervisor):
     _select(supervisor, [10, 30], [20])
     supervisor.toggle_merge_mode()
     candidate = supervisor.similarity_view.get_ids()[0]
+    assert supervisor.merge_view.table_view.selectionMode() == QAbstractItemView.SingleSelection
+    movable = supervisor.merge_view._proxy_index_for_id(30)
+    supervisor.merge_view.table_view.setCurrentIndex(movable)
+    assert supervisor.merge_view._drag_ids_for_index(movable) == (30,)
+    reference = supervisor.merge_view._proxy_index_for_id(10)
+    assert supervisor.merge_view._drag_ids_for_index(reference) == ()
 
     supervisor.merge_view.emit_cluster_drop(supervisor.similarity_view, (candidate,), 1)
     assert supervisor.selected_merge == [10, candidate, 30, 20]
@@ -636,7 +691,7 @@ def test_failed_merge_preserves_complete_merge_workspace(monkeypatch, supervisor
 
     assert supervisor.selection.state is state
     assert supervisor.merge_view.get_ids() == rows
-    assert not supervisor.cluster_view.isEnabled()
+    assert supervisor.cluster_view._interaction_blocked
 
 
 def test_saving_gui_state_cancels_transient_merge_selection(supervisor):
@@ -936,6 +991,9 @@ def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
     shortcut = supervisor.select_actions.get('select_first_similar').shortcut()
     expected_shortcut = 'meta+space' if sys.platform == 'darwin' else 'ctrl+space'
     assert _get_shortcut_string(shortcut) == expected_shortcut
+    assert (
+        _get_shortcut_string(supervisor.select_actions.get('toggle_merge_mode').shortcut()) == 'v'
+    )
 
     with raises(ValueError, match='positive integer'):
         supervisor.select_first_similar(0)

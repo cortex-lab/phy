@@ -211,7 +211,7 @@ def test_enter_merge_mode_requires_cluster_selection():
         controller.enter_merge_mode()
 
 
-def test_merge_candidate_transfer_and_reorder_preserve_color_order():
+def test_merge_candidate_transfer_and_reorder_follow_visible_role_order():
     controller = CurationSelectionController(
         CurationSelectionState(cluster_ids=(1, 2), similar_ids=(3,), reference_id=1)
     )
@@ -223,17 +223,19 @@ def test_merge_candidate_transfer_and_reorder_preserve_color_order():
     change = controller.add_to_merge((4,))
     assert change.after.merge_ids == (1, 2, 3, 4)
     assert change.after.similar_ids == (5,)
+    assert change.after.presentation_order == (1, 2, 3, 4, 5)
     assert not change.presentation_changed
 
     change = controller.remove_from_merge((2,))
     assert change.after.merge_ids == (1, 3, 4)
     assert change.after.similar_ids == (5, 2)
-    assert not change.presentation_changed
+    assert change.after.presentation_order == (1, 3, 4, 5, 2)
+    assert change.presentation_changed
 
     change = controller.reorder_merge((4,), 1)
     assert change.after.merge_ids == (1, 4, 3)
-    assert change.after.presentation_order == (1, 2, 3, 4, 5)
-    assert not change.presentation_changed
+    assert change.after.presentation_order == (1, 4, 3, 5, 2)
+    assert change.presentation_changed
 
 
 def test_merge_candidate_guards_reference_and_duplicate_membership():

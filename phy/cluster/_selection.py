@@ -84,8 +84,8 @@ class CurationSelectionState:
     """The authoritative, immutable curation selection.
 
     ``presentation_order`` is the effective selection in the order delivered
-    to scientific views.  It is independent from the two role-specific orders
-    so a future role transfer can leave colors and redraw state untouched.
+    to scientific views. In Merge mode it is derived from the visible roles:
+    Merge View order first, followed by Similarity View selection order.
     """
 
     mode: WorkflowMode = WorkflowMode.NORMAL
@@ -127,7 +127,7 @@ class CurationSelectionState:
         )
         presentation_order = (
             default_presentation
-            if self.presentation_order is None
+            if self.presentation_order is None or self.mode is WorkflowMode.MERGE
             else _as_unique_ids(self.presentation_order)
         )
 
@@ -379,12 +379,10 @@ class CurationSelectionController:
         similar_ids = tuple(
             cluster_id for cluster_id in current.similar_ids if cluster_id not in new_ids
         )
-        presentation_order = _ordered_union(current.presentation_order, new_ids)
         after = CurationSelectionState(
             mode=WorkflowMode.MERGE,
             similar_ids=similar_ids,
             reference_id=current.reference_id,
-            presentation_order=presentation_order,
             merge=merge,
         )
         return self._apply(after)
@@ -406,13 +404,12 @@ class CurationSelectionController:
             mode=WorkflowMode.MERGE,
             similar_ids=_ordered_union(current.similar_ids, cluster_ids),
             reference_id=current.reference_id,
-            presentation_order=current.presentation_order,
             merge=merge,
         )
         return self._apply(after)
 
     def reorder_merge(self, cluster_ids, insertion):
-        """Move staged candidates to an insertion point without changing colors."""
+        """Move staged candidates to an insertion point."""
         self._require_merge_mode()
         cluster_ids = _as_unique_ids(cluster_ids)
         current = self._state
@@ -431,7 +428,6 @@ class CurationSelectionController:
             mode=WorkflowMode.MERGE,
             similar_ids=current.similar_ids,
             reference_id=current.reference_id,
-            presentation_order=current.presentation_order,
             merge=merge,
         )
         return self._apply(after)

@@ -420,7 +420,10 @@ class MergeView(Table):
             sort=None,
         )
         self.filter_edit.hide()
-        self.table_view.setSelectionMode(QAbstractItemView.NoSelection)
+        # A current row is required by QAbstractItemView to initiate a drag. The
+        # selection is local interaction state only; every Merge row remains part of
+        # the scientific selection projected through ``_selected_ids``.
+        self.table_view.setSelectionMode(QAbstractItemView.SingleSelection)
 
     def _on_row_clicked(self, index):
         """Rows are workspace members, not an independent selection."""
@@ -474,7 +477,7 @@ class ActionCreator:
         # Qt maps Meta to the physical Control key on macOS.
         'select_first_similar': 'meta+space' if sys.platform == 'darwin' else 'ctrl+space',
         'unselect_similar': 'backspace',
-        'toggle_merge_mode': 'c',
+        'toggle_merge_mode': 'v',
         'next_best': 'down',
         'previous_best': 'up',
         # Misc.
@@ -722,6 +725,7 @@ class Supervisor:
         self.gui = None
         self.merge_view = None
         self._merge_close_callback = None
+        self._merge_dock_state = None
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
         # This is populated alongside the existing TaskLogger-derived selection during the
@@ -1000,6 +1004,13 @@ class Supervisor:
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.merge_view)
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.similarity_view)
         self.gui.add_view(self.merge_view, position='left', closable=True)
+        if self._merge_dock_state is not None:
+            self.gui.restoreState(self._merge_dock_state['window'])
+            if self._merge_dock_state['floating']:
+                self.merge_view.dock.setFloating(True)
+                self.merge_view.dock.restoreGeometry(self._merge_dock_state['geometry'])
+        else:
+            self.gui.splitDockWidget(self.cluster_view.dock, self.merge_view.dock, Qt.Vertical)
         self.merge_view.dock.setAttribute(Qt.WA_DeleteOnClose)
         self.merge_view.dock.add_button(
             name='cancel_merge_mode',
@@ -1156,7 +1167,9 @@ class Supervisor:
             self.cluster_view._schedule_callback(callback, state)
 
     def _set_merge_mode_ui(self, active):
-        self.cluster_view.setEnabled(not active)
+        self.cluster_view._set_interaction_overlay(
+            'CLUSTER VIEW DISABLED IN MERGE MODE\nPress V to re-enable it.' if active else None
+        )
         if active:
             self.cluster_view.dock.set_status('MERGE MODE — Cluster View disabled')
         else:
@@ -1193,6 +1206,12 @@ class Supervisor:
     def _close_merge_view(self):
         view = self.merge_view
         self.merge_view = None
+        if view is not None and view in self.gui.views:
+            self._merge_dock_state = {
+                'window': self.gui.saveState(),
+                'floating': view.dock.isFloating(),
+                'geometry': view.dock.saveGeometry(),
+            }
         if view is not None:
             self._disconnect_merge_view_events(view)
         if view is not None and view in self.gui.views:
@@ -1809,7 +1828,7 @@ class Supervisor:
         return change.after
 
     def reorder_merge(self, cluster_ids, insertion, callback=None):
-        """Reorder staged candidates while preserving their color slots."""
+        """Reorder staged candidates and their scientific presentation order."""
         change = self.selection.reorder_merge(cluster_ids, insertion)
         self._apply_selection_change(change, callback=callback)
         return change.after
