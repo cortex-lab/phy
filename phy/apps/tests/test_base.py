@@ -534,18 +534,25 @@ def test_get_firing_rate_honors_get_spike_times_override():
 def test_recording_time_unit_updates_compatible_views(qtbot):
     controller = object.__new__(BaseController)
     controller.recording_time_unit = 's'
+    controller.recording_time_decimals = 2
     amplitude = AmplitudeView(amplitudes=lambda cluster_ids, load_all=False: None)
     firing_rate = FiringRateView(cluster_stat=lambda cluster_id: Bunch(data=np.array([0.0])))
 
     class GUI:
         views = [amplitude, firing_rate]
 
-    controller._set_recording_time_unit('hours', GUI())
+    with (
+        patch.object(amplitude.canvas, 'update') as amplitude_update,
+        patch.object(firing_rate.canvas, 'update') as firing_rate_update,
+    ):
+        controller._set_recording_time_unit('hours', GUI())
 
     assert controller.recording_time_unit == 'h'
     assert amplitude.recording_time_unit == firing_rate.recording_time_unit == 'h'
     assert all(label.endswith(' h') for label in amplitude.canvas.axes.locator.xtext)
     assert all(label.endswith(' h') for label in firing_rate.canvas.axes.locator.xtext)
+    amplitude_update.assert_called()
+    firing_rate_update.assert_called()
 
     amplitude.close()
     firing_rate.close()
@@ -554,6 +561,7 @@ def test_recording_time_unit_updates_compatible_views(qtbot):
 def test_recording_time_unit_menu(qtbot, tempdir):
     controller = object.__new__(BaseController)
     controller.recording_time_unit = 's'
+    controller.recording_time_decimals = 2
     gui = GUI(name='RecordingTimeTest', config_dir=tempdir)
     controller.create_misc_actions(gui)
 
@@ -569,6 +577,12 @@ def test_recording_time_unit_menu(qtbot, tempdir):
     assert hours.isChecked()
     assert not seconds.isChecked()
     assert not minutes.isChecked()
+
+    four_decimals = gui.view_actions.get('4 decimals')
+    four_decimals.trigger()
+    assert controller.recording_time_decimals == 4
+    assert four_decimals.isChecked()
+    assert not gui.view_actions.get('2 decimals').isChecked()
     gui.close()
 
 

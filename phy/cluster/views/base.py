@@ -27,11 +27,15 @@ class RecordingTimeAxisMixin:
     """Mixin for views whose x axis represents elapsed recording time."""
 
     recording_time_unit = 's'
+    recording_time_decimals = 2
 
-    def _set_recording_time_unit(self, unit):
-        """Set the displayed unit for the elapsed recording-time x axis."""
+    def _set_recording_time_format(self, unit, decimals):
+        """Set the displayed format for the elapsed recording-time x axis."""
         self.recording_time_unit = unit
-        self.canvas.axes.set_x_formatter(lambda values: format_time_ticks(values, unit=unit))
+        self.recording_time_decimals = decimals
+        self.canvas.axes.set_x_formatter(
+            lambda values: format_time_ticks(values, unit=unit, decimals=decimals)
+        )
 
 
 # -----------------------------------------------------------------------------

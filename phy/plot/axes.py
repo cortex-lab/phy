@@ -25,7 +25,7 @@ def format_number(value):
     return f'{value:,.9g}'
 
 
-def format_time_ticks(values, unit='s'):
+def format_time_ticks(values, unit='s', decimals=2):
     """Format elapsed-time ticks expressed internally in seconds.
 
     The coordinates are deliberately left in seconds: only their displayed
@@ -35,8 +35,18 @@ def format_time_ticks(values, unit='s'):
     factors = {'s': 1, 'min': 60, 'h': 3600}
     if unit not in factors:
         raise ValueError(f'Unknown time unit: {unit!r}')
+    if not isinstance(decimals, int) or not 0 <= decimals <= 6:
+        raise ValueError('Time tick decimals must be an integer between 0 and 6.')
     factor = factors[unit]
-    return [f'{format_number(value / factor)} {unit}' for value in values]
+    labels = []
+    for value in values:
+        number = f'{value / factor:,.{decimals}f}'
+        if decimals:
+            number = number.rstrip('0').rstrip('.')
+        if number in ('-0', ''):
+            number = '0'
+        labels.append(f'{number} {unit}')
+    return labels
 
 
 class AxisLocator:
@@ -199,6 +209,7 @@ class Axes:
         self.locator.set_view_bounds(self._attached.panzoom.get_range() if self._attached else NDC)
         if self._attached:
             self.update_visuals()
+            self._attached.update()
 
     def _create_visuals(self):
         """Create the line and text visuals on the x and/or y axes."""

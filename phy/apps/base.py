@@ -1038,6 +1038,7 @@ class BaseController:
 
     # Unit used to display elapsed recording time in compatible views.
     recording_time_unit = 's'
+    recording_time_decimals = 2
 
     # Controller attributes to load/save in the GUI state.
     _state_params = (
@@ -1048,6 +1049,7 @@ class BaseController:
         'n_spikes_correlograms_total',
         'raw_data_filter_name',
         'recording_time_unit',
+        'recording_time_decimals',
     )
 
     # Methods that are cached in memory (and on disk) for performance.
@@ -2162,6 +2164,31 @@ class BaseController:
             self._recording_time_action_group.addAction(action)
             self._recording_time_actions[unit] = action
 
+        self._recording_time_decimal_actions = {}
+        self._recording_time_decimal_action_group = QActionGroup(gui)
+        self._recording_time_decimal_action_group.setExclusive(True)
+
+        for decimals in range(5):
+
+            def set_recording_time_decimals(checked, decimals=decimals):
+                """Set the maximum decimal places used in recording-time labels."""
+                if checked:
+                    self._set_recording_time_decimals(decimals, gui)
+
+            label = f'{decimals} decimal' if decimals == 1 else f'{decimals} decimals'
+            gui.view_actions.add(
+                set_recording_time_decimals,
+                name=label,
+                alias=f'time_decimals_{decimals}',
+                submenu='Recording time decimals',
+                checkable=True,
+                checked=self.recording_time_decimals == decimals,
+                show_shortcut=False,
+            )
+            action = gui.view_actions.get(label)
+            self._recording_time_decimal_action_group.addAction(action)
+            self._recording_time_decimal_actions[decimals] = action
+
         # Toggle spike reorder.
         @gui.view_actions.add(
             shortcut=self.default_shortcuts['toggle_spike_reorder'],
@@ -2215,7 +2242,18 @@ class BaseController:
             action.setChecked(action_unit == unit)
         for view in gui.views:
             if isinstance(view, RecordingTimeAxisMixin):
-                view._set_recording_time_unit(unit)
+                view._set_recording_time_format(unit, self.recording_time_decimals)
+
+    def _set_recording_time_decimals(self, decimals, gui):
+        """Set the maximum decimal places in elapsed recording-time labels."""
+        if not isinstance(decimals, int) or not 0 <= decimals <= 4:
+            raise ValueError('Recording time decimals must be an integer between 0 and 4.')
+        self.recording_time_decimals = decimals
+        for value, action in getattr(self, '_recording_time_decimal_actions', {}).items():
+            action.setChecked(value == decimals)
+        for view in gui.views:
+            if isinstance(view, RecordingTimeAxisMixin):
+                view._set_recording_time_format(self.recording_time_unit, decimals)
 
     def _add_default_color_schemes(self, view):
         """Add the default color schemes to every view."""
@@ -2298,7 +2336,9 @@ class BaseController:
 
             if isinstance(view, ManualClusteringView):
                 if isinstance(view, RecordingTimeAxisMixin):
-                    view._set_recording_time_unit(self.recording_time_unit)
+                    view._set_recording_time_format(
+                        self.recording_time_unit, self.recording_time_decimals
+                    )
 
                 # Add auto update button.
                 view.dock.add_button(

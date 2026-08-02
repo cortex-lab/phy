@@ -121,7 +121,7 @@ def test_firing_rate_view_formats_recording_time_axis(qtbot):
         )
     )
     v.on_select(cluster_ids=[0])
-    v._set_recording_time_unit('h')
+    v._set_recording_time_format('h', 2)
 
     assert v.recording_time_unit == 'h'
     assert all(label.endswith(' h') for label in v.canvas.axes.locator.xtext)

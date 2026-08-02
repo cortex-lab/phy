@@ -40,6 +40,7 @@ def test_axes_1(qtbot, canvas_pz):
 def test_time_tick_formatting():
     assert format_time_ticks([0, 1000, 10000]) == ['0 s', '1,000 s', '10,000 s']
     assert format_time_ticks([0, 3600], unit='h') == ['0 h', '1 h']
+    assert format_time_ticks([4000, 4800], unit='h', decimals=2) == ['1.11 h', '1.33 h']
 
 
 def test_axes_x_formatter_survives_reset(qtbot, canvas_pz):
