@@ -29,3 +29,10 @@ both Merge View documents completely. Merge, selection, undo/redo, saved cluster
 assignments, colors, and cross-view consistency are safety-sensitive; do not
 declare the feature complete without the regression coverage and verification
 listed in the architecture proposal.
+
+## Amplitude-threshold splitting
+
+The [amplitude-threshold splitting implementation plan](amplitude-threshold-splitting.md)
+defines the user interaction, safety invariants, controller/view boundaries,
+delegable work packages, and verification required for amplitude-based split
+previews in Amplitude View and Waveform View.
