@@ -584,8 +584,8 @@ class GUI(QMainWindow):
         """Set the GUI name."""
         if name is None:
             name = self.__class__.__name__
-        title = name if not subtitle else f'{name} - {subtitle}'
-        self.setWindowTitle(title)
+        self._window_title = name if not subtitle else f'{name} - {subtitle}'
+        self._set_dirty(False)
         self.setObjectName(name)
         # Set the name in the GUI.
         self.name = name
