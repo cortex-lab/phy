@@ -824,14 +824,15 @@ def test_supervisor_select_first_similar(qtbot, supervisor, gui):
     assert supervisor.selected_similar == navigable_ids[:2]
     assert supervisor.n_similar_clusters_to_select == 2
 
-    # The shortcut variant uses the saved preference and replaces the similar selection.
+    # The shortcut variant uses the saved preference and advances past the current selection.
     similarity_view.sort_by('id', 'desc')
     navigable_ids = similarity_view.get_navigable_ids()
+    previous_last = navigable_ids.index(similarity_view.get_selected_ids()[-1])
     control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
     qtbot.keyClick(gui, Qt.Key_Space, control_modifier)
     supervisor.block()
     assert supervisor.selected_clusters == [30]
-    assert supervisor.selected_similar == navigable_ids[:2]
+    assert supervisor.selected_similar == navigable_ids[previous_last + 1 : previous_last + 3]
 
     # Selecting more rows than are available is safe.
     supervisor.select_actions.select_n_similar(100)

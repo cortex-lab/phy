@@ -1791,13 +1791,19 @@ class Supervisor:
         return change.after
 
     def select_first_similar(self, n=None, callback=None):
-        """Select the first N eligible clusters currently shown in the similarity view."""
+        """Select N eligible similar clusters, advancing after the current selection."""
+        select_from_start = n is not None
         if n is not None:
             self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(n)
         n = self.n_similar_clusters_to_select
 
         def select(cluster_ids):
-            self.similarity_view.select(cluster_ids[:n], callback=callback)
+            start = 0
+            if not select_from_start:
+                selected = self.similarity_view.get_selected_ids()
+                if selected and selected[-1] in cluster_ids:
+                    start = cluster_ids.index(selected[-1]) + 1
+            self.similarity_view.select(cluster_ids[start : start + n], callback=callback)
 
         self.similarity_view.get_navigable_ids(callback=select)
 

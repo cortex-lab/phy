@@ -10107,7 +10107,7 @@ Select a list of clusters.
 
 **`Supervisor.select_first_similar(self, n=None, callback=None)`**
 
-Select the first N eligible clusters currently shown in the similarity view.
+Select N eligible similar clusters, advancing after the current selection.
 
 ---
 

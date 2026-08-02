@@ -21,8 +21,9 @@ behavior they verify rather than listed separately.
   pre-merge workspace.
 
 - Select the first eligible clusters in the Similarity View with
-  `Control+Space`. The default is 15 clusters; **Select > Select N Similar**
-  changes the number and remembers it across sessions.
+  `Control+Space`; repeat the shortcut to select successive batches. The
+  default is 15 clusters; **Select > Select N Similar** changes the number
+  and remembers it across sessions.
 - Skip clusters labeled `noise` or `mua` during wizard navigation and batch
   similarity selection. **Select > Skip Noise and MUA** controls the behavior
   and remembers the preference across sessions.
