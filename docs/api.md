@@ -5805,6 +5805,15 @@ Close the view.
 
 ---
 
+#### AmplitudeView.cluster_color_index
+
+
+**`AmplitudeView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### AmplitudeView.decrease_marker_size
 
 
@@ -6204,6 +6213,15 @@ Change the bindings.
 **`ClusterScatterView.close(self)`**
 
 Close the view.
+
+---
+
+#### ClusterScatterView.cluster_color_index
+
+
+**`ClusterScatterView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -7289,6 +7307,15 @@ Close the view.
 
 ---
 
+#### CorrelogramView.cluster_color_index
+
+
+**`CorrelogramView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### CorrelogramView.decrease
 
 
@@ -7545,6 +7572,15 @@ Reset the current channels.
 **`FeatureView.close(self)`**
 
 Close the view.
+
+---
+
+#### FeatureView.cluster_color_index
+
+
+**`FeatureView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -7820,6 +7856,15 @@ Close the view.
 
 ---
 
+#### FiringRateView.cluster_color_index
+
+
+**`FiringRateView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### FiringRateView.decrease
 
 
@@ -8063,6 +8108,15 @@ Close the view.
 
 ---
 
+#### HistogramView.cluster_color_index
+
+
+**`HistogramView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### HistogramView.decrease
 
 
@@ -8296,6 +8350,15 @@ Attach the view to the GUI.
 **`ISIView.close(self)`**
 
 Close the view.
+
+---
+
+#### ISIView.cluster_color_index
+
+
+**`ISIView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -8559,6 +8622,15 @@ Close the view.
 
 ---
 
+#### ManualClusteringView.cluster_color_index
+
+
+**`ManualClusteringView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### ManualClusteringView.get_clusters_data
 
 
@@ -8718,6 +8790,15 @@ Attach the view to the GUI.
 **`ProbeView.close(self)`**
 
 Close the view.
+
+---
+
+#### ProbeView.cluster_color_index
+
+
+**`ProbeView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -8900,6 +8981,15 @@ Attach the view to the GUI.
 **`RasterView.close(self)`**
 
 Close the view.
+
+---
+
+#### RasterView.cluster_color_index
+
+
+**`RasterView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -9196,6 +9286,15 @@ This view displays a scatter plot for all selected clusters.
 **`ScatterView.close(self)`**
 
 Close the view.
+
+---
+
+#### ScatterView.cluster_color_index
+
+
+**`ScatterView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -10200,6 +10299,15 @@ Selected clusters in the similarity view only.
 
 ---
 
+#### Supervisor.selection_color_order
+
+
+**`Supervisor.selection_color_order`**
+
+Cluster IDs in their stable selected-color slots.
+
+---
+
 #### Supervisor.shown_cluster_ids
 
 
@@ -10272,6 +10380,15 @@ def on_view_attached(gui, view):
 **`TemplateView.close(self)`**
 
 Close the view.
+
+---
+
+#### TemplateView.cluster_color_index
+
+
+**`TemplateView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -10591,6 +10708,15 @@ Attach the view to the GUI.
 **`TraceImageView.close(self)`**
 
 Close the view.
+
+---
+
+#### TraceImageView.cluster_color_index
+
+
+**`TraceImageView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -11089,6 +11215,15 @@ Attach the view to the GUI.
 **`TraceView.close(self)`**
 
 Close the view.
+
+---
+
+#### TraceView.cluster_color_index
+
+
+**`TraceView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -11611,6 +11746,15 @@ Attach the view to the GUI.
 **`WaveformView.close(self)`**
 
 Close the view.
+
+---
+
+#### WaveformView.cluster_color_index
+
+
+**`WaveformView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
