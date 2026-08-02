@@ -11,6 +11,11 @@ been included in a stable release. The current entries cover all user-visible
 changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
+### Documentation
+
+- Documented uv-first installation of exact previous phy releases in separate
+  environments, including how to intentionally replace a tool installation.
+
 ### Added
 
 - Stage and order manual merge candidates in the new **Merge View**. Press `V`
