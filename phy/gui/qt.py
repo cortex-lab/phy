@@ -44,6 +44,7 @@ from PyQt5.QtCore import (
     QEvent,
     QCoreApplication,
     QModelIndex,
+    QMimeData,
     QItemSelectionModel,
     QSortFilterProxyModel,
     qInstallMessageHandler,
@@ -57,6 +58,7 @@ from PyQt5.QtGui import (  # noqa
     QMouseEvent,
     QGuiApplication,
     QFontDatabase,
+    QDrag,
     QWindow,
     QOpenGLWindow as _QOpenGLWindow,
 )

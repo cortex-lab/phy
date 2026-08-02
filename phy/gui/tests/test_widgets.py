@@ -10,7 +10,7 @@ from functools import partial
 from phylib.utils import connect, unconnect
 from pytest import fixture, mark
 
-from ..qt import QHeaderView, Qt
+from ..qt import QHeaderView, QMimeData, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
@@ -58,6 +58,38 @@ def table(qtbot):
 # ------------------------------------------------------------------------------
 # Test key value widget
 # ------------------------------------------------------------------------------
+
+
+def test_table_cluster_drag_drop_policy_and_payload(table, qtbot):
+    target = Table(columns=['id'], data=[{'id': 10}, {'id': 11}])
+    qtbot.addWidget(target)
+    table.configure_cluster_drag_drop('similarity', drag_selected_rows=True)
+    target.configure_cluster_drag_drop('merge', accepted_roles=('similarity',))
+    table.set_selected_ids((1, 2))
+
+    assert table._drag_ids_for_index(table._proxy_index_for_id(1)) == (1, 2)
+    assert table._drag_ids_for_index(table._proxy_index_for_id(3)) == (3,)
+
+    mime = QMimeData()
+    mime.setData('application/x-phy-cluster-ids', b'[1, 2, 2]')
+    assert target.cluster_ids_from_mime(mime) == (1, 2)
+    assert target.accepts_cluster_drop(table, (1, 2))
+
+    drops = []
+
+    @connect(event='cluster_drop', sender=target)
+    def on_cluster_drop(sender, payload):
+        drops.append(payload)
+
+    target.emit_cluster_drop(table, (1, 2), 1)
+    assert drops == [{'source': table, 'cluster_ids': (1, 2), 'insertion': 1}]
+    unconnect(on_cluster_drop)
+
+    invalid = QMimeData()
+    invalid.setData('application/x-phy-cluster-ids', b'[1, "spikes"]')
+    assert target.cluster_ids_from_mime(invalid) == ()
+    table.configure_cluster_drag_drop(None)
+    assert not table.table_view.dragEnabled()
 
 
 def test_key_value_1(qtbot):

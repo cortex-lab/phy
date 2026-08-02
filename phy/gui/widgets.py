@@ -34,12 +34,14 @@ from .qt import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
+    QDrag,
     QEvent,
     QGridLayout,
     QHeaderView,
     QItemSelectionModel,
     QLabel,
     QLineEdit,
+    QMimeData,
     QModelIndex,
     QObject,
     QPalette,
@@ -60,6 +62,7 @@ from .qt import (
 
 logger = logging.getLogger(__name__)
 _NO_VALUE = object()
+_CLUSTER_IDS_MIME = 'application/x-phy-cluster-ids'
 
 
 # -----------------------------------------------------------------------------
@@ -519,6 +522,45 @@ def _install_table_filter_focus_watcher():
         app.installEventFilter(watcher)
 
 
+class _TableView(QTableView):
+    """QTableView adapter for cluster-ID-only drag-and-drop intents."""
+
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._owner = owner
+
+    def startDrag(self, supported_actions):
+        ids = self._owner._drag_ids_for_index(self.currentIndex())
+        if not ids:
+            return
+        mime = QMimeData()
+        mime.setData(_CLUSTER_IDS_MIME, json.dumps(ids).encode('utf8'))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+        drag.exec_(Qt.MoveAction)
+
+    def dragEnterEvent(self, event):
+        if self._owner._accept_cluster_drop_event(event):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        self.dragEnterEvent(event)
+
+    def dropEvent(self, event):
+        source = event.source()
+        source_table = source._owner if isinstance(source, _TableView) else None
+        ids = self._owner.cluster_ids_from_mime(event.mimeData())
+        if source_table is None or not self._owner.accepts_cluster_drop(source_table, ids):
+            event.ignore()
+            return
+        index = self.indexAt(event.pos())
+        insertion = index.row() if index.isValid() else len(self._owner._visible_ids())
+        self._owner.emit_cluster_drop(source_table, ids, insertion)
+        event.acceptProposedAction()
+
+
 class Table(QWidget):
     """A sortable native Qt table with a compatibility API for legacy callers."""
 
@@ -557,6 +599,9 @@ class Table(QWidget):
         self._column_widths_fitted = False
         self._row_height_fitted = False
         self.skip_masked = bool(skip_masked)
+        self._drag_role = None
+        self._accepted_drag_roles = set()
+        self._drag_selected_rows = True
         self._group_colors = {
             'good': QColor('#86D16D'),
             'mua': QColor('#afafaf'),
@@ -572,7 +617,7 @@ class Table(QWidget):
         self.filter_edit.returnPressed.connect(self._apply_filter_from_editor)
         self.filter_edit.installEventFilter(self)
 
-        self.table_view = QTableView(self)
+        self.table_view = _TableView(self)
         self.table_view.viewport().installEventFilter(self)
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -600,6 +645,75 @@ class Table(QWidget):
 
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
         _install_table_filter_focus_watcher()
+
+    def configure_cluster_drag_drop(
+        self,
+        role,
+        *,
+        accepted_roles=(),
+        drag_selected_rows=True,
+    ):
+        """Enable reusable cluster-ID drag/drop and declare accepted source roles."""
+        self._drag_role = role
+        self._accepted_drag_roles = set(accepted_roles)
+        self._drag_selected_rows = bool(drag_selected_rows)
+        enabled = role is not None
+        self.table_view.setDragEnabled(enabled)
+        self.table_view.setAcceptDrops(bool(self._accepted_drag_roles))
+        self.table_view.viewport().setAcceptDrops(bool(self._accepted_drag_roles))
+        self.table_view.setDropIndicatorShown(bool(self._accepted_drag_roles))
+        self.table_view.setDefaultDropAction(Qt.MoveAction)
+        self.table_view.setDragDropMode(
+            QAbstractItemView.DragDrop if enabled else QAbstractItemView.NoDragDrop
+        )
+
+    def _drag_ids_for_index(self, index):
+        if self._drag_role is None or not index.isValid():
+            return ()
+        visible = self._visible_ids()
+        if not 0 <= index.row() < len(visible):
+            return ()
+        clicked = visible[index.row()]
+        if self._drag_selected_rows and clicked in self._selected_ids:
+            return tuple(self._selected_visible_ids())
+        return (clicked,)
+
+    @staticmethod
+    def cluster_ids_from_mime(mime):
+        """Decode and validate a cluster-ID-only MIME payload."""
+        if mime is None or not mime.hasFormat(_CLUSTER_IDS_MIME):
+            return ()
+        try:
+            ids = json.loads(bytes(mime.data(_CLUSTER_IDS_MIME)).decode('utf8'))
+        except (TypeError, ValueError, UnicodeDecodeError):
+            return ()
+        if not isinstance(ids, list) or any(not _is_integer(cluster_id) for cluster_id in ids):
+            return ()
+        return tuple(_uniq(ids))
+
+    def accepts_cluster_drop(self, source, cluster_ids):
+        """Return whether a source table and payload satisfy this table's policy."""
+        return bool(
+            cluster_ids and source is not None and source._drag_role in self._accepted_drag_roles
+        )
+
+    def _accept_cluster_drop_event(self, event):
+        source = event.source()
+        source_table = source._owner if isinstance(source, _TableView) else None
+        ids = self.cluster_ids_from_mime(event.mimeData())
+        return self.accepts_cluster_drop(source_table, ids)
+
+    def emit_cluster_drop(self, source, cluster_ids, insertion):
+        """Emit one domain-neutral transfer/reorder intent."""
+        emit(
+            'cluster_drop',
+            self,
+            {
+                'source': source,
+                'cluster_ids': tuple(cluster_ids),
+                'insertion': int(insertion),
+            },
+        )
 
     @property
     def debouncer(self):
