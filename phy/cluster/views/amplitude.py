@@ -9,11 +9,11 @@ import logging
 
 import numpy as np
 from phylib.utils._types import _as_array
-from phylib.utils.event import emit
+from phylib.utils.event import connect, emit, unconnect
 
 from phy.cluster._utils import RotatingProperty
 from phy.plot.transform import NDC, Range, Rotate, Scale, Translate
-from phy.plot.visuals import HistogramVisual, PatchVisual, ScatterVisual
+from phy.plot.visuals import HistogramVisual, LineVisual, PatchVisual, ScatterVisual
 from phy.utils.color import add_alpha, selected_cluster_color
 
 from .base import LassoMixin, ManualClusteringView, MarkerSizeMixin, RecordingTimeAxisMixin
@@ -51,6 +51,7 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
     # Alpha channel of the markers in the scatter plot.
     marker_alpha = 1.0
     time_range_color = (1.0, 1.0, 0.0, 0.25)
+    split_preview_color = (1.0, 0.4, 0.1, 1.0)
 
     # Number of bins in the histogram.
     n_bins = 100
@@ -73,9 +74,17 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
         'select_time': 'alt+click',
     }
 
-    def __init__(self, amplitudes=None, amplitudes_type=None, duration=None):
+    def __init__(
+        self, amplitudes=None, amplitudes_type=None, duration=None, split_is_eligible=None
+    ):
         super().__init__()
         self.state_attrs += ('amplitudes_type',)
+
+        # The split preview is deliberately transient and is not part of view state.
+        self.split_threshold = None
+        self._split_is_eligible = split_is_eligible
+        self._split_threshold_dragging = False
+        self._displayed_bunchs = ()
 
         self.canvas.enable_axes()
         self.canvas.enable_lasso()
@@ -136,6 +145,11 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
             'after_transforms',
         )
         self.canvas.add_visual(self.patch_visual)
+
+        # Horizontal amplitude split threshold, expressed in amplitude data coordinates.
+        self.split_threshold_visual = LineVisual()
+        self.split_threshold_visual.hide()
+        self.canvas.add_visual(self.split_threshold_visual)
 
         # Scatter plot.
         self.visual = ScatterVisual()
@@ -203,9 +217,40 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
         )
 
         # Scatter plot.
+        color = bunch.color
+        if bunch.cluster_id is not None and self.split_threshold is not None:
+            color = np.tile(np.asarray(bunch.color), (len(bunch.amplitudes), 1))
+            below = np.isfinite(bunch.amplitudes) & (bunch.amplitudes < self.split_threshold)
+            color[below] = self.split_preview_color
         self.visual.add_batch_data(
-            pos=bunch.pos, color=bunch.color, size=ms, data_bounds=self.data_bounds
+            pos=bunch.pos, color=color, size=ms, data_bounds=self.data_bounds
         )
+
+    def _update_split_threshold_visual(self):
+        if self.split_threshold is None or not hasattr(self, 'data_bounds'):
+            self.split_threshold_visual.hide()
+            return
+        xmin, _, xmax, _ = self.data_bounds
+        y = self.split_threshold
+        self.split_threshold_visual.set_data(
+            pos=np.array([[xmin, y, xmax, y]]),
+            color=self.split_preview_color,
+            data_bounds=self.data_bounds,
+        )
+        self.split_threshold_visual.show()
+
+    def _replot_displayed_amplitudes(self):
+        """Recolor the already loaded amplitude sample without loading data."""
+        if not self._displayed_bunchs:
+            self._update_split_threshold_visual()
+            self.canvas.update()
+            return
+        self.visual.reset_batch()
+        for bunch in self._displayed_bunchs:
+            self._plot_cluster(bunch)
+        self.canvas.update_visual(self.visual)
+        self._update_split_threshold_visual()
+        self.canvas.update()
 
     def get_clusters_data(self, load_all=None):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
@@ -223,6 +268,9 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
             spike_times = _as_array(bunch.spike_times)
             amplitudes = _as_array(bunch.amplitudes)
             assert spike_ids.shape == spike_times.shape == amplitudes.shape
+            bunch.spike_ids = spike_ids
+            bunch.spike_times = spike_times
+            bunch.amplitudes = amplitudes
             # Ensure that bunch.pos exists, as it used by the LassoMixin.
             bunch.pos = np.c_[spike_times, amplitudes]
             assert bunch.pos.ndim == 2
@@ -244,6 +292,7 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
             return
         self.data_bounds = self._get_data_bounds(bunchs)
         bunchs = self._add_histograms(bunchs)
+        self._displayed_bunchs = tuple(bunchs)
         # Use the same scale for all histograms.
         self._ylim = max(bunch.histogram.max() for bunch in bunchs) if bunchs else 1.0
 
@@ -253,6 +302,7 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
             self._plot_cluster(bunch)
         self.canvas.update_visual(self.visual)
         self.canvas.update_visual(self.hist_visual)
+        self._update_split_threshold_visual()
 
         self._update_axes()
         self.canvas.update()
@@ -281,6 +331,17 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
 
         self.actions.add(self.next_amplitudes_type, set_busy=True)
         self.actions.add(self.previous_amplitudes_type, set_busy=True)
+        self.actions.add(self.clear_amplitude_split_threshold, show_shortcut=False)
+
+        @connect(event='lasso_updated', sender=self.canvas)
+        def on_lasso_updated(sender, polygon):
+            if len(polygon):
+                self.clear_amplitude_split_threshold()
+
+        @connect(event='close_view', sender=self)
+        def on_close_view(view, gui):
+            unconnect(on_lasso_updated)
+            unconnect(on_close_view)
 
     @property
     def status(self):
@@ -292,23 +353,138 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
 
     @amplitudes_type.setter
     def amplitudes_type(self, value):
+        if hasattr(self, 'split_threshold') and value != self.amplitudes_types.current:
+            self.clear_amplitude_split_threshold()
         self.amplitudes_types.set(value)
 
     def next_amplitudes_type(self):
         """Switch to the next amplitudes type."""
+        self.clear_amplitude_split_threshold()
         self.amplitudes_types.next()
         logger.debug('Switch to amplitudes type: %s.', self.amplitudes_types.current)
         self.plot()
 
     def previous_amplitudes_type(self):
         """Switch to the previous amplitudes type."""
+        self.clear_amplitude_split_threshold()
         self.amplitudes_types.previous()
         logger.debug('Switch to amplitudes type: %s.', self.amplitudes_types.current)
         self.plot()
 
     def on_mouse_click(self, e):
         """Select a time from the amplitude view to display in the trace view."""
-        if 'Alt' in e.modifiers:
+        if 'Control' in e.modifiers and e.button == 'Right':
+            self.clear_split_selection()
+        elif 'Alt' in e.modifiers and e.button == 'Left':
             mouse_pos = self.canvas.panzoom.window_to_ndc(e.pos)
             time = Range(NDC, self.data_bounds).apply(mouse_pos)[0][0]
             emit('select_time', self, time)
+
+    def _can_set_split_threshold(self):
+        eligible = len(self.cluster_ids) == 1
+        if eligible and self._split_is_eligible is not None:
+            eligible = bool(self._split_is_eligible())
+        if not eligible:
+            self._show_split_status(
+                'Amplitude threshold splitting requires exactly one selected cluster '
+                'and inactive Merge mode.'
+            )
+        return eligible
+
+    def _show_split_status(self, message):
+        logger.warning(message)
+        if hasattr(self, 'dock'):
+            self.dock.set_status(message)
+
+    def _threshold_from_window_pos(self, pos):
+        mouse_pos = self.canvas.panzoom.window_to_ndc(pos)
+        return float(Range(NDC, self.data_bounds).apply(mouse_pos)[0][1])
+
+    def _set_split_threshold_from_pos(self, pos):
+        self.split_threshold = self._threshold_from_window_pos(pos)
+        self.activate_split_selection()
+        self._replot_displayed_amplitudes()
+        emit(
+            'amplitude_split_preview_changed',
+            self,
+            cluster_id=self.cluster_ids[0],
+            amplitudes_type=self.amplitudes_type,
+            threshold=self.split_threshold,
+        )
+
+    def on_mouse_press(self, e):
+        if e.button != 'Right' or 'Alt' not in e.modifiers or not self._can_set_split_threshold():
+            return
+        self.canvas.lasso.clear()
+        self._split_threshold_dragging = True
+        self._set_split_threshold_from_pos(e.pos)
+
+    def on_mouse_move(self, e):
+        if not self._split_threshold_dragging:
+            return
+        if e.button != 'Right' or 'Alt' not in (e.mouse_press_modifiers or ()):
+            return
+        self._set_split_threshold_from_pos(e.pos)
+
+    def on_mouse_release(self, e):
+        if not self._split_threshold_dragging:
+            return
+        self._split_threshold_dragging = False
+        if e.button == 'Right' and 'Alt' in e.modifiers:
+            self._set_split_threshold_from_pos(e.pos)
+
+    def clear_amplitude_split_threshold(self):
+        """Clear the amplitude split threshold."""
+        if self.split_threshold is None:
+            return
+        cluster_id = self.cluster_ids[0] if len(self.cluster_ids) == 1 else None
+        self.split_threshold = None
+        self._split_threshold_dragging = False
+        self._replot_displayed_amplitudes()
+        emit(
+            'amplitude_split_preview_changed',
+            self,
+            cluster_id=cluster_id,
+            amplitudes_type=self.amplitudes_type,
+            threshold=None,
+        )
+
+    def clear_split_selection(self):
+        super().clear_split_selection()
+        self.clear_amplitude_split_threshold()
+
+    def on_select(self, cluster_ids=None, **kwargs):
+        self.clear_amplitude_split_threshold()
+        super().on_select(cluster_ids=cluster_ids, **kwargs)
+
+    def on_cluster(self, up):
+        self.clear_amplitude_split_threshold()
+
+    def on_request_split(self, sender=None):
+        if self.split_threshold is None:
+            return super().on_request_split(sender=sender)
+        if len(self.cluster_ids) != 1:
+            return np.array([], dtype=np.int64)
+
+        bunchs = self.get_clusters_data(load_all=True) or ()
+        if len(bunchs) != 1:
+            self._show_split_status('Amplitude threshold split has no eligible spikes.')
+            return np.array([], dtype=np.int64)
+        bunch = bunchs[0]
+        spike_ids = _as_array(bunch.spike_ids)
+        amplitudes = _as_array(bunch.amplitudes)
+        selected = np.isfinite(amplitudes) & (amplitudes < self.split_threshold)
+        n_selected = int(selected.sum())
+        if n_selected == 0:
+            self._show_split_status(
+                'Amplitude threshold split rejected: no spikes are below the threshold.'
+            )
+            return np.array([], dtype=np.int64)
+        if n_selected == len(spike_ids):
+            self._show_split_status(
+                'Amplitude threshold split rejected: all spikes are below the threshold.'
+            )
+            return np.array([], dtype=np.int64)
+        out = np.unique(spike_ids[selected]).astype(np.int64, copy=False)
+        self.clear_split_selection()
+        return out
