@@ -1192,8 +1192,8 @@ def test_supervisor_edge_cases(supervisor):
 
 def test_supervisor_save(qtbot, gui, supervisor):
     assert not gui.windowTitle().startswith('* ')
-    supervisor.label('group', 'noise', [30])
     assert not gui.file_actions.get('save').isEnabled()
+    supervisor.label('group', 'noise', [30])
     supervisor.block()
     assert gui.windowTitle().startswith('* ')
     assert gui.file_actions.get('save').isEnabled()
