@@ -68,10 +68,13 @@ You can move up and down in the **cluster view** with the `Up` and `Down` arrows
 
 You can move up and down in the **similarity view** with the `Space` and `Shift-space` arrows. The cluster selected in the similarity view is called the **similar cluster**. The idea is to go through every "best cluster" in the cluster view, and review the "similar clusters" in the similarity view (sorted by decreasing similarity with the best cluster).
 
-In Normal mode, this wizard navigation replaces the current similar cluster in
-its color slot. With one blue reference, the candidate therefore remains red as
-you move forward or backward. Multi-selection colors and Merge-mode colors keep
-their separate stable-slot behavior.
+In Normal mode, ordinary single-row selection and wizard navigation both replace
+the current similar cluster. With one blue reference, the replacement candidate
+therefore remains red whether you click it or move with `Space`/`Shift+Space`.
+Extending a selection with Control or Shift keeps existing cluster colors;
+Control-deselecting and reselecting a row restores its reserved color. Backspace
+clears those Normal-mode candidate reservations, so the next candidate starts
+red again. Merge-mode colors remain fixed for the entire Merge session.
 
 Press `Control+Space` to select the first 15 eligible clusters currently shown in the similarity view while preserving the cluster view selection. Repeat it to select the next batch. This uses the current similarity view sorting and filtering. To choose a different number, use **Select > Select N Similar**; the chosen number becomes the shortcut's new default and is remembered across sessions.
 
@@ -81,8 +84,9 @@ On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is
 
 In Normal mode, scientific views follow the selected Cluster and Similarity rows in their visible
 table order, with the blue Similarity reference first. Sorting or filtering either table updates
-that presentation without recoloring existing table selections. Deselecting and reselecting a row
-restores its previous color while the same blue reference is active; selecting a new reference
+that presentation without recoloring existing table selections. Colors follow the selection
+operation rather than incidental row order: replacement starts from the first candidate color,
+while Control/Shift multi-selection preserves existing assignments. Selecting a new reference
 starts a new color sequence. Use Merge mode when you need to collect or explicitly order candidates.
 
 For each similar cluster, you can either:

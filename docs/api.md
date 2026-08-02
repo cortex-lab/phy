@@ -2019,21 +2019,21 @@ Project selected row IDs without emitting a selection event.
 
 ---
 
+#### Table.set_selected_index_mapping
+
+
+**`Table.set_selected_index_mapping(self, color_indices)`**
+
+Set explicit selected-row palette indices independently of role order.
+
+---
+
 #### Table.set_selected_index_offset
 
 
 **`Table.set_selected_index_offset(self, n)`**
 
 
-
----
-
-#### Table.set_selected_index_order
-
-
-**`Table.set_selected_index_order(self, ids)`**
-
-Set stable positional-color indices independently of table-role order.
 
 ---
 
@@ -7011,21 +7011,21 @@ Project selected row IDs without emitting a selection event.
 
 ---
 
+#### ClusterView.set_selected_index_mapping
+
+
+**`ClusterView.set_selected_index_mapping(self, color_indices)`**
+
+Set explicit selected-row palette indices independently of role order.
+
+---
+
 #### ClusterView.set_selected_index_offset
 
 
 **`ClusterView.set_selected_index_offset(self, n)`**
 
 
-
----
-
-#### ClusterView.set_selected_index_order
-
-
-**`ClusterView.set_selected_index_order(self, ids)`**
-
-Set stable positional-color indices independently of table-role order.
 
 ---
 
@@ -9945,6 +9945,15 @@ Project selected row IDs without emitting a selection event.
 
 ---
 
+#### SimilarityView.set_selected_index_mapping
+
+
+**`SimilarityView.set_selected_index_mapping(self, color_indices)`**
+
+Set explicit selected-row palette indices independently of role order.
+
+---
+
 #### SimilarityView.set_selected_index_offset
 
 
@@ -9952,15 +9961,6 @@ Project selected row IDs without emitting a selection event.
 
 Set the index of the selected cluster, used for correct coloring in the similarity
 view.
-
----
-
-#### SimilarityView.set_selected_index_order
-
-
-**`SimilarityView.set_selected_index_order(self, ids)`**
-
-Set stable positional-color indices independently of table-role order.
 
 ---
 
@@ -10407,12 +10407,12 @@ Selected clusters in the similarity view only.
 
 ---
 
-#### Supervisor.selection_color_order
+#### Supervisor.selection_color_indices
 
 
-**`Supervisor.selection_color_order`**
+**`Supervisor.selection_color_indices`**
 
-Cluster IDs in their stable selected-color slots.
+Immutable mapping from cluster IDs to stable selected-color slots.
 
 ---
 

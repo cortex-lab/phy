@@ -174,12 +174,9 @@ render_changed  # presentation_changed or colors_changed
 
 ### 6.1 Snapshot simplification
 
-`NormalWorkflowSnapshot` should store the complete immutable Normal selection
-state plus opaque table workflow context, rather than duplicate individual
-selection fields. If changing the dataclass layout in the first implementation
-step would make the migration unnecessarily risky, adding `color_order` to the
-existing snapshot is an acceptable intermediate commit; the duplicated fields
-must still be removed before completing the refactor.
+`NormalWorkflowSnapshot` stores the complete immutable Normal selection state,
+including explicit color slots, plus opaque table workflow context. It does not
+duplicate individual selection fields.
 
 ## 7. Supervisor responsibilities
 

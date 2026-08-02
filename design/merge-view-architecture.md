@@ -80,14 +80,14 @@ user-visible consequence must be reviewed during implementation.
 
 ### 2.4 Color slots are independent of presentation order
 
-The Supervisor owns both an explicit `presentation_order` and an independent
-cluster-to-color order. Normal-mode presentation follows the visible role
-tables; Merge ordering is modeled separately and takes precedence while active.
-Normal selection additions receive a new color slot without recoloring existing
-clusters. In Merge mode, slots are retained across transfers, reordering,
+The authoritative selection state owns both an explicit `presentation_order`
+and independent `color_slots`. Normal-mode presentation follows the visible
+role tables; Merge ordering is modeled separately and takes precedence while
+active. Normal color transitions depend on structured selection intent. In
+Merge mode, existing bindings are retained across transfers, reordering,
 temporary deselection, and reselection. Built-in scientific views resolve their
-positional palette index through that mapping while retaining presentation order
-for layout.
+positional palette index through that mapping while retaining presentation
+order for layout.
 
 ### 2.5 History lacks orchestration context
 
@@ -182,6 +182,7 @@ class CurationSelectionState:
     similar_ids: tuple[int, ...]
     reference_id: int | None
     presentation_order: tuple[int, ...]
+    color_slots: tuple[int | None, ...]
     merge: MergeSession | None
 ```
 
@@ -196,8 +197,9 @@ state.is_merge_mode
 
 In Normal mode, effective membership is Cluster plus Similarity membership. In
 Merge mode, it is Merge plus Similarity membership. `presentation_order` is the
-ordered unique list emitted to scientific views. The Supervisor separately
-retains the cross-view color-slot order.
+ordered unique list emitted to scientific views. `color_slots` independently
+stores explicit cluster-to-palette bindings, including released holes and
+reserved inactive bindings.
 
 ### 4.3 Merge session
 
@@ -227,6 +229,7 @@ class SelectionChange:
     after: CurationSelectionState
     roles_changed: bool
     presentation_changed: bool
+    colors_changed: bool
     reference_changed: bool
     mode_changed: bool
 ```
@@ -234,7 +237,7 @@ class SelectionChange:
 This diff determines which observers need work:
 
 - `roles_changed`: update Cluster, Similarity, and Merge projections;
-- `presentation_changed`: emit the legacy public `select` event;
+- `presentation_changed` or `colors_changed`: emit the public `select` event;
 - `reference_changed`: recompute Similarity candidates; and
 - `mode_changed`: update action availability and enabled views.
 
@@ -252,7 +255,7 @@ add_to_merge(cluster_ids, insertion=None)
 remove_from_merge(cluster_ids)
 reorder_merge(cluster_id, insertion)
 set_cluster_selection(cluster_ids)
-set_similarity_selection(cluster_ids)
+apply_similarity_mutation(mutation)
 clear_similarity_selection()
 ```
 
