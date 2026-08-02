@@ -577,12 +577,7 @@ def test_recording_time_unit_menu(qtbot, tempdir):
     assert hours.isChecked()
     assert not seconds.isChecked()
     assert not minutes.isChecked()
-
-    four_decimals = gui.view_actions.get('4 decimals')
-    four_decimals.trigger()
-    assert controller.recording_time_decimals == 4
-    assert four_decimals.isChecked()
-    assert not gui.view_actions.get('2 decimals').isChecked()
+    assert gui.view_actions.get('2 decimals') is None
     gui.close()
 
 
