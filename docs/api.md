@@ -7325,15 +7325,6 @@ selected clusters (template view, raster view).
 
 ---
 
-#### CorrelogramView.on_mouse_release
-
-
-**`CorrelogramView.on_mouse_release(self, e)`**
-
-Promote a similarity cluster after a stationary secondary click.
-
----
-
 #### CorrelogramView.on_mouse_wheel
 
 
@@ -9901,15 +9892,6 @@ Only used in the automated testing suite.
 
 ---
 
-#### Supervisor.demote_cluster
-
-
-**`Supervisor.demote_cluster(self, cluster_id, callback=None)`**
-
-Move a selected cluster row into the similarity view.
-
----
-
 #### Supervisor.filter
 
 
@@ -10036,15 +10018,6 @@ Select the previous best cluster in the cluster view.
 
 ---
 
-#### Supervisor.promote_similar
-
-
-**`Supervisor.promote_similar(self, cluster_id, callback=None)`**
-
-Move a similarity row into the cluster view while preserving all other selections.
-
----
-
 #### Supervisor.redo
 
 
@@ -10135,15 +10108,6 @@ Sort the cluster view by a given column, in a given order (asc or desc).
 **`Supervisor.split(self, spike_ids=None, spike_clusters_rel=0)`**
 
 Make a new cluster out of the specified spikes.
-
----
-
-#### Supervisor.toggle_cluster_selection
-
-
-**`Supervisor.toggle_cluster_selection(self, cluster_id, callback=None)`**
-
-Add or remove a cluster from the cluster-view selection.
 
 ---
 

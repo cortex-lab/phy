@@ -54,11 +54,11 @@ Consequently, `TaskLogger` currently has several responsibilities:
 Extending `TaskLogger.last_state()` with a third view would make selection state
 more implicit and increase the number of callback-order dependencies.
 
-### 2.2 View transfers are multi-step callback sequences
+### 2.2 Merge candidate transfers are multi-step callback sequences
 
-Moving a cluster between Cluster and Similarity currently requires changing one
-table, waiting for its callback, restoring the other table, and suppressing the
-intermediate scientific-view update with `update_views=False`.
+Moving a candidate between Similarity and Merge requires changing both role
+tables while preserving one effective selection and publishing only the final
+presentation order.
 
 Merge mode requires many related transitions: enter, cancel, add, remove,
 reorder, commit, undo, and redo. Implementing each as a separate callback chain
@@ -84,12 +84,13 @@ Many scientific views call `selected_cluster_color(index)` or otherwise derive
 selection colors from ID order. Replacing every consumer with a new color API
 would unnecessarily broaden the first refactor.
 
-The target architecture instead owns a stable `presentation_order`. Scientific
-views continue receiving an ordered list, preserving the existing plugin and
-view contract. Merge ordering is modeled separately.
+The target architecture instead owns an explicit `presentation_order`.
+Scientific views continue receiving an ordered list, preserving the existing
+plugin and view contract. Normal-mode order follows the visible role tables;
+Merge ordering is modeled separately and takes precedence while active.
 
 An explicit cluster-ID-to-color-slot API may be considered later if requirements
-eventually exceed what stable presentation order can express.
+eventually exceed what explicit presentation order can express.
 
 ### 2.5 History lacks orchestration context
 
@@ -143,8 +144,9 @@ The refactor should establish the following invariants:
    independent domain authorities.
 3. Similarity reference is an explicit cluster ID.
 4. The reference occupies the blue presentation slot.
-5. Presentation/color order is Merge row order followed by Similarity selection
-   order.
+5. Presentation/color order follows visible Cluster and Similarity row order in
+   Normal mode, with the reference first. In Merge mode it is Merge row order
+   followed by visible Similarity selection order.
 6. Moving a cluster between Similarity and Merge does not change membership,
    but emits a public selection update when it changes presentation order.
 7. Related state changes are applied transactionally; observers see only valid
@@ -602,7 +604,7 @@ Most mode behavior should be testable without Qt:
 - valid and invalid entry;
 - fixed reference;
 - transfer and reorder;
-- stable presentation order;
+- mode-dependent presentation order;
 - exact cancellation;
 - effective membership and merge target; and
 - before/after snapshot restoration.

@@ -25,10 +25,10 @@ shows the number of staged clusters, selected similar clusters, and the total th
 
 Move candidates between the two views with `Control`-right-click or drag-and-drop. Drag within
 Merge View to reorder candidates. The first blue reference cannot be moved or removed, and
-the selection order shown by scientific views is always the Merge View order followed by the
-Similarity View selection order. Transfers and reordering can therefore update cluster colors and
-redraw order-dependent views. Press `Backspace` to clear only the Similarity View selection when
-the merge should contain only the staged rows.
+the selection order shown by scientific views is always the Merge View order followed by selected
+Similarity View rows in visible table order. Transfers, table sorting, and Merge reordering can
+therefore update cluster colors and redraw order-dependent views. Press `Backspace` to clear only
+the Similarity View selection when the merge should contain only the staged rows.
 
 Press `G` to commit the staged clusters plus the selected Similarity candidates. Press `V` again,
 use **Cancel Merge Mode**, or close Merge View to cancel and restore the exact state from before
@@ -65,9 +65,9 @@ Wizard navigation skips clusters labeled `noise` or `mua` by default. To include
 
 On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is assigned to switching input sources in macOS System Settings, disable or remap that system shortcut so that phy can receive it.
 
-Control-right-click any cluster in the similarity view to move it into the cluster view. Existing selections in both tables are preserved, and the previous best cluster remains the similarity reference.
-
-Control-right-click a cluster in the cluster view to add it to, or remove it from, the current cluster selection. A plain right-click does not change the selection.
+In Normal mode, scientific views and positional colors follow the selected Cluster and Similarity
+rows in their visible table order, with the blue Similarity reference first. Sorting either table
+updates that presentation. Use Merge mode when you need to collect or explicitly order candidates.
 
 For each similar cluster, you can either:
 

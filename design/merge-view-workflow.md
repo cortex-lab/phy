@@ -22,7 +22,9 @@ commits a curation change.
 The GUI has two mutually exclusive modes:
 
 - **Normal mode:** the effective selection is the union of the Cluster View and
-  Similarity View selections.
+  Similarity View selections. Scientific views show the blue reference first,
+  followed by the other selected Cluster View rows and selected Similarity View
+  rows in their visible table order.
 - **Merge mode:** the effective selection is the union of every cluster in Merge
   View and the Similarity View selection. Cluster View is disabled.
 
@@ -103,7 +105,8 @@ row transfers all selected rows; dragging an unselected row transfers only that
 row.
 
 In Merge mode, the presentation order delivered to scientific views is always
-the Merge View row order followed by the Similarity View selection order.
+the Merge View row order followed by selected Similarity View rows in visible
+table order.
 Adding, removing, or reordering rows may therefore reassign positional colors
 and redraw order-dependent scientific views.
 

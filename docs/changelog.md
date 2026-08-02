@@ -19,7 +19,7 @@ behavior they verify rather than listed separately.
   cluster plus the current Similarity View selection. Merge View opens below
   Cluster View and remembers its in-session dock position; the dimmed Cluster
   View remains scrollable. Scientific views follow Merge View order and then
-  Similarity View selection order. Cancellation restores the entry state, and
+  selected Similarity rows in visible table order. Cancellation restores the entry state, and
   undo restores the full pre-merge workspace.
 
 - Select the first eligible clusters in the Similarity View with
@@ -29,12 +29,6 @@ behavior they verify rather than listed separately.
 - Skip clusters labeled `noise` or `mua` during wizard navigation and batch
   similarity selection. **Select > Skip Noise and MUA** controls the behavior
   and remembers the preference across sessions.
-- Use `Control`-right-click to transfer a selected Cluster View row to the
-  Similarity View, or to promote a Similarity View row into the Cluster View,
-  while preserving the existing selections and similarity reference.
-- Right-click a cross-correlogram to promote its similar cluster into the
-  Cluster View selection. Native mouse and trackpad secondary clicks are
-  supported.
 - Configure the total number of gray background points in the Amplitude View
   with `n_spikes_amplitudes_background` (10,000 by default).
 - Waveform, Amplitude, and Correlogram views support optional fixed total spike
@@ -68,8 +62,11 @@ behavior they verify rather than listed separately.
 ### Changed
 
 - The first, blue Cluster View selection is now the explicit Similarity
-  reference. Moving non-reference rows between Cluster and Similarity roles
-  preserves their presentation order, colors, and scientific-view selection.
+  reference. In Normal mode, scientific views and positional colors follow the
+  selected Cluster and Similarity rows in visible table order; re-sorting either
+  table updates that presentation. In Merge mode, explicit Merge View order
+  takes precedence. Normal-mode cross-role mouse transfers and cross-correlogram
+  promotion have been removed in favor of the Merge workspace.
 - Undo and redo restore the complete selection context around merge, split,
   and metadata actions; redo also preserves selection-only exploration made
   after the original action.
