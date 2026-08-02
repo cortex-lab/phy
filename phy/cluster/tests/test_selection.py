@@ -4,6 +4,8 @@ from dataclasses import FrozenInstanceError
 
 from pytest import raises
 
+from phy.utils.selection import SelectionIntent, SelectionMutation
+
 from .._selection import (
     CurationSelectionController,
     CurationSelectionState,
@@ -35,13 +37,13 @@ def test_state_rejects_invalid_ids_reference_and_presentation():
         )
     with raises(ValueError, match='requires a merge session'):
         CurationSelectionState(mode=WorkflowMode.MERGE)
-    with raises(ValueError, match='Color order'):
+    with raises(ValueError, match='Color slots'):
         CurationSelectionState(cluster_ids=(1, 2), color_order=(1,))
     with raises(ValueError, match='first color'):
         CurationSelectionState(cluster_ids=(1, 2), color_order=(2, 1))
     with raises(ValueError, match='Similarity selection'):
         CurationSelectionState(similar_ids=(2,))
-    with raises(ValueError, match='Color order'):
+    with raises(ValueError, match='Color slots'):
         CurationSelectionState(color_order=(2,))
 
 
@@ -100,19 +102,25 @@ def test_set_similarity_and_clear_similarity_selection():
     assert change.after.presentation_order == (1,)
 
 
-def test_similarity_deselection_and_reselection_preserve_color_slots():
+def test_toggle_deselection_reserves_and_reselection_restores_color_slots():
     controller = CurationSelectionController(
         CurationSelectionState(cluster_ids=(1,), reference_id=1)
     )
 
-    controller.set_similarity_selection((2, 3, 4))
-    color_order = controller.state.color_order
-    change = controller.set_similarity_selection((2, 4))
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.EXTEND, (), (2, 3, 4), (2, 3, 4), ())
+    )
+    slots = controller.state.color_slots
+    change = controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.TOGGLE, (2, 3, 4), (2, 4), (), (3,))
+    )
 
-    assert change.after.color_order == color_order
+    assert change.after.color_slots == slots
     assert not change.colors_changed
-    change = controller.set_similarity_selection((2, 3, 4))
-    assert change.after.color_order == color_order
+    change = controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.TOGGLE, (2, 4), (2, 3, 4), (3,), ())
+    )
+    assert change.after.color_slots == slots
     assert not change.colors_changed
 
 
@@ -129,15 +137,15 @@ def test_similarity_navigation_reuses_outgoing_or_inactive_color_slot():
     change = controller.navigate_similarity_selection((3,))
     assert change.after.similar_ids == (3,)
     assert change.after.presentation_order == (1, 3)
-    assert change.after.color_order == (1, 3, 2)
+    assert change.after.color_slots == (1, 3, None)
     assert change.colors_changed
 
     change = controller.navigate_similarity_selection((2,))
-    assert change.after.color_order == (1, 2, 3)
+    assert change.after.color_slots == (1, 2, None)
 
     controller.clear_similarity_selection()
     change = controller.navigate_similarity_selection((4,))
-    assert change.after.color_order == (1, 4, 3, 2)
+    assert change.after.color_slots == (1, 4, None)
 
 
 def test_similarity_navigation_preserves_primary_colors_and_is_normal_only():
@@ -151,7 +159,7 @@ def test_similarity_navigation_preserves_primary_colors_and_is_normal_only():
     )
 
     change = controller.navigate_similarity_selection((3,))
-    assert change.after.color_order == (1, 4, 3, 2)
+    assert change.after.color_slots == (1, 4, 3, None)
     with raises(ValueError, match='at most one'):
         controller.navigate_similarity_selection((2, 3))
 
@@ -342,3 +350,82 @@ def test_merge_presentation_order_requires_merge_prefix_and_similarity_tail():
         controller.set_presentation_order((1, 3, 2))
     with raises(ValueError, match='exactly'):
         controller.set_presentation_order((1, 2, 4))
+
+
+def test_replace_and_navigate_reuse_first_similarity_slot_after_cluster_roles():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1, 8), reference_id=1)
+    )
+
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.REPLACE, (), (5,), (5,), ())
+    )
+    assert controller.state.color_slots == (1, 8, 5)
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.REPLACE, (5,), (7,), (7,), (5,))
+    )
+    assert controller.state.color_slots == (1, 8, 7)
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.NAVIGATE, (7,), (6,), (6,), (7,))
+    )
+    assert controller.state.color_slots == (1, 8, 6)
+
+
+def test_extend_fills_released_holes_and_exposes_immutable_palette_projection():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1,), reference_id=1, color_slots=(1, None, None))
+    )
+
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.EXTEND, (), (4, 5), (4, 5), ())
+    )
+    assert controller.state.color_slots == (1, 4, 5)
+    assert dict(controller.state.color_indices) == {1: 0, 4: 1, 5: 2}
+    with raises(TypeError):
+        controller.state.color_indices[4] = 9
+
+
+def test_clear_releases_similarity_reservations_for_the_next_replace():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1,), reference_id=1)
+    )
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.EXTEND, (), (2, 3), (2, 3), ())
+    )
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.TOGGLE, (2, 3), (2,), (), (3,))
+    )
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.CLEAR, (2,), (), (), (2,))
+    )
+    assert controller.state.color_slots == (1, None, None)
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.REPLACE, (), (9,), (9,), ())
+    )
+    assert controller.state.color_slots == (1, 9, None)
+
+
+def test_merge_freezes_existing_bindings_and_unseen_candidates_fill_holes():
+    initial = CurationSelectionState(
+        cluster_ids=(1, 2),
+        similar_ids=(3,),
+        reference_id=1,
+        color_slots=(1, 2, 3, None),
+    )
+    controller = CurationSelectionController(initial)
+    controller.enter_merge_mode()
+    entry_slots = controller.state.color_slots
+    controller.apply_similarity_mutation(
+        SelectionMutation(SelectionIntent.REPLACE, (), (4,), (4,), ())
+    )
+    assert controller.state.color_slots == (1, 2, 3, 4)
+    controller.add_to_merge((4,))
+    controller.reorder_merge((4,), 1)
+    controller.remove_from_merge((2,))
+    assert controller.state.color_indices[1] == 0
+    assert controller.state.color_indices[2] == 1
+    assert controller.state.color_indices[3] == 2
+    assert controller.state.color_indices[4] == 3
+    controller.cancel_merge_mode()
+    assert controller.state == initial
+    assert entry_slots == initial.color_slots
