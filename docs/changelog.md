@@ -44,6 +44,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Show the active sort column and direction in Cluster and Similarity View
+  headers.
 - Dragging Merge View rows now shows the cluster ID preview, insertion boundary,
   edge autoscroll, and a row-wide hover cue without changing the order until
   the drop completes.
