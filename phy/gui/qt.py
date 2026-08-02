@@ -462,7 +462,8 @@ def _get_icon(icon, size=64, color='black'):
         draw = ImageDraw.Draw(image)
 
         font = ImageFont.truetype(ttf_file, int(size))
-        width, height = draw.textsize(hex_icon, font=font)
+        left, top, right, bottom = draw.textbbox((0, 0), hex_icon, font=font)
+        width, height = right - left, bottom - top
 
         draw.text(
             (float(size - width) / 2, float(size - height) / 2),
@@ -502,7 +503,8 @@ def _get_icon(icon, size=64, color='black'):
 
         # If necessary, scale the image to the target size
         if org_size != size:
-            out_image = out_image.resize((org_size, org_size), Image.ANTIALIAS)
+            resampling = getattr(Image, 'Resampling', Image)
+            out_image = out_image.resize((org_size, org_size), resampling.LANCZOS)
 
         # Save file
         os.makedirs(op.dirname(output_path), exist_ok=True)
