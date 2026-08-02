@@ -17,7 +17,7 @@ table. It introduces:
 - a third cluster role alongside Cluster and Similarity;
 - an explicit presentation order derived from the two active roles;
 - a fixed blue Similarity reference;
-- stable workflow-table colors independent of role and row-order changes;
+- stable cross-view colors independent of role and row-order changes;
 - exact cancellation to an entry snapshot; and
 - restoration of the complete workspace after undoing a committed merge.
 
@@ -78,22 +78,16 @@ This is an intentional correction of the internal model. Characterization tests
 must document the existing multi-selection behavior before changing it, and the
 user-visible consequence must be reviewed during implementation.
 
-### 2.4 Scientific-view colors remain positional
+### 2.4 Color slots are independent of presentation order
 
-Many scientific views call `selected_cluster_color(index)` or otherwise derive
-selection colors from ID order. Replacing every consumer with a new color API
-would unnecessarily broaden the first refactor.
-
-The target architecture instead owns an explicit `presentation_order`.
-Scientific views continue receiving an ordered list, preserving the existing
-plugin and view contract. Normal-mode order follows the visible role tables;
-Merge ordering is modeled separately and takes precedence while active.
-
-Workflow tables separately retain a Supervisor-owned cluster-to-color order.
-Normal selection additions receive a new slot without recoloring existing rows.
-In Merge mode, slots are retained across transfers, reordering, temporary
-deselection, and reselection. A corresponding scientific-view color API may be
-considered later if their positional-color contract needs to change.
+The Supervisor owns both an explicit `presentation_order` and an independent
+cluster-to-color order. Normal-mode presentation follows the visible role
+tables; Merge ordering is modeled separately and takes precedence while active.
+Normal selection additions receive a new color slot without recoloring existing
+clusters. In Merge mode, slots are retained across transfers, reordering,
+temporary deselection, and reselection. Built-in scientific views resolve their
+positional palette index through that mapping while retaining presentation order
+for layout.
 
 ### 2.5 History lacks orchestration context
 
@@ -149,8 +143,8 @@ The refactor should establish the following invariants:
 4. The reference occupies the blue presentation slot.
 5. Presentation order follows visible Cluster and Similarity row order in
    Normal mode, with the reference first. In Merge mode it is Merge row order
-   followed by visible Similarity selection order. Workflow-table color slots
-   are stable independently of those order changes.
+   followed by visible Similarity selection order. Color slots are stable across
+   workflow tables and scientific views independently of those order changes.
 6. Moving a cluster between Similarity and Merge does not change membership,
    but emits a public selection update when it changes presentation order.
 7. Related state changes are applied transactionally; observers see only valid
@@ -203,7 +197,7 @@ state.is_merge_mode
 In Normal mode, effective membership is Cluster plus Similarity membership. In
 Merge mode, it is Merge plus Similarity membership. `presentation_order` is the
 ordered unique list emitted to scientific views. The Supervisor separately
-retains the workflow tables' color-slot order.
+retains the cross-view color-slot order.
 
 ### 4.3 Merge session
 
@@ -675,12 +669,13 @@ This could unify all state eventually, but the migration surface includes every
 view and plugin. It is disproportionate to the feature and too risky for the
 curation path.
 
-### Introduce a full scientific-view color registry immediately
+### Derive colors exclusively from presentation order
 
-A full color registry would require changing many scientific views and plugin
-assumptions. The narrower Supervisor-owned workflow-table registry satisfies the
-interactive table requirement without changing that API. A full registry
-remains a possible later evolution.
+This initially minimized the migration surface, but it recolored existing
+clusters whenever inserting a newly selected row earlier in presentation order
+or transferring a Merge candidate between roles. The explicit color-slot order
+avoids that cross-view inconsistency while leaving the public selection payload
+unchanged.
 
 ### Store Merge UI context inside `Clustering`
 

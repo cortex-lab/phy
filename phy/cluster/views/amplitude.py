@@ -228,7 +228,9 @@ class AmplitudeView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             assert bunch.pos.ndim == 2
             bunch.cluster_id = cluster_id
             bunch.color = (
-                selected_cluster_color(i - 1, self.marker_alpha)
+                selected_cluster_color(
+                    self.cluster_color_index(cluster_id, i - 1), self.marker_alpha
+                )
                 # Background amplitude color.
                 if cluster_id is not None
                 else (0.5, 0.5, 0.5, 0.5)

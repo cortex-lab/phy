@@ -27,9 +27,9 @@ Move candidates between the two views with `Control`-right-click or drag-and-dro
 Merge View to reorder candidates. The first blue reference cannot be moved or removed, and
 the selection order shown by scientific views is always the Merge View order followed by selected
 Similarity View rows in visible table order. Transfers, table sorting, and Merge reordering redraw
-order-dependent views, while each cluster keeps the same workflow-table color for the entire Merge
-session. Press `Backspace` to clear only the Similarity View selection when the merge should contain
-only the staged rows.
+order-dependent views, while each cluster keeps the same color across tables and scientific views
+for the entire Merge session. Press `Backspace` to clear only the Similarity View selection when the
+merge should contain only the staged rows.
 
 Press `G` to commit the staged clusters plus the selected Similarity candidates. Press `V` again,
 use **Cancel Merge Mode**, or close Merge View to cancel and restore the exact state from before

@@ -237,7 +237,11 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
             self.visual.add_batch_data(
                 x=px.data,
                 y=py.data,
-                color=_get_point_color(clu_idx),
+                color=_get_point_color(
+                    self.cluster_color_index(cluster_id, clu_idx)
+                    if cluster_id is not None
+                    else None
+                ),
                 # Reduced marker size for background features
                 size=self._marker_size,
                 masks=_get_point_masks(clu_idx=clu_idx, masks=masks),

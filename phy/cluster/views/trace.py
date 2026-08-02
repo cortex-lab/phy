@@ -302,7 +302,12 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         i = bunch.select_index
         c = bunch.spike_cluster
         cs = self.color_schemes.get()
-        color = selected_cluster_color(i, alpha=1) if i is not None else cs.get(c, alpha=1)
+        color_index = self.cluster_color_index(c, i) if i is not None else None
+        color = (
+            selected_cluster_color(color_index, alpha=1)
+            if color_index is not None
+            else cs.get(c, alpha=1)
+        )
 
         # We could tweak the color of each spike waveform depending on the template amplitude
         # on each of its best channels.

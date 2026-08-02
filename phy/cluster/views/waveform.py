@@ -200,10 +200,11 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         n_clu = max(clu_offsets) + 1
         # Offset depending on the overlap.
         for i, (bunch, offset) in enumerate(zip(bunchs, clu_offsets)):
+            color_index = self.cluster_color_index(self.cluster_ids[i], i)
             bunch.index = i
             bunch.offset = offset
             bunch.n_clu = n_clu
-            bunch.color = selected_cluster_color(i, bunch.get('alpha', 0.75))
+            bunch.color = selected_cluster_color(color_index, bunch.get('alpha', 0.75))
         return bunchs
 
     def _plot_cluster(self, bunch):

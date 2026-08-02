@@ -130,7 +130,8 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             b.firing_rate = fr[i, j] if fr is not None else None
             b.data_bounds = (0, 0, n_bins, m)
             b.pair_index = i, j
-            b.color = selected_cluster_color(i, 1)
+            color_index = self.cluster_color_index(self.cluster_ids[i], i)
+            b.color = selected_cluster_color(color_index, 1)
             if i != j:
                 b.color = add_alpha(_override_hsv(b.color[:3], s=0.1, v=1))
             bunchs.append(b)

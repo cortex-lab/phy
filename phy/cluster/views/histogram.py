@@ -173,7 +173,7 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             bunch.histogram = self._compute_histogram(bunch.data)
             bunch.ylim = bunch.histogram.max()
 
-            bunch.color = selected_cluster_color(i)
+            bunch.color = selected_cluster_color(self.cluster_color_index(cluster_id, i))
             bunch.index = i
             bunch.cluster_id = cluster_id
             bunchs.append(bunch)

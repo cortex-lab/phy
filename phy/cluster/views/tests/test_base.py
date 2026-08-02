@@ -70,9 +70,11 @@ def test_manual_clustering_view_2(qtbot, gui):
     v.attach(gui)
 
     class Supervisor:
-        pass
+        selection_color_order = (0, 2, 1)
 
     emit('select', Supervisor(), cluster_ids=[0, 1])
+    assert v.cluster_color_index(0, 0) == 0
+    assert v.cluster_color_index(1, 1) == 2
 
     v.actions.get('Change color scheme to myscheme').trigger()
     v.next_color_scheme()

@@ -1691,6 +1691,11 @@ class Supervisor:
         """Selected clusters in the cluster and similarity views."""
         return list(self.selection.state.presentation_order)
 
+    @property
+    def selection_color_order(self):
+        """Cluster IDs in their stable selected-color slots."""
+        return self._selection_color_order
+
     def n_spikes(self, cluster_id):
         """Number of spikes in a given cluster."""
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))

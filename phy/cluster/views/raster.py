@@ -125,7 +125,10 @@ class RasterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualClusterin
         # Selected cluster colors.
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
-                selected_clusters, self.all_cluster_ids, cluster_colors
+                selected_clusters,
+                self.all_cluster_ids,
+                cluster_colors,
+                self._cluster_color_index_by_id,
             )
         return cluster_colors[box_index, :]
 

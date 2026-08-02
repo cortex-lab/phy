@@ -73,6 +73,7 @@ class ManualClusteringView:
         self._dock_visible = True
         self._pending_selection = None
         self.cluster_ids = ()
+        self._cluster_color_index_by_id = {}
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -144,6 +145,17 @@ class ManualClusteringView:
             return
         self.plot(**kwargs)
 
+    def _update_cluster_color_indices(self, sender):
+        order = getattr(sender, 'selection_color_order', ())
+        if order:
+            self._cluster_color_index_by_id = {
+                cluster_id: index for index, cluster_id in enumerate(order)
+            }
+
+    def cluster_color_index(self, cluster_id, fallback):
+        """Return the stable selected-color slot for a cluster."""
+        return self._cluster_color_index_by_id.get(cluster_id, fallback)
+
     def on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs):
         # Decide whether the view should react to the select event or not.
         if not self.auto_update or self._closed:
@@ -154,6 +166,7 @@ class ManualClusteringView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
+        self._update_cluster_color_indices(sender)
         # Limit the number of displayed clusters for performance reasons. Keep the
         # selection order so that a large selection still refreshes the view rather
         # than leaving its previous contents on screen.
@@ -461,6 +474,7 @@ class BaseGlobalView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
+        self._update_cluster_color_indices(sender)
         self.cluster_ids = cluster_ids  # selected clusters
 
 

@@ -71,7 +71,7 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
                 bunch.pos = np.c_[bunch.x, bunch.y]
             assert bunch.pos.ndim == 2
             assert 'spike_ids' in bunch
-            bunch.color = selected_cluster_color(i, 0.75)
+            bunch.color = selected_cluster_color(self.cluster_color_index(cluster_id, i), 0.75)
         return bunchs
 
     def _get_collated_cluster_data(self, bunch):
@@ -82,7 +82,14 @@ class ScatterView(MarkerSizeMixin, LassoMixin, ManualClusteringView):
             assert bunch.x.shape == bunch.y.shape
             bunch.pos = np.c_[bunch.x, bunch.y]
         assert bunch.pos.ndim == 2
-        bunch.color = spike_colors(bunch.spike_clusters, self.cluster_ids)
+        color_ids = (
+            sorted(
+                self._cluster_color_index_by_id,
+                key=self._cluster_color_index_by_id.get,
+            )
+            or self.cluster_ids
+        )
+        bunch.color = spike_colors(bunch.spike_clusters, color_ids)
         return bunch
 
     def get_clusters_data(self, load_all=None):
