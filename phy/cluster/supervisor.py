@@ -1163,24 +1163,40 @@ class Supervisor:
         self.similarity_view.dock.set_status(f'similar clusters: {", ".join(map(str, similar))}')
 
     @staticmethod
-    def _ids_in_table_order(view, cluster_ids):
-        """Return selected IDs in row order, retaining filtered-out IDs at the end."""
+    def _ids_in_table_order(view, cluster_ids, previous_order=()):
+        """Return visible selected IDs followed by hidden IDs in prior presentation order."""
         cluster_ids = tuple(cluster_ids)
         selected = set(cluster_ids)
         visible = [cluster_id for cluster_id in view.get_ids() if cluster_id in selected]
         visible_set = set(visible)
-        return tuple(visible) + tuple(
-            cluster_id for cluster_id in cluster_ids if cluster_id not in visible_set
+        hidden = [
+            cluster_id
+            for cluster_id in previous_order
+            if cluster_id in selected and cluster_id not in visible_set
+        ]
+        hidden_set = set(hidden)
+        # New role IDs may not yet occur in the previous presentation while a
+        # table selection is being applied. They are visible in normal use;
+        # retain any exceptional hidden IDs rather than dropping membership.
+        hidden.extend(
+            cluster_id
+            for cluster_id in cluster_ids
+            if cluster_id not in visible_set and cluster_id not in hidden_set
         )
+        return tuple(visible) + tuple(hidden)
 
     def _presentation_order_from_tables(self, state, similar_ids=None):
         """Return the active roles in table order without changing their membership."""
         similar_ids = self._ids_in_table_order(
-            self.similarity_view, state.similar_ids if similar_ids is None else similar_ids
+            self.similarity_view,
+            state.similar_ids if similar_ids is None else similar_ids,
+            state.presentation_order,
         )
         if state.is_merge_mode:
             return state.merge_ids + similar_ids
-        cluster_ids = self._ids_in_table_order(self.cluster_view, state.cluster_ids)
+        cluster_ids = self._ids_in_table_order(
+            self.cluster_view, state.cluster_ids, state.presentation_order
+        )
         return tuple(
             dict.fromkeys(
                 (

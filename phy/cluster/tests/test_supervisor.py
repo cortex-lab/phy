@@ -950,8 +950,10 @@ def test_table_filter_reorders_normal_presentation_without_recoloring(supervisor
     _select(supervisor, [30])
     similarity_view = supervisor.similarity_view
     similarity_view.sort_by('id', 'asc')
-    similarity_view.select([1, 11, 20])
+    # Click A, C, B, while table order establishes A, B, C presentation.
+    similarity_view.select([1, 20, 11])
     supervisor.block()
+    assert supervisor.selected == [30, 1, 11, 20]
     colors = supervisor.selection_color_order
     roles = (supervisor.selected_clusters, supervisor.selected_similar)
     events = []
@@ -960,12 +962,14 @@ def test_table_filter_reorders_normal_presentation_without_recoloring(supervisor
     def on_select(sender, cluster_ids):
         events.append(cluster_ids)
 
-    similarity_view.filter('id >= 11')
+    # Retain only A. Hidden B/C must use the prior presentation order, not
+    # the Similarity role's click order (A, C, B).
+    similarity_view.filter('id < 2')
 
-    assert supervisor.selected == [30, 11, 20, 1]
+    assert supervisor.selected == [30, 1, 11, 20]
     assert supervisor.selection_color_order == colors
     assert (supervisor.selected_clusters, supervisor.selected_similar) == roles
-    assert events == [[30, 11, 20, 1]]
+    assert events == []
     unconnect(on_select)
 
 
@@ -974,9 +978,9 @@ def test_table_filter_reorders_merge_similarity_tail_without_recoloring(supervis
     supervisor.toggle_merge_mode()
     similarity_view = supervisor.similarity_view
     similarity_view.sort_by('id', 'asc')
-    similarity_view.select([1, 11, 20])
+    similarity_view.select([1, 20, 11])
     supervisor.block()
-    supervisor.add_to_merge((11,), insertion=1)
+    assert supervisor.selected == [30, 1, 11, 20]
     colors = supervisor.selection_color_order
     roles = (supervisor.selected_merge, supervisor.selected_similar)
     events = []
@@ -985,12 +989,12 @@ def test_table_filter_reorders_merge_similarity_tail_without_recoloring(supervis
     def on_select(sender, cluster_ids):
         events.append(cluster_ids)
 
-    similarity_view.filter('id >= 20')
+    similarity_view.filter('id < 2')
 
-    assert supervisor.selected == [30, 11, 20, 1]
+    assert supervisor.selected == [30, 1, 11, 20]
     assert supervisor.selection_color_order == colors
     assert (supervisor.selected_merge, supervisor.selected_similar) == roles
-    assert events == [[30, 11, 20, 1]]
+    assert events == []
     unconnect(on_select)
 
 
