@@ -41,6 +41,8 @@ def test_state_rejects_invalid_ids_reference_and_presentation():
         CurationSelectionState(cluster_ids=(1, 2), color_order=(2, 1))
     with raises(ValueError, match='Similarity selection'):
         CurationSelectionState(similar_ids=(2,))
+    with raises(ValueError, match='Color order'):
+        CurationSelectionState(color_order=(2,))
 
 
 def test_state_is_immutable():
@@ -65,6 +67,20 @@ def test_set_cluster_selection_uses_blue_first_id_or_explicit_reference():
     change = controller.set_cluster_selection((1, 2), reference_id=2)
     assert change.after.reference_id == 2
     assert change.after.presentation_order == (2, 1)
+
+
+def test_empty_cluster_selection_clears_similarity_and_color_session():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1,), similar_ids=(2,), reference_id=1)
+    )
+
+    change = controller.set_cluster_selection(())
+
+    assert change.after.cluster_ids == ()
+    assert change.after.similar_ids == ()
+    assert change.after.reference_id is None
+    assert change.after.presentation_order == ()
+    assert change.after.color_order == ()
 
 
 def test_set_similarity_and_clear_similarity_selection():

@@ -150,6 +150,8 @@ class CurationSelectionState:
         color_order = (
             presentation_order if self.color_order is None else _as_unique_ids(self.color_order)
         )
+        if reference_id is None and color_order:
+            raise ValueError('Color order requires a reference ID.')
         if not set(effective_ids) <= set(color_order):
             raise ValueError('Color order must contain every effective ID.')
         if color_order and reference_id is not None and color_order[0] != reference_id:
@@ -248,14 +250,15 @@ class CurationSelectionController:
         cluster_ids = _as_unique_ids(cluster_ids)
         if reference_id is None:
             reference_id = cluster_ids[0] if cluster_ids else None
+        similar_ids = self._state.similar_ids if reference_id is not None else ()
         presentation_order = _ordered_union(
             (reference_id,) if reference_id is not None else (),
             cluster_ids,
-            self._state.similar_ids,
+            similar_ids,
         )
         after = CurationSelectionState(
             cluster_ids=cluster_ids,
-            similar_ids=self._state.similar_ids,
+            similar_ids=similar_ids,
             reference_id=reference_id,
             presentation_order=presentation_order,
             color_order=self._next_color_order(reference_id, presentation_order),

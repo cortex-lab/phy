@@ -1512,7 +1512,10 @@ class Supervisor:
         similar_ids = self.similarity_view.get_selected_ids()
         if tuple(cluster_ids) != self.selection.state.cluster_ids:
             self.selection.set_cluster_selection(cluster_ids)
-        if tuple(similar_ids) != self.selection.state.similar_ids:
+        if (
+            self.selection.state.reference_id is not None
+            and tuple(similar_ids) != self.selection.state.similar_ids
+        ):
             self.selection.set_similarity_selection(similar_ids)
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
