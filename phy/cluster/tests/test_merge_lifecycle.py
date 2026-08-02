@@ -7,7 +7,7 @@ from phy.gui.tests.conftest import gui  # noqa: F401
 from .test_supervisor import _select, supervisor  # noqa: F401
 
 
-def test_supervisor_merge_mode_releases_temporary_event_callbacks(supervisor):
+def test_supervisor_merge_mode_releases_temporary_event_callbacks(supervisor):  # noqa: F811
     _select(supervisor, [30], [20])
 
     def callbacks_for(callback):
