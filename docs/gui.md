@@ -92,7 +92,7 @@ Most graphical views share these controls:
 
 View-specific controls appear in the view menu and in the
 [shortcut reference](shortcuts.md). Press `H` or choose **Help > Show shortcuts and commands** to
-print the bindings active in the current session.
+open the bindings active in the current session.
 
 ## Automatic updates and large selections
 

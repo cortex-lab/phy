@@ -1,7 +1,7 @@
 # Customize keyboard shortcuts
 
-Press `H` or choose **Help > Show shortcuts and commands** to print the effective
-shortcuts and command aliases in the console. The generated
+Press `H` or choose **Help > Show shortcuts and commands** to open a searchable reference
+of the effective shortcuts and command aliases. The generated
 [keyboard shortcut reference](shortcuts.md) lists the defaults, but `H` is the
 better source after plugins have changed them.
 

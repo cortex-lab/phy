@@ -162,10 +162,13 @@ def test_actions_gui(qtbot, gui, actions):
         gui.file_actions.show_shortcuts()
     assert 'q\n' in stdout.getvalue()
 
-    # Show all action shortcuts.
-    with captured_output() as (stdout, stderr):
-        gui.help_actions.show_all_shortcuts()
-    assert 'g\n' in stdout.getvalue()
+    # Show all action shortcuts and commands in the GUI.
+    reference = gui.help_actions.show_all_shortcuts()
+    rows = [
+        [reference.entries.item(row, column).text() for column in range(reference.entries.columnCount())]
+        for row in range(reference.entries.rowCount())
+    ]
+    assert any(row[1] == 'Press' and row[2] == 'g' for row in rows)
 
 
 def test_actions_submenu(qtbot, gui, actions):

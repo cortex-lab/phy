@@ -1331,6 +1331,15 @@ Show the window.
 
 ---
 
+#### GUI.show_shortcuts_and_commands
+
+
+**`GUI.show_shortcuts_and_commands(self)`**
+
+Open a searchable reference of the active shortcuts and commands.
+
+---
+
 #### GUI.unlock_status
 
 

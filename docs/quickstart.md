@@ -63,9 +63,9 @@ Click one row in the Cluster View. Then click a highly ranked row in the
 Similarity View. The other views should now compare the two clusters using
 different colors.
 
-Press `H` or choose **Help > Show shortcuts and commands** to print the effective
-keyboard shortcuts and command aliases. Menus also show their shortcuts, and hovering
-over an action shows its command name in the status bar.
+Press `H` or choose **Help > Show shortcuts and commands** to open a searchable reference
+of the effective keyboard shortcuts and command aliases. Menus also show their shortcuts, and
+hovering over an action shows its command name in the status bar.
 
 ## 3. Inspect one cluster
 

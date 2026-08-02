@@ -11,13 +11,17 @@ from functools import partial
 
 from phylib.utils import connect, emit
 
-from .actions import Actions, Snippets
+from .actions import Actions, Snippets, _get_shortcut_string
 from .qt import (
+    QAbstractItemView,
     QApplication,
     QCheckBox,
+    QDialog,
     QDockWidget,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -26,6 +30,8 @@ from .qt import (
     QSize,
     QStatusBar,
     Qt,
+    QTableWidget,
+    QTableWidgetItem,
     QToolBar,
     QVBoxLayout,
     QWidget,
@@ -43,6 +49,79 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # GUI utils
 # -----------------------------------------------------------------------------
+
+
+class _ShortcutReferenceDialog(QDialog):
+    """Searchable reference for the GUI's live actions and command aliases."""
+
+    _headers = ('Scope', 'Action', 'Shortcut', 'Command', 'Description')
+
+    def __init__(self, gui):
+        super().__init__(gui)
+        self.gui = gui
+        self.setWindowTitle('Shortcuts and commands')
+        self.setModal(False)
+        self.resize(900, 520)
+
+        self.search = QLineEdit(self)
+        self.search.setObjectName('shortcut-reference-search')
+        self.search.setPlaceholderText('Search actions, shortcuts, commands, or descriptions')
+        self.search.textChanged.connect(self._update_entries)
+
+        self.entries = QTableWidget(self)
+        self.entries.setObjectName('shortcut-reference-entries')
+        self.entries.setColumnCount(len(self._headers))
+        self.entries.setHorizontalHeaderLabels(self._headers)
+        self.entries.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.entries.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.entries.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.entries.verticalHeader().hide()
+        header = self.entries.horizontalHeader()
+        for column in range(len(self._headers) - 1):
+            header.setSectionResizeMode(column, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(len(self._headers) - 1, QHeaderView.Stretch)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.search)
+        layout.addWidget(self.entries)
+        self._rows = ()
+
+    def refresh(self):
+        """Collect the actions currently registered with the GUI."""
+        rows = []
+        for actions in self.gui.actions:
+            for name, action in actions._actions_dict.items():
+                if name.startswith('_'):
+                    continue
+                shortcut = _get_shortcut_string(action.qaction.shortcut()) or '-'
+                command = f':{action.alias}' if action.alias else '-'
+                rows.append(
+                    (
+                        actions.name,
+                        action.qaction.text() or name,
+                        shortcut,
+                        command,
+                        action.docstring.replace('\n', ' '),
+                    )
+                )
+        self._rows = tuple(sorted(rows, key=lambda row: (row[0].lower(), row[1].lower())))
+        self._update_entries()
+
+    def _update_entries(self):
+        query = self.search.text().strip().lower()
+        rows = self._rows
+        if query:
+            rows = [row for row in rows if query in ' '.join(row).lower()]
+        self.entries.setRowCount(len(rows))
+        for row_index, row in enumerate(rows):
+            for column, value in enumerate(row):
+                self.entries.setItem(row_index, column, QTableWidgetItem(value))
+        if not rows:
+            self.entries.setRowCount(1)
+            self.entries.setSpan(0, 0, 1, len(self._headers))
+            self.entries.setItem(0, 0, QTableWidgetItem('No matching shortcuts or commands.'))
+        else:
+            self.entries.clearSpans()
 
 
 def _try_get_matplotlib_canvas(view):
@@ -530,6 +609,7 @@ class GUI(QMainWindow):
 
         # List of attached Actions instances.
         self.actions = []
+        self._shortcut_reference = None
 
         # Mapping {name: menuBar}.
         self._menus = {}
@@ -623,11 +703,10 @@ class GUI(QMainWindow):
         self.view_actions.separator()
 
         # Help menu.
-        @self.help_actions.add(shortcut=('HelpContents', 'h'))
+        @self.help_actions.add(shortcut=('HelpContents', 'h'), icon='f128', toolbar=True)
         def show_all_shortcuts():
-            """Print the active keyboard shortcuts and command aliases."""
-            for actions in self.actions:
-                actions.show_shortcuts()
+            """Show the active keyboard shortcuts and command aliases."""
+            return self.show_shortcuts_and_commands()
 
         self.help_actions.get('show_all_shortcuts').setText('Show shortcuts and commands')
 
@@ -846,6 +925,17 @@ class GUI(QMainWindow):
         box = QMessageBox(self)
         box.setText(message)
         return box
+
+    def show_shortcuts_and_commands(self):
+        """Open a searchable reference of the active shortcuts and commands."""
+        if self._shortcut_reference is None:
+            self._shortcut_reference = _ShortcutReferenceDialog(self)
+        self._shortcut_reference.refresh()
+        self._shortcut_reference.show()
+        self._shortcut_reference.raise_()
+        self._shortcut_reference.activateWindow()
+        self._shortcut_reference.search.setFocus()
+        return self._shortcut_reference
 
     def _set_dirty(self, dirty):
         """Show whether the window has unsaved curation changes."""

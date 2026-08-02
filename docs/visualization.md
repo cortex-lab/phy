@@ -64,8 +64,8 @@ The GUI is made of several parts:
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
-Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `H` or use the Help
-menu to print the active keyboard shortcuts and snippets in the terminal.
+Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `H` or choose
+**Help > Show shortcuts and commands** to open the active keyboard shortcuts and snippets.
 
 
 ### Cluster view

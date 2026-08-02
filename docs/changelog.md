@@ -50,7 +50,8 @@ behavior they verify rather than listed separately.
   only when curation changes are pending, and confirm successful saves in the
   status bar.
 - Rename the Help shortcut reference action to **Show shortcuts and commands**
-  and show Enter/Escape guidance when the `:` command prompt is active.
+  and show Enter/Escape guidance when the `:` command prompt is active. The
+  shortcut now opens an in-GUI searchable reference, including plugin actions.
 - Pressing `:` repeatedly no longer leaves the command prompt visible after
   Escape closes it.
 - Keep the disabled Cluster View overlay fixed while scrolling in Merge mode,
