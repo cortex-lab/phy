@@ -138,6 +138,16 @@ def test_table_drag_preview_marks_an_insertion_boundary_without_reordering(table
     assert not view._drop_indicator.isVisible()
 
 
+def test_table_hover_is_row_wide_without_selecting(table):
+    assert table.get_selected_ids() == []
+    table._set_hovered_row(3)
+    assert table._hovered_row_id == 3
+    assert table.get_selected_ids() == []
+
+    table._set_hovered_row(None)
+    assert table._hovered_row_id is None
+
+
 def test_key_value_1(qtbot):
     widget = KeyValueWidget()
     qtbot.addWidget(widget)

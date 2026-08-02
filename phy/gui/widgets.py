@@ -485,6 +485,10 @@ class _TableItemDelegate(QStyledItemDelegate):
             bg = self._table._selection_background(row_id)
             if fg is None:
                 fg = QColor('#ffffff')
+        elif row_id == self._table._hovered_row_id:
+            bg = QColor('#222222')
+            if fg is None:
+                fg = QColor('#ffffff')
         elif fg is None:
             fg = QColor('#ffffff')
 
@@ -722,6 +726,7 @@ class Table(QWidget):
         self.value_names = list(value_names or self.columns)
         self.data = list(data or [])
         self._selected_ids = []
+        self._hovered_row_id = None
         self._selected_index_offset = 0
         self._selected_index_by_id = None
         self._selection_revision = 0
@@ -759,6 +764,8 @@ class Table(QWidget):
         self.table_view.viewport().installEventFilter(self)
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.table_view.setMouseTracking(True)
+        self.table_view.viewport().setMouseTracking(True)
         self.table_view.clicked.connect(self._on_row_clicked)
         self.table_view.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
         self.table_view.verticalHeader().hide()
@@ -913,6 +920,12 @@ class Table(QWidget):
         if obj is self.table_view.viewport() and event.type() == QEvent.Resize:
             if self._interaction_overlay is not None:
                 self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
+        if obj is self.table_view.viewport() and event.type() == QEvent.MouseMove:
+            index = self.table_view.indexAt(event.pos())
+            row_id = self._visible_ids()[index.row()] if index.isValid() else None
+            self._set_hovered_row(row_id)
+        if obj is self.table_view.viewport() and event.type() == QEvent.Leave:
+            self._set_hovered_row(None)
         if (
             self._interaction_blocked
             and obj is self.table_view.viewport()
@@ -1237,6 +1250,13 @@ class Table(QWidget):
             self.select_until(row_id)
         else:
             self.select([row_id])
+
+    def _set_hovered_row(self, row_id):
+        """Update the row-wide hover tint without changing selection."""
+        if row_id == self._hovered_row_id:
+            return
+        self._hovered_row_id = row_id
+        self.table_view.viewport().update()
 
     def get_selected_ids(self):
         visible = set(self._visible_ids())
