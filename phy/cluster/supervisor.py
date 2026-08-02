@@ -538,6 +538,12 @@ class ActionCreator:
         self._create_select_actions()
         self._create_toolbar(gui)
 
+        @connect(sender=gui)
+        def on_default_actions_created(sender):
+            self._place_merge_actions_before_save(gui)
+
+        self._place_merge_actions_before_save(gui)
+
     def _create_edit_actions(self):
         w = 'edit'
         self.add(w, 'undo', set_busy=True, icon='f0e2')
@@ -583,7 +589,7 @@ class ActionCreator:
             docstring='Select the first N eligible clusters shown in the similarity view.',
         )
         self.add(w, 'unselect_similar')
-        self.add(w, 'toggle_merge_mode')
+        self.add(w, 'toggle_merge_mode', icon='f0e8')
         self.add(
             w,
             'skip_noise_and_mua',
@@ -632,7 +638,6 @@ class ActionCreator:
     def _create_toolbar(self, gui):
         gui._toolbar.addAction(self.edit_actions.get('undo'))
         gui._toolbar.addAction(self.edit_actions.get('redo'))
-        gui._toolbar.addSeparator()
         gui._toolbar.addAction(self.select_actions.get('reset_wizard'))
         gui._toolbar.addAction(self.select_actions.get('previous_best'))
         gui._toolbar.addAction(self.select_actions.get('next_best'))
@@ -640,6 +645,19 @@ class ActionCreator:
         gui._toolbar.addAction(self.select_actions.get('next'))
         gui._toolbar.addSeparator()
         gui._toolbar.show()
+
+    def _place_merge_actions_before_save(self, gui):
+        """Place merge controls beside Save once the default actions exist."""
+        save_action = gui.file_actions.get('save')
+        if save_action is None:
+            return
+        toolbar = gui._toolbar
+        merge_mode = self.select_actions.get('toggle_merge_mode')
+        merge = self.edit_actions.get('merge')
+        toolbar.removeAction(merge_mode)
+        toolbar.removeAction(merge)
+        toolbar.insertAction(save_action, merge_mode)
+        toolbar.insertAction(save_action, merge)
 
 
 # -----------------------------------------------------------------------------
