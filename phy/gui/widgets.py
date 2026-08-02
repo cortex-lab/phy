@@ -44,6 +44,7 @@ from .qt import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPainter,
     QPalette,
     QPlainTextEdit,
     QPoint,
@@ -552,10 +553,15 @@ class _TableView(QTableView):
         self._drag_scroll_timer = QTimer(self)
         self._drag_scroll_timer.setInterval(30)
         self._drag_scroll_timer.timeout.connect(self._auto_scroll_drag)
-        self._drop_indicator = QLabel(self.viewport())
-        self._drop_indicator.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self._drop_indicator.setStyleSheet('background-color: #5ca8ff;')
-        self._drop_indicator.hide()
+        self._drop_indicator_y = None
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._drop_indicator_y is None:
+            return
+        painter = QPainter(self.viewport())
+        painter.fillRect(0, self._drop_indicator_y, self.viewport().width(), 3, QColor('#5ca8ff'))
+        painter.end()
 
     def startDrag(self, supported_actions):
         index = self._drag_start_index if self._drag_start_index.isValid() else self.currentIndex()
@@ -678,9 +684,8 @@ class _TableView(QTableView):
         else:
             index = self.model().index(insertion, 0)
             y = self.visualRect(index).top()
-        self._drop_indicator.setGeometry(0, max(0, y - 1), self.viewport().width(), 3)
-        self._drop_indicator.show()
-        self._drop_indicator.raise_()
+        self._drop_indicator_y = max(0, y - 1)
+        self.viewport().update()
 
     def _auto_scroll_drag(self):
         if self._drag_position is None or not self._drag_scroll_direction:
@@ -697,7 +702,8 @@ class _TableView(QTableView):
         self._drag_position = None
         self._drag_scroll_direction = 0
         self._drag_scroll_timer.stop()
-        self._drop_indicator.hide()
+        self._drop_indicator_y = None
+        self.viewport().update()
 
 
 class Table(QWidget):

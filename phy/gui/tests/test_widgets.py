@@ -106,7 +106,30 @@ def test_table_cluster_drag_drop_policy_and_payload(table, qtbot):
     def on_cluster_drop(sender, payload):
         drops.append(payload)
 
-    target.emit_cluster_drop(table, (1, 2), 1)
+    class DragEvent:
+        def __init__(self):
+            self.accepted = False
+
+        def source(self):
+            return table.table_view
+
+        def mimeData(self):
+            return mime
+
+        def pos(self):
+            return target.table_view.visualRect(target._proxy_index_for_id(10)).center()
+
+        def acceptProposedAction(self):
+            self.accepted = True
+
+        def ignore(self):
+            self.accepted = False
+
+    drag_event = DragEvent()
+    target.table_view.dragEnterEvent(drag_event)
+    target.table_view.dragMoveEvent(drag_event)
+    target.table_view.dropEvent(drag_event)
+    assert drag_event.accepted
     assert drops == [{'source': table, 'cluster_ids': (1, 2), 'insertion': 1}]
     unconnect(on_cluster_drop)
 
@@ -126,7 +149,7 @@ def test_table_drag_preview_marks_an_insertion_boundary_without_reordering(table
 
     view._update_drop_preview(first.topLeft())
     assert view._drop_insertion == 0
-    assert view._drop_indicator.isVisible()
+    assert view._drop_indicator_y is not None
     assert table._visible_ids() == before
 
     view._update_drop_preview(second.center())
@@ -135,7 +158,7 @@ def test_table_drag_preview_marks_an_insertion_boundary_without_reordering(table
 
     view._clear_drop_preview()
     assert view._drop_insertion is None
-    assert not view._drop_indicator.isVisible()
+    assert view._drop_indicator_y is None
 
 
 def test_table_hover_is_row_wide_without_selecting(table):

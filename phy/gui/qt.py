@@ -56,6 +56,7 @@ from PyQt5.QtGui import (  # noqa
     QColor,
     QPalette,
     QMouseEvent,
+    QPainter,
     QGuiApplication,
     QFontDatabase,
     QDrag,
