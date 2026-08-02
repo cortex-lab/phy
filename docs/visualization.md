@@ -82,7 +82,10 @@ Select quickly one or several cluster(s) by using **snippets**: for example, typ
 
 ![image](https://user-images.githubusercontent.com/1942359/58951169-bac4a280-8790-11e9-8e7b-5fa5410de152.png)
 
-Selected clusters are assigned with a special color: blue for the first selected cluster, red for the second, yellow for the third, etc.
+Selected clusters are assigned with a special color: blue for the explicit Similarity reference,
+then red, yellow, and so on for clusters encountered with that reference. Table sorting and
+filtering do not change these colors, and a deselected cluster recovers its prior color when it is
+reselected. Choosing a new blue reference starts a new color sequence.
 
 
 #### Cluster table

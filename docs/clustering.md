@@ -75,9 +75,10 @@ Wizard navigation skips clusters labeled `noise` or `mua` by default. To include
 On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is assigned to switching input sources in macOS System Settings, disable or remap that system shortcut so that phy can receive it.
 
 In Normal mode, scientific views follow the selected Cluster and Similarity rows in their visible
-table order, with the blue Similarity reference first. Sorting either table updates that
-presentation without recoloring existing table selections. Use Merge mode when you need to collect
-or explicitly order candidates.
+table order, with the blue Similarity reference first. Sorting or filtering either table updates
+that presentation without recoloring existing table selections. Deselecting and reselecting a row
+restores its previous color while the same blue reference is active; selecting a new reference
+starts a new color sequence. Use Merge mode when you need to collect or explicitly order candidates.
 
 For each similar cluster, you can either:
 

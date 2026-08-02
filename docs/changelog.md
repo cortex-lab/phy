@@ -99,11 +99,14 @@ behavior they verify rather than listed separately.
 
 - The first, blue Cluster View selection is now the explicit Similarity
   reference. In Normal mode, scientific views follow the selected Cluster and
-  Similarity rows in visible table order; re-sorting either table updates that
-  presentation without recoloring existing selections. In Merge mode, explicit
-  Merge View order takes precedence, while workflow-table colors remain fixed
-  for the entire session. Normal-mode cross-role mouse transfers and
-  cross-correlogram promotion have been removed in favor of the Merge workspace.
+  Similarity rows in visible table order; sorting or filtering either table
+  updates that presentation without recoloring existing selections. Deselecting
+  and reselecting a cluster reuses its color while the blue reference remains
+  unchanged; choosing a new reference starts a new color session. In Merge
+  mode, explicit Merge View order takes precedence, while workflow-table
+  colors remain fixed for the entire session. Normal-mode cross-role mouse
+  transfers and cross-correlogram promotion have been removed in favor of the
+  Merge workspace.
 - Undo and redo restore the complete selection context around merge, split,
   and metadata actions; redo also preserves selection-only exploration made
   after the original action.
