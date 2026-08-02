@@ -995,6 +995,30 @@ def test_table_filter_reorders_normal_presentation_without_recoloring(supervisor
     unconnect(on_select)
 
 
+def test_filtered_ctrl_toggle_preserves_hidden_selection_and_colors(supervisor):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.select([1, 11, 20])
+    supervisor.block()
+    colors = dict(supervisor.selection_color_indices)
+    similarity_view.filter('id < 2')
+
+    similarity_view.select_toggle(1)
+    supervisor.block()
+
+    assert supervisor.selected_similar == [11, 20]
+    assert {
+        cluster_id: supervisor.selection_color_indices[cluster_id] for cluster_id in colors
+    } == colors
+
+    similarity_view.select_toggle(1)
+    supervisor.block()
+
+    assert set(supervisor.selected_similar) == {1, 11, 20}
+    assert dict(supervisor.selection_color_indices) == colors
+
+
 def test_table_filter_reorders_merge_similarity_tail_without_recoloring(supervisor):
     _select(supervisor, [30])
     supervisor.toggle_merge_mode()

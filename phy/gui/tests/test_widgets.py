@@ -422,6 +422,23 @@ def test_table_uses_explicit_selected_color_mapping(table):
         table.set_selected_index_mapping({1: -1})
 
 
+def test_table_mutation_retains_filtered_selected_ids(table):
+    payloads = []
+
+    @connect(event='select', sender=table)
+    def on_select(sender, payload):
+        payloads.append(payload)
+
+    table.select([1, 4])
+    table.filter('id < 2')
+    table.select_toggle(1)
+
+    mutation = payloads[-1]['kwargs']['_selection_mutation']
+    assert mutation == SelectionMutation(SelectionIntent.TOGGLE, (1, 4), (4,), (), (1,))
+    assert payloads[-1]['selected'] == []
+    unconnect(on_select)
+
+
 def test_table_batch_update_fits_once(table):
     fit_calls = []
     table._fit_columns = lambda: fit_calls.append(True)

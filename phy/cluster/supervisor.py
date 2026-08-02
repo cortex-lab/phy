@@ -1120,7 +1120,9 @@ class Supervisor:
         cluster_ids = obj['selected']
         next_cluster = obj['next']
         kwargs = dict(obj.get('kwargs', {}))
-        kwargs.pop('_selection_mutation', None)
+        mutation = kwargs.pop('_selection_mutation', None)
+        if mutation is not None:
+            cluster_ids = list(mutation.after_ids)
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
         change = self.selection.set_normal_selection(cluster_ids)
         change = self._set_table_presentation_order(change)
@@ -1154,8 +1156,8 @@ class Supervisor:
         if mutation is None:
             intent = SelectionIntent.CLEAR if not similar else SelectionIntent.REPLACE
             mutation = SelectionMutation.create(intent, self.selection.state.similar_ids, similar)
-        elif mutation.after_ids != tuple(similar):
-            raise ValueError('Similarity mutation does not match the table selection payload.')
+        else:
+            similar = list(mutation.after_ids)
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
         presentation_order = self._presentation_order_from_tables(
             self.selection.state, similar_ids=similar

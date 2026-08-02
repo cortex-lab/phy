@@ -1216,7 +1216,7 @@ class Table(QWidget):
     def _selection_mutation(self, before_ids, intent):
         """Describe the selection operation that just updated this table."""
         before_ids = tuple(before_ids)
-        after_ids = tuple(self.get_selected_ids())
+        after_ids = tuple(self._selected_ids)
         return SelectionMutation.create(intent, before_ids, after_ids)
 
     def _emit_selected(self, kwargs=None, mutation=None):
@@ -1286,7 +1286,7 @@ class Table(QWidget):
         return [row_id for row_id in self._selected_ids if row_id in visible]
 
     def select_toggle(self, row_id):
-        before_ids = tuple(self.get_selected_ids())
+        before_ids = tuple(self._selected_ids)
         if row_id in self._selected_ids:
             self._selected_ids.remove(row_id)
         else:
@@ -1297,7 +1297,7 @@ class Table(QWidget):
         )
 
     def select_until(self, row_id):
-        before_ids = tuple(self.get_selected_ids())
+        before_ids = tuple(self._selected_ids)
         visible = self._visible_ids()
         if row_id not in visible:
             return None
@@ -1420,7 +1420,7 @@ class Table(QWidget):
 
     def select(self, ids, callback=None, **kwargs):
         ids = tuple(ids)
-        before_ids = tuple(self.get_selected_ids())
+        before_ids = tuple(self._selected_ids)
         intent = kwargs.pop('_selection_intent', None)
         if intent == 'navigation':
             intent = SelectionIntent.NAVIGATE
@@ -1438,8 +1438,9 @@ class Table(QWidget):
         """Project selected row IDs without emitting a selection event."""
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        visible = set(self._visible_ids())
-        self._selected_ids = [row_id for row_id in ids if row_id in visible]
+        self._selected_ids = [
+            row_id for row_id in ids if self._model.row_by_id(row_id) is not None
+        ]
         self._selection_revision += 1
         self._refresh_selection()
         return self._selected_payload()
