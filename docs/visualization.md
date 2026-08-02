@@ -512,10 +512,10 @@ and the displayed range together. These parameters are dataset-local, so
 values saved for one recording do not clip or coarsen a fresh dataset.
 
 Amplitude and Firing Rate views display elapsed recording time on their x
-axes. Choose **View > Set recording time unit** to show that time in seconds,
-minutes, or hours; the setting is shared across compatible views and remembered
-between sessions. This only changes tick labels: navigation, selection, ranges,
-and firing-rate bins remain in seconds.
+axes. Choose **View > Recording time unit > Seconds**, **Minutes**, or **Hours**;
+the setting is shared across compatible views and remembered between sessions.
+This only changes tick labels: navigation, selection, ranges, and firing-rate
+bins remain in seconds.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 

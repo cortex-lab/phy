@@ -65,6 +65,7 @@ from PyQt5.QtGui import (  # noqa
 )
 from PyQt5.QtWidgets import (  # noqa
     QAction,
+    QActionGroup,
     QAbstractItemView,
     QHeaderView,
     QStatusBar,

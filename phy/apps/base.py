@@ -42,7 +42,7 @@ from phy.cluster.views.base import BaseColorView, ManualClusteringView, Recordin
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
-from phy.gui.qt import AsyncCaller
+from phy.gui.qt import AsyncCaller, QActionGroup
 from phy.gui.state import _gui_state_path
 from phy.gui.widgets import IPythonView, view_settings_dialog
 from phy.utils.context import Context, _cache_methods
@@ -2138,16 +2138,29 @@ class BaseController:
                 gui.create_and_add_view(view_name)
 
     def create_misc_actions(self, gui):
-        @gui.view_actions.add(
-            name='Set recording time unit',
-            alias='timeunit',
-            prompt=True,
-            prompt_default=lambda: self.recording_time_unit,
-            show_shortcut=False,
-        )
-        def set_recording_time_unit(unit):
-            """Set recording-time labels to s, min, or h."""
-            self._set_recording_time_unit(unit, gui)
+        self._recording_time_actions = {}
+        self._recording_time_action_group = QActionGroup(gui)
+        self._recording_time_action_group.setExclusive(True)
+
+        for label, unit in (('Seconds', 's'), ('Minutes', 'min'), ('Hours', 'h')):
+
+            def set_recording_time_unit(checked, unit=unit):
+                """Set the unit used for elapsed recording-time labels."""
+                if checked:
+                    self._set_recording_time_unit(unit, gui)
+
+            gui.view_actions.add(
+                set_recording_time_unit,
+                name=label,
+                alias=f'time_{unit}',
+                submenu='Recording time unit',
+                checkable=True,
+                checked=self.recording_time_unit == unit,
+                show_shortcut=False,
+            )
+            action = gui.view_actions.get(label)
+            self._recording_time_action_group.addAction(action)
+            self._recording_time_actions[unit] = action
 
         # Toggle spike reorder.
         @gui.view_actions.add(
@@ -2198,7 +2211,9 @@ class BaseController:
         except (AttributeError, KeyError) as e:
             raise ValueError("Recording time unit must be 's', 'min', or 'h'.") from e
         self.recording_time_unit = unit
-        for view in gui.list_views():
+        for action_unit, action in getattr(self, '_recording_time_actions', {}).items():
+            action.setChecked(action_unit == unit)
+        for view in gui.views:
             if isinstance(view, RecordingTimeAxisMixin):
                 view._set_recording_time_unit(unit)
 

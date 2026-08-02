@@ -19,8 +19,8 @@ behavior they verify rather than listed separately.
 ### Added
 
 - Display elapsed recording time in seconds, minutes, or hours in Amplitude
-  and Firing Rate views. **View > Set recording time unit** changes the shared
-  preference, and axis labels now use thousands separators.
+  and Firing Rate views. Choose the shared preference from **View > Recording
+  time unit**, and axis labels now use thousands separators.
 - Stage and order manual merge candidates in the new **Merge View**. Press `V`
   to enter or cancel Merge mode, transfer candidates with
   `Control`-right-click or drag-and-drop, and press `G` to merge every staged

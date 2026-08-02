@@ -36,6 +36,7 @@ from phy.cluster.views import (
     TraceView,
     WaveformView,
 )
+from phy.gui import GUI
 from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
@@ -537,8 +538,7 @@ def test_recording_time_unit_updates_compatible_views(qtbot):
     firing_rate = FiringRateView(cluster_stat=lambda cluster_id: Bunch(data=np.array([0.0])))
 
     class GUI:
-        def list_views(self):
-            return [amplitude, firing_rate]
+        views = [amplitude, firing_rate]
 
     controller._set_recording_time_unit('hours', GUI())
 
@@ -549,6 +549,27 @@ def test_recording_time_unit_updates_compatible_views(qtbot):
 
     amplitude.close()
     firing_rate.close()
+
+
+def test_recording_time_unit_menu(qtbot, tempdir):
+    controller = object.__new__(BaseController)
+    controller.recording_time_unit = 's'
+    gui = GUI(name='RecordingTimeTest', config_dir=tempdir)
+    controller.create_misc_actions(gui)
+
+    seconds = gui.view_actions.get('Seconds')
+    minutes = gui.view_actions.get('Minutes')
+    hours = gui.view_actions.get('Hours')
+    assert seconds.isCheckable() and minutes.isCheckable() and hours.isCheckable()
+    assert seconds.isChecked()
+
+    hours.trigger()
+
+    assert controller.recording_time_unit == 'h'
+    assert hours.isChecked()
+    assert not seconds.isChecked()
+    assert not minutes.isChecked()
+    gui.close()
 
 
 def test_amplitude_view_excludes_unavailable_features(qtbot, tempdir):
