@@ -7,10 +7,11 @@
 import sys
 from functools import partial
 
+import numpy as np
 from phylib.utils import connect, unconnect
-from pytest import fixture, mark
+from pytest import fixture, mark, raises
 
-from ..qt import QHeaderView, QMimeData, Qt
+from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
@@ -69,11 +70,33 @@ def test_table_cluster_drag_drop_policy_and_payload(table, qtbot):
 
     assert table._drag_ids_for_index(table._proxy_index_for_id(1)) == (1, 2)
     assert table._drag_ids_for_index(table._proxy_index_for_id(3)) == (3,)
+    assert table._proxy_index_for_id(1).flags() & Qt.ItemIsDragEnabled
+    assert target._proxy_index_for_id(10).flags() & Qt.ItemIsDropEnabled
+    unrelated = Table(columns=['id'], data=[{'id': 20}])
+    qtbot.addWidget(unrelated)
+    assert not unrelated.table_view.acceptDrops()
+    assert not unrelated._proxy_index_for_id(20).flags() & Qt.ItemIsDropEnabled
+
+    started = []
+    table.table_view.startDrag = lambda actions: started.append(actions)
+    index = table._proxy_index_for_id(3)
+    pos = table.table_view.visualRect(index).center()
+    qtbot.mousePress(table.table_view.viewport(), Qt.LeftButton, pos=pos)
+    end = pos + type(pos)(QApplication.startDragDistance() + 1, 0)
+    table.table_view.mouseMoveEvent(
+        QMouseEvent(QEvent.MouseMove, end, Qt.NoButton, Qt.LeftButton, Qt.NoModifier)
+    )
+    qtbot.mouseRelease(table.table_view.viewport(), Qt.LeftButton, pos=pos)
+    assert started
 
     mime = QMimeData()
     mime.setData('application/x-phy-cluster-ids', b'[1, 2, 2]')
     assert target.cluster_ids_from_mime(mime) == (1, 2)
     assert target.accepts_cluster_drop(table, (1, 2))
+    numpy_mime = table._cluster_ids_to_mime((np.int64(1), np.int32(2)))
+    assert bytes(numpy_mime.data('application/x-phy-cluster-ids')) == b'[1, 2]'
+    with raises(TypeError, match='integer IDs'):
+        table._cluster_ids_to_mime((1, 'spikes'))
 
     drops = []
 
@@ -734,3 +757,22 @@ def test_table_filter_event_emits_visible_ids(qtbot, table):
     _block(lambda: emitted == [[0, 1, 2]])
 
     unconnect(on_table_filter)
+
+
+def test_table_interaction_overlay_stays_fixed_while_scrolling(qtbot):
+    table = Table(columns=['id'], data=[{'id': i} for i in range(100)])
+    _wait_until_table_ready(qtbot, table)
+    table.resize(240, 180)
+    table._set_interaction_overlay('DISABLED')
+    qtbot.wait(1)
+
+    geometry = table._interaction_overlay.geometry()
+    scrollbar = table.table_view.verticalScrollBar()
+    assert scrollbar.maximum() > 0
+    scrollbar.setValue(scrollbar.maximum())
+    qtbot.wait(1)
+
+    assert table._interaction_overlay.parent() is table.table_view
+    assert table._interaction_overlay.geometry() == geometry
+    assert 'rgba(0, 0, 0, 220)' in table._interaction_overlay.styleSheet()
+    table.close()

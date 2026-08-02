@@ -390,6 +390,15 @@ class _TableModel(QAbstractTableModel):
                 return fg
         return None
 
+    def flags(self, index):
+        """Advertise drag/drop support when the owning table enables it."""
+        flags = super().flags(index)
+        if index.isValid() and self._table._drag_role is not None:
+            flags |= Qt.ItemIsDragEnabled
+        if self._table._accepted_drag_roles:
+            flags |= Qt.ItemIsDropEnabled
+        return flags
+
     def set_rows(self, rows):
         self.beginResetModel()
         self._rows = list(rows)
@@ -528,16 +537,46 @@ class _TableView(QTableView):
     def __init__(self, owner):
         super().__init__(owner)
         self._owner = owner
+        self._drag_start_pos = None
+        self._drag_start_index = QModelIndex()
 
     def startDrag(self, supported_actions):
-        ids = self._owner._drag_ids_for_index(self.currentIndex())
+        index = self._drag_start_index if self._drag_start_index.isValid() else self.currentIndex()
+        ids = self._owner._drag_ids_for_index(index)
         if not ids:
             return
-        mime = QMimeData()
-        mime.setData(_CLUSTER_IDS_MIME, json.dumps(ids).encode('utf8'))
         drag = QDrag(self)
-        drag.setMimeData(mime)
+        drag.setMimeData(self._owner._cluster_ids_to_mime(ids))
         drag.exec_(Qt.MoveAction)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self._drag_start_pos = None
+        self._drag_start_index = QModelIndex()
+        if event.button() != Qt.LeftButton or self._owner._drag_role is None:
+            return
+        index = self.indexAt(event.pos())
+        if self._owner._drag_ids_for_index(index):
+            self._drag_start_pos = event.pos()
+            self._drag_start_index = index
+
+    def mouseMoveEvent(self, event):
+        if (
+            self._drag_start_pos is not None
+            and event.buttons() & Qt.LeftButton
+            and (event.pos() - self._drag_start_pos).manhattanLength()
+            >= QApplication.startDragDistance()
+        ):
+            self.startDrag(Qt.MoveAction)
+            self._drag_start_pos = None
+            self._drag_start_index = QModelIndex()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        self._drag_start_index = QModelIndex()
+        super().mouseReleaseEvent(event)
 
     def dragEnterEvent(self, event):
         if self._owner._accept_cluster_drop_event(event):
@@ -684,17 +723,19 @@ class Table(QWidget):
             self.filter_edit.setEnabled(False)
             self.table_view.horizontalHeader().setEnabled(False)
             if self._interaction_overlay is None:
-                overlay = QLabel(self.table_view.viewport())
+                # Parent the overlay to the view frame, not its scrolling viewport:
+                # QAbstractScrollArea moves viewport children with its contents.
+                overlay = QLabel(self.table_view)
                 overlay.setAlignment(Qt.AlignCenter)
                 overlay.setWordWrap(True)
                 overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
                 overlay.setStyleSheet(
-                    'background-color: rgba(0, 0, 0, 150); color: #dddddd; '
+                    'background-color: rgba(0, 0, 0, 220); color: #dddddd; '
                     'font-size: 18px; font-weight: bold; padding: 24px;'
                 )
                 self._interaction_overlay = overlay
             self._interaction_overlay.setText(text)
-            self._interaction_overlay.setGeometry(self.table_view.viewport().rect())
+            self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
             self._interaction_overlay.show()
             self._interaction_overlay.raise_()
         else:
@@ -717,6 +758,19 @@ class Table(QWidget):
         if self._drag_selected_rows and clicked in self._selected_ids:
             return tuple(self._selected_visible_ids())
         return (clicked,)
+
+    @staticmethod
+    def _cluster_ids_to_mime(cluster_ids):
+        """Encode integer-like cluster IDs as native JSON integers."""
+        cluster_ids = tuple(cluster_ids)
+        if any(not _is_integer(cluster_id) for cluster_id in cluster_ids):
+            raise TypeError('Cluster drag payloads require integer IDs.')
+        mime = QMimeData()
+        mime.setData(
+            _CLUSTER_IDS_MIME,
+            json.dumps([int(cluster_id) for cluster_id in cluster_ids]).encode('utf8'),
+        )
+        return mime
 
     @staticmethod
     def cluster_ids_from_mime(mime):
@@ -762,7 +816,7 @@ class Table(QWidget):
     def eventFilter(self, obj, event):
         if obj is self.table_view.viewport() and event.type() == QEvent.Resize:
             if self._interaction_overlay is not None:
-                self._interaction_overlay.setGeometry(self.table_view.viewport().rect())
+                self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
         if (
             self._interaction_blocked
             and obj is self.table_view.viewport()

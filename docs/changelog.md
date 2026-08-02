@@ -50,6 +50,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Keep the disabled Cluster View overlay fixed while scrolling in Merge mode,
+  increase its dimming, and make native table rows initiate drag-and-drop.
 - Display Firing Rate View values in spikes per second instead of normalized
   probability density, with the configured bin count matching the rendered bins.
 - Start the GUI with released phylib versions that do not yet expose the

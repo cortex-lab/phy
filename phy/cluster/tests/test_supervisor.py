@@ -523,6 +523,9 @@ def test_supervisor_merge_drag_drop_intents(supervisor):
     _select(supervisor, [10, 30], [20])
     supervisor.toggle_merge_mode()
     candidate = supervisor.similarity_view.get_ids()[0]
+    assert supervisor.merge_view.table_view.acceptDrops()
+    assert supervisor.similarity_view.table_view.acceptDrops()
+    assert not supervisor.cluster_view.table_view.acceptDrops()
     assert supervisor.merge_view.table_view.selectionMode() == QAbstractItemView.SingleSelection
     movable = supervisor.merge_view._proxy_index_for_id(30)
     supervisor.merge_view.table_view.setCurrentIndex(movable)
