@@ -170,3 +170,8 @@ def test_add_selected_clusters_colors_uses_stable_slots():
 
     ae(colors[1], selected_cluster_color(3))
     ae(colors[0], selected_cluster_color(1))
+
+    empty = _add_selected_clusters_colors(
+        [], [2, 5, 9], np.zeros((3, 4)), color_index_by_id={5: 3, 2: 1}
+    )
+    ae(empty, np.zeros((3, 4)))

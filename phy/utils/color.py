@@ -197,7 +197,8 @@ def _add_selected_clusters_colors(
             [
                 color_index_by_id.get(int(cluster_id), index)
                 for index, cluster_id in enumerate(selected_clusters[kept])
-            ]
+            ],
+            dtype=np.int64,
         )
     colormap = _categorical_colormap(colormaps.default, cmap_idx, categorize=False)
     # Inject those colors in cluster_colors.
