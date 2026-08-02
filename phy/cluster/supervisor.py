@@ -1375,7 +1375,10 @@ class Supervisor:
         context = self.selection.state.merge.entry_snapshot.workflow_context
         change = self.selection.cancel_merge_mode()
         self._set_merge_mode_ui(False)
-        self._apply_selection_change(change, refresh_similarity=False, sync_presentation=False)
+        # Merge mode rebuilds Similarity while excluding every staged row. Rebuild it
+        # again from the restored Cluster role so the pre-merge Similarity rows are
+        # present before their selection and table context are restored.
+        self._apply_selection_change(change, refresh_similarity=True, sync_presentation=False)
         self._restore_workflow_context(context)
         if close_view:
             self._close_merge_view()

@@ -58,6 +58,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Closing the Merge View now restores staged clusters to their original
+  Cluster and Similarity View rows, selections, and table positions.
 - Show the active sort column and direction in Cluster and Similarity View
   headers.
 - Dragging Merge View rows now shows the cluster ID preview, insertion boundary,

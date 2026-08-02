@@ -396,6 +396,26 @@ def test_supervisor_merge_mode_lifecycle_restores_entry_state(supervisor):
     unconnect(on_select)
 
 
+def test_closing_merge_view_restores_original_table_rows(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20, 11])
+    cluster_rows = supervisor.cluster_view.get_ids()
+    similarity_rows = supervisor.similarity_view.get_ids()
+
+    supervisor.toggle_merge_mode()
+    assert 20 not in supervisor.similarity_view.get_ids()
+    assert 11 not in supervisor.similarity_view.get_ids()
+
+    supervisor.merge_view.dock.close()
+    qtbot.wait(10)
+
+    assert not supervisor.selection.state.is_merge_mode
+    assert supervisor.merge_view is None
+    assert supervisor.cluster_view.get_ids() == cluster_rows
+    assert supervisor.similarity_view.get_ids() == similarity_rows
+    assert supervisor.cluster_view.get_selected_ids() == [10, 30]
+    assert supervisor.similarity_view.get_selected_ids() == [20, 11]
+
+
 def test_supervisor_merge_view_opens_below_cluster_and_restores_position(qtbot, supervisor):
     _select(supervisor, [30], [20])
 
