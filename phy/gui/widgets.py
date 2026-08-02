@@ -46,6 +46,7 @@ from .qt import (
     QObject,
     QPalette,
     QPlainTextEdit,
+    QPoint,
     QSize,
     QSortFilterProxyModel,
     QSpinBox,
@@ -534,11 +535,23 @@ def _install_table_filter_focus_watcher():
 class _TableView(QTableView):
     """QTableView adapter for cluster-ID-only drag-and-drop intents."""
 
+    _drag_scroll_margin = 24
+
     def __init__(self, owner):
         super().__init__(owner)
         self._owner = owner
         self._drag_start_pos = None
         self._drag_start_index = QModelIndex()
+        self._drop_insertion = None
+        self._drag_position = None
+        self._drag_scroll_direction = 0
+        self._drag_scroll_timer = QTimer(self)
+        self._drag_scroll_timer.setInterval(30)
+        self._drag_scroll_timer.timeout.connect(self._auto_scroll_drag)
+        self._drop_indicator = QLabel(self.viewport())
+        self._drop_indicator.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self._drop_indicator.setStyleSheet('background-color: #5ca8ff;')
+        self._drop_indicator.hide()
 
     def startDrag(self, supported_actions):
         index = self._drag_start_index if self._drag_start_index.isValid() else self.currentIndex()
@@ -547,7 +560,13 @@ class _TableView(QTableView):
             return
         drag = QDrag(self)
         drag.setMimeData(self._owner._cluster_ids_to_mime(ids))
+        rect = self.visualRect(index)
+        if rect.isValid():
+            drag.setPixmap(self.viewport().grab(rect))
+            if self._drag_start_pos is not None:
+                drag.setHotSpot(self._drag_start_pos - rect.topLeft())
         drag.exec_(Qt.MoveAction)
+        self._clear_drop_preview()
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -582,22 +601,88 @@ class _TableView(QTableView):
         if self._owner._accept_cluster_drop_event(event):
             event.acceptProposedAction()
         else:
+            self._clear_drop_preview()
             event.ignore()
 
     def dragMoveEvent(self, event):
-        self.dragEnterEvent(event)
+        if not self._owner._accept_cluster_drop_event(event):
+            self._clear_drop_preview()
+            event.ignore()
+            return
+        self._update_drop_preview(event.pos())
+        event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event):
+        self._clear_drop_preview()
+        event.accept()
 
     def dropEvent(self, event):
         source = event.source()
         source_table = source._owner if isinstance(source, _TableView) else None
         ids = self._owner.cluster_ids_from_mime(event.mimeData())
         if source_table is None or not self._owner.accepts_cluster_drop(source_table, ids):
+            self._clear_drop_preview()
             event.ignore()
             return
-        index = self.indexAt(event.pos())
-        insertion = index.row() if index.isValid() else len(self._owner._visible_ids())
+        insertion = self._drop_insertion
+        if insertion is None:
+            insertion = self._drop_insertion_for_pos(event.pos())
+        self._clear_drop_preview()
         self._owner.emit_cluster_drop(source_table, ids, insertion)
         event.acceptProposedAction()
+
+    def _drop_insertion_for_pos(self, pos):
+        """Return the visual row boundary immediately under a drop position."""
+        index = self.indexAt(pos)
+        if not index.isValid():
+            return 0 if pos.y() <= 0 else len(self._owner._visible_ids())
+        rect = self.visualRect(index)
+        return index.row() + int(pos.y() >= rect.center().y())
+
+    def _update_drop_preview(self, pos):
+        """Show a non-mutating insertion target and keep edge autoscroll active."""
+        self._drag_position = QPoint(pos)
+        self._drop_insertion = self._drop_insertion_for_pos(pos)
+        self._show_drop_indicator(self._drop_insertion)
+        height = self.viewport().height()
+        if pos.y() < self._drag_scroll_margin:
+            direction = -1
+        elif pos.y() >= height - self._drag_scroll_margin:
+            direction = 1
+        else:
+            direction = 0
+        self._drag_scroll_direction = direction
+        if direction and not self._drag_scroll_timer.isActive():
+            self._drag_scroll_timer.start()
+        elif not direction:
+            self._drag_scroll_timer.stop()
+
+    def _show_drop_indicator(self, insertion):
+        if insertion >= len(self._owner._visible_ids()):
+            y = self.viewport().height() - 2
+        else:
+            index = self.model().index(insertion, 0)
+            y = self.visualRect(index).top()
+        self._drop_indicator.setGeometry(0, max(0, y - 1), self.viewport().width(), 3)
+        self._drop_indicator.show()
+        self._drop_indicator.raise_()
+
+    def _auto_scroll_drag(self):
+        if self._drag_position is None or not self._drag_scroll_direction:
+            self._drag_scroll_timer.stop()
+            return
+        bar = self.verticalScrollBar()
+        step = max(1, bar.singleStep()) * self._drag_scroll_direction
+        bar.setValue(bar.value() + step)
+        self._drop_insertion = self._drop_insertion_for_pos(self._drag_position)
+        self._show_drop_indicator(self._drop_insertion)
+
+    def _clear_drop_preview(self):
+        self._drop_insertion = None
+        self._drag_position = None
+        self._drag_scroll_direction = 0
+        self._drag_scroll_timer.stop()
+        self._drop_indicator.hide()
 
 
 class Table(QWidget):

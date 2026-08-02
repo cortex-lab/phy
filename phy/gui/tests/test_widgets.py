@@ -115,6 +115,27 @@ def test_table_cluster_drag_drop_policy_and_payload(table, qtbot):
     assert not table.table_view.dragEnabled()
 
 
+def test_table_drag_preview_marks_an_insertion_boundary_without_reordering(table):
+    table.configure_cluster_drag_drop('merge', accepted_roles=('merge',))
+    view = table.table_view
+    before = table._visible_ids()
+    first = view.visualRect(table._proxy_index_for_id(0))
+    second = view.visualRect(table._proxy_index_for_id(1))
+
+    view._update_drop_preview(first.topLeft())
+    assert view._drop_insertion == 0
+    assert view._drop_indicator.isVisible()
+    assert table._visible_ids() == before
+
+    view._update_drop_preview(second.center())
+    assert view._drop_insertion == 2
+    assert table._visible_ids() == before
+
+    view._clear_drop_preview()
+    assert view._drop_insertion is None
+    assert not view._drop_indicator.isVisible()
+
+
 def test_key_value_1(qtbot):
     widget = KeyValueWidget()
     qtbot.addWidget(widget)

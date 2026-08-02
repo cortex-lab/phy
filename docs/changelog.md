@@ -44,6 +44,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Dragging Merge View rows now shows a row preview, insertion boundary, and
+  edge autoscroll without changing the order until the drop completes.
 - Show an unsaved-changes marker in the window title, enable the Save action
   only when curation changes are pending, and confirm successful saves in the
   status bar.
