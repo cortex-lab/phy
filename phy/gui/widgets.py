@@ -1315,18 +1315,18 @@ class Table(QWidget):
 
     def _move_to_sibling(self, row_id=None, direction='next'):
         if not self.get_selected_ids():
-            return self._select_first_or_last('first')
+            return self._select_first_or_last('first', _selection_intent='navigation')
         new_id = self.get_sibling_id(row_id, direction)
         if new_id is None:
             return None
-        return self.select([new_id])
+        return self.select([new_id], _selection_intent='navigation')
 
-    def _select_first_or_last(self, which):
+    def _select_first_or_last(self, which, **kwargs):
         visible = self._visible_ids()
         ordered = visible if which == 'first' else list(reversed(visible))
         for row_id in ordered:
             if self._is_navigable_id(row_id):
-                return self.select([row_id])
+                return self.select([row_id], **kwargs)
         return None
 
     def sort_by(self, name, sort_dir='asc'):

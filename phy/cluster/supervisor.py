@@ -1118,7 +1118,8 @@ class Supervisor:
             return
         cluster_ids = obj['selected']
         next_cluster = obj['next']
-        kwargs = obj.get('kwargs', {})
+        kwargs = dict(obj.get('kwargs', {}))
+        kwargs.pop('_selection_intent', None)
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
         change = self.selection.set_normal_selection(cluster_ids)
         change = self._set_table_presentation_order(change)
@@ -1147,12 +1148,16 @@ class Supervisor:
             return
         similar = obj['selected']
         next_similar = obj['next']
-        kwargs = obj.get('kwargs', {})
+        kwargs = dict(obj.get('kwargs', {}))
+        selection_intent = kwargs.pop('_selection_intent', None)
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
         presentation_order = self._presentation_order_from_tables(
             self.selection.state, similar_ids=similar
         )
-        self.selection.set_similarity_selection(similar, presentation_order)
+        if selection_intent == 'navigation' and not self.selection.state.is_merge_mode:
+            self.selection.navigate_similarity_selection(similar, presentation_order)
+        else:
+            self.selection.set_similarity_selection(similar, presentation_order)
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)

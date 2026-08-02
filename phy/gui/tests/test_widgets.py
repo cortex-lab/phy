@@ -494,13 +494,23 @@ def test_table_nav_last(qtbot, table):
 
 
 def test_table_nav_0(qtbot, table):
+    payloads = []
+
+    @connect(event='select', sender=table)
+    def on_select(sender, obj):
+        payloads.append(obj)
+
     table.select([4])
+    assert payloads[-1]['kwargs'] == {}
 
     table.next()
     _assert(table.get_selected, [6])
+    assert payloads[-1]['kwargs'] == {'_selection_intent': 'navigation'}
 
     table.previous()
     _assert(table.get_selected, [4])
+    assert payloads[-1]['kwargs'] == {'_selection_intent': 'navigation'}
+    unconnect(on_select)
 
 
 def test_table_navigation_skip_masked_policy(qtbot, table):

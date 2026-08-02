@@ -610,6 +610,14 @@ def test_merge_mode_next_navigates_similarity_not_cluster(supervisor):
     assert supervisor.selection.state.merge is before.merge
     assert supervisor.selected_clusters == []
     assert len(supervisor.selected_similar) == 1
+    first_candidate = supervisor.selected_similar[0]
+    first_colors = supervisor.selection_color_order
+
+    supervisor.next()
+    supervisor.block()
+
+    assert supervisor.selection_color_order[: len(first_colors)] == first_colors
+    assert supervisor.selected_similar != [first_candidate]
 
 
 def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
@@ -1735,18 +1743,25 @@ def test_supervisor_reset(qtbot, supervisor):
     supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
+    assert supervisor.similarity_view._selected_color_index(20) == 1
 
     supervisor.select_actions.next()
     supervisor.block()
     _assert_selected(supervisor, [30, 11])
+    assert supervisor.similarity_view._selected_color_index(11) == 1
 
     supervisor.select_actions.previous()
     supervisor.block()
     _assert_selected(supervisor, [30, 20])
+    assert supervisor.similarity_view._selected_color_index(20) == 1
 
     supervisor.select_actions.unselect_similar()
     supervisor.block()
     _assert_selected(supervisor, [30])
+
+    supervisor.select_actions.next()
+    supervisor.block()
+    assert supervisor.similarity_view._selected_color_index(supervisor.selected_similar[0]) == 1
 
 
 def test_supervisor_nav(qtbot, supervisor):
