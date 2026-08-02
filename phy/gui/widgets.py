@@ -22,6 +22,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 from phy.utils.color import _is_bright, colormaps
+from phy.utils.selection import SelectionIntent, SelectionMutation
 
 from .qt import (
     Debouncer,
@@ -1211,8 +1212,27 @@ class Table(QWidget):
             'revision': self._selection_revision,
         }
 
-    def _emit_selected(self, kwargs=None):
+    def _selection_mutation(self, before_ids, intent):
+        """Describe the selection operation that just updated this table."""
+        before_ids = tuple(before_ids)
+        after_ids = tuple(self.get_selected_ids())
+        before_set = set(before_ids)
+        after_set = set(after_ids)
+        return SelectionMutation(
+            intent=intent,
+            before_ids=before_ids,
+            after_ids=after_ids,
+            added_ids=tuple(row_id for row_id in after_ids if row_id not in before_set),
+            removed_ids=tuple(row_id for row_id in before_ids if row_id not in after_set),
+        )
+
+    def _emit_selected(self, kwargs=None, mutation=None):
         self._selection_revision += 1
+        kwargs = dict(kwargs or {})
+        if mutation is not None:
+            # This stays in the private kwargs channel so existing consumers see
+            # the same top-level select payload.
+            kwargs['_selection_mutation'] = mutation
         payload = self._selected_payload(kwargs)
         self._emit_event('select', payload)
         return payload
@@ -1273,27 +1293,33 @@ class Table(QWidget):
         return [row_id for row_id in self._selected_ids if row_id in visible]
 
     def select_toggle(self, row_id):
+        before_ids = tuple(self.get_selected_ids())
         if row_id in self._selected_ids:
             self._selected_ids.remove(row_id)
         else:
             self._selected_ids.append(row_id)
         self._refresh_selection()
-        return self._emit_selected()
+        return self._emit_selected(
+            mutation=self._selection_mutation(before_ids, SelectionIntent.TOGGLE)
+        )
 
     def select_until(self, row_id):
+        before_ids = tuple(self.get_selected_ids())
         visible = self._visible_ids()
         if row_id not in visible:
             return None
         anchor = self._selection_anchor_row()
         if anchor is None:
-            return self.select([row_id])
+            return self.select([row_id], _selection_intent=SelectionIntent.EXTEND)
         clicked = visible.index(row_id)
         imin, imax = sorted((anchor, clicked))
         for visible_id in visible[imin : imax + 1]:
             if visible_id not in self._selected_ids:
                 self._selected_ids.append(visible_id)
         self._refresh_selection()
-        return self._emit_selected()
+        return self._emit_selected(
+            mutation=self._selection_mutation(before_ids, SelectionIntent.EXTEND)
+        )
 
     def get_sibling_id(self, row_id=None, direction='next'):
         selected = self.get_selected_ids()
@@ -1315,11 +1341,11 @@ class Table(QWidget):
 
     def _move_to_sibling(self, row_id=None, direction='next'):
         if not self.get_selected_ids():
-            return self._select_first_or_last('first', _selection_intent='navigation')
+            return self._select_first_or_last('first', _selection_intent=SelectionIntent.NAVIGATE)
         new_id = self.get_sibling_id(row_id, direction)
         if new_id is None:
             return None
-        return self.select([new_id], _selection_intent='navigation')
+        return self.select([new_id], _selection_intent=SelectionIntent.NAVIGATE)
 
     def _select_first_or_last(self, which, **kwargs):
         visible = self._visible_ids()
@@ -1382,10 +1408,16 @@ class Table(QWidget):
         return [row_id] if row_id is not None else []
 
     def first(self, callback=None):
-        return self._async_return(self._select_first_or_last('first'), callback)
+        return self._async_return(
+            self._select_first_or_last('first', _selection_intent=SelectionIntent.NAVIGATE),
+            callback,
+        )
 
     def last(self, callback=None):
-        return self._async_return(self._select_first_or_last('last'), callback)
+        return self._async_return(
+            self._select_first_or_last('last', _selection_intent=SelectionIntent.NAVIGATE),
+            callback,
+        )
 
     def next(self, callback=None):
         return self._async_return(self._move_to_sibling(None, 'next'), callback)
@@ -1394,8 +1426,19 @@ class Table(QWidget):
         return self._async_return(self._move_to_sibling(None, 'previous'), callback)
 
     def select(self, ids, callback=None, **kwargs):
+        ids = tuple(ids)
+        before_ids = tuple(self.get_selected_ids())
+        intent = kwargs.pop('_selection_intent', None)
+        if intent == 'navigation':
+            intent = SelectionIntent.NAVIGATE
+        elif intent is None:
+            intent = SelectionIntent.CLEAR if not ids else SelectionIntent.REPLACE
+        if not isinstance(intent, SelectionIntent):
+            raise TypeError('_selection_intent must be a SelectionIntent.')
         self.set_selected_ids(ids)
-        payload = self._emit_selected(kwargs)
+        payload = self._emit_selected(
+            kwargs, mutation=self._selection_mutation(before_ids, intent)
+        )
         return self._async_return(payload, callback)
 
     def set_selected_ids(self, ids):

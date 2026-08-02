@@ -11,6 +11,8 @@ import numpy as np
 from phylib.utils import connect, unconnect
 from pytest import fixture, mark, raises
 
+from phy.utils.selection import SelectionIntent, SelectionMutation
+
 from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
@@ -376,6 +378,38 @@ def test_table_set_selected_ids_is_a_silent_projection(table):
     unconnect(on_select)
 
 
+def test_table_selection_events_include_structured_mutations(table):
+    events = []
+
+    @connect(event='select', sender=table)
+    def on_select(sender, payload):
+        events.append(payload)
+
+    table.select([1])
+    replace = events[-1]['kwargs']['_selection_mutation']
+    assert replace == SelectionMutation(SelectionIntent.REPLACE, (), (1,), (1,), ())
+
+    table.select_toggle(3)
+    toggle = events[-1]['kwargs']['_selection_mutation']
+    assert toggle == SelectionMutation(SelectionIntent.TOGGLE, (1,), (1, 3), (3,), ())
+
+    table.select_until(5)
+    extend = events[-1]['kwargs']['_selection_mutation']
+    assert extend == SelectionMutation(SelectionIntent.EXTEND, (1, 3), (1, 3, 4, 5), (4, 5), ())
+
+    table.select([])
+    clear = events[-1]['kwargs']['_selection_mutation']
+    assert clear == SelectionMutation(SelectionIntent.CLEAR, (1, 3, 4, 5), (), (), (1, 3, 4, 5))
+
+    # Programmatic projection remains intentionally silent.
+    table.set_selected_ids([1])
+    assert len(events) == 4
+    table.next()
+    navigate = events[-1]['kwargs']['_selection_mutation']
+    assert navigate == SelectionMutation(SelectionIntent.NAVIGATE, (1,), (4,), (4,), (1,))
+    unconnect(on_select)
+
+
 def test_table_batch_update_fits_once(table):
     fit_calls = []
     table._fit_columns = lambda: fit_calls.append(True)
@@ -501,15 +535,15 @@ def test_table_nav_0(qtbot, table):
         payloads.append(obj)
 
     table.select([4])
-    assert payloads[-1]['kwargs'] == {}
+    assert payloads[-1]['kwargs']['_selection_mutation'].intent is SelectionIntent.REPLACE
 
     table.next()
     _assert(table.get_selected, [6])
-    assert payloads[-1]['kwargs'] == {'_selection_intent': 'navigation'}
+    assert payloads[-1]['kwargs']['_selection_mutation'].intent is SelectionIntent.NAVIGATE
 
     table.previous()
     _assert(table.get_selected, [4])
-    assert payloads[-1]['kwargs'] == {'_selection_intent': 'navigation'}
+    assert payloads[-1]['kwargs']['_selection_mutation'].intent is SelectionIntent.NAVIGATE
     unconnect(on_select)
 
 
