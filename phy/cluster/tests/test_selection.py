@@ -35,6 +35,12 @@ def test_state_rejects_invalid_ids_reference_and_presentation():
         )
     with raises(ValueError, match='requires a merge session'):
         CurationSelectionState(mode=WorkflowMode.MERGE)
+    with raises(ValueError, match='Color order'):
+        CurationSelectionState(cluster_ids=(1, 2), color_order=(1,))
+    with raises(ValueError, match='first color'):
+        CurationSelectionState(cluster_ids=(1, 2), color_order=(2, 1))
+    with raises(ValueError, match='Similarity selection'):
+        CurationSelectionState(similar_ids=(2,))
 
 
 def test_state_is_immutable():
@@ -76,6 +82,22 @@ def test_set_similarity_and_clear_similarity_selection():
     change = controller.clear_similarity_selection()
     assert change.after.similar_ids == ()
     assert change.after.presentation_order == (1,)
+
+
+def test_similarity_deselection_and_reselection_preserve_color_slots():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1,), reference_id=1)
+    )
+
+    controller.set_similarity_selection((2, 3, 4))
+    color_order = controller.state.color_order
+    change = controller.set_similarity_selection((2, 4))
+
+    assert change.after.color_order == color_order
+    assert not change.colors_changed
+    change = controller.set_similarity_selection((2, 3, 4))
+    assert change.after.color_order == color_order
+    assert not change.colors_changed
 
 
 def test_set_normal_selection_replaces_all_roles_atomically():
@@ -171,7 +193,7 @@ def test_enter_merge_mode_stages_normal_presentation_order():
 
 
 def test_enter_merge_mode_requires_cluster_selection():
-    controller = CurationSelectionController(CurationSelectionState(similar_ids=(2,)))
+    controller = CurationSelectionController()
     with raises(ValueError, match='Cluster View selection'):
         controller.enter_merge_mode()
 

@@ -620,6 +620,14 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     supervisor.similarity_view.select([candidate])
     supervisor.block()
     merge_before = supervisor.selection.snapshot()
+    colors_before = {
+        cluster_id: (
+            supervisor.merge_view._selected_color_index(cluster_id)
+            if cluster_id in supervisor.selected_merge
+            else supervisor.similarity_view._selected_color_index(cluster_id)
+        )
+        for cluster_id in supervisor.selected
+    }
 
     up = supervisor.merge()
     supervisor.block()
@@ -646,6 +654,15 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     assert supervisor.merge_view is not None
     assert supervisor.actions.get('redo').isEnabled()
     assert events[-1] == list(merge_before.presentation_order)
+    assert supervisor.selection_color_order == merge_before.color_order
+    assert {
+        cluster_id: (
+            supervisor.merge_view._selected_color_index(cluster_id)
+            if cluster_id in supervisor.selected_merge
+            else supervisor.similarity_view._selected_color_index(cluster_id)
+        )
+        for cluster_id in supervisor.selected
+    } == colors_before
 
     supervisor.redo()
     supervisor.block()
@@ -885,6 +902,29 @@ def test_normal_similarity_insertion_does_not_recolor_existing_rows(supervisor):
     assert supervisor.selected == [30, 1, 11, 20]
     assert similarity_view._selected_color_index(20) == color_before
     assert similarity_view._selected_color_index(11) > color_before
+
+
+def test_normal_similarity_deselection_and_reselection_preserve_color_slots(supervisor):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.select([1, 11, 20])
+    supervisor.block()
+    colors_before = {
+        cluster_id: similarity_view._selected_color_index(cluster_id) for cluster_id in (1, 11, 20)
+    }
+
+    similarity_view.select([1, 20])
+    supervisor.block()
+    assert {
+        cluster_id: similarity_view._selected_color_index(cluster_id) for cluster_id in (1, 20)
+    } == {cluster_id: colors_before[cluster_id] for cluster_id in (1, 20)}
+
+    similarity_view.select([1, 11, 20])
+    supervisor.block()
+    assert {
+        cluster_id: similarity_view._selected_color_index(cluster_id) for cluster_id in (1, 11, 20)
+    } == colors_before
 
 
 def test_merge_presentation_keeps_merge_order_before_similarity_table_order(supervisor):

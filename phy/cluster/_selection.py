@@ -39,6 +39,7 @@ class NormalWorkflowSnapshot:
     similar_ids: tuple[int, ...]
     reference_id: int | None
     presentation_order: tuple[int, ...]
+    color_order: tuple[int, ...] | None = None
     workflow_context: object = None
 
     def __post_init__(self):
@@ -47,11 +48,13 @@ class NormalWorkflowSnapshot:
             similar_ids=self.similar_ids,
             reference_id=self.reference_id,
             presentation_order=self.presentation_order,
+            color_order=self.color_order,
         )
         object.__setattr__(self, 'cluster_ids', state.cluster_ids)
         object.__setattr__(self, 'similar_ids', state.similar_ids)
         object.__setattr__(self, 'reference_id', state.reference_id)
         object.__setattr__(self, 'presentation_order', state.presentation_order)
+        object.__setattr__(self, 'color_order', state.color_order)
 
     @property
     def selection(self):
@@ -61,6 +64,7 @@ class NormalWorkflowSnapshot:
             similar_ids=self.similar_ids,
             reference_id=self.reference_id,
             presentation_order=self.presentation_order,
+            color_order=self.color_order,
         )
 
 
@@ -94,6 +98,7 @@ class CurationSelectionState:
     similar_ids: tuple[int, ...] = ()
     reference_id: int | None = None
     presentation_order: tuple[int, ...] | None = None
+    color_order: tuple[int, ...] | None = None
     merge: MergeSession | None = None
 
     def __post_init__(self):
@@ -134,17 +139,27 @@ class CurationSelectionState:
 
         if set(presentation_order) != set(effective_ids):
             raise ValueError('Presentation order must contain exactly the effective IDs.')
+        if similar_ids and reference_id is None:
+            raise ValueError('Similarity selection requires a reference ID.')
         if (
             presentation_order
             and reference_id is not None
             and presentation_order[0] != reference_id
         ):
             raise ValueError('The reference ID must occupy the first presentation slot.')
+        color_order = (
+            presentation_order if self.color_order is None else _as_unique_ids(self.color_order)
+        )
+        if not set(effective_ids) <= set(color_order):
+            raise ValueError('Color order must contain every effective ID.')
+        if color_order and reference_id is not None and color_order[0] != reference_id:
+            raise ValueError('The reference ID must occupy the first color slot.')
 
         object.__setattr__(self, 'cluster_ids', cluster_ids)
         object.__setattr__(self, 'similar_ids', similar_ids)
         object.__setattr__(self, 'reference_id', reference_id)
         object.__setattr__(self, 'presentation_order', presentation_order)
+        object.__setattr__(self, 'color_order', color_order)
 
     @property
     def effective_ids(self):
@@ -174,6 +189,7 @@ class SelectionChange:
     after: CurationSelectionState
     roles_changed: bool
     presentation_changed: bool
+    colors_changed: bool
     reference_changed: bool
     mode_changed: bool
 
@@ -189,6 +205,7 @@ class SelectionChange:
                 or before.merge_ids != after.merge_ids
             ),
             presentation_changed=before.presentation_order != after.presentation_order,
+            colors_changed=before.color_order != after.color_order,
             reference_changed=before.reference_id != after.reference_id,
             mode_changed=before.mode is not after.mode,
         )
@@ -197,6 +214,11 @@ class SelectionChange:
     def changed(self):
         """Whether this transition changes any modeled state."""
         return self.before != self.after
+
+    @property
+    def render_changed(self):
+        """Whether scientific views need an updated selection render."""
+        return self.presentation_changed or self.colors_changed
 
 
 class CurationSelectionController:
@@ -226,10 +248,17 @@ class CurationSelectionController:
         cluster_ids = _as_unique_ids(cluster_ids)
         if reference_id is None:
             reference_id = cluster_ids[0] if cluster_ids else None
+        presentation_order = _ordered_union(
+            (reference_id,) if reference_id is not None else (),
+            cluster_ids,
+            self._state.similar_ids,
+        )
         after = CurationSelectionState(
             cluster_ids=cluster_ids,
             similar_ids=self._state.similar_ids,
             reference_id=reference_id,
+            presentation_order=presentation_order,
+            color_order=self._next_color_order(reference_id, presentation_order),
         )
         return self._apply(after)
 
@@ -241,11 +270,20 @@ class CurationSelectionController:
         presentation_order=None,
     ):
         """Atomically replace all Normal-mode selection roles and presentation state."""
+        cluster_ids = _as_unique_ids(cluster_ids)
+        similar_ids = _as_unique_ids(similar_ids)
+        if reference_id is None:
+            reference_id = cluster_ids[0] if cluster_ids else None
+        if presentation_order is None:
+            presentation_order = _ordered_union(
+                (reference_id,) if reference_id is not None else (), cluster_ids, similar_ids
+            )
         after = CurationSelectionState(
-            cluster_ids=_as_unique_ids(cluster_ids),
-            similar_ids=_as_unique_ids(similar_ids),
+            cluster_ids=cluster_ids,
+            similar_ids=similar_ids,
             reference_id=reference_id,
             presentation_order=presentation_order,
+            color_order=self._next_color_order(reference_id, presentation_order),
         )
         return self._apply(after)
 
@@ -268,6 +306,7 @@ class CurationSelectionController:
             similar_ids=similar_ids,
             reference_id=current.reference_id,
             presentation_order=presentation_order,
+            color_order=self._next_color_order(current.reference_id, presentation_order),
             merge=current.merge,
         )
         return self._apply(after)
@@ -287,6 +326,7 @@ class CurationSelectionController:
             similar_ids=current.similar_ids,
             reference_id=current.reference_id,
             presentation_order=current.presentation_order,
+            color_order=current.color_order,
             workflow_context=workflow_context,
         )
         ordered_ids = current.presentation_order
@@ -295,6 +335,7 @@ class CurationSelectionController:
             mode=WorkflowMode.MERGE,
             reference_id=current.reference_id,
             presentation_order=current.presentation_order,
+            color_order=self._next_color_order(current.reference_id, current.presentation_order),
             merge=merge,
         )
         return self._apply(after)
@@ -333,6 +374,9 @@ class CurationSelectionController:
             similar_ids=similar_ids,
             reference_id=current.reference_id,
             merge=merge,
+            color_order=self._next_color_order(
+                current.reference_id, _ordered_union(merge.ordered_ids, similar_ids)
+            ),
         )
         return self._apply(after)
 
@@ -354,6 +398,9 @@ class CurationSelectionController:
             similar_ids=_ordered_union(current.similar_ids, cluster_ids),
             reference_id=current.reference_id,
             merge=merge,
+            color_order=self._next_color_order(
+                current.reference_id, _ordered_union(merge.ordered_ids, current.similar_ids)
+            ),
         )
         return self._apply(after)
 
@@ -378,6 +425,9 @@ class CurationSelectionController:
             similar_ids=current.similar_ids,
             reference_id=current.reference_id,
             merge=merge,
+            color_order=self._next_color_order(
+                current.reference_id, _ordered_union(merge.ordered_ids, current.similar_ids)
+            ),
         )
         return self._apply(after)
 
@@ -388,6 +438,13 @@ class CurationSelectionController:
     def _require_merge_mode(self):
         if not self._state.is_merge_mode:
             raise RuntimeError('This operation requires Merge mode.')
+
+    def _next_color_order(self, reference_id, presentation_order):
+        """Return the reference-scoped registry for the next selection state."""
+        current = self._state
+        if reference_id != current.reference_id:
+            return tuple(presentation_order)
+        return _ordered_union(current.color_order, presentation_order)
 
     def _apply(self, after):
         before = self._state

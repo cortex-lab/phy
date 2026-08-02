@@ -762,7 +762,6 @@ class Supervisor:
         self._merge_close_callback = None
         self._merge_dock_state = None
         self._suspend_presentation_order_sync = False
-        self._selection_color_order = ()
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
         # This is populated alongside the existing TaskLogger-derived selection during the
@@ -1126,7 +1125,7 @@ class Supervisor:
         self.similarity_view.reset(cluster_ids, reference_id=change.after.reference_id)
         self.similarity_view.set_selected_ids(())
         change = self._normalize_presentation_order(change)
-        self._update_selection_colors(reset=True)
+        self._update_selection_colors()
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
         # event, but instead after the second similarity_view.select event.
@@ -1148,8 +1147,27 @@ class Supervisor:
         next_similar = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
-        change = self.selection.set_similarity_selection(similar)
-        change = self._normalize_presentation_order(change)
+        if self.selection.state.is_merge_mode:
+            change = self.selection.set_similarity_selection(similar)
+            change = self._normalize_presentation_order(change)
+        else:
+            state = self.selection.state
+            similar_in_table_order = self._ids_in_table_order(self.similarity_view, similar)
+            presentation_order = tuple(
+                dict.fromkeys(
+                    (
+                        *((state.reference_id,) if state.reference_id is not None else ()),
+                        *self._ids_in_table_order(self.cluster_view, state.cluster_ids),
+                        *similar_in_table_order,
+                    )
+                )
+            )
+            change = self.selection.set_normal_selection(
+                state.cluster_ids,
+                similar,
+                reference_id=state.reference_id,
+                presentation_order=presentation_order,
+            )
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
@@ -1209,20 +1227,10 @@ class Supervisor:
         self._project_merge_view()
         emit('select', self, list(change.after.presentation_order))
 
-    def _update_selection_colors(self, reset=False):
+    def _update_selection_colors(self):
         """Project stable selection-color positions into all workflow tables."""
         state = self.selection.state
-        if reset:
-            order = tuple(state.presentation_order)
-        else:
-            active_ids = set(state.effective_ids)
-            order = tuple(
-                cluster_id
-                for cluster_id in self._selection_color_order
-                if state.is_merge_mode or cluster_id in active_ids
-            )
-            order = tuple(dict.fromkeys((*order, *state.presentation_order)))
-        self._selection_color_order = order
+        order = state.color_order
         self.cluster_view.set_selected_index_order(order)
         self.similarity_view.set_selected_index_order(order)
         if self.merge_view is not None:
@@ -1233,7 +1241,7 @@ class Supervisor:
         if self.merge_view is None or not state.is_merge_mode:
             return
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
-        self.merge_view.set_merge_ids(state.merge_ids, data, self._selection_color_order)
+        self.merge_view.set_merge_ids(state.merge_ids, data, state.color_order)
         self.merge_view.dock.set_status(self._merge_status_text())
 
     def _merge_status_text(self):
@@ -1252,9 +1260,7 @@ class Supervisor:
         if normalize_order:
             change = self._normalize_presentation_order(change)
             state = change.after
-        self._update_selection_colors(
-            reset=not state.is_merge_mode and change.reference_changed,
-        )
+        self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(
             self.cluster_view,
@@ -1268,7 +1274,7 @@ class Supervisor:
             list(state.similar_ids),
             output=similar_payload,
         )
-        if change.presentation_changed:
+        if change.render_changed:
             emit('select', self, list(state.presentation_order))
         if callback:
             self.cluster_view._schedule_callback(callback, state)
@@ -1735,7 +1741,7 @@ class Supervisor:
     @property
     def selection_color_order(self):
         """Cluster IDs in their stable selected-color slots."""
-        return self._selection_color_order
+        return self.selection.state.color_order
 
     def n_spikes(self, cluster_id):
         """Number of spikes in a given cluster."""
