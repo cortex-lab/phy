@@ -946,6 +946,54 @@ def test_merge_presentation_keeps_merge_order_before_similarity_table_order(supe
     assert supervisor.selected == [30, 11, 20, 1]
 
 
+def test_table_filter_reorders_normal_presentation_without_recoloring(supervisor):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.select([1, 11, 20])
+    supervisor.block()
+    colors = supervisor.selection_color_order
+    roles = (supervisor.selected_clusters, supervisor.selected_similar)
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    similarity_view.filter('id >= 11')
+
+    assert supervisor.selected == [30, 11, 20, 1]
+    assert supervisor.selection_color_order == colors
+    assert (supervisor.selected_clusters, supervisor.selected_similar) == roles
+    assert events == [[30, 11, 20, 1]]
+    unconnect(on_select)
+
+
+def test_table_filter_reorders_merge_similarity_tail_without_recoloring(supervisor):
+    _select(supervisor, [30])
+    supervisor.toggle_merge_mode()
+    similarity_view = supervisor.similarity_view
+    similarity_view.sort_by('id', 'asc')
+    similarity_view.select([1, 11, 20])
+    supervisor.block()
+    supervisor.add_to_merge((11,), insertion=1)
+    colors = supervisor.selection_color_order
+    roles = (supervisor.selected_merge, supervisor.selected_similar)
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
+    similarity_view.filter('id >= 20')
+
+    assert supervisor.selected == [30, 11, 20, 1]
+    assert supervisor.selection_color_order == colors
+    assert (supervisor.selected_merge, supervisor.selected_similar) == roles
+    assert events == [[30, 11, 20, 1]]
+    unconnect(on_select)
+
+
 def test_supervisor_select_event_has_legacy_payload_and_suppression(supervisor):
     events = []
 

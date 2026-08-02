@@ -253,3 +253,37 @@ def test_merge_candidate_guards_reference_and_duplicate_membership():
         controller.reorder_merge((1,), 1)
     with raises(ValueError, match='merge session'):
         controller.remove_from_merge((9,))
+
+
+def test_presentation_order_transition_preserves_roles_and_colors():
+    controller = CurationSelectionController(
+        CurationSelectionState(
+            cluster_ids=(1, 2), similar_ids=(3,), reference_id=1, color_order=(1, 2, 3)
+        )
+    )
+
+    change = controller.set_presentation_order((1, 3, 2))
+
+    assert change.presentation_changed
+    assert not change.roles_changed
+    assert not change.colors_changed
+    assert change.after.cluster_ids == (1, 2)
+    assert change.after.similar_ids == (3,)
+    assert change.after.color_order == (1, 2, 3)
+    with raises(ValueError, match='exactly'):
+        controller.set_presentation_order((1, 2))
+
+
+def test_merge_presentation_order_requires_merge_prefix_and_similarity_tail():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1, 2)))
+    controller.enter_merge_mode()
+    controller.set_similarity_selection((3,))
+
+    change = controller.set_presentation_order((1, 2, 3))
+
+    assert not change.roles_changed
+    assert not change.colors_changed
+    with raises(ValueError, match='begin'):
+        controller.set_presentation_order((1, 3, 2))
+    with raises(ValueError, match='exactly'):
+        controller.set_presentation_order((1, 2, 4))

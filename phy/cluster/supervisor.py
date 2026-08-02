@@ -998,6 +998,7 @@ class Supervisor:
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
         connect(self._table_order_changed, event='table_sort', sender=self.cluster_view)
+        connect(self._table_order_changed, event='table_filter', sender=self.cluster_view)
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
@@ -1013,6 +1014,7 @@ class Supervisor:
         )
         connect(self._similar_selected, event='select', sender=self.similarity_view)
         connect(self._table_order_changed, event='table_sort', sender=self.similarity_view)
+        connect(self._table_order_changed, event='table_filter', sender=self.similarity_view)
         connect(
             self._add_similar_to_merge_on_right_click,
             event='row_right_click',
@@ -1120,12 +1122,13 @@ class Supervisor:
         kwargs = obj.get('kwargs', {})
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
         change = self.selection.set_normal_selection(cluster_ids)
+        change = self._set_table_presentation_order(change)
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=obj)
-        # Update the similarity view when the cluster view selection changes.
+        # Reset candidates for the newly selected reference without emitting.
         self.similarity_view.reset(cluster_ids, reference_id=change.after.reference_id)
         self.similarity_view.set_selected_ids(())
-        change = self._normalize_presentation_order(change)
         self._update_selection_colors()
+        self._project_merge_view()
         # Emit supervisor.select event unless update_views is False. This happens after
         # a merge event, where the views should not be updated after the first cluster_view.select
         # event, but instead after the second similarity_view.select event.
@@ -1147,27 +1150,10 @@ class Supervisor:
         next_similar = obj['next']
         kwargs = obj.get('kwargs', {})
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
-        if self.selection.state.is_merge_mode:
-            change = self.selection.set_similarity_selection(similar)
-            change = self._normalize_presentation_order(change)
-        else:
-            state = self.selection.state
-            similar_in_table_order = self._ids_in_table_order(self.similarity_view, similar)
-            presentation_order = tuple(
-                dict.fromkeys(
-                    (
-                        *((state.reference_id,) if state.reference_id is not None else ()),
-                        *self._ids_in_table_order(self.cluster_view, state.cluster_ids),
-                        *similar_in_table_order,
-                    )
-                )
-            )
-            change = self.selection.set_normal_selection(
-                state.cluster_ids,
-                similar,
-                reference_id=state.reference_id,
-                presentation_order=presentation_order,
-            )
+        presentation_order = self._presentation_order_from_tables(
+            self.selection.state, similar_ids=similar
+        )
+        self.selection.set_similarity_selection(similar, presentation_order)
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
@@ -1187,29 +1173,28 @@ class Supervisor:
             cluster_id for cluster_id in cluster_ids if cluster_id not in visible_set
         )
 
-    def _normalize_presentation_order(self, change):
-        """Derive scientific-view order from the active workflow's visible role order."""
-        state = change.after
-        similar_ids = self._ids_in_table_order(self.similarity_view, state.similar_ids)
+    def _presentation_order_from_tables(self, state, similar_ids=None):
+        """Return the active roles in table order without changing their membership."""
+        similar_ids = self._ids_in_table_order(
+            self.similarity_view, state.similar_ids if similar_ids is None else similar_ids
+        )
         if state.is_merge_mode:
-            normalized = self.selection.set_similarity_selection(similar_ids)
-        else:
-            cluster_ids = self._ids_in_table_order(self.cluster_view, state.cluster_ids)
-            presentation_order = tuple(
-                dict.fromkeys(
-                    (
-                        *((state.reference_id,) if state.reference_id is not None else ()),
-                        *cluster_ids,
-                        *similar_ids,
-                    )
+            return state.merge_ids + similar_ids
+        cluster_ids = self._ids_in_table_order(self.cluster_view, state.cluster_ids)
+        return tuple(
+            dict.fromkeys(
+                (
+                    *((state.reference_id,) if state.reference_id is not None else ()),
+                    *cluster_ids,
+                    *similar_ids,
                 )
             )
-            normalized = self.selection.set_normal_selection(
-                state.cluster_ids,
-                state.similar_ids,
-                reference_id=state.reference_id,
-                presentation_order=presentation_order,
-            )
+        )
+
+    def _set_table_presentation_order(self, change):
+        """Apply the current table ordering through the presentation-only transition."""
+        presentation_order = self._presentation_order_from_tables(change.after)
+        normalized = self.selection.set_presentation_order(presentation_order)
         return SelectionChange.create(change.before, normalized.after)
 
     def _table_order_changed(self, sender, row_ids):
@@ -1219,13 +1204,10 @@ class Supervisor:
         if sender is self.cluster_view and self.selection.state.is_merge_mode:
             return
         state = self.selection.state
-        change = SelectionChange.create(state, state)
-        change = self._normalize_presentation_order(change)
+        change = self._set_table_presentation_order(SelectionChange.create(state, state))
         if not change.presentation_changed:
             return
-        self._update_selection_colors()
-        self._project_merge_view()
-        emit('select', self, list(change.after.presentation_order))
+        self._apply_selection_change(change, refresh_similarity=False)
 
     def _update_selection_colors(self):
         """Project stable selection-color positions into all workflow tables."""
@@ -1250,16 +1232,17 @@ class Supervisor:
         similar = len(state.similar_ids)
         return f'MERGE MODE — {staged} staged + {similar} selected similar = {staged + similar} clusters'
 
-    def _apply_selection_change(self, change, callback=None, normalize_order=True):
+    def _apply_selection_change(
+        self, change, callback=None, refresh_similarity=True, publish=True, sync_presentation=True
+    ):
         """Project one complete controller transition and publish it atomically."""
+        if sync_presentation:
+            change = self._set_table_presentation_order(change)
         state = change.after
         cluster_payload = self.cluster_view.set_selected_ids(state.cluster_ids)
-        if state.reference_id is not None:
+        if refresh_similarity and state.reference_id is not None:
             self.similarity_view.reset(state.merge_ids, reference_id=state.reference_id)
         similar_payload = self.similarity_view.set_selected_ids(state.similar_ids)
-        if normalize_order:
-            change = self._normalize_presentation_order(change)
-            state = change.after
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(
@@ -1274,7 +1257,7 @@ class Supervisor:
             list(state.similar_ids),
             output=similar_payload,
         )
-        if change.render_changed:
+        if publish and change.render_changed:
             emit('select', self, list(state.presentation_order))
         if callback:
             self.cluster_view._schedule_callback(callback, state)
@@ -1367,7 +1350,7 @@ class Supervisor:
         context = self.selection.state.merge.entry_snapshot.workflow_context
         change = self.selection.cancel_merge_mode()
         self._set_merge_mode_ui(False)
-        self._apply_selection_change(change, normalize_order=False)
+        self._apply_selection_change(change, refresh_similarity=False, sync_presentation=False)
         self._restore_workflow_context(context)
         if close_view:
             self._close_merge_view()
@@ -1380,7 +1363,7 @@ class Supervisor:
         elif not selection.is_merge_mode:
             self._set_merge_mode_ui(False)
         change = self.selection.restore(selection)
-        self._apply_selection_change(change, normalize_order=False)
+        self._apply_selection_change(change, refresh_similarity=False, sync_presentation=False)
         if selection.is_merge_mode:
             context = (
                 workflow_context.get('tables')

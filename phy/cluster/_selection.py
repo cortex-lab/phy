@@ -133,7 +133,7 @@ class CurationSelectionState:
         )
         presentation_order = (
             default_presentation
-            if self.presentation_order is None or self.mode is WorkflowMode.MERGE
+            if self.presentation_order is None
             else _as_unique_ids(self.presentation_order)
         )
 
@@ -147,6 +147,12 @@ class CurationSelectionState:
             and presentation_order[0] != reference_id
         ):
             raise ValueError('The reference ID must occupy the first presentation slot.')
+        if self.mode is WorkflowMode.MERGE:
+            merge_ids = merge.ordered_ids
+            if presentation_order[: len(merge_ids)] != merge_ids:
+                raise ValueError('Merge presentation must begin with the staged merge order.')
+            if set(presentation_order[len(merge_ids) :]) != set(similar_ids):
+                raise ValueError('Merge presentation tail must contain the Similarity selection.')
         color_order = (
             presentation_order if self.color_order is None else _as_unique_ids(self.color_order)
         )
@@ -290,19 +296,20 @@ class CurationSelectionController:
         )
         return self._apply(after)
 
-    def set_similarity_selection(self, similar_ids):
+    def set_similarity_selection(self, similar_ids, presentation_order=None):
         """Set Similarity View IDs without changing the current reference."""
         current = self._state
         similar_ids = _as_unique_ids(similar_ids)
         effective_ids = _ordered_union(current.merge_ids, similar_ids)
-        presentation_order = _ordered_union(
-            tuple(
-                cluster_id
-                for cluster_id in current.presentation_order
-                if cluster_id in effective_ids
-            ),
-            effective_ids,
-        )
+        if presentation_order is None:
+            presentation_order = _ordered_union(
+                tuple(
+                    cluster_id
+                    for cluster_id in current.presentation_order
+                    if cluster_id in effective_ids
+                ),
+                effective_ids,
+            )
         after = CurationSelectionState(
             mode=current.mode,
             cluster_ids=current.cluster_ids,
@@ -310,6 +317,20 @@ class CurationSelectionController:
             reference_id=current.reference_id,
             presentation_order=presentation_order,
             color_order=self._next_color_order(current.reference_id, presentation_order),
+            merge=current.merge,
+        )
+        return self._apply(after)
+
+    def set_presentation_order(self, presentation_order):
+        """Set scientific-view order without changing roles or color slots."""
+        current = self._state
+        after = CurationSelectionState(
+            mode=current.mode,
+            cluster_ids=current.cluster_ids,
+            similar_ids=current.similar_ids,
+            reference_id=current.reference_id,
+            presentation_order=_as_unique_ids(presentation_order),
+            color_order=current.color_order,
             merge=current.merge,
         )
         return self._apply(after)
