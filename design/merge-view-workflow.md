@@ -1,6 +1,6 @@
 # Merge View workflow specification
 
-Status: proposed for phy 2.2.0
+Status: implemented for phy 2.2.0
 
 Companion document: [Merge View architecture proposal](merge-view-architecture.md)
 

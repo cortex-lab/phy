@@ -18,11 +18,11 @@ silently alter the workflow contract.
 
 ### Current status
 
-- The manual Merge View workflow has been designed but not implemented.
-- The supporting architecture has been audited and a target design proposed.
+- The manual Merge View workflow and its supporting architecture are implemented
+  on the feature branch.
 - Merge Propositions and `curation.json` are intentionally deferred.
-- The next task is the characterization-test and state-model preparation phase
-  described in the architecture proposal.
+- The remaining work is release review and validation of the implemented
+  workflow; Merge Propositions remain a separate future project.
 
 Agents continuing this work should first read the repository `AGENTS.md`, then
 both Merge View documents completely. Merge, selection, undo/redo, saved cluster

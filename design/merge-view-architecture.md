@@ -1,6 +1,6 @@
 # Merge View architecture proposal
 
-Status: proposed for phy 2.2.0
+Status: implemented for phy 2.2.0
 
 This document describes the internal architecture and incremental refactor
 recommended for implementing the user behavior fixed in the

@@ -1669,6 +1669,15 @@ A sortable native Qt table with a compatibility API for legacy callers.
 
 ---
 
+#### Table.accepts_cluster_drop
+
+
+**`Table.accepts_cluster_drop(self, source, cluster_ids)`**
+
+Return whether a source table and payload satisfy this table's policy.
+
+---
+
 #### Table.add
 
 
@@ -1720,6 +1729,33 @@ Coalesce expensive table fitting across related mutations.
 **`Table.clear_temporary_files(self)`**
 
 Compatibility no-op kept for callers from the removed WebEngine path.
+
+---
+
+#### Table.cluster_ids_from_mime
+
+
+**`Table.cluster_ids_from_mime(mime)`**
+
+Decode and validate a cluster-ID-only MIME payload.
+
+---
+
+#### Table.configure_cluster_drag_drop
+
+
+**`Table.configure_cluster_drag_drop(self, role, *, accepted_roles=(), drag_selected_rows=True)`**
+
+Enable reusable cluster-ID drag/drop and declare accepted source roles.
+
+---
+
+#### Table.emit_cluster_drop
+
+
+**`Table.emit_cluster_drop(self, source, cluster_ids, insertion)`**
+
+Emit one domain-neutral transfer/reorder intent.
 
 ---
 
@@ -6541,6 +6577,15 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
 
 ---
 
+#### ClusterView.accepts_cluster_drop
+
+
+**`ClusterView.accepts_cluster_drop(self, source, cluster_ids)`**
+
+Return whether a source table and payload satisfy this table's policy.
+
+---
+
 #### ClusterView.add
 
 
@@ -6592,6 +6637,33 @@ Coalesce expensive table fitting across related mutations.
 **`ClusterView.clear_temporary_files(self)`**
 
 Compatibility no-op kept for callers from the removed WebEngine path.
+
+---
+
+#### ClusterView.cluster_ids_from_mime
+
+
+**`ClusterView.cluster_ids_from_mime(mime)`**
+
+Decode and validate a cluster-ID-only MIME payload.
+
+---
+
+#### ClusterView.configure_cluster_drag_drop
+
+
+**`ClusterView.configure_cluster_drag_drop(self, role, *, accepted_roles=(), drag_selected_rows=True)`**
+
+Enable reusable cluster-ID drag/drop and declare accepted source roles.
+
+---
+
+#### ClusterView.emit_cluster_drop
+
+
+**`ClusterView.emit_cluster_drop(self, source, cluster_ids, insertion)`**
+
+Emit one domain-neutral transfer/reorder intent.
 
 ---
 
@@ -9316,6 +9388,15 @@ in the cluster view.
 
 ---
 
+#### SimilarityView.accepts_cluster_drop
+
+
+**`SimilarityView.accepts_cluster_drop(self, source, cluster_ids)`**
+
+Return whether a source table and payload satisfy this table's policy.
+
+---
+
 #### SimilarityView.add
 
 
@@ -9367,6 +9448,33 @@ Coalesce expensive table fitting across related mutations.
 **`SimilarityView.clear_temporary_files(self)`**
 
 Compatibility no-op kept for callers from the removed WebEngine path.
+
+---
+
+#### SimilarityView.cluster_ids_from_mime
+
+
+**`SimilarityView.cluster_ids_from_mime(mime)`**
+
+Decode and validate a cluster-ID-only MIME payload.
+
+---
+
+#### SimilarityView.configure_cluster_drag_drop
+
+
+**`SimilarityView.configure_cluster_drag_drop(self, role, *, accepted_roles=(), drag_selected_rows=True)`**
+
+Enable reusable cluster-ID drag/drop and declare accepted source roles.
+
+---
+
+#### SimilarityView.emit_cluster_drop
+
+
+**`SimilarityView.emit_cluster_drop(self, source, cluster_ids, insertion)`**
+
+Emit one domain-neutral transfer/reorder intent.
 
 ---
 
@@ -9755,6 +9863,15 @@ When this component is attached to a GUI, the following events are emitted:
 
 ---
 
+#### Supervisor.add_to_merge
+
+
+**`Supervisor.add_to_merge(self, cluster_ids, insertion=None, callback=None)`**
+
+Transfer candidate IDs into the Merge workspace.
+
+---
+
 #### Supervisor.attach
 
 
@@ -9937,6 +10054,24 @@ Undo the last undone action.
 
 ---
 
+#### Supervisor.remove_from_merge
+
+
+**`Supervisor.remove_from_merge(self, cluster_ids, callback=None)`**
+
+Transfer staged candidates back to Similarity View.
+
+---
+
+#### Supervisor.reorder_merge
+
+
+**`Supervisor.reorder_merge(self, cluster_ids, insertion, callback=None)`**
+
+Reorder staged candidates while preserving their color slots.
+
+---
+
 #### Supervisor.reset_wizard
 
 
@@ -10012,6 +10147,15 @@ Add or remove a cluster from the cluster-view selection.
 
 ---
 
+#### Supervisor.toggle_merge_mode
+
+
+**`Supervisor.toggle_merge_mode(self, callback=None)`**
+
+Enter Merge mode, or cancel the active Merge workspace.
+
+---
+
 #### Supervisor.undo
 
 
@@ -10063,6 +10207,15 @@ Selected clusters in the cluster and similarity views.
 **`Supervisor.selected_clusters`**
 
 Selected clusters in the cluster view only.
+
+---
+
+#### Supervisor.selected_merge
+
+
+**`Supervisor.selected_merge`**
+
+Clusters staged in Merge View, or an empty list in Normal mode.
 
 ---
 

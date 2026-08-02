@@ -12,6 +12,28 @@ All spikes belonging to either of the selected clusters will be assigned to that
 
 ![image](https://user-images.githubusercontent.com/1942359/58953860-eac37400-8797-11e9-962d-2cf79ea55853.png)
 
+### Staging candidates in Merge View
+
+Press `C` with at least one Cluster View row selected to open **MERGE MODE**. phy stages the blue
+reference first, followed by the other Cluster View selections and the current Similarity View
+selection. Cluster View is disabled while the workspace is active, and the plots keep the same
+clusters and colors.
+
+Every row in Merge View is part of the pending merge. Continue exploring Similarity View, where
+sorting, filtering, `Control+Space`, and multi-selection remain available. The Merge View status
+shows the number of staged clusters, selected similar clusters, and the total that `G` will merge.
+
+Move candidates between the two views with `Control`-right-click or drag-and-drop. Drag within
+Merge View to reorder candidates. The first blue reference cannot be moved or removed, and
+transfers or reordering do not change cluster colors or redraw the scientific views unnecessarily.
+Press `Backspace` to clear only the Similarity View selection when the merge should contain only
+the staged rows.
+
+Press `G` to commit the staged clusters plus the selected Similarity candidates. Press `C` again,
+use **Cancel Merge Mode**, or close Merge View to cancel and restore the exact state from before
+entry. Undoing a committed Merge-mode merge restores the complete workspace as it appeared just
+before `G`; Redo reapplies the merge and returns to the normal workflow.
+
 
 ## Splitting clusters
 
