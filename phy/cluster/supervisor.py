@@ -19,6 +19,7 @@ from phylib.utils import Bunch, connect, emit, unconnect
 from phy.gui.actions import Actions
 from phy.gui.qt import QAbstractItemView, QHeaderView, Qt, _block, _wait, set_busy
 from phy.gui.widgets import Barrier, Table, _uniq
+from phy.utils.selection import SelectionIntent, SelectionMutation
 
 from ._history import GlobalHistory
 from ._selection import CurationSelectionController, SelectionChange
@@ -431,10 +432,10 @@ class MergeView(Table):
     def _on_header_clicked(self, section):
         """Merge order changes only through explicit reorder intents."""
 
-    def set_merge_ids(self, cluster_ids, data, color_order):
+    def set_merge_ids(self, cluster_ids, data, color_indices):
         """Project one complete ordered Merge session."""
         self.remove_all_and_add(data, fit_columns=not self._column_widths_fitted)
-        self.set_selected_index_order(color_order)
+        self.set_selected_index_mapping(color_indices)
         self.set_selected_ids(cluster_ids)
 
     def _drag_ids_for_index(self, index):
@@ -1119,7 +1120,7 @@ class Supervisor:
         cluster_ids = obj['selected']
         next_cluster = obj['next']
         kwargs = dict(obj.get('kwargs', {}))
-        kwargs.pop('_selection_intent', None)
+        kwargs.pop('_selection_mutation', None)
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
         change = self.selection.set_normal_selection(cluster_ids)
         change = self._set_table_presentation_order(change)
@@ -1149,15 +1150,17 @@ class Supervisor:
         similar = obj['selected']
         next_similar = obj['next']
         kwargs = dict(obj.get('kwargs', {}))
-        selection_intent = kwargs.pop('_selection_intent', None)
+        mutation = kwargs.pop('_selection_mutation', None)
+        if mutation is None:
+            intent = SelectionIntent.CLEAR if not similar else SelectionIntent.REPLACE
+            mutation = SelectionMutation.create(intent, self.selection.state.similar_ids, similar)
+        elif mutation.after_ids != tuple(similar):
+            raise ValueError('Similarity mutation does not match the table selection payload.')
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
         presentation_order = self._presentation_order_from_tables(
             self.selection.state, similar_ids=similar
         )
-        if selection_intent == 'navigation' and not self.selection.state.is_merge_mode:
-            self.selection.navigate_similarity_selection(similar, presentation_order)
-        else:
-            self.selection.set_similarity_selection(similar, presentation_order)
+        self.selection.apply_similarity_mutation(mutation, presentation_order)
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
@@ -1232,18 +1235,18 @@ class Supervisor:
     def _update_selection_colors(self):
         """Project stable selection-color positions into all workflow tables."""
         state = self.selection.state
-        order = state.color_order
-        self.cluster_view.set_selected_index_order(order)
-        self.similarity_view.set_selected_index_order(order)
+        color_indices = state.color_indices
+        self.cluster_view.set_selected_index_mapping(color_indices)
+        self.similarity_view.set_selected_index_mapping(color_indices)
         if self.merge_view is not None:
-            self.merge_view.set_selected_index_order(order)
+            self.merge_view.set_selected_index_mapping(color_indices)
 
     def _project_merge_view(self):
         state = self.selection.state
         if self.merge_view is None or not state.is_merge_mode:
             return
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
-        self.merge_view.set_merge_ids(state.merge_ids, data, state.color_order)
+        self.merge_view.set_merge_ids(state.merge_ids, data, state.color_indices)
         self.merge_view.dock.set_status(self._merge_status_text())
 
     def _merge_status_text(self):
@@ -1519,7 +1522,13 @@ class Supervisor:
             self.selection.state.reference_id is not None
             and tuple(similar_ids) != self.selection.state.similar_ids
         ):
-            self.selection.set_similarity_selection(similar_ids)
+            self.selection.apply_similarity_mutation(
+                SelectionMutation.create(
+                    SelectionIntent.TOGGLE,
+                    self.selection.state.similar_ids,
+                    similar_ids,
+                )
+            )
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
         self.task_logger.process()
@@ -1745,9 +1754,9 @@ class Supervisor:
         return list(self.selection.state.presentation_order)
 
     @property
-    def selection_color_order(self):
-        """Cluster IDs in their stable selected-color slots."""
-        return self.selection.state.color_order
+    def selection_color_indices(self):
+        """Immutable mapping from cluster IDs to stable selected-color slots."""
+        return self.selection.state.color_indices
 
     def n_spikes(self, cluster_id):
         """Number of spikes in a given cluster."""

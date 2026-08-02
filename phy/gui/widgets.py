@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import sys
+from collections.abc import Mapping
 from contextlib import contextmanager
 from functools import partial
 
@@ -1216,15 +1217,7 @@ class Table(QWidget):
         """Describe the selection operation that just updated this table."""
         before_ids = tuple(before_ids)
         after_ids = tuple(self.get_selected_ids())
-        before_set = set(before_ids)
-        after_set = set(after_ids)
-        return SelectionMutation(
-            intent=intent,
-            before_ids=before_ids,
-            after_ids=after_ids,
-            added_ids=tuple(row_id for row_id in after_ids if row_id not in before_set),
-            removed_ids=tuple(row_id for row_id in before_ids if row_id not in after_set),
-        )
+        return SelectionMutation.create(intent, before_ids, after_ids)
 
     def _emit_selected(self, kwargs=None, mutation=None):
         self._selection_revision += 1
@@ -1581,9 +1574,13 @@ class Table(QWidget):
         self._selected_index_by_id = None
         self.table_view.viewport().update()
 
-    def set_selected_index_order(self, ids):
-        """Set stable positional-color indices independently of table-role order."""
-        self._selected_index_by_id = {row_id: index for index, row_id in enumerate(_uniq(ids))}
+    def set_selected_index_mapping(self, color_indices):
+        """Set explicit selected-row palette indices independently of role order."""
+        if not isinstance(color_indices, Mapping):
+            raise TypeError('Selected color indices must be a mapping.')
+        if any(not _is_integer(index) or index < 0 for index in color_indices.values()):
+            raise ValueError('Selected color indices must be non-negative integers.')
+        self._selected_index_by_id = dict(color_indices)
         self.table_view.viewport().update()
 
     def clear_temporary_files(self):

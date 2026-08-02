@@ -611,12 +611,14 @@ def test_merge_mode_next_navigates_similarity_not_cluster(supervisor):
     assert supervisor.selected_clusters == []
     assert len(supervisor.selected_similar) == 1
     first_candidate = supervisor.selected_similar[0]
-    first_colors = supervisor.selection_color_order
+    first_colors = dict(supervisor.selection_color_indices)
 
     supervisor.next()
     supervisor.block()
 
-    assert supervisor.selection_color_order[: len(first_colors)] == first_colors
+    assert {
+        cluster_id: supervisor.selection_color_indices[cluster_id] for cluster_id in first_colors
+    } == first_colors
     assert supervisor.selected_similar != [first_candidate]
 
 
@@ -662,7 +664,7 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     assert supervisor.merge_view is not None
     assert supervisor.actions.get('redo').isEnabled()
     assert events[-1] == list(merge_before.presentation_order)
-    assert supervisor.selection_color_order == merge_before.color_order
+    assert dict(supervisor.selection_color_indices) == dict(merge_before.color_indices)
     assert {
         cluster_id: (
             supervisor.merge_view._selected_color_index(cluster_id)
@@ -899,17 +901,29 @@ def test_normal_similarity_insertion_does_not_recolor_existing_rows(supervisor):
 
     similarity_view.select([1])
     supervisor.block()
-    similarity_view.select([1, 20])
+    similarity_view.select_toggle(20)
     supervisor.block()
     color_before = similarity_view._selected_color_index(20)
 
     # Insert 11 before 20 in visible row order without changing 20's color slot.
-    similarity_view.select([1, 20, 11])
+    similarity_view.select_toggle(11)
     supervisor.block()
 
     assert supervisor.selected == [30, 1, 11, 20]
     assert similarity_view._selected_color_index(20) == color_before
     assert similarity_view._selected_color_index(11) > color_before
+
+
+def test_direct_similarity_replacements_reuse_first_candidate_color(supervisor):
+    _select(supervisor, [30])
+    similarity_view = supervisor.similarity_view
+
+    for candidate in (20, 1, 11):
+        similarity_view.select([candidate])
+        supervisor.block()
+
+        assert supervisor.selected_similar == [candidate]
+        assert similarity_view._selected_color_index(candidate) == 1
 
 
 def test_normal_similarity_deselection_and_reselection_preserve_color_slots(supervisor):
@@ -922,13 +936,13 @@ def test_normal_similarity_deselection_and_reselection_preserve_color_slots(supe
         cluster_id: similarity_view._selected_color_index(cluster_id) for cluster_id in (1, 11, 20)
     }
 
-    similarity_view.select([1, 20])
+    similarity_view.select_toggle(11)
     supervisor.block()
     assert {
         cluster_id: similarity_view._selected_color_index(cluster_id) for cluster_id in (1, 20)
     } == {cluster_id: colors_before[cluster_id] for cluster_id in (1, 20)}
 
-    similarity_view.select([1, 11, 20])
+    similarity_view.select_toggle(11)
     supervisor.block()
     assert {
         cluster_id: similarity_view._selected_color_index(cluster_id) for cluster_id in (1, 11, 20)
@@ -962,7 +976,7 @@ def test_table_filter_reorders_normal_presentation_without_recoloring(supervisor
     similarity_view.select([1, 20, 11])
     supervisor.block()
     assert supervisor.selected == [30, 1, 11, 20]
-    colors = supervisor.selection_color_order
+    colors = dict(supervisor.selection_color_indices)
     roles = (supervisor.selected_clusters, supervisor.selected_similar)
     events = []
 
@@ -975,7 +989,7 @@ def test_table_filter_reorders_normal_presentation_without_recoloring(supervisor
     similarity_view.filter('id < 2')
 
     assert supervisor.selected == [30, 1, 11, 20]
-    assert supervisor.selection_color_order == colors
+    assert dict(supervisor.selection_color_indices) == colors
     assert (supervisor.selected_clusters, supervisor.selected_similar) == roles
     assert events == []
     unconnect(on_select)
@@ -989,7 +1003,7 @@ def test_table_filter_reorders_merge_similarity_tail_without_recoloring(supervis
     similarity_view.select([1, 20, 11])
     supervisor.block()
     assert supervisor.selected == [30, 1, 11, 20]
-    colors = supervisor.selection_color_order
+    colors = dict(supervisor.selection_color_indices)
     roles = (supervisor.selected_merge, supervisor.selected_similar)
     events = []
 
@@ -1000,7 +1014,7 @@ def test_table_filter_reorders_merge_similarity_tail_without_recoloring(supervis
     similarity_view.filter('id < 2')
 
     assert supervisor.selected == [30, 1, 11, 20]
-    assert supervisor.selection_color_order == colors
+    assert dict(supervisor.selection_color_indices) == colors
     assert (supervisor.selected_merge, supervisor.selected_similar) == roles
     assert events == []
     unconnect(on_select)

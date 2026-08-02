@@ -31,6 +31,21 @@ class SelectionMutation:
     added_ids: tuple[int, ...]
     removed_ids: tuple[int, ...]
 
+    @classmethod
+    def create(cls, intent, before_ids, after_ids):
+        """Build a mutation and derive its ordered added/removed IDs."""
+        before_ids = tuple(before_ids)
+        after_ids = tuple(after_ids)
+        before_set = set(before_ids)
+        after_set = set(after_ids)
+        return cls(
+            intent=intent,
+            before_ids=before_ids,
+            after_ids=after_ids,
+            added_ids=tuple(row_id for row_id in after_ids if row_id not in before_set),
+            removed_ids=tuple(row_id for row_id in before_ids if row_id not in after_set),
+        )
+
     def __post_init__(self):
         if not isinstance(self.intent, SelectionIntent):
             raise TypeError('intent must be a SelectionIntent.')

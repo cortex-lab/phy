@@ -56,8 +56,7 @@ class CurationSelectionState:
 
     ``color_slots`` is deliberately not derived from presentation order: a
     ``None`` entry is a released palette slot and a non-active ID is a reserved
-    binding.  ``color_order`` is a temporary legacy projection for callers
-    which still expect a compact sequence.
+    binding.
     """
 
     mode: WorkflowMode = WorkflowMode.NORMAL
@@ -66,7 +65,6 @@ class CurationSelectionState:
     reference_id: int | None = None
     presentation_order: tuple[int, ...] | None = None
     color_slots: tuple[int | None, ...] | None = None
-    color_order: tuple[int, ...] | None = None
     merge: MergeSession | None = None
 
     def __post_init__(self):
@@ -114,12 +112,7 @@ class CurationSelectionState:
                 raise ValueError('Merge presentation must begin with the staged merge order.')
             if set(presentation[len(primary) :]) != set(similar):
                 raise ValueError('Merge presentation tail must contain the Similarity selection.')
-        if self.color_slots is not None and self.color_order is not None:
-            raise ValueError('Specify color_slots instead of legacy color_order.')
-        slots = self.color_slots
-        if slots is None:
-            slots = self.color_order if self.color_order is not None else presentation
-        slots = tuple(slots)
+        slots = presentation if self.color_slots is None else tuple(self.color_slots)
         bindings = tuple(cluster_id for cluster_id in slots if cluster_id is not None)
         if len(bindings) != len(set(bindings)):
             raise ValueError('Color-slot bindings must be unique.')
@@ -134,12 +127,6 @@ class CurationSelectionState:
         object.__setattr__(self, 'reference_id', reference)
         object.__setattr__(self, 'presentation_order', presentation)
         object.__setattr__(self, 'color_slots', slots)
-        # Compatibility only: consumers needing palette indices must use color_indices.
-        object.__setattr__(
-            self,
-            'color_order',
-            tuple(cluster_id for cluster_id in slots if cluster_id is not None),
-        )
 
     @property
     def color_indices(self):
@@ -261,6 +248,8 @@ class CurationSelectionController:
         if mutation.before_ids != current.similar_ids:
             raise ValueError('Mutation before_ids do not match the current Similarity selection.')
         similar = mutation.after_ids
+        if mutation.intent is SelectionIntent.NAVIGATE and len(similar) > 1:
+            raise ValueError('Similarity navigation selects at most one candidate.')
         effective = _ordered_union(current.merge_ids, similar)
         order = presentation_order or _ordered_union(
             tuple(
@@ -275,7 +264,10 @@ class CurationSelectionController:
             SelectionIntent.NAVIGATE,
             SelectionIntent.CLEAR,
         ):
-            slots = self._replace_similarity_slots(similar)
+            ordered_similar = tuple(
+                cluster_id for cluster_id in order if cluster_id in set(similar)
+            )
+            slots = self._replace_similarity_slots(ordered_similar)
         else:
             slots = self._preserve_and_allocate(current.color_slots, similar)
         return self._apply(
@@ -290,41 +282,11 @@ class CurationSelectionController:
             )
         )
 
-    def set_similarity_selection(self, similar_ids, presentation_order=None):
-        """Legacy adapter; UI callers should supply a SelectionMutation."""
-        similar = _as_unique_ids(similar_ids)
-        intent = SelectionIntent.CLEAR if not similar else SelectionIntent.REPLACE
-        before = self._state.similar_ids
-        return self.apply_similarity_mutation(
-            SelectionMutation(
-                intent,
-                before,
-                similar,
-                tuple(cluster_id for cluster_id in similar if cluster_id not in before),
-                tuple(cluster_id for cluster_id in before if cluster_id not in similar),
-            ),
-            presentation_order,
-        )
-
-    def navigate_similarity_selection(self, similar_ids, presentation_order=None):
-        self._require_normal_mode()
-        similar = _as_unique_ids(similar_ids)
-        if len(similar) > 1:
-            raise ValueError('Similarity navigation selects at most one candidate.')
-        before = self._state.similar_ids
-        return self.apply_similarity_mutation(
-            SelectionMutation(
-                SelectionIntent.NAVIGATE,
-                before,
-                similar,
-                tuple(cluster_id for cluster_id in similar if cluster_id not in before),
-                tuple(cluster_id for cluster_id in before if cluster_id not in similar),
-            ),
-            presentation_order,
-        )
-
     def clear_similarity_selection(self):
-        return self.set_similarity_selection(())
+        current = self._state
+        return self.apply_similarity_mutation(
+            SelectionMutation.create(SelectionIntent.CLEAR, current.similar_ids, ())
+        )
 
     def set_presentation_order(self, presentation_order):
         current = self._state

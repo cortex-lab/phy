@@ -15,6 +15,12 @@ from .._selection import (
 )
 
 
+def _mutate_similarity(controller, after_ids, intent=SelectionIntent.REPLACE):
+    return controller.apply_similarity_mutation(
+        SelectionMutation.create(intent, controller.state.similar_ids, after_ids)
+    )
+
+
 def test_state_derives_unique_effective_and_presentation_ids():
     state = CurationSelectionState(cluster_ids=(3, 1), similar_ids=(1, 2))
 
@@ -38,13 +44,13 @@ def test_state_rejects_invalid_ids_reference_and_presentation():
     with raises(ValueError, match='requires a merge session'):
         CurationSelectionState(mode=WorkflowMode.MERGE)
     with raises(ValueError, match='Color slots'):
-        CurationSelectionState(cluster_ids=(1, 2), color_order=(1,))
+        CurationSelectionState(cluster_ids=(1, 2), color_slots=(1,))
     with raises(ValueError, match='first color'):
-        CurationSelectionState(cluster_ids=(1, 2), color_order=(2, 1))
+        CurationSelectionState(cluster_ids=(1, 2), color_slots=(2, 1))
     with raises(ValueError, match='Similarity selection'):
         CurationSelectionState(similar_ids=(2,))
     with raises(ValueError, match='Color slots'):
-        CurationSelectionState(color_order=(2,))
+        CurationSelectionState(color_slots=(2,))
 
 
 def test_state_is_immutable():
@@ -82,7 +88,7 @@ def test_empty_cluster_selection_clears_similarity_and_color_session():
     assert change.after.similar_ids == ()
     assert change.after.reference_id is None
     assert change.after.presentation_order == ()
-    assert change.after.color_order == ()
+    assert change.after.color_slots == ()
 
 
 def test_set_similarity_and_clear_similarity_selection():
@@ -90,7 +96,7 @@ def test_set_similarity_and_clear_similarity_selection():
         CurationSelectionState(cluster_ids=(1,), reference_id=1)
     )
 
-    change = controller.set_similarity_selection((3, 2))
+    change = _mutate_similarity(controller, (3, 2))
     assert change.after.effective_ids == (1, 3, 2)
     assert change.after.presentation_order == (1, 3, 2)
     assert change.roles_changed
@@ -130,42 +136,38 @@ def test_similarity_navigation_reuses_outgoing_or_inactive_color_slot():
             cluster_ids=(1,),
             similar_ids=(2,),
             reference_id=1,
-            color_order=(1, 2, 3),
+            color_slots=(1, 2, 3),
         )
     )
 
-    change = controller.navigate_similarity_selection((3,))
+    change = _mutate_similarity(controller, (3,), SelectionIntent.NAVIGATE)
     assert change.after.similar_ids == (3,)
     assert change.after.presentation_order == (1, 3)
     assert change.after.color_slots == (1, 3, None)
     assert change.colors_changed
 
-    change = controller.navigate_similarity_selection((2,))
+    change = _mutate_similarity(controller, (2,), SelectionIntent.NAVIGATE)
     assert change.after.color_slots == (1, 2, None)
 
     controller.clear_similarity_selection()
-    change = controller.navigate_similarity_selection((4,))
+    change = _mutate_similarity(controller, (4,), SelectionIntent.NAVIGATE)
     assert change.after.color_slots == (1, 4, None)
 
 
-def test_similarity_navigation_preserves_primary_colors_and_is_normal_only():
+def test_similarity_navigation_preserves_primary_colors_and_selects_at_most_one():
     controller = CurationSelectionController(
         CurationSelectionState(
             cluster_ids=(1, 4),
             similar_ids=(2,),
             reference_id=1,
-            color_order=(1, 4, 2, 3),
+            color_slots=(1, 4, 2, 3),
         )
     )
 
-    change = controller.navigate_similarity_selection((3,))
+    change = _mutate_similarity(controller, (3,), SelectionIntent.NAVIGATE)
     assert change.after.color_slots == (1, 4, 3, None)
     with raises(ValueError, match='at most one'):
-        controller.navigate_similarity_selection((2, 3))
-
-    controller.enter_merge_mode()
-    with raises(RuntimeError, match='unavailable'):
-        controller.navigate_similarity_selection((5,))
+        _mutate_similarity(controller, (2, 3), SelectionIntent.NAVIGATE)
 
 
 def test_set_normal_selection_replaces_all_roles_atomically():
@@ -184,7 +186,7 @@ def test_snapshot_restore_and_noop_change_classification():
         CurationSelectionState(cluster_ids=(1,), similar_ids=(2,), reference_id=1)
     )
     snapshot = controller.snapshot()
-    controller.set_similarity_selection((3,))
+    _mutate_similarity(controller, (3,))
 
     change = controller.restore(snapshot)
     assert change.before.similar_ids == (3,)
@@ -283,7 +285,7 @@ def test_merge_candidate_transfer_and_reorder_follow_visible_role_order():
     )
     controller.enter_merge_mode()
 
-    change = controller.set_similarity_selection((4, 5))
+    change = _mutate_similarity(controller, (4, 5))
     assert change.after.presentation_order == (1, 2, 3, 4, 5)
 
     change = controller.add_to_merge((4,))
@@ -321,7 +323,7 @@ def test_merge_candidate_guards_reference_and_duplicate_membership():
 def test_presentation_order_transition_preserves_roles_and_colors():
     controller = CurationSelectionController(
         CurationSelectionState(
-            cluster_ids=(1, 2), similar_ids=(3,), reference_id=1, color_order=(1, 2, 3)
+            cluster_ids=(1, 2), similar_ids=(3,), reference_id=1, color_slots=(1, 2, 3)
         )
     )
 
@@ -332,7 +334,7 @@ def test_presentation_order_transition_preserves_roles_and_colors():
     assert not change.colors_changed
     assert change.after.cluster_ids == (1, 2)
     assert change.after.similar_ids == (3,)
-    assert change.after.color_order == (1, 2, 3)
+    assert change.after.color_slots == (1, 2, 3)
     with raises(ValueError, match='exactly'):
         controller.set_presentation_order((1, 2))
 
@@ -340,7 +342,7 @@ def test_presentation_order_transition_preserves_roles_and_colors():
 def test_merge_presentation_order_requires_merge_prefix_and_similarity_tail():
     controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1, 2)))
     controller.enter_merge_mode()
-    controller.set_similarity_selection((3,))
+    _mutate_similarity(controller, (3,))
 
     change = controller.set_presentation_order((1, 2, 3))
 
