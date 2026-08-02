@@ -375,8 +375,7 @@ class ManualClusteringView:
         """Put view utilities in a consistent footer and normalize separators."""
         menu = self.dock._menu
         utilities = [
-            self.actions.get(name)
-            for name in ('toggle_auto_update', 'screenshot', 'close')
+            self.actions.get(name) for name in ('toggle_auto_update', 'screenshot', 'close')
         ]
         for action in utilities:
             menu.removeAction(action)
@@ -765,7 +764,51 @@ class MarkerSizeMixin(BaseWheelMixin):
                 self.decrease_marker_size()
 
 
-class LassoMixin:
+class SplitSelectionMixin:
+    """Coordinate transient built-in split selections between views in one GUI.
+
+    Split selections are deliberately view-local and transient.  This mixin only
+    makes them mutually exclusive; it does not participate in the
+    ``request_split`` commit event.
+    """
+
+    def clear_split_selection(self):
+        """Clear this view's transient split selection.
+
+        Views with another kind of split preview can override this hook, call
+        ``super()``, and clear their own preview state as well.
+        """
+        self.canvas.lasso.clear()
+
+    def activate_split_selection(self):
+        """Make this view's transient split selection the active built-in one."""
+        if self.gui is not None:
+            emit('split_selection_activated', self)
+
+    def attach(self, gui):
+        super().attach(gui)
+
+        @connect(event='lasso_updated')
+        def on_lasso_updated(sender, polygon):
+            if sender == self.canvas and len(polygon):
+                self.activate_split_selection()
+
+        @connect(event='split_selection_activated')
+        def on_split_selection_activated(sender):
+            if sender is self or getattr(sender, 'gui', None) is not self.gui:
+                return
+            self.clear_split_selection()
+
+        @connect(event='close_view')
+        def on_close_view(view, sender):
+            if view is not self:
+                return
+            unconnect(on_lasso_updated)
+            unconnect(on_split_selection_activated)
+            unconnect(on_close_view)
+
+
+class LassoMixin(SplitSelectionMixin):
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
         if self.canvas.lasso.count < 3 or not len(self.cluster_ids):  # pragma: no cover
@@ -803,3 +846,8 @@ class LassoMixin:
     def attach(self, gui):
         super().attach(gui)
         connect(self.on_request_split)
+
+        @connect(event='close_view', sender=self)
+        def on_close_view(view, gui):
+            unconnect(self.on_request_split)
+            unconnect(on_close_view)

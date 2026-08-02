@@ -9,7 +9,7 @@ from phylib.utils import emit
 
 from phy.utils.color import colormaps, selected_cluster_color
 
-from ..base import BaseColorView, ManualClusteringView
+from ..base import BaseColorView, ManualClusteringView, SplitSelectionMixin
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
@@ -39,6 +39,12 @@ class DeferredView(ManualClusteringView):
 
     def plot(self, **kwargs):
         self.updates.append((list(self.cluster_ids), kwargs))
+
+
+class SplitSelectionView(SplitSelectionMixin, ManualClusteringView):
+    def __init__(self):
+        super().__init__()
+        self.canvas.enable_lasso()
 
 
 def test_manual_clustering_view_1(qtbot, tempdir):
@@ -176,3 +182,32 @@ def test_manual_clustering_view_defers_inactive_tab(qtbot, gui):
 
     _stop_and_close(qtbot, hidden)
     _stop_and_close(qtbot, visible)
+
+
+def test_split_selection_is_exclusive_and_disconnects_on_close(qtbot, gui):
+    first = SplitSelectionView()
+    second = SplitSelectionView()
+    first.attach(gui)
+    second.attach(gui)
+
+    first.canvas.lasso.add((0, 0))
+    emit('lasso_updated', first.canvas, first.canvas.lasso.polygon)
+    assert first.canvas.lasso.count == 1
+
+    second.canvas.lasso.add((0, 0))
+    emit('lasso_updated', second.canvas, second.canvas.lasso.polygon)
+    assert first.canvas.lasso.count == 0
+    assert second.canvas.lasso.count == 1
+
+    first.canvas.lasso.add((0, 0))
+    emit('lasso_updated', first.canvas, first.canvas.lasso.polygon)
+    assert first.canvas.lasso.count == 1
+    assert second.canvas.lasso.count == 0
+
+    first.close()
+    calls = []
+    first.clear_split_selection = lambda: calls.append(True)
+    second.activate_split_selection()
+    assert not calls
+
+    _stop_and_close(qtbot, second)
