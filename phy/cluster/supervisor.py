@@ -17,7 +17,7 @@ import numpy as np
 from phylib.utils import Bunch, connect, emit, unconnect
 
 from phy.gui.actions import Actions
-from phy.gui.qt import QAbstractItemView, QHeaderView, _block, _wait, set_busy
+from phy.gui.qt import QAbstractItemView, QHeaderView, Qt, _block, _wait, set_busy
 from phy.gui.widgets import Barrier, Table, _uniq
 
 from ._history import GlobalHistory
@@ -721,6 +721,7 @@ class Supervisor:
         self.actions = None  # will be set when attaching the GUI
         self.gui = None
         self.merge_view = None
+        self._merge_close_callback = None
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
         # This is populated alongside the existing TaskLogger-derived selection during the
@@ -874,6 +875,12 @@ class Supervisor:
         # Compatibility no-op on the native table implementation.
         self.cluster_view.clear_temporary_files()
         self.similarity_view.clear_temporary_files()
+        if self._merge_close_callback is not None:
+            unconnect(self._merge_close_callback)
+            self._merge_close_callback = None
+        # The GUI is closing and Qt will destroy its native QObject. Do not retain the
+        # corresponding Python wrapper until interpreter shutdown.
+        self.gui = None
 
     def _get_similar_clusters(self, sender, cluster_id):
         """Return the clusters similar to a given cluster."""
@@ -993,6 +1000,7 @@ class Supervisor:
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.merge_view)
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.similarity_view)
         self.gui.add_view(self.merge_view, position='left', closable=True)
+        self.merge_view.dock.setAttribute(Qt.WA_DeleteOnClose)
         self.merge_view.dock.add_button(
             name='cancel_merge_mode',
             text='Cancel Merge Mode',
@@ -1185,9 +1193,21 @@ class Supervisor:
     def _close_merge_view(self):
         view = self.merge_view
         self.merge_view = None
+        if view is not None:
+            self._disconnect_merge_view_events(view)
         if view is not None and view in self.gui.views:
             view.dock.close()
+        if view is not None:
+            unconnect(view.dock)
         self.similarity_view.configure_cluster_drag_drop(None)
+
+    def _disconnect_merge_view_events(self, view):
+        """Release event-registry references owned by a temporary Merge View."""
+        unconnect(
+            view,
+            self._on_cluster_drop,
+            self._remove_merge_candidate_on_right_click,
+        )
 
     def _on_cluster_drop(self, sender, payload):
         """Translate generic table drops into Merge controller intents."""
@@ -1513,8 +1533,12 @@ class Supervisor:
         @connect(event='close_view')
         def on_close_view(view, sender):
             if view is self.merge_view:
+                self._disconnect_merge_view_events(view)
+                unconnect(view.dock)
                 self.merge_view = None
                 self._cancel_merge_mode(close_view=False)
+
+        self._merge_close_callback = on_close_view
 
         gui.add_view(self.cluster_view, position='left', closable=False)
         gui.add_view(self.similarity_view, position='left', closable=False)
