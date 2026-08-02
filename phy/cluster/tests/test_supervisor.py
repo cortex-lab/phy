@@ -1063,10 +1063,17 @@ def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
     assert supervisor.action_creator.select_actions.get('toggle_merge_mode') in toolbar_actions
     assert gui.help_actions.get('show_all_shortcuts') in toolbar_actions
     save_index = toolbar_actions.index(gui.file_actions.get('save'))
-    assert toolbar_actions[save_index - 2 : save_index] == [
+    assert toolbar_actions[save_index - 6 : save_index] == [
         supervisor.action_creator.select_actions.get('toggle_merge_mode'),
         supervisor.action_creator.edit_actions.get('merge'),
+        toolbar_actions[save_index - 4],
+        supervisor.action_creator.edit_actions.get('undo'),
+        supervisor.action_creator.edit_actions.get('redo'),
+        toolbar_actions[save_index - 1],
     ]
+    assert toolbar_actions[save_index - 4].isSeparator()
+    assert toolbar_actions[save_index - 1].isSeparator()
+    assert toolbar_actions[save_index + 1].isSeparator()
     assert not supervisor.action_creator.select_actions.get('toggle_merge_mode').icon().isNull()
     assert not supervisor.action_creator.edit_actions.get('merge').icon().isNull()
     assert not gui.help_actions.get('show_all_shortcuts').icon().isNull()

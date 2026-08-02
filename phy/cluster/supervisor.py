@@ -551,7 +551,7 @@ class ActionCreator:
         self.edit_actions.separator()
 
         # Clustering.
-        self.add(w, 'merge', set_busy=True, icon='f247')
+        self.add(w, 'merge', set_busy=True, icon='f0c1')
         self.add(w, 'split', set_busy=True)
         self.edit_actions.separator()
 
@@ -589,7 +589,7 @@ class ActionCreator:
             docstring='Select the first N eligible clusters shown in the similarity view.',
         )
         self.add(w, 'unselect_similar')
-        self.add(w, 'toggle_merge_mode', icon='f0e8')
+        self.add(w, 'toggle_merge_mode', icon='f542')
         self.add(
             w,
             'skip_noise_and_mua',
@@ -636,11 +636,10 @@ class ActionCreator:
         self.select_actions.separator()
 
     def _create_toolbar(self, gui):
-        gui._toolbar.addAction(self.edit_actions.get('undo'))
-        gui._toolbar.addAction(self.edit_actions.get('redo'))
         gui._toolbar.addAction(self.select_actions.get('reset_wizard'))
         gui._toolbar.addAction(self.select_actions.get('previous_best'))
         gui._toolbar.addAction(self.select_actions.get('next_best'))
+        gui._toolbar.addSeparator()
         gui._toolbar.addAction(self.select_actions.get('previous'))
         gui._toolbar.addAction(self.select_actions.get('next'))
         gui._toolbar.addSeparator()
@@ -654,10 +653,28 @@ class ActionCreator:
         toolbar = gui._toolbar
         merge_mode = self.select_actions.get('toggle_merge_mode')
         merge = self.edit_actions.get('merge')
-        toolbar.removeAction(merge_mode)
-        toolbar.removeAction(merge)
+        undo = self.edit_actions.get('undo')
+        redo = self.edit_actions.get('redo')
+        for action in (
+            merge_mode,
+            merge,
+            undo,
+            redo,
+            getattr(self, '_merge_history_separator', None),
+            getattr(self, '_save_separator', None),
+            getattr(self, '_help_separator', None),
+        ):
+            if action is not None:
+                toolbar.removeAction(action)
         toolbar.insertAction(save_action, merge_mode)
         toolbar.insertAction(save_action, merge)
+        self._merge_history_separator = toolbar.insertSeparator(save_action)
+        toolbar.insertAction(save_action, undo)
+        toolbar.insertAction(save_action, redo)
+        self._save_separator = toolbar.insertSeparator(save_action)
+        help_action = gui.help_actions.get('show_all_shortcuts')
+        if help_action is not None:
+            self._help_separator = toolbar.insertSeparator(help_action)
 
 
 # -----------------------------------------------------------------------------
