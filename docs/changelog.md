@@ -37,11 +37,13 @@ behavior they verify rather than listed separately.
   undo restores the full pre-merge workspace.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
   dataset-local `curation.json` in a persistent **Merge Propositions** view.
-  Its compact, lifecycle-colored rows have no action buttons and carry stable
-  source-order display labels (`P1`, `P2`, ...): click a pending row to stage it
-  in Merge View (with the first unit blue), while tooltips retain
-  the full IDs, status, key, and reason. `Alt+Down`/`Alt+Up` navigate pending
-  rows, `Alt+Backspace` rejects and advances, and `Alt+Shift+Backspace` resets a
+  Its compact rows have no action buttons and carry stable source-order display
+  labels (`P1`, `P2`, ...). The selection background marks the active review;
+  foreground colors show completed/problem states while blue stays reserved for
+  the merge reference cluster. Click a pending row to stage it in Merge View,
+  while tooltips retain the full IDs, status, key, and reason.
+  `Alt+Down`/`Alt+Up` navigate pending rows, `Alt+Backspace` rejects and advances,
+  and `Alt+Shift+Backspace` resets a
   highlighted completed review. `G` accepts the ordinary merge, marks edited
   acceptance `accepted_modified`, and opens the next pending proposition in the
   pre-merge visible order. Undo/redo restore exact proposition workspaces; stale

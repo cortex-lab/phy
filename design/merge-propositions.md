@@ -108,13 +108,14 @@ decisions uses the existing save prompt.
 When a valid `curation.json` contains merges, phy creates a persistent **Merge
 Propositions** view with no row action buttons. Each row begins with its `P`
 display label and shows its ordered unit IDs compactly: all IDs for four or fewer
-units, or the first two, an
-ellipsis, the last, and the total count for larger propositions. A supplied
+units, or the first two, an ellipsis, the last, and the total count for larger
+propositions. A supplied
 `new_unit_id` is appended as `⇒ new_unit_id`. The row tooltip provides the key,
 full ordered IDs, status, reference, and any invalid/stale reason; the dock status
-summarizes the compact proposition, status, reference, and reason. Lifecycle
-colors distinguish the active review,
-accepted, accepted-modified, rejected, stale, and invalid states.
+summarizes the compact proposition, status, reference, and reason. The selected-row
+background identifies the active review without recoloring its text. Foreground
+colors distinguish accepted, accepted-modified, rejected, stale, and invalid
+states; blue remains reserved for the merge reference cluster.
 
 Clicking a pending, reviewable row immediately starts its review. It cancels and
 replaces any active manual or proposition Merge workspace, snapshots the complete

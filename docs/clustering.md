@@ -47,8 +47,9 @@ an ellipsis, the last, and the total count for larger propositions. A supplied
 `new_unit_id` follows `⇒`; it is provenance only because phy allocates the result
 through its ordinary merge model. There are no row action buttons. Hover a row
 for its full IDs, key, status, reference, and any reason. Row colors identify
-the active, accepted, accepted-modified, rejected, stale, and invalid lifecycle
-states.
+accepted, accepted-modified, rejected, stale, and invalid lifecycle states. The
+selected-row background alone identifies the active review, leaving blue text
+reserved for the merge reference cluster.
 
 The `P` label is intended for navigation and discussion; filtering and status
 changes do not renumber it. Review persistence continues to use the internal
