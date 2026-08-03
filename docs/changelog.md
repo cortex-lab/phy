@@ -4,7 +4,7 @@ This file records user-visible changes to phy. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) where practical.
 
-## [Unreleased] — 2.1.1.dev0
+## [Unreleased] — 2.2.0.dev0
 
 Changes below are available from the latest source checkout but have not yet
 been included in a stable release. The current entries cover all user-visible
@@ -35,6 +35,13 @@ behavior they verify rather than listed separately.
   View remains scrollable. Scientific views follow Merge View order and then
   selected Similarity rows in visible table order. Cancellation restores the entry state, and
   undo restores the full pre-merge workspace.
+- Review AIND/SpikeInterface format-version 2 merge propositions from
+  dataset-local `curation.json` in a persistent **Merge Propositions** view.
+  Review stages the ordered proposition in Merge View (with the first unit blue);
+  `G` accepts the ordinary merge, while edited acceptance is marked
+  `accepted_modified`. Reject and reset are undoable, stale overlapping proposals
+  are never remapped, and decisions are atomically saved in
+  `curation_review.json` without overwriting `curation.json`.
 
 - Select the first eligible clusters in the Similarity View with
   `Control+Space`; repeat the shortcut to select successive batches. The
