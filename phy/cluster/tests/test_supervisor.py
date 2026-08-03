@@ -809,10 +809,18 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
     assert supervisor.selection.state.merge.proposition_id is None
     merge_view = supervisor.merge_view
     merge_dock = merge_view.dock
+    events = []
+
+    @connect(sender=supervisor)
+    def on_select(sender, cluster_ids):
+        events.append(cluster_ids)
+
     view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[key]))
 
     assert supervisor.merge_view is merge_view
     assert supervisor.merge_view.dock is merge_dock
+    assert not merge_dock.isHidden()
+    assert events == [[30, 20]]
     assert supervisor.selected_merge == [30, 20]
     assert supervisor.selection.state.reference_id == 30
     assert supervisor.selection.state.color_indices[30] == 0
@@ -823,12 +831,15 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
     view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[replacement.key]))
     assert supervisor.merge_view is merge_view
     assert supervisor.merge_view.dock is merge_dock
+    assert not merge_dock.isHidden()
+    assert events == [[30, 20], [11, 1]]
     assert supervisor.selected_merge == [11, 1]
     assert supervisor.selection.state.merge.proposition_id == replacement.key
 
     supervisor.toggle_merge_mode()
     assert supervisor.selection.state == entry
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+    unconnect(on_select)
 
 
 def test_merge_proposition_navigation_shortcuts_and_text_focus(
@@ -855,9 +866,16 @@ def test_merge_proposition_navigation_shortcuts_and_text_focus(
     }
 
     supervisor._activate_merge_proposition(supervisor.merge_propositions_view, first.key)
+    merge_view = supervisor.merge_view
+    merge_dock = merge_view.dock
     supervisor.next_merge_proposition()
+    assert supervisor.merge_view is merge_view
+    assert supervisor.merge_view.dock is merge_dock
+    assert not merge_dock.isHidden()
     assert supervisor.selection.state.merge.proposition_id == second.key
     supervisor.previous_merge_proposition()
+    assert supervisor.merge_view is merge_view
+    assert supervisor.merge_view.dock is merge_dock
     assert supervisor.selection.state.merge.proposition_id == first.key
 
     supervisor.merge_propositions_view.filter_edit.setFocus()
@@ -899,6 +917,8 @@ def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
     assignments_before = supervisor.clustering.spike_clusters.copy()
     supervisor._review_merge_proposition(supervisor.merge_propositions_view, first.key)
     workspace = supervisor.selection.snapshot()
+    merge_view = supervisor.merge_view
+    merge_dock = merge_view.dock
 
     supervisor.merge()
     supervisor.block()
@@ -910,6 +930,9 @@ def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
     assert supervisor.merge_propositions.catalog.reviews[first.key].applied_unit_ids == (30, 20)
     assert supervisor.selection.state.merge.proposition_id == next_proposition.key
     assert supervisor.selected_merge == [11, 1]
+    assert supervisor.merge_view is merge_view
+    assert supervisor.merge_view.dock is merge_dock
+    assert not merge_dock.isHidden()
     assert supervisor.merge_propositions_view.current_key == next_proposition.key
     assert supervisor.actions.get('undo').isEnabled()
     assert supervisor.merge_propositions_view.select_key(overlap.key)
@@ -945,6 +968,7 @@ def test_failed_proposition_merge_and_reject_history(
     key = supervisor.merge_propositions.catalog.propositions[0].key
     supervisor._review_merge_proposition(supervisor.merge_propositions_view, key)
     workspace = supervisor.selection.snapshot()
+    merge_view = supervisor.merge_view
 
     def fail(*args, **kwargs):
         raise RuntimeError('merge failed')
@@ -959,6 +983,8 @@ def test_failed_proposition_merge_and_reject_history(
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.REJECTED
     next_key = supervisor.merge_propositions.catalog.propositions[1].key
     assert supervisor.selection.state.merge.proposition_id == next_key
+    assert supervisor.merge_view is merge_view
+    assert not merge_view.dock.isHidden()
     assert supervisor.actions.get('undo').isEnabled()
     supervisor.undo()
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING

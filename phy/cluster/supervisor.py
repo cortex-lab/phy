@@ -2012,9 +2012,6 @@ class Supervisor:
             out = self.clustering.merge(cluster_ids, to=to)
         if not getattr(getattr(self, 'task_logger', None), '_processing', False):
             self._select_after_merge(out, selection_before)
-        if merge_mode:
-            self._set_merge_mode_ui(False)
-            self._hide_merge_view()
         controllers = [self.clustering]
         if proposition_id is not None:
             self.merge_propositions.accept(proposition_id, tuple(cluster_ids), int(out.added[0]))
@@ -2027,7 +2024,12 @@ class Supervisor:
             if next_key is not None:
                 self._activate_merge_proposition(self.merge_propositions_view, next_key)
             else:
+                self._set_merge_mode_ui(False)
+                self._hide_merge_view()
                 self.merge_propositions_view.select_key(proposition_id)
+        elif merge_mode:
+            self._set_merge_mode_ui(False)
+            self._hide_merge_view()
         self._global_history.action(
             *controllers,
             description='merge',
@@ -2218,8 +2220,6 @@ class Supervisor:
         if active_key == key:
             self.merge_propositions_view.select_key(key)
             return self.selection.state
-        if self.selection.state.is_merge_mode:
-            self._cancel_merge_mode()
         self.merge_propositions_view.select_key(key)
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         catalog = self.merge_propositions.catalog
@@ -2227,15 +2227,20 @@ class Supervisor:
             catalog.entry_for(key) is None
             or catalog.status_for(key) is not PropositionStatus.PENDING
         ):
+            if self.selection.state.is_merge_mode:
+                self._cancel_merge_mode()
             self._refresh_propositions()
             self.merge_propositions_view.select_key(key)
             return
         proposition = catalog.entry_for(key).proposition
         self.cluster_view.debouncer.flush()
         self.similarity_view.debouncer.flush()
-        change = self.selection.enter_merge_proposition(
-            key, proposition.unit_ids, self._workflow_context()
-        )
+        if self.selection.state.is_merge_mode:
+            change = self.selection.switch_merge_proposition(key, proposition.unit_ids)
+        else:
+            change = self.selection.enter_merge_proposition(
+                key, proposition.unit_ids, self._workflow_context()
+            )
         self._show_merge_view()
         self._set_merge_mode_ui(True)
         self._apply_selection_change(change)
@@ -2256,13 +2261,13 @@ class Supervisor:
             if self.merge_propositions_view is not None
             else None
         )
-        if self.selection.state.is_merge_mode:
-            self._cancel_merge_mode()
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         key = self._pending_proposition_relative_to(current, direction, ordered_keys)
         if key is not None:
             self._activate_merge_proposition(self.merge_propositions_view, key)
         else:
+            if self.selection.state.is_merge_mode:
+                self._cancel_merge_mode()
             self._refresh_propositions()
             if current is not None:
                 self.merge_propositions_view.select_key(current)
@@ -2286,13 +2291,14 @@ class Supervisor:
             if self._active_merge_proposition_key() != key:
                 logger.warning('Only the active merge proposition can be rejected.')
                 return
-            self._cancel_merge_mode()
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         self.merge_propositions.reject(key)
         self._refresh_propositions()
         next_key = self._pending_proposition_relative_to(key, 'next', ordered_keys)
         if next_key is not None:
             self._activate_merge_proposition(self.merge_propositions_view, next_key)
+        elif self.selection.state.is_merge_mode:
+            self._cancel_merge_mode()
         self._global_history.action(
             self.merge_propositions,
             description=f'reject merge proposition {key}',
