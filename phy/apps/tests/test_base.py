@@ -175,30 +175,38 @@ def test_controller_loads_and_reopens_merge_proposition_reviews(tempdir):
     }
     (tempdir / 'curation.json').write_text(json.dumps(source), encoding='utf8')
     controller = _mock_controller(tempdir, MyPropositionController)
-    proposition = controller.supervisor.merge_propositions.catalog.propositions[0]
+    try:
+        proposition = controller.supervisor.merge_propositions.catalog.propositions[0]
 
-    controller.supervisor.merge_propositions.reject(proposition.key)
-    controller.supervisor.save()
+        controller.supervisor.merge_propositions.reject(proposition.key)
+        controller.supervisor.save()
 
-    sidecar = json.loads((tempdir / 'curation_review.json').read_text(encoding='utf8'))
-    assert sidecar['source']['filename'] == 'curation.json'
-    assert len(sidecar['source']['sha256']) == 64
-    assert sidecar['reviews'][proposition.key]['decision'] == 'rejected'
+        sidecar = json.loads((tempdir / 'curation_review.json').read_text(encoding='utf8'))
+        assert sidecar['source']['filename'] == 'curation.json'
+        assert len(sidecar['source']['sha256']) == 64
+        assert sidecar['reviews'][proposition.key]['decision'] == 'rejected'
+    finally:
+        controller.close()
 
     reopened = _mock_controller(tempdir, MyPropositionController)
-    assert (
-        reopened.supervisor.merge_propositions.catalog.status_for(proposition.key)
-        is PropositionStatus.REJECTED
-    )
+    try:
+        assert (
+            reopened.supervisor.merge_propositions.catalog.status_for(proposition.key)
+            is PropositionStatus.REJECTED
+        )
+    finally:
+        reopened.close()
 
 
 def test_invalid_curation_json_does_not_prevent_ordinary_controller(tempdir, caplog):
     (tempdir / 'curation.json').write_text('{bad', encoding='utf8')
 
     controller = _mock_controller(tempdir, MyPropositionController)
-
-    assert controller.supervisor.merge_propositions is None
-    assert 'Merge Propositions disabled' in caplog.text
+    try:
+        assert controller.supervisor.merge_propositions is None
+        assert 'Merge Propositions disabled' in caplog.text
+    finally:
+        controller.close()
 
 
 def test_allocate_spike_counts_redistributes_total_budget():
