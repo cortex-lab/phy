@@ -49,3 +49,40 @@ def test_merge_propositions_compact_projection_and_activation(qtbot):
     assert view.current_key == 'merge:2'
     unconnect(on_activate)
     view.close()
+
+
+def test_merge_propositions_active_row_changes_in_place(qtbot):
+    view = MergePropositionsView(
+        data=[
+            {
+                'key': f'merge:{index}',
+                'unit_ids': (index, index + 1),
+                'status': 'rejected' if index == 1 else 'pending',
+                'catalog_status': 'rejected' if index == 1 else 'pending',
+            }
+            for index in range(20)
+        ]
+    )
+    _wait_until_table_ready(qtbot, view)
+    model = view._model
+    resets = []
+    model.modelReset.connect(lambda: resets.append(True))
+    view.table_view.verticalScrollBar().setValue(5)
+    scroll = view.table_view.verticalScrollBar().value()
+
+    assert view.set_active_key('merge:10')
+    assert view._model is model
+    assert resets == []
+    assert view._model.row_by_id(10)['status'] == 'active'
+    assert view.table_view.verticalScrollBar().value() >= scroll
+
+    assert view.set_active_key('merge:11', previous_key='merge:10')
+    assert view._model is model
+    assert view._model.row_by_id(10)['status'] == 'pending'
+    assert view._model.row_by_id(11)['status'] == 'active'
+
+    assert view.set_active_key('merge:1')
+    assert view._model.row_by_id(11)['status'] == 'pending'
+    assert view._model.row_by_id(1)['status'] == 'active'
+    assert view._model.row_by_id(1)['_catalog_status'] == 'rejected'
+    view.close()

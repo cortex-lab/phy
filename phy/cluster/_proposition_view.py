@@ -97,6 +97,7 @@ class MergePropositionsView(Table):
         unit_ids = self._as_ordered_ids(row.get('unit_ids'))
         display_id = str(row.get('display_id') or f'P{index + 1}')
         status = str(row.get('status', 'pending'))
+        catalog_status = str(row.get('catalog_status', status))
         new_unit_id = row.get('new_unit_id')
         reference = row.get('reference', unit_ids[0] if unit_ids else None)
         invalid_or_stale = status in {'invalid', 'stale'}
@@ -118,6 +119,7 @@ class MergePropositionsView(Table):
             'display_id': display_id,
             'unit_ids': unit_ids,
             'status': status,
+            '_catalog_status': catalog_status,
             'reference': reference,
             'reason': row.get('reason') or '',
             'new_unit_id': new_unit_id,
@@ -197,6 +199,20 @@ class MergePropositionsView(Table):
         self.scroll_to(row_id)
         self._set_dock_status(key)
         return True
+
+    def set_active_key(self, key, previous_key=None):
+        """Mark one row active without resetting the table model or its layout."""
+        if key not in self._id_by_key:
+            return False
+        patches = []
+        previous_id = self._id_by_key.get(previous_key or self._current_key)
+        if previous_id is not None:
+            previous = self._model.row_by_id(previous_id)
+            patches.append({'id': previous_id, 'status': previous['_catalog_status']})
+        row_id = self._id_by_key[key]
+        patches.append({'id': row_id, 'status': 'active'})
+        self.change(patches)
+        return self.select_key(key)
 
     def _select_actionable(self, direction):
         keys = self.actionable_keys()

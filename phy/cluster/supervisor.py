@@ -1354,6 +1354,7 @@ class Supervisor:
                     'display_id': f'P{entry.index + 1}',
                     'unit_ids': unit_ids,
                     'status': status,
+                    'catalog_status': catalog_status.value,
                     'reason': entry.invalid_reason
                     or (catalog.reason_for(key) if entry.key is not None else None),
                     'new_unit_id': proposition.new_unit_id if proposition is not None else None,
@@ -2259,7 +2260,8 @@ class Supervisor:
         self._show_merge_view()
         self._set_merge_mode_ui(True)
         self._apply_selection_change(change)
-        self._refresh_propositions()
+        self.merge_propositions_view.set_active_key(key, previous_key=active_key)
+        self._update_proposition_actions()
         return change.after
 
     def _review_merge_proposition(self, sender, key):

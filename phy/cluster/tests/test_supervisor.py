@@ -897,6 +897,8 @@ def test_merge_proposition_navigation_shortcuts_and_text_focus(
     assert supervisor.merge_view.dock is merge_dock
     assert not merge_dock.isHidden()
     assert supervisor.selection.state.merge.proposition_id == second.key
+    assert supervisor.merge_propositions_view._model.row_by_id(0)['status'] == 'pending'
+    assert supervisor.merge_propositions_view._model.row_by_id(1)['status'] == 'active'
     supervisor.previous_merge_proposition()
     assert supervisor.merge_view is merge_view
     assert supervisor.merge_view.dock is merge_dock

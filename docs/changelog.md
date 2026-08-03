@@ -73,6 +73,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Keep the Merge Propositions table layout and scroll state stable while moving
+  between pending propositions instead of rebuilding the full queue.
 - Release GUI, Supervisor, table, dock, and curation event callbacks when a
   dataset window closes, preventing retained Qt widgets and intermittent
   process crashes during shutdown.
