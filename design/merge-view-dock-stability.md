@@ -1,6 +1,7 @@
 # Merge View dock and workspace stability plan
 
-Status: proposed for the unreleased phy 2.2 branch
+Status: implemented and automatically validated on the unreleased phy 2.2 branch;
+manual dataset smoke testing and release acceptance remain
 
 Companion documents:
 
@@ -19,9 +20,9 @@ This plan changes presentation lifecycle only. The existing selection,
 proposition, merge, history, save, and cancellation integrity contracts remain
 authoritative.
 
-## 2. Current source of disruption
+## 2. Previous source of disruption
 
-The current proposition transition takes a destructive GUI path:
+Before this plan was implemented, proposition transitions took a destructive GUI path:
 
 1. activating another proposition calls `_cancel_merge_mode()`;
 2. cancellation calls `_close_merge_view()`;

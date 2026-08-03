@@ -34,7 +34,9 @@ merge should contain only the staged rows.
 Press `G` to commit the staged clusters plus the selected Similarity candidates. Press `V` again,
 use **Cancel Merge Mode**, or close Merge View to cancel and restore the exact state from before
 entry. Undoing a committed Merge-mode merge restores the complete workspace as it appeared just
-before `G`; Redo reapplies the merge and returns to the normal workflow.
+before `G`; Redo reapplies the merge and returns to the normal workflow. The Merge View dock is
+reused throughout the dataset session: proposition changes do not move it, and reopening restores
+its previous docked extent or floating position and size without resetting neighboring docks.
 
 ### Reviewing merge propositions
 
@@ -56,11 +58,11 @@ changes do not renumber it. Review persistence continues to use the internal
 stable key. Labels such as `P12.1` are reserved for future persisted propositions
 derived from `P12`; this release does not generate derived proposition rows.
 
-Click a pending row to stage it in Merge View immediately; this cancels and
-replaces any manual or proposition workspace already open. Clicking a completed,
-stale, or invalid row cancels any active workspace and only highlights that row.
+Click a pending row to stage it in Merge View immediately; this atomically
+replaces any manual or proposition workspace already open in the same dock.
+Clicking a completed, stale, or invalid row cancels any active workspace and only highlights that row.
 You can still add, remove, and reorder candidates in a pending review. `Alt+Down`
-and `Alt+Up` cancel the current workspace and open the next or previous pending
+and `Alt+Up` replace the current workspace with the next or previous pending
 proposition in the current visible table order, wrapping at either end.
 `Alt+Backspace` rejects the active proposition and advances; `Alt+Shift+Backspace`
 resets the highlighted completed review and reopens it when reviewable.

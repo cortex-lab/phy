@@ -148,7 +148,7 @@ GUI reports that another candidate is required.
 After a successful merge:
 
 - Merge mode ends;
-- Merge View is cleared and closed;
+- Merge View is cleared and hidden while its dataset-scoped dock is retained;
 - Cluster View is re-enabled;
 - the new merged cluster becomes the blue Cluster View selection; and
 - Similarity View is recomputed for the new cluster using the normal post-merge
@@ -176,6 +176,11 @@ Closing Merge View must visibly communicate that it cancels the mode. Merge mode
 must also be unmistakable while active: Merge View is labelled **MERGE MODE**,
 Cluster View is dimmed or overlaid with an explanation, and the status area shows
 the pending merge count.
+
+Merge View and its dock are created lazily once per dataset session. Cancelling,
+closing, undoing, or re-entering Merge mode hides, reveals, and repopulates that
+same dock, preserving its placement and size without restoring the whole-window
+layout.
 
 ## Undo and redo
 

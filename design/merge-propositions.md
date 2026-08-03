@@ -117,11 +117,11 @@ background identifies the active review without recoloring its text. Foreground
 colors distinguish accepted, accepted-modified, rejected, stale, and invalid
 states; blue remains reserved for the merge reference cluster.
 
-Clicking a pending, reviewable row immediately starts its review. It cancels and
-replaces any active manual or proposition Merge workspace, snapshots the complete
-current Normal workspace, and stages the ordered proposition IDs directly. It
-must not first project those IDs into Cluster View, because cancellation must
-restore the curator's pre-review state. Clicking an accepted, accepted-modified,
+Clicking a pending, reviewable row immediately starts its review. It atomically
+replaces any active manual or proposition Merge workspace in the same dock,
+retains the original Normal-entry cancellation snapshot, and stages the ordered
+proposition IDs directly. It must not first project those IDs into Cluster View,
+because cancellation must restore the curator's pre-review state. Clicking an accepted, accepted-modified,
 rejected, stale, or invalid row first cancels any active workspace, then only
 highlights that row; it does not enter Merge mode. Invalid and stale propositions
 remain visible with their reason but cannot be reviewed.

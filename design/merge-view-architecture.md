@@ -459,8 +459,9 @@ drag-and-drop, then add this reusable layer.
 ### 7.5 View closing and lifecycle
 
 Closing Merge View is a cancel intent. Cancellation must complete before the view
-is removed or hidden. Re-entering Merge mode must be able to recreate or reveal
-the view without retaining stale local state.
+is hidden. Merge View and its dock persist for the dataset session, and re-entering
+Merge mode reveals and freshly projects controller state into the same objects.
+Only GUI shutdown disconnects and releases them.
 
 Application shutdown must not accidentally save the transient empty Cluster
 selection produced by Merge mode as the next Normal-mode selection. Either
@@ -635,7 +636,7 @@ Cover:
 - close-to-cancel;
 - drag-and-drop and insertion order;
 - reference-row immobility; and
-- view recreation and shutdown state.
+- persistent view identity and shutdown disposal.
 
 ### 10.4 Safety regressions
 

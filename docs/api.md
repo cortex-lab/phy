@@ -1175,7 +1175,7 @@ close_view(view, gui)
 #### GUI.add_view
 
 
-**`GUI.add_view(self, view, position=None, closable=True, floatable=True, floating=None)`**
+**`GUI.add_view(self, view, position=None, closable=True, floatable=True, floating=None, persistent=False)`**
 
 Add a dock widget to the main window.
 
@@ -1195,6 +1195,9 @@ Add a dock widget to the main window.
 
 * `floating : boolean`
     Whether the view should be added in floating mode or not.
+
+* `persistent : boolean`
+    Whether closing the dock should hide it without removing the view.
 
 ---
 

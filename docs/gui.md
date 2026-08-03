@@ -56,8 +56,9 @@ Control-right-clicking a Similarity View row promotes it into the primary select
 preserving the current comparison. See [Similarity and the wizard](similarity.md) for the complete
 workflow.
 
-Press `V` to stage the current selections in Merge View. It opens below Cluster View and remembers
-where you move it while toggling the mode. In this temporary mode, Cluster View is dimmed and
+Press `V` to stage the current selections in Merge View. It opens below Cluster View and reuses the
+same dock, placement, and size while toggling the mode or changing propositions. In this temporary
+mode, Cluster View is dimmed and
 read-only but remains scrollable, every Merge View row is included in the pending merge, and
 Similarity View remains available for exploring additional candidates. Control-right-click or drag
 rows between Merge and Similarity views, or drag inside Merge View to reorder candidates. Press `G`
@@ -66,7 +67,7 @@ to commit or `V` to cancel. See
 
 When a Template GUI dataset provides `curation.json` merge suggestions, the
 persistent **Merge Propositions** table is a button-free review queue. Clicking
-a pending row immediately opens it in Merge View and replaces any active merge
+a pending row immediately opens it in Merge View and atomically replaces any active merge
 workspace; clicking a nonactionable row only highlights it after cancelling the
 workspace. See [Reviewing merge propositions](clustering.md#reviewing-merge-propositions).
 

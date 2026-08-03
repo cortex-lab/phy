@@ -31,8 +31,9 @@ behavior they verify rather than listed separately.
   to enter or cancel Merge mode, transfer candidates with
   `Control`-right-click or drag-and-drop, and press `G` to merge every staged
   cluster plus the current Similarity View selection. Merge View opens below
-  Cluster View and remembers its in-session dock position; the dimmed Cluster
-  View remains scrollable. Scientific views follow Merge View order and then
+  Cluster View and keeps one stable in-session dock identity, position, and
+  size; proposition navigation updates that dock without moving neighboring
+  views. The dimmed Cluster View remains scrollable. Scientific views follow Merge View order and then
   selected Similarity rows in visible table order. Cancellation restores the entry state, and
   undo restores the full pre-merge workspace.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
@@ -76,7 +77,8 @@ behavior they verify rather than listed separately.
   dataset window closes, preventing retained Qt widgets and intermittent
   process crashes during shutdown.
 - Closing the Merge View now restores staged clusters to their original
-  Cluster and Similarity View rows, selections, and table positions.
+  Cluster and Similarity View rows, selections, and table positions. Reopening
+  reveals the same dock at its prior docked extent or floating geometry.
 - Show the active sort column and direction in Cluster and Similarity View
   headers.
 - Dragging Merge View rows now shows the cluster ID preview, insertion boundary,
