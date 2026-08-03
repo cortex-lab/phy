@@ -273,6 +273,50 @@ def test_enter_merge_mode_stages_normal_presentation_order():
     assert not change.presentation_changed
 
 
+def test_enter_merge_proposition_preserves_entry_and_uses_proposed_reference():
+    initial = CurationSelectionState(
+        cluster_ids=(3, 1),
+        similar_ids=(4,),
+        reference_id=3,
+        color_slots=(3, 1, 4),
+    )
+    context = {'cluster_filter': 'group == good'}
+    controller = CurationSelectionController(initial)
+
+    change = controller.enter_merge_proposition('merge:8,2', (8, 2), context)
+
+    assert change.after.merge_ids == (8, 2)
+    assert change.after.reference_id == 8
+    assert change.after.color_slots == (8, 2)
+    assert change.after.merge.proposition_id == 'merge:8,2'
+    assert change.after.merge.entry_snapshot.selection is initial
+    assert change.after.merge.entry_snapshot.workflow_context is context
+    assert controller.cancel_merge_mode().after is initial
+
+
+def test_enter_merge_proposition_validates_identity_and_membership():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1,)))
+
+    with raises(ValueError, match='at least two'):
+        controller.enter_merge_proposition('p', (1,))
+    with raises(ValueError, match='cannot be empty'):
+        controller.enter_merge_proposition('', (1, 2))
+    with raises(ValueError, match='unique'):
+        controller.enter_merge_proposition('p', (1, 1))
+
+
+def test_merge_workspace_edits_preserve_proposition_identity():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1,)))
+    controller.enter_merge_proposition('p', (1, 2))
+
+    controller.add_to_merge((3,))
+    assert controller.state.merge.proposition_id == 'p'
+    controller.remove_from_merge((2,))
+    assert controller.state.merge.proposition_id == 'p'
+    controller.reorder_merge((3,), 1)
+    assert controller.state.merge.proposition_id == 'p'
+
+
 def test_enter_merge_mode_requires_cluster_selection():
     controller = CurationSelectionController()
     with raises(ValueError, match='Cluster View selection'):

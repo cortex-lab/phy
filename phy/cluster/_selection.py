@@ -42,11 +42,14 @@ class MergeSession:
     reference_id: int
     ordered_ids: tuple[int, ...]
     entry_snapshot: NormalWorkflowSnapshot
+    proposition_id: str | None = None
 
     def __post_init__(self):
         ordered = _as_unique_ids(self.ordered_ids)
         if not ordered or ordered[0] != self.reference_id:
             raise ValueError('The merge reference must be the first staged cluster.')
+        if self.proposition_id is not None and not self.proposition_id:
+            raise ValueError('The merge proposition ID cannot be empty.')
         object.__setattr__(self, 'ordered_ids', ordered)
 
 
@@ -322,6 +325,31 @@ class CurationSelectionController:
             )
         )
 
+    def enter_merge_proposition(self, proposition_id, ordered_ids, workflow_context=None):
+        """Stage an external merge proposition without changing its entry snapshot."""
+        self._require_normal_mode()
+        ordered = _as_unique_ids(ordered_ids)
+        if len(ordered) < 2:
+            raise ValueError('A merge proposition requires at least two cluster IDs.')
+        if not proposition_id:
+            raise ValueError('The merge proposition ID cannot be empty.')
+        current = self._state
+        merge = MergeSession(
+            ordered[0],
+            ordered,
+            NormalWorkflowSnapshot(current, workflow_context),
+            proposition_id=str(proposition_id),
+        )
+        return self._apply(
+            CurationSelectionState(
+                mode=WorkflowMode.MERGE,
+                reference_id=ordered[0],
+                presentation_order=ordered,
+                color_slots=ordered,
+                merge=merge,
+            )
+        )
+
     def cancel_merge_mode(self):
         self._require_merge_mode()
         return self._apply(self._state.merge.entry_snapshot.selection)
@@ -338,7 +366,12 @@ class CurationSelectionController:
         if not 1 <= insertion <= len(ids):
             raise ValueError('Merge insertion must follow the fixed reference.')
         ids[insertion:insertion] = new
-        merge = MergeSession(current.reference_id, tuple(ids), current.merge.entry_snapshot)
+        merge = MergeSession(
+            current.reference_id,
+            tuple(ids),
+            current.merge.entry_snapshot,
+            proposition_id=current.merge.proposition_id,
+        )
         similar = tuple(cluster_id for cluster_id in current.similar_ids if cluster_id not in new)
         effective = _ordered_union(merge.ordered_ids, similar)
         return self._apply(
@@ -363,6 +396,7 @@ class CurationSelectionController:
             current.reference_id,
             tuple(i for i in current.merge_ids if i not in removed),
             current.merge.entry_snapshot,
+            proposition_id=current.merge.proposition_id,
         )
         similar = _ordered_union(current.similar_ids, removed)
         effective = _ordered_union(merge.ordered_ids, similar)
@@ -388,7 +422,12 @@ class CurationSelectionController:
         if not 1 <= insertion <= len(remain):
             raise ValueError('Merge insertion must follow the fixed reference.')
         remain[insertion:insertion] = moving
-        merge = MergeSession(current.reference_id, tuple(remain), current.merge.entry_snapshot)
+        merge = MergeSession(
+            current.reference_id,
+            tuple(remain),
+            current.merge.entry_snapshot,
+            proposition_id=current.merge.proposition_id,
+        )
         return self._apply(
             CurationSelectionState(
                 mode=WorkflowMode.MERGE,
