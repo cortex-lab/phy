@@ -13,6 +13,8 @@ Read these documents in order:
    internal refactor supporting that behavior.
 3. [Merge Propositions specification](merge-propositions.md) defines review of
    AIND/SpikeInterface format-version 2 `curation.json` merge propositions.
+4. [Merge View dock stability plan](merge-view-dock-stability.md) proposes a
+   persistent dock and atomic workspace switching to avoid layout disruption.
 
 The workflow specification is the authority for user behavior. The architecture
 record may evolve as implementation reveals constraints, but changes must not
