@@ -785,6 +785,7 @@ class Supervisor:
         self.merge_propositions_view = None
         self.merge_propositions = merge_propositions
         self._merge_close_callback = None
+        self._merge_dock_state = None
         self._suspend_presentation_order_sync = False
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
@@ -1084,16 +1085,32 @@ class Supervisor:
     def _show_merge_view(self, state=None):
         """Reveal the persistent Merge View for the active workspace."""
         view = self._ensure_merge_view(state)
+        was_hidden = view.dock.isHidden()
         self.similarity_view.configure_cluster_drag_drop(
             'similarity', accepted_roles=('merge',), drag_selected_rows=True
         )
         view.dock.show()
+        if was_hidden and self._merge_dock_state is not None:
+            dock_state = self._merge_dock_state
+            if dock_state['floating']:
+                view.dock.setFloating(True)
+                view.dock.restoreGeometry(dock_state['geometry'])
+            elif not view.dock.isFloating():
+                size = dock_state['size']
+                self.gui.resizeDocks((view.dock,), (size.width(),), Qt.Horizontal)
+                self.gui.resizeDocks((view.dock,), (size.height(),), Qt.Vertical)
         return view
 
     def _hide_merge_view(self):
         """Hide Merge View without releasing its stable dock identity or callbacks."""
-        if self.merge_view is not None:
-            self.merge_view.dock.hide()
+        if self.merge_view is not None and not self.merge_view.dock.isHidden():
+            dock = self.merge_view.dock
+            self._merge_dock_state = {
+                'floating': dock.isFloating(),
+                'geometry': dock.saveGeometry(),
+                'size': dock.size(),
+            }
+            dock.hide()
         self.similarity_view.configure_cluster_drag_drop(None)
 
     def _dispose_merge_view(self):

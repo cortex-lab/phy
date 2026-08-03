@@ -441,8 +441,10 @@ def test_supervisor_merge_view_opens_below_cluster_and_restores_position(qtbot, 
 
     supervisor.merge_view.dock.setFloating(True)
     supervisor.merge_view.dock.move(70, 80)
+    supervisor.merge_view.dock.resize(240, 180)
     qtbot.wait(10)
     floating_position = supervisor.merge_view.dock.pos()
+    floating_size = supervisor.merge_view.dock.size()
 
     supervisor.toggle_merge_mode()
     supervisor.toggle_merge_mode()
@@ -452,6 +454,24 @@ def test_supervisor_merge_view_opens_below_cluster_and_restores_position(qtbot, 
     assert supervisor.merge_view.dock is merge_dock
     assert supervisor.merge_view.dock.isFloating()
     assert supervisor.merge_view.dock.pos() == floating_position
+    assert supervisor.merge_view.dock.size() == floating_size
+
+
+def test_supervisor_merge_view_restores_docked_extent(qtbot, supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    dock = supervisor.merge_view.dock
+    supervisor.gui.resizeDocks((dock,), (210,), Qt.Horizontal)
+    supervisor.gui.resizeDocks((dock,), (160,), Qt.Vertical)
+    qtbot.wait(10)
+    docked_size = dock.size()
+
+    supervisor.toggle_merge_mode()
+    supervisor.toggle_merge_mode()
+    qtbot.wait(10)
+
+    assert not dock.isFloating()
+    assert dock.size() == docked_size
 
 
 def test_supervisor_merge_candidate_interactions_follow_visible_role_order(supervisor):
@@ -828,11 +848,15 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
     assert 'PROPOSITION merge:' in supervisor.merge_view.dock.status
 
     replacement = supervisor.merge_propositions.catalog.propositions[2]
+    cluster_geometry = supervisor.cluster_view.dock.geometry()
+    proposition_geometry = supervisor.merge_propositions_view.dock.geometry()
     view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[replacement.key]))
     assert supervisor.merge_view is merge_view
     assert supervisor.merge_view.dock is merge_dock
     assert not merge_dock.isHidden()
     assert events == [[30, 20], [11, 1]]
+    assert supervisor.cluster_view.dock.geometry() == cluster_geometry
+    assert supervisor.merge_propositions_view.dock.geometry() == proposition_geometry
     assert supervisor.selected_merge == [11, 1]
     assert supervisor.selection.state.merge.proposition_id == replacement.key
 
