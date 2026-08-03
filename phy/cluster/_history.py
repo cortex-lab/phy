@@ -136,6 +136,7 @@ class CurationHistoryEntry:
     selection_before: object = None
     selection_after: object = None
     workflow_context: object = None
+    workflow_context_after: object = None
 
 
 class GlobalHistory(History):
@@ -153,6 +154,7 @@ class GlobalHistory(History):
         selection_before=None,
         selection_after=None,
         workflow_context=None,
+        workflow_context_after=None,
     ):
         """Register one or several controllers for this action."""
         self.add(
@@ -162,6 +164,7 @@ class GlobalHistory(History):
                 selection_before=selection_before,
                 selection_after=selection_after,
                 workflow_context=workflow_context,
+                workflow_context_after=workflow_context_after,
             )
         )
 
@@ -179,7 +182,12 @@ class GlobalHistory(History):
 
     def _restore(self, entry, selection, direction):
         if self.restore_context is not None and selection is not None:
-            self.restore_context(selection, entry.workflow_context, direction)
+            context = (
+                entry.workflow_context_after
+                if direction == 'redo' and entry.workflow_context_after is not None
+                else entry.workflow_context
+            )
+            self.restore_context(selection, context, direction)
 
     def undo(self):
         """Undo the last action.

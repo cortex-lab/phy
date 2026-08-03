@@ -184,3 +184,33 @@ def test_global_history_restores_context_after_controllers_and_preserves_it_on_e
         'controller redo',
         ('redo', 'after', 'normal'),
     ]
+
+
+def test_global_history_restores_direction_specific_workflow_contexts():
+    calls = []
+
+    class Controller(History):
+        pass
+
+    controller = Controller()
+    controller.add('action')
+    history = GlobalHistory(
+        restore_context=lambda selection, context, direction: calls.append(
+            (direction, selection, context)
+        )
+    )
+    history.action(
+        controller,
+        selection_before='current proposition',
+        selection_after='next proposition',
+        workflow_context='current tables',
+        workflow_context_after='next tables',
+    )
+
+    history.undo()
+    history.redo()
+
+    assert calls == [
+        ('undo', 'current proposition', 'current tables'),
+        ('redo', 'next proposition', 'next tables'),
+    ]

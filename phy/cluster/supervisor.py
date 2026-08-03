@@ -17,7 +17,17 @@ import numpy as np
 from phylib.utils import Bunch, connect, emit, unconnect
 
 from phy.gui.actions import Actions
-from phy.gui.qt import QAbstractItemView, QHeaderView, Qt, _block, _wait, set_busy
+from phy.gui.qt import (
+    QAbstractItemView,
+    QApplication,
+    QHeaderView,
+    QLineEdit,
+    QPlainTextEdit,
+    Qt,
+    _block,
+    _wait,
+    set_busy,
+)
 from phy.gui.widgets import Barrier, Table, _uniq
 from phy.utils.selection import SelectionIntent, SelectionMutation
 
@@ -482,6 +492,11 @@ class ActionCreator:
         'toggle_merge_mode': 'v',
         'next_best': 'down',
         'previous_best': 'up',
+        # Merge propositions.
+        'next_merge_proposition': 'alt+down',
+        'previous_merge_proposition': 'alt+up',
+        'reject_merge_proposition': 'alt+backspace',
+        'reset_merge_proposition': 'alt+shift+backspace',
         # Misc.
         'undo': 'ctrl+z',
         'redo': ('ctrl+shift+z', 'ctrl+y'),
@@ -635,6 +650,12 @@ class ActionCreator:
         self.select_actions.separator(submenu=submenu)
         self.add(w, 'next_best', icon='f0a9', submenu=submenu)
         self.add(w, 'previous_best', icon='f0a8', submenu=submenu)
+
+        proposition_submenu = 'Merge propositions'
+        self.add(w, 'next_merge_proposition', submenu=proposition_submenu)
+        self.add(w, 'previous_merge_proposition', submenu=proposition_submenu)
+        self.add(w, 'reject_merge_proposition', submenu=proposition_submenu)
+        self.add(w, 'reset_merge_proposition', submenu=proposition_submenu)
 
     def _create_toolbar(self, gui):
         gui._toolbar.addAction(self.select_actions.get('reset_wizard'))
@@ -1275,39 +1296,92 @@ class Supervisor:
             return []
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         catalog = self.merge_propositions.catalog
+        live_ids = set(catalog.live_unit_ids)
+        active_key = self._active_merge_proposition_key()
         rows = []
         for entry in catalog.entries:
             proposition = entry.proposition
             key = entry.key or f'invalid:{entry.index}'
-            status = (
+            catalog_status = (
                 catalog.status_for(key) if entry.key is not None else PropositionStatus.INVALID
             )
+            status = 'active' if key == active_key else catalog_status.value
             unit_ids = proposition.unit_ids if proposition is not None else ()
             rows.append(
                 {
                     'key': key,
                     'unit_ids': unit_ids,
-                    'status': status.value,
+                    'status': status,
                     'reason': entry.invalid_reason
                     or (catalog.reason_for(key) if entry.key is not None else None),
                     'new_unit_id': proposition.new_unit_id if proposition is not None else None,
-                    'can_review': status is PropositionStatus.PENDING,
-                    'can_reject': status is PropositionStatus.PENDING,
-                    'can_skip': status is PropositionStatus.PENDING,
-                    'can_reset': status
+                    'can_review': catalog_status is PropositionStatus.PENDING,
+                    'can_reject': catalog_status is PropositionStatus.PENDING,
+                    'can_skip': catalog_status is PropositionStatus.PENDING,
+                    'can_reset': catalog_status
                     in {
                         PropositionStatus.ACCEPTED,
                         PropositionStatus.ACCEPTED_MODIFIED,
                         PropositionStatus.REJECTED,
                     }
-                    and set(unit_ids) <= set(catalog.live_unit_ids),
+                    and set(unit_ids) <= live_ids,
                 }
             )
         return rows
 
+    def _active_merge_proposition_key(self):
+        state = self.selection.state
+        if state.is_merge_mode and state.merge is not None:
+            return state.merge.proposition_id
+        return None
+
+    def _update_proposition_actions(self):
+        """Keep proposition shortcuts aligned with the current queue state."""
+        if self.select_actions is None:
+            return
+        names = {
+            'next_merge_proposition',
+            'previous_merge_proposition',
+            'reject_merge_proposition',
+            'reset_merge_proposition',
+        }
+        if not names <= set(self.select_actions._actions_dict):
+            return
+        view = self.merge_propositions_view
+        current = self._active_merge_proposition_key() or (
+            view.current_key if view is not None else None
+        )
+        actionable = view.actionable_keys() if view is not None else ()
+        can_navigate = any(key != current for key in actionable) or (
+            current is None and bool(actionable)
+        )
+        can_reject = bool(
+            view is not None
+            and current is not None
+            and self._active_merge_proposition_key() == current
+            and view.can_trigger('reject')
+        )
+        can_reset = bool(
+            view is not None
+            and not self.selection.state.is_merge_mode
+            and view.can_trigger('reset')
+        )
+        enabled = {
+            'next_merge_proposition': can_navigate,
+            'previous_merge_proposition': can_navigate,
+            'reject_merge_proposition': can_reject,
+            'reset_merge_proposition': can_reset,
+        }
+        for name, value in enabled.items():
+            (self.select_actions.enable if value else self.select_actions.disable)(name)
+
     def _refresh_propositions(self):
         if self.merge_propositions_view is not None:
             self.merge_propositions_view.set_propositions(self._proposition_rows())
+            active_key = self._active_merge_proposition_key()
+            if active_key is not None:
+                self.merge_propositions_view.select_key(active_key)
+        self._update_proposition_actions()
 
     def _apply_selection_change(
         self, change, callback=None, refresh_similarity=True, publish=True, sync_presentation=True
@@ -1350,14 +1424,24 @@ class Supervisor:
             self.cluster_view.dock.set_status(f'clusters: {", ".join(map(str, ids))}')
         if self.actions is not None:
             can_redo_merge = False
+            can_undo_proposition = False
             if active:
+                can_undo_proposition = (
+                    self._active_merge_proposition_key() is not None
+                    and self._global_history.current_position > 0
+                )
                 index = self._global_history.current_position + 1
                 history = self._global_history._history
                 can_redo_merge = index < len(history) and self._is_merge_history_context(
                     history[index].workflow_context
                 )
             for name in self.actions._actions_dict:
-                enabled = not active or name == 'merge' or (name == 'redo' and can_redo_merge)
+                enabled = (
+                    not active
+                    or name == 'merge'
+                    or (name == 'undo' and can_undo_proposition)
+                    or (name == 'redo' and can_redo_merge)
+                )
                 (self.actions.enable if enabled else self.actions.disable)(name)
         if self.select_actions is not None:
             allowed = {
@@ -1368,6 +1452,10 @@ class Supervisor:
                 'next',
                 'previous',
                 'skip_noise_and_mua',
+                'next_merge_proposition',
+                'previous_merge_proposition',
+                'reject_merge_proposition',
+                'reset_merge_proposition',
             }
             for name in self.select_actions._actions_dict:
                 (
@@ -1375,6 +1463,7 @@ class Supervisor:
                     if not active or name in allowed
                     else self.select_actions.disable
                 )(name)
+        self._update_proposition_actions()
 
     def _close_merge_view(self):
         view = self.merge_view
@@ -1521,7 +1610,7 @@ class Supervisor:
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
         assert sender == self.action_creator
-        if self.selection.state.is_merge_mode and name in {
+        blocked_in_merge = {
             'split',
             'label',
             'move',
@@ -1535,7 +1624,10 @@ class Supervisor:
             'next_best',
             'previous_best',
             'undo',
-        }:
+        }
+        if name == 'undo' and self._active_merge_proposition_key() is not None:
+            blocked_in_merge.remove('undo')
+        if self.selection.state.is_merge_mode and name in blocked_in_merge:
             logger.warning('Action `%s` is unavailable in Merge mode.', name)
             return
         # Ignore wizard navigation requests triggered while another selection task is still
@@ -1763,6 +1855,11 @@ class Supervisor:
             )
             gui.add_view(self.merge_propositions_view, position='left', closable=False)
             connect(
+                self._activate_merge_proposition,
+                event='activate_merge_proposition',
+                sender=self.merge_propositions_view,
+            )
+            connect(
                 self._review_merge_proposition,
                 event='review_merge_proposition',
                 sender=self.merge_propositions_view,
@@ -1783,6 +1880,7 @@ class Supervisor:
         self.actions = self.action_creator.edit_actions  # clustering actions
         self.select_actions = self.action_creator.select_actions
         self.view_actions = gui.view_actions
+        self._update_proposition_actions()
         emit('attach_gui', self)
 
         # Call supervisor.save() when the save/ctrl+s action is triggered in the GUI.
@@ -1889,6 +1987,11 @@ class Supervisor:
         workflow_context = (
             {'mode': 'merge', 'tables': self._workflow_context()} if merge_mode else None
         )
+        proposition_order = (
+            self.merge_propositions_view.visible_keys()
+            if proposition_id is not None and self.merge_propositions_view is not None
+            else ()
+        )
         # A merge synchronously emits several related table mutations: metadata
         # inheritance, addition of the merged cluster, and removal of its
         # ancestors. Fit each attached table once after the complete operation
@@ -1909,13 +2012,24 @@ class Supervisor:
             self.merge_propositions.accept(proposition_id, tuple(cluster_ids), int(out.added[0]))
             controllers.append(self.merge_propositions)
         self._refresh_propositions()
+        if proposition_id is not None:
+            next_key = self._pending_proposition_relative_to(
+                proposition_id, 'next', proposition_order
+            )
+            if next_key is not None:
+                self._activate_merge_proposition(self.merge_propositions_view, next_key)
+            else:
+                self.merge_propositions_view.select_key(proposition_id)
         self._global_history.action(
             *controllers,
             description='merge',
             selection_before=selection_before,
             selection_after=self.selection.snapshot(),
             workflow_context=workflow_context,
+            workflow_context_after=self._merge_workflow_history_context(),
         )
+        if self.selection.state.is_merge_mode:
+            self._set_merge_mode_ui(True)
         return out
 
     def split(self, spike_ids=None, spike_clusters_rel=0):
@@ -2059,16 +2173,54 @@ class Supervisor:
         self._apply_selection_change(change, callback=callback)
         return change.after
 
-    def _review_merge_proposition(self, sender, key):
-        """Open one actionable proposition in the ordinary Merge workspace."""
+    @staticmethod
+    def _proposition_shortcut_blocked_by_text_input():
+        return isinstance(QApplication.focusWidget(), (QLineEdit, QPlainTextEdit))
+
+    def _merge_workflow_history_context(self):
+        if not self.selection.state.is_merge_mode:
+            return None
+        return {'mode': 'merge', 'tables': self._workflow_context()}
+
+    def _pending_proposition_relative_to(self, key, direction, ordered_keys=None):
+        """Find another pending proposition in visible order, wrapping once."""
+        view = self.merge_propositions_view
+        if view is None:
+            return None
+        ordered = tuple(ordered_keys or view.visible_keys())
+        if not ordered:
+            return None
+        if key in ordered:
+            start = ordered.index(key)
+        else:
+            start = -1 if direction == 'next' else 0
+        step = 1 if direction == 'next' else -1
+        catalog = self.merge_propositions.catalog
+        for offset in range(1, len(ordered) + 1):
+            candidate = ordered[(start + step * offset) % len(ordered)]
+            if candidate == key or catalog.entry_for(candidate) is None:
+                continue
+            if catalog.status_for(candidate) is PropositionStatus.PENDING:
+                return candidate
+        return None
+
+    def _activate_merge_proposition(self, sender, key):
+        """Replace any temporary Merge workspace with the clicked proposition."""
+        active_key = self._active_merge_proposition_key()
+        if active_key == key:
+            self.merge_propositions_view.select_key(key)
+            return self.selection.state
         if self.selection.state.is_merge_mode:
-            logger.warning('Finish or cancel the active Merge workspace first.')
-            return
+            self._cancel_merge_mode()
+        self.merge_propositions_view.select_key(key)
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         catalog = self.merge_propositions.catalog
-        if catalog.status_for(key) is not PropositionStatus.PENDING:
-            logger.warning('Merge proposition %s is not actionable.', key)
+        if (
+            catalog.entry_for(key) is None
+            or catalog.status_for(key) is not PropositionStatus.PENDING
+        ):
             self._refresh_propositions()
+            self.merge_propositions_view.select_key(key)
             return
         proposition = catalog.entry_for(key).proposition
         self.cluster_view.debouncer.flush()
@@ -2079,39 +2231,124 @@ class Supervisor:
         self._create_merge_view()
         self._set_merge_mode_ui(True)
         self._apply_selection_change(change)
+        self._refresh_propositions()
         return change.after
 
-    def _reject_merge_proposition(self, sender, key):
-        if self.selection.state.is_merge_mode:
-            logger.warning('Cancel the active Merge workspace before rejecting a proposition.')
+    def _review_merge_proposition(self, sender, key):
+        """Compatibility alias for explicit programmatic review requests."""
+        return self._activate_merge_proposition(sender, key)
+
+    def _navigate_merge_proposition(self, direction, callback=None, ordered_keys=None):
+        if self._proposition_shortcut_blocked_by_text_input():
+            if callback:
+                callback(self.selection.state)
             return
+        current = self._active_merge_proposition_key() or (
+            self.merge_propositions_view.current_key
+            if self.merge_propositions_view is not None
+            else None
+        )
+        if self.selection.state.is_merge_mode:
+            self._cancel_merge_mode()
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        key = self._pending_proposition_relative_to(current, direction, ordered_keys)
+        if key is not None:
+            self._activate_merge_proposition(self.merge_propositions_view, key)
+        else:
+            self._refresh_propositions()
+            if current is not None:
+                self.merge_propositions_view.select_key(current)
+        if callback:
+            callback(self.selection.state)
+        return self.selection.state
+
+    def next_merge_proposition(self, callback=None):
+        """Cancel the current workspace and review the next pending proposition."""
+        return self._navigate_merge_proposition('next', callback=callback)
+
+    def previous_merge_proposition(self, callback=None):
+        """Cancel the current workspace and review the previous pending proposition."""
+        return self._navigate_merge_proposition('previous', callback=callback)
+
+    def _reject_merge_proposition(self, sender, key):
         before = self.selection.snapshot()
+        workflow_before = self._merge_workflow_history_context()
+        ordered_keys = self.merge_propositions_view.visible_keys()
+        if self.selection.state.is_merge_mode:
+            if self._active_merge_proposition_key() != key:
+                logger.warning('Only the active merge proposition can be rejected.')
+                return
+            self._cancel_merge_mode()
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         self.merge_propositions.reject(key)
+        self._refresh_propositions()
+        next_key = self._pending_proposition_relative_to(key, 'next', ordered_keys)
+        if next_key is not None:
+            self._activate_merge_proposition(self.merge_propositions_view, next_key)
         self._global_history.action(
             self.merge_propositions,
             description=f'reject merge proposition {key}',
             selection_before=before,
-            selection_after=before,
+            selection_after=self.selection.snapshot(),
+            workflow_context=workflow_before,
+            workflow_context_after=self._merge_workflow_history_context(),
         )
-        self._refresh_propositions()
+        if self.selection.state.is_merge_mode:
+            self._set_merge_mode_ui(True)
         self._update_save_feedback()
+        return self.selection.state
+
+    def reject_merge_proposition(self, callback=None):
+        """Reject the active proposition and review the next pending one."""
+        if self._proposition_shortcut_blocked_by_text_input():
+            if callback:
+                callback(self.selection.state)
+            return
+        key = self._active_merge_proposition_key()
+        if key is not None:
+            self._reject_merge_proposition(self.merge_propositions_view, key)
+        if callback:
+            callback(self.selection.state)
+        return self.selection.state
 
     def _reset_merge_proposition(self, sender, key):
         if self.selection.state.is_merge_mode:
-            logger.warning('Cancel the active Merge workspace before resetting a review.')
-            return
+            self._cancel_merge_mode()
         before = self.selection.snapshot()
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
-        self.merge_propositions.reset(key)
+        try:
+            self.merge_propositions.reset(key)
+        except ValueError as e:
+            logger.warning('%s', e)
+            self._refresh_propositions()
+            self.merge_propositions_view.select_key(key)
+            return
+        self._refresh_propositions()
+        self._activate_merge_proposition(self.merge_propositions_view, key)
         self._global_history.action(
             self.merge_propositions,
             description=f'reset merge proposition {key}',
             selection_before=before,
-            selection_after=before,
+            selection_after=self.selection.snapshot(),
+            workflow_context_after=self._merge_workflow_history_context(),
         )
-        self._refresh_propositions()
+        self._set_merge_mode_ui(True)
         self._update_save_feedback()
+        return self.selection.state
+
+    def reset_merge_proposition(self, callback=None):
+        """Reset the highlighted review and reopen it when actionable."""
+        if self._proposition_shortcut_blocked_by_text_input():
+            if callback:
+                callback(self.selection.state)
+            return
+        view = self.merge_propositions_view
+        key = view.current_key if view is not None else None
+        if key is not None and view.can_trigger('reset'):
+            self._reset_merge_proposition(view, key)
+        if callback:
+            callback(self.selection.state)
+        return self.selection.state
 
     def add_to_merge(self, cluster_ids, insertion=None, callback=None):
         """Transfer candidate IDs into the Merge workspace."""
@@ -2215,7 +2452,7 @@ class Supervisor:
 
     def undo(self):
         """Undo the last action."""
-        if self.selection.state.is_merge_mode:
+        if self.selection.state.is_merge_mode and self._active_merge_proposition_key() is None:
             logger.warning('Undo is unavailable while a Merge workspace is active.')
             return
         # Selection-only exploration does not create history entries. Preserve the exact
@@ -2223,6 +2460,7 @@ class Supervisor:
         if self._global_history.current_position > 0:
             self._global_history.update_current_context(
                 selection_after=self.selection.snapshot(),
+                workflow_context_after=self._merge_workflow_history_context(),
             )
         self._global_history.undo()
 

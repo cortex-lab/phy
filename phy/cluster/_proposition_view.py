@@ -1,8 +1,8 @@
-"""Presentation-only table for automatic merge propositions.
+"""Compact presentation table for automatic merge propositions.
 
-The view intentionally accepts plain row dictionaries.  It has no dependency on
-the proposition catalog or on a :class:`~phy.cluster.supervisor.Supervisor`, so
-the GUI cannot become an alternative source of curation state.
+This view owns only presentation state.  Proposition identity is always the
+catalog's stable string key; the integer ``id`` used by :class:`Table` is an
+ephemeral rendering implementation detail.
 """
 
 from __future__ import annotations
@@ -11,35 +11,32 @@ from collections.abc import Iterable, Mapping
 
 from phylib.utils import emit
 
-from phy.gui.qt import QAbstractItemView, QHBoxLayout, QPushButton
+from phy.gui.qt import QAbstractItemView, QColor
 from phy.gui.widgets import Table
 
 
 class MergePropositionsView(Table):
-    """A persistent, local-selection table for merge-proposition projections.
+    """A compact, persistent table of merge-proposition projections.
 
-    Rows supplied to :meth:`set_propositions` require a string ``key`` and may
-    provide ``unit_ids``, ``status``, ``reason``, and ``new_unit_id``.  Button
-    events carry only the stable proposition key:
-
-    * ``review_merge_proposition``
-    * ``reject_merge_proposition``
-    * ``skip_merge_proposition``
-    * ``reset_merge_proposition``
-
-    Selecting a row is deliberately local presentation state: unlike a cluster
-    table it never emits ``select`` and never starts a merge review.
+    Rows supplied to :meth:`set_propositions` require a non-empty string
+    ``key`` and may provide ``unit_ids``, ``status``, ``reason``, and
+    ``new_unit_id``.  Clicking a row emits ``activate_merge_proposition`` with
+    that stable key.  It does not itself alter curation or merge-workspace
+    state.
     """
 
-    _columns = (
-        'key',
-        'unit_ids',
-        'status',
-        'reason',
-        'n_clusters',
-        'reference',
-        'new_unit_id',
-    )
+    _columns = ('proposition',)
+    _status_colors = {
+        'active': '#5ca8ff',
+        'accepted': '#86d16d',
+        'accepted_modified': '#e6ad4c',
+        'rejected': '#888888',
+        'stale': '#e58b3c',
+        'invalid': '#e05a5a',
+    }
+    # Kept as a programmatic compatibility surface while the visible action
+    # buttons are deliberately removed.  New callers should use activation and
+    # navigation methods above; the Supervisor still owns these mutations.
     _action_events = {
         'review': 'review_merge_proposition',
         'reject': 'reject_merge_proposition',
@@ -51,10 +48,10 @@ class MergePropositionsView(Table):
         super().__init__(
             *args,
             title='MERGE PROPOSITIONS',
-            columns=['id', *self._columns],
-            value_names=['id', *self._columns],
+            columns=self._columns,
+            value_names=self._columns,
             data=[],
-            sort=('status', 'asc'),
+            sort=None,
             debounce_events=(),
             skip_masked=False,
             **kwargs,
@@ -63,32 +60,12 @@ class MergePropositionsView(Table):
         self._id_by_key = {}
         self._current_key = None
         self.table_view.setSelectionMode(QAbstractItemView.SingleSelection)
-        self._create_actions()
         self.set_propositions(data or ())
 
     @property
     def current_key(self):
-        """The key of the locally highlighted proposition, if any."""
+        """The locally highlighted proposition key, if any."""
         return self._current_key
-
-    def _create_actions(self):
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.action_buttons = {}
-        for action, label in (
-            ('review', 'Review'),
-            ('reject', 'Reject'),
-            ('skip', 'Skip'),
-            ('reset', 'Reset review'),
-        ):
-            button = QPushButton(label, self)
-            button.setObjectName(f'merge-proposition-{action}')
-            button.clicked.connect(lambda _checked=False, action=action: self.trigger(action))
-            layout.addWidget(button)
-            self.action_buttons[action] = button
-        # The Table layout is [filter, table].  Put controls between them.
-        self.layout().insertLayout(1, layout)
-        self._update_action_buttons()
 
     @staticmethod
     def _as_ordered_ids(value):
@@ -98,6 +75,18 @@ class MergePropositionsView(Table):
             return (value,)
         return tuple(value)
 
+    @staticmethod
+    def _format_proposition(unit_ids, new_unit_id=None):
+        """Return the compact, scan-friendly proposition label."""
+        labels = tuple(map(str, unit_ids))
+        if len(labels) <= 4:
+            text = ', '.join(labels)
+        else:
+            text = f'{labels[0]}, {labels[1]}, …, {labels[-1]} ({len(labels)})'
+        if new_unit_id is not None and new_unit_id != '':
+            text = f'{text} ⇒ {new_unit_id}'
+        return text
+
     def _normalize_row(self, row, index):
         if not isinstance(row, Mapping):
             raise TypeError('Merge proposition rows must be mappings.')
@@ -106,41 +95,48 @@ class MergePropositionsView(Table):
             raise ValueError('Every merge proposition row requires a non-empty string key.')
         unit_ids = self._as_ordered_ids(row.get('unit_ids'))
         status = str(row.get('status', 'pending'))
+        new_unit_id = row.get('new_unit_id')
+        reference = row.get('reference', unit_ids[0] if unit_ids else None)
         invalid_or_stale = status in {'invalid', 'stale'}
-        can_review = bool(row.get('can_review', not invalid_or_stale))
-        can_reject = bool(row.get('can_reject', status == 'pending' and not invalid_or_stale))
-        can_skip = bool(row.get('can_skip', status == 'pending' and not invalid_or_stale))
-        can_reset = bool(
-            row.get(
-                'can_reset',
-                status in {'accepted', 'accepted_modified', 'rejected'} and not invalid_or_stale,
-            )
-        )
+        full_proposition = ', '.join(map(str, unit_ids))
+        if new_unit_id is not None and new_unit_id != '':
+            full_proposition = f'{full_proposition} ⇒ {new_unit_id}'
+        tooltip = f'{full_proposition}\nStatus: {status}'
+        if reference is not None:
+            tooltip = f'{tooltip}\nReference: {reference}'
+        tooltip = f'{tooltip}\nKey: {key}'
+        if row.get('reason'):
+            tooltip = f'{tooltip}\n{row["reason"]}'
         return {
-            # Table itself uses integer IDs.  The catalog key remains a separate,
-            # visible column and is recovered through ``_key_by_id`` after every
-            # sort or filter operation.
             'id': index,
+            'proposition': self._format_proposition(unit_ids, new_unit_id),
+            # Retain full metadata in the model for filtering, status text, and
+            # stable-key recovery, but do not expose it as a table column.
             'key': key,
             'unit_ids': unit_ids,
             'status': status,
+            'reference': reference,
             'reason': row.get('reason') or '',
-            'n_clusters': len(unit_ids),
-            'reference': unit_ids[0] if unit_ids else '',
-            'new_unit_id': row.get('new_unit_id', ''),
-            '_can_review': can_review,
-            '_can_reject': can_reject,
-            '_can_skip': can_skip,
-            '_can_reset': can_reset,
+            'new_unit_id': new_unit_id,
+            '_proposition_tooltip': tooltip,
+            '_can_review': bool(
+                row.get('can_review', status == 'pending' and not invalid_or_stale)
+            ),
+            '_can_reject': bool(
+                row.get('can_reject', status == 'pending' and not invalid_or_stale)
+            ),
+            '_can_skip': bool(row.get('can_skip', status == 'pending' and not invalid_or_stale)),
+            '_can_reset': bool(
+                row.get(
+                    'can_reset',
+                    status in {'accepted', 'accepted_modified', 'rejected'}
+                    and not invalid_or_stale,
+                )
+            ),
         }
 
     def set_propositions(self, rows: Iterable[Mapping]):
-        """Replace the table projection while retaining a surviving local row.
-
-        The integer table row IDs are regenerated only for rendering.  Action
-        identity is always recovered from the proposition key, so sorting and
-        filtering cannot redirect a button action to another proposition.
-        """
+        """Replace the projection while retaining a still-present highlight."""
         previous_key = self._current_key
         normalized = [self._normalize_row(row, index) for index, row in enumerate(rows)]
         keys = [row['key'] for row in normalized]
@@ -152,60 +148,98 @@ class MergePropositionsView(Table):
         self._current_key = previous_key if previous_key in self._id_by_key else None
         if self._current_key is not None:
             self.set_selected_ids([self._id_by_key[self._current_key]])
-        self._update_action_buttons()
+            self._set_dock_status(self._current_key)
+
+    def visible_keys(self):
+        """Return stable keys in the table's current visible sorted order."""
+        return tuple(self._key_by_id[row_id] for row_id in self._visible_ids())
+
+    def actionable_keys(self):
+        """Return visible pending/reviewable keys in their current table order."""
+        return tuple(
+            self._key_by_id[row_id]
+            for row_id in self._visible_ids()
+            if self._model.row_by_id(row_id).get('_can_review')
+        )
+
+    def is_actionable_key(self, key):
+        row_id = self._id_by_key.get(key)
+        row = self._model.row_by_id(row_id) if row_id is not None else None
+        return bool(row and row.get('_can_review'))
+
+    def can_trigger(self, action):
+        """Whether the legacy programmatic action is valid for the current row."""
+        if action not in self._action_events:
+            raise ValueError(f'Unknown merge proposition action: {action}.')
+        row_id = self._id_by_key.get(self._current_key)
+        row = self._model.row_by_id(row_id) if row_id is not None else None
+        return bool(row and row.get(f'_can_{action}'))
+
+    def trigger(self, action):
+        """Emit a legacy programmatic mutation intent for the current stable key."""
+        if not self.can_trigger(action):
+            return False
+        emit(self._action_events[action], self, self._current_key)
+        if action == 'skip':
+            self.select_next_actionable()
+        return True
 
     def select_key(self, key):
-        """Highlight ``key`` locally, without emitting a workflow event."""
+        """Highlight ``key`` locally, without emitting an activation event."""
         row_id = self._id_by_key.get(key)
         if row_id is None:
             return False
         self._current_key = key
         self.set_selected_ids([row_id])
         self.scroll_to(row_id)
-        self._update_action_buttons()
+        self._set_dock_status(key)
         return True
+
+    def _select_actionable(self, direction):
+        keys = self.actionable_keys()
+        if not keys:
+            return None
+        if self._current_key not in keys:
+            key = keys[0] if direction == 'next' else keys[-1]
+        else:
+            index = keys.index(self._current_key) + (1 if direction == 'next' else -1)
+            index %= len(keys)
+            key = keys[index]
+        return key if self.select_key(key) else None
+
+    def select_next_actionable(self):
+        """Select the next visible actionable entry, wrapping once."""
+        return self._select_actionable('next')
+
+    def select_previous_actionable(self):
+        """Select the previous visible actionable entry, wrapping once."""
+        return self._select_actionable('previous')
 
     def _on_row_clicked(self, index):
         if not index.isValid():
             return
-        row_id = self._visible_ids()[index.row()]
-        self._current_key = self._key_by_id[row_id]
-        self.set_selected_ids([row_id])
-        self._update_action_buttons()
-
-    def _row_for_current_key(self):
-        row_id = self._id_by_key.get(self._current_key)
-        return self._model.row_by_id(row_id) if row_id is not None else None
-
-    def can_trigger(self, action):
-        """Whether an explicit action is currently valid for the local row."""
-        if action not in self._action_events:
-            raise ValueError(f'Unknown merge proposition action: {action}.')
-        row = self._row_for_current_key()
-        return bool(row and row.get(f'_can_{action}'))
-
-    def trigger(self, action):
-        """Emit one explicit action for the currently highlighted proposition."""
-        if not self.can_trigger(action):
-            return False
-        key = self._current_key
-        emit(self._action_events[action], self, key)
-        if action == 'skip':
-            self._select_next_pending()
-        return True
-
-    def _select_next_pending(self):
         visible_ids = self._visible_ids()
-        if not visible_ids:
+        if not 0 <= index.row() < len(visible_ids):
             return
-        current_id = self._id_by_key.get(self._current_key)
-        start = visible_ids.index(current_id) + 1 if current_id in visible_ids else 0
-        for row_id in visible_ids[start:] + visible_ids[:start]:
-            row = self._model.row_by_id(row_id)
-            if row and row.get('_can_skip'):
-                self.select_key(self._key_by_id[row_id])
-                return
+        key = self._key_by_id[visible_ids[index.row()]]
+        self.select_key(key)
+        emit('activate_merge_proposition', self, key)
 
-    def _update_action_buttons(self):
-        for action, button in getattr(self, 'action_buttons', {}).items():
-            button.setEnabled(self.can_trigger(action))
+    def _set_dock_status(self, key):
+        """Expose hidden metadata through the dock status line when available."""
+        row_id = self._id_by_key.get(key)
+        row = self._model.row_by_id(row_id) if row_id is not None else None
+        dock = getattr(self, 'dock', None)
+        if row is None or dock is None:
+            return
+        detail = f'{row["proposition"]} · {row["status"]}'
+        if row['reference'] is not None:
+            detail = f'{detail} · reference {row["reference"]}'
+        if row['reason']:
+            detail = f'{detail} · {row["reason"]}'
+        dock.set_status(detail)
+
+    def _foreground_color(self, row, column):
+        """Tint complete rows by lifecycle state, like cluster-group rows."""
+        color = self._status_colors.get(row.get('status'))
+        return QColor(color) if color is not None else super()._foreground_color(row, column)

@@ -747,7 +747,11 @@ def _proposition_supervisor(gui, cluster_ids, cluster_groups, cluster_labels, si
         {
             'format_version': '2',
             'unit_ids': cluster_ids,
-            'merges': [{'unit_ids': [30, 20]}, {'unit_ids': [20, 10]}],
+            'merges': [
+                {'unit_ids': [30, 20]},
+                {'unit_ids': [20, 10]},
+                {'unit_ids': [11, 1]},
+            ],
         }
     )
     supervisor = Supervisor(
@@ -777,10 +781,14 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
     key = supervisor.merge_propositions.catalog.propositions[0].key
     view = supervisor.merge_propositions_view
 
-    view.sort_by('key', 'desc')
+    assert view.columns == ['proposition']
+    assert not hasattr(view, 'action_buttons')
     assert view.select_key(key)
     assert supervisor.selection.snapshot() is entry
-    assert view.trigger('review')
+    supervisor.toggle_merge_mode()
+    assert supervisor.selection.state.is_merge_mode
+    assert supervisor.selection.state.merge.proposition_id is None
+    view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[key]))
 
     assert supervisor.selected_merge == [30, 20]
     assert supervisor.selection.state.reference_id == 30
@@ -788,9 +796,72 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
     assert supervisor.selection.state.merge.proposition_id == key
     assert 'PROPOSITION merge:' in supervisor.merge_view.dock.status
 
+    replacement = supervisor.merge_propositions.catalog.propositions[2]
+    view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[replacement.key]))
+    assert supervisor.selected_merge == [11, 1]
+    assert supervisor.selection.state.merge.proposition_id == replacement.key
+
     supervisor.toggle_merge_mode()
     assert supervisor.selection.state == entry
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+
+
+def test_merge_proposition_navigation_shortcuts_and_text_focus(
+    gui, qtbot, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    first, second, third = supervisor.merge_propositions.catalog.propositions
+    shortcuts = {
+        name: _get_shortcut_string(supervisor.select_actions.get(name).shortcut())
+        for name in (
+            'next_merge_proposition',
+            'previous_merge_proposition',
+            'reject_merge_proposition',
+            'reset_merge_proposition',
+        )
+    }
+    assert shortcuts == {
+        'next_merge_proposition': 'alt+down',
+        'previous_merge_proposition': 'alt+up',
+        'reject_merge_proposition': 'alt+backspace',
+        'reset_merge_proposition': 'alt+shift+backspace',
+    }
+
+    supervisor._activate_merge_proposition(supervisor.merge_propositions_view, first.key)
+    supervisor.next_merge_proposition()
+    assert supervisor.selection.state.merge.proposition_id == second.key
+    supervisor.previous_merge_proposition()
+    assert supervisor.selection.state.merge.proposition_id == first.key
+
+    supervisor.merge_propositions_view.filter_edit.setFocus()
+    qtbot.wait(1)
+    supervisor.next_merge_proposition()
+    assert supervisor.selection.state.merge.proposition_id == first.key
+    assert third.key in supervisor.merge_propositions_view.actionable_keys()
+
+
+def test_clicking_nonactionable_proposition_cancels_active_workspace(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    first, _, third = supervisor.merge_propositions.catalog.propositions
+    supervisor._activate_merge_proposition(supervisor.merge_propositions_view, first.key)
+    supervisor.reject_merge_proposition()
+    assert supervisor.selection.state.is_merge_mode
+
+    view = supervisor.merge_propositions_view
+    view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[first.key]))
+
+    assert not supervisor.selection.state.is_merge_mode
+    assert view.current_key == first.key
+    assert (
+        supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.REJECTED
+    )
+    assert third.key in view.actionable_keys()
 
 
 def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
@@ -799,12 +870,12 @@ def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
     supervisor = _proposition_supervisor(
         gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
     )
-    first, overlap = supervisor.merge_propositions.catalog.propositions
+    first, overlap, next_proposition = supervisor.merge_propositions.catalog.propositions
     assignments_before = supervisor.clustering.spike_clusters.copy()
     supervisor._review_merge_proposition(supervisor.merge_propositions_view, first.key)
     workspace = supervisor.selection.snapshot()
 
-    up = supervisor.merge()
+    supervisor.merge()
     supervisor.block()
 
     assert (
@@ -812,6 +883,10 @@ def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
     )
     assert supervisor.merge_propositions.catalog.status_for(overlap.key) is PropositionStatus.STALE
     assert supervisor.merge_propositions.catalog.reviews[first.key].applied_unit_ids == (30, 20)
+    assert supervisor.selection.state.merge.proposition_id == next_proposition.key
+    assert supervisor.selected_merge == [11, 1]
+    assert supervisor.merge_propositions_view.current_key == next_proposition.key
+    assert supervisor.actions.get('undo').isEnabled()
     assert supervisor.merge_propositions_view.select_key(overlap.key)
     assert not supervisor.merge_propositions_view.can_trigger('review')
     assignments_after = supervisor.clustering.spike_clusters.copy()
@@ -832,7 +907,8 @@ def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
         supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.ACCEPTED
     )
     assert supervisor.merge_propositions.catalog.status_for(overlap.key) is PropositionStatus.STALE
-    assert supervisor.selected == list(up.added)
+    assert supervisor.selection.state.merge.proposition_id == next_proposition.key
+    assert supervisor.selected_merge == [11, 1]
 
 
 def test_failed_proposition_merge_and_reject_history(
@@ -854,14 +930,23 @@ def test_failed_proposition_merge_and_reject_history(
     assert supervisor.selection.state is workspace
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
 
-    supervisor.toggle_merge_mode()
-    assert supervisor.merge_propositions_view.select_key(key)
-    assert supervisor.merge_propositions_view.trigger('reject')
+    supervisor.reject_merge_proposition()
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.REJECTED
+    next_key = supervisor.merge_propositions.catalog.propositions[1].key
+    assert supervisor.selection.state.merge.proposition_id == next_key
+    assert supervisor.actions.get('undo').isEnabled()
     supervisor.undo()
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+    assert supervisor.selection.state == workspace
     supervisor.redo()
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.REJECTED
+    assert supervisor.selection.state.merge.proposition_id == next_key
+
+    supervisor._activate_merge_proposition(supervisor.merge_propositions_view, key)
+    assert not supervisor.selection.state.is_merge_mode
+    supervisor.reset_merge_proposition()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+    assert supervisor.selection.state.merge.proposition_id == key
 
 
 def test_supervisor_close_releases_owned_event_callbacks(

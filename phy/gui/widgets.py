@@ -384,6 +384,8 @@ class _TableModel(QAbstractTableModel):
             if role == Qt.DisplayRole and column == 'n_spikes' and isinstance(value, int):
                 return f'{value:,}'
             return value
+        if role == Qt.ToolTipRole:
+            return row.get(f'_{column}_tooltip') or row.get('_tooltip')
         if role == Qt.BackgroundRole and column == 'id':
             color = self._table._selection_background(row.get('id'))
             if color is not None:
