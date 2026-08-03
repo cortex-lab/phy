@@ -65,6 +65,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Release GUI, Supervisor, table, dock, and curation event callbacks when a
+  dataset window closes, preventing retained Qt widgets and intermittent
+  process crashes during shutdown.
 - Closing the Merge View now restores staged clusters to their original
   Cluster and Similarity View rows, selections, and table positions.
 - Show the active sort column and direction in Cluster and Similarity View

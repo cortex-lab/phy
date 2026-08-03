@@ -11,6 +11,7 @@ import sys
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from phylib.utils import Bunch, connect, emit, unconnect
+from phylib.utils.event import _EVENT
 from pytest import fixture, raises
 
 from phy.gui import GUI
@@ -861,6 +862,40 @@ def test_failed_proposition_merge_and_reject_history(
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
     supervisor.redo()
     assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.REJECTED
+
+
+def test_supervisor_close_releases_owned_event_callbacks(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    key = supervisor.merge_propositions.catalog.propositions[0].key
+    supervisor._review_merge_proposition(supervisor.merge_propositions_view, key)
+    views = (
+        supervisor.cluster_view,
+        supervisor.similarity_view,
+        supervisor.merge_view,
+        supervisor.merge_propositions_view,
+    )
+    owned = {
+        gui,
+        supervisor,
+        supervisor.action_creator,
+        supervisor.clustering,
+        supervisor.cluster_meta,
+        supervisor.merge_propositions,
+        *views,
+        *(view.dock for view in views),
+    }
+
+    gui.close()
+
+    assert supervisor._merge_close_callback is None
+    assert not any(
+        sender in owned or getattr(callback, '__self__', None) in owned
+        for _, sender, callback, _ in _EVENT._callbacks
+    )
 
 
 def test_saving_gui_state_cancels_transient_merge_selection(supervisor):

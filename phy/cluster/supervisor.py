@@ -1803,14 +1803,30 @@ class Supervisor:
 
         @connect(sender=gui)
         def on_close(e):
-            unconnect(on_is_busy, self)
-            if self.merge_propositions_view is not None:
-                unconnect(
-                    self.merge_propositions_view,
-                    self._review_merge_proposition,
-                    self._reject_merge_proposition,
-                    self._reset_merge_proposition,
-                )
+            # The event registry holds strong references to senders and callbacks.
+            # Release every object owned by this attachment before Qt destroys its
+            # widgets; otherwise deleted QWidget wrappers can survive until Python
+            # interpreter shutdown and make Qt teardown nondeterministic.
+            views = (
+                self.cluster_view,
+                self.similarity_view,
+                self.merge_view,
+                self.merge_propositions_view,
+            )
+            docks = tuple(view.dock for view in views if view is not None)
+            unconnect(
+                on_is_busy,
+                self._merge_close_callback,
+                gui,
+                self,
+                self.action_creator,
+                self.clustering,
+                self.cluster_meta,
+                self.merge_propositions,
+                *views,
+                *docks,
+            )
+            self._merge_close_callback = None
 
         @connect(sender=self.cluster_view)
         def on_ready(sender):
