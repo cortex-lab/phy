@@ -36,6 +36,29 @@ use **Cancel Merge Mode**, or close Merge View to cancel and restore the exact s
 entry. Undoing a committed Merge-mode merge restores the complete workspace as it appeared just
 before `G`; Redo reapplies the merge and returns to the normal workflow.
 
+### Reviewing merge propositions
+
+For Template GUI datasets, phy can also review automatic merge propositions from a
+dataset-local AIND/SpikeInterface format-version 2 `curation.json`. When the file
+contains valid `merges`, the persistent **Merge Propositions** view lists their
+ordered cluster IDs, status, and any supplied `new_unit_id`. The first ID is the
+blue reference; `new_unit_id` is provenance only because phy allocates the result
+through its ordinary merge model.
+
+Select a proposition and choose **Review** to stage it in the normal Merge View.
+You can still add, remove, and reorder candidates there. Press `G` to accept only
+after the ordinary merge succeeds; an edited set of candidates is marked
+`accepted_modified`. Press `V`, use Cancel, or close Merge View to leave the
+proposition pending. **Reject** and **Reset review** are undoable; **Skip / Next
+pending** only navigates. Overlapping propositions are allowed, but one whose
+source cluster no longer exists after a merge or split becomes stale and is never
+automatically remapped.
+
+phy never overwrites producer-owned `curation.json`. It stores accepted and
+rejected decisions in dataset-local `curation_review.json`, atomically after the
+ordinary clustering files have been saved. Undo and redo restore both the
+clustering result and the associated proposition review state.
+
 
 ## Splitting clusters
 

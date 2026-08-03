@@ -12563,6 +12563,15 @@ Save the modified data.
 
 ---
 
+#### BaseController.on_save_proposition_reviews
+
+
+**`BaseController.on_save_proposition_reviews(self, sender, mapping)`**
+
+Atomically save phy-owned review state after cluster assignments.
+
+---
+
 #### BaseController.peak_channel_similarity
 
 
@@ -13277,6 +13286,15 @@ Save the modified data.
 
 ---
 
+#### TemplateController.on_save_proposition_reviews
+
+
+**`TemplateController.on_save_proposition_reviews(self, sender, mapping)`**
+
+Atomically save phy-owned review state after cluster assignments.
+
+---
+
 #### TemplateController.peak_channel_similarity
 
 
@@ -13937,6 +13955,15 @@ Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`.
 **`KwikController.on_save_clustering(self, sender, spike_clusters, groups, *labels)`**
 
 Save the modified data.
+
+---
+
+#### KwikController.on_save_proposition_reviews
+
+
+**`KwikController.on_save_proposition_reviews(self, sender, mapping)`**
+
+Atomically save phy-owned review state after cluster assignments.
 
 ---
 

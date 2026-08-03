@@ -1,9 +1,10 @@
-# Merge View architecture proposal
+# Merge View architecture record
 
-Status: implemented for phy 2.2.0
+Status: implemented and automatically validated on the unreleased phy 2.2 branch;
+manual dataset smoke testing and release acceptance remain
 
-This document describes the internal architecture and incremental refactor
-recommended for implementing the user behavior fixed in the
+This document records the internal architecture and incremental refactor used to
+implement the user behavior fixed in the
 [Merge View workflow specification](merge-view-workflow.md). The workflow
 specification is authoritative when this document discusses implementation
 tradeoffs.
@@ -25,16 +26,16 @@ The architectural goal is to support this workflow while improving the current
 selection, action, and history boundaries. The refactor should be incremental and
 should preserve public plugin APIs.
 
-The following are out of scope:
+The following were out of scope for the manual-workflow implementation:
 
-- Merge Propositions and proposition review states;
-- `curation.json` or external proposition-file schemas;
+- Merge Propositions and proposition review states, now specified separately in
+  [Merge Propositions](merge-propositions.md);
 - a global application-state framework;
 - a rewrite of scientific/OpenGL views;
 - clustering-algorithm changes; and
 - unrelated GUI modernization.
 
-## 2. Current architecture and constraints
+## 2. Pre-implementation architecture and constraints
 
 ### 2.1 Selection authority is indirect
 
@@ -522,7 +523,7 @@ The initial Merge-mode action policy is:
 
 - disable split, group/metadata changes, Cluster navigation, and Cluster
   selection;
-- allow Similarity navigation, filtering, sorting, Ctrl+Space, Backspace, `C`,
+- allow Similarity navigation, filtering, sorting, Ctrl+Space, Backspace, `V`,
   `G`, and save;
 - reject unsafe direct or plugin calls explicitly without partially mutating the
   workspace;
@@ -574,7 +575,7 @@ restoration is best effort where Qt exposes a reliable value.
 ### Phase 5: Merge mode without drag-and-drop
 
 - Add `MergeSession` and mode transitions.
-- Add Merge View, `C`, Ctrl+right-click transfers, Backspace behavior, mode
+- Add Merge View, `V`, Ctrl+right-click transfers, Backspace behavior, mode
   indication, cancellation, and `G` semantics.
 - Add exact cancel and merge undo/redo restoration tests.
 
@@ -699,8 +700,10 @@ before their implementation phase:
 - whether the first contextual-history implementation uses the existing
   `request_undo_state` hook as a transition step.
 
-Merge Propositions, persistence of proposition state, overlapping proposals, and
-external JSON remain separate future design work.
+TaskLogger no longer owns selection state, but its optional structural split into
+separate action-runner and post-action-policy classes remains deferred cleanup.
+Merge Propositions and their persistence are specified in
+[Merge Propositions](merge-propositions.md).
 
 ## 13. Handoff for future agents
 

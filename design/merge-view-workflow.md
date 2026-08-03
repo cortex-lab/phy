@@ -1,13 +1,13 @@
 # Merge View workflow specification
 
-Status: implemented for phy 2.2.0
+Status: implemented and automatically validated on the unreleased phy 2.2 branch;
+manual dataset smoke testing and release acceptance remain
 
-Companion document: [Merge View architecture proposal](merge-view-architecture.md)
+Companion document: [Merge View architecture record](merge-view-architecture.md)
 
-This document fixes the intended user-facing behavior of the manual Merge View
-workflow before implementation. It deliberately does not specify Merge
-Propositions, their JSON format, or their review states; those will be designed
-separately after the manual workflow is validated.
+This document fixes the user-facing behavior of the manual Merge View workflow.
+Merge Propositions extend this contract in
+[their own specification](merge-propositions.md).
 
 ## Purpose
 
@@ -30,15 +30,15 @@ The GUI has two mutually exclusive modes:
 
 The effective selection is what graphical and scientific views display. It is
 also what `G` merges. Transferring a cluster between Similarity View and Merge
-View does not change the effective selection and therefore must not cause an
-effective selection update or unnecessary redraw.
+View does not change effective membership. It publishes a render update only
+when the transfer also changes presentation order.
 
 Merge mode is active exactly while Merge View contains its blue reference
 cluster.
 
 ## Entering Merge mode
 
-`C` enters Merge mode. At least one cluster must be selected in Cluster View. If
+`V` enters Merge mode. At least one cluster must be selected in Cluster View. If
 there is no Cluster View selection, the action does nothing and reports why.
 
 Before changing the UI, phy snapshots the complete state needed to restore the
@@ -59,8 +59,9 @@ All selected clusters are transferred into Merge View in this order:
 After the transfer:
 
 - Cluster View and Similarity View have no selected rows;
-- Cluster View remains visible but is clearly disabled and cannot be selected,
-  navigated, filtered, sorted, or used as a drag source or target;
+- Cluster View remains visible and scrollable but is clearly read-only: it
+  cannot be selected, navigated, filtered, sorted, or used as a drag source or
+  target;
 - Similarity View remains enabled and remains calculated relative to the blue
   reference; and
 - the effective selection and graphical displays initially remain unchanged.
@@ -159,7 +160,7 @@ If the merge fails, the complete Merge-mode state remains unchanged.
 
 All of the following cancel Merge mode:
 
-- pressing `C` while Merge mode is active;
+- pressing `V` while Merge mode is active;
 - activating a prominent **Cancel Merge Mode** control; or
 - closing Merge View.
 
@@ -199,21 +200,18 @@ entries in the clustering undo stack.
 
 | State | Action | Result |
 | --- | --- | --- |
-| Normal | `C` | Snapshot state, transfer all selections, enter Merge mode |
+| Normal | `V` | Snapshot state, transfer all selections, enter Merge mode |
 | Merge | Ctrl+right-click Similarity | Transfer clicked candidate to Merge |
 | Merge | Ctrl+right-click removable Merge row | Transfer candidate to Similarity |
 | Merge | Ctrl+Space | Select the next Similarity candidates |
 | Merge | Backspace | Clear only the Similarity selection |
 | Merge | `G` | Merge Merge contents plus selected Similarity candidates |
-| Merge | `C`, Cancel, or close Merge View | Restore the entry snapshot exactly |
+| Merge | `V`, Cancel, or close Merge View | Restore the entry snapshot exactly |
 | After Merge-mode merge | Undo | Restore clusters and pre-commit Merge workspace |
 | Restored after undo | Redo | Reapply merge and return to normal mode |
 
-## Out of scope
+## Extension
 
-The following are intentionally deferred:
-
-- Merge Propositions view and workflow;
-- `curation.json` and external proposition-file schemas;
-- proposition review and resolution states; and
-- partial, overlapping, or invalid propositions.
+The [Merge Propositions specification](merge-propositions.md) defines how
+external propositions enter this workspace without changing the manual workflow
+contract.

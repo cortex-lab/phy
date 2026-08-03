@@ -119,6 +119,16 @@ For a longer comparison, press `V` first. Merge View keeps the candidates staged
 continue exploring Similarity View. Its status shows exactly how many clusters `G` will merge.
 Press `V` again or close Merge View to cancel without changing the clustering.
 
+If the Template GUI dataset includes an AIND/SpikeInterface format-version 2
+`curation.json` with merge suggestions, use the persistent **Merge Propositions**
+view to review them. Choose **Review** to stage its ordered IDs in Merge View (the
+first is blue), then use `G` to accept the ordinary merge; changes you make to the
+proposal are recorded as `accepted_modified`. **Reject** and **Reset review** are
+undoable, while **Skip** leaves it pending. A proposition whose source clusters
+were changed becomes stale rather than being remapped. phy leaves `curation.json`
+unchanged and atomically saves decisions to `curation_review.json` with the rest
+of the curation results.
+
 Splitting requires selecting spikes in a view that supports lasso or polygon
 selection, commonly the Feature View, and pressing `K`. It is worth learning
 merge, undo, and save on the example dataset before attempting a scientific
@@ -154,10 +164,14 @@ dataset directory are:
 - other `cluster_<field>.tsv` files for additional labels;
 - `cluster_info.tsv`: a convenient snapshot of the columns currently exported
   from the Cluster View.
+- `curation_review.json`: accepted and rejected Merge Propositions decisions,
+  when that workflow is in use.
 
 The original `spike_templates.npy` is not changed by merges or splits.
 `cluster_info.tsv` is a derived summary; use `spike_clusters.npy` and the
 `cluster_<field>.tsv` files as the primary curation results.
+`curation.json`, when present, remains producer-owned input and is never
+overwritten.
 
 phy does **not** automatically make a backup before overwriting these files.
 Keep the pre-curation copy made above, and consider dated snapshots or version

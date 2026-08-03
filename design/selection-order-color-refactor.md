@@ -1,10 +1,10 @@
 # Selection ordering and color-state refactor
 
-Status: implementation specification
+Status: implemented on the unreleased phy 2.2 branch; final coverage audit pending
 
 ## 1. Motivation
 
-Cluster selection currently has three partially independent representations:
+Before this refactor, cluster selection had three partially independent representations:
 
 - role membership and `presentation_order` in `CurationSelectionState`;
 - a mutable `_selection_color_order` in `Supervisor`; and

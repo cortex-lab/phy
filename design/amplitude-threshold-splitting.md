@@ -1,6 +1,6 @@
 # Amplitude-threshold splitting implementation plan
 
-Status: proposed implementation plan
+Status: implemented on the unreleased phy 2.2 branch; final integration and manual validation pending
 
 ## 1. Goal
 
