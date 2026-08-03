@@ -10215,6 +10215,15 @@ Select the next best cluster in the cluster view.
 
 ---
 
+#### Supervisor.next_merge_proposition
+
+
+**`Supervisor.next_merge_proposition(self, callback=None)`**
+
+Cancel the current workspace and review the next pending proposition.
+
+---
+
 #### Supervisor.previous
 
 
@@ -10233,12 +10242,30 @@ Select the previous best cluster in the cluster view.
 
 ---
 
+#### Supervisor.previous_merge_proposition
+
+
+**`Supervisor.previous_merge_proposition(self, callback=None)`**
+
+Cancel the current workspace and review the previous pending proposition.
+
+---
+
 #### Supervisor.redo
 
 
 **`Supervisor.redo(self)`**
 
 Undo the last undone action.
+
+---
+
+#### Supervisor.reject_merge_proposition
+
+
+**`Supervisor.reject_merge_proposition(self, callback=None)`**
+
+Reject the active proposition and review the next pending one.
 
 ---
 
@@ -10257,6 +10284,15 @@ Transfer staged candidates back to Similarity View.
 **`Supervisor.reorder_merge(self, cluster_ids, insertion, callback=None)`**
 
 Reorder staged candidates and their scientific presentation order.
+
+---
+
+#### Supervisor.reset_merge_proposition
+
+
+**`Supervisor.reset_merge_proposition(self, callback=None)`**
+
+Reset the highlighted review and reopen it when actionable.
 
 ---
 

@@ -64,6 +64,12 @@ rows between Merge and Similarity views, or drag inside Merge View to reorder ca
 to commit or `V` to cancel. See
 [Staging candidates in Merge View](clustering.md#staging-candidates-in-merge-view).
 
+When a Template GUI dataset provides `curation.json` merge suggestions, the
+persistent **Merge Propositions** table is a button-free review queue. Clicking
+a pending row immediately opens it in Merge View and replaces any active merge
+workspace; clicking a nonactionable row only highlights it after cancelling the
+workspace. See [Reviewing merge propositions](clustering.md#reviewing-merge-propositions).
+
 ## Sorting and filtering
 
 Click a Cluster View column header to sort the table. Enter a boolean expression in the filter box

@@ -40,19 +40,34 @@ before `G`; Redo reapplies the merge and returns to the normal workflow.
 
 For Template GUI datasets, phy can also review automatic merge propositions from a
 dataset-local AIND/SpikeInterface format-version 2 `curation.json`. When the file
-contains valid `merges`, the persistent **Merge Propositions** view lists their
-ordered cluster IDs, status, and any supplied `new_unit_id`. The first ID is the
-blue reference; `new_unit_id` is provenance only because phy allocates the result
-through its ordinary merge model.
+contains valid `merges`, the persistent **Merge Propositions** view shows a
+compact ordered unit list: all IDs for four or fewer units, or the first two,
+an ellipsis, the last, and the total count for larger propositions. A supplied
+`new_unit_id` follows `⇒`; it is provenance only because phy allocates the result
+through its ordinary merge model. There are no row action buttons. Hover a row
+for its full IDs, key, status, reference, and any reason. Row colors identify
+the active, accepted, accepted-modified, rejected, stale, and invalid lifecycle
+states.
 
-Select a proposition and choose **Review** to stage it in the normal Merge View.
-You can still add, remove, and reorder candidates there. Press `G` to accept only
-after the ordinary merge succeeds; an edited set of candidates is marked
-`accepted_modified`. Press `V`, use Cancel, or close Merge View to leave the
-proposition pending. **Reject** and **Reset review** are undoable; **Skip / Next
-pending** only navigates. Overlapping propositions are allowed, but one whose
-source cluster no longer exists after a merge or split becomes stale and is never
-automatically remapped.
+Click a pending row to stage it in Merge View immediately; this cancels and
+replaces any manual or proposition workspace already open. Clicking a completed,
+stale, or invalid row cancels any active workspace and only highlights that row.
+You can still add, remove, and reorder candidates in a pending review. `Alt+Down`
+and `Alt+Up` cancel the current workspace and open the next or previous pending
+proposition in the current visible table order, wrapping at either end.
+`Alt+Backspace` rejects the active proposition and advances; `Alt+Shift+Backspace`
+resets the highlighted completed review and reopens it when reviewable.
+These shortcuts do nothing while a text input has focus.
+
+Press `G` to accept only after the ordinary merge succeeds; an edited set of
+candidates is marked `accepted_modified`. A successful proposition merge opens
+the next pending proposition using the visible order captured before the merge.
+Manual and failed merges do not advance proposition review. Press `V`, use
+Cancel, or close Merge View to leave the current proposition pending. Reject and
+reset are undoable, and undo/redo restore the exact before/after proposition
+workspaces. Overlapping propositions are allowed, but one whose source cluster
+no longer exists after a merge or split becomes stale and is never automatically
+remapped.
 
 phy never overwrites producer-owned `curation.json`. It stores accepted and
 rejected decisions in dataset-local `curation_review.json`, atomically after the

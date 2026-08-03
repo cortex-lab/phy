@@ -37,11 +37,15 @@ behavior they verify rather than listed separately.
   undo restores the full pre-merge workspace.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
   dataset-local `curation.json` in a persistent **Merge Propositions** view.
-  Review stages the ordered proposition in Merge View (with the first unit blue);
-  `G` accepts the ordinary merge, while edited acceptance is marked
-  `accepted_modified`. Reject and reset are undoable, stale overlapping proposals
-  are never remapped, and decisions are atomically saved in
-  `curation_review.json` without overwriting `curation.json`.
+  Its compact, lifecycle-colored rows have no action buttons: click a pending
+  row to stage it in Merge View (with the first unit blue), while tooltips retain
+  the full IDs, status, key, and reason. `Alt+Down`/`Alt+Up` navigate pending
+  rows, `Alt+Backspace` rejects and advances, and `Alt+Shift+Backspace` resets a
+  highlighted completed review. `G` accepts the ordinary merge, marks edited
+  acceptance `accepted_modified`, and opens the next pending proposition in the
+  pre-merge visible order. Undo/redo restore exact proposition workspaces; stale
+  overlapping proposals are never remapped, and decisions are atomically saved
+  in `curation_review.json` without overwriting `curation.json`.
 
 - Select the first eligible clusters in the Similarity View with
   `Control+Space`; repeat the shortcut to select successive batches. The
@@ -103,6 +107,10 @@ behavior they verify rather than listed separately.
 
 - Put content-specific actions first in every view menu, followed by a
   consistent Auto-update, Screenshot, and Close utility footer.
+
+- Move Trace View scale shortcuts from `Alt+Up`/`Alt+Down` to
+  `Control+Alt+Up`/`Control+Alt+Down`, leaving `Alt+Up`/`Alt+Down` available for
+  Merge Propositions navigation.
 
 - Group cluster traversal commands under **Select > Navigation**.
 

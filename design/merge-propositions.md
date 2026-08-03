@@ -98,24 +98,37 @@ decisions uses the existing save prompt.
 ## 4. User-visible workflow
 
 When a valid `curation.json` contains merges, phy creates a persistent **Merge
-Propositions** view. It shows status, proposition key, ordered cluster IDs,
-cluster count, reference, and `new_unit_id` when present.
+Propositions** view with no row action buttons. Each row displays its ordered
+unit IDs compactly: all IDs for four or fewer units, or the first two, an
+ellipsis, the last, and the total count for larger propositions. A supplied
+`new_unit_id` is appended as `⇒ new_unit_id`. The row tooltip provides the key,
+full ordered IDs, status, reference, and any invalid/stale reason; the dock status
+summarizes the compact proposition, status, reference, and reason. Lifecycle
+colors distinguish the active review,
+accepted, accepted-modified, rejected, stale, and invalid states.
 
-Available operations are:
+Clicking a pending, reviewable row immediately starts its review. It cancels and
+replaces any active manual or proposition Merge workspace, snapshots the complete
+current Normal workspace, and stages the ordered proposition IDs directly. It
+must not first project those IDs into Cluster View, because cancellation must
+restore the curator's pre-review state. Clicking an accepted, accepted-modified,
+rejected, stale, or invalid row first cancels any active workspace, then only
+highlights that row; it does not enter Merge mode. Invalid and stale propositions
+remain visible with their reason but cannot be reviewed.
 
-- **Review**: open the proposition in Merge mode;
-- **Reject**: record a reversible rejection without changing clustering;
-- **Skip / Next pending**: navigate without changing review state; and
-- **Reset review**: return an accepted or rejected proposition to pending when
-  its source clusters still exist.
+The **Select > Merge propositions** commands are also available without visible
+row buttons:
 
-Invalid and stale propositions remain visible with a reason but cannot be
-reviewed.
+- `Alt+Down` and `Alt+Up` cancel the current workspace and review the next or
+  previous pending proposition in the current visible table order, wrapping at
+  either end;
+- `Alt+Backspace` rejects the active proposition and advances to the next pending
+  proposition in that same visible order; and
+- `Alt+Shift+Backspace` resets the highlighted completed review (accepted,
+  accepted-modified, or rejected) to pending and immediately reopens it when its
+  source clusters still exist.
 
-Review is explicit; ordinary row selection does not enter Merge mode. Starting a
-review snapshots the complete current Normal workspace, then stages the ordered
-proposition IDs directly. It must not first project those IDs into Cluster View,
-because cancellation must restore the curator's pre-review state.
+These proposition shortcuts are suppressed while a text input has focus.
 
 While reviewing:
 
@@ -130,11 +143,14 @@ While reviewing:
 On `G`, phy calls the ordinary merge implementation. Only after that call
 succeeds does it record the proposition as accepted, including the actual
 ordered merge IDs and result cluster ID. A changed workspace produces the
-derived `accepted_modified` status. Failure leaves the workspace and review
-state unchanged.
+derived `accepted_modified` status. Successful proposition commits then open the
+next pending proposition using the visible table order captured immediately
+before the merge. A manual merge and a failed merge do not advance proposition
+review; failure leaves the workspace and review state unchanged.
 
-Reject creates a review-history entry and is undoable. Skip does not create
-history. Reset review is explicit and undoable.
+Reject creates a review-history entry and advances as described above. Reset
+review is explicit and undoable. Undo and redo restore the exact before/after
+proposition workspaces, including any automatically opened next proposition.
 
 ## 5. Overlap, stale IDs, and clustering changes
 
@@ -154,7 +170,9 @@ Undoing an accepted proposition restores:
 - the Normal-entry snapshot used by cancellation; and
 - derived validity of overlapping propositions.
 
-Redo reapplies the merge, restores the accepted decision, and exits Merge mode.
+Redo reapplies the merge and accepted decision, then restores the exact
+post-commit context: the automatically opened next proposition, or Normal mode
+when no pending proposition remains.
 
 ## 6. Architecture boundaries
 

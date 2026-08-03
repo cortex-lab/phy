@@ -121,13 +121,18 @@ Press `V` again or close Merge View to cancel without changing the clustering.
 
 If the Template GUI dataset includes an AIND/SpikeInterface format-version 2
 `curation.json` with merge suggestions, use the persistent **Merge Propositions**
-view to review them. Choose **Review** to stage its ordered IDs in Merge View (the
-first is blue), then use `G` to accept the ordinary merge; changes you make to the
-proposal are recorded as `accepted_modified`. **Reject** and **Reset review** are
-undoable, while **Skip** leaves it pending. A proposition whose source clusters
-were changed becomes stale rather than being remapped. phy leaves `curation.json`
-unchanged and atomically saves decisions to `curation_review.json` with the rest
-of the curation results.
+view to review them. Its button-free rows compactly show the proposed units and
+any `⇒ new_unit_id`; hover for full details and lifecycle status. Click a pending
+row to stage its ordered IDs in Merge View (the first is blue), replacing any
+active merge workspace. `Alt+Down`/`Alt+Up` move through pending rows in the
+current visible order and wrap; `Alt+Backspace` rejects and advances, while
+`Alt+Shift+Backspace` resets the highlighted completed review and reopens it.
+These shortcuts are suppressed while typing in a text input. Use `G` to accept;
+an edited merge is recorded as `accepted_modified`, then the next pending row in
+the pre-merge visible order opens automatically. Manual or failed merges do not
+advance. A proposition whose source clusters were changed becomes stale rather
+than being remapped. phy leaves `curation.json` unchanged and atomically saves
+decisions to `curation_review.json` with the rest of the curation results.
 
 Splitting requires selecting spikes in a view that supports lasso or polygon
 selection, commonly the Feature View, and pressing `K`. It is worth learning
