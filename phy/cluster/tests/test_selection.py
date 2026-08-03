@@ -305,6 +305,44 @@ def test_enter_merge_proposition_validates_identity_and_membership():
         controller.enter_merge_proposition('p', (1, 1))
 
 
+def test_switch_merge_proposition_preserves_original_normal_entry_snapshot():
+    initial = CurationSelectionState(cluster_ids=(1,), similar_ids=(2,))
+    context = {'cluster_filter': 'group == good'}
+    controller = CurationSelectionController(initial)
+    controller.enter_merge_mode(context)
+
+    change = controller.switch_merge_proposition('p1', (8, 3))
+
+    assert change.after.merge_ids == (8, 3)
+    assert change.after.reference_id == 8
+    assert change.after.similar_ids == ()
+    assert change.after.merge.proposition_id == 'p1'
+    assert change.after.merge.entry_snapshot.selection is initial
+    assert change.after.merge.entry_snapshot.workflow_context is context
+
+    first_snapshot = change.after.merge.entry_snapshot
+    change = controller.switch_merge_proposition('p2', (7, 4))
+
+    assert change.after.merge_ids == (7, 4)
+    assert change.after.merge.entry_snapshot is first_snapshot
+    assert controller.cancel_merge_mode().after is initial
+
+
+def test_switch_merge_proposition_requires_merge_mode_and_valid_proposition():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1,)))
+
+    with raises(RuntimeError, match='requires Merge mode'):
+        controller.switch_merge_proposition('p', (1, 2))
+
+    controller.enter_merge_mode()
+    with raises(ValueError, match='at least two'):
+        controller.switch_merge_proposition('p', (1,))
+    with raises(ValueError, match='cannot be empty'):
+        controller.switch_merge_proposition('', (1, 2))
+    with raises(ValueError, match='unique'):
+        controller.switch_merge_proposition('p', (1, 1))
+
+
 def test_merge_workspace_edits_preserve_proposition_identity():
     controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1,)))
     controller.enter_merge_proposition('p', (1, 2))

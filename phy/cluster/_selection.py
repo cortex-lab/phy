@@ -350,6 +350,30 @@ class CurationSelectionController:
             )
         )
 
+    def switch_merge_proposition(self, proposition_id, ordered_ids):
+        """Replace the active Merge workspace while preserving its Normal entry snapshot."""
+        self._require_merge_mode()
+        ordered = _as_unique_ids(ordered_ids)
+        if len(ordered) < 2:
+            raise ValueError('A merge proposition requires at least two cluster IDs.')
+        if not proposition_id:
+            raise ValueError('The merge proposition ID cannot be empty.')
+        merge = MergeSession(
+            ordered[0],
+            ordered,
+            self._state.merge.entry_snapshot,
+            proposition_id=str(proposition_id),
+        )
+        return self._apply(
+            CurationSelectionState(
+                mode=WorkflowMode.MERGE,
+                reference_id=ordered[0],
+                presentation_order=ordered,
+                color_slots=ordered,
+                merge=merge,
+            )
+        )
+
     def cancel_merge_mode(self):
         self._require_merge_mode()
         return self._apply(self._state.merge.entry_snapshot.selection)
