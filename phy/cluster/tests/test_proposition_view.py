@@ -36,6 +36,7 @@ def test_merge_propositions_compact_projection_and_activation(qtbot):
         'reviewed with an extra unit'
     )
     assert view._model.data(index, Qt.ForegroundRole).name() == '#e6ad4c'
+    assert view._foreground_color({'status': 'active'}, 'proposition') is None
 
     activated = []
 

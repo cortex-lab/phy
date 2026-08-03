@@ -27,7 +27,6 @@ class MergePropositionsView(Table):
 
     _columns = ('proposition',)
     _status_colors = {
-        'active': '#5ca8ff',
         'accepted': '#86d16d',
         'accepted_modified': '#e6ad4c',
         'rejected': '#888888',
@@ -244,6 +243,6 @@ class MergePropositionsView(Table):
         dock.set_status(detail)
 
     def _foreground_color(self, row, column):
-        """Tint complete rows by lifecycle state, like cluster-group rows."""
+        """Tint reviewed/problem rows while selection background marks the active row."""
         color = self._status_colors.get(row.get('status'))
         return QColor(color) if color is not None else super()._foreground_color(row, column)
