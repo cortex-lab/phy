@@ -785,7 +785,6 @@ class Supervisor:
         self.merge_propositions_view = None
         self.merge_propositions = merge_propositions
         self._merge_close_callback = None
-        self._merge_dock_state = None
         self._suspend_presentation_order_sync = False
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
@@ -943,6 +942,7 @@ class Supervisor:
         if self._merge_close_callback is not None:
             unconnect(self._merge_close_callback)
             self._merge_close_callback = None
+        self._dispose_merge_view()
         # The GUI is closing and Qt will destroy its native QObject. Do not retain the
         # corresponding Python wrapper until interpreter shutdown.
         self.gui = None
@@ -1049,7 +1049,10 @@ class Supervisor:
         # Change the state after every clustering action, according to the action flow.
         connect(self._after_action, event='cluster', sender=self)
 
-    def _create_merge_view(self, state=None):
+    def _ensure_merge_view(self, state=None):
+        """Create and connect the dataset-scoped Merge View at most once."""
+        if self.merge_view is not None:
+            return self.merge_view
         state = state or self.selection.state
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
         self.merge_view = MergeView(self.gui, data=data, columns=self.columns)
@@ -1067,21 +1070,44 @@ class Supervisor:
         )
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.merge_view)
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.similarity_view)
-        self.gui.add_view(self.merge_view, position='left', closable=True)
-        if self._merge_dock_state is not None:
-            self.gui.restoreState(self._merge_dock_state['window'])
-            if self._merge_dock_state['floating']:
-                self.merge_view.dock.setFloating(True)
-                self.merge_view.dock.restoreGeometry(self._merge_dock_state['geometry'])
-        else:
-            self.gui.splitDockWidget(self.cluster_view.dock, self.merge_view.dock, Qt.Vertical)
-        self.merge_view.dock.setAttribute(Qt.WA_DeleteOnClose)
+        self.gui.add_view(
+            self.merge_view, position='left', closable=True, persistent=True
+        )
+        self.gui.splitDockWidget(self.cluster_view.dock, self.merge_view.dock, Qt.Vertical)
         self.merge_view.dock.add_button(
             name='cancel_merge_mode',
             text='Cancel Merge Mode',
             callback=lambda checked: self.toggle_merge_mode(),
         )
         return self.merge_view
+
+    def _show_merge_view(self, state=None):
+        """Reveal the persistent Merge View for the active workspace."""
+        view = self._ensure_merge_view(state)
+        self.similarity_view.configure_cluster_drag_drop(
+            'similarity', accepted_roles=('merge',), drag_selected_rows=True
+        )
+        view.dock.show()
+        return view
+
+    def _hide_merge_view(self):
+        """Hide Merge View without releasing its stable dock identity or callbacks."""
+        if self.merge_view is not None:
+            self.merge_view.dock.hide()
+        self.similarity_view.configure_cluster_drag_drop(None)
+
+    def _dispose_merge_view(self):
+        """Release the persistent Merge View during GUI shutdown."""
+        view = self.merge_view
+        if view is None:
+            return
+        self._disconnect_merge_view_events(view)
+        unconnect(view.dock)
+        if self.gui is not None and view in self.gui.views:
+            self.gui._views.remove(view)
+        view.dock.close()
+        self.similarity_view.configure_cluster_drag_drop(None)
+        self.merge_view = None
 
     def _reset_cluster_view(self):
         """Recreate the cluster view."""
@@ -1466,25 +1492,8 @@ class Supervisor:
                 )(name)
         self._update_proposition_actions()
 
-    def _close_merge_view(self):
-        view = self.merge_view
-        self.merge_view = None
-        if view is not None and view in self.gui.views:
-            self._merge_dock_state = {
-                'window': self.gui.saveState(),
-                'floating': view.dock.isFloating(),
-                'geometry': view.dock.saveGeometry(),
-            }
-        if view is not None:
-            self._disconnect_merge_view_events(view)
-        if view is not None and view in self.gui.views:
-            view.dock.close()
-        if view is not None:
-            unconnect(view.dock)
-        self.similarity_view.configure_cluster_drag_drop(None)
-
     def _disconnect_merge_view_events(self, view):
-        """Release event-registry references owned by a temporary Merge View."""
+        """Release event-registry references owned by the persistent Merge View."""
         unconnect(
             view,
             self._on_cluster_drop,
@@ -1523,12 +1532,12 @@ class Supervisor:
         self._apply_selection_change(change, refresh_similarity=True, sync_presentation=False)
         self._restore_workflow_context(context)
         if close_view:
-            self._close_merge_view()
+            self._hide_merge_view()
 
     def _restore_history_context(self, selection, workflow_context, direction):
         """Restore a curation snapshot after the associated data undo or redo."""
-        if selection.is_merge_mode and self.merge_view is None:
-            self._create_merge_view(selection)
+        if selection.is_merge_mode:
+            self._ensure_merge_view(selection)
             self._set_merge_mode_ui(True)
         elif not selection.is_merge_mode:
             self._set_merge_mode_ui(False)
@@ -1541,8 +1550,9 @@ class Supervisor:
                 else selection.merge.entry_snapshot.workflow_context
             )
             self._restore_workflow_context(context)
+            self._show_merge_view(selection)
         else:
-            self._close_merge_view()
+            self._hide_merge_view()
         self._refresh_propositions()
 
     @staticmethod
@@ -1830,9 +1840,6 @@ class Supervisor:
         @connect(event='close_view')
         def on_close_view(view, sender):
             if view is self.merge_view:
-                self._disconnect_merge_view_events(view)
-                unconnect(view.dock)
-                self.merge_view = None
                 self._cancel_merge_mode(close_view=False)
 
         self._merge_close_callback = on_close_view
@@ -2007,7 +2014,7 @@ class Supervisor:
             self._select_after_merge(out, selection_before)
         if merge_mode:
             self._set_merge_mode_ui(False)
-            self._close_merge_view()
+            self._hide_merge_view()
         controllers = [self.clustering]
         if proposition_id is not None:
             self.merge_propositions.accept(proposition_id, tuple(cluster_ids), int(out.added[0]))
@@ -2169,7 +2176,7 @@ class Supervisor:
             logger.warning('Select at least one Cluster View row before entering Merge mode.')
             return
         change = self.selection.enter_merge_mode(self._workflow_context())
-        self._create_merge_view()
+        self._show_merge_view()
         self._set_merge_mode_ui(True)
         self._apply_selection_change(change, callback=callback)
         return change.after
@@ -2229,7 +2236,7 @@ class Supervisor:
         change = self.selection.enter_merge_proposition(
             key, proposition.unit_ids, self._workflow_context()
         )
-        self._create_merge_view()
+        self._show_merge_view()
         self._set_merge_mode_ui(True)
         self._apply_selection_change(change)
         self._refresh_propositions()

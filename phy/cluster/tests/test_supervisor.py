@@ -391,10 +391,13 @@ def test_supervisor_merge_mode_lifecycle_restores_entry_state(supervisor):
     assert events == []
 
     supervisor.similarity_view.filter('id < 20')
+    merge_view = supervisor.merge_view
     supervisor.toggle_merge_mode()
 
     assert supervisor.selection.state == entry
-    assert supervisor.merge_view is None
+    assert supervisor.merge_view is merge_view
+    assert merge_view in supervisor.gui.views
+    assert merge_view.dock.isHidden()
     assert supervisor.cluster_view.isEnabled()
     assert not supervisor.cluster_view._interaction_blocked
     assert supervisor._workflow_context() == context
@@ -410,12 +413,15 @@ def test_closing_merge_view_restores_original_table_rows(qtbot, supervisor):
     supervisor.toggle_merge_mode()
     assert 20 not in supervisor.similarity_view.get_ids()
     assert 11 not in supervisor.similarity_view.get_ids()
+    merge_view = supervisor.merge_view
 
     supervisor.merge_view.dock.close()
     qtbot.wait(10)
 
     assert not supervisor.selection.state.is_merge_mode
-    assert supervisor.merge_view is None
+    assert supervisor.merge_view is merge_view
+    assert merge_view in supervisor.gui.views
+    assert merge_view.dock.isHidden()
     assert supervisor.cluster_view.get_ids() == cluster_rows
     assert supervisor.similarity_view.get_ids() == similarity_rows
     assert supervisor.cluster_view.get_selected_ids() == [10, 30]
@@ -427,8 +433,10 @@ def test_supervisor_merge_view_opens_below_cluster_and_restores_position(qtbot, 
 
     supervisor.toggle_merge_mode()
     qtbot.wait(10)
+    merge_view = supervisor.merge_view
+    merge_dock = merge_view.dock
     cluster_rect = supervisor.cluster_view.dock.geometry()
-    merge_rect = supervisor.merge_view.dock.geometry()
+    merge_rect = merge_dock.geometry()
     assert merge_rect.top() >= cluster_rect.bottom()
 
     supervisor.merge_view.dock.setFloating(True)
@@ -440,6 +448,8 @@ def test_supervisor_merge_view_opens_below_cluster_and_restores_position(qtbot, 
     supervisor.toggle_merge_mode()
     qtbot.wait(10)
 
+    assert supervisor.merge_view is merge_view
+    assert supervisor.merge_view.dock is merge_dock
     assert supervisor.merge_view.dock.isFloating()
     assert supervisor.merge_view.dock.pos() == floating_position
 
@@ -589,7 +599,9 @@ def test_closing_merge_view_cancels_mode(supervisor):
     merge_view.dock.close()
 
     assert supervisor.selection.state == entry
-    assert supervisor.merge_view is None
+    assert supervisor.merge_view is merge_view
+    assert merge_view in supervisor.gui.views
+    assert merge_view.dock.isHidden()
     assert supervisor.cluster_view.isEnabled()
 
 
@@ -599,11 +611,13 @@ def test_merge_mode_action_and_cancel_control(supervisor):
     supervisor.select_actions.toggle_merge_mode()
     supervisor.block()
     assert supervisor.selection.state.is_merge_mode
+    merge_view = supervisor.merge_view
 
     supervisor.merge_view.dock.get_widget('cancel_merge_mode').click()
     supervisor.block()
     assert not supervisor.selection.state.is_merge_mode
-    assert supervisor.merge_view is None
+    assert supervisor.merge_view is merge_view
+    assert merge_view.dock.isHidden()
 
 
 def test_merge_mode_rejects_cluster_mutations(supervisor):
@@ -671,7 +685,9 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     merged_id = up.added[0]
     assert not supervisor.selection.state.is_merge_mode
     assert supervisor.selected == [merged_id]
-    assert supervisor.merge_view is None
+    merge_view = supervisor.merge_view
+    assert merge_view is not None
+    assert merge_view.dock.isHidden()
     assert set(up.deleted) == {30, 20, candidate}
     assignments_after = supervisor.clustering.spike_clusters.copy()
     events = []
@@ -687,7 +703,8 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     assert supervisor.selection.state == merge_before
     assert supervisor.selected_merge == [30, 20]
     assert supervisor.selected_similar == [candidate]
-    assert supervisor.merge_view is not None
+    assert supervisor.merge_view is merge_view
+    assert not merge_view.dock.isHidden()
     assert supervisor.actions.get('redo').isEnabled()
     assert events[-1] == list(merge_before.presentation_order)
     assert dict(supervisor.selection_color_indices) == dict(merge_before.color_indices)
@@ -706,7 +723,8 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     ae(supervisor.clustering.spike_clusters, assignments_after)
     assert not supervisor.selection.state.is_merge_mode
     assert supervisor.selected == [merged_id]
-    assert supervisor.merge_view is None
+    assert supervisor.merge_view is merge_view
+    assert merge_view.dock.isHidden()
     assert events[-1] == [merged_id]
     unconnect(on_select)
 
@@ -789,8 +807,12 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
     supervisor.toggle_merge_mode()
     assert supervisor.selection.state.is_merge_mode
     assert supervisor.selection.state.merge.proposition_id is None
+    merge_view = supervisor.merge_view
+    merge_dock = merge_view.dock
     view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[key]))
 
+    assert supervisor.merge_view is merge_view
+    assert supervisor.merge_view.dock is merge_dock
     assert supervisor.selected_merge == [30, 20]
     assert supervisor.selection.state.reference_id == 30
     assert supervisor.selection.state.color_indices[30] == 0
@@ -799,6 +821,8 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
 
     replacement = supervisor.merge_propositions.catalog.propositions[2]
     view._on_row_clicked(view._proxy_index_for_id(view._id_by_key[replacement.key]))
+    assert supervisor.merge_view is merge_view
+    assert supervisor.merge_view.dock is merge_dock
     assert supervisor.selected_merge == [11, 1]
     assert supervisor.selection.state.merge.proposition_id == replacement.key
 

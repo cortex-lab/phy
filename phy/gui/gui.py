@@ -848,7 +848,15 @@ class GUI(QMainWindow):
             for i in range(n_views):
                 self.create_and_add_view(view_name)
 
-    def add_view(self, view, position=None, closable=True, floatable=True, floating=None):
+    def add_view(
+        self,
+        view,
+        position=None,
+        closable=True,
+        floatable=True,
+        floating=None,
+        persistent=False,
+    ):
         """Add a dock widget to the main window.
 
         Parameters
@@ -863,6 +871,8 @@ class GUI(QMainWindow):
             Whether the view can be detached from the main GUI.
         floating : boolean
             Whether the view should be added in floating mode or not.
+        persistent : boolean
+            Whether closing the dock should hide it without removing the view.
 
         """
 
@@ -886,7 +896,8 @@ class GUI(QMainWindow):
         # Emit the close_view event when the dock widget is closed.
         @connect(sender=dock)
         def on_close_dock_widget(sender):
-            self._views.remove(view)
+            if not persistent:
+                self._views.remove(view)
             emit('close_view', view, self)
 
         dock.show()
