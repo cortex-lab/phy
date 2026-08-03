@@ -51,6 +51,14 @@ For each `merges` entry:
 - an internal stable key is derived from the ordered `unit_ids`. Exact duplicate
   entries are invalid rather than silently coalesced.
 
+Every source list entry, including an invalid one, also receives a concise
+one-based display label (`P1`, `P2`, and so on) from its original position in
+`curation.json`. Sorting, filtering, and review-state changes do not renumber
+these labels. They are navigation aids rather than durable identity; the stable
+key remains authoritative for persistence. The `P` namespace reserves
+hierarchical labels such as `P12.1` for future persisted propositions derived
+from source `P12`; phy 2.2 does not synthesize such rows.
+
 Unsupported format versions or invalid top-level JSON disable the proposition
 workflow with a clear warning but never prevent ordinary curation. An invalid
 individual merge entry remains visible with its reason when the rest of the
@@ -98,8 +106,9 @@ decisions uses the existing save prompt.
 ## 4. User-visible workflow
 
 When a valid `curation.json` contains merges, phy creates a persistent **Merge
-Propositions** view with no row action buttons. Each row displays its ordered
-unit IDs compactly: all IDs for four or fewer units, or the first two, an
+Propositions** view with no row action buttons. Each row begins with its `P`
+display label and shows its ordered unit IDs compactly: all IDs for four or fewer
+units, or the first two, an
 ellipsis, the last, and the total count for larger propositions. A supplied
 `new_unit_id` is appended as `⇒ new_unit_id`. The row tooltip provides the key,
 full ordered IDs, status, reference, and any invalid/stale reason; the dock status

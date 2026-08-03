@@ -40,14 +40,20 @@ before `G`; Redo reapplies the merge and returns to the normal workflow.
 
 For Template GUI datasets, phy can also review automatic merge propositions from a
 dataset-local AIND/SpikeInterface format-version 2 `curation.json`. When the file
-contains valid `merges`, the persistent **Merge Propositions** view shows a
-compact ordered unit list: all IDs for four or fewer units, or the first two,
+contains valid `merges`, the persistent **Merge Propositions** view labels source
+entries `P1`, `P2`, and so on in their original file order, then shows a compact
+ordered unit list: all IDs for four or fewer units, or the first two,
 an ellipsis, the last, and the total count for larger propositions. A supplied
 `new_unit_id` follows `⇒`; it is provenance only because phy allocates the result
 through its ordinary merge model. There are no row action buttons. Hover a row
 for its full IDs, key, status, reference, and any reason. Row colors identify
 the active, accepted, accepted-modified, rejected, stale, and invalid lifecycle
 states.
+
+The `P` label is intended for navigation and discussion; filtering and status
+changes do not renumber it. Review persistence continues to use the internal
+stable key. Labels such as `P12.1` are reserved for future persisted propositions
+derived from `P12`; this release does not generate derived proposition rows.
 
 Click a pending row to stage it in Merge View immediately; this cancels and
 replaces any manual or proposition workspace already open. Clicking a completed,

@@ -121,8 +121,10 @@ Press `V` again or close Merge View to cancel without changing the clustering.
 
 If the Template GUI dataset includes an AIND/SpikeInterface format-version 2
 `curation.json` with merge suggestions, use the persistent **Merge Propositions**
-view to review them. Its button-free rows compactly show the proposed units and
-any `⇒ new_unit_id`; hover for full details and lifecycle status. Click a pending
+view to review them. Its button-free rows have source-order labels (`P1`, `P2`,
+...), compactly show the proposed units and any `⇒ new_unit_id`, and retain their
+labels while filtered or reviewed. Hover for full details and lifecycle status.
+Click a pending
 row to stage its ordered IDs in Merge View (the first is blue), replacing any
 active merge workspace. `Alt+Down`/`Alt+Up` move through pending rows in the
 current visible order and wrap; `Alt+Backspace` rejects and advances, while
