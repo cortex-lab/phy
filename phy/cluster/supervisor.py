@@ -1071,9 +1071,7 @@ class Supervisor:
         )
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.merge_view)
         connect(self._on_cluster_drop, event='cluster_drop', sender=self.similarity_view)
-        self.gui.add_view(
-            self.merge_view, position='left', closable=True, persistent=True
-        )
+        self.gui.add_view(self.merge_view, position='left', closable=True, persistent=True)
         self.gui.splitDockWidget(self.cluster_view.dock, self.merge_view.dock, Qt.Vertical)
         self.merge_view.dock.add_button(
             name='cancel_merge_mode',
