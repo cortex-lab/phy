@@ -331,8 +331,12 @@ See [Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
 Control-right-click a diagonal autocorrelogram to remove that cluster from the
-current selection. On a cross-correlogram between a Cluster View selection and a
-Similarity View selection, the same shortcut removes the Similarity View cluster.
+current selection. On a cross-correlogram between a primary selection (from the
+Cluster View or staged Merge selection) and a Similarity View selection, the same
+shortcut removes the Similarity View cluster.
+During Merge mode and proposition review, it can also remove a staged cluster; if
+that cluster is the reference, the next staged cluster becomes the reference. The
+last staged cluster cannot be removed without leaving Merge mode.
 Choose **View settings** in the view menu to edit the two spike-budget modes,
 bin size, window size, and refractory period together. The budget settings are
 global controller preferences; the bin, window, and refractory settings are

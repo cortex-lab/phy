@@ -1313,6 +1313,7 @@ class Supervisor:
         state = self.selection.state
         if self.merge_view is None or not state.is_merge_mode:
             return
+        self.merge_view._reference_id = state.reference_id
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
         self.merge_view.set_merge_ids(state.merge_ids, data, state.color_indices)
         self.merge_view.dock.set_status(self._merge_status_text())
@@ -2398,6 +2399,18 @@ class Supervisor:
             cluster_ids = (int(cluster_ids),)
         try:
             change = self.selection.remove_from_merge(cluster_ids)
+        except ValueError as e:
+            logger.warning('%s', e)
+            return
+        self._apply_selection_change(change, callback=callback)
+        return change.after
+
+    def deselect_from_merge(self, cluster_ids, callback=None):
+        """Remove staged clusters entirely from the active Merge selection."""
+        if isinstance(cluster_ids, Integral):
+            cluster_ids = (int(cluster_ids),)
+        try:
+            change = self.selection.deselect_from_merge(cluster_ids)
         except ValueError as e:
             logger.warning('%s', e)
             return

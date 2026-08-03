@@ -434,6 +434,39 @@ class CurationSelectionController:
             )
         )
 
+    def deselect_from_merge(self, cluster_ids):
+        """Remove staged IDs entirely, promoting the next staged ID to reference."""
+        self._require_merge_mode()
+        current = self._state
+        removed = _as_unique_ids(cluster_ids)
+        if not set(removed) <= set(current.merge_ids):
+            raise ValueError('Deselected IDs must belong to the merge session.')
+        merge_ids = tuple(
+            cluster_id for cluster_id in current.merge_ids if cluster_id not in removed
+        )
+        if not merge_ids:
+            raise ValueError('The last staged merge cluster cannot be deselected.')
+        reference = merge_ids[0]
+        merge = MergeSession(
+            reference,
+            merge_ids,
+            current.merge.entry_snapshot,
+            proposition_id=current.merge.proposition_id,
+        )
+        slots = list(current.color_slots)
+        if reference != current.reference_id:
+            reference_slot = slots.index(reference)
+            slots[0], slots[reference_slot] = slots[reference_slot], slots[0]
+        return self._apply(
+            CurationSelectionState(
+                mode=WorkflowMode.MERGE,
+                similar_ids=current.similar_ids,
+                reference_id=reference,
+                color_slots=tuple(slots),
+                merge=merge,
+            )
+        )
+
     def reorder_merge(self, cluster_ids, insertion):
         self._require_merge_mode()
         current = self._state

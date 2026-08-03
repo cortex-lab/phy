@@ -20,8 +20,9 @@ behavior they verify rather than listed separately.
 
 - `Control`-right-clicking a diagonal autocorrelogram in the Correlogram View
   removes that cluster from the active selection. On a cross-correlogram spanning
-  the Cluster and Similarity selections, it removes the Similarity cluster. In
-  Merge mode, staged clusters remain managed by the Merge View.
+  the primary and Similarity selections, it removes the Similarity cluster. This
+  also works during Merge mode and proposition review; removing the reference
+  promotes the next staged cluster to reference.
 - Split the lower-amplitude portion of one selected cluster directly from the
   Amplitude View: use `Alt`-right-drag to preview a threshold, then press `K`
   to commit an exact all-spike split. Individual waveform traces receive the

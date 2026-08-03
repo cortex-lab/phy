@@ -175,10 +175,28 @@ def test_correlogram_deselect_request_preserves_hidden_selection(qtbot, tempdir)
 
     try:
         supervisor = controller.supervisor
+        view = gui.list_views(CorrelogramView)[0]
+
+        # Exercise the complete GUI path for the first diagonal cell, which is the
+        # current best cluster in the Cluster View.
+        supervisor.select([0, 1, 2])
+        supervisor.block()
+        view.on_select(cluster_ids=[0, 1, 2])
+        width, height = view.canvas.get_size()
+        first_center = 0.5 * (1 - 0.9 * (1 - 1 / 3))
+        mouse_click(
+            qtbot,
+            view.canvas,
+            (first_center * width, first_center * height),
+            button='Right',
+            modifiers=('Control',),
+        )
+        supervisor.block()
+        assert supervisor.selected_clusters == [1, 2]
+
         supervisor.select(list(range(22)))
         supervisor.block()
 
-        view = gui.list_views(CorrelogramView)[0]
         emit('request_correlogram_deselect', view, 0, 1)
         supervisor.block()
         assert supervisor.selected_clusters == list(range(22))
@@ -196,6 +214,46 @@ def test_correlogram_deselect_request_preserves_hidden_selection(qtbot, tempdir)
         supervisor.block()
 
         assert supervisor.selected_clusters == list(range(1, 22))
+        assert supervisor.selected_similar == []
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_correlogram_deselects_merge_proposition_reference(qtbot, tempdir):
+    source = {
+        'format_version': '2',
+        'unit_ids': list(range(MyModel.n_clusters)),
+        'merges': [{'unit_ids': [0, 1, 2]}],
+    }
+    (tempdir / 'curation.json').write_text(json.dumps(source), encoding='utf8')
+    controller = _mock_controller(tempdir, MyPropositionController)
+    gui = controller.create_gui(do_prompt_save=False)
+    with qtbot.waitExposed(gui):
+        gui.show()
+
+    try:
+        supervisor = controller.supervisor
+        proposition = supervisor.merge_propositions.catalog.propositions[0]
+        supervisor._review_merge_proposition(supervisor.merge_propositions_view, proposition.key)
+        assert supervisor.selected_merge == [0, 1, 2]
+
+        view = gui.list_views(CorrelogramView)[0]
+        emit('request_correlogram_deselect', view, 0, 0)
+        supervisor.block()
+
+        assert supervisor.selected_merge == [1, 2]
+        assert supervisor.selection.state.reference_id == 1
+        assert supervisor.selection.state.merge.proposition_id == proposition.key
+        assert supervisor.merge_view._reference_id == 1
+
+        candidate = supervisor.similarity_view.get_ids()[0]
+        supervisor.similarity_view.select([candidate])
+        supervisor.block()
+        emit('request_correlogram_deselect', view, 1, candidate)
+        supervisor.block()
+
+        assert supervisor.selected_merge == [1, 2]
         assert supervisor.selected_similar == []
     finally:
         gui.close()

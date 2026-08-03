@@ -10119,6 +10119,15 @@ Only used in the automated testing suite.
 
 ---
 
+#### Supervisor.deselect_from_merge
+
+
+**`Supervisor.deselect_from_merge(self, cluster_ids, callback=None)`**
+
+Remove staged clusters entirely from the active Merge selection.
+
+---
+
 #### Supervisor.filter
 
 

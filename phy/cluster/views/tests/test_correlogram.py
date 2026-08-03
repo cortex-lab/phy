@@ -45,27 +45,41 @@ def test_correlogram_view(qtbot, gui):
     def on_request_correlogram_deselect(sender, cluster_id_a, cluster_id_b):
         deselected.append((cluster_id_a, cluster_id_b))
 
-    v.on_select(cluster_ids=[0, 2, 3])
+    cluster_ids = list(range(v.max_n_clusters))
+    v.on_select(cluster_ids=cluster_ids)
     width, height = v.canvas.get_size()
-    # A Control-secondary click on a diagonal autocorrelogram identifies one cluster.
-    mouse_click(
-        qtbot,
-        v.canvas,
-        (width / 2, height / 2),
-        button='Right',
-        modifiers=('Control',),
-    )
+    # Exercise every visual diagonal center, including the first/best cluster. The
+    # entire matrix is scaled to leave room for labels, so unscaled hit-testing
+    # would map outer cells to an adjacent index when many clusters are displayed.
+    n = len(cluster_ids)
+    for k in range(n):
+        x_ndc = 0.9 * (-1 + (2 * k + 1) / n)
+        y_ndc = 0.9 * (+1 - (2 * k + 1) / n)
+        mouse_click(
+            qtbot,
+            v.canvas,
+            (0.5 * width * (x_ndc + 1), 0.5 * height * (1 - y_ndc)),
+            button='Right',
+            modifiers=('Control',),
+        )
     # Plain clicks do nothing; modified cross-correlogram clicks report both clusters.
-    mouse_click(qtbot, v.canvas, (width / 6, height / 6), button='Right')
+    first_center = 0.5 * (1 - 0.9 * (1 - 1 / n))
+    second_center = 0.5 * (1 - 0.9 * (1 - 3 / n))
     mouse_click(
         qtbot,
         v.canvas,
-        (width / 2, height / 6),
+        (first_center * width, first_center * height),
+        button='Right',
+    )
+    mouse_click(
+        qtbot,
+        v.canvas,
+        (second_center * width, first_center * height),
         button='Right',
         modifiers=('Control',),
     )
 
-    assert deselected == [(2, 2), (0, 2)]
+    assert deselected == [(cluster_id, cluster_id) for cluster_id in cluster_ids] + [(0, 1)]
     unconnect(on_request_correlogram_deselect)
 
     v.toggle_normalization(True)

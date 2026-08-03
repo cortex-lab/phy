@@ -82,8 +82,10 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.local_state_attrs += ('bin_size', 'window_size', 'refractory_period')
         self.canvas.set_layout(layout='grid')
 
-        # Outside margin to show labels.
-        self.canvas.gpu_transforms.add(Scale(0.9))
+        # Outside margin to show labels. Mouse hit-testing must invert this transform
+        # before resolving a correlogram cell.
+        self._display_scale = Scale(0.9)
+        self.canvas.gpu_transforms.add(self._display_scale)
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
@@ -245,7 +247,9 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         press_pos = self.canvas._mouse_press_position
         if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
             return
-        (i, j), _ = self.canvas.grid.box_map(e.pos)
+        ndc = self.canvas.window_to_ndc(e.pos)
+        grid_ndc = self._display_scale.inverse().apply(ndc)[0]
+        i, j = self.canvas.grid.get_closest_box(grid_ndc)
         emit(
             'request_correlogram_deselect',
             self,

@@ -402,6 +402,26 @@ def test_merge_candidate_guards_reference_and_duplicate_membership():
         controller.remove_from_merge((9,))
 
 
+def test_merge_proposition_deselection_can_replace_reference():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(9,)))
+    controller.enter_merge_proposition('proposal-1', (1, 2, 3))
+
+    change = controller.deselect_from_merge((1,))
+
+    assert change.after.merge_ids == (2, 3)
+    assert change.after.reference_id == 2
+    assert change.after.presentation_order == (2, 3)
+    assert change.after.color_slots == (2, 1, 3)
+    assert change.after.merge.proposition_id == 'proposal-1'
+
+    with raises(ValueError, match='merge session'):
+        controller.deselect_from_merge((9,))
+
+    controller.deselect_from_merge((3,))
+    with raises(ValueError, match='last staged'):
+        controller.deselect_from_merge((2,))
+
+
 def test_presentation_order_transition_preserves_roles_and_colors():
     controller = CurationSelectionController(
         CurationSelectionState(

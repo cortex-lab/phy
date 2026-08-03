@@ -2133,7 +2133,7 @@ class BaseController:
             if cluster_id_a == cluster_id_b:
                 cluster_id = cluster_id_a
             else:
-                selected_clusters = set(state.cluster_ids)
+                selected_clusters = set(state.merge_ids)
                 selected_similar = set(state.similar_ids)
                 cluster_id = next(
                     (
@@ -2151,7 +2151,7 @@ class BaseController:
             elif not state.is_merge_mode and cluster_id in state.cluster_ids:
                 self.supervisor.cluster_view.select_toggle(cluster_id)
             elif state.is_merge_mode and cluster_id in state.merge_ids:
-                logger.warning('Staged Merge clusters must be changed in the Merge View.')
+                self.supervisor.deselect_from_merge(cluster_id)
 
         @connect(sender=view)
         def on_view_attached(view_, gui):
