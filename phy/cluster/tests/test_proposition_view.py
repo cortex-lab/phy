@@ -13,6 +13,7 @@ def test_merge_propositions_compact_projection_and_activation(qtbot):
         data=[
             {
                 'key': 'merge:1',
+                'display_id': 'P12',
                 'unit_ids': (1, 2, 3, 4, 5, 6),
                 'status': 'accepted_modified',
                 'reason': 'reviewed with an extra unit',
@@ -25,10 +26,10 @@ def test_merge_propositions_compact_projection_and_activation(qtbot):
 
     assert view.columns == ['proposition']
     assert not hasattr(view, 'action_buttons')
-    assert view._model.row_by_id(0)['proposition'] == '1, 2, …, 6 (6) ⇒ 42'
+    assert view._model.row_by_id(0)['proposition'] == 'P12 · 1, 2, …, 6 (6) ⇒ 42'
     index = view._model.index(0, 0)
     assert view._model.data(index, Qt.ToolTipRole) == (
-        '1, 2, 3, 4, 5, 6 ⇒ 42\n'
+        'P12 · 1, 2, 3, 4, 5, 6 ⇒ 42\n'
         'Status: accepted_modified\n'
         'Reference: 1\n'
         'Key: merge:1\n'

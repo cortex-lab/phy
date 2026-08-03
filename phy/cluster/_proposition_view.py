@@ -76,7 +76,7 @@ class MergePropositionsView(Table):
         return tuple(value)
 
     @staticmethod
-    def _format_proposition(unit_ids, new_unit_id=None):
+    def _format_proposition(unit_ids, new_unit_id=None, display_id=None):
         """Return the compact, scan-friendly proposition label."""
         labels = tuple(map(str, unit_ids))
         if len(labels) <= 4:
@@ -85,6 +85,8 @@ class MergePropositionsView(Table):
             text = f'{labels[0]}, {labels[1]}, …, {labels[-1]} ({len(labels)})'
         if new_unit_id is not None and new_unit_id != '':
             text = f'{text} ⇒ {new_unit_id}'
+        if display_id:
+            text = f'{display_id} · {text}'
         return text
 
     def _normalize_row(self, row, index):
@@ -94,6 +96,7 @@ class MergePropositionsView(Table):
         if not isinstance(key, str) or not key:
             raise ValueError('Every merge proposition row requires a non-empty string key.')
         unit_ids = self._as_ordered_ids(row.get('unit_ids'))
+        display_id = str(row.get('display_id') or f'P{index + 1}')
         status = str(row.get('status', 'pending'))
         new_unit_id = row.get('new_unit_id')
         reference = row.get('reference', unit_ids[0] if unit_ids else None)
@@ -101,7 +104,7 @@ class MergePropositionsView(Table):
         full_proposition = ', '.join(map(str, unit_ids))
         if new_unit_id is not None and new_unit_id != '':
             full_proposition = f'{full_proposition} ⇒ {new_unit_id}'
-        tooltip = f'{full_proposition}\nStatus: {status}'
+        tooltip = f'{display_id} · {full_proposition}\nStatus: {status}'
         if reference is not None:
             tooltip = f'{tooltip}\nReference: {reference}'
         tooltip = f'{tooltip}\nKey: {key}'
@@ -109,10 +112,11 @@ class MergePropositionsView(Table):
             tooltip = f'{tooltip}\n{row["reason"]}'
         return {
             'id': index,
-            'proposition': self._format_proposition(unit_ids, new_unit_id),
+            'proposition': self._format_proposition(unit_ids, new_unit_id, display_id),
             # Retain full metadata in the model for filtering, status text, and
             # stable-key recovery, but do not expose it as a table column.
             'key': key,
+            'display_id': display_id,
             'unit_ids': unit_ids,
             'status': status,
             'reference': reference,

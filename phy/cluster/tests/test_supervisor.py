@@ -783,6 +783,7 @@ def test_merge_proposition_review_cancel_restores_exact_entry(
 
     assert view.columns == ['proposition']
     assert not hasattr(view, 'action_buttons')
+    assert [view._model.row_by_id(i)['display_id'] for i in range(3)] == ['P1', 'P2', 'P3']
     assert view.select_key(key)
     assert supervisor.selection.snapshot() is entry
     supervisor.toggle_merge_mode()

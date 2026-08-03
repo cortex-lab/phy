@@ -1310,6 +1310,7 @@ class Supervisor:
             rows.append(
                 {
                     'key': key,
+                    'display_id': f'P{entry.index + 1}',
                     'unit_ids': unit_ids,
                     'status': status,
                     'reason': entry.invalid_reason
