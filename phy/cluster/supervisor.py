@@ -22,6 +22,8 @@ from phy.gui.widgets import Barrier, Table, _uniq
 from phy.utils.selection import SelectionIntent, SelectionMutation
 
 from ._history import GlobalHistory
+from ._proposition_view import MergePropositionsView
+from ._propositions import PropositionStatus
 from ._selection import CurationSelectionController, SelectionChange
 from ._utils import create_cluster_meta
 from .clustering import Clustering
@@ -38,16 +40,15 @@ def _process_ups(ups):  # pragma: no cover
     """This function processes the UpdateInfo instances of the two
     undo stacks (clustering and cluster metadata) and concatenates them
     into a single UpdateInfo instance."""
+    ups = tuple(up for up in ups if up is not None)
     if len(ups) == 0:
         return
     elif len(ups) == 1:
         return ups[0]
-    elif len(ups) == 2:
-        up = ups[0]
-        up.update(ups[1])
-        return up
-    else:
-        raise NotImplementedError()
+    up = ups[0]
+    for other in ups[1:]:
+        up.update(other)
+    return up
 
 
 def _ensure_all_ints(l):
@@ -752,6 +753,7 @@ class Supervisor:
         context=None,
         n_similar_clusters_to_select=None,
         skip_masked_clusters=True,
+        merge_propositions=None,
     ):
         super().__init__()
         self.context = context
@@ -759,6 +761,8 @@ class Supervisor:
         self.actions = None  # will be set when attaching the GUI
         self.gui = None
         self.merge_view = None
+        self.merge_propositions_view = None
+        self.merge_propositions = merge_propositions
         self._merge_close_callback = None
         self._merge_dock_state = None
         self._suspend_presentation_order_sync = False
@@ -1255,7 +1259,55 @@ class Supervisor:
         state = self.selection.state
         staged = len(state.merge_ids)
         similar = len(state.similar_ids)
-        return f'MERGE MODE — {staged} staged + {similar} selected similar = {staged + similar} clusters'
+        source = (
+            f' — PROPOSITION {state.merge.proposition_id}'
+            if state.merge is not None and state.merge.proposition_id
+            else ''
+        )
+        return (
+            f'MERGE MODE{source} — {staged} staged + {similar} selected similar '
+            f'= {staged + similar} clusters'
+        )
+
+    def _proposition_rows(self):
+        """Project durable propositions and current live-cluster validity for the view."""
+        if self.merge_propositions is None:
+            return []
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        catalog = self.merge_propositions.catalog
+        rows = []
+        for entry in catalog.entries:
+            proposition = entry.proposition
+            key = entry.key or f'invalid:{entry.index}'
+            status = (
+                catalog.status_for(key) if entry.key is not None else PropositionStatus.INVALID
+            )
+            unit_ids = proposition.unit_ids if proposition is not None else ()
+            rows.append(
+                {
+                    'key': key,
+                    'unit_ids': unit_ids,
+                    'status': status.value,
+                    'reason': entry.invalid_reason
+                    or (catalog.reason_for(key) if entry.key is not None else None),
+                    'new_unit_id': proposition.new_unit_id if proposition is not None else None,
+                    'can_review': status is PropositionStatus.PENDING,
+                    'can_reject': status is PropositionStatus.PENDING,
+                    'can_skip': status is PropositionStatus.PENDING,
+                    'can_reset': status
+                    in {
+                        PropositionStatus.ACCEPTED,
+                        PropositionStatus.ACCEPTED_MODIFIED,
+                        PropositionStatus.REJECTED,
+                    }
+                    and set(unit_ids) <= set(catalog.live_unit_ids),
+                }
+            )
+        return rows
+
+    def _refresh_propositions(self):
+        if self.merge_propositions_view is not None:
+            self.merge_propositions_view.set_propositions(self._proposition_rows())
 
     def _apply_selection_change(
         self, change, callback=None, refresh_similarity=True, publish=True, sync_presentation=True
@@ -1401,6 +1453,7 @@ class Supervisor:
             self._restore_workflow_context(context)
         else:
             self._close_merge_view()
+        self._refresh_propositions()
 
     @staticmethod
     def _is_merge_history_context(context):
@@ -1562,6 +1615,8 @@ class Supervisor:
         self.similarity_view.set_busy(busy)
         if self.merge_view is not None:
             self.merge_view.set_busy(busy)
+        if self.merge_propositions_view is not None:
+            self.merge_propositions_view.set_busy(busy)
         # If the GUI is no longer busy, deliver the latest selection on the next timer tick.
         # Keeping this asynchronous avoids re-entering the task queue during a busy transition.
         if not busy:
@@ -1702,6 +1757,26 @@ class Supervisor:
 
         gui.add_view(self.cluster_view, position='left', closable=False)
         gui.add_view(self.similarity_view, position='left', closable=False)
+        if self.merge_propositions is not None and self.merge_propositions.catalog.entries:
+            self.merge_propositions_view = MergePropositionsView(
+                gui, data=self._proposition_rows()
+            )
+            gui.add_view(self.merge_propositions_view, position='left', closable=False)
+            connect(
+                self._review_merge_proposition,
+                event='review_merge_proposition',
+                sender=self.merge_propositions_view,
+            )
+            connect(
+                self._reject_merge_proposition,
+                event='reject_merge_proposition',
+                sender=self.merge_propositions_view,
+            )
+            connect(
+                self._reset_merge_proposition,
+                event='reset_merge_proposition',
+                sender=self.merge_propositions_view,
+            )
 
         # Create all supervisor actions (edit and view menu).
         self.action_creator.attach(gui)
@@ -1729,6 +1804,13 @@ class Supervisor:
         @connect(sender=gui)
         def on_close(e):
             unconnect(on_is_busy, self)
+            if self.merge_propositions_view is not None:
+                unconnect(
+                    self.merge_propositions_view,
+                    self._review_merge_proposition,
+                    self._reject_merge_proposition,
+                    self._reset_merge_proposition,
+                )
 
         @connect(sender=self.cluster_view)
         def on_ready(sender):
@@ -1783,6 +1865,11 @@ class Supervisor:
                 logger.warning('Select at least one additional candidate before merging.')
             return
         selection_before = self.selection.snapshot()
+        proposition_id = (
+            selection_before.merge.proposition_id
+            if merge_mode and selection_before.merge is not None
+            else None
+        )
         workflow_context = (
             {'mode': 'merge', 'tables': self._workflow_context()} if merge_mode else None
         )
@@ -1801,8 +1888,13 @@ class Supervisor:
         if merge_mode:
             self._set_merge_mode_ui(False)
             self._close_merge_view()
+        controllers = [self.clustering]
+        if proposition_id is not None:
+            self.merge_propositions.accept(proposition_id, tuple(cluster_ids), int(out.added[0]))
+            controllers.append(self.merge_propositions)
+        self._refresh_propositions()
         self._global_history.action(
-            self.clustering,
+            *controllers,
             description='merge',
             selection_before=selection_before,
             selection_after=self.selection.snapshot(),
@@ -1829,6 +1921,7 @@ class Supervisor:
         out = self.clustering.split(spike_ids, spike_clusters_rel=spike_clusters_rel)
         if not getattr(task_logger, '_processing', False):
             self._select_after_split(out)
+        self._refresh_propositions()
         self._global_history.action(
             self.clustering,
             description='split',
@@ -1950,6 +2043,60 @@ class Supervisor:
         self._apply_selection_change(change, callback=callback)
         return change.after
 
+    def _review_merge_proposition(self, sender, key):
+        """Open one actionable proposition in the ordinary Merge workspace."""
+        if self.selection.state.is_merge_mode:
+            logger.warning('Finish or cancel the active Merge workspace first.')
+            return
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        catalog = self.merge_propositions.catalog
+        if catalog.status_for(key) is not PropositionStatus.PENDING:
+            logger.warning('Merge proposition %s is not actionable.', key)
+            self._refresh_propositions()
+            return
+        proposition = catalog.entry_for(key).proposition
+        self.cluster_view.debouncer.flush()
+        self.similarity_view.debouncer.flush()
+        change = self.selection.enter_merge_proposition(
+            key, proposition.unit_ids, self._workflow_context()
+        )
+        self._create_merge_view()
+        self._set_merge_mode_ui(True)
+        self._apply_selection_change(change)
+        return change.after
+
+    def _reject_merge_proposition(self, sender, key):
+        if self.selection.state.is_merge_mode:
+            logger.warning('Cancel the active Merge workspace before rejecting a proposition.')
+            return
+        before = self.selection.snapshot()
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self.merge_propositions.reject(key)
+        self._global_history.action(
+            self.merge_propositions,
+            description=f'reject merge proposition {key}',
+            selection_before=before,
+            selection_after=before,
+        )
+        self._refresh_propositions()
+        self._update_save_feedback()
+
+    def _reset_merge_proposition(self, sender, key):
+        if self.selection.state.is_merge_mode:
+            logger.warning('Cancel the active Merge workspace before resetting a review.')
+            return
+        before = self.selection.snapshot()
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self.merge_propositions.reset(key)
+        self._global_history.action(
+            self.merge_propositions,
+            description=f'reset merge proposition {key}',
+            selection_before=before,
+            selection_after=before,
+        )
+        self._refresh_propositions()
+        self._update_save_feedback()
+
     def add_to_merge(self, cluster_ids, insertion=None, callback=None):
         """Transfer candidate IDs into the Merge workspace."""
         cluster_ids = tuple(cluster_ids)
@@ -2028,7 +2175,15 @@ class Supervisor:
 
     def is_dirty(self):
         """Return whether there are any pending changes."""
-        return self._is_dirty if self._is_dirty in (False, True) else len(self._global_history) > 1
+        data_dirty = (
+            self._is_dirty
+            if self._is_dirty in (False, True)
+            else self._global_history.current_position > 0
+        )
+        review_dirty = bool(
+            self.merge_propositions is not None and self.merge_propositions.is_dirty()
+        )
+        return data_dirty or review_dirty
 
     def _update_save_feedback(self, saved=False):
         """Reflect the current curation-save state in the attached GUI."""
@@ -2085,6 +2240,13 @@ class Supervisor:
             if field not in ('next_cluster')
         ]
         emit('save_clustering', self, spike_clusters, groups, *labels)
+        if self.merge_propositions is not None:
+            emit(
+                'save_proposition_reviews',
+                self,
+                self.merge_propositions.catalog.review_mapping(),
+            )
+            self.merge_propositions.mark_saved()
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
         self._is_dirty = False

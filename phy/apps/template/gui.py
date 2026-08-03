@@ -59,6 +59,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     """
 
     gui_name = 'TemplateGUI'
+    enable_merge_propositions = True
 
     # Specific views implemented in this class.
     _new_views = ('TemplateFeatureView',)

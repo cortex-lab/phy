@@ -22,6 +22,11 @@ from phy.utils.color import selected_cluster_color
 from phy.utils.context import Context
 
 from .. import supervisor as _supervisor
+from .._propositions import (
+    MergePropositionController,
+    PropositionStatus,
+    decode_curation_mapping,
+)
 from ..supervisor import (
     ActionCreator,
     ClusterView,
@@ -734,6 +739,128 @@ def test_failed_merge_preserves_complete_merge_workspace(monkeypatch, supervisor
     assert supervisor.selection.state is state
     assert supervisor.merge_view.get_ids() == rows
     assert supervisor.cluster_view._interaction_blocked
+
+
+def _proposition_supervisor(gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir):
+    catalog = decode_curation_mapping(
+        {
+            'format_version': '2',
+            'unit_ids': cluster_ids,
+            'merges': [{'unit_ids': [30, 20]}, {'unit_ids': [20, 10]}],
+        }
+    )
+    supervisor = Supervisor(
+        np.repeat(cluster_ids, 2),
+        cluster_groups=cluster_groups,
+        cluster_labels=cluster_labels,
+        similarity=similarity,
+        context=Context(tempdir),
+        merge_propositions=MergePropositionController(catalog),
+    )
+    supervisor.attach(gui)
+    barrier = Barrier()
+    connect(barrier('cluster_view'), event='ready', sender=supervisor.cluster_view)
+    connect(barrier('similarity_view'), event='ready', sender=supervisor.similarity_view)
+    barrier.wait()
+    return supervisor
+
+
+def test_merge_proposition_review_cancel_restores_exact_entry(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    _select(supervisor, [11], [10])
+    entry = supervisor.selection.snapshot()
+    key = supervisor.merge_propositions.catalog.propositions[0].key
+    view = supervisor.merge_propositions_view
+
+    view.sort_by('key', 'desc')
+    assert view.select_key(key)
+    assert supervisor.selection.snapshot() is entry
+    assert view.trigger('review')
+
+    assert supervisor.selected_merge == [30, 20]
+    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection.state.color_indices[30] == 0
+    assert supervisor.selection.state.merge.proposition_id == key
+    assert 'PROPOSITION merge:' in supervisor.merge_view.dock.status
+
+    supervisor.toggle_merge_mode()
+    assert supervisor.selection.state == entry
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+
+
+def test_merge_proposition_accept_overlap_and_coupled_undo_redo(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    first, overlap = supervisor.merge_propositions.catalog.propositions
+    assignments_before = supervisor.clustering.spike_clusters.copy()
+    supervisor._review_merge_proposition(supervisor.merge_propositions_view, first.key)
+    workspace = supervisor.selection.snapshot()
+
+    up = supervisor.merge()
+    supervisor.block()
+
+    assert (
+        supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.ACCEPTED
+    )
+    assert supervisor.merge_propositions.catalog.status_for(overlap.key) is PropositionStatus.STALE
+    assert supervisor.merge_propositions.catalog.reviews[first.key].applied_unit_ids == (30, 20)
+    assert supervisor.merge_propositions_view.select_key(overlap.key)
+    assert not supervisor.merge_propositions_view.can_trigger('review')
+    assignments_after = supervisor.clustering.spike_clusters.copy()
+
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, assignments_before)
+    assert supervisor.selection.state == workspace
+    assert supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.PENDING
+    assert (
+        supervisor.merge_propositions.catalog.status_for(overlap.key) is PropositionStatus.PENDING
+    )
+
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, assignments_after)
+    assert (
+        supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.ACCEPTED
+    )
+    assert supervisor.merge_propositions.catalog.status_for(overlap.key) is PropositionStatus.STALE
+    assert supervisor.selected == list(up.added)
+
+
+def test_failed_proposition_merge_and_reject_history(
+    monkeypatch, gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    key = supervisor.merge_propositions.catalog.propositions[0].key
+    supervisor._review_merge_proposition(supervisor.merge_propositions_view, key)
+    workspace = supervisor.selection.snapshot()
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('merge failed')
+
+    monkeypatch.setattr(supervisor.clustering, 'merge', fail)
+    with raises(RuntimeError, match='merge failed'):
+        supervisor.merge()
+    assert supervisor.selection.state is workspace
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+
+    supervisor.toggle_merge_mode()
+    assert supervisor.merge_propositions_view.select_key(key)
+    assert supervisor.merge_propositions_view.trigger('reject')
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.REJECTED
+    supervisor.undo()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.PENDING
+    supervisor.redo()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.REJECTED
 
 
 def test_saving_gui_state_cancels_transient_merge_selection(supervisor):

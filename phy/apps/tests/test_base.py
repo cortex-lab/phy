@@ -4,6 +4,7 @@
 # Imports
 # ------------------------------------------------------------------------------
 
+import json
 import logging
 import os
 import shutil
@@ -26,6 +27,7 @@ from phylib.utils import Bunch, connect, emit, reset, unconnect
 from pytest import mark
 from pytestqt.plugin import QtBot
 
+from phy.cluster._propositions import PropositionStatus
 from phy.cluster.clustering import Clustering
 from phy.cluster.views import (
     AmplitudeView,
@@ -150,6 +152,10 @@ class MyControllerFull(TemplateMixin, WaveformMixin, FeatureMixin, TraceMixin, M
     """With everything."""
 
 
+class MyPropositionController(MyController):
+    enable_merge_propositions = True
+
+
 def _mock_controller(tempdir, cls):
     model = MyModel()
     return cls(
@@ -159,6 +165,40 @@ def _mock_controller(tempdir, cls):
         clear_cache=True,
         enable_threading=False,
     )
+
+
+def test_controller_loads_and_reopens_merge_proposition_reviews(tempdir):
+    source = {
+        'format_version': '2',
+        'unit_ids': list(range(MyModel.n_clusters)),
+        'merges': [{'unit_ids': [1, 2]}],
+    }
+    (tempdir / 'curation.json').write_text(json.dumps(source), encoding='utf8')
+    controller = _mock_controller(tempdir, MyPropositionController)
+    proposition = controller.supervisor.merge_propositions.catalog.propositions[0]
+
+    controller.supervisor.merge_propositions.reject(proposition.key)
+    controller.supervisor.save()
+
+    sidecar = json.loads((tempdir / 'curation_review.json').read_text(encoding='utf8'))
+    assert sidecar['source']['filename'] == 'curation.json'
+    assert len(sidecar['source']['sha256']) == 64
+    assert sidecar['reviews'][proposition.key]['decision'] == 'rejected'
+
+    reopened = _mock_controller(tempdir, MyPropositionController)
+    assert (
+        reopened.supervisor.merge_propositions.catalog.status_for(proposition.key)
+        is PropositionStatus.REJECTED
+    )
+
+
+def test_invalid_curation_json_does_not_prevent_ordinary_controller(tempdir, caplog):
+    (tempdir / 'curation.json').write_text('{bad', encoding='utf8')
+
+    controller = _mock_controller(tempdir, MyPropositionController)
+
+    assert controller.supervisor.merge_propositions is None
+    assert 'Merge Propositions disabled' in caplog.text
 
 
 def test_allocate_spike_counts_redistributes_total_budget():

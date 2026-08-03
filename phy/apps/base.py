@@ -20,6 +20,12 @@ from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
 from scipy.signal import butter, lfilter
 
+from phy.cluster._propositions import (
+    MergePropositionCatalog,
+    MergePropositionController,
+    decode_curation_mapping,
+    decode_review_mapping,
+)
 from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (
@@ -48,6 +54,7 @@ from phy.gui.widgets import IPythonView, view_settings_dialog
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 
+from ._proposition_io import load_proposition_documents, write_review_document
 from ._utils import _close_trace_reader
 
 logger = logging.getLogger(__name__)
@@ -1088,6 +1095,7 @@ class BaseController:
 
     gui_name = 'BaseGUI'
     gui_version = 2
+    enable_merge_propositions = False
 
     # Default value of the 'show_mapped_channels' param if it is not set in params.py.
     default_show_mapped_channels = True
@@ -1328,6 +1336,8 @@ class BaseController:
         # Cluster groups.
         cluster_groups = self.model.metadata.get('group', {})
 
+        merge_propositions = self._load_merge_propositions()
+
         # Create the Supervisor instance.
         supervisor = Supervisor(
             spike_clusters=self.model.spike_clusters,
@@ -1337,6 +1347,7 @@ class BaseController:
             similarity=self.similarity_functions[self.similarity],
             new_cluster_id=new_cluster_id,
             context=self.context,
+            merge_propositions=merge_propositions,
         )
         # Load the non-group metadata from the model to the cluster_meta.
         for name in sorted(self.model.metadata):
@@ -1349,8 +1360,57 @@ class BaseController:
         # Connect the `save_clustering` event raised by the supervisor when saving
         # to the model's saving functions.
         connect(self.on_save_clustering, sender=supervisor)
+        if merge_propositions is not None:
+            connect(
+                self.on_save_proposition_reviews,
+                event='save_proposition_reviews',
+                sender=supervisor,
+            )
 
         self.supervisor = supervisor
+
+    def _load_merge_propositions(self):
+        """Load optional AIND/SI merge propositions for supported applications."""
+        self._merge_proposition_sha256 = None
+        if not self.enable_merge_propositions:
+            return None
+        try:
+            documents = load_proposition_documents(self.dir_path)
+        except ValueError as e:
+            logger.warning('Merge Propositions disabled: %s', e)
+            return None
+        if documents.curation is None:
+            if documents.review is not None:
+                logger.warning('Ignoring curation_review.json because curation.json is absent.')
+            return None
+        try:
+            catalog = decode_curation_mapping(documents.curation)
+        except (TypeError, ValueError) as e:
+            logger.warning('Merge Propositions disabled: %s', e)
+            return None
+        self._merge_proposition_sha256 = documents.curation_sha256
+        reviews = {}
+        if documents.review is not None:
+            try:
+                source, reviews = decode_review_mapping(documents.review)
+            except (TypeError, ValueError) as e:
+                logger.warning('Merge Propositions disabled: invalid curation_review.json: %s', e)
+                return None
+            else:
+                review_hash = source.get('sha256')
+                if review_hash and review_hash != documents.curation_sha256:
+                    logger.warning(
+                        'curation.json changed since its reviews were saved; matching '
+                        'proposition decisions were retained and unmatched reviews are orphaned.'
+                    )
+        catalog = MergePropositionCatalog(
+            catalog.source_unit_ids,
+            catalog.entries,
+            reviews=reviews,
+            live_unit_ids=tuple(map(int, np.unique(self.model.spike_clusters))),
+            source_mapping=catalog.source_mapping,
+        )
+        return MergePropositionController(catalog)
 
     def _set_selector(self):
         """Set the Selector instance."""
@@ -1493,6 +1553,20 @@ class BaseController:
         for name, values in labels:
             self.model.save_metadata(name, values)
         self._save_cluster_info()
+
+    def on_save_proposition_reviews(self, sender, mapping):
+        """Atomically save phy-owned review state after cluster assignments."""
+        mapping = dict(mapping)
+        source = dict(mapping.get('source', {}))
+        source['filename'] = 'curation.json'
+        if self._merge_proposition_sha256 is not None:
+            source['sha256'] = self._merge_proposition_sha256
+        mapping['source'] = source
+        write_review_document(
+            self.dir_path,
+            mapping,
+            expected_curation_sha256=self._merge_proposition_sha256,
+        )
 
     def _save_cluster_info(self):
         """Save all the contents of the cluster view into `cluster_info.tsv`."""
