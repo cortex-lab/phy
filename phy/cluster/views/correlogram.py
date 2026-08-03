@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 from phylib.io.array import _clip
-from phylib.utils import Bunch
+from phylib.utils import Bunch, emit
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
@@ -62,6 +62,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
         'change_bin_size': 'alt+wheel',
+        'deselect_cluster': 'ctrl+right click',
     }
 
     default_snippets = {
@@ -236,6 +237,21 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         else:
             self.text_visual.hide()
         self.canvas.update()
+
+    def on_mouse_release(self, e):
+        """Remove a cluster after a stationary Control-secondary click."""
+        if 'Control' not in e.modifiers or e.button != 'Right' or not self.cluster_ids:
+            return
+        press_pos = self.canvas._mouse_press_position
+        if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
+            return
+        (i, j), _ = self.canvas.grid.box_map(e.pos)
+        emit(
+            'request_correlogram_deselect',
+            self,
+            self.cluster_ids[i],
+            self.cluster_ids[j],
+        )
 
     def attach(self, gui):
         """Attach the view to the GUI."""

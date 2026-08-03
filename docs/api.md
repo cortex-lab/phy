@@ -7429,6 +7429,15 @@ selected clusters (template view, raster view).
 
 ---
 
+#### CorrelogramView.on_mouse_release
+
+
+**`CorrelogramView.on_mouse_release(self, e)`**
+
+Remove a cluster after a stationary Control-secondary click.
+
+---
+
 #### CorrelogramView.on_mouse_wheel
 
 

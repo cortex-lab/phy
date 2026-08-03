@@ -330,6 +330,9 @@ auto- and cross-correlogram calculation. These spikes are picked randomly.
 See [Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
+Control-right-click a diagonal autocorrelogram to remove that cluster from the
+current selection. On a cross-correlogram between a Cluster View selection and a
+Similarity View selection, the same shortcut removes the Similarity View cluster.
 Choose **View settings** in the view menu to edit the two spike-budget modes,
 bin size, window size, and refractory period together. The budget settings are
 global controller preferences; the bin, window, and refractory settings are
@@ -349,6 +352,7 @@ Keyboard shortcuts for CorrelogramView
 Keyboard shortcuts
 - change_bin_size                          alt+wheel
 - change_window_size                       ctrl+wheel
+- deselect_cluster                         ctrl+right click
 
 Snippets
 - set_bin                                  :cb

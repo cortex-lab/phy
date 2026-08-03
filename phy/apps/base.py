@@ -2128,6 +2128,32 @@ class BaseController:
         )
 
         @connect(sender=view)
+        def on_request_correlogram_deselect(sender, cluster_id_a, cluster_id_b):
+            state = self.supervisor.selection.state
+            if cluster_id_a == cluster_id_b:
+                cluster_id = cluster_id_a
+            else:
+                selected_clusters = set(state.cluster_ids)
+                selected_similar = set(state.similar_ids)
+                cluster_id = next(
+                    (
+                        cluster_id
+                        for cluster_id, other_cluster_id in (
+                            (cluster_id_a, cluster_id_b),
+                            (cluster_id_b, cluster_id_a),
+                        )
+                        if cluster_id in selected_similar and other_cluster_id in selected_clusters
+                    ),
+                    None,
+                )
+            if cluster_id in state.similar_ids:
+                self.supervisor.similarity_view.select_toggle(cluster_id)
+            elif not state.is_merge_mode and cluster_id in state.cluster_ids:
+                self.supervisor.cluster_view.select_toggle(cluster_id)
+            elif state.is_merge_mode and cluster_id in state.merge_ids:
+                logger.warning('Staged Merge clusters must be changed in the Merge View.')
+
+        @connect(sender=view)
         def on_view_attached(view_, gui):
             def validate(values):
                 if values['bin_size'] >= values['window_size']:
@@ -2204,6 +2230,7 @@ class BaseController:
 
         @connect(sender=view)
         def on_close_view(view_, gui):
+            unconnect(on_request_correlogram_deselect)
             unconnect(on_view_attached)
 
         return view

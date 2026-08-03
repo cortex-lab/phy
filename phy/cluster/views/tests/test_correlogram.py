@@ -6,6 +6,9 @@
 
 import numpy as np
 from phylib.io.mock import artificial_correlograms
+from phylib.utils import connect, unconnect
+
+from phy.plot.tests import mouse_click
 
 from ..correlogram import CorrelogramView
 from . import _stop_and_close
@@ -35,6 +38,35 @@ def test_correlogram_view(qtbot, gui):
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
+
+    deselected = []
+
+    @connect(sender=v)
+    def on_request_correlogram_deselect(sender, cluster_id_a, cluster_id_b):
+        deselected.append((cluster_id_a, cluster_id_b))
+
+    v.on_select(cluster_ids=[0, 2, 3])
+    width, height = v.canvas.get_size()
+    # A Control-secondary click on a diagonal autocorrelogram identifies one cluster.
+    mouse_click(
+        qtbot,
+        v.canvas,
+        (width / 2, height / 2),
+        button='Right',
+        modifiers=('Control',),
+    )
+    # Plain clicks do nothing; modified cross-correlogram clicks report both clusters.
+    mouse_click(qtbot, v.canvas, (width / 6, height / 6), button='Right')
+    mouse_click(
+        qtbot,
+        v.canvas,
+        (width / 2, height / 6),
+        button='Right',
+        modifiers=('Control',),
+    )
+
+    assert deselected == [(2, 2), (0, 2)]
+    unconnect(on_request_correlogram_deselect)
 
     v.toggle_normalization(True)
     v.toggle_labels(False)

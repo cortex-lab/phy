@@ -167,6 +167,41 @@ def _mock_controller(tempdir, cls):
     )
 
 
+def test_correlogram_deselect_request_preserves_hidden_selection(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    gui = controller.create_gui(do_prompt_save=False)
+    with qtbot.waitExposed(gui):
+        gui.show()
+
+    try:
+        supervisor = controller.supervisor
+        supervisor.select(list(range(22)))
+        supervisor.block()
+
+        view = gui.list_views(CorrelogramView)[0]
+        emit('request_correlogram_deselect', view, 0, 1)
+        supervisor.block()
+        assert supervisor.selected_clusters == list(range(22))
+
+        emit('request_correlogram_deselect', view, 0, 0)
+        supervisor.block()
+
+        assert supervisor.selected_clusters == list(range(1, 22))
+
+        supervisor.similarity_view.select([22])
+        supervisor.block()
+        assert supervisor.selected_similar == [22]
+
+        emit('request_correlogram_deselect', view, 1, 22)
+        supervisor.block()
+
+        assert supervisor.selected_clusters == list(range(1, 22))
+        assert supervisor.selected_similar == []
+    finally:
+        gui.close()
+        controller.close()
+
+
 def test_controller_loads_and_reopens_merge_proposition_reviews(tempdir):
     source = {
         'format_version': '2',
