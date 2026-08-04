@@ -43,6 +43,7 @@ class MergeSession:
     ordered_ids: tuple[int, ...]
     entry_snapshot: NormalWorkflowSnapshot
     proposition_id: str | None = None
+    is_post_merge: bool = False
 
     def __post_init__(self):
         ordered = _as_unique_ids(self.ordered_ids)
@@ -50,6 +51,8 @@ class MergeSession:
             raise ValueError('The merge reference must be the first staged cluster.')
         if self.proposition_id is not None and not self.proposition_id:
             raise ValueError('The merge proposition ID cannot be empty.')
+        if self.proposition_id is not None and self.is_post_merge:
+            raise ValueError('A proposition workspace cannot be a post-merge continuation.')
         object.__setattr__(self, 'ordered_ids', ordered)
 
 
@@ -350,6 +353,26 @@ class CurationSelectionController:
             )
         )
 
+    def continue_after_merge(self, cluster_id, workflow_context=None):
+        """Continue manual Merge mode with a committed result as the new reference."""
+        self._require_merge_mode()
+        if self._state.merge.proposition_id is not None:
+            raise ValueError('Proposition merges advance through the proposition workflow.')
+        normal = CurationSelectionState(cluster_ids=(cluster_id,))
+        merge = MergeSession(
+            cluster_id,
+            (cluster_id,),
+            NormalWorkflowSnapshot(normal, workflow_context),
+            is_post_merge=True,
+        )
+        return self._apply(
+            CurationSelectionState(
+                mode=WorkflowMode.MERGE,
+                reference_id=cluster_id,
+                merge=merge,
+            )
+        )
+
     def switch_merge_proposition(self, proposition_id, ordered_ids):
         """Replace the active Merge workspace while preserving its Normal entry snapshot."""
         self._require_merge_mode()
@@ -395,6 +418,7 @@ class CurationSelectionController:
             tuple(ids),
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            is_post_merge=current.merge.is_post_merge,
         )
         similar = tuple(cluster_id for cluster_id in current.similar_ids if cluster_id not in new)
         effective = _ordered_union(merge.ordered_ids, similar)
@@ -421,6 +445,7 @@ class CurationSelectionController:
             tuple(i for i in current.merge_ids if i not in removed),
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            is_post_merge=current.merge.is_post_merge,
         )
         similar = _ordered_union(current.similar_ids, removed)
         effective = _ordered_union(merge.ordered_ids, similar)
@@ -452,6 +477,7 @@ class CurationSelectionController:
             merge_ids,
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            is_post_merge=current.merge.is_post_merge,
         )
         slots = list(current.color_slots)
         if reference != current.reference_id:
@@ -484,6 +510,7 @@ class CurationSelectionController:
             tuple(remain),
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            is_post_merge=current.merge.is_post_merge,
         )
         return self._apply(
             CurationSelectionState(

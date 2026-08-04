@@ -152,9 +152,12 @@ The refactor should establish the following invariants:
    before and after states.
 8. Cancellation restores the exact entry snapshot.
 9. Undoing a Merge-mode merge restores the exact pre-commit workspace.
-10. Workspace edits do not enter the curation undo stack.
-11. Public selection and plugin APIs remain compatible.
-12. Selection transitions operate on cluster IDs and do no work proportional to
+10. A successful manual merge remains in Merge mode with its result as the sole
+    blue reference; its cancellation snapshot is the corresponding settled
+    Normal-mode result selection.
+11. Workspace edits do not enter the curation undo stack.
+12. Public selection and plugin APIs remain compatible.
+13. Selection transitions operate on cluster IDs and do no work proportional to
     every spike.
 
 ## 4. Proposed domain model
@@ -210,6 +213,8 @@ class MergeSession:
     reference_id: int
     ordered_ids: tuple[int, ...]
     entry_snapshot: NormalWorkflowSnapshot
+    proposition_id: str | None = None
+    is_post_merge: bool = False
 ```
 
 `ordered_ids[0]` is always `reference_id`. The reference cannot be removed or
@@ -220,6 +225,13 @@ The entry snapshot contains the user state required by the workflow contract,
 not arbitrary application state. It includes selections, reference,
 presentation order, and any table filter, sort, scroll, or navigation state that
 entering or editing Merge mode changes.
+
+`is_post_merge` distinguishes the automatically retained singleton workspace
+from a manually entered, uncommitted workspace. This allows `Undo` to target the
+commit directly without allowing a fresh temporary workspace to undo an older
+curation action. Workspace edits preserve this marker; exiting and manually
+re-entering Merge mode clears it. Proposition workspaces use their own provenance
+and automatic-advancement contract and are never post-merge continuations.
 
 ### 4.4 Selection change
 
@@ -402,10 +414,16 @@ For a Merge-mode merge:
 
 1. capture the complete pre-commit Merge state;
 2. execute the clustering merge;
-3. capture the resulting Normal-mode state;
+3. capture the resulting Normal-mode state and wrap it as the entry snapshot of
+   a singleton post-merge continuation workspace;
 4. store both on the global action entry;
 5. on undo, undo controllers and restore `selection_before` transactionally; and
 6. on redo, redo controllers and restore `selection_after` transactionally.
+
+The continuation keeps Merge View visible, makes the result the sole staged blue
+reference, clears Similarity selection, and recomputes Similarity rows. Exiting
+with `V` restores its settled Normal-mode result snapshot. Group and metadata
+actions remain disabled until that exit.
 
 The existing `request_undo_state` mechanism may be used as a compatibility step,
 but the final ownership of Merge workflow context belongs to the global curation
@@ -529,6 +547,8 @@ The initial Merge-mode action policy is:
 - reject unsafe direct or plugin calls explicitly without partially mutating the
   workspace;
 - do not let an uncommitted Merge session undo an earlier curation action;
+- keep a successful manual merge in a marked singleton continuation workspace
+  whose Undo action targets that commit directly;
 - after undoing a Merge-mode merge, allow redo to reapply it; and
 - truncate that redo branch normally if the restored workspace is edited and a
   different curation action is committed.

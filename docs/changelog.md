@@ -40,7 +40,9 @@ behavior they verify rather than listed separately.
   size; proposition navigation updates that dock without moving neighboring
   views. The dimmed Cluster View remains scrollable. Scientific views follow Merge View order and then
   selected Similarity rows in visible table order. Cancellation restores the entry state, and
-  undo restores the full pre-merge workspace.
+  undo restores the full pre-merge workspace. After a successful manual merge,
+  the result remains as the sole blue Merge View reference for inspection or a
+  further merge; press `V` to return to Normal mode before assigning quality.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
   dataset-local `curation.json` in a persistent **Merge Propositions** view.
   Its compact rows have no action buttons and carry stable source-order display

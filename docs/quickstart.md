@@ -117,8 +117,12 @@ clusters and press `G` to merge. phy gives the result a new cluster ID. Press
 
 For a longer comparison, press `V` first. Merge View keeps the candidates staged while you
 continue exploring Similarity View. Its status shows exactly how many clusters `G` will merge.
-Press `V` again or close Merge View to cancel without changing the clustering. Reopening uses the
-same dock and restores its previous placement and size.
+After `G`, the merged result stays in Merge View as the blue reference so you can inspect it or
+add candidates for another merge. Press `V` to return to Normal mode before assigning the result
+to `good`, `mua`, or `noise`. Before the first commit, `V` or closing Merge View cancels without
+changing the clustering; afterward it exits with the latest merged result selected. Reopening uses
+the same dock and restores its previous placement and size. `Ctrl+Z` directly undoes the latest
+commit and restores its pre-merge workspace.
 
 If the Template GUI dataset includes an AIND/SpikeInterface format-version 2
 `curation.json` with merge suggestions, use the persistent **Merge Propositions**

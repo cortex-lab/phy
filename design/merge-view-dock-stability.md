@@ -104,7 +104,9 @@ Automatic advancement after a successful proposition merge is slightly
 different because the clustering has changed. It should construct the settled
 post-merge Normal state, use that as the next proposition's entry snapshot, and
 then project the next Merge workspace without hiding or recreating the dock.
-Failed and manual merges retain their existing no-advancement behavior.
+Failed merges retain their workspace unchanged. Successful manual merges do not
+advance proposition review; they reuse the dock for a singleton continuation
+workspace containing the merged result as its blue reference.
 
 Reject-and-advance and shortcut navigation use the same in-place replacement
 path. Selecting a nonactionable proposition still cancels to Normal mode and
@@ -201,8 +203,9 @@ intermittent Qt shutdown crash.
 - `P1 -> P2` preserves `id(merge_view)` and `id(merge_view.dock)`.
 - Manual Merge to proposition review preserves those identities.
 - Shortcut navigation and reject-and-advance do not hide or recreate the dock.
-- Successful auto-advance updates the existing view; failed and manual merges
-  do not advance.
+- Successful auto-advance updates the existing view; successful manual merges
+  project the result into the same view without advancing, and failed merges
+  leave it unchanged.
 - All unrelated dock geometries remain unchanged across proposition switches.
 - Cancel/hide/reopen restores the Merge dock area and docked extent.
 - A floating Merge dock retains its exact position and size.

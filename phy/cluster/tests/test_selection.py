@@ -305,6 +305,39 @@ def test_enter_merge_proposition_validates_identity_and_membership():
         controller.enter_merge_proposition('p', (1, 1))
 
 
+def test_continue_after_merge_uses_result_as_singleton_reference_and_cancel_target():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1,), similar_ids=(2,))
+    )
+    controller.enter_merge_mode()
+    context = {'similarity_filter': 'similarity > .5'}
+
+    change = controller.continue_after_merge(3, context)
+
+    assert change.after.is_merge_mode
+    assert change.after.merge_ids == (3,)
+    assert change.after.reference_id == 3
+    assert change.after.color_slots == (3,)
+    assert change.after.merge.is_post_merge
+    assert change.after.merge.entry_snapshot.workflow_context is context
+    assert controller.cancel_merge_mode().after == CurationSelectionState(cluster_ids=(3,))
+
+
+def test_post_merge_identity_survives_workspace_edits_but_not_manual_reentry():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1, 2)))
+    controller.enter_merge_mode()
+    controller.continue_after_merge(3)
+
+    controller.add_to_merge((4,))
+    assert controller.state.merge.is_post_merge
+    controller.remove_from_merge((4,))
+    assert controller.state.merge.is_post_merge
+
+    controller.cancel_merge_mode()
+    controller.enter_merge_mode()
+    assert not controller.state.merge.is_post_merge
+
+
 def test_switch_merge_proposition_preserves_original_normal_entry_snapshot():
     initial = CurationSelectionState(cluster_ids=(1,), similar_ids=(2,))
     context = {'cluster_filter': 'group == good'}
