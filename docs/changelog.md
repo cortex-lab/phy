@@ -50,6 +50,10 @@ behavior they verify rather than listed separately.
   Escape, and outside clicks release filter focus so global shortcuts resume.
 - Display metadata columns containing multiple values in the Cluster and
   Similarity Views instead of leaving their cells blank.
+- Rescale the Waveform View y axis when the waveforms type changes. Templates
+  and mean waveforms are no longer drawn as flat lines after switching away
+  from raw waveforms, and raw waveforms no longer overflow their box after
+  switching back.
 
 ### Changed
 
