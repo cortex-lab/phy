@@ -9,6 +9,7 @@ import ast
 import inspect
 import json
 import logging
+import math
 import re
 import sys
 from contextlib import contextmanager
@@ -330,6 +331,25 @@ def _compile_filter_expr(expr, allowed_names):
     return predicate, True
 
 
+def _text_sort_key(value):
+    """Return a sort key that orders numeric text by value rather than character by character.
+
+    Columns such as `ch` hold channel labels, which are strings, so a plain string
+    comparison places '10' before '2'. Numeric entries sort first, in numeric order, and
+    the remaining entries keep their string ordering.
+
+    """
+    text = value if isinstance(value, str) else str(value)
+    try:
+        number = float(text)
+    except ValueError:
+        return (1, 0.0, text)
+    # NaN has no consistent ordering, so keep it with the non-numeric entries.
+    if math.isnan(number):
+        return (1, 0.0, text)
+    return (0, number, '')
+
+
 class _TableModel(QAbstractTableModel):
     """Model backing the native Qt table."""
 
@@ -438,6 +458,8 @@ class _TableProxyModel(QSortFilterProxyModel):
             return False
         if right_value is None:
             return True
+        if isinstance(left_value, str) or isinstance(right_value, str):
+            return _text_sort_key(left_value) < _text_sort_key(right_value)
         try:
             return bool(left_value < right_value)
         except TypeError:

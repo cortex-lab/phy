@@ -50,6 +50,9 @@ behavior they verify rather than listed separately.
   Escape, and outside clicks release filter focus so global shortcuts resume.
 - Display metadata columns containing multiple values in the Cluster and
   Similarity Views instead of leaving their cells blank.
+- Sort text columns holding numbers, such as the channel column `ch`, by
+  numeric value in the Cluster and Similarity Views. Channel 2 no longer
+  appears after channel 10.
 
 ### Changed
 
