@@ -703,18 +703,14 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     supervisor.block()
 
     merged_id = up.added[0]
-    assert supervisor.selection.state.is_merge_mode
-    assert supervisor.selection.state.merge.is_post_merge
-    assert supervisor.selected_merge == [merged_id]
-    assert supervisor.selected_clusters == []
+    assert not supervisor.selection.state.is_merge_mode
+    assert supervisor.selected_merge == []
+    assert supervisor.selected_clusters == [merged_id]
     assert supervisor.selected_similar == []
     assert supervisor.selected == [merged_id]
     merge_view = supervisor.merge_view
     assert merge_view is not None
-    assert not merge_view.dock.isHidden()
-    assert merge_view.get_ids() == [merged_id]
-    assert merge_view._selected_color_index(merged_id) == 0
-    assert merge_view.dock.get_widget('cancel_merge_mode').text() == 'Exit Merge Mode'
+    assert merge_view.dock.isHidden()
     assert supervisor.actions.get('undo').isEnabled()
     assert set(up.deleted) == {30, 20, candidate}
     assignments_after = supervisor.clustering.spike_clusters.copy()
@@ -750,31 +746,22 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     supervisor.block()
 
     ae(supervisor.clustering.spike_clusters, assignments_after)
-    assert supervisor.selection.state.is_merge_mode
-    assert supervisor.selection.state.merge.is_post_merge
-    assert supervisor.selected_merge == [merged_id]
+    assert not supervisor.selection.state.is_merge_mode
+    assert supervisor.selected_merge == []
+    assert supervisor.selected_clusters == [merged_id]
     assert supervisor.selected == [merged_id]
     assert supervisor.merge_view is merge_view
-    assert not merge_view.dock.isHidden()
-    assert merge_view.dock.get_widget('cancel_merge_mode').text() == 'Exit Merge Mode'
+    assert merge_view.dock.isHidden()
     assert supervisor.actions.get('undo').isEnabled()
     assert events[-1] == [merged_id]
     unconnect(on_select)
 
 
-def test_post_merge_workspace_requires_exit_before_quality_assignment(supervisor):
+def test_manual_merge_returns_to_cluster_view_for_quality_assignment(supervisor):
     _select(supervisor, [30], [20])
     supervisor.toggle_merge_mode()
     merged_id = supervisor.merge().added[0]
     supervisor.block()
-    group = supervisor.cluster_meta.get('group', merged_id)
-
-    supervisor.move('good', 'all')
-
-    assert supervisor.selection.state.is_merge_mode
-    assert supervisor.cluster_meta.get('group', merged_id) == group
-
-    supervisor.toggle_merge_mode()
     supervisor.move('good', 'all')
 
     assert not supervisor.selection.state.is_merge_mode
@@ -782,12 +769,13 @@ def test_post_merge_workspace_requires_exit_before_quality_assignment(supervisor
     assert supervisor.cluster_meta.get('group', merged_id) == 'good'
 
 
-def test_post_merge_workspace_supports_chained_merge_and_direct_undo(supervisor):
+def test_manual_merge_supports_explicit_chained_merge_and_direct_undo(supervisor):
     _select(supervisor, [30], [20])
     supervisor.toggle_merge_mode()
     first_id = supervisor.merge().added[0]
     supervisor.block()
     candidate = supervisor.similarity_view.get_ids()[0]
+    supervisor.toggle_merge_mode()
     supervisor.similarity_view.select([candidate])
     supervisor.block()
     before_second = supervisor.selection.snapshot()
@@ -797,8 +785,8 @@ def test_post_merge_workspace_supports_chained_merge_and_direct_undo(supervisor)
 
     second_id = second.added[0]
     assert set(second.deleted) == {first_id, candidate}
-    assert supervisor.selected_merge == [second_id]
-    assert supervisor.selection.state.merge.is_post_merge
+    assert supervisor.selected_clusters == [second_id]
+    assert supervisor.selected_merge == []
 
     supervisor.undo()
     supervisor.block()
@@ -808,13 +796,14 @@ def test_post_merge_workspace_supports_chained_merge_and_direct_undo(supervisor)
     assert supervisor.selected_similar == [candidate]
 
 
-def test_post_merge_workspace_supports_action_dragged_chained_merge(supervisor):
+def test_manual_merge_supports_action_dragged_explicit_chained_merge(supervisor):
     _select(supervisor, [30], [20])
     supervisor.toggle_merge_mode()
     supervisor.action_creator.edit_actions.get('merge').trigger()
     supervisor.block()
-    first_id = supervisor.selected_merge[0]
-    assert supervisor.selection.state.is_merge_mode
+    first_id = supervisor.selected_clusters[0]
+    assert not supervisor.selection.state.is_merge_mode
+    supervisor.toggle_merge_mode()
     candidate = supervisor.similarity_view.get_ids()[0]
 
     supervisor.merge_view.emit_cluster_drop(supervisor.similarity_view, (candidate,), 1)
@@ -827,7 +816,8 @@ def test_post_merge_workspace_supports_action_dragged_chained_merge(supervisor):
 
     assert first_id not in supervisor.clustering.cluster_ids
     assert candidate not in supervisor.clustering.cluster_ids
-    assert len(supervisor.selected_merge) == 1
+    assert len(supervisor.selected_clusters) == 1
+    assert supervisor.selected_merge == []
 
 
 def test_uncommitted_merge_workspace_does_not_undo_prior_action(supervisor):

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 from phylib import _add_log_file
-from phylib.io.model import TemplateModel, load_model
+from phylib.io.model import TemplateModel, get_closest_channels, load_model
 from phylib.io.traces import MtscompEphysReader
 from phylib.utils import Bunch, connect
 
@@ -146,11 +146,68 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     # Public methods
     # -------------------------------------------------------------------------
 
+    def _get_stored_waveform_channel_amplitudes(self, cluster_id):
+        """Estimate cluster channel amplitudes from an optional stored waveform subset."""
+        stored = self.model.spike_waveforms
+        if stored is None:
+            return None
+
+        rows_by_cluster = getattr(self, '_stored_waveform_rows_by_cluster', None)
+        if rows_by_cluster is None or cluster_id not in rows_by_cluster:
+            subset_clusters = self.supervisor.clustering.spike_clusters[stored.spike_ids]
+            order = np.argsort(subset_clusters, kind='stable')
+            cluster_ids, starts = np.unique(subset_clusters[order], return_index=True)
+            rows_by_cluster = {
+                int(current_cluster): rows
+                for current_cluster, rows in zip(cluster_ids, np.split(order, starts[1:]))
+            }
+            self._stored_waveform_rows_by_cluster = rows_by_cluster
+
+        rows = rows_by_cluster.get(cluster_id)
+        if rows is None or len(rows) == 0:
+            return None
+        waveforms = stored.waveforms[rows]
+        channel_ids = stored.spike_channels[rows]
+        if waveforms.ndim != 3 or channel_ids.shape != waveforms.shape[::2]:
+            logger.warning('Stored spike waveforms have inconsistent waveform/channel shapes.')
+            return None
+
+        local_amplitudes = np.ptp(waveforms, axis=1)
+        valid = (
+            (channel_ids >= 0)
+            & (channel_ids < self.model.n_channels)
+            & np.isfinite(local_amplitudes)
+        )
+        if not np.any(valid):
+            return None
+        sums = np.zeros(self.model.n_channels, dtype=np.float64)
+        counts = np.zeros(self.model.n_channels, dtype=np.int64)
+        np.add.at(sums, channel_ids[valid], local_amplitudes[valid])
+        np.add.at(counts, channel_ids[valid], 1)
+        populated = np.flatnonzero(counts)
+        amplitudes = np.zeros(self.model.n_channels, dtype=np.float64)
+        amplitudes[populated] = sums[populated] / counts[populated]
+
+        best_channel = int(populated[np.argmax(amplitudes[populated])])
+        closest = get_closest_channels(
+            self.model.channel_positions, best_channel, self.model.n_closest_channels
+        )
+        selected = np.intersect1d(populated, closest)
+        if self.model.channel_shanks is not None:
+            selected = selected[
+                self.model.channel_shanks[selected] == self.model.channel_shanks[best_channel]
+            ]
+        selected = selected[np.argsort(amplitudes[selected])[::-1]]
+        return selected, amplitudes[selected]
+
     def get_best_channels(self, cluster_id):
         """Return the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
         template = self.model.get_template(template_id)
-        if not template:  # pragma: no cover
+        if not template:
+            stored = self._get_stored_waveform_channel_amplitudes(cluster_id)
+            if stored is not None:
+                return stored[0]
             return [0]
         return template.channel_ids
 
@@ -158,7 +215,13 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
         """Return the channel amplitudes of the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
         template = self.model.get_template(template_id, amplitude_threshold=0.5)
-        if not template:  # pragma: no cover
+        if not template:
+            stored = self._get_stored_waveform_channel_amplitudes(cluster_id)
+            if stored is not None:
+                channel_ids, amplitude = stored
+                m, M = amplitude.min(), amplitude.max()
+                d = (M - m) if m < M else 1.0
+                return channel_ids, (amplitude - m) / d
             return [0], [0.0]
         m, M = template.amplitude.min(), template.amplitude.max()
         d = (M - m) if m < M else 1.0

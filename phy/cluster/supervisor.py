@@ -197,7 +197,7 @@ class TaskLogger:
             and selection_before.is_merge_mode
             and selection_before.merge.proposition_id is None
         ):
-            self.supervisor._continue_after_merge(output)
+            self.supervisor._finish_manual_merge(output, selection_before)
             return
         self.supervisor._select_after_merge(
             output,
@@ -1324,11 +1324,6 @@ class Supervisor:
         self.merge_view._reference_id = state.reference_id
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
         self.merge_view.set_merge_ids(state.merge_ids, data, state.color_indices)
-        exit_button = self.merge_view.dock.get_widget('cancel_merge_mode')
-        if exit_button is not None:
-            exit_button.setText(
-                'Exit Merge Mode' if state.merge.is_post_merge else 'Cancel Merge Mode'
-            )
         self.merge_view.dock.set_status(self._merge_status_text())
 
     def _merge_status_text(self):
@@ -1482,13 +1477,11 @@ class Supervisor:
         if self.actions is not None:
             can_redo_merge = False
             can_undo_proposition = False
-            can_undo_post_merge = False
             if active:
                 can_undo_proposition = (
                     self._active_merge_proposition_key() is not None
                     and self._global_history.current_position > 0
                 )
-                can_undo_post_merge = self._can_undo_post_merge_workspace()
                 index = self._global_history.current_position + 1
                 history = self._global_history._history
                 can_redo_merge = index < len(history) and self._is_merge_history_context(
@@ -1498,7 +1491,7 @@ class Supervisor:
                 enabled = (
                     not active
                     or name == 'merge'
-                    or (name == 'undo' and (can_undo_proposition or can_undo_post_merge))
+                    or (name == 'undo' and can_undo_proposition)
                     or (name == 'redo' and can_redo_merge)
                 )
                 (self.actions.enable if enabled else self.actions.disable)(name)
@@ -1611,10 +1604,11 @@ class Supervisor:
         change = self.selection.set_normal_selection((up.added[0],), similar_ids)
         self._apply_selection_change(change)
 
-    def _continue_after_merge(self, up):
-        """Keep a manual Merge workspace open with its committed result as reference."""
-        change = self.selection.continue_after_merge(up.added[0], self._workflow_context())
-        self._apply_selection_change(change)
+    def _finish_manual_merge(self, up, selection_before):
+        """Return a committed manual merge to Normal mode with its result selected."""
+        self._select_after_merge(up, selection_before)
+        self._set_merge_mode_ui(False)
+        self._hide_merge_view()
 
     def _select_after_split(self, up):
         """Select all clusters created by a split as one settled transition."""
@@ -2051,7 +2045,7 @@ class Supervisor:
             out = self.clustering.merge(cluster_ids, to=to)
         if not task_logger_processing:
             if merge_mode and proposition_id is None:
-                self._continue_after_merge(out)
+                self._finish_manual_merge(out, selection_before)
             else:
                 self._select_after_merge(out, selection_before)
         controllers = [self.clustering]
@@ -2230,17 +2224,6 @@ class Supervisor:
         if not self.selection.state.is_merge_mode:
             return None
         return {'mode': 'merge', 'tables': self._workflow_context()}
-
-    def _can_undo_post_merge_workspace(self):
-        """Whether the active manual workspace continues the current merge action."""
-        state = self.selection.state
-        return bool(
-            state.is_merge_mode
-            and state.merge is not None
-            and state.merge.is_post_merge
-            and self._global_history.current_position > 0
-            and self._global_history.current_item.description == 'merge'
-        )
 
     def _pending_proposition_relative_to(self, key, direction, ordered_keys=None):
         """Find another pending proposition in visible order, wrapping once."""
@@ -2529,11 +2512,7 @@ class Supervisor:
 
     def undo(self):
         """Undo the last action."""
-        if (
-            self.selection.state.is_merge_mode
-            and self._active_merge_proposition_key() is None
-            and not self._can_undo_post_merge_workspace()
-        ):
+        if self.selection.state.is_merge_mode and self._active_merge_proposition_key() is None:
             logger.warning('Undo is unavailable while a Merge workspace is active.')
             return
         # Selection-only exploration does not create history entries. Preserve the exact

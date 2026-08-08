@@ -32,17 +32,14 @@ for the entire Merge session. Press `Backspace` to clear only the Similarity Vie
 merge should contain only the staged rows.
 
 Press `G` to commit the staged clusters plus the selected Similarity candidates. The resulting
-unit remains in Merge View as the sole staged row and blue reference, with Similarity View
-recomputed around it. Add more candidates to continue merging, or press `V` to return to Normal
-mode with the result selected before assigning its quality. Group and metadata changes remain
-unavailable in Merge mode.
+unit becomes the sole Cluster View selection, Merge mode closes, and Similarity View is recomputed
+around the result. Assign its quality immediately, or press `V` again to stage it for another
+merge. Group and metadata changes remain unavailable only while Merge mode is active.
 
 Before a merge is committed, pressing `V`, using **Cancel Merge Mode**, or closing Merge View
-cancels and restores the exact state from before entry. After a commit, the dock control becomes
-**Exit Merge Mode** and those controls exit with the latest merged result selected. Undoing a
-committed Merge-mode merge directly restores the complete workspace as it appeared just before
-`G`; Redo reapplies the merge and restores its singleton continuation workspace. The Merge View
-dock is reused throughout the dataset session:
+cancels and restores the exact state from before entry. Undoing a committed Merge-mode merge
+directly restores the complete workspace as it appeared just before `G`; Redo reapplies the merge
+and returns to Normal mode with the result selected. The Merge View dock is reused throughout the dataset session:
 proposition changes do not move it, and reopening restores its previous docked extent or floating
 position and size without resetting neighboring docks.
 

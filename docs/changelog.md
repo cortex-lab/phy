@@ -41,8 +41,8 @@ behavior they verify rather than listed separately.
   views. The dimmed Cluster View remains scrollable. Scientific views follow Merge View order and then
   selected Similarity rows in visible table order. Cancellation restores the entry state, and
   undo restores the full pre-merge workspace. After a successful manual merge,
-  the result remains as the sole blue Merge View reference for inspection or a
-  further merge; press `V` to return to Normal mode before assigning quality.
+  Merge mode closes and the result becomes the sole Cluster View selection for
+  quality assignment or explicit entry into another merge.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
   dataset-local `curation.json` in a persistent **Merge Propositions** view.
   Its compact rows have no action buttons and carry stable source-order display
@@ -80,6 +80,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Load and display stored spike-waveform subsets when waveform templates are absent, and derive
+  cluster-specific channel rankings from those waveforms so Waveform and Probe views do not fall
+  back to channel zero.
 - Keep the Merge Propositions table layout and scroll state stable while moving
   between pending propositions instead of rebuilding the full queue.
 - Release GUI, Supervisor, table, dock, and curation event callbacks when a
