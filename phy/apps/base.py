@@ -20,6 +20,12 @@ from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
 from scipy.signal import butter, lfilter
 
+from phy.cluster._propositions import (
+    MergePropositionCatalog,
+    MergePropositionController,
+    decode_curation_mapping,
+    decode_review_mapping,
+)
 from phy.cluster._utils import RotatingProperty
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (
@@ -38,16 +44,17 @@ from phy.cluster.views import (
     WaveformView,
     select_traces,
 )
-from phy.cluster.views.base import BaseColorView, ManualClusteringView
+from phy.cluster.views.base import BaseColorView, ManualClusteringView, RecordingTimeAxisMixin
 from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import GUI
 from phy.gui.gui import _prompt_save
-from phy.gui.qt import AsyncCaller
+from phy.gui.qt import AsyncCaller, QActionGroup
 from phy.gui.state import _gui_state_path
 from phy.gui.widgets import IPythonView, view_settings_dialog
 from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 
+from ._proposition_io import load_proposition_documents, write_review_document
 from ._utils import _close_trace_reader
 
 logger = logging.getLogger(__name__)
@@ -354,6 +361,10 @@ class WaveformMixin:
             data = self.raw_data_filter.apply(data, axis=1)
         return Bunch(
             data=data,
+            # Keep the identity of individual waveform traces.  This is used
+            # for transient cross-view highlighting; it is deliberately not
+            # propagated to aggregate waveform providers.
+            spike_ids=spike_ids,
             channel_ids=channel_ids,
             channel_labels=channel_labels,
             channel_positions=pos[channel_ids],
@@ -389,6 +400,9 @@ class WaveformMixin:
         b = self._get_waveforms(cluster_id)
         if b.data is not None:
             b.data = b.data.mean(axis=0)[np.newaxis, ...]
+        # The mean is one trace synthesized from many spikes, so it has no
+        # one-to-one spike identity.
+        b.pop('spike_ids', None)
         b['alpha'] = 1.0
         return b
 
@@ -406,6 +420,68 @@ class WaveformMixin:
             return
         view = WaveformView(waveforms_dict, sample_rate=self.model.sample_rate)
         view.ex_status = self.raw_data_filter.current
+        preview_amplitude_cache = {}
+
+        def clear_amplitude_split_preview():
+            preview_amplitude_cache.clear()
+            view.set_highlighted_spike_ids()
+
+        def update_amplitude_split_preview(sender, cluster_id, amplitudes_type, threshold):
+            """Classify only the waveform traces currently on screen."""
+            if getattr(sender, '_controller', None) is not self:
+                return
+            if (
+                threshold is None
+                or view._closed
+                or view.waveforms_type != 'waveforms'
+                or list(view.cluster_ids) != [cluster_id]
+                or not view._displayed_bunchs
+            ):
+                clear_amplitude_split_preview()
+                return
+            bunch = view._displayed_bunchs[0]
+            spike_ids = bunch.get('spike_ids', None)
+            if spike_ids is None:
+                clear_amplitude_split_preview()
+                return
+            spike_ids = np.asarray(spike_ids, dtype=np.int64)
+            key = (
+                cluster_id,
+                amplitudes_type,
+                tuple(self.get_best_channels(cluster_id)),
+                self.selection.get('channel_id', None),
+                self.selection.get('feature_pc', None),
+                self.raw_data_filter.current,
+                tuple(spike_ids),
+            )
+            amplitudes = preview_amplitude_cache.get(key)
+            if amplitudes is None:
+                amplitudes = self._resolve_spike_amplitudes(spike_ids, amplitudes_type, cluster_id)
+                if amplitudes is None:
+                    clear_amplitude_split_preview()
+                    return
+                preview_amplitude_cache.clear()
+                preview_amplitude_cache[key] = amplitudes
+            highlighted = spike_ids[np.isfinite(amplitudes) & (amplitudes < threshold)]
+            view.set_highlighted_spike_ids(highlighted, color=sender.split_preview_color)
+
+        @connect(event='amplitude_split_preview_changed')
+        def on_amplitude_split_preview_changed(sender, cluster_id, amplitudes_type, threshold):
+            update_amplitude_split_preview(sender, cluster_id, amplitudes_type, threshold)
+
+        @connect(sender=self.supervisor)
+        def on_select(sender, cluster_ids, **kwargs):
+            # A new waveform selection has different displayed identities and
+            # must not reuse the previous preview cache.
+            clear_amplitude_split_preview()
+
+        @connect
+        def on_selected_channel_changed(sender):
+            clear_amplitude_split_preview()
+
+        @connect
+        def on_selected_feature_changed(sender):
+            clear_amplitude_split_preview()
 
         @connect(sender=view)
         def on_select_channel(sender, channel_id=None, key=None, button=None):
@@ -457,6 +533,10 @@ class WaveformMixin:
         def on_close_view(view_, gui):
             unconnect(on_select_channel)
             unconnect(on_view_attached)
+            unconnect(on_amplitude_split_preview_changed)
+            unconnect(on_select)
+            unconnect(on_selected_channel_changed)
+            unconnect(on_selected_feature_changed)
 
         return view
 
@@ -507,6 +587,7 @@ class FeatureMixin:
         @connect
         def on_selected_feature_changed(sender):
             # Replot the amplitude view with the selected feature.
+            view.clear_amplitude_split_threshold()
             view.amplitudes_type = 'feature'
             view.plot()
 
@@ -1014,6 +1095,7 @@ class BaseController:
 
     gui_name = 'BaseGUI'
     gui_version = 2
+    enable_merge_propositions = False
 
     # Default value of the 'show_mapped_channels' param if it is not set in params.py.
     default_show_mapped_channels = True
@@ -1036,6 +1118,10 @@ class BaseController:
     # when using compressed dataset, as random access triggers expensive decompression).
     n_chunks_kept = 20
 
+    # Unit used to display elapsed recording time in compatible views.
+    recording_time_unit = 's'
+    recording_time_decimals = 2
+
     # Controller attributes to load/save in the GUI state.
     _state_params = (
         'n_spikes_amplitudes',
@@ -1044,6 +1130,7 @@ class BaseController:
         'n_spikes_correlograms',
         'n_spikes_correlograms_total',
         'raw_data_filter_name',
+        'recording_time_unit',
     )
 
     # Methods that are cached in memory (and on disk) for performance.
@@ -1249,6 +1336,8 @@ class BaseController:
         # Cluster groups.
         cluster_groups = self.model.metadata.get('group', {})
 
+        merge_propositions = self._load_merge_propositions()
+
         # Create the Supervisor instance.
         supervisor = Supervisor(
             spike_clusters=self.model.spike_clusters,
@@ -1258,6 +1347,7 @@ class BaseController:
             similarity=self.similarity_functions[self.similarity],
             new_cluster_id=new_cluster_id,
             context=self.context,
+            merge_propositions=merge_propositions,
         )
         # Load the non-group metadata from the model to the cluster_meta.
         for name in sorted(self.model.metadata):
@@ -1270,8 +1360,57 @@ class BaseController:
         # Connect the `save_clustering` event raised by the supervisor when saving
         # to the model's saving functions.
         connect(self.on_save_clustering, sender=supervisor)
+        if merge_propositions is not None:
+            connect(
+                self.on_save_proposition_reviews,
+                event='save_proposition_reviews',
+                sender=supervisor,
+            )
 
         self.supervisor = supervisor
+
+    def _load_merge_propositions(self):
+        """Load optional AIND/SI merge propositions for supported applications."""
+        self._merge_proposition_sha256 = None
+        if not self.enable_merge_propositions:
+            return None
+        try:
+            documents = load_proposition_documents(self.dir_path)
+        except ValueError as e:
+            logger.warning('Merge Propositions disabled: %s', e)
+            return None
+        if documents.curation is None:
+            if documents.review is not None:
+                logger.warning('Ignoring curation_review.json because curation.json is absent.')
+            return None
+        try:
+            catalog = decode_curation_mapping(documents.curation)
+        except (TypeError, ValueError) as e:
+            logger.warning('Merge Propositions disabled: %s', e)
+            return None
+        self._merge_proposition_sha256 = documents.curation_sha256
+        reviews = {}
+        if documents.review is not None:
+            try:
+                source, reviews = decode_review_mapping(documents.review)
+            except (TypeError, ValueError) as e:
+                logger.warning('Merge Propositions disabled: invalid curation_review.json: %s', e)
+                return None
+            else:
+                review_hash = source.get('sha256')
+                if review_hash and review_hash != documents.curation_sha256:
+                    logger.warning(
+                        'curation.json changed since its reviews were saved; matching '
+                        'proposition decisions were retained and unmatched reviews are orphaned.'
+                    )
+        catalog = MergePropositionCatalog(
+            catalog.source_unit_ids,
+            catalog.entries,
+            reviews=reviews,
+            live_unit_ids=tuple(map(int, np.unique(self.model.spike_clusters))),
+            source_mapping=catalog.source_mapping,
+        )
+        return MergePropositionController(catalog)
 
     def _set_selector(self):
         """Set the Selector instance."""
@@ -1414,6 +1553,20 @@ class BaseController:
         for name, values in labels:
             self.model.save_metadata(name, values)
         self._save_cluster_info()
+
+    def on_save_proposition_reviews(self, sender, mapping):
+        """Atomically save phy-owned review state after cluster assignments."""
+        mapping = dict(mapping)
+        source = dict(mapping.get('source', {}))
+        source['filename'] = 'curation.json'
+        if self._merge_proposition_sha256 is not None:
+            source['sha256'] = self._merge_proposition_sha256
+        mapping['source'] = source
+        write_review_document(
+            self.dir_path,
+            mapping,
+            expected_curation_sha256=self._merge_proposition_sha256,
+        )
 
     def _save_cluster_info(self):
         """Save all the contents of the cluster view into `cluster_info.tsv`."""
@@ -1674,8 +1827,6 @@ class BaseController:
         # Remove selected clusters from other_clusters to prevent them from being included
         #  in both the grey dots and grey histogram
         other_clusters = [e for e in other_clusters if e not in cluster_ids]
-        # Get the amplitude method.
-        f = self._get_amplitude_functions()[name]
         # Take spikes from the waveform selection if we're loading the raw amplitudes,
         # or by minimizing the number of chunks to load if fetching waveforms directly
         # from the raw data.
@@ -1710,19 +1861,7 @@ class BaseController:
                 )
             # Get the spike times.
             spike_times = self._get_spike_times_reordered(spike_ids)
-            if name in ('feature', 'raw'):
-                # Retrieve the feature PC selected in the feature view
-                # or the channel selected in the waveform view.
-                channel_id = self.selection.get('channel_id', channel_id)
-            pc = self.selection.get('feature_pc', None)
-            # Call the spike amplitude getter function.
-            amplitudes = f(
-                spike_ids,
-                channel_ids=channel_ids,
-                channel_id=channel_id,
-                pc=pc,
-                first_cluster=first_cluster,
-            )
+            amplitudes = self._resolve_spike_amplitudes(spike_ids, name, first_cluster)
             if amplitudes is None:
                 continue
             assert amplitudes.shape == spike_ids.shape == spike_times.shape
@@ -1734,6 +1873,21 @@ class BaseController:
                 )
             )
         return out
+
+    def _resolve_spike_amplitudes(self, spike_ids, name, first_cluster):
+        """Evaluate one amplitude type in the canonical amplitude-view context."""
+        spike_ids = np.asarray(spike_ids, dtype=np.int64)
+        channel_ids = self.get_best_channels(first_cluster)
+        channel_id = channel_ids[0]
+        if name in ('feature', 'raw'):
+            channel_id = self.selection.get('channel_id', channel_id)
+        return self._get_amplitude_functions()[name](
+            spike_ids,
+            channel_ids=channel_ids,
+            channel_id=channel_id,
+            pc=self.selection.get('feature_pc', None),
+            first_cluster=first_cluster,
+        )
 
     def create_amplitude_view(self):
         """Create the amplitude view."""
@@ -1747,11 +1901,18 @@ class BaseController:
         # or they're loaded from a small part of the dataset which is not very useful.
         if len(amplitudes_dict) > 1 and 'raw' in amplitudes_dict:
             del amplitudes_dict['raw']
+
+        def split_is_eligible():
+            state = self.supervisor.selection.state
+            return len(self.supervisor.selected) == 1 and not state.is_merge_mode
+
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitudes_type=None,  # TODO: GUI state
             duration=self.model.duration,
+            split_is_eligible=split_is_eligible,
         )
+        view._controller = self
 
         @connect
         def on_toggle_spike_reorder(sender, do_reorder):
@@ -1765,6 +1926,7 @@ class BaseController:
             # Do nothing if the displayed amplitude does not depend on the channel.
             if view.amplitudes_type not in ('feature', 'raw'):
                 return
+            view.clear_amplitude_split_threshold()
             # Otherwise, replot the amplitude view, which will use
             # Selection.selected_channel_id to use the requested channel in the computation of
             # the amplitudes.
@@ -1777,6 +1939,12 @@ class BaseController:
             if update_views and view.amplitudes_type == 'raw' and len(cluster_ids):
                 # Update the channel used in the amplitude when the cluster selection changes.
                 self.selection.channel_id = self.get_best_channel(cluster_ids[0])
+            if not split_is_eligible():
+                view.clear_amplitude_split_threshold()
+
+        @connect(sender=self.supervisor)
+        def on_cluster(sender, up):
+            view.clear_amplitude_split_threshold()
 
         @connect
         def on_time_range_selected(sender, interval):
@@ -1813,9 +1981,11 @@ class BaseController:
 
         @connect(sender=view)
         def on_close_view(view_, gui):
+            view.clear_amplitude_split_threshold()
             unconnect(on_toggle_spike_reorder)
             unconnect(on_selected_channel_changed)
             unconnect(on_select)
+            unconnect(on_cluster)
             unconnect(on_time_range_selected)
             unconnect(on_view_attached)
 
@@ -1958,25 +2128,30 @@ class BaseController:
         )
 
         @connect(sender=view)
-        def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
-            selected_clusters = set(self.supervisor.selected_clusters)
-            selected_similar = set(self.supervisor.selected_similar)
-            logger.debug(
-                'Correlogram promotion request for (%s, %s); clusters=%s, similar=%s.',
-                cluster_id_a,
-                cluster_id_b,
-                sorted(selected_clusters),
-                sorted(selected_similar),
-            )
-            for cluster_id, other_cluster_id in (
-                (cluster_id_a, cluster_id_b),
-                (cluster_id_b, cluster_id_a),
-            ):
-                if cluster_id in selected_similar and other_cluster_id in selected_clusters:
-                    logger.debug('Promote similarity cluster %s from correlogram.', cluster_id)
-                    emit('action', self.supervisor.action_creator, 'promote_similar', cluster_id)
-                    return
-            logger.debug('Correlogram pair does not span ClusterView and SimilarityView.')
+        def on_request_correlogram_deselect(sender, cluster_id_a, cluster_id_b):
+            state = self.supervisor.selection.state
+            if cluster_id_a == cluster_id_b:
+                cluster_id = cluster_id_a
+            else:
+                selected_clusters = set(state.merge_ids)
+                selected_similar = set(state.similar_ids)
+                cluster_id = next(
+                    (
+                        cluster_id
+                        for cluster_id, other_cluster_id in (
+                            (cluster_id_a, cluster_id_b),
+                            (cluster_id_b, cluster_id_a),
+                        )
+                        if cluster_id in selected_similar and other_cluster_id in selected_clusters
+                    ),
+                    None,
+                )
+            if cluster_id in state.similar_ids:
+                self.supervisor.similarity_view.select_toggle(cluster_id)
+            elif not state.is_merge_mode and cluster_id in state.cluster_ids:
+                self.supervisor.cluster_view.select_toggle(cluster_id)
+            elif state.is_merge_mode and cluster_id in state.merge_ids:
+                self.supervisor.deselect_from_merge(cluster_id)
 
         @connect(sender=view)
         def on_view_attached(view_, gui):
@@ -2055,7 +2230,7 @@ class BaseController:
 
         @connect(sender=view)
         def on_close_view(view_, gui):
-            unconnect(on_request_promote_similar)
+            unconnect(on_request_correlogram_deselect)
             unconnect(on_view_attached)
 
         return view
@@ -2156,6 +2331,32 @@ class BaseController:
                 gui.create_and_add_view(view_name)
 
     def create_misc_actions(self, gui):
+        self._recording_time_actions = {}
+        self._recording_time_action_group = QActionGroup(gui)
+        self._recording_time_action_group.setExclusive(True)
+
+        for label, unit in (('Seconds', 's'), ('Minutes', 'min'), ('Hours', 'h')):
+
+            def set_recording_time_unit(checked, unit=unit):
+                """Set the unit used for elapsed recording-time labels."""
+                if checked:
+                    self._set_recording_time_unit(unit, gui)
+
+            gui.view_actions.add(
+                set_recording_time_unit,
+                name=label,
+                alias=f'time_{unit}',
+                submenu='Recording time unit',
+                checkable=True,
+                checked=self.recording_time_unit == unit,
+                show_shortcut=False,
+            )
+            action = gui.view_actions.get(label)
+            self._recording_time_action_group.addAction(action)
+            self._recording_time_actions[unit] = action
+
+        gui.view_actions.separator()
+
         # Toggle spike reorder.
         @gui.view_actions.add(
             shortcut=self.default_shortcuts['toggle_spike_reorder'],
@@ -2185,7 +2386,29 @@ class BaseController:
                     v.ex_status = filter_name
                     v.update_status()
 
-        gui.view_actions.separator()
+    def _set_recording_time_unit(self, unit, gui):
+        """Set the elapsed recording-time display unit in compatible open views."""
+        aliases = {
+            's': 's',
+            'second': 's',
+            'seconds': 's',
+            'min': 'min',
+            'minute': 'min',
+            'minutes': 'min',
+            'h': 'h',
+            'hour': 'h',
+            'hours': 'h',
+        }
+        try:
+            unit = aliases[unit.strip().lower()]
+        except (AttributeError, KeyError) as e:
+            raise ValueError("Recording time unit must be 's', 'min', or 'h'.") from e
+        self.recording_time_unit = unit
+        for action_unit, action in getattr(self, '_recording_time_actions', {}).items():
+            action.setChecked(action_unit == unit)
+        for view in gui.views:
+            if isinstance(view, RecordingTimeAxisMixin):
+                view._set_recording_time_format(unit, self.recording_time_decimals)
 
     def _add_default_color_schemes(self, view):
         """Add the default color schemes to every view."""
@@ -2267,6 +2490,11 @@ class BaseController:
                 self._add_default_color_schemes(view)
 
             if isinstance(view, ManualClusteringView):
+                if isinstance(view, RecordingTimeAxisMixin):
+                    view._set_recording_time_format(
+                        self.recording_time_unit, self.recording_time_decimals
+                    )
+
                 # Add auto update button.
                 view.dock.add_button(
                     name='auto_update',
@@ -2282,8 +2510,8 @@ class BaseController:
 
         # Get the state's current sort, and make sure the cluster view is initialized with it.
         self.supervisor.attach(gui)
-        self.create_misc_actions(gui)
         gui.set_default_actions()
+        self.create_misc_actions(gui)
         gui.create_views()
 
         # Bind the `select_more` event to add clusters to the existing selection.
@@ -2332,7 +2560,7 @@ class BaseController:
                 gui.state.add_local_keys(local_keys)
 
             # Update the controller params in the GUI state.
-            for param in self._state_params:
+            for param in state_params:
                 gui.state[param] = getattr(self, param, None)
 
             # Save the memcache.

@@ -1,7 +1,7 @@
 # Design documents
 
-These documents describe proposed or in-progress changes that are not yet part
-of the released user documentation.
+These documents record implemented and proposed work targeting phy 2.2.0. User
+documentation remains authoritative for released behavior.
 
 ## Merge View
 
@@ -9,23 +9,40 @@ Read these documents in order:
 
 1. [Merge View workflow specification](merge-view-workflow.md) fixes the agreed
    user-visible behavior.
-2. [Merge View architecture proposal](merge-view-architecture.md) describes the
-   internal refactor and implementation path needed to support that behavior.
+2. [Merge View architecture record](merge-view-architecture.md) describes the
+   internal refactor supporting that behavior.
+3. [Merge Propositions specification](merge-propositions.md) defines review of
+   AIND/SpikeInterface format-version 2 `curation.json` merge propositions.
+4. [Merge View dock stability plan](merge-view-dock-stability.md) proposes a
+   persistent dock and atomic workspace switching to avoid layout disruption.
 
 The workflow specification is the authority for user behavior. The architecture
-proposal may evolve as implementation reveals constraints, but changes must not
+record may evolve as implementation reveals constraints, but changes must not
 silently alter the workflow contract.
 
 ### Current status
 
-- The manual Merge View workflow has been designed but not implemented.
-- The supporting architecture has been audited and a target design proposed.
-- Merge Propositions and `curation.json` are intentionally deferred.
-- The next task is the characterization-test and state-model preparation phase
-  described in the architecture proposal.
+- Manual Merge View is implemented on the unreleased phy 2.2 branch.
+- Merge Propositions are implemented for Template GUI datasets on that branch.
+- Automated release validation is complete (`make test-full`, lint, formatting,
+  strict documentation build, and package build). Remaining work is maintainer
+  acceptance and manual dataset smoke testing before release.
+- The dated [integration handoff](merge-view-integration-handoff.md) records the
+  current PR dependencies, manual-feedback gate, merge order, conflict policy,
+  and final validation steps. GitHub remains authoritative for live PR state.
 
 Agents continuing this work should first read the repository `AGENTS.md`, then
 both Merge View documents completely. Merge, selection, undo/redo, saved cluster
 assignments, colors, and cross-view consistency are safety-sensitive; do not
 declare the feature complete without the regression coverage and verification
-listed in the architecture proposal.
+listed in the architecture record and proposition specification.
+
+## Amplitude-threshold splitting
+
+The [amplitude-threshold splitting implementation plan](amplitude-threshold-splitting.md)
+defines the user interaction, safety invariants, controller/view boundaries,
+delegable work packages, and verification required for amplitude-based split
+previews in Amplitude View and Waveform View.
+
+The implementation and user documentation are complete on the unreleased phy
+2.2 branch. Final large-dataset smoke testing and save/reopen validation remain.

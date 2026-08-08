@@ -64,8 +64,8 @@ The GUI is made of several parts:
 
 Dock widgets can be moved anywhere in or outside of the GUI (floating mode). They can be closed as well. New views can be added from the `View` menu in the menu bar.
 
-Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `H` or use the Help
-menu to print the active keyboard shortcuts and snippets in the terminal.
+Use the menu, keyboard shortcuts, or snippets to trigger actions. Press `H` or choose
+**Help > Show shortcuts and commands** to open the active keyboard shortcuts and snippets.
 
 
 ### Cluster view
@@ -82,7 +82,10 @@ Select quickly one or several cluster(s) by using **snippets**: for example, typ
 
 ![image](https://user-images.githubusercontent.com/1942359/58951169-bac4a280-8790-11e9-8e7b-5fa5410de152.png)
 
-Selected clusters are assigned with a special color: blue for the first selected cluster, red for the second, yellow for the third, etc.
+Selected clusters are assigned with a special color: blue for the explicit Similarity reference,
+then red, yellow, and so on for clusters encountered with that reference. Table sorting and
+filtering do not change these colors, and a deselected cluster recovers its prior color when it is
+reselected. Choosing a new blue reference starts a new color sequence.
 
 
 #### Cluster table
@@ -327,6 +330,13 @@ auto- and cross-correlogram calculation. These spikes are picked randomly.
 See [Spike sampling and performance](performance.md) before increasing them.
 
 You can dynamically change the window size and bin size with control+mouse wheel and alt+mouse wheel.
+Control-right-click a diagonal autocorrelogram to remove that cluster from the
+current selection. On a cross-correlogram between a primary selection (from the
+Cluster View or staged Merge selection) and a Similarity View selection, the same
+shortcut removes the Similarity View cluster.
+During Merge mode and proposition review, it can also remove a staged cluster; if
+that cluster is the reference, the next staged cluster becomes the reference. The
+last staged cluster cannot be removed without leaving Merge mode.
 Choose **View settings** in the view menu to edit the two spike-budget modes,
 bin size, window size, and refractory period together. The budget settings are
 global controller preferences; the bin, window, and refractory settings are
@@ -346,6 +356,7 @@ Keyboard shortcuts for CorrelogramView
 Keyboard shortcuts
 - change_bin_size                          alt+wheel
 - change_window_size                       ctrl+wheel
+- deselect_cluster                         ctrl+right click
 
 Snippets
 - set_bin                                  :cb
@@ -373,7 +384,7 @@ Keyboard shortcuts for TraceView
 
 Keyboard shortcuts
 - change_trace_size                        ctrl+wheel
-- decrease                                 alt+down
+- decrease                                 ctrl+alt+down
 - go_left                                  alt+left
 - go_right                                 alt+right
 - go_to                                    alt+t
@@ -381,7 +392,7 @@ Keyboard shortcuts
 - go_to_next_spike                         alt+pgdown
 - go_to_previous_spike                     alt+pgup
 - go_to_start                              alt+home
-- increase                                 alt+up
+- increase                                 ctrl+alt+up
 - jump_left                                shift+alt+left
 - jump_right                               shift+alt+right
 - narrow                                   alt++
@@ -471,13 +482,28 @@ effect immediately and are saved as global controller preferences.
 
 This view supports splitting like in the feature view. When splitting, all spikes (and not just displayed spikes) are loaded before computing the spikes that belong to the lasso polygon.
 
+With exactly one cluster selected in Normal mode, you can also split by amplitude:
+hold **Alt** and right-drag to place a horizontal threshold. Spikes with a
+finite amplitude strictly below the threshold are highlighted in the Amplitude
+View and, when individual spike waveforms are displayed, in the Waveform View.
+Spikes exactly on the threshold remain in the upper group. Press `K` to split
+the highlighted lower group. The split evaluates every eligible spike in the
+cluster, not only the plotted or waveform samples, so the committed result
+matches the active amplitude type and context. A threshold selecting no spikes
+or the entire cluster is left in place and cannot be committed.
+
+The threshold remains active after the drag so you can adjust it. Use
+**Control+right-click** or **View > Clear amplitude split threshold** to clear
+it; either action also clears the Amplitude View lasso. Threshold previews only
+color individual waveform traces: mean and template waveforms are unchanged.
+
 #### Background spikes
 
 Extra spikes beyond those of the selected clusters are shown in gray. These spikes come from clusters whose best channels include the first selected cluster's peak channel. The gray spikes come from all clusters that have some signal on the first selected cluster's peak channel, and not necessarily those for which the best channel corresponds exactly to that channel.
 
 #### Time range
 
-The time interval currently displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+click` in the amplitude view: that will automatically change the time range in the trace view.
+The time interval currently displayed in the trace view is shown as a vertical yellow bar. You can change the current time range with `Alt+left-click` in the amplitude view: that will automatically change the time range in the trace view.
 
 #### Keyboard shortcuts
 
@@ -510,6 +536,13 @@ bins and visible time range only control how all cluster spikes are grouped.
 Choose **View settings** in the Firing Rate or ISI view menu to edit bin size
 and the displayed range together. These parameters are dataset-local, so
 values saved for one recording do not clip or coarsen a fresh dataset.
+
+Amplitude and Firing Rate views display elapsed recording time on their x
+axes. Choose **View > Recording time unit > Seconds**, **Minutes**, or **Hours**;
+the setting is shared across compatible views and remembered between sessions.
+Labels show no more than two decimal places and discard unnecessary trailing
+zeroes. Unit selections update open views immediately and only change tick
+labels: navigation, selection, ranges, and firing-rate bins remain in seconds.
 
 ![image](https://user-images.githubusercontent.com/1942359/58951704-193e5080-8792-11e9-873f-91a9115a9e7c.png)
 

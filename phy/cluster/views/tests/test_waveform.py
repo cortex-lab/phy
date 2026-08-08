@@ -113,3 +113,63 @@ def test_waveform_view(qtbot, tempdir, gui):
     v.set_state(v.state)
 
     _stop_and_close(qtbot, v)
+
+
+def test_waveform_view_highlights_displayed_spike_ids_without_reloading(qtbot, gui):
+    n_spikes, n_channels, n_samples = 3, 2, 10
+    calls = []
+
+    def get_waveforms(cluster_id):
+        calls.append(cluster_id)
+        return Bunch(
+            data=artificial_waveforms(n_spikes, n_samples, n_channels),
+            spike_ids=np.array([10, 11, 12]),
+            channel_ids=np.arange(n_channels),
+            channel_positions=staggered_positions(n_channels),
+        )
+
+    v = WaveformView(
+        waveforms={'waveforms': get_waveforms, 'mean_waveforms': get_waveforms},
+        sample_rate=10000.0,
+    )
+    with qtbot.waitExposed(v.canvas):
+        v.show()
+    v.attach(gui)
+    v.on_select(cluster_ids=[0])
+    assert calls == [0]
+
+    base_color = np.asarray(v._displayed_bunchs[0].base_color)
+    v.set_highlighted_spike_ids([11, 99])
+    assert calls == [0]
+    colors = v._displayed_bunchs[0].color
+    assert colors.shape == (n_spikes * n_channels, 4)
+    np.testing.assert_array_equal(colors[:n_channels], np.tile(base_color, (n_channels, 1)))
+    np.testing.assert_array_equal(
+        colors[n_channels : 2 * n_channels],
+        np.tile(v.highlighted_spike_color, (n_channels, 1)),
+    )
+    np.testing.assert_array_equal(colors[2 * n_channels :], np.tile(base_color, (n_channels, 1)))
+
+    v.toggle_mean_waveforms(True)
+    assert not len(v._highlighted_spike_ids)
+    _stop_and_close(qtbot, v)
+
+
+def test_waveform_view_ignores_highlights_without_spike_identity(qtbot, gui):
+    n_channels = 2
+
+    def get_waveforms(cluster_id):
+        return Bunch(
+            data=artificial_waveforms(2, 10, n_channels),
+            channel_ids=np.arange(n_channels),
+            channel_positions=staggered_positions(n_channels),
+        )
+
+    v = WaveformView(waveforms=get_waveforms, sample_rate=10000.0)
+    with qtbot.waitExposed(v.canvas):
+        v.show()
+    v.attach(gui)
+    v.on_select(cluster_ids=[0])
+    v.set_highlighted_spike_ids([10])
+    assert v._displayed_bunchs[0].color == v._displayed_bunchs[0].base_color
+    _stop_and_close(qtbot, v)

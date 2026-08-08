@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import sys
+from collections.abc import Mapping
 from contextlib import contextmanager
 from functools import partial
 
@@ -22,6 +23,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 from phy.utils.color import _is_bright, colormaps
+from phy.utils.selection import SelectionIntent, SelectionMutation
 
 from .qt import (
     Debouncer,
@@ -34,16 +36,20 @@ from .qt import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
+    QDrag,
     QEvent,
     QGridLayout,
     QHeaderView,
     QItemSelectionModel,
     QLabel,
     QLineEdit,
+    QMimeData,
     QModelIndex,
     QObject,
+    QPainter,
     QPalette,
     QPlainTextEdit,
+    QPoint,
     QSize,
     QSortFilterProxyModel,
     QSpinBox,
@@ -60,6 +66,7 @@ from .qt import (
 
 logger = logging.getLogger(__name__)
 _NO_VALUE = object()
+_CLUSTER_IDS_MIME = 'application/x-phy-cluster-ids'
 
 
 # -----------------------------------------------------------------------------
@@ -377,6 +384,8 @@ class _TableModel(QAbstractTableModel):
             if role == Qt.DisplayRole and column == 'n_spikes' and isinstance(value, int):
                 return f'{value:,}'
             return value
+        if role == Qt.ToolTipRole:
+            return row.get(f'_{column}_tooltip') or row.get('_tooltip')
         if role == Qt.BackgroundRole and column == 'id':
             color = self._table._selection_background(row.get('id'))
             if color is not None:
@@ -386,6 +395,15 @@ class _TableModel(QAbstractTableModel):
             if fg is not None:
                 return fg
         return None
+
+    def flags(self, index):
+        """Advertise drag/drop support when the owning table enables it."""
+        flags = super().flags(index)
+        if index.isValid() and self._table._drag_role is not None:
+            flags |= Qt.ItemIsDragEnabled
+        if self._table._accepted_drag_roles:
+            flags |= Qt.ItemIsDropEnabled
+        return flags
 
     def set_rows(self, rows):
         self.beginResetModel()
@@ -472,6 +490,10 @@ class _TableItemDelegate(QStyledItemDelegate):
             bg = self._table._selection_background(row_id)
             if fg is None:
                 fg = QColor('#ffffff')
+        elif row_id == self._table._hovered_row_id:
+            bg = QColor('#222222')
+            if fg is None:
+                fg = QColor('#ffffff')
         elif fg is None:
             fg = QColor('#ffffff')
 
@@ -519,6 +541,175 @@ def _install_table_filter_focus_watcher():
         app.installEventFilter(watcher)
 
 
+class _TableView(QTableView):
+    """QTableView adapter for cluster-ID-only drag-and-drop intents."""
+
+    _drag_scroll_margin = 24
+
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._owner = owner
+        self._drag_start_pos = None
+        self._drag_start_index = QModelIndex()
+        self._drop_insertion = None
+        self._drag_position = None
+        self._drag_scroll_direction = 0
+        self._drag_scroll_timer = QTimer(self)
+        self._drag_scroll_timer.setInterval(30)
+        self._drag_scroll_timer.timeout.connect(self._auto_scroll_drag)
+        self._drop_indicator_y = None
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._drop_indicator_y is None:
+            return
+        painter = QPainter(self.viewport())
+        painter.fillRect(0, self._drop_indicator_y, self.viewport().width(), 3, QColor('#5ca8ff'))
+        painter.end()
+
+    def startDrag(self, supported_actions):
+        index = self._drag_start_index if self._drag_start_index.isValid() else self.currentIndex()
+        ids = self._owner._drag_ids_for_index(index)
+        if not ids:
+            return
+        drag = QDrag(self)
+        drag.setMimeData(self._owner._cluster_ids_to_mime(ids))
+        index = self._drag_preview_index(index)
+        rect = self.visualRect(index)
+        if rect.isValid():
+            drag.setPixmap(self.viewport().grab(rect))
+            if self._drag_start_pos is not None:
+                drag.setHotSpot(QPoint(rect.width() // 2, self._drag_start_pos.y() - rect.top()))
+        drag.exec_(Qt.MoveAction)
+        self._clear_drop_preview()
+
+    def _drag_preview_index(self, index):
+        """Return the ID cell for a row-oriented drag preview."""
+        if not index.isValid():
+            return index
+        try:
+            column = self._owner.columns.index('id')
+        except ValueError:
+            column = 0
+        return self.model().index(index.row(), column)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self._drag_start_pos = None
+        self._drag_start_index = QModelIndex()
+        if event.button() != Qt.LeftButton or self._owner._drag_role is None:
+            return
+        index = self.indexAt(event.pos())
+        if self._owner._drag_ids_for_index(index):
+            self._drag_start_pos = event.pos()
+            self._drag_start_index = index
+
+    def mouseMoveEvent(self, event):
+        if (
+            self._drag_start_pos is not None
+            and event.buttons() & Qt.LeftButton
+            and (event.pos() - self._drag_start_pos).manhattanLength()
+            >= QApplication.startDragDistance()
+        ):
+            self.startDrag(Qt.MoveAction)
+            self._drag_start_pos = None
+            self._drag_start_index = QModelIndex()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        self._drag_start_index = QModelIndex()
+        super().mouseReleaseEvent(event)
+
+    def dragEnterEvent(self, event):
+        if self._owner._accept_cluster_drop_event(event):
+            event.acceptProposedAction()
+        else:
+            self._clear_drop_preview()
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if not self._owner._accept_cluster_drop_event(event):
+            self._clear_drop_preview()
+            event.ignore()
+            return
+        self._update_drop_preview(event.pos())
+        event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event):
+        self._clear_drop_preview()
+        event.accept()
+
+    def dropEvent(self, event):
+        source = event.source()
+        source_table = source._owner if isinstance(source, _TableView) else None
+        ids = self._owner.cluster_ids_from_mime(event.mimeData())
+        if source_table is None or not self._owner.accepts_cluster_drop(source_table, ids):
+            self._clear_drop_preview()
+            event.ignore()
+            return
+        insertion = self._drop_insertion
+        if insertion is None:
+            insertion = self._drop_insertion_for_pos(event.pos())
+        self._clear_drop_preview()
+        self._owner.emit_cluster_drop(source_table, ids, insertion)
+        event.acceptProposedAction()
+
+    def _drop_insertion_for_pos(self, pos):
+        """Return the visual row boundary immediately under a drop position."""
+        index = self.indexAt(pos)
+        if not index.isValid():
+            return 0 if pos.y() <= 0 else len(self._owner._visible_ids())
+        rect = self.visualRect(index)
+        return index.row() + int(pos.y() >= rect.center().y())
+
+    def _update_drop_preview(self, pos):
+        """Show a non-mutating insertion target and keep edge autoscroll active."""
+        self._drag_position = QPoint(pos)
+        self._drop_insertion = self._drop_insertion_for_pos(pos)
+        self._show_drop_indicator(self._drop_insertion)
+        height = self.viewport().height()
+        if pos.y() < self._drag_scroll_margin:
+            direction = -1
+        elif pos.y() >= height - self._drag_scroll_margin:
+            direction = 1
+        else:
+            direction = 0
+        self._drag_scroll_direction = direction
+        if direction and not self._drag_scroll_timer.isActive():
+            self._drag_scroll_timer.start()
+        elif not direction:
+            self._drag_scroll_timer.stop()
+
+    def _show_drop_indicator(self, insertion):
+        if insertion >= len(self._owner._visible_ids()):
+            y = self.viewport().height() - 2
+        else:
+            index = self.model().index(insertion, 0)
+            y = self.visualRect(index).top()
+        self._drop_indicator_y = max(0, y - 1)
+        self.viewport().update()
+
+    def _auto_scroll_drag(self):
+        if self._drag_position is None or not self._drag_scroll_direction:
+            self._drag_scroll_timer.stop()
+            return
+        bar = self.verticalScrollBar()
+        step = max(1, bar.singleStep()) * self._drag_scroll_direction
+        bar.setValue(bar.value() + step)
+        self._drop_insertion = self._drop_insertion_for_pos(self._drag_position)
+        self._show_drop_indicator(self._drop_insertion)
+
+    def _clear_drop_preview(self):
+        self._drop_insertion = None
+        self._drag_position = None
+        self._drag_scroll_direction = 0
+        self._drag_scroll_timer.stop()
+        self._drop_indicator_y = None
+        self.viewport().update()
+
+
 class Table(QWidget):
     """A sortable native Qt table with a compatibility API for legacy callers."""
 
@@ -545,7 +736,10 @@ class Table(QWidget):
         self.value_names = list(value_names or self.columns)
         self.data = list(data or [])
         self._selected_ids = []
+        self._hovered_row_id = None
         self._selected_index_offset = 0
+        self._selected_index_by_id = None
+        self._selection_revision = 0
         self._filter_text = ''
         self._filter_is_active = False
         self._current_sort = None
@@ -555,6 +749,12 @@ class Table(QWidget):
         self._column_widths_fitted = False
         self._row_height_fitted = False
         self.skip_masked = bool(skip_masked)
+        self._drag_role = None
+        self._accepted_drag_roles = set()
+        self._drag_selected_rows = True
+        self._interaction_overlay = None
+        self._interaction_blocked = False
+        self._selection_mode_before_block = None
         self._group_colors = {
             'good': QColor('#86D16D'),
             'mua': QColor('#afafaf'),
@@ -563,17 +763,19 @@ class Table(QWidget):
 
         self.filter_edit = QLineEdit(self)
         self.filter_edit.setObjectName('table-filter')
-        # Do not let the filter become the table's automatic focus target when the GUI is
-        # shown, reactivated, or its model is reset. Explicit mouse clicks are handled in
-        # eventFilter() below so the editor remains usable.
-        self.filter_edit.setFocusPolicy(Qt.NoFocus)
+        # Accept focus only from a mouse click.  Using ``NoFocus`` and setting focus from
+        # an event filter prevents QLineEdit from completing some native mouse gestures,
+        # notably a double-click selection followed by keyboard editing.
+        self.filter_edit.setFocusPolicy(Qt.ClickFocus)
         self.filter_edit.returnPressed.connect(self._apply_filter_from_editor)
         self.filter_edit.installEventFilter(self)
 
-        self.table_view = QTableView(self)
+        self.table_view = _TableView(self)
         self.table_view.viewport().installEventFilter(self)
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.table_view.setMouseTracking(True)
+        self.table_view.viewport().setMouseTracking(True)
         self.table_view.clicked.connect(self._on_row_clicked)
         self.table_view.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
         self.table_view.verticalHeader().hide()
@@ -583,6 +785,10 @@ class Table(QWidget):
         self.table_view.setWordWrap(False)
         self.table_view.horizontalHeader().setStretchLastSection(False)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        # Sorting is managed explicitly below rather than through QTableView's
+        # automatic sorting.  Keep the native header indicator in sync so the
+        # active column and direction remain visible in every table view.
+        self.table_view.horizontalHeader().setSortIndicatorShown(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
@@ -599,17 +805,153 @@ class Table(QWidget):
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
         _install_table_filter_focus_watcher()
 
+    def configure_cluster_drag_drop(
+        self,
+        role,
+        *,
+        accepted_roles=(),
+        drag_selected_rows=True,
+    ):
+        """Enable reusable cluster-ID drag/drop and declare accepted source roles."""
+        self._drag_role = role
+        self._accepted_drag_roles = set(accepted_roles)
+        self._drag_selected_rows = bool(drag_selected_rows)
+        enabled = role is not None
+        self.table_view.setDragEnabled(enabled)
+        self.table_view.setAcceptDrops(bool(self._accepted_drag_roles))
+        self.table_view.viewport().setAcceptDrops(bool(self._accepted_drag_roles))
+        self.table_view.setDropIndicatorShown(bool(self._accepted_drag_roles))
+        self.table_view.setDefaultDropAction(Qt.MoveAction)
+        self.table_view.setDragDropMode(
+            QAbstractItemView.DragDrop if enabled else QAbstractItemView.NoDragDrop
+        )
+
+    def _set_interaction_overlay(self, text=None):
+        """Block table editing while retaining scrolling, with an explanatory overlay."""
+        blocked = bool(text)
+        if blocked == self._interaction_blocked:
+            if blocked:
+                self._interaction_overlay.setText(text)
+            return
+        self._interaction_blocked = blocked
+        if blocked:
+            self._selection_mode_before_block = self.table_view.selectionMode()
+            self.table_view.setSelectionMode(QAbstractItemView.NoSelection)
+            self.filter_edit.setEnabled(False)
+            self.table_view.horizontalHeader().setEnabled(False)
+            if self._interaction_overlay is None:
+                # Parent the overlay to the view frame, not its scrolling viewport:
+                # QAbstractScrollArea moves viewport children with its contents.
+                overlay = QLabel(self.table_view)
+                overlay.setAlignment(Qt.AlignCenter)
+                overlay.setWordWrap(True)
+                overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
+                overlay.setStyleSheet(
+                    'background-color: rgba(0, 0, 0, 220); color: #dddddd; '
+                    'font-size: 18px; font-weight: bold; padding: 24px;'
+                )
+                self._interaction_overlay = overlay
+            self._interaction_overlay.setText(text)
+            self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
+            self._interaction_overlay.show()
+            self._interaction_overlay.raise_()
+        else:
+            if self._interaction_overlay is not None:
+                self._interaction_overlay.hide()
+            self.filter_edit.setEnabled(True)
+            self.table_view.horizontalHeader().setEnabled(True)
+            self.table_view.setSelectionMode(
+                self._selection_mode_before_block or QAbstractItemView.ExtendedSelection
+            )
+            self._selection_mode_before_block = None
+
+    def _drag_ids_for_index(self, index):
+        if self._drag_role is None or not index.isValid():
+            return ()
+        visible = self._visible_ids()
+        if not 0 <= index.row() < len(visible):
+            return ()
+        clicked = visible[index.row()]
+        if self._drag_selected_rows and clicked in self._selected_ids:
+            return tuple(self._selected_visible_ids())
+        return (clicked,)
+
+    @staticmethod
+    def _cluster_ids_to_mime(cluster_ids):
+        """Encode integer-like cluster IDs as native JSON integers."""
+        cluster_ids = tuple(cluster_ids)
+        if any(not _is_integer(cluster_id) for cluster_id in cluster_ids):
+            raise TypeError('Cluster drag payloads require integer IDs.')
+        mime = QMimeData()
+        mime.setData(
+            _CLUSTER_IDS_MIME,
+            json.dumps([int(cluster_id) for cluster_id in cluster_ids]).encode('utf8'),
+        )
+        return mime
+
+    @staticmethod
+    def cluster_ids_from_mime(mime):
+        """Decode and validate a cluster-ID-only MIME payload."""
+        if mime is None or not mime.hasFormat(_CLUSTER_IDS_MIME):
+            return ()
+        try:
+            ids = json.loads(bytes(mime.data(_CLUSTER_IDS_MIME)).decode('utf8'))
+        except (TypeError, ValueError, UnicodeDecodeError):
+            return ()
+        if not isinstance(ids, list) or any(not _is_integer(cluster_id) for cluster_id in ids):
+            return ()
+        return tuple(_uniq(ids))
+
+    def accepts_cluster_drop(self, source, cluster_ids):
+        """Return whether a source table and payload satisfy this table's policy."""
+        return bool(
+            cluster_ids and source is not None and source._drag_role in self._accepted_drag_roles
+        )
+
+    def _accept_cluster_drop_event(self, event):
+        source = event.source()
+        source_table = source._owner if isinstance(source, _TableView) else None
+        ids = self.cluster_ids_from_mime(event.mimeData())
+        return self.accepts_cluster_drop(source_table, ids)
+
+    def emit_cluster_drop(self, source, cluster_ids, insertion):
+        """Emit one domain-neutral transfer/reorder intent."""
+        emit(
+            'cluster_drop',
+            self,
+            {
+                'source': source,
+                'cluster_ids': tuple(cluster_ids),
+                'insertion': int(insertion),
+            },
+        )
+
     @property
     def debouncer(self):
         return self._debouncer
 
     def eventFilter(self, obj, event):
+        if obj is self.table_view.viewport() and event.type() == QEvent.Resize:
+            if self._interaction_overlay is not None:
+                self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
+        if obj is self.table_view.viewport() and event.type() == QEvent.MouseMove:
+            index = self.table_view.indexAt(event.pos())
+            row_id = self._visible_ids()[index.row()] if index.isValid() else None
+            self._set_hovered_row(row_id)
+        if obj is self.table_view.viewport() and event.type() == QEvent.Leave:
+            self._set_hovered_row(None)
         if (
-            obj is self.filter_edit
-            and event.type() == QEvent.MouseButtonPress
-            and event.button() == Qt.LeftButton
+            self._interaction_blocked
+            and obj is self.table_view.viewport()
+            and event.type()
+            in {
+                QEvent.MouseButtonPress,
+                QEvent.MouseButtonRelease,
+                QEvent.MouseButtonDblClick,
+                QEvent.MouseMove,
+            }
         ):
-            self.filter_edit.setFocus(Qt.MouseFocusReason)
+            return True
         if (
             obj is self.table_view.viewport()
             and event.type() == QEvent.MouseButtonPress
@@ -672,9 +1014,6 @@ class Table(QWidget):
                 padding: 4px 6px;
                 border: 0;
                 background-color: transparent;
-            }
-            QTableView::item:hover {
-                background-color: #222;
             }
             QTableView::item:selected {
                 background-color: transparent;
@@ -827,14 +1166,14 @@ class Table(QWidget):
     def _selection_background(self, row_id):
         if row_id not in self._selected_ids:
             return None
-        pos = self._selected_ids.index(row_id) + self._selected_index_offset
+        pos = self._selected_color_index(row_id)
         colors = list(colormaps.default * 255)
         r, g, b = colors[pos % len(colors)]
         return QColor(int(r), int(g), int(b), 160)
 
     def _foreground_color(self, row, column):
         if column == 'id' and row.get('id') in self._selected_ids:
-            pos = self._selected_ids.index(row.get('id')) + self._selected_index_offset
+            pos = self._selected_color_index(row.get('id'))
             colors = list(colormaps.default * 255)
             r, g, b = colors[pos % len(colors)]
             if _is_bright((int(r), int(g), int(b))):
@@ -845,6 +1184,11 @@ class Table(QWidget):
         if row.get('is_masked'):
             return QColor('#888888')
         return None
+
+    def _selected_color_index(self, row_id):
+        if self._selected_index_by_id is not None and row_id in self._selected_index_by_id:
+            return self._selected_index_by_id[row_id]
+        return self._selected_ids.index(row_id) + self._selected_index_offset
 
     def _refresh_selection(self):
         selection_model = self.table_view.selectionModel()
@@ -864,9 +1208,26 @@ class Table(QWidget):
     def _selected_payload(self, kwargs=None):
         selected = self.get_selected_ids()
         next_id = self.get_sibling_id(selected[-1] if selected else None, 'next')
-        return {'selected': selected, 'next': next_id, 'kwargs': kwargs or {}}
+        return {
+            'selected': selected,
+            'next': next_id,
+            'kwargs': kwargs or {},
+            'revision': self._selection_revision,
+        }
 
-    def _emit_selected(self, kwargs=None):
+    def _selection_mutation(self, before_ids, intent):
+        """Describe the selection operation that just updated this table."""
+        before_ids = tuple(before_ids)
+        after_ids = tuple(self._selected_ids)
+        return SelectionMutation.create(intent, before_ids, after_ids)
+
+    def _emit_selected(self, kwargs=None, mutation=None):
+        self._selection_revision += 1
+        kwargs = dict(kwargs or {})
+        if mutation is not None:
+            # This stays in the private kwargs channel so existing consumers see
+            # the same top-level select payload.
+            kwargs['_selection_mutation'] = mutation
         payload = self._selected_payload(kwargs)
         self._emit_event('select', payload)
         return payload
@@ -915,32 +1276,45 @@ class Table(QWidget):
         else:
             self.select([row_id])
 
+    def _set_hovered_row(self, row_id):
+        """Update the row-wide hover tint without changing selection."""
+        if row_id == self._hovered_row_id:
+            return
+        self._hovered_row_id = row_id
+        self.table_view.viewport().update()
+
     def get_selected_ids(self):
         visible = set(self._visible_ids())
         return [row_id for row_id in self._selected_ids if row_id in visible]
 
     def select_toggle(self, row_id):
+        before_ids = tuple(self._selected_ids)
         if row_id in self._selected_ids:
             self._selected_ids.remove(row_id)
         else:
             self._selected_ids.append(row_id)
         self._refresh_selection()
-        return self._emit_selected()
+        return self._emit_selected(
+            mutation=self._selection_mutation(before_ids, SelectionIntent.TOGGLE)
+        )
 
     def select_until(self, row_id):
+        before_ids = tuple(self._selected_ids)
         visible = self._visible_ids()
         if row_id not in visible:
             return None
         anchor = self._selection_anchor_row()
         if anchor is None:
-            return self.select([row_id])
+            return self.select([row_id], _selection_intent=SelectionIntent.EXTEND)
         clicked = visible.index(row_id)
         imin, imax = sorted((anchor, clicked))
         for visible_id in visible[imin : imax + 1]:
             if visible_id not in self._selected_ids:
                 self._selected_ids.append(visible_id)
         self._refresh_selection()
-        return self._emit_selected()
+        return self._emit_selected(
+            mutation=self._selection_mutation(before_ids, SelectionIntent.EXTEND)
+        )
 
     def get_sibling_id(self, row_id=None, direction='next'):
         selected = self.get_selected_ids()
@@ -962,18 +1336,18 @@ class Table(QWidget):
 
     def _move_to_sibling(self, row_id=None, direction='next'):
         if not self.get_selected_ids():
-            return self._select_first_or_last('first')
+            return self._select_first_or_last('first', _selection_intent=SelectionIntent.NAVIGATE)
         new_id = self.get_sibling_id(row_id, direction)
         if new_id is None:
             return None
-        return self.select([new_id])
+        return self.select([new_id], _selection_intent=SelectionIntent.NAVIGATE)
 
-    def _select_first_or_last(self, which):
+    def _select_first_or_last(self, which, **kwargs):
         visible = self._visible_ids()
         ordered = visible if which == 'first' else list(reversed(visible))
         for row_id in ordered:
             if self._is_navigable_id(row_id):
-                return self.select([row_id])
+                return self.select([row_id], **kwargs)
         return None
 
     def sort_by(self, name, sort_dir='asc'):
@@ -983,6 +1357,11 @@ class Table(QWidget):
         column = self.columns.index(name)
         order = Qt.AscendingOrder if sort_dir == 'asc' else Qt.DescendingOrder
         self._current_sort = (name, sort_dir)
+        # QHeaderView's stock arrow describes the next sort direction in the
+        # active Qt style.  Invert it so the displayed arrow describes the
+        # current data order: up for ascending and down for descending.
+        indicator_order = Qt.DescendingOrder if sort_dir == 'asc' else Qt.AscendingOrder
+        self.table_view.horizontalHeader().setSortIndicator(column, indicator_order)
         self._proxy.sort(column, order)
         self._refresh_selection()
         self._request_fit_columns()
@@ -1013,11 +1392,27 @@ class Table(QWidget):
     def get_previous_id(self, callback=None):
         return self._async_return(self.get_sibling_id(None, 'previous'), callback)
 
+    def selection_after_navigation(self, direction='next'):
+        """Return the row selection produced by navigation without mutating the table."""
+        if direction not in ('next', 'previous'):
+            raise ValueError("Direction must be 'next' or 'previous'.")
+        if not self.get_selected_ids():
+            navigable = self._visible_navigable_ids()
+            return navigable[:1]
+        row_id = self.get_sibling_id(direction=direction)
+        return [row_id] if row_id is not None else []
+
     def first(self, callback=None):
-        return self._async_return(self._select_first_or_last('first'), callback)
+        return self._async_return(
+            self._select_first_or_last('first', _selection_intent=SelectionIntent.NAVIGATE),
+            callback,
+        )
 
     def last(self, callback=None):
-        return self._async_return(self._select_first_or_last('last'), callback)
+        return self._async_return(
+            self._select_first_or_last('last', _selection_intent=SelectionIntent.NAVIGATE),
+            callback,
+        )
 
     def next(self, callback=None):
         return self._async_return(self._move_to_sibling(None, 'next'), callback)
@@ -1026,13 +1421,31 @@ class Table(QWidget):
         return self._async_return(self._move_to_sibling(None, 'previous'), callback)
 
     def select(self, ids, callback=None, **kwargs):
+        ids = tuple(ids)
+        before_ids = tuple(self._selected_ids)
+        intent = kwargs.pop('_selection_intent', None)
+        if intent == 'navigation':
+            intent = SelectionIntent.NAVIGATE
+        elif intent is None:
+            intent = SelectionIntent.CLEAR if not ids else SelectionIntent.REPLACE
+        if not isinstance(intent, SelectionIntent):
+            raise TypeError('_selection_intent must be a SelectionIntent.')
+        self.set_selected_ids(ids)
+        payload = self._emit_selected(
+            kwargs, mutation=self._selection_mutation(before_ids, intent)
+        )
+        return self._async_return(payload, callback)
+
+    def set_selected_ids(self, ids):
+        """Project selected row IDs without emitting a selection event."""
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        visible = set(self._visible_ids())
-        self._selected_ids = [row_id for row_id in ids if row_id in visible]
+        self._selected_ids = [
+            row_id for row_id in ids if self._model.row_by_id(row_id) is not None
+        ]
+        self._selection_revision += 1
         self._refresh_selection()
-        payload = self._emit_selected(kwargs)
-        return self._async_return(payload, callback)
+        return self._selected_payload()
 
     def scroll_to(self, id):
         index = self._proxy_index_for_id(id)
@@ -1161,6 +1574,16 @@ class Table(QWidget):
 
     def set_selected_index_offset(self, n):
         self._selected_index_offset = n
+        self._selected_index_by_id = None
+        self.table_view.viewport().update()
+
+    def set_selected_index_mapping(self, color_indices):
+        """Set explicit selected-row palette indices independently of role order."""
+        if not isinstance(color_indices, Mapping):
+            raise TypeError('Selected color indices must be a mapping.')
+        if any(not _is_integer(index) or index < 0 for index in color_indices.values()):
+            raise ValueError('Selected color indices must be non-negative integers.')
+        self._selected_index_by_id = dict(color_indices)
         self.table_view.viewport().update()
 
     def clear_temporary_files(self):

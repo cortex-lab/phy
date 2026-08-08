@@ -54,10 +54,10 @@ jobs:
     - name: Check formatting with ruff
       run: uv run --frozen ruff format --check phy
 
-    # phy currently relies on SpikeSelector changes newer than phylib 2.7.0.
+    # phy currently relies on SpikeSelector and template-less waveform fixes newer than phylib 2.7.0.
     # Keep normal CI reproducible until those changes are included in a release.
     - name: Install tested phylib revision
-      run: uv pip install --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@db10401589b47fd8d56f7c66531b0c22fc7f9e91"
+      run: uv pip install --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@fc494f6ab9f03370c43e618d2ef9610c6781b0e6"
 
     - name: Test with pytest
       run: uv run --no-sync pytest --cov=phy --cov-report=xml phy

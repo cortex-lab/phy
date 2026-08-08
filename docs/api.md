@@ -1175,7 +1175,7 @@ close_view(view, gui)
 #### GUI.add_view
 
 
-**`GUI.add_view(self, view, position=None, closable=True, floatable=True, floating=None)`**
+**`GUI.add_view(self, view, position=None, closable=True, floatable=True, floating=None, persistent=False)`**
 
 Add a dock widget to the main window.
 
@@ -1195,6 +1195,9 @@ Add a dock widget to the main window.
 
 * `floating : boolean`
     Whether the view should be added in floating mode or not.
+
+* `persistent : boolean`
+    Whether closing the dock should hide it without removing the view.
 
 ---
 
@@ -1328,6 +1331,15 @@ Create the default actions (file, views, help...).
 **`GUI.show(self)`**
 
 Show the window.
+
+---
+
+#### GUI.show_shortcuts_and_commands
+
+
+**`GUI.show_shortcuts_and_commands(self)`**
+
+Open a searchable reference of the active shortcuts and commands.
 
 ---
 
@@ -1658,14 +1670,22 @@ May be overridden.
 
 **`Snippets.command`**
 
-This is used to write a snippet message in the status bar. A cursor is appended at
-the end.
+Current snippet command, without the status-bar cursor or guidance.
 
 ---
 
 ### phy.gui.Table
 
 A sortable native Qt table with a compatibility API for legacy callers.
+
+---
+
+#### Table.accepts_cluster_drop
+
+
+**`Table.accepts_cluster_drop(self, source, cluster_ids)`**
+
+Return whether a source table and payload satisfy this table's policy.
 
 ---
 
@@ -1720,6 +1740,33 @@ Coalesce expensive table fitting across related mutations.
 **`Table.clear_temporary_files(self)`**
 
 Compatibility no-op kept for callers from the removed WebEngine path.
+
+---
+
+#### Table.cluster_ids_from_mime
+
+
+**`Table.cluster_ids_from_mime(mime)`**
+
+Decode and validate a cluster-ID-only MIME payload.
+
+---
+
+#### Table.configure_cluster_drag_drop
+
+
+**`Table.configure_cluster_drag_drop(self, role, *, accepted_roles=(), drag_selected_rows=True)`**
+
+Enable reusable cluster-ID drag/drop and declare accepted source roles.
+
+---
+
+#### Table.emit_cluster_drop
+
+
+**`Table.emit_cluster_drop(self, source, cluster_ids, insertion)`**
+
+Emit one domain-neutral transfer/reorder intent.
 
 ---
 
@@ -1948,12 +1995,39 @@ minimumSizeHint(self) -> QSize
 
 ---
 
+#### Table.selection_after_navigation
+
+
+**`Table.selection_after_navigation(self, direction='next')`**
+
+Return the row selection produced by navigation without mutating the table.
+
+---
+
 #### Table.set_busy
 
 
 **`Table.set_busy(self, busy)`**
 
 
+
+---
+
+#### Table.set_selected_ids
+
+
+**`Table.set_selected_ids(self, ids)`**
+
+Project selected row IDs without emitting a selection event.
+
+---
+
+#### Table.set_selected_index_mapping
+
+
+**`Table.set_selected_index_mapping(self, color_indices)`**
+
+Set explicit selected-row palette indices independently of role order.
 
 ---
 
@@ -2126,6 +2200,15 @@ raised by the canvas.
 Reset the bounds of the view in data coordinates.
 
 Used when the view is recreated from scratch.
+
+---
+
+#### Axes.set_x_formatter
+
+
+**`Axes.set_x_formatter(self, formatter)`**
+
+Set the formatter for x-axis tick labels.
 
 ---
 
@@ -4157,7 +4240,7 @@ Raise an internal event and call `on_xxx()` on attached objects.
 #### PlotCanvas.enable_axes
 
 
-**`PlotCanvas.enable_axes(self, data_bounds=None, show_x=True, show_y=True)`**
+**`PlotCanvas.enable_axes(self, data_bounds=None, show_x=True, show_y=True, format_x=None, format_y=None)`**
 
 Show axes in the canvas.
 
@@ -5716,6 +5799,15 @@ This view displays an amplitude plot for all selected clusters.
 
 ---
 
+#### AmplitudeView.activate_split_selection
+
+
+**`AmplitudeView.activate_split_selection(self)`**
+
+Make this view's transient split selection the active built-in one.
+
+---
+
 #### AmplitudeView.attach
 
 
@@ -5725,12 +5817,42 @@ Attach the view to the GUI.
 
 ---
 
+#### AmplitudeView.clear_amplitude_split_threshold
+
+
+**`AmplitudeView.clear_amplitude_split_threshold(self)`**
+
+Clear the amplitude split threshold.
+
+---
+
+#### AmplitudeView.clear_split_selection
+
+
+**`AmplitudeView.clear_split_selection(self)`**
+
+Clear this view's transient split selection.
+
+Views with another kind of split preview can override this hook, call
+``super()``, and clear their own preview state as well.
+
+---
+
 #### AmplitudeView.close
 
 
 **`AmplitudeView.close(self)`**
 
 Close the view.
+
+---
+
+#### AmplitudeView.cluster_color_index
+
+
+**`AmplitudeView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -5791,6 +5913,33 @@ selected clusters (template view, raster view).
 **`AmplitudeView.on_mouse_click(self, e)`**
 
 Select a time from the amplitude view to display in the trace view.
+
+---
+
+#### AmplitudeView.on_mouse_move
+
+
+**`AmplitudeView.on_mouse_move(self, e)`**
+
+
+
+---
+
+#### AmplitudeView.on_mouse_press
+
+
+**`AmplitudeView.on_mouse_press(self, e)`**
+
+
+
+---
+
+#### AmplitudeView.on_mouse_release
+
+
+**`AmplitudeView.on_mouse_release(self, e)`**
+
+
 
 ---
 
@@ -6133,6 +6282,15 @@ Change the bindings.
 **`ClusterScatterView.close(self)`**
 
 Close the view.
+
+---
+
+#### ClusterScatterView.cluster_color_index
+
+
+**`ClusterScatterView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -6514,6 +6672,15 @@ Display a table of all clusters with metrics and labels as columns. Derive from 
 
 ---
 
+#### ClusterView.accepts_cluster_drop
+
+
+**`ClusterView.accepts_cluster_drop(self, source, cluster_ids)`**
+
+Return whether a source table and payload satisfy this table's policy.
+
+---
+
 #### ClusterView.add
 
 
@@ -6565,6 +6732,33 @@ Coalesce expensive table fitting across related mutations.
 **`ClusterView.clear_temporary_files(self)`**
 
 Compatibility no-op kept for callers from the removed WebEngine path.
+
+---
+
+#### ClusterView.cluster_ids_from_mime
+
+
+**`ClusterView.cluster_ids_from_mime(mime)`**
+
+Decode and validate a cluster-ID-only MIME payload.
+
+---
+
+#### ClusterView.configure_cluster_drag_drop
+
+
+**`ClusterView.configure_cluster_drag_drop(self, role, *, accepted_roles=(), drag_selected_rows=True)`**
+
+Enable reusable cluster-ID drag/drop and declare accepted source roles.
+
+---
+
+#### ClusterView.emit_cluster_drop
+
+
+**`ClusterView.emit_cluster_drop(self, source, cluster_ids, insertion)`**
+
+Emit one domain-neutral transfer/reorder intent.
 
 ---
 
@@ -6793,12 +6987,39 @@ minimumSizeHint(self) -> QSize
 
 ---
 
+#### ClusterView.selection_after_navigation
+
+
+**`ClusterView.selection_after_navigation(self, direction='next')`**
+
+Return the row selection produced by navigation without mutating the table.
+
+---
+
 #### ClusterView.set_busy
 
 
 **`ClusterView.set_busy(self, busy)`**
 
 
+
+---
+
+#### ClusterView.set_selected_ids
+
+
+**`ClusterView.set_selected_ids(self, ids)`**
+
+Project selected row IDs without emitting a selection event.
+
+---
+
+#### ClusterView.set_selected_index_mapping
+
+
+**`ClusterView.set_selected_index_mapping(self, color_indices)`**
+
+Set explicit selected-row palette indices independently of role order.
 
 ---
 
@@ -7155,6 +7376,15 @@ Close the view.
 
 ---
 
+#### CorrelogramView.cluster_color_index
+
+
+**`CorrelogramView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### CorrelogramView.decrease
 
 
@@ -7204,7 +7434,7 @@ selected clusters (template view, raster view).
 
 **`CorrelogramView.on_mouse_release(self, e)`**
 
-Promote a similarity cluster after a stationary secondary click.
+Remove a cluster after a stationary Control-secondary click.
 
 ---
 
@@ -7396,6 +7626,15 @@ component features. This view keeps track of which channels are currently shown.
 
 ---
 
+#### FeatureView.activate_split_selection
+
+
+**`FeatureView.activate_split_selection(self)`**
+
+Make this view's transient split selection the active built-in one.
+
+---
+
 #### FeatureView.attach
 
 
@@ -7414,12 +7653,33 @@ Reset the current channels.
 
 ---
 
+#### FeatureView.clear_split_selection
+
+
+**`FeatureView.clear_split_selection(self)`**
+
+Clear this view's transient split selection.
+
+Views with another kind of split preview can override this hook, call
+``super()``, and clear their own preview state as well.
+
+---
+
 #### FeatureView.close
 
 
 **`FeatureView.close(self)`**
 
 Close the view.
+
+---
+
+#### FeatureView.cluster_color_index
+
+
+**`FeatureView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -7695,6 +7955,15 @@ Close the view.
 
 ---
 
+#### FiringRateView.cluster_color_index
+
+
+**`FiringRateView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### FiringRateView.decrease
 
 
@@ -7938,6 +8207,15 @@ Close the view.
 
 ---
 
+#### HistogramView.cluster_color_index
+
+
+**`HistogramView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### HistogramView.decrease
 
 
@@ -8171,6 +8449,15 @@ Attach the view to the GUI.
 **`ISIView.close(self)`**
 
 Close the view.
+
+---
+
+#### ISIView.cluster_color_index
+
+
+**`ISIView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -8434,6 +8721,15 @@ Close the view.
 
 ---
 
+#### ManualClusteringView.cluster_color_index
+
+
+**`ManualClusteringView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### ManualClusteringView.get_clusters_data
 
 
@@ -8593,6 +8889,15 @@ Attach the view to the GUI.
 **`ProbeView.close(self)`**
 
 Close the view.
+
+---
+
+#### ProbeView.cluster_color_index
+
+
+**`ProbeView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -8775,6 +9080,15 @@ Attach the view to the GUI.
 **`RasterView.close(self)`**
 
 Close the view.
+
+---
+
+#### RasterView.cluster_color_index
+
+
+**`RasterView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -9056,6 +9370,15 @@ This view displays a scatter plot for all selected clusters.
 
 ---
 
+#### ScatterView.activate_split_selection
+
+
+**`ScatterView.activate_split_selection(self)`**
+
+Make this view's transient split selection the active built-in one.
+
+---
+
 #### ScatterView.attach
 
 
@@ -9065,12 +9388,33 @@ This view displays a scatter plot for all selected clusters.
 
 ---
 
+#### ScatterView.clear_split_selection
+
+
+**`ScatterView.clear_split_selection(self)`**
+
+Clear this view's transient split selection.
+
+Views with another kind of split preview can override this hook, call
+``super()``, and clear their own preview state as well.
+
+---
+
 #### ScatterView.close
 
 
 **`ScatterView.close(self)`**
 
 Close the view.
+
+---
+
+#### ScatterView.cluster_color_index
+
+
+**`ScatterView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -9262,6 +9606,15 @@ in the cluster view.
 
 ---
 
+#### SimilarityView.accepts_cluster_drop
+
+
+**`SimilarityView.accepts_cluster_drop(self, source, cluster_ids)`**
+
+Return whether a source table and payload satisfy this table's policy.
+
+---
+
 #### SimilarityView.add
 
 
@@ -9313,6 +9666,33 @@ Coalesce expensive table fitting across related mutations.
 **`SimilarityView.clear_temporary_files(self)`**
 
 Compatibility no-op kept for callers from the removed WebEngine path.
+
+---
+
+#### SimilarityView.cluster_ids_from_mime
+
+
+**`SimilarityView.cluster_ids_from_mime(mime)`**
+
+Decode and validate a cluster-ID-only MIME payload.
+
+---
+
+#### SimilarityView.configure_cluster_drag_drop
+
+
+**`SimilarityView.configure_cluster_drag_drop(self, role, *, accepted_roles=(), drag_selected_rows=True)`**
+
+Enable reusable cluster-ID drag/drop and declare accepted source roles.
+
+---
+
+#### SimilarityView.emit_cluster_drop
+
+
+**`SimilarityView.emit_cluster_drop(self, source, cluster_ids, insertion)`**
+
+Emit one domain-neutral transfer/reorder intent.
 
 ---
 
@@ -9508,9 +9888,9 @@ minimumSizeHint(self) -> QSize
 #### SimilarityView.reset
 
 
-**`SimilarityView.reset(self, cluster_ids)`**
+**`SimilarityView.reset(self, cluster_ids, reference_id=None)`**
 
-Recreate the similarity view, given the selected clusters in the cluster view.
+Recreate the view for an explicit reference and Cluster-role exclusions.
 
 ---
 
@@ -9550,12 +9930,39 @@ Recreate the similarity view, given the selected clusters in the cluster view.
 
 ---
 
+#### SimilarityView.selection_after_navigation
+
+
+**`SimilarityView.selection_after_navigation(self, direction='next')`**
+
+Return the row selection produced by navigation without mutating the table.
+
+---
+
 #### SimilarityView.set_busy
 
 
 **`SimilarityView.set_busy(self, busy)`**
 
 
+
+---
+
+#### SimilarityView.set_selected_ids
+
+
+**`SimilarityView.set_selected_ids(self, ids)`**
+
+Project selected row IDs without emitting a selection event.
+
+---
+
+#### SimilarityView.set_selected_index_mapping
+
+
+**`SimilarityView.set_selected_index_mapping(self, color_indices)`**
+
+Set explicit selected-row palette indices independently of role order.
 
 ---
 
@@ -9674,6 +10081,15 @@ When this component is attached to a GUI, the following events are emitted:
 
 ---
 
+#### Supervisor.add_to_merge
+
+
+**`Supervisor.add_to_merge(self, cluster_ids, insertion=None, callback=None)`**
+
+Transfer candidate IDs into the Merge workspace.
+
+---
+
 #### Supervisor.attach
 
 
@@ -9703,12 +10119,12 @@ Only used in the automated testing suite.
 
 ---
 
-#### Supervisor.demote_cluster
+#### Supervisor.deselect_from_merge
 
 
-**`Supervisor.demote_cluster(self, cluster_id, callback=None)`**
+**`Supervisor.deselect_from_merge(self, cluster_ids, callback=None)`**
 
-Move a selected cluster row into the similarity view.
+Remove staged clusters entirely from the active Merge selection.
 
 ---
 
@@ -9820,6 +10236,15 @@ Select the next best cluster in the cluster view.
 
 ---
 
+#### Supervisor.next_merge_proposition
+
+
+**`Supervisor.next_merge_proposition(self, callback=None)`**
+
+Cancel the current workspace and review the next pending proposition.
+
+---
+
 #### Supervisor.previous
 
 
@@ -9838,12 +10263,12 @@ Select the previous best cluster in the cluster view.
 
 ---
 
-#### Supervisor.promote_similar
+#### Supervisor.previous_merge_proposition
 
 
-**`Supervisor.promote_similar(self, cluster_id, callback=None)`**
+**`Supervisor.previous_merge_proposition(self, callback=None)`**
 
-Move a similarity row into the cluster view while preserving all other selections.
+Cancel the current workspace and review the previous pending proposition.
 
 ---
 
@@ -9853,6 +10278,42 @@ Move a similarity row into the cluster view while preserving all other selection
 **`Supervisor.redo(self)`**
 
 Undo the last undone action.
+
+---
+
+#### Supervisor.reject_merge_proposition
+
+
+**`Supervisor.reject_merge_proposition(self, callback=None)`**
+
+Reject the active proposition and review the next pending one.
+
+---
+
+#### Supervisor.remove_from_merge
+
+
+**`Supervisor.remove_from_merge(self, cluster_ids, callback=None)`**
+
+Transfer staged candidates back to Similarity View.
+
+---
+
+#### Supervisor.reorder_merge
+
+
+**`Supervisor.reorder_merge(self, cluster_ids, insertion, callback=None)`**
+
+Reorder staged candidates and their scientific presentation order.
+
+---
+
+#### Supervisor.reset_merge_proposition
+
+
+**`Supervisor.reset_merge_proposition(self, callback=None)`**
+
+Reset the highlighted review and reopen it when actionable.
 
 ---
 
@@ -9891,7 +10352,7 @@ Select a list of clusters.
 
 **`Supervisor.select_first_similar(self, n=None, callback=None)`**
 
-Select the first N eligible clusters currently shown in the similarity view.
+Select N eligible similar clusters, advancing after the current selection.
 
 ---
 
@@ -9922,12 +10383,12 @@ Make a new cluster out of the specified spikes.
 
 ---
 
-#### Supervisor.toggle_cluster_selection
+#### Supervisor.toggle_merge_mode
 
 
-**`Supervisor.toggle_cluster_selection(self, cluster_id, callback=None)`**
+**`Supervisor.toggle_merge_mode(self, callback=None)`**
 
-Add or remove a cluster from the cluster-view selection.
+Enter Merge mode, or cancel the active Merge workspace.
 
 ---
 
@@ -9985,12 +10446,30 @@ Selected clusters in the cluster view only.
 
 ---
 
+#### Supervisor.selected_merge
+
+
+**`Supervisor.selected_merge`**
+
+Clusters staged in Merge View, or an empty list in Normal mode.
+
+---
+
 #### Supervisor.selected_similar
 
 
 **`Supervisor.selected_similar`**
 
 Selected clusters in the similarity view only.
+
+---
+
+#### Supervisor.selection_color_indices
+
+
+**`Supervisor.selection_color_indices`**
+
+Immutable mapping from cluster IDs to stable selected-color slots.
 
 ---
 
@@ -10066,6 +10545,15 @@ def on_view_attached(gui, view):
 **`TemplateView.close(self)`**
 
 Close the view.
+
+---
+
+#### TemplateView.cluster_color_index
+
+
+**`TemplateView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -10385,6 +10873,15 @@ Attach the view to the GUI.
 **`TraceImageView.close(self)`**
 
 Close the view.
+
+---
+
+#### TraceImageView.cluster_color_index
+
+
+**`TraceImageView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -10883,6 +11380,15 @@ Attach the view to the GUI.
 **`TraceView.close(self)`**
 
 Close the view.
+
+---
+
+#### TraceView.cluster_color_index
+
+
+**`TraceView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
 
 ---
 
@@ -11408,6 +11914,15 @@ Close the view.
 
 ---
 
+#### WaveformView.cluster_color_index
+
+
+**`WaveformView.cluster_color_index(self, cluster_id, fallback)`**
+
+Return the stable selected-color slot for a cluster.
+
+---
+
 #### WaveformView.decrease
 
 
@@ -11509,9 +12024,9 @@ Change the scaling with the wheel.
 #### WaveformView.on_select
 
 
-**`WaveformView.on_select(self, cluster_ids=None, **kwargs)`**
+**`WaveformView.on_select(self, sender=None, cluster_ids=None, **kwargs)`**
 
-Callback function when clusters are selected. May be overridden.
+Clear transient highlighting when the displayed selection changes.
 
 ---
 
@@ -11558,6 +12073,19 @@ Reset the scaling to the default value.
 
 Save a PNG screenshot of the view into a given directory. By default, the screenshots
 are saved in `~/.phy/screenshots/`.
+
+---
+
+#### WaveformView.set_highlighted_spike_ids
+
+
+**`WaveformView.set_highlighted_spike_ids(self, spike_ids=None, color=None)`**
+
+Highlight displayed individual waveform traces by spike id.
+
+This rerenders the cached displayed data only; it never invokes a
+waveform provider.  Providers without per-trace ``spike_ids`` simply
+retain their ordinary cluster color.
 
 ---
 
@@ -12089,6 +12617,15 @@ Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`.
 **`BaseController.on_save_clustering(self, sender, spike_clusters, groups, *labels)`**
 
 Save the modified data.
+
+---
+
+#### BaseController.on_save_proposition_reviews
+
+
+**`BaseController.on_save_proposition_reviews(self, sender, mapping)`**
+
+Atomically save phy-owned review state after cluster assignments.
 
 ---
 
@@ -12806,6 +13343,15 @@ Save the modified data.
 
 ---
 
+#### TemplateController.on_save_proposition_reviews
+
+
+**`TemplateController.on_save_proposition_reviews(self, sender, mapping)`**
+
+Atomically save phy-owned review state after cluster assignments.
+
+---
+
 #### TemplateController.peak_channel_similarity
 
 
@@ -13466,6 +14012,15 @@ Return the spike times of spikes returned by `get_spike_ids(cluster_id, n)`.
 **`KwikController.on_save_clustering(self, sender, spike_clusters, groups, *labels)`**
 
 Save the modified data.
+
+---
+
+#### KwikController.on_save_proposition_reviews
+
+
+**`KwikController.on_save_proposition_reviews(self, sender, mapping)`**
+
+Atomically save phy-owned review state after cluster assignments.
 
 ---
 

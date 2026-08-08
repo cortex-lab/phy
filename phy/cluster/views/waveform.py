@@ -100,6 +100,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     _default_position = 'right'
     ax_color = (0.75, 0.75, 0.75, 1.0)
+    highlighted_spike_color = (1.0, 1.0, 0.0, 1.0)
     tick_size = 5.0
     cluster_ids = ()
 
@@ -134,6 +135,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         self.data_bounds = None
         self.sample_rate = sample_rate
         self._status_suffix = ''
+        self._displayed_bunchs = ()
+        self._highlighted_spike_ids = np.array([], dtype=np.int64)
+        self._highlighted_spike_color = self.highlighted_spike_color
         assert sample_rate > 0.0, 'The sample rate must be provided to the waveform view.'
 
         # Initialize the view.
@@ -200,11 +204,77 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         n_clu = max(clu_offsets) + 1
         # Offset depending on the overlap.
         for i, (bunch, offset) in enumerate(zip(bunchs, clu_offsets)):
+            color_index = self.cluster_color_index(self.cluster_ids[i], i)
             bunch.index = i
             bunch.offset = offset
             bunch.n_clu = n_clu
-            bunch.color = selected_cluster_color(i, bunch.get('alpha', 0.75))
+            bunch.color = selected_cluster_color(color_index, bunch.get('alpha', 0.75))
+            bunch.base_color = bunch.color
         return bunchs
+
+    def _update_highlight_colors(self):
+        """Apply transient per-spike colors to the already displayed bunches."""
+        for bunch in self._displayed_bunchs:
+            color = bunch.base_color
+            spike_ids = bunch.get('spike_ids', None)
+            if (
+                self.waveforms_type == 'waveforms'
+                and spike_ids is not None
+                and bunch.data is not None
+                and len(spike_ids) == len(bunch.data)
+                and len(self._highlighted_spike_ids)
+            ):
+                colors = np.tile(color, (len(spike_ids), 1))
+                colors[np.isin(spike_ids, self._highlighted_spike_ids)] = (
+                    self._highlighted_spike_color
+                )
+                # `_plot_cluster()` flattens waveforms in spike-major,
+                # channel-major order after its transpose.
+                color = np.repeat(colors, len(bunch.channel_ids), axis=0)
+            bunch.color = color
+
+    def set_highlighted_spike_ids(self, spike_ids=None, color=None):
+        """Highlight displayed individual waveform traces by spike id.
+
+        This rerenders the cached displayed data only; it never invokes a
+        waveform provider.  Providers without per-trace ``spike_ids`` simply
+        retain their ordinary cluster color.
+        """
+        if self.waveforms_type != 'waveforms' or spike_ids is None:
+            spike_ids = ()
+        self._highlighted_spike_color = color or self.highlighted_spike_color
+        self._highlighted_spike_ids = np.unique(np.asarray(spike_ids, dtype=np.int64))
+        if self._displayed_bunchs:
+            self._update_highlight_colors()
+            self._render_bunchs()
+
+    def _render_bunchs(self):
+        """Render cached waveform bunches without reloading their providers."""
+        bunchs = self._displayed_bunchs
+        if not bunchs:
+            return
+
+        self._current_visual.reset_batch()
+        self.line_visual.reset_batch()
+        self.tick_visual.reset_batch()
+        for bunch in bunchs:
+            self._plot_cluster(bunch)
+        self.canvas.update_visual(self.tick_visual)
+        self.canvas.update_visual(self.line_visual)
+        self.canvas.update_visual(self._current_visual)
+
+        self._plot_labels(self.channel_ids, len(self.cluster_ids), self._channel_labels)
+
+        # Only show the current waveform visual.
+        if self._current_visual == self.waveform_visual:
+            self.waveform_visual.show()
+            self.waveform_agg_visual.hide()
+        elif self._current_visual == self.waveform_agg_visual:
+            self.waveform_agg_visual.show()
+            self.waveform_visual.hide()
+
+        self.canvas.update()
+        self.update_status()
 
     def _plot_cluster(self, bunch):
         wave = bunch.data
@@ -334,6 +404,9 @@ class WaveformView(ScalingMixin, ManualClusteringView):
         bunchs = self.get_clusters_data()
         if not bunchs:
             return
+        self._displayed_bunchs = bunchs
+        if self.waveforms_type != 'waveforms':
+            self._highlighted_spike_ids = np.array([], dtype=np.int64)
 
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
@@ -350,6 +423,7 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             channel_labels.update(
                 {channel_id: chl[i] for i, channel_id in enumerate(d.channel_ids)}
             )
+        self._channel_labels = channel_labels
 
         # Update the Boxed box positions as a function of the selected channels.
         if channel_ids:
@@ -357,27 +431,14 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
         self.data_bounds = self.data_bounds or self._get_data_bounds(bunchs)
 
-        self._current_visual.reset_batch()
-        self.line_visual.reset_batch()
-        self.tick_visual.reset_batch()
-        for bunch in bunchs:
-            self._plot_cluster(bunch)
-        self.canvas.update_visual(self.tick_visual)
-        self.canvas.update_visual(self.line_visual)
-        self.canvas.update_visual(self._current_visual)
+        self._update_highlight_colors()
+        self._render_bunchs()
 
-        self._plot_labels(channel_ids, len(self.cluster_ids), channel_labels)
-
-        # Only show the current waveform visual.
-        if self._current_visual == self.waveform_visual:
-            self.waveform_visual.show()
-            self.waveform_agg_visual.hide()
-        elif self._current_visual == self.waveform_agg_visual:
-            self.waveform_agg_visual.show()
-            self.waveform_visual.hide()
-
-        self.canvas.update()
-        self.update_status()
+    def on_select(self, sender=None, cluster_ids=None, **kwargs):
+        """Clear transient highlighting when the displayed selection changes."""
+        self._highlighted_spike_ids = np.array([], dtype=np.int64)
+        self._displayed_bunchs = ()
+        super().on_select(cluster_ids=cluster_ids, **kwargs)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -512,16 +573,22 @@ class WaveformView(ScalingMixin, ManualClusteringView):
     @waveforms_type.setter
     def waveforms_type(self, value):
         self.waveforms_types.set(value)
+        if value != 'waveforms' and hasattr(self, '_highlighted_spike_ids'):
+            self._highlighted_spike_ids = np.array([], dtype=np.int64)
 
     def next_waveforms_type(self):
         """Switch to the next waveforms type."""
         self.waveforms_types.next()
+        if self.waveforms_type != 'waveforms':
+            self._highlighted_spike_ids = np.array([], dtype=np.int64)
         logger.debug('Switch to waveforms type %s.', self.waveforms_type)
         self.plot()
 
     def previous_waveforms_type(self):
         """Switch to the previous waveforms type."""
         self.waveforms_types.previous()
+        if self.waveforms_type != 'waveforms':
+            self._highlighted_spike_ids = np.array([], dtype=np.int64)
         logger.debug('Switch to waveforms type %s.', self.waveforms_type)
         self.plot()
 
@@ -533,5 +600,6 @@ class WaveformView(ScalingMixin, ManualClusteringView):
             self.plot()
         elif 'mean_waveforms' in self.waveforms:
             self.waveforms_types.set('mean_waveforms')
+            self._highlighted_spike_ids = np.array([], dtype=np.int64)
             logger.debug('Switch to mean waveforms.')
             self.plot()

@@ -62,6 +62,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
         'change_bin_size': 'alt+wheel',
+        'deselect_cluster': 'ctrl+right click',
     }
 
     default_snippets = {
@@ -81,8 +82,10 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.local_state_attrs += ('bin_size', 'window_size', 'refractory_period')
         self.canvas.set_layout(layout='grid')
 
-        # Outside margin to show labels.
-        self.canvas.gpu_transforms.add(Scale(0.9))
+        # Outside margin to show labels. Mouse hit-testing must invert this transform
+        # before resolving a correlogram cell.
+        self._display_scale = Scale(0.9)
+        self.canvas.gpu_transforms.add(self._display_scale)
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
@@ -130,7 +133,8 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             b.firing_rate = fr[i, j] if fr is not None else None
             b.data_bounds = (0, 0, n_bins, m)
             b.pair_index = i, j
-            b.color = selected_cluster_color(i, 1)
+            color_index = self.cluster_color_index(self.cluster_ids[i], i)
+            b.color = selected_cluster_color(color_index, 1)
             if i != j:
                 b.color = add_alpha(_override_hsv(b.color[:3], s=0.1, v=1))
             bunchs.append(b)
@@ -237,17 +241,21 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.canvas.update()
 
     def on_mouse_release(self, e):
-        """Promote a similarity cluster after a stationary secondary click."""
-        if e.button != 'Right' or len(self.cluster_ids) < 2:
+        """Remove a cluster after a stationary Control-secondary click."""
+        if 'Control' not in e.modifiers or e.button != 'Right' or not self.cluster_ids:
             return
         press_pos = self.canvas._mouse_press_position
         if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
             return
-        (i, j), _ = self.canvas.grid.box_map(e.pos)
-        logger.debug('Correlogram secondary click at %s maps to cell (%d, %d).', e.pos, i, j)
-        if i == j:
-            return
-        emit('request_promote_similar', self, self.cluster_ids[i], self.cluster_ids[j])
+        ndc = self.canvas.window_to_ndc(e.pos)
+        grid_ndc = self._display_scale.inverse().apply(ndc)[0]
+        i, j = self.canvas.grid.get_closest_box(grid_ndc)
+        emit(
+            'request_correlogram_deselect',
+            self,
+            self.cluster_ids[i],
+            self.cluster_ids[j],
+        )
 
     def attach(self, gui):
         """Attach the view to the GUI."""

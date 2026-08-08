@@ -7,10 +7,13 @@
 import sys
 from functools import partial
 
+import numpy as np
 from phylib.utils import connect, unconnect
-from pytest import fixture, mark
+from pytest import fixture, mark, raises
 
-from ..qt import QHeaderView, Qt
+from phy.utils.selection import SelectionIntent, SelectionMutation
+
+from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
@@ -58,6 +61,116 @@ def table(qtbot):
 # ------------------------------------------------------------------------------
 # Test key value widget
 # ------------------------------------------------------------------------------
+
+
+def test_table_cluster_drag_drop_policy_and_payload(table, qtbot):
+    target = Table(columns=['id'], data=[{'id': 10}, {'id': 11}])
+    qtbot.addWidget(target)
+    table.configure_cluster_drag_drop('similarity', drag_selected_rows=True)
+    target.configure_cluster_drag_drop('merge', accepted_roles=('similarity',))
+    table.set_selected_ids((1, 2))
+
+    assert table._drag_ids_for_index(table._proxy_index_for_id(1)) == (1, 2)
+    assert table._drag_ids_for_index(table._proxy_index_for_id(3)) == (3,)
+    count_index = table._proxy_index_for_id(3).sibling(3, table.columns.index('count'))
+    assert table.table_view._drag_preview_index(count_index).column() == table.columns.index('id')
+    assert table._proxy_index_for_id(1).flags() & Qt.ItemIsDragEnabled
+    assert target._proxy_index_for_id(10).flags() & Qt.ItemIsDropEnabled
+    unrelated = Table(columns=['id'], data=[{'id': 20}])
+    qtbot.addWidget(unrelated)
+    assert not unrelated.table_view.acceptDrops()
+    assert not unrelated._proxy_index_for_id(20).flags() & Qt.ItemIsDropEnabled
+
+    started = []
+    table.table_view.startDrag = lambda actions: started.append(actions)
+    index = table._proxy_index_for_id(3)
+    pos = table.table_view.visualRect(index).center()
+    qtbot.mousePress(table.table_view.viewport(), Qt.LeftButton, pos=pos)
+    end = pos + type(pos)(QApplication.startDragDistance() + 1, 0)
+    table.table_view.mouseMoveEvent(
+        QMouseEvent(QEvent.MouseMove, end, Qt.NoButton, Qt.LeftButton, Qt.NoModifier)
+    )
+    qtbot.mouseRelease(table.table_view.viewport(), Qt.LeftButton, pos=pos)
+    assert started
+
+    mime = QMimeData()
+    mime.setData('application/x-phy-cluster-ids', b'[1, 2, 2]')
+    assert target.cluster_ids_from_mime(mime) == (1, 2)
+    assert target.accepts_cluster_drop(table, (1, 2))
+    numpy_mime = table._cluster_ids_to_mime((np.int64(1), np.int32(2)))
+    assert bytes(numpy_mime.data('application/x-phy-cluster-ids')) == b'[1, 2]'
+    with raises(TypeError, match='integer IDs'):
+        table._cluster_ids_to_mime((1, 'spikes'))
+
+    drops = []
+
+    @connect(event='cluster_drop', sender=target)
+    def on_cluster_drop(sender, payload):
+        drops.append(payload)
+
+    class DragEvent:
+        def __init__(self):
+            self.accepted = False
+
+        def source(self):
+            return table.table_view
+
+        def mimeData(self):
+            return mime
+
+        def pos(self):
+            return target.table_view.visualRect(target._proxy_index_for_id(10)).center()
+
+        def acceptProposedAction(self):
+            self.accepted = True
+
+        def ignore(self):
+            self.accepted = False
+
+    drag_event = DragEvent()
+    target.table_view.dragEnterEvent(drag_event)
+    target.table_view.dragMoveEvent(drag_event)
+    target.table_view.dropEvent(drag_event)
+    assert drag_event.accepted
+    assert drops == [{'source': table, 'cluster_ids': (1, 2), 'insertion': 1}]
+    unconnect(on_cluster_drop)
+
+    invalid = QMimeData()
+    invalid.setData('application/x-phy-cluster-ids', b'[1, "spikes"]')
+    assert target.cluster_ids_from_mime(invalid) == ()
+    table.configure_cluster_drag_drop(None)
+    assert not table.table_view.dragEnabled()
+
+
+def test_table_drag_preview_marks_an_insertion_boundary_without_reordering(table):
+    table.configure_cluster_drag_drop('merge', accepted_roles=('merge',))
+    view = table.table_view
+    before = table._visible_ids()
+    first = view.visualRect(table._proxy_index_for_id(0))
+    second = view.visualRect(table._proxy_index_for_id(1))
+
+    view._update_drop_preview(first.topLeft())
+    assert view._drop_insertion == 0
+    assert view._drop_indicator_y is not None
+    assert table._visible_ids() == before
+
+    view._update_drop_preview(second.center())
+    assert view._drop_insertion == 2
+    assert table._visible_ids() == before
+
+    view._clear_drop_preview()
+    assert view._drop_insertion is None
+    assert view._drop_indicator_y is None
+
+
+def test_table_hover_is_row_wide_without_selecting(table):
+    assert table.get_selected_ids() == []
+    table._set_hovered_row(3)
+    assert table._hovered_row_id == 3
+    assert table.get_selected_ids() == []
+
+    table._set_hovered_row(None)
+    assert table._hovered_row_id is None
 
 
 def test_key_value_1(qtbot):
@@ -200,11 +313,26 @@ def test_table_invalid_column(qtbot):
 
 
 def test_table_0(qtbot, table):
-    assert table.filter_edit.focusPolicy() == Qt.NoFocus
+    assert table.filter_edit.focusPolicy() == Qt.ClickFocus
     table.filter_edit.clearFocus()
     qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
     assert table.filter_edit.hasFocus()
 
+
+def test_table_filter_double_click_selection_remains_editable(qtbot, table):
+    qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
+    table.filter_edit.setText('cluster 12')
+    qtbot.mouseDClick(table.filter_edit, Qt.LeftButton)
+    assert table.filter_edit.hasFocus()
+    assert table.filter_edit.hasSelectedText()
+    qtbot.keyClicks(table.filter_edit, 'x')
+    assert table.filter_edit.text() != 'cluster 12'
+    qtbot.keyClick(table.filter_edit, Qt.Key_Backspace)
+    assert table.filter_edit.text() != 'x'
+
+
+def test_table_filter_apply_and_release(qtbot, table):
+    qtbot.mouseClick(table.filter_edit, Qt.LeftButton)
     table.filter_edit.setText('id >= 2')
     qtbot.keyClick(table.filter_edit, Qt.Key_Return)
     assert not table.filter_edit.hasFocus()
@@ -232,6 +360,83 @@ def test_table_1(qtbot, table):
 
     table.select([1, 2])
     _assert(table.get_selected, [1, 2])
+
+
+def test_table_set_selected_ids_is_a_silent_projection(table):
+    events = []
+
+    @connect(sender=table)
+    def on_select(sender, obj):
+        events.append(obj)
+
+    payload = table.set_selected_ids([2, 1, 2, 999])
+
+    assert payload['selected'] == [2, 1]
+    assert table.get_selected_ids() == [2, 1]
+    assert events == []
+
+    unconnect(on_select)
+
+
+def test_table_selection_events_include_structured_mutations(table):
+    events = []
+
+    @connect(event='select', sender=table)
+    def on_select(sender, payload):
+        events.append(payload)
+
+    table.select([1])
+    replace = events[-1]['kwargs']['_selection_mutation']
+    assert replace == SelectionMutation(SelectionIntent.REPLACE, (), (1,), (1,), ())
+
+    table.select_toggle(3)
+    toggle = events[-1]['kwargs']['_selection_mutation']
+    assert toggle == SelectionMutation(SelectionIntent.TOGGLE, (1,), (1, 3), (3,), ())
+
+    table.select_until(5)
+    extend = events[-1]['kwargs']['_selection_mutation']
+    assert extend == SelectionMutation(SelectionIntent.EXTEND, (1, 3), (1, 3, 4, 5), (4, 5), ())
+
+    table.select([])
+    clear = events[-1]['kwargs']['_selection_mutation']
+    assert clear == SelectionMutation(SelectionIntent.CLEAR, (1, 3, 4, 5), (), (), (1, 3, 4, 5))
+
+    # Programmatic projection remains intentionally silent.
+    table.set_selected_ids([1])
+    assert len(events) == 4
+    table.next()
+    navigate = events[-1]['kwargs']['_selection_mutation']
+    assert navigate == SelectionMutation(SelectionIntent.NAVIGATE, (1,), (4,), (4,), (1,))
+    unconnect(on_select)
+
+
+def test_table_uses_explicit_selected_color_mapping(table):
+    table.set_selected_ids([1, 3])
+    table.set_selected_index_mapping({1: 1, 3: 4})
+
+    assert table._selected_color_index(1) == 1
+    assert table._selected_color_index(3) == 4
+    with raises(TypeError, match='mapping'):
+        table.set_selected_index_mapping([1, 3])
+    with raises(ValueError, match='non-negative'):
+        table.set_selected_index_mapping({1: -1})
+
+
+def test_table_mutation_retains_filtered_selected_ids(table):
+    payloads = []
+
+    @connect(event='select', sender=table)
+    def on_select(sender, payload):
+        payloads.append(payload)
+
+    table.select([1, 4])
+    table.filter('id < 2')
+    table.select_toggle(1)
+
+    mutation = payloads[-1]['kwargs']['_selection_mutation']
+    assert mutation == SelectionMutation(SelectionIntent.TOGGLE, (1, 4), (4,), (), (1,))
+    assert payloads[-1]['selected'] == []
+    unconnect(on_select)
 
 
 def test_table_batch_update_fits_once(table):
@@ -352,13 +557,23 @@ def test_table_nav_last(qtbot, table):
 
 
 def test_table_nav_0(qtbot, table):
+    payloads = []
+
+    @connect(event='select', sender=table)
+    def on_select(sender, obj):
+        payloads.append(obj)
+
     table.select([4])
+    assert payloads[-1]['kwargs']['_selection_mutation'].intent is SelectionIntent.REPLACE
 
     table.next()
     _assert(table.get_selected, [6])
+    assert payloads[-1]['kwargs']['_selection_mutation'].intent is SelectionIntent.NAVIGATE
 
     table.previous()
     _assert(table.get_selected, [4])
+    assert payloads[-1]['kwargs']['_selection_mutation'].intent is SelectionIntent.NAVIGATE
+    unconnect(on_select)
 
 
 def test_table_navigation_skip_masked_policy(qtbot, table):
@@ -459,6 +674,9 @@ def test_table_nav_1(qtbot, table):
 
 
 def test_table_sort(qtbot, table):
+    header = table.table_view.horizontalHeader()
+    assert header.isSortIndicatorShown()
+
     table.select([1])
     table.next()
     table.next()
@@ -475,6 +693,8 @@ def test_table_sort(qtbot, table):
     table.sort_by('count', 'asc')
 
     _assert(table.get_current_sort, ['count', 'asc'])
+    assert header.sortIndicatorSection() == table.columns.index('count')
+    assert header.sortIndicatorOrder() == Qt.DescendingOrder
     _assert(table.get_selected, [6])
     _assert(table.get_ids, list(range(9, -1, -1)))
 
@@ -482,6 +702,8 @@ def test_table_sort(qtbot, table):
     _assert(table.get_selected, [4])
 
     table.sort_by('count', 'desc')
+    assert header.sortIndicatorSection() == table.columns.index('count')
+    assert header.sortIndicatorOrder() == Qt.AscendingOrder
     _assert(table.get_ids, list(range(10)))
 
     assert _l == [list(range(9, -1, -1)), list(range(10))]
@@ -686,3 +908,22 @@ def test_table_filter_event_emits_visible_ids(qtbot, table):
     _block(lambda: emitted == [[0, 1, 2]])
 
     unconnect(on_table_filter)
+
+
+def test_table_interaction_overlay_stays_fixed_while_scrolling(qtbot):
+    table = Table(columns=['id'], data=[{'id': i} for i in range(100)])
+    _wait_until_table_ready(qtbot, table)
+    table.resize(240, 180)
+    table._set_interaction_overlay('DISABLED')
+    qtbot.wait(1)
+
+    geometry = table._interaction_overlay.geometry()
+    scrollbar = table.table_view.verticalScrollBar()
+    assert scrollbar.maximum() > 0
+    scrollbar.setValue(scrollbar.maximum())
+    qtbot.wait(1)
+
+    assert table._interaction_overlay.parent() is table.table_view
+    assert table._interaction_overlay.geometry() == geometry
+    assert 'rgba(0, 0, 0, 220)' in table._interaction_overlay.styleSheet()
+    table.close()

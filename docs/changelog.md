@@ -4,27 +4,67 @@ This file records user-visible changes to phy. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) where practical.
 
-## [Unreleased] — 2.1.1.dev0
+## [Unreleased] — 2.2.0.dev0
 
 Changes below are available from the latest source checkout but have not yet
 been included in a stable release. The current entries cover all user-visible
 changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
+### Documentation
+
+- Documented uv-first installation of exact previous phy releases in separate
+  environments, including how to intentionally replace a tool installation.
+
 ### Added
 
+- `Control`-right-clicking a diagonal autocorrelogram in the Correlogram View
+  removes that cluster from the active selection. On a cross-correlogram spanning
+  the primary and Similarity selections, it removes the Similarity cluster. This
+  also works during Merge mode and proposition review; removing the reference
+  promotes the next staged cluster to reference.
+- Split the lower-amplitude portion of one selected cluster directly from the
+  Amplitude View: use `Alt`-right-drag to preview a threshold, then press `K`
+  to commit an exact all-spike split. Individual waveform traces receive the
+  same transient preview; **Control+right-click** or **View > Clear amplitude
+  split threshold** clears it.
+- Display elapsed recording time in seconds, minutes, or hours in Amplitude
+  and Firing Rate views. Choose the shared preference from **View > Recording
+  time unit** and see open views update immediately. Axis labels use thousands
+  separators and at most two decimal places.
+- Stage and order manual merge candidates in the new **Merge View**. Press `V`
+  to enter or cancel Merge mode, transfer candidates with
+  `Control`-right-click or drag-and-drop, and press `G` to merge every staged
+  cluster plus the current Similarity View selection. Merge View opens below
+  Cluster View and keeps one stable in-session dock identity, position, and
+  size; proposition navigation updates that dock without moving neighboring
+  views. The dimmed Cluster View remains scrollable. Scientific views follow Merge View order and then
+  selected Similarity rows in visible table order. Cancellation restores the entry state, and
+  undo restores the full pre-merge workspace. After a successful manual merge,
+  Merge mode closes and the result becomes the sole Cluster View selection for
+  quality assignment or explicit entry into another merge.
+- Review AIND/SpikeInterface format-version 2 merge propositions from
+  dataset-local `curation.json` in a persistent **Merge Propositions** view.
+  Its compact rows have no action buttons and carry stable source-order display
+  labels (`P1`, `P2`, ...). The selection background marks the active review;
+  foreground colors show completed/problem states while blue stays reserved for
+  the merge reference cluster. Click a pending row to stage it in Merge View,
+  while tooltips retain the full IDs, status, key, and reason.
+  `Alt+Down`/`Alt+Up` navigate pending rows, `Alt+Backspace` rejects and advances,
+  and `Alt+Shift+Backspace` resets a
+  highlighted completed review. `G` accepts the ordinary merge, marks edited
+  acceptance `accepted_modified`, and opens the next pending proposition in the
+  pre-merge visible order. Undo/redo restore exact proposition workspaces; stale
+  overlapping proposals are never remapped, and decisions are atomically saved
+  in `curation_review.json` without overwriting `curation.json`.
+
 - Select the first eligible clusters in the Similarity View with
-  `Control+Space`. The default is 15 clusters; **Select > Select N Similar**
-  changes the number and remembers it across sessions.
+  `Control+Space`; repeat the shortcut to select successive batches. The
+  default is 15 clusters; **Select > Select N Similar** changes the number
+  and remembers it across sessions.
 - Skip clusters labeled `noise` or `mua` during wizard navigation and batch
   similarity selection. **Select > Skip Noise and MUA** controls the behavior
   and remembers the preference across sessions.
-- Use `Control`-right-click to transfer a selected Cluster View row to the
-  Similarity View, or to promote a Similarity View row into the Cluster View,
-  while preserving the existing selections and similarity reference.
-- Right-click a cross-correlogram to promote its similar cluster into the
-  Cluster View selection. Native mouse and trackpad secondary clicks are
-  supported.
 - Configure the total number of gray background points in the Amplitude View
   with `n_spikes_amplitudes_background` (10,000 by default).
 - Waveform, Amplitude, and Correlogram views support optional fixed total spike
@@ -40,19 +80,76 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Load and display stored spike-waveform subsets when waveform templates are absent, and derive
+  cluster-specific channel rankings from those waveforms so Waveform and Probe views do not fall
+  back to channel zero.
+- Keep the Merge Propositions table layout and scroll state stable while moving
+  between pending propositions instead of rebuilding the full queue.
+- Release GUI, Supervisor, table, dock, and curation event callbacks when a
+  dataset window closes, preventing retained Qt widgets and intermittent
+  process crashes during shutdown.
+- Closing the Merge View now restores staged clusters to their original
+  Cluster and Similarity View rows, selections, and table positions. Reopening
+  reveals the same dock at its prior docked extent or floating geometry.
+- Show the active sort column and direction in Cluster and Similarity View
+  headers.
+- Dragging Merge View rows now shows the cluster ID preview, insertion boundary,
+  edge autoscroll, and a row-wide hover cue without changing the order until
+  the drop completes.
+- Show an unsaved-changes marker in the window title, enable the Save action
+  only when curation changes are pending, and confirm successful saves in the
+  status bar.
+- Rename the Help shortcut reference action to **Show shortcuts and commands**
+  and show Enter/Escape guidance when the `:` command prompt is active. The
+  shortcut now opens an in-GUI searchable reference, including plugin actions.
+- Pressing `:` repeatedly no longer leaves the command prompt visible after
+  Escape closes it.
+- Keep the disabled Cluster View overlay fixed while scrolling in Merge mode,
+  increase its dimming, and make native table rows initiate drag-and-drop.
+- Display Firing Rate View values in spikes per second instead of normalized
+  probability density, with the configured bin count matching the rendered bins.
 - Start the GUI with released phylib versions that do not yet expose the
   disjoint-spike selection optimization hint.
 - Keep dataset-local view settings isolated from global GUI state. In
   particular, a Firing Rate time range saved or leaked from another recording
   no longer clips spikes in a fresh dataset.
 - Cluster and Similarity View filters only take keyboard focus after an
-  explicit click, including when a table is first shown or refreshed. Enter,
-  Escape, and outside clicks release filter focus so global shortcuts resume.
+  explicit click, including when a table is first shown or refreshed. Their
+  native double-click text selection remains editable. Enter, Escape, and
+  outside clicks release filter focus so global shortcuts resume.
 - Display metadata columns containing multiple values in the Cluster and
   Similarity Views instead of leaving their cells blank.
 
 ### Changed
 
+- Put content-specific actions first in every view menu, followed by a
+  consistent Auto-update, Screenshot, and Close utility footer.
+
+- Move Trace View scale shortcuts from `Alt+Up`/`Alt+Down` to
+  `Control+Alt+Up`/`Control+Alt+Down`, leaving `Alt+Up`/`Alt+Down` available for
+  Merge Propositions navigation.
+
+- Group cluster traversal commands under **Select > Navigation**.
+
+- Group available views under **View > Add view** and keep global view options
+  separate from view creation.
+
+- The first, blue Cluster View selection is now the explicit Similarity
+  reference. In Normal mode, scientific views follow the selected Cluster and
+  Similarity rows in visible table order; sorting or filtering either table
+  updates that presentation without recoloring existing selections. Color
+  assignment now follows explicit selection intent: ordinary clicks and
+  `Space`/`Shift+Space` replace the Similarity candidate and reuse the first
+  candidate color, so a lone candidate remains red; Control/Shift
+  multi-selection preserves existing colors and reserves a toggled-off row's
+  color for reselection; Backspace releases Normal-mode candidate reservations.
+  Choosing a new reference starts a new color session. In Merge mode, explicit
+  Merge View order takes precedence and all existing colors remain fixed for
+  the entire session. Normal-mode cross-role mouse transfers and
+  cross-correlogram promotion have been removed in favor of the Merge workspace.
+- Undo and redo restore the complete selection context around merge, split,
+  and metadata actions; redo also preserves selection-only exploration made
+  after the original action.
 - Merge and assignment operations update the small cluster-ID collection
   incrementally instead of rescanning every spike.
 - Merges gather their spikes from the maintained per-cluster arrays while

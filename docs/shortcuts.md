@@ -1,7 +1,7 @@
 # Keyboard shortcuts and snippets
 
-This page presents the list of shortcuts and snippets in the Template GUI. Press `H` or use the
-Help menu to print the shortcuts that are active in the current session.
+This page presents the list of shortcuts and snippets in the Template GUI. Press `H` or choose
+**Help > Show shortcuts and commands** to open the shortcuts active in the current session.
 
 
 ## List of keyboard shortcuts
@@ -32,12 +32,17 @@ Keyboard shortcuts
 - move_similar_to_unsorted                 ctrl+u
 - next                                     space
 - next_best                                down
+- next_merge_proposition                   alt+down
 - previous                                 shift+space
 - previous_best                            up
+- previous_merge_proposition               alt+up
 - redo                                     ctrl+shift+z, ctrl+y
+- reject_merge_proposition                 alt+backspace
 - reset                                    ctrl+alt+space
+- reset_merge_proposition                  alt+shift+backspace
 - select_first_similar                     ctrl+space
 - split                                    k
+- toggle_merge_mode                        v
 - undo                                     ctrl+z
 - unselect_similar                         backspace
 
@@ -99,6 +104,7 @@ CorrelogramView
 Keyboard shortcuts
 - change_bin_size                          alt+wheel
 - change_window_size                       ctrl+wheel
+- deselect_cluster                         ctrl+right click
 
 Snippets
 - set_bin                                  :cb
@@ -210,7 +216,7 @@ TraceView
 
 Keyboard shortcuts
 - change_trace_size                        ctrl+wheel
-- decrease                                 alt+down
+- decrease                                 ctrl+alt+down
 - go_left                                  alt+left
 - go_right                                 alt+right
 - go_to                                    alt+t
@@ -218,7 +224,7 @@ Keyboard shortcuts
 - go_to_next_spike                         alt+pgdown
 - go_to_previous_spike                     alt+pgup
 - go_to_start                              alt+home
-- increase                                 alt+up
+- increase                                 ctrl+alt+up
 - jump_left                                shift+alt+left
 - jump_right                               shift+alt+right
 - narrow                                   alt++

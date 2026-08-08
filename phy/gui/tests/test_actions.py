@@ -162,10 +162,16 @@ def test_actions_gui(qtbot, gui, actions):
         gui.file_actions.show_shortcuts()
     assert 'q\n' in stdout.getvalue()
 
-    # Show all action shortcuts.
-    with captured_output() as (stdout, stderr):
-        gui.help_actions.show_all_shortcuts()
-    assert 'g\n' in stdout.getvalue()
+    # Show all action shortcuts and commands in the GUI.
+    reference = gui.help_actions.show_all_shortcuts()
+    rows = [
+        [
+            reference.entries.item(row, column).text()
+            for column in range(reference.entries.columnCount())
+        ]
+        for row in range(reference.entries.rowCount())
+    ]
+    assert any(row[1] == 'Press' and row[2] == 'g' for row in rows)
 
 
 def test_actions_submenu(qtbot, gui, actions):
@@ -245,7 +251,23 @@ def test_actions_disable(qtbot, gui, actions):
 def test_snippets_message(qtbot, gui):
     gui.status_message = 'Hello world!'
     gui.snippets.mode_on()
+    assert gui.snippets.command == ':'
+    assert 'Enter: run' in gui.status_message
+    assert 'Esc: cancel' in gui.status_message
     gui.snippets.mode_off()
+    assert gui.status_message == 'Hello world!'
+
+
+def test_snippets_repeated_activation_leaves_escape_available(qtbot, gui):
+    gui.status_message = 'Hello world!'
+    snippets = gui.snippets
+
+    snippets.actions.enable_snippet_mode()
+    snippets.actions.enable_snippet_mode()
+    assert snippets.is_mode_on()
+
+    snippets.actions._snippet_disable()
+    assert not snippets.is_mode_on()
     assert gui.status_message == 'Hello world!'
 
 

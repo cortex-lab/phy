@@ -4,6 +4,7 @@
 # Imports
 # ------------------------------------------------------------------------------
 
+import json
 import logging
 import os
 import shutil
@@ -26,15 +27,18 @@ from phylib.utils import Bunch, connect, emit, reset, unconnect
 from pytest import mark
 from pytestqt.plugin import QtBot
 
+from phy.cluster._propositions import PropositionStatus
 from phy.cluster.clustering import Clustering
 from phy.cluster.views import (
     AmplitudeView,
     CorrelogramView,
     FeatureView,
+    FiringRateView,
     TemplateView,
     TraceView,
     WaveformView,
 )
+from phy.gui import GUI
 from phy.gui.qt import Debouncer, create_app
 from phy.gui.widgets import Barrier
 from phy.plot.tests import mouse_click
@@ -148,6 +152,10 @@ class MyControllerFull(TemplateMixin, WaveformMixin, FeatureMixin, TraceMixin, M
     """With everything."""
 
 
+class MyPropositionController(MyController):
+    enable_merge_propositions = True
+
+
 def _mock_controller(tempdir, cls):
     model = MyModel()
     return cls(
@@ -157,6 +165,141 @@ def _mock_controller(tempdir, cls):
         clear_cache=True,
         enable_threading=False,
     )
+
+
+def test_correlogram_deselect_request_preserves_hidden_selection(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    gui = controller.create_gui(do_prompt_save=False)
+    with qtbot.waitExposed(gui):
+        gui.show()
+
+    try:
+        supervisor = controller.supervisor
+        view = gui.list_views(CorrelogramView)[0]
+
+        # Exercise the complete GUI path for the first diagonal cell, which is the
+        # current best cluster in the Cluster View.
+        supervisor.select([0, 1, 2])
+        supervisor.block()
+        view.on_select(cluster_ids=[0, 1, 2])
+        width, height = view.canvas.get_size()
+        first_center = 0.5 * (1 - 0.9 * (1 - 1 / 3))
+        mouse_click(
+            qtbot,
+            view.canvas,
+            (first_center * width, first_center * height),
+            button='Right',
+            modifiers=('Control',),
+        )
+        supervisor.block()
+        assert supervisor.selected_clusters == [1, 2]
+
+        supervisor.select(list(range(22)))
+        supervisor.block()
+
+        emit('request_correlogram_deselect', view, 0, 1)
+        supervisor.block()
+        assert supervisor.selected_clusters == list(range(22))
+
+        emit('request_correlogram_deselect', view, 0, 0)
+        supervisor.block()
+
+        assert supervisor.selected_clusters == list(range(1, 22))
+
+        supervisor.similarity_view.select([22])
+        supervisor.block()
+        assert supervisor.selected_similar == [22]
+
+        emit('request_correlogram_deselect', view, 1, 22)
+        supervisor.block()
+
+        assert supervisor.selected_clusters == list(range(1, 22))
+        assert supervisor.selected_similar == []
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_correlogram_deselects_merge_proposition_reference(qtbot, tempdir):
+    source = {
+        'format_version': '2',
+        'unit_ids': list(range(MyModel.n_clusters)),
+        'merges': [{'unit_ids': [0, 1, 2]}],
+    }
+    (tempdir / 'curation.json').write_text(json.dumps(source), encoding='utf8')
+    controller = _mock_controller(tempdir, MyPropositionController)
+    gui = controller.create_gui(do_prompt_save=False)
+    with qtbot.waitExposed(gui):
+        gui.show()
+
+    try:
+        supervisor = controller.supervisor
+        proposition = supervisor.merge_propositions.catalog.propositions[0]
+        supervisor._review_merge_proposition(supervisor.merge_propositions_view, proposition.key)
+        assert supervisor.selected_merge == [0, 1, 2]
+
+        view = gui.list_views(CorrelogramView)[0]
+        emit('request_correlogram_deselect', view, 0, 0)
+        supervisor.block()
+
+        assert supervisor.selected_merge == [1, 2]
+        assert supervisor.selection.state.reference_id == 1
+        assert supervisor.selection.state.merge.proposition_id == proposition.key
+        assert supervisor.merge_view._reference_id == 1
+
+        candidate = supervisor.similarity_view.get_ids()[0]
+        supervisor.similarity_view.select([candidate])
+        supervisor.block()
+        emit('request_correlogram_deselect', view, 1, candidate)
+        supervisor.block()
+
+        assert supervisor.selected_merge == [1, 2]
+        assert supervisor.selected_similar == []
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_controller_loads_and_reopens_merge_proposition_reviews(tempdir):
+    source = {
+        'format_version': '2',
+        'unit_ids': list(range(MyModel.n_clusters)),
+        'merges': [{'unit_ids': [1, 2]}],
+    }
+    (tempdir / 'curation.json').write_text(json.dumps(source), encoding='utf8')
+    controller = _mock_controller(tempdir, MyPropositionController)
+    try:
+        proposition = controller.supervisor.merge_propositions.catalog.propositions[0]
+
+        controller.supervisor.merge_propositions.reject(proposition.key)
+        controller.supervisor.save()
+
+        sidecar = json.loads((tempdir / 'curation_review.json').read_text(encoding='utf8'))
+        assert sidecar['source']['filename'] == 'curation.json'
+        assert len(sidecar['source']['sha256']) == 64
+        assert sidecar['reviews'][proposition.key]['decision'] == 'rejected'
+    finally:
+        controller.close()
+
+    reopened = _mock_controller(tempdir, MyPropositionController)
+    try:
+        assert (
+            reopened.supervisor.merge_propositions.catalog.status_for(proposition.key)
+            is PropositionStatus.REJECTED
+        )
+    finally:
+        reopened.close()
+
+
+def test_invalid_curation_json_does_not_prevent_ordinary_controller(tempdir, caplog):
+    (tempdir / 'curation.json').write_text('{bad', encoding='utf8')
+
+    controller = _mock_controller(tempdir, MyPropositionController)
+    try:
+        assert controller.supervisor.merge_propositions is None
+        assert 'Merge Propositions disabled' in caplog.text
+    finally:
+        controller.close()
 
 
 def test_allocate_spike_counts_redistributes_total_budget():
@@ -431,7 +574,163 @@ def test_sparse_waveform_selection_filters_small_exported_pool(tempdir):
     eligible = subset_spikes[controller.supervisor.clustering.spike_clusters[subset_spikes] == 0]
     expected_indices = [0, (len(eligible) - 1) // 2, len(eligible) - 1]
     np.testing.assert_array_equal(selected[0], eligible[expected_indices])
+    np.testing.assert_array_equal(bunch.spike_ids, selected[0])
     controller.close()
+
+
+def test_mean_waveforms_do_not_expose_individual_spike_ids(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    bunch = controller._get_mean_waveforms(0)
+    assert bunch.data.shape[0] == 1
+    assert 'spike_ids' not in bunch
+    controller.close()
+
+
+def test_amplitude_preview_highlights_waveforms_with_cached_resolver(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    amplitude = controller.create_amplitude_view()
+    waveform = controller.create_waveform_view()
+    gui = GUI(name='AmplitudePreview', config_dir=tempdir)
+    amplitude.attach(gui)
+    waveform.attach(gui)
+    waveform.on_select(cluster_ids=[0])
+    spike_ids = waveform._displayed_bunchs[0].spike_ids
+    calls = []
+
+    def resolve(ids, name, first_cluster):
+        calls.append((ids.copy(), name, first_cluster))
+        return np.arange(len(ids), dtype=float)
+
+    controller._resolve_spike_amplitudes = resolve
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=0,
+        amplitudes_type='raw',
+        threshold=1.5,
+    )
+    np.testing.assert_array_equal(waveform._highlighted_spike_ids, spike_ids[:2])
+    assert waveform._highlighted_spike_color == amplitude.split_preview_color
+    assert len(calls) == 1
+
+    # Moving only the threshold must reuse the amplitudes already resolved for
+    # the displayed waveform identities.
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=0,
+        amplitudes_type='raw',
+        threshold=2.5,
+    )
+    np.testing.assert_array_equal(waveform._highlighted_spike_ids, spike_ids[:3])
+    assert len(calls) == 1
+
+    amplitude.split_threshold = 1.5
+    emit('selected_channel_changed', waveform)
+    assert amplitude.split_threshold is None
+
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=1,
+        amplitudes_type='raw',
+        threshold=2.5,
+    )
+    assert not len(waveform._highlighted_spike_ids)
+
+    amplitude.split_threshold = 0.5
+    emit(
+        'amplitude_split_preview_changed',
+        amplitude,
+        cluster_id=0,
+        amplitudes_type='raw',
+        threshold=amplitude.split_threshold,
+    )
+    assert len(waveform._highlighted_spike_ids)
+    amplitude.dock.close()
+    assert not len(waveform._highlighted_spike_ids)
+    waveform.dock.close()
+    gui.close()
+    controller.close()
+
+
+def test_amplitude_threshold_split_commits_exact_partition_and_undo_redo(qtbot, tempdir):
+    """The sampled preview must commit the exact, all-spike threshold partition."""
+    controller = _mock_controller(tempdir, MyControllerFull)
+    controller.n_spikes_amplitudes = 3
+    controller.n_spikes_waveforms = 8
+    supervisor = controller.supervisor
+    cluster_id = 0
+    original_clusters = controller.model.spike_clusters.copy()
+    cluster_spike_ids = np.flatnonzero(original_clusters == cluster_id)
+    # The sparse display samples cannot be authoritative: this deterministic
+    # pattern gives both sides of the threshold throughout the cluster.
+    controller.model.amplitudes = np.full(controller.model.n_spikes, 3.0)
+    controller.model.amplitudes[cluster_spike_ids] = np.arange(len(cluster_spike_ids)) % 4
+    expected = cluster_spike_ids[controller.model.amplitudes[cluster_spike_ids] < 1.5]
+    remaining = np.setdiff1d(cluster_spike_ids, expected)
+    gui = controller.create_gui(do_prompt_save=False)
+    try:
+        with qtbot.waitExposed(gui):
+            gui.show()
+        supervisor.select([cluster_id])
+        supervisor.block()
+        amplitude = gui.list_views(AmplitudeView)[0]
+        waveform = gui.list_views(WaveformView)[0]
+        amplitude.amplitudes_type = 'template'
+        amplitude.plot()
+        waveform.waveforms_type = 'waveforms'
+        waveform.plot()
+
+        displayed_amplitudes = next(
+            bunch for bunch in amplitude._displayed_bunchs if bunch.cluster_id == cluster_id
+        )
+        waveform_spike_ids = waveform._displayed_bunchs[0].spike_ids
+        missing_from_amplitude = np.setdiff1d(waveform_spike_ids, displayed_amplitudes.spike_ids)
+        assert len(missing_from_amplitude)
+        assert np.any(np.isin(expected, missing_from_amplitude))
+
+        # Set the transient threshold through the view-level preview contract;
+        # waveform classification resolves its own displayed spike identities.
+        amplitude.split_threshold = 1.5
+        amplitude._replot_displayed_amplitudes()
+        emit(
+            'amplitude_split_preview_changed',
+            amplitude,
+            cluster_id=cluster_id,
+            amplitudes_type=amplitude.amplitudes_type,
+            threshold=amplitude.split_threshold,
+        )
+        expected_waveform = waveform_spike_ids[
+            controller.model.amplitudes[waveform_spike_ids] < amplitude.split_threshold
+        ]
+        np.testing.assert_array_equal(waveform._highlighted_spike_ids, expected_waveform)
+
+        # This is the same request_split path invoked by the K shortcut.
+        supervisor.actions.split()
+        supervisor.block()
+        after_split = controller.model.spike_clusters.copy()
+        split_cluster = after_split[expected]
+        remaining_cluster = after_split[remaining]
+        assert len(np.unique(split_cluster)) == len(np.unique(remaining_cluster)) == 1
+        assert split_cluster[0] != remaining_cluster[0]
+        assert not np.any(after_split[cluster_spike_ids] == cluster_id)
+        assert amplitude.split_threshold is None
+        assert not len(waveform._highlighted_spike_ids)
+
+        supervisor.actions.undo()
+        supervisor.block()
+        np.testing.assert_array_equal(controller.model.spike_clusters, original_clusters)
+        assert amplitude.split_threshold is None
+
+        supervisor.actions.redo()
+        supervisor.block()
+        redone = controller.model.spike_clusters
+        np.testing.assert_array_equal(redone[expected], split_cluster)
+        np.testing.assert_array_equal(redone[remaining], remaining_cluster)
+    finally:
+        gui.close()
+        controller.close()
 
 
 def test_waveform_selected_clusters_share_total_budget(tempdir):
@@ -527,6 +826,56 @@ def test_get_firing_rate_honors_get_spike_times_override():
     np.testing.assert_array_equal(bunch.data, [1.25, 2.5])
     assert bunch.x_min == 0
     assert bunch.x_max == 3.0
+
+
+def test_recording_time_unit_updates_compatible_views(qtbot):
+    controller = object.__new__(BaseController)
+    controller.recording_time_unit = 's'
+    controller.recording_time_decimals = 2
+    amplitude = AmplitudeView(amplitudes=lambda cluster_ids, load_all=False: None)
+    firing_rate = FiringRateView(cluster_stat=lambda cluster_id: Bunch(data=np.array([0.0])))
+
+    class GUI:
+        views = [amplitude, firing_rate]
+
+    with (
+        patch.object(amplitude.canvas, 'update') as amplitude_update,
+        patch.object(firing_rate.canvas, 'update') as firing_rate_update,
+    ):
+        controller._set_recording_time_unit('hours', GUI())
+
+    assert controller.recording_time_unit == 'h'
+    assert amplitude.recording_time_unit == firing_rate.recording_time_unit == 'h'
+    assert all(label.endswith(' h') for label in amplitude.canvas.axes.locator.xtext)
+    assert all(label.endswith(' h') for label in firing_rate.canvas.axes.locator.xtext)
+    amplitude_update.assert_called()
+    firing_rate_update.assert_called()
+
+    amplitude.close()
+    firing_rate.close()
+
+
+def test_recording_time_unit_menu(qtbot, tempdir):
+    controller = object.__new__(BaseController)
+    controller.recording_time_unit = 's'
+    controller.recording_time_decimals = 2
+    gui = GUI(name='RecordingTimeTest', config_dir=tempdir)
+    controller.create_misc_actions(gui)
+
+    seconds = gui.view_actions.get('Seconds')
+    minutes = gui.view_actions.get('Minutes')
+    hours = gui.view_actions.get('Hours')
+    assert seconds.isCheckable() and minutes.isCheckable() and hours.isCheckable()
+    assert seconds.isChecked()
+
+    hours.trigger()
+
+    assert controller.recording_time_unit == 'h'
+    assert hours.isChecked()
+    assert not seconds.isChecked()
+    assert not minutes.isChecked()
+    assert gui.view_actions.get('2 decimals') is None
+    gui.close()
 
 
 def test_amplitude_view_excludes_unavailable_features(qtbot, tempdir):

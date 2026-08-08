@@ -58,6 +58,43 @@ def test_template_controller_close(tempdir):
     assert all(arr._mmap.closed for arr in mmaps)
 
 
+def test_template_controller_without_templates_uses_stored_waveform_channels(qtbot, tempdir):
+    dataset = _make_dataset(tempdir, param='dense', has_spike_attributes=False)
+    model = load_model(dataset)
+    spike_clusters = model.spike_clusters.copy()
+    cluster_ids = np.unique(spike_clusters)[:2]
+    spike_ids = np.concatenate(
+        [np.flatnonzero(spike_clusters == cluster_id)[:2] for cluster_id in cluster_ids]
+    )
+    model.close()
+
+    n_samples = 20
+    channel_ids = np.array(((2, 3), (2, 3), (7, 6), (7, 6)), dtype=np.int32)
+    waveforms = np.zeros((4, n_samples, 2), dtype=np.float32)
+    ramp = np.linspace(-1, 1, n_samples)
+    waveforms[:, :, 0] = 5 * ramp
+    waveforms[:, :, 1] = 2 * ramp
+    np.save(tempdir / '_phy_spikes_subset.waveforms.npy', waveforms)
+    np.save(tempdir / '_phy_spikes_subset.channels.npy', channel_ids)
+    np.save(tempdir / '_phy_spikes_subset.spikes.npy', spike_ids)
+    (tempdir / 'templates.npy').unlink()
+
+    controller = _template_controller(tempdir, dataset.parent)
+    probe = controller.create_probe_view()
+    try:
+        assert controller.model.n_samples_waveforms == n_samples
+        assert list(controller.get_best_channels(cluster_ids[0])) == [2, 3]
+        assert list(controller.get_best_channels(cluster_ids[1])) == [7, 6]
+        assert controller._get_waveforms(cluster_ids[0]).data.shape == (2, n_samples, 2)
+
+        first_positions, _ = probe._get_clu_positions([cluster_ids[0]])
+        second_positions, _ = probe._get_clu_positions([cluster_ids[1]])
+        assert not np.array_equal(first_positions, second_positions)
+    finally:
+        probe.canvas.close()
+        controller.close()
+
+
 class TemplateControllerTests(GlobalViewsTests, BaseControllerTests):
     """Base template controller tests."""
 

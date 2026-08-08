@@ -1,9 +1,10 @@
-# Merge View architecture proposal
+# Merge View architecture record
 
-Status: proposed for phy 2.2.0
+Status: implemented and automatically validated on the unreleased phy 2.2 branch;
+manual dataset smoke testing and release acceptance remain
 
-This document describes the internal architecture and incremental refactor
-recommended for implementing the user behavior fixed in the
+This document records the internal architecture and incremental refactor used to
+implement the user behavior fixed in the
 [Merge View workflow specification](merge-view-workflow.md). The workflow
 specification is authoritative when this document discusses implementation
 tradeoffs.
@@ -15,9 +16,9 @@ table. It introduces:
 
 - an explicit workflow mode;
 - a third cluster role alongside Cluster and Similarity;
-- role transfers that must not redraw scientific views;
+- an explicit presentation order derived from the two active roles;
 - a fixed blue Similarity reference;
-- stable colors independent of Merge row order;
+- stable cross-view colors independent of role and row-order changes;
 - exact cancellation to an entry snapshot; and
 - restoration of the complete workspace after undoing a committed merge.
 
@@ -25,16 +26,16 @@ The architectural goal is to support this workflow while improving the current
 selection, action, and history boundaries. The refactor should be incremental and
 should preserve public plugin APIs.
 
-The following are out of scope:
+The following were out of scope for the manual-workflow implementation:
 
-- Merge Propositions and proposition review states;
-- `curation.json` or external proposition-file schemas;
+- Merge Propositions and proposition review states, now specified separately in
+  [Merge Propositions](merge-propositions.md);
 - a global application-state framework;
 - a rewrite of scientific/OpenGL views;
 - clustering-algorithm changes; and
 - unrelated GUI modernization.
 
-## 2. Current architecture and constraints
+## 2. Pre-implementation architecture and constraints
 
 ### 2.1 Selection authority is indirect
 
@@ -54,11 +55,11 @@ Consequently, `TaskLogger` currently has several responsibilities:
 Extending `TaskLogger.last_state()` with a third view would make selection state
 more implicit and increase the number of callback-order dependencies.
 
-### 2.2 View transfers are multi-step callback sequences
+### 2.2 Merge candidate transfers are multi-step callback sequences
 
-Moving a cluster between Cluster and Similarity currently requires changing one
-table, waiting for its callback, restoring the other table, and suppressing the
-intermediate scientific-view update with `update_views=False`.
+Moving a candidate between Similarity and Merge requires changing both role
+tables while preserving one effective selection and publishing only the final
+presentation order.
 
 Merge mode requires many related transitions: enter, cancel, add, remove,
 reorder, commit, undo, and redo. Implementing each as a separate callback chain
@@ -78,18 +79,16 @@ This is an intentional correction of the internal model. Characterization tests
 must document the existing multi-selection behavior before changing it, and the
 user-visible consequence must be reviewed during implementation.
 
-### 2.4 Colors are positional throughout the views
+### 2.4 Color slots are independent of presentation order
 
-Many scientific views call `selected_cluster_color(index)` or otherwise derive
-selection colors from ID order. Replacing every consumer with a new color API
-would unnecessarily broaden the first refactor.
-
-The target architecture instead owns a stable `presentation_order`. Scientific
-views continue receiving an ordered list, preserving the existing plugin and
-view contract. Merge ordering is modeled separately.
-
-An explicit cluster-ID-to-color-slot API may be considered later if requirements
-eventually exceed what stable presentation order can express.
+The authoritative selection state owns both an explicit `presentation_order`
+and independent `color_slots`. Normal-mode presentation follows the visible
+role tables; Merge ordering is modeled separately and takes precedence while
+active. Normal color transitions depend on structured selection intent. In
+Merge mode, existing bindings are retained across transfers, reordering,
+temporary deselection, and reselection. Built-in scientific views resolve their
+positional palette index through that mapping while retaining presentation
+order for layout.
 
 ### 2.5 History lacks orchestration context
 
@@ -143,16 +142,22 @@ The refactor should establish the following invariants:
    independent domain authorities.
 3. Similarity reference is an explicit cluster ID.
 4. The reference occupies the blue presentation slot.
-5. Merge row order and presentation/color order are independent.
-6. Moving a cluster between Similarity and Merge does not change the effective
-   selection or emit a public selection update.
+5. Presentation order follows visible Cluster and Similarity row order in
+   Normal mode, with the reference first. In Merge mode it is Merge row order
+   followed by visible Similarity selection order. Color slots are stable across
+   workflow tables and scientific views independently of those order changes.
+6. Moving a cluster between Similarity and Merge does not change membership,
+   but emits a public selection update when it changes presentation order.
 7. Related state changes are applied transactionally; observers see only valid
    before and after states.
 8. Cancellation restores the exact entry snapshot.
 9. Undoing a Merge-mode merge restores the exact pre-commit workspace.
-10. Workspace edits do not enter the curation undo stack.
-11. Public selection and plugin APIs remain compatible.
-12. Selection transitions operate on cluster IDs and do no work proportional to
+10. A successful manual merge remains in Merge mode with its result as the sole
+    blue reference; its cancellation snapshot is the corresponding settled
+    Normal-mode result selection.
+11. Workspace edits do not enter the curation undo stack.
+12. Public selection and plugin APIs remain compatible.
+13. Selection transitions operate on cluster IDs and do no work proportional to
     every spike.
 
 ## 4. Proposed domain model
@@ -181,6 +186,7 @@ class CurationSelectionState:
     similar_ids: tuple[int, ...]
     reference_id: int | None
     presentation_order: tuple[int, ...]
+    color_slots: tuple[int | None, ...]
     merge: MergeSession | None
 ```
 
@@ -195,7 +201,9 @@ state.is_merge_mode
 
 In Normal mode, effective membership is Cluster plus Similarity membership. In
 Merge mode, it is Merge plus Similarity membership. `presentation_order` is the
-ordered unique list emitted to scientific views and used for positional colors.
+ordered unique list emitted to scientific views. `color_slots` independently
+stores explicit cluster-to-palette bindings, including released holes and
+reserved inactive bindings.
 
 ### 4.3 Merge session
 
@@ -205,6 +213,8 @@ class MergeSession:
     reference_id: int
     ordered_ids: tuple[int, ...]
     entry_snapshot: NormalWorkflowSnapshot
+    proposition_id: str | None = None
+    is_post_merge: bool = False
 ```
 
 `ordered_ids[0]` is always `reference_id`. The reference cannot be removed or
@@ -216,6 +226,13 @@ not arbitrary application state. It includes selections, reference,
 presentation order, and any table filter, sort, scroll, or navigation state that
 entering or editing Merge mode changes.
 
+`is_post_merge` distinguishes the automatically retained singleton workspace
+from a manually entered, uncommitted workspace. This allows `Undo` to target the
+commit directly without allowing a fresh temporary workspace to undo an older
+curation action. Workspace edits preserve this marker; exiting and manually
+re-entering Merge mode clears it. Proposition workspaces use their own provenance
+and automatic-advancement contract and are never post-merge continuations.
+
 ### 4.4 Selection change
 
 ```python
@@ -225,6 +242,7 @@ class SelectionChange:
     after: CurationSelectionState
     roles_changed: bool
     presentation_changed: bool
+    colors_changed: bool
     reference_changed: bool
     mode_changed: bool
 ```
@@ -232,7 +250,7 @@ class SelectionChange:
 This diff determines which observers need work:
 
 - `roles_changed`: update Cluster, Similarity, and Merge projections;
-- `presentation_changed`: emit the legacy public `select` event;
+- `presentation_changed` or `colors_changed`: emit the public `select` event;
 - `reference_changed`: recompute Similarity candidates; and
 - `mode_changed`: update action availability and enabled views.
 
@@ -250,7 +268,7 @@ add_to_merge(cluster_ids, insertion=None)
 remove_from_merge(cluster_ids)
 reorder_merge(cluster_id, insertion)
 set_cluster_selection(cluster_ids)
-set_similarity_selection(cluster_ids)
+apply_similarity_mutation(mutation)
 clear_similarity_selection()
 ```
 
@@ -396,10 +414,16 @@ For a Merge-mode merge:
 
 1. capture the complete pre-commit Merge state;
 2. execute the clustering merge;
-3. capture the resulting Normal-mode state;
+3. capture the resulting Normal-mode state and wrap it as the entry snapshot of
+   a singleton post-merge continuation workspace;
 4. store both on the global action entry;
 5. on undo, undo controllers and restore `selection_before` transactionally; and
 6. on redo, redo controllers and restore `selection_after` transactionally.
+
+The continuation keeps Merge View visible, makes the result the sole staged blue
+reference, clears Similarity selection, and recomputes Similarity rows. Exiting
+with `V` restores its settled Normal-mode result snapshot. Group and metadata
+actions remain disabled until that exit.
 
 The existing `request_undo_state` mechanism may be used as a compatibility step,
 but the final ownership of Merge workflow context belongs to the global curation
@@ -453,8 +477,9 @@ drag-and-drop, then add this reusable layer.
 ### 7.5 View closing and lifecycle
 
 Closing Merge View is a cancel intent. Cancellation must complete before the view
-is removed or hidden. Re-entering Merge mode must be able to recreate or reveal
-the view without retaining stale local state.
+is hidden. Merge View and its dock persist for the dataset session, and re-entering
+Merge mode reveals and freshly projects controller state into the same objects.
+Only GUI shutdown disconnects and releases them.
 
 Application shutdown must not accidentally save the transient empty Cluster
 selection produced by Merge mode as the next Normal-mode selection. Either
@@ -490,13 +515,55 @@ acceptable.
 Each phase should leave the repository testable and avoid combining broad
 behavioral changes with mechanical moves.
 
+### Planned commit sequence
+
+Implementation is organized as twelve reviewable commits. A commit may be split
+if its diff becomes difficult to review, but independent phases should not be
+squashed together merely to preserve the count.
+
+1. `test: characterize curation selection contracts`
+2. `refactor: add curation selection state model`
+3. `refactor: shadow supervisor selection state`
+4. `refactor: make curation selection authoritative`
+5. `refactor: separate reference and presentation order`
+6. `refactor: remove selection state from task history`
+7. `refactor: add contextual curation history`
+8. `feat: add merge session and mode lifecycle`
+9. `feat: add merge candidate interactions`
+10. `feat: restore merge sessions through history`
+11. `feat: add cluster table drag and drop`
+12. `docs: finalize merge view workflow`
+
+Commits 1-7 form the architectural foundation (Milestone 1). Commits 8-10
+provide the complete manual workflow without drag-and-drop (Milestone 2).
+Commits 11-12 add drag-and-drop and final cleanup/documentation (Milestone 3).
+
+The initial Merge-mode action policy is:
+
+- disable split, group/metadata changes, Cluster navigation, and Cluster
+  selection;
+- allow Similarity navigation, filtering, sorting, Ctrl+Space, Backspace, `V`,
+  `G`, and save;
+- reject unsafe direct or plugin calls explicitly without partially mutating the
+  workspace;
+- do not let an uncommitted Merge session undo an earlier curation action;
+- keep a successful manual merge in a marked singleton continuation workspace
+  whose Undo action targets that commit directly;
+- after undoing a Merge-mode merge, allow redo to reapply it; and
+- truncate that redo branch normally if the restored workspace is edited and a
+  different curation action is committed.
+
+Cancellation and shutdown restore or persist the Normal-mode entry snapshot,
+never the transient empty Cluster selection. The snapshot includes selections,
+reference, ordering, filter, sort, and navigation state. Pixel-perfect scroll
+restoration is best effort where Qt exposes a reliable value.
+
 ### Phase 0: characterization
 
 - Add tests for selection order, effective selection, multi-Cluster Similarity
   reference, positional colors, Ctrl+Space, Backspace, merge follow-up,
   undo/redo selection restoration, debouncing, and plugin-facing events.
-- Record exact event counts for transfers and merges where redraw suppression is
-  important.
+- Record exact event counts for transfers, reorders, and merges.
 
 ### Phase 1: state model in observation mode
 
@@ -516,7 +583,7 @@ behavioral changes with mechanical moves.
 
 - Make Similarity reference explicit.
 - Establish the reviewed blue-reference invariant.
-- Separate presentation order from table-role order.
+- Derive Merge-mode presentation order from table-role order.
 - Update characterization tests for the intentionally approved behavior change.
 
 ### Phase 4: transactional actions and contextual history
@@ -529,7 +596,7 @@ behavioral changes with mechanical moves.
 ### Phase 5: Merge mode without drag-and-drop
 
 - Add `MergeSession` and mode transitions.
-- Add Merge View, `C`, Ctrl+right-click transfers, Backspace behavior, mode
+- Add Merge View, `V`, Ctrl+right-click transfers, Backspace behavior, mode
   indication, cancellation, and `G` semantics.
 - Add exact cancel and merge undo/redo restoration tests.
 
@@ -537,7 +604,7 @@ behavioral changes with mechanical moves.
 
 - Add reusable native-table drag support.
 - Connect it to controller transfer and reorder intents.
-- Verify multi-row behavior and no-redraw invariants across platforms.
+- Verify multi-row behavior and presentation updates across platforms.
 
 ### Phase 7: TaskLogger decomposition and cleanup
 
@@ -561,7 +628,7 @@ Most mode behavior should be testable without Qt:
 - valid and invalid entry;
 - fixed reference;
 - transfer and reorder;
-- stable presentation order;
+- mode-dependent presentation order;
 - exact cancellation;
 - effective membership and merge target; and
 - before/after snapshot restoration.
@@ -589,7 +656,7 @@ Cover:
 - close-to-cancel;
 - drag-and-drop and insertion order;
 - reference-row immobility; and
-- view recreation and shutdown state.
+- persistent view identity and shutdown disposal.
 
 ### 10.4 Safety regressions
 
@@ -627,12 +694,13 @@ This could unify all state eventually, but the migration surface includes every
 view and plugin. It is disproportionate to the feature and too risky for the
 curation path.
 
-### Introduce an explicit color registry immediately
+### Derive colors exclusively from presentation order
 
-A color registry is conceptually clean but would require changing many
-scientific views and plugin assumptions. Stable presentation order satisfies the
-agreed workflow while providing a compatibility bridge. A full registry remains
-a possible later evolution.
+This initially minimized the migration surface, but it recolored existing
+clusters whenever inserting a newly selected row earlier in presentation order
+or transferring a Merge candidate between roles. The explicit color-slot order
+avoids that cross-view inconsistency while leaving the public selection payload
+unchanged.
 
 ### Store Merge UI context inside `Clustering`
 
@@ -653,8 +721,10 @@ before their implementation phase:
 - whether the first contextual-history implementation uses the existing
   `request_undo_state` hook as a transition step.
 
-Merge Propositions, persistence of proposition state, overlapping proposals, and
-external JSON remain separate future design work.
+TaskLogger no longer owns selection state, but its optional structural split into
+separate action-runner and post-action-policy classes remains deferred cleanup.
+Merge Propositions and their persistence are specified in
+[Merge Propositions](merge-propositions.md).
 
 ## 13. Handoff for future agents
 
@@ -683,7 +753,7 @@ Do not silently weaken these central invariants to simplify implementation:
 
 - the reference is blue and fixed in Merge View;
 - all entry selections transfer into Merge View;
-- role-only transfers do not redraw scientific views;
+- Merge-mode transfers and reorders publish their resulting presentation order;
 - cancellation restores the exact entry state;
 - `G` has one user-facing meaning in each visibly distinct mode; and
 - undoing a Merge-mode merge restores the complete pre-commit workspace.

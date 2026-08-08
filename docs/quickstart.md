@@ -63,9 +63,9 @@ Click one row in the Cluster View. Then click a highly ranked row in the
 Similarity View. The other views should now compare the two clusters using
 different colors.
 
-Press `H` at any time to show the effective keyboard shortcuts. Menus also show
-their shortcuts, and hovering over an action shows its command name in the status
-bar.
+Press `H` or choose **Help > Show shortcuts and commands** to open a searchable reference
+of the effective keyboard shortcuts and command aliases. Menus also show their shortcuts, and
+hovering over an action shows its command name in the status bar.
 
 ## 3. Inspect one cluster
 
@@ -86,16 +86,18 @@ Useful first-session keys include:
 
 | Action | Default shortcut |
 | --- | --- |
-| Show all shortcuts | `H` |
+| Show shortcuts and commands | `H` |
 | Select the next similarity candidate | `Space` |
 | Return to only the Cluster View selection | `Backspace` |
+| Enter or cancel Merge mode | `V` |
 | Merge selected clusters | `G` |
 | Split a feature selection | `K` |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z` |
 | Save | `Ctrl+S` |
 
 On macOS, menu labels may use platform-native key names. The help window is the
-authoritative list for the running build.
+authoritative list for the running build. Press `:` to open the command prompt in the
+status bar; it shows Enter/Escape guidance while active.
 
 ## 4. Compare a possible merge
 
@@ -112,6 +114,31 @@ Compare at least:
 If the evidence strongly supports one unit split by the sorter, select the
 clusters and press `G` to merge. phy gives the result a new cluster ID. Press
 `Ctrl+Z` immediately if the result is not what you intended.
+
+For a longer comparison, press `V` first. Merge View keeps the candidates staged while you
+continue exploring Similarity View. Its status shows exactly how many clusters `G` will merge.
+After `G`, Merge mode closes and the merged result becomes the sole Cluster View selection, ready
+to assign to `good`, `mua`, or `noise`. Press `V` again if it needs another merge. Before the
+commit, `V` or closing Merge View cancels without changing the clustering. Reopening uses the same
+dock and restores its previous placement and size. `Ctrl+Z` directly undoes the latest commit and
+restores its pre-merge workspace.
+
+If the Template GUI dataset includes an AIND/SpikeInterface format-version 2
+`curation.json` with merge suggestions, use the persistent **Merge Propositions**
+view to review them. Its button-free rows have source-order labels (`P1`, `P2`,
+...), compactly show the proposed units and any `⇒ new_unit_id`, and retain their
+labels while filtered or reviewed. Hover for full details and lifecycle status.
+Click a pending
+row to stage its ordered IDs in Merge View (the first is blue), replacing any
+active merge workspace. `Alt+Down`/`Alt+Up` move through pending rows in the
+current visible order and wrap; `Alt+Backspace` rejects and advances, while
+`Alt+Shift+Backspace` resets the highlighted completed review and reopens it.
+These shortcuts are suppressed while typing in a text input. Use `G` to accept;
+an edited merge is recorded as `accepted_modified`, then the next pending row in
+the pre-merge visible order opens automatically. Manual or failed merges do not
+advance. A proposition whose source clusters were changed becomes stale rather
+than being remapped. phy leaves `curation.json` unchanged and atomically saves
+decisions to `curation_review.json` with the rest of the curation results.
 
 Splitting requires selecting spikes in a view that supports lasso or polygon
 selection, commonly the Feature View, and pressing `K`. It is worth learning
@@ -148,10 +175,14 @@ dataset directory are:
 - other `cluster_<field>.tsv` files for additional labels;
 - `cluster_info.tsv`: a convenient snapshot of the columns currently exported
   from the Cluster View.
+- `curation_review.json`: accepted and rejected Merge Propositions decisions,
+  when that workflow is in use.
 
 The original `spike_templates.npy` is not changed by merges or splits.
 `cluster_info.tsv` is a derived summary; use `spike_clusters.npy` and the
 `cluster_<field>.tsv` files as the primary curation results.
+`curation.json`, when present, remains producer-owned input and is never
+overwritten.
 
 phy does **not** automatically make a backup before overwriting these files.
 Keep the pre-curation copy made above, and consider dated snapshots or version
