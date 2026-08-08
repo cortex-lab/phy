@@ -27,6 +27,9 @@ silently alter the workflow contract.
 - Automated release validation is complete (`make test-full`, lint, formatting,
   strict documentation build, and package build). Remaining work is maintainer
   acceptance and manual dataset smoke testing before release.
+- The dated [integration handoff](merge-view-integration-handoff.md) records the
+  current PR dependencies, manual-feedback gate, merge order, conflict policy,
+  and final validation steps. GitHub remains authoritative for live PR state.
 
 Agents continuing this work should first read the repository `AGENTS.md`, then
 both Merge View documents completely. Merge, selection, undo/redo, saved cluster
