@@ -111,6 +111,10 @@ behavior they verify rather than listed separately.
 - Added a task-oriented documentation navigation, synchronized API, shortcut,
   and plugin references, and strict documentation checks in continuous
   integration.
+- Corrected the `pc_features.npy` description. The file stores
+  `(n_spikes, n_pcs, n_channels_loc)`, phy swaps the last two axes on load,
+  array indices are zero-based, and `pc_feature_ind` is indexed by the
+  spike's template.
 
 ## [2.1.0] — 2026-07-17
 
