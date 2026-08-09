@@ -108,6 +108,10 @@ comment, or tester response. Phy #1409 remains open, non-draft, cleanly
 mergeable, and green at `046e05c9db33c9af565582829ea5fab4f55d7d8a`.
 The final phy `master` CI run at
 `92f080080047af2013162027e253ba22cbfd22a8` also passed.
+As expected after those merges, draft #1404 now reports a conflict with
+`master`; GitHub did not create a new check suite for the documentation-only
+handoff commits because it cannot construct the PR merge ref. Leave that
+conflict unresolved until the tester-feedback and #1409 gates are both met.
 
 Three existing phylib PRs received new heads later in the day. Their CI runs
 have conclusion `action_required`, meaning a maintainer must approve the fork
