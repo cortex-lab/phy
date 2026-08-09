@@ -14,10 +14,12 @@ stacked branches for this work.
 
 - phy: `feature/merge-view-workflow`
   - PR: https://github.com/cortex-lab/phy/pull/1404
-  - snapshot head before this handoff update:
-    `0a47882d6cd6ca8190b77df29d489963da077cc3`
-  - snapshot state: draft, manual feedback pending; all 12 checks passed on
-    that head
+  - current published head before this handoff update:
+    `036299dcff229e27db17a774cc2912b9a7f0c218`
+  - last manually tested implementation head, before documentation-only
+    handoff commits: `0a47882d6cd6ca8190b77df29d489963da077cc3`
+  - snapshot state: draft and conflicting with current `master`, with manual
+    feedback pending; all 12 checks passed on the tested implementation head
 - phylib: former branch `agent/fix-template-less-curation-reload`
   - PR: https://github.com/cortex-lab/phylib/pull/63
   - merged head: `fc494f6ab9f03370c43e618d2ef9610c6781b0e6`
@@ -136,6 +138,38 @@ test, and changelog overlaps once, on #60 after both earlier PRs have landed.
 Treat #60 and #62 as curation-integrity changes and require their failure-path,
 permission, cleanup, and full-suite regressions plus green CI before merge.
 
+### Later activity result (completed 2026-08-09)
+
+The refreshed executable batch is complete:
+
+- phy #1409 was verified as a lockfile-only six-package minor/patch update.
+  `uv sync --frozen --dev`, `make lint`, `make format-check`, and `uv build`
+  passed locally. It was squash-merged as
+  `6c582a5043d4f79723e446bb80dc62b63b7e9dc4`; its complete post-merge
+  platform matrix, docs, spelling, dependency-graph, and build checks passed.
+- phylib #61's fork workflow was approved. Its focused model tests and every
+  Linux, macOS, Windows-smoke, and package-build CI job passed. It was
+  squash-merged as `97118cad110006bf58a5a948c9de47666ff97065`.
+- phylib #62 was merged with current `master` and corrected before approval.
+  Its sibling temporary files now use exclusive open semantics, letting the OS
+  apply the process umask without temporarily changing that process-global
+  setting. Existing destination permissions are preserved; exception cleanup,
+  binary mode, and cross-platform permission behavior have regression tests.
+  Changed-file flake8 and all 279 local tests passed, followed by every CI job.
+  It was squash-merged as `0f78527a8051d40478c4d72910969b0fb9b16d7a`.
+- phylib #60 was then merged with that `master` and changed to reuse #62's
+  shared atomic writer for `spike_clusters.npy`. Its model-level regression
+  verifies that a simulated partial `np.save` leaves prior assignments byte
+  identical, removes the temporary file, and preserves group-readable mode on
+  Unix. All 280 local tests passed; changed files introduced no flake8 findings
+  beyond the six existing `model.py` findings; every CI job passed. It was
+  squash-merged as `0ccd6908ecb689a1762ca8d1322433bf0fba801b`.
+
+There are now no open phylib PRs in this integration sequence and no unmerged
+phy prerequisite PRs. The only current gate is the explicit real-dataset reply
+requested from `@goatsofnaxos` on phy #1404. There was still no reply, review,
+or newer PR comment at this update. Do not interpret silence as acceptance.
+
 ### Full pre-integration order
 
 Review and merge these PRs one at a time in this order:
@@ -159,11 +193,13 @@ Review and merge these PRs one at a time in this order:
    - Completed as `92f080080047af2013162027e253ba22cbfd22a8`.
 5. phy #1409 — grouped dependency lock refresh
    - https://github.com/cortex-lab/phy/pull/1409
-   - Merge this last so `uv.lock` represents the final dependency state.
+   - Completed as `6c582a5043d4f79723e446bb80dc62b63b7e9dc4` after local
+     lock-environment, lint, format, and build validation plus green PR and
+     post-merge CI.
 
-At this snapshot only #1409 remains in this sequence. Recheck its current patch,
-head, mergeability, reviews, comments, and complete CI matrix before merging it.
-Do not merge merely because CI is green.
+This sequence is complete. Do not begin the #1404 integration merely because
+all machine checks and prerequisite merges are complete; the manual feedback
+gate still applies.
 
 The smaller phy PRs overlap #1404 as follows:
 
@@ -183,7 +219,9 @@ If the tester confirms the fixes:
 2. Confirm phylib #63 and phy #1406 through #1409 are merged.
 3. Merge current `origin/master` once into `feature/merge-view-workflow`.
 4. Resolve overlap, validate, push, and wait for the complete PR CI matrix.
-5. Request final code review and mark #1404 ready only when all gates pass.
+5. Perform the final maintainer review and mark #1404 ready only when all gates
+   pass. Cyrille may provide that review and merge without an additional
+   independent reviewer.
 
 If the tester reports another problem:
 
@@ -256,7 +294,8 @@ PR #1404 may be marked ready only when all of the following are true:
 - phy #1406 through #1409 are merged and integrated;
 - local required validation and the complete PR CI matrix pass;
 - the real-dataset smoke test passes;
-- a final reviewer has reviewed the integrated patch.
+- Cyrille has completed the final maintainer review of the integrated patch;
+  no additional independent reviewer is required.
 
 Prefer squash-merging PR #1404 because its branch contains a long development
 history. After merge, verify `master` CI. When a phylib release containing
