@@ -101,6 +101,37 @@ The batch above is complete:
 The first unexecuted merge step is phy #1409. Do not start the #1404 integration
 until #1409 is merged and the manual tester feedback gate in section 2 is met.
 
+### Later activity refresh (2026-08-09 20:23 CEST)
+
+A second GitHub audit after the batch found no new phy PR, review, inline
+comment, or tester response. Phy #1409 remains open, non-draft, cleanly
+mergeable, and green at `046e05c9db33c9af565582829ea5fab4f55d7d8a`.
+The final phy `master` CI run at
+`92f080080047af2013162027e253ba22cbfd22a8` also passed.
+
+Three existing phylib PRs received new heads later in the day. Their CI runs
+have conclusion `action_required`, meaning a maintainer must approve the fork
+workflows; this is not a test failure:
+
+- #61, blank `dat_path`: `45be9a2c03824b8a1ca748a447dafaf049e91d7c`,
+  Actions run `31311081566`;
+- #62, atomic text writers: `0703f8474a2c1029a678f13cdc6b3938d1e4b952`,
+  Actions run `31311093728`;
+- #60, atomic `spike_clusters.npy`:
+  `6cf9e9828cdced4455635ad091d786a9206cccee`, Actions run `31309808016`.
+
+The revised phylib order is #61, then #62, then #60. Approve and verify #61's
+CI before merging it. Before merging #62, replace its process-global
+`os.umask(0)` read with a race-free way to create a sibling temporary file with
+normal new-file permissions, and preserve existing-file permissions. After #62
+is corrected and merged, update #60 onto that master and implement its binary
+array write through the shared atomic writer. The current #60 creates its
+temporary file with mode 0600 and then replaces `spike_clusters.npy`, which can
+silently remove group access on shared lab storage. Resolve the #61/#60 model,
+test, and changelog overlaps once, on #60 after both earlier PRs have landed.
+Treat #60 and #62 as curation-integrity changes and require their failure-path,
+permission, cleanup, and full-suite regressions plus green CI before merge.
+
 ### Full pre-integration order
 
 Review and merge these PRs one at a time in this order:
