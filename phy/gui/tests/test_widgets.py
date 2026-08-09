@@ -566,6 +566,36 @@ def test_table_change_and_sort_2(qtbot, table):
     _assert(table.get_ids, [9, 8, 7, 6, 4, 3, 2, 1, 0, 5])
 
 
+def test_table_sort_numeric_strings(qtbot):
+    # The `ch` column of the cluster view holds channel labels, which are strings.
+    # A plain string comparison sorts '10' before '2', so numeric strings have to be
+    # compared as numbers.
+    data = [{'id': i, 'ch': ch} for i, ch in enumerate(['2', '10', '1', '21', '3'])]
+    table = Table(columns=['id', 'ch'], value_names=['id', 'ch'], data=data)
+    _wait_until_table_ready(qtbot, table)
+
+    table.sort_by('ch', 'asc')
+    _assert(table.get_ids, [2, 0, 4, 1, 3])
+
+    table.sort_by('ch', 'desc')
+    _assert(table.get_ids, [3, 1, 4, 0, 2])
+
+    table.close()
+
+
+def test_table_sort_mixed_strings(qtbot):
+    # In a column that mixes numbers and free text, the numbers come first in numeric
+    # order and the remaining entries keep their string ordering.
+    data = [{'id': i, 'label': label} for i, label in enumerate(['mua', '10', 'good', '2'])]
+    table = Table(columns=['id', 'label'], value_names=['id', 'label'], data=data)
+    _wait_until_table_ready(qtbot, table)
+
+    table.sort_by('label', 'asc')
+    _assert(table.get_ids, [3, 1, 2, 0])
+
+    table.close()
+
+
 def test_table_change_metadata_preserves_sort(qtbot):
     data = [
         {'id': 0, 'count': 30, 'group': 'noise'},
