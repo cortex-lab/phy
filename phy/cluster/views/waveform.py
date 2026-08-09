@@ -511,27 +511,45 @@ class WaveformView(ScalingMixin, ManualClusteringView):
 
     @waveforms_type.setter
     def waveforms_type(self, value):
+        previous_type = self.waveforms_type
         self.waveforms_types.set(value)
+        self._rescale_if_waveforms_type_changed(previous_type)
+
+    def _rescale_if_waveforms_type_changed(self, previous_type):
+        """Discard the cached y axis bounds when the waveforms type has changed.
+
+        Raw waveforms, mean waveforms and templates have very different amplitude
+        scales, so bounds computed for one type make the others unreadable, either as
+        flat lines or as traces overflowing their box. Dropping the bounds makes the
+        next plot recompute them for the type now displayed.
+
+        """
+        if self.waveforms_type != previous_type:
+            self.data_bounds = None
 
     def next_waveforms_type(self):
         """Switch to the next waveforms type."""
+        previous_type = self.waveforms_type
         self.waveforms_types.next()
+        self._rescale_if_waveforms_type_changed(previous_type)
         logger.debug('Switch to waveforms type %s.', self.waveforms_type)
         self.plot()
 
     def previous_waveforms_type(self):
         """Switch to the previous waveforms type."""
+        previous_type = self.waveforms_type
         self.waveforms_types.previous()
+        self._rescale_if_waveforms_type_changed(previous_type)
         logger.debug('Switch to waveforms type %s.', self.waveforms_type)
         self.plot()
 
     def toggle_mean_waveforms(self, checked):
         """Switch to the `mean_waveforms` type, if it is available."""
         if self.waveforms_type == 'mean_waveforms' and 'waveforms' in self.waveforms:
-            self.waveforms_types.set('waveforms')
+            self.waveforms_type = 'waveforms'
             logger.debug('Switch to raw waveforms.')
             self.plot()
         elif 'mean_waveforms' in self.waveforms:
-            self.waveforms_types.set('mean_waveforms')
+            self.waveforms_type = 'mean_waveforms'
             logger.debug('Switch to mean waveforms.')
             self.plot()
