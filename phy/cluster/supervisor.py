@@ -833,14 +833,7 @@ class Supervisor:
         self._save_spikes_per_cluster()
 
         # Create the ClusterMeta instance.
-        self.cluster_meta = create_cluster_meta(cluster_groups or {})
-        # Add the labels.
-        for label, values in self.cluster_labels.items():
-            if label == 'group':
-                continue
-            self.cluster_meta.add_field(label)
-            for cl, v in values.items():
-                self.cluster_meta.set(label, [cl], v, add_to_stack=False)
+        self.cluster_meta = create_cluster_meta(cluster_groups or {}, self.cluster_labels)
 
         # Create the GlobalHistory instance.
         self._global_history = GlobalHistory(

@@ -1349,14 +1349,6 @@ class BaseController:
             context=self.context,
             merge_propositions=merge_propositions,
         )
-        # Load the non-group metadata from the model to the cluster_meta.
-        for name in sorted(self.model.metadata):
-            if name == 'group':
-                continue
-            values = self.model.metadata.get(name, {})
-            d = {cluster_id: {name: value} for cluster_id, value in values.items()}
-            supervisor.cluster_meta.from_dict(d)
-
         # Connect the `save_clustering` event raised by the supervisor when saving
         # to the model's saving functions.
         connect(self.on_save_clustering, sender=supervisor)

@@ -122,6 +122,9 @@ behavior they verify rather than listed separately.
 
 ### Changed
 
+- Load cluster-label columns in one silent bulk operation, avoiding duplicate
+  metadata assignment and thousands of unnecessary undo-event scans at startup.
+
 - Put content-specific actions first in every view menu, followed by a
   consistent Auto-update, Screenshot, and Close utility footer.
 
