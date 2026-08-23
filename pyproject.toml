@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.10"
 
@@ -34,7 +35,7 @@ dependencies = [
     "joblib",
     "matplotlib",
     "mtscomp",
-    "numpy",
+    "numpy>=1.23",
     "pillow",
     "pip",
     "PyQt5>=5.15.11,<5.16",
@@ -55,6 +56,13 @@ Repository = "https://github.com/cortex-lab/phy"
 Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
+kwik = [
+    "klusta",
+    "klustakwik2",
+    "numpy>=1.23,<1.24",
+    "setuptools<81",
+    "six",
+]
 dev = [
     "Cython>=3.0",
     "pytest",
@@ -108,6 +116,12 @@ phy = [
 
 [tool.uv]
 required-version = ">=0.11.8,<0.13"
+conflicts = [
+    [
+        { extra = "kwik" },
+        { group = "dev" },
+    ],
+]
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
 ]

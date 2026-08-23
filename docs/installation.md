@@ -161,14 +161,17 @@ phy template-gui /path/to/output/params.py
 ## Legacy Kwik support
 
 The Template GUI is the recommended workflow for current template-based sorters.
-The legacy Kwik GUI needs additional packages. Install them in a separate
-uv-managed environment because `klustakwik2` needs NumPy, setuptools, and Cython
-available while it builds:
+The legacy Kwik GUI requires Python 3.10 or 3.11 because its unmaintained
+dependencies are not compatible with current NumPy releases. Install it in a
+separate uv-managed environment. The `kwik` extra supplies the tested legacy
+dependency versions, while `klustakwik2` still needs NumPy, setuptools, and
+Cython available while it builds:
 
 ```bash
-uv venv --python 3.12 phy-kwik-env
-uv pip install --python phy-kwik-env phy klusta cython
+uv venv --python 3.11 phy-kwik-env
+uv pip install --python phy-kwik-env "numpy>=1.23,<1.24" "setuptools<81" six cython
 uv pip install --python phy-kwik-env --no-build-isolation klustakwik2
+uv pip install --python phy-kwik-env "phy[kwik]"
 ```
 
 Activate the environment using the command printed by `uv venv`. It can then be

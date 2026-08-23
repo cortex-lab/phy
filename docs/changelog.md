@@ -13,6 +13,9 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Install the legacy Kwik GUI dependencies with the optional `phy[kwik]`
+  extra. The supported legacy environment uses Python 3.10 or 3.11 and NumPy
+  1.23 without constraining regular Template GUI installations.
 - Select the first eligible clusters in the Similarity View with
   `Control+Space`. The default is 15 clusters; **Select > Select N Similar**
   changes the number and remembers it across sessions.
