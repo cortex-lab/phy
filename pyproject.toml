@@ -55,6 +55,10 @@ Repository = "https://github.com/cortex-lab/phy"
 Documentation = "https://phy.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
+recluster = [
+    "isosplit==0.1.4",
+    "scikit-learn>=1.7",
+]
 dev = [
     "Cython>=3.0",
     "pytest",
