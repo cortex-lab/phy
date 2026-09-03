@@ -1610,7 +1610,7 @@ class Supervisor:
     def _reveal_cluster_result(self, merged_id):
         """Bring a merged Cluster View row into the center of the visible workflow."""
         self.cluster_view.dock.raise_()
-        self.cluster_view.scroll_to(merged_id, QAbstractItemView.PositionAtCenter)
+        self.cluster_view.scroll_to(merged_id, center=True)
 
     def _select_after_split(self, up):
         """Select all clusters created by a split as one settled transition."""

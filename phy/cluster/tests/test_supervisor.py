@@ -765,7 +765,7 @@ def test_manual_merge_returns_to_visible_cluster_for_quality_assignment(monkeypa
     monkeypatch.setattr(
         supervisor.cluster_view,
         'scroll_to',
-        lambda cluster_id, hint: scrolled.append((cluster_id, hint)),
+        lambda cluster_id, center: scrolled.append((cluster_id, center)),
     )
     supervisor.toggle_merge_mode()
     merged_id = supervisor.merge().added[0]
@@ -773,7 +773,7 @@ def test_manual_merge_returns_to_visible_cluster_for_quality_assignment(monkeypa
 
     assert supervisor.cluster_view.filter_edit.text() == ''
     assert supervisor.cluster_view._current_sort == ('id', 'asc')
-    assert scrolled == [(merged_id, QAbstractItemView.PositionAtCenter)]
+    assert scrolled == [(merged_id, True)]
     supervisor.move('good', 'all')
 
     assert not supervisor.selection.state.is_merge_mode
@@ -1043,7 +1043,7 @@ def test_merge_proposition_accept_returns_to_cluster_then_navigates_explicitly(
     monkeypatch.setattr(
         supervisor.cluster_view,
         'scroll_to',
-        lambda cluster_id, hint: scrolled.append((cluster_id, hint)),
+        lambda cluster_id, center: scrolled.append((cluster_id, center)),
     )
 
     merged_id = supervisor.merge().added[0]
@@ -1063,7 +1063,7 @@ def test_merge_proposition_accept_returns_to_cluster_then_navigates_explicitly(
     assert supervisor.merge_propositions_view.current_key == first.key
     assert supervisor.cluster_view.filter_edit.text() == ''
     assert supervisor.cluster_view._current_sort == ('id', 'asc')
-    assert scrolled == [(merged_id, QAbstractItemView.PositionAtCenter)]
+    assert scrolled == [(merged_id, True)]
     assert supervisor.actions.get('undo').isEnabled()
     assert supervisor.merge_propositions_view.select_key(overlap.key)
     assert not supervisor.merge_propositions_view.can_trigger('review')
@@ -1091,7 +1091,7 @@ def test_merge_proposition_accept_returns_to_cluster_then_navigates_explicitly(
     assert supervisor.selected_merge == []
     assert supervisor.merge_view.dock.isHidden()
     assert supervisor.cluster_view.filter_edit.text() == ''
-    assert scrolled[-1] == (merged_id, QAbstractItemView.PositionAtCenter)
+    assert scrolled[-1] == (merged_id, True)
 
     supervisor.next_merge_proposition()
 

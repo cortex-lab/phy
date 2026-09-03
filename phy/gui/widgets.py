@@ -1447,9 +1447,12 @@ class Table(QWidget):
         self._refresh_selection()
         return self._selected_payload()
 
-    def scroll_to(self, id, hint=QAbstractItemView.EnsureVisible):
+    def scroll_to(self, id, *, center=False):
         index = self._proxy_index_for_id(id)
         if index.isValid():
+            hint = (
+                QAbstractItemView.PositionAtCenter if center else QAbstractItemView.EnsureVisible
+            )
             self.table_view.scrollTo(index, hint)
 
     def set_busy(self, busy):

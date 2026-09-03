@@ -1962,7 +1962,7 @@ minimumSizeHint(self) -> QSize
 #### Table.scroll_to
 
 
-**`Table.scroll_to(self, id)`**
+**`Table.scroll_to(self, id, *, center=False)`**
 
 
 
@@ -6954,7 +6954,7 @@ minimumSizeHint(self) -> QSize
 #### ClusterView.scroll_to
 
 
-**`ClusterView.scroll_to(self, id)`**
+**`ClusterView.scroll_to(self, id, *, center=False)`**
 
 
 
@@ -9897,7 +9897,7 @@ Recreate the view for an explicit reference and Cluster-role exclusions.
 #### SimilarityView.scroll_to
 
 
-**`SimilarityView.scroll_to(self, id)`**
+**`SimilarityView.scroll_to(self, id, *, center=False)`**
 
 
 
