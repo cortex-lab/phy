@@ -33,7 +33,8 @@ merge should contain only the staged rows.
 
 Press `G` to commit the staged clusters plus the selected Similarity candidates. The resulting
 unit becomes the sole Cluster View selection, Merge mode closes, and Similarity View is recomputed
-around the result. Assign its quality immediately, or press `V` again to stage it for another
+around the result. phy clears the Cluster View filter, keeps its sort, brings the result into view,
+and leaves it ready for immediate quality assignment. Press `V` again to stage it for another
 merge. Group and metadata changes remain unavailable only while Merge mode is active.
 
 Before a merge is committed, pressing `V`, using **Cancel Merge Mode**, or closing Merge View
@@ -74,14 +75,14 @@ resets the highlighted completed review and reopens it when reviewable.
 These shortcuts do nothing while a text input has focus.
 
 Press `G` to accept only after the ordinary merge succeeds; an edited set of
-candidates is marked `accepted_modified`. A successful proposition merge opens
-the next pending proposition using the visible order captured before the merge.
-Manual and failed merges do not advance proposition review. Press `V`, use
-Cancel, or close Merge View to leave the current proposition pending. Reject and
-reset are undoable, and undo/redo restore the exact before/after proposition
-workspaces. Overlapping propositions are allowed, but one whose source cluster
-no longer exists after a merge or split becomes stale and is never automatically
-remapped.
+candidates is marked `accepted_modified`. A successful proposition merge closes
+Merge View and reveals the result in Cluster View for quality assignment. Press
+`Alt+Down` or `Alt+Up` when ready to open the next or previous pending proposition.
+Failed merges do not advance proposition review. Press `V`, use Cancel, or close
+Merge View to leave the current proposition pending. Reject and reset are undoable,
+and undo/redo restore the exact before/after proposition workspaces. Overlapping
+propositions are allowed, but one whose source cluster no longer exists after a
+merge or split becomes stale and is never automatically remapped.
 
 phy never overwrites producer-owned `curation.json`. It stores accepted and
 rejected decisions in dataset-local `curation_review.json`, atomically after the

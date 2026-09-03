@@ -118,9 +118,10 @@ clusters and press `G` to merge. phy gives the result a new cluster ID. Press
 For a longer comparison, press `V` first. Merge View keeps the candidates staged while you
 continue exploring Similarity View. Its status shows exactly how many clusters `G` will merge.
 After `G`, Merge mode closes and the merged result becomes the sole Cluster View selection, ready
-to assign to `good`, `mua`, or `noise`. Press `V` again if it needs another merge. Before the
-commit, `V` or closing Merge View cancels without changing the clustering. Reopening uses the same
-dock and restores its previous placement and size. `Ctrl+Z` directly undoes the latest commit and
+to assign to `good`, `mua`, or `noise`. The Cluster View filter is cleared, its sort is preserved,
+and the result is scrolled into view. Press `V` again if it needs another merge. Before the commit,
+`V` or closing Merge View cancels without changing the clustering. Reopening uses the same dock
+and restores its previous placement and size. `Ctrl+Z` directly undoes the latest commit and
 restores its pre-merge workspace.
 
 If the Template GUI dataset includes an AIND/SpikeInterface format-version 2
@@ -134,9 +135,10 @@ active merge workspace. `Alt+Down`/`Alt+Up` move through pending rows in the
 current visible order and wrap; `Alt+Backspace` rejects and advances, while
 `Alt+Shift+Backspace` resets the highlighted completed review and reopens it.
 These shortcuts are suppressed while typing in a text input. Use `G` to accept;
-an edited merge is recorded as `accepted_modified`, then the next pending row in
-the pre-merge visible order opens automatically. Manual or failed merges do not
-advance. A proposition whose source clusters were changed becomes stale rather
+an edited merge is recorded as `accepted_modified`. A successful merge returns
+to Cluster View with the result visible for quality assignment. Press `Alt+Down`
+when ready to open the next pending row. A failed merge leaves the current review
+unchanged. A proposition whose source clusters were changed becomes stale rather
 than being remapped. phy leaves `curation.json` unchanged and atomically saves
 decisions to `curation_review.json` with the rest of the curation results.
 

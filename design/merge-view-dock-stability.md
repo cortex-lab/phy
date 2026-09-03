@@ -44,7 +44,7 @@ The resulting risks are:
 - loss of a floating dock's size or position;
 - loss of docking area or tab relationships;
 - repeated event connection and Qt resource lifecycle work; and
-- different behavior for `V`, proposition navigation, automatic advancement,
+- different behavior for `V`, proposition navigation, merge completion,
   undo/redo, and the dock close button.
 
 ## 3. Target lifecycle
@@ -100,13 +100,10 @@ The same operation should support replacing a manual Merge workspace with a
 proposition. Its cancellation target remains the manual workspace's original
 Normal-entry snapshot.
 
-Automatic advancement after a successful proposition merge is slightly
-different because the clustering has changed. It should construct the settled
-post-merge Normal state, use that as the next proposition's entry snapshot, and
-then project the next Merge workspace without hiding or recreating the dock.
-Failed merges retain their workspace unchanged. Successful manual merges do not
-advance proposition review; they reuse the dock for a singleton continuation
-workspace containing the merged result as its blue reference.
+Successful manual and proposition merges construct a settled post-merge Normal
+state, hide the reusable Merge dock, and reveal the merged result in Cluster
+View. Proposition review resumes only when the curator explicitly navigates to
+another pending row. Failed merges retain their workspace unchanged.
 
 Reject-and-advance and shortcut navigation use the same in-place replacement
 path. Selecting a nonactionable proposition still cancels to Normal mode and
@@ -191,7 +188,7 @@ intermittent Qt shutdown crash.
 4. Add the atomic selection-controller transition for manual/proposition and
    proposition/proposition replacement.
 5. Route click navigation, `Alt+Up`/`Alt+Down`, reject-and-advance, successful
-   merge auto-advance, undo, and redo through the reusable view.
+   merge completion, undo, and redo through the reusable view.
 6. Remove transition-time whole-window `saveState()`/`restoreState()` calls and
    add local dock extent restoration.
 7. Extend shutdown cleanup and leak/crash regressions for the persistent view.
@@ -203,9 +200,8 @@ intermittent Qt shutdown crash.
 - `P1 -> P2` preserves `id(merge_view)` and `id(merge_view.dock)`.
 - Manual Merge to proposition review preserves those identities.
 - Shortcut navigation and reject-and-advance do not hide or recreate the dock.
-- Successful auto-advance updates the existing view; successful manual merges
-  project the result into the same view without advancing, and failed merges
-  leave it unchanged.
+- Successful merges hide the existing view and reveal the Cluster View result;
+  failed merges leave the Merge workspace unchanged.
 - All unrelated dock geometries remain unchanged across proposition switches.
 - Cancel/hide/reopen restores the Merge dock area and docked extent.
 - A floating Merge dock retains its exact position and size.

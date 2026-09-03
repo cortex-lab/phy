@@ -214,7 +214,6 @@ class MergeSession:
     ordered_ids: tuple[int, ...]
     entry_snapshot: NormalWorkflowSnapshot
     proposition_id: str | None = None
-    is_post_merge: bool = False
 ```
 
 `ordered_ids[0]` is always `reference_id`. The reference cannot be removed or
@@ -226,12 +225,10 @@ not arbitrary application state. It includes selections, reference,
 presentation order, and any table filter, sort, scroll, or navigation state that
 entering or editing Merge mode changes.
 
-`is_post_merge` distinguishes the automatically retained singleton workspace
-from a manually entered, uncommitted workspace. This allows `Undo` to target the
-commit directly without allowing a fresh temporary workspace to undo an older
-curation action. Workspace edits preserve this marker; exiting and manually
-re-entering Merge mode clears it. Proposition workspaces use their own provenance
-and automatic-advancement contract and are never post-merge continuations.
+Successful merges leave no singleton Merge workspace behind. Their history
+entries retain the pre-commit workspace and the post-commit Normal table context,
+allowing Undo to restore the former and Redo to reveal the merged result again.
+Proposition workspaces retain their own provenance until the merge commits.
 
 ### 4.4 Selection change
 
@@ -547,8 +544,8 @@ The initial Merge-mode action policy is:
 - reject unsafe direct or plugin calls explicitly without partially mutating the
   workspace;
 - do not let an uncommitted Merge session undo an earlier curation action;
-- keep a successful manual merge in a marked singleton continuation workspace
-  whose Undo action targets that commit directly;
+- return successful manual and proposition merges to Normal mode with the result
+  visible for quality assignment;
 - after undoing a Merge-mode merge, allow redo to reapply it; and
 - truncate that redo branch normally if the restored workspace is edited and a
   different curation action is committed.

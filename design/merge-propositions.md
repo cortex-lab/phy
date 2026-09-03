@@ -153,14 +153,14 @@ While reviewing:
 On `G`, phy calls the ordinary merge implementation. Only after that call
 succeeds does it record the proposition as accepted, including the actual
 ordered merge IDs and result cluster ID. A changed workspace produces the
-derived `accepted_modified` status. Successful proposition commits then open the
-next pending proposition using the visible table order captured immediately
-before the merge. A manual merge and a failed merge do not advance proposition
-review; failure leaves the workspace and review state unchanged.
+derived `accepted_modified` status. Successful proposition commits close Merge
+View and reveal the merged unit in Cluster View for quality assignment. The
+curator explicitly opens another pending proposition with `Alt+Down` or `Alt+Up`.
+A failed merge leaves the workspace and review state unchanged.
 
 Reject creates a review-history entry and advances as described above. Reset
 review is explicit and undoable. Undo and redo restore the exact before/after
-proposition workspaces, including any automatically opened next proposition.
+proposition workspaces.
 
 ## 5. Overlap, stale IDs, and clustering changes
 
@@ -181,8 +181,7 @@ Undoing an accepted proposition restores:
 - derived validity of overlapping propositions.
 
 Redo reapplies the merge and accepted decision, then restores the exact
-post-commit context: the automatically opened next proposition, or Normal mode
-when no pending proposition remains.
+post-commit Normal context with the merged result visible in Cluster View.
 
 ## 6. Architecture boundaries
 

@@ -40,9 +40,10 @@ behavior they verify rather than listed separately.
   size; proposition navigation updates that dock without moving neighboring
   views. The dimmed Cluster View remains scrollable. Scientific views follow Merge View order and then
   selected Similarity rows in visible table order. Cancellation restores the entry state, and
-  undo restores the full pre-merge workspace. After a successful manual merge,
-  Merge mode closes and the result becomes the sole Cluster View selection for
-  quality assignment or explicit entry into another merge.
+  undo restores the full pre-merge workspace. After a successful merge, Merge
+  mode closes, the Cluster View filter clears without changing its sort, and the
+  result becomes the sole visible Cluster View selection for quality assignment
+  or explicit entry into another merge.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
   dataset-local `curation.json` in a persistent **Merge Propositions** view.
   Its compact rows have no action buttons and carry stable source-order display
@@ -53,8 +54,9 @@ behavior they verify rather than listed separately.
   `Alt+Down`/`Alt+Up` navigate pending rows, `Alt+Backspace` rejects and advances,
   and `Alt+Shift+Backspace` resets a
   highlighted completed review. `G` accepts the ordinary merge, marks edited
-  acceptance `accepted_modified`, and opens the next pending proposition in the
-  pre-merge visible order. Undo/redo restore exact proposition workspaces; stale
+  acceptance `accepted_modified`, and returns to Cluster View; `Alt+Down` or
+  `Alt+Up` explicitly opens another pending proposition. Undo/redo restore exact
+  proposition workspaces; stale
   overlapping proposals are never remapped, and decisions are atomically saved
   in `curation_review.json` without overwriting `curation.json`.
 

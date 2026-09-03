@@ -147,33 +147,25 @@ GUI reports that another candidate is required.
 
 After a successful merge:
 
-- Merge mode remains active;
-- Merge View replaces the committed inputs with the new merged cluster as its
-  sole staged row and blue reference;
+- Merge mode closes and Merge View is hidden;
+- Cluster View clears its filter, preserves its sort, and reveals the new merged
+  cluster as its sole selection;
 - Similarity View clears its selection and is recomputed for the new cluster;
-- the curator may stage or select more candidates and press `G` again; and
-- the dock control changes from **Cancel Merge Mode** to **Exit Merge Mode**;
-  `V`, that control, or closing Merge View exits to Normal mode with the merged
-  cluster selected in Cluster View.
+- the curator may assign quality immediately or press `V` to begin another merge.
 
-Group and metadata changes remain unavailable while Merge mode is active. The
-curator must exit with `V`, **Exit Merge Mode**, or the Merge View close control
-before classifying the merged cluster as `good`, `mua`, `noise`, or another
-quality.
+Group and metadata changes remain unavailable only while Merge mode is active.
 
-Successful proposition merges keep their separate review contract: they open
-the next pending proposition when one exists, rather than pausing on the merged
-result.
+Successful proposition merges use the same post-merge result workflow. The
+curator presses `Alt+Down` or `Alt+Up` to open another pending proposition.
 
 If the merge fails, the complete Merge-mode state remains unchanged.
 
 ## Cancelling or exiting Merge mode
 
-All of the following leave Merge mode:
+Before a merge is committed, all of the following cancel Merge mode:
 
 - pressing `V` while Merge mode is active;
-- activating the prominent **Cancel Merge Mode** control, renamed **Exit Merge
-  Mode** after a successful manual commit; or
+- activating the prominent **Cancel Merge Mode** control; or
 - closing Merge View.
 
 Cancellation performs no clustering action. Before the first commit, it restores
@@ -184,10 +176,9 @@ additions, removals, or reordering performed in Merge mode. In other words:
 state A -> enter Merge mode -> edit workspace -> cancel -> state A
 ```
 
-After a successful manual merge, the continuation workspace receives a new
-Normal-mode entry snapshot containing the merged cluster. Cancelling that
-workspace therefore exits with the committed merged cluster selected; it never
-tries to restore source clusters that no longer exist.
+A successful merge exits directly to a new Normal-mode snapshot containing the
+merged cluster; it never leaves a continuation workspace that could restore
+source clusters that no longer exist.
 
 Closing Merge View must visibly communicate that it cancels the mode. Merge mode
 must also be unmistakable while active: Merge View is labelled **MERGE MODE**,
@@ -231,10 +222,10 @@ entries in the clustering undo stack.
 | Merge | Ctrl+right-click removable Merge row | Transfer candidate to Similarity |
 | Merge | Ctrl+Space | Select the next Similarity candidates |
 | Merge | Backspace | Clear only the Similarity selection |
-| Merge | `G` | Commit the selection and continue with its result as the blue Merge reference |
+| Merge | `G` | Commit, return to Normal mode, and reveal the result in Cluster View |
 | Merge | `V`, Cancel, or close Merge View | Restore the entry snapshot exactly |
 | After Merge-mode merge | Undo | Restore clusters and pre-commit Merge workspace |
-| Restored after undo | Redo | Reapply merge and restore the singleton continuation workspace |
+| Restored after undo | Redo | Reapply merge and reveal the post-commit Cluster View result |
 
 ## Extension
 
