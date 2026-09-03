@@ -192,12 +192,8 @@ class TaskLogger:
     def _after_merge(self, task, output):
         """Tasks that should follow a merge."""
         selection_before = task.selection_before
-        if (
-            selection_before is not None
-            and selection_before.is_merge_mode
-            and selection_before.merge.proposition_id is None
-        ):
-            self.supervisor._finish_manual_merge(output, selection_before)
+        if selection_before is not None and selection_before.is_merge_mode:
+            self.supervisor._finish_merge(output, selection_before)
             return
         self.supervisor._select_after_merge(
             output,
@@ -1570,6 +1566,10 @@ class Supervisor:
         else:
             self._set_merge_mode_ui(False)
             self._hide_merge_view()
+            if isinstance(workflow_context, dict) and workflow_context.get('mode') == 'post_merge':
+                self._restore_workflow_context(workflow_context.get('tables'))
+                if selection.cluster_ids:
+                    self._reveal_cluster_result(selection.cluster_ids[-1])
         self._refresh_propositions()
 
     @staticmethod
@@ -1597,11 +1597,20 @@ class Supervisor:
         change = self.selection.set_normal_selection((up.added[0],), similar_ids)
         self._apply_selection_change(change)
 
-    def _finish_manual_merge(self, up, selection_before):
-        """Return a committed manual merge to Normal mode with its result selected."""
+    def _finish_merge(self, up, selection_before):
+        """Return a committed Merge workspace to its visible Cluster View result."""
+        # A successful merge starts the quality-assignment phase. Clear any Cluster View filter
+        # that could hide the result, while preserving the user's current sort.
+        self.cluster_view.filter('')
         self._select_after_merge(up, selection_before)
         self._set_merge_mode_ui(False)
         self._hide_merge_view()
+        self._reveal_cluster_result(up.added[0])
+
+    def _reveal_cluster_result(self, merged_id):
+        """Bring a merged Cluster View row into the center of the visible workflow."""
+        self.cluster_view.dock.raise_()
+        self.cluster_view.scroll_to(merged_id, QAbstractItemView.PositionAtCenter)
 
     def _select_after_split(self, up):
         """Select all clusters created by a split as one settled transition."""
@@ -2021,11 +2030,6 @@ class Supervisor:
         workflow_context = (
             {'mode': 'merge', 'tables': self._workflow_context()} if merge_mode else None
         )
-        proposition_order = (
-            self.merge_propositions_view.visible_keys()
-            if proposition_id is not None and self.merge_propositions_view is not None
-            else ()
-        )
         # A merge synchronously emits several related table mutations: metadata
         # inheritance, addition of the merged cluster, and removal of its
         # ancestors. Fit each attached table once after the complete operation
@@ -2037,8 +2041,8 @@ class Supervisor:
                     stack.enter_context(table.batch_update())
             out = self.clustering.merge(cluster_ids, to=to)
         if not task_logger_processing:
-            if merge_mode and proposition_id is None:
-                self._finish_manual_merge(out, selection_before)
+            if merge_mode:
+                self._finish_merge(out, selection_before)
             else:
                 self._select_after_merge(out, selection_before)
         controllers = [self.clustering]
@@ -2047,22 +2051,19 @@ class Supervisor:
             controllers.append(self.merge_propositions)
         self._refresh_propositions()
         if proposition_id is not None:
-            next_key = self._pending_proposition_relative_to(
-                proposition_id, 'next', proposition_order
-            )
-            if next_key is not None:
-                self._activate_merge_proposition(self.merge_propositions_view, next_key)
-            else:
-                self._set_merge_mode_ui(False)
-                self._hide_merge_view()
-                self.merge_propositions_view.select_key(proposition_id)
+            self._set_merge_mode_ui(False)
+            self._hide_merge_view()
+            self.merge_propositions_view.select_key(proposition_id)
         self._global_history.action(
             *controllers,
             description='merge',
             selection_before=selection_before,
             selection_after=self.selection.snapshot(),
             workflow_context=workflow_context,
-            workflow_context_after=self._merge_workflow_history_context(),
+            workflow_context_after={
+                'mode': 'post_merge',
+                'tables': self._workflow_context(),
+            },
         )
         if self.selection.state.is_merge_mode:
             self._set_merge_mode_ui(True)
@@ -2511,9 +2512,20 @@ class Supervisor:
         # Selection-only exploration does not create history entries. Preserve the exact
         # state at the time undo is requested so redo remains a true inverse operation.
         if self._global_history.current_position > 0:
+            workflow_after = self._merge_workflow_history_context()
+            current_context = self._global_history.current_item.workflow_context_after
+            if (
+                workflow_after is None
+                and isinstance(current_context, dict)
+                and current_context.get('mode') == 'post_merge'
+            ):
+                workflow_after = {
+                    'mode': 'post_merge',
+                    'tables': self._workflow_context(),
+                }
             self._global_history.update_current_context(
                 selection_after=self.selection.snapshot(),
-                workflow_context_after=self._merge_workflow_history_context(),
+                workflow_context_after=workflow_after,
             )
         self._global_history.undo()
 

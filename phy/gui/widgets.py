@@ -1447,10 +1447,10 @@ class Table(QWidget):
         self._refresh_selection()
         return self._selected_payload()
 
-    def scroll_to(self, id):
+    def scroll_to(self, id, hint=QAbstractItemView.EnsureVisible):
         index = self._proxy_index_for_id(id)
         if index.isValid():
-            self.table_view.scrollTo(index)
+            self.table_view.scrollTo(index, hint)
 
     def set_busy(self, busy):
         self.debouncer.isBusy = bool(busy)
