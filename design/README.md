@@ -15,6 +15,9 @@ Read these documents in order:
    AIND/SpikeInterface format-version 2 `curation.json` merge propositions.
 4. [Merge View dock stability plan](merge-view-dock-stability.md) proposes a
    persistent dock and atomic workspace switching to avoid layout disruption.
+5. [Merge workflow feedback plan](merge-workflow-feedback-plan.md) records the
+   September 2026 assessment and proposed transfer, reference-promotion, lookup,
+   gesture, and column-layout work, with regression requirements for a future agent.
 
 The workflow specification is the authority for user behavior. The architecture
 record may evolve as implementation reveals constraints, but changes must not
