@@ -18,11 +18,10 @@ behavior they verify rather than listed separately.
 
 ### Added
 
-- `Control`-right-clicking a diagonal autocorrelogram in the Correlogram View
-  removes that cluster from the active selection. On a cross-correlogram spanning
-  the primary and Similarity selections, it removes the Similarity cluster. This
-  also works during Merge mode and proposition review; removing the reference
-  promotes the next staged cluster to reference.
+- Right-clicking a correlogram transfers its row cluster between the primary and
+  Similarity roles. This also works during Merge mode and proposition review;
+  transferring the reference promotes the next staged cluster and retains the old
+  reference in Similarity. Modified right-click is not a transfer alias.
 - Split the lower-amplitude portion of one selected cluster directly from the
   Amplitude View: use `Alt`-right-drag to preview a threshold, then press `K`
   to commit an exact all-spike split. Individual waveform traces receive the
@@ -34,7 +33,7 @@ behavior they verify rather than listed separately.
   separators and at most two decimal places.
 - Stage and order manual merge candidates in the new **Merge View**. Press `V`
   to enter or cancel Merge mode, transfer candidates with
-  `Control`-right-click or drag-and-drop, and press `G` to merge every staged
+  right-click or drag-and-drop, and press `G` to merge every staged
   cluster plus the current Similarity View selection. Merge View opens below
   Cluster View and keeps one stable in-session dock identity, position, and
   size; proposition navigation updates that dock without moving neighboring
@@ -44,6 +43,10 @@ behavior they verify rather than listed separately.
   mode closes, the Cluster View filter clears without changing its sort, and the
   result becomes the sole visible Cluster View selection for quality assignment
   or explicit entry into another merge.
+- Select and center an exact cluster ID by entering a bare integer in an enabled
+  table filter and pressing Enter. Rearrange Cluster, Similarity, and Merge table
+  columns by dragging their headers; each layout is persisted independently by
+  column name, including across plugin-column changes.
 - Review AIND/SpikeInterface format-version 2 merge propositions from
   dataset-local `curation.json` in a persistent **Merge Propositions** view.
   Its compact rows have no action buttons and carry stable source-order display

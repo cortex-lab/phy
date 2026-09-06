@@ -47,12 +47,12 @@ red, and subsequent clusters use additional colors that are shared by the plots.
 * Control-click or Command-click, depending on the platform's normal table behavior, to select
   additional rows.
 * Shift-click to select a range.
-* Control-right-click a Cluster View row to toggle it without discarding the rest of the
-  selection.
+* Right-click a Cluster View row to transfer it to Similarity without discarding the rest of
+  the selection. Right-click a Similarity row to transfer it into the primary selection.
 * Type `:c 12 34` to select clusters by ID.
 
 The Similarity View contains candidates relative to the primary Cluster View selection.
-Control-right-clicking a Similarity View row promotes it into the primary selection while
+Right-clicking a Similarity View row promotes it into the primary selection while
 preserving the current comparison. See [Similarity and the wizard](similarity.md) for the complete
 workflow.
 
@@ -60,7 +60,7 @@ Press `V` to stage the current selections in Merge View. It opens below Cluster 
 same dock, placement, and size while toggling the mode or changing propositions. In this temporary
 mode, Cluster View is dimmed and
 read-only but remains scrollable, every Merge View row is included in the pending merge, and
-Similarity View remains available for exploring additional candidates. Control-right-click or drag
+Similarity View remains available for exploring additional candidates. Right-click or drag
 rows between Merge and Similarity views, or drag inside Merge View to reorder candidates. Press `G`
 to commit or `V` to cancel. See
 [Staging candidates in Merge View](clustering.md#staging-candidates-in-merge-view).
@@ -85,6 +85,11 @@ group != 'noise' && depth >= 1000
 Press Escape to clear the filter. The `:s` and `:f` snippets provide keyboard-driven sorting and
 filtering. Filtering and sorting also control the order and contents of global views such as the
 Raster and Template views.
+
+A bare cluster ID followed by Enter selects and centers that exact row, clearing an expression
+filter if necessary. Missing IDs leave the current table state unchanged. Drag table headers to
+rearrange columns; Cluster, Similarity, and Merge layouts are remembered independently. The ID
+column can move but cannot be hidden.
 
 ## Common plot interactions
 

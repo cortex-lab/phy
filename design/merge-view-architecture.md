@@ -146,7 +146,7 @@ The refactor should establish the following invariants:
    Normal mode, with the reference first. In Merge mode it is Merge row order
    followed by visible Similarity selection order. Color slots are stable across
    workflow tables and scientific views independently of those order changes.
-6. Moving a cluster between Similarity and Merge does not change membership,
+6. Moving a cluster between primary and Similarity roles does not change membership,
    but emits a public selection update when it changes presentation order.
 7. Related state changes are applied transactionally; observers see only valid
    before and after states.
@@ -216,8 +216,9 @@ class MergeSession:
     proposition_id: str | None = None
 ```
 
-`ordered_ids[0]` is always `reference_id`. The reference cannot be removed or
-reordered. Reordering later candidates changes `ordered_ids` but not
+`ordered_ids[0]` is always `reference_id`. The reference cannot be reordered
+within Merge View, but transferring it to Similarity promotes the next staged
+ID. Reordering later candidates changes `ordered_ids` but not
 `presentation_order`.
 
 The entry snapshot contains the user state required by the workflow contract,
@@ -593,7 +594,7 @@ restoration is best effort where Qt exposes a reliable value.
 ### Phase 5: Merge mode without drag-and-drop
 
 - Add `MergeSession` and mode transitions.
-- Add Merge View, `V`, Ctrl+right-click transfers, Backspace behavior, mode
+- Add Merge View, `V`, right-click transfers, Backspace behavior, mode
   indication, cancellation, and `G` semantics.
 - Add exact cancel and merge undo/redo restoration tests.
 
@@ -649,7 +650,7 @@ Cover:
 
 - disabled Cluster View interaction;
 - mode indicator and pending count;
-- Ctrl+right-click;
+- right-click role transfer;
 - close-to-cancel;
 - drag-and-drop and insertion order;
 - reference-row immobility; and

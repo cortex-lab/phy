@@ -1,7 +1,7 @@
 # Merge workflow feedback: implementation handoff
 
-Status: proposed work, not implemented. Snapshot: 2026-09-06, local HEAD
-`0d227204` (`refactor: expose centered table scrolling`).
+Status: approved and implemented on 2026-09-06; automated validation is recorded
+below and real-dataset acceptance remains.
 
 ## Goal and scope
 
@@ -45,25 +45,21 @@ Useful implementation locations:
   `test_merge_lifecycle.py`, `phy/gui/tests/test_widgets.py`,
   `phy/cluster/views/tests/test_correlogram.py`, `phy/apps/tests/test_base.py`.
 
-## Proposed behavior and decisions to settle
+## Approved behavior
 
-Use these as implementation proposals, not claims of previously agreed behavior.
-Resolve ambiguities from current user guidance and repository context; seek user
-input only where a material product decision remains unresolved.
+These decisions were approved during implementation.
 
-1. Keep Ctrl+left-click for Normal-mode multi-(de)selection. Prefer ordinary
-   right-click for transfer, as requested. Audit plot navigation and context-menu
-   handling before binding it; preserve stationary-click versus drag behavior.
-   Decide whether Ctrl+right-click remains an alias or retains deselection.
+1. Keep Ctrl+left-click for Normal-mode multi-(de)selection. Ordinary right-click
+   transfers; Ctrl+right-click is not a compatibility alias. Stationary plot
+   clicks transfer and drags do not.
 2. Define primary role as Cluster selection in Normal mode and staged Merge
    membership in Merge mode. Transfer the clicked cluster between that role and
    Similarity. A plot click targets the row cluster, including off-diagonal cells.
-   Unselected table rows need an explicit policy: existing Merge transfers can
-   stage an unselected Similarity candidate, which adds effective membership.
+   Unselected table rows transfer directly without a preliminary left-click.
 3. Allow reference transfer when another primary cluster remains. Promote the
    next remaining primary cluster deterministically, retain the old reference in
-   Similarity, and recompute similarity against the new reference. Default proposal:
-   reject transfer of the last primary cluster with clear feedback; cancellation
+   Similarity, and recompute similarity against the new reference. Reject transfer
+   of the last primary cluster with clear feedback; cancellation
    remains the explicit way to leave Merge mode.
 4. Preserve the blue-reference invariant. Existing promotion swaps the promoted
    cluster's palette slot with slot zero. Reuse a documented policy for transfers
@@ -72,21 +68,18 @@ input only where a material product decision remains unresolved.
    transfer B and C into Cluster selection; Backspace clears remaining Similarity;
    V stages A/B/C. The feedback's step 5 says SimilarityView, but context indicates
    ClusterView. V already supports manual entry.
-6. Define exact-ID lookup separately from expression filtering. Suggested behavior:
+6. Define exact-ID lookup separately from expression filtering. A
    bare integer plus Enter selects and reveals that ID; expressions retain filter
-   behavior. Specify absent IDs, filtered-out IDs, selection replacement, focus,
-   and behavior in disabled views. Do not accidentally stage candidates or change
+   behavior. Missing IDs are non-mutating, a filtered-out ID clears the expression
+   so it can be centered, and the lookup follows the enabled table's replacement
+   selection semantics. Do not stage candidates or change
    Merge membership through generic search. No live-as-you-type selection is assumed.
 7. Add independent column order for Cluster, Similarity, and Merge tables. Persist
    by column name, tolerate added/removed plugin columns, and keep logical sorting
-   separate from visual column order. Decide whether the ID column is movable.
+   separate from visual column order. The ID column is movable but not hideable.
 
-**Audit merge operands before changing them.** The prior assessment recommended
-merging exactly staged IDs, but the existing workflow specification says G merges
-the effective union of Merge and Similarity selections. Determine actual current
-behavior and settle the intended contract explicitly. Do not silently change this
-curation-sensitive behavior as a side effect of transfer work. Tests must exercise
-G while Similarity candidates remain selected.
+`G` merges the complete effective selection: the unique union of Merge and
+Similarity selections, including selected rows hidden by filtering.
 
 ## Implementation sequence
 
@@ -165,3 +158,15 @@ and limitations. Manually exercise both entry workflows on a dataset copy,
 including reference transfer, remaining Similarity candidates at commit,
 cancel/undo/redo, quality assignment, and save/reopen. Passing old tests is not
 evidence that the newly requested behavior works.
+
+Implementation validation: the focused controller, widget, Supervisor,
+Correlogram, and application suite passed **236 tests**. `make lint` and
+`make format-check` passed. Documentation generation, link checking, and strict
+MkDocs building passed; the final clean-tree comparison reports the intended
+uncommitted documentation changes. The core/GUI half of `make test-full` passed
+**483 tests**. Its application half passed **152 of 153 tests**; the unrelated
+`test_template_controller_without_templates_uses_stored_waveform_channels`
+fails both in the full run and isolation because phylib reports
+`n_samples_waveforms == 0` instead of the fixture's expected 20. No code on that
+waveform-loading path was changed here. A real-dataset smoke test was not possible
+without a supplied dataset copy.

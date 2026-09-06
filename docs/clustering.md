@@ -23,15 +23,18 @@ Every row in Merge View is part of the pending merge. Continue exploring Similar
 sorting, filtering, `Control+Space`, and multi-selection remain available. The Merge View status
 shows the number of staged clusters, selected similar clusters, and the total that `G` will merge.
 
-Move candidates between the two views with `Control`-right-click or drag-and-drop. Drag within
-Merge View to reorder candidates. The first blue reference cannot be moved or removed, and
+Move candidates between the two views with right-click or drag-and-drop. Drag within
+Merge View to reorder candidates. The first blue reference cannot be reordered, but it can be
+transferred when another staged row remains. The next row then becomes the blue reference and
+the old reference remains selected in Similarity. The final staged row cannot be transferred, and
 the selection order shown by scientific views is always the Merge View order followed by selected
 Similarity View rows in visible table order. Transfers, table sorting, and Merge reordering redraw
 order-dependent views, while each cluster keeps the same color across tables and scientific views
 for the entire Merge session. Press `Backspace` to clear only the Similarity View selection when the
 merge should contain only the staged rows.
 
-Press `G` to commit the staged clusters plus the selected Similarity candidates. The resulting
+Press `G` to commit the staged clusters plus all selected Similarity candidates, including selected
+rows currently hidden by a filter. The resulting
 unit becomes the sole Cluster View selection, Merge mode closes, and Similarity View is recomputed
 around the result. phy clears the Cluster View filter, keeps its sort, brings the result into view,
 and leaves it ready for immediate quality assignment. Press `V` again to stage it for another

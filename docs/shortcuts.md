@@ -104,7 +104,7 @@ CorrelogramView
 Keyboard shortcuts
 - change_bin_size                          alt+wheel
 - change_window_size                       ctrl+wheel
-- deselect_cluster                         ctrl+right click
+- transfer_cluster                         right click
 
 Snippets
 - set_bin                                  :cb

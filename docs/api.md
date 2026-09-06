@@ -1752,6 +1752,15 @@ Decode and validate a cluster-ID-only MIME payload.
 
 ---
 
+#### Table.column_order
+
+
+**`Table.column_order(self)`**
+
+Return column names in their current visual order.
+
+---
+
 #### Table.configure_cluster_drag_drop
 
 
@@ -2010,6 +2019,15 @@ Return the row selection produced by navigation without mutating the table.
 **`Table.set_busy(self, busy)`**
 
 
+
+---
+
+#### Table.set_column_order
+
+
+**`Table.set_column_order(self, names)`**
+
+Restore a visual order by name, tolerating changed plugin columns.
 
 ---
 
@@ -6744,6 +6762,15 @@ Decode and validate a cluster-ID-only MIME payload.
 
 ---
 
+#### ClusterView.column_order
+
+
+**`ClusterView.column_order(self)`**
+
+Return column names in their current visual order.
+
+---
+
 #### ClusterView.configure_cluster_drag_drop
 
 
@@ -7002,6 +7029,15 @@ Return the row selection produced by navigation without mutating the table.
 **`ClusterView.set_busy(self, busy)`**
 
 
+
+---
+
+#### ClusterView.set_column_order
+
+
+**`ClusterView.set_column_order(self, names)`**
+
+Restore a visual order by name, tolerating changed plugin columns.
 
 ---
 
@@ -7434,7 +7470,7 @@ selected clusters (template view, raster view).
 
 **`CorrelogramView.on_mouse_release(self, e)`**
 
-Remove a cluster after a stationary Control-secondary click.
+Request a row-cluster transfer after a stationary secondary click.
 
 ---
 
@@ -9678,6 +9714,15 @@ Decode and validate a cluster-ID-only MIME payload.
 
 ---
 
+#### SimilarityView.column_order
+
+
+**`SimilarityView.column_order(self)`**
+
+Return column names in their current visual order.
+
+---
+
 #### SimilarityView.configure_cluster_drag_drop
 
 
@@ -9945,6 +9990,15 @@ Return the row selection produced by navigation without mutating the table.
 **`SimilarityView.set_busy(self, busy)`**
 
 
+
+---
+
+#### SimilarityView.set_column_order
+
+
+**`SimilarityView.set_column_order(self, names)`**
+
+Restore a visual order by name, tolerating changed plugin columns.
 
 ---
 
@@ -10389,6 +10443,33 @@ Make a new cluster out of the specified spikes.
 **`Supervisor.toggle_merge_mode(self, callback=None)`**
 
 Enter Merge mode, or cancel the active Merge workspace.
+
+---
+
+#### Supervisor.transfer_cluster
+
+
+**`Supervisor.transfer_cluster(self, cluster_id, callback=None)`**
+
+Transfer one effective cluster according to its current role.
+
+---
+
+#### Supervisor.transfer_to_primary
+
+
+**`Supervisor.transfer_to_primary(self, cluster_ids, callback=None)`**
+
+Transfer visible IDs into Cluster selection or the active Merge workspace.
+
+---
+
+#### Supervisor.transfer_to_similarity
+
+
+**`Supervisor.transfer_to_similarity(self, cluster_ids, callback=None)`**
+
+Transfer IDs from the current primary role into Similarity.
 
 ---
 

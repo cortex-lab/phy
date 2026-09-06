@@ -75,9 +75,15 @@ Merge View is tied to one blue reference cluster:
 
 - it is always the first row;
 - it remains the reference used to calculate Similarity;
-- it cannot be reordered;
-- it cannot be removed individually; and
-- its blue color is stable throughout the workflow.
+- it cannot be reordered within Merge View;
+- it can be transferred to Similarity when another staged cluster remains; and
+- the current reference always owns the blue palette slot.
+
+Transferring the reference promotes the next staged cluster in stable row order,
+moves the old reference into the selected Similarity role, and recomputes
+Similarity against the promoted blue reference. Transferring the final staged
+cluster is rejected without changing the workspace; cancellation remains the
+explicit way to leave Merge mode.
 
 When several clusters were selected in Cluster View, the cluster that was the
 Similarity reference on entry becomes the blue reference. The other clusters
@@ -89,9 +95,9 @@ Merge View has no selected-versus-unselected row state. Every cluster present in
 the view is included in the pending merge by definition. Removing a row means
 removing that cluster from Merge View.
 
-- Ctrl+right-click on a non-reference Merge row transfers that cluster to
+- Right-click on a Merge row transfers that cluster to
   Similarity View and selects it there.
-- Ctrl+right-click on a Similarity row transfers that cluster to Merge View.
+- Right-click on a Similarity row transfers that cluster to Merge View.
 - Drag-and-drop between Similarity View and Merge View provides the equivalent
   transfer operation.
 - Dragging within Merge View reorders candidates, except for the fixed blue
@@ -101,7 +107,8 @@ removing that cluster from Merge View.
 - Duplicate membership is not possible; adding an existing member is a no-op.
 
 Ctrl+click retains its existing multi-row selection meaning in Similarity View.
-Ctrl+right-click transfers only the clicked row. Dragging a selected Similarity
+Right-click transfers only the clicked row, without requiring prior selection;
+modified right-click is not a transfer alias. Dragging a selected Similarity
 row transfers all selected rows; dragging an unselected row transfers only that
 row.
 
@@ -111,6 +118,25 @@ table order.
 Adding, removing, or reordering rows may redraw order-dependent scientific
 views, but a cluster's color slot remains fixed across workflow tables and
 scientific views for the entire Merge session.
+
+The same role rule applies in Normal mode: right-click transfers the clicked
+Cluster row into Similarity or the clicked Similarity row into the Cluster
+selection. Other selections remain unchanged. Transferring the blue Cluster
+reference promotes the next selected Cluster row; transferring the final primary
+row is rejected.
+
+## Table lookup and layout
+
+Entering a bare integer in an enabled table filter and pressing Enter performs
+an exact ID lookup: it clears any expression filter, selects the row, centers it,
+and otherwise follows that table's ordinary selection semantics. A missing ID
+leaves selection and filtering unchanged. Expressions retain their filtering
+behavior, and lookup never stages or transfers a cluster implicitly.
+
+Cluster, Similarity, and Merge tables have independently movable columns. Their
+visual order is persisted by column name, ignores removed plugin columns, and
+appends newly added columns. The ID column may move but cannot be hidden. Visual
+column order never changes logical sorting, selection, or staged merge order.
 
 ## Exploring Similarity
 
@@ -218,8 +244,10 @@ entries in the clustering undo stack.
 | State | Action | Result |
 | --- | --- | --- |
 | Normal | `V` | Snapshot state, transfer all selections, enter Merge mode |
-| Merge | Ctrl+right-click Similarity | Transfer clicked candidate to Merge |
-| Merge | Ctrl+right-click removable Merge row | Transfer candidate to Similarity |
+| Normal | Right-click Cluster | Transfer clicked row to Similarity |
+| Normal | Right-click Similarity | Transfer clicked row to Cluster selection |
+| Merge | Right-click Similarity | Transfer clicked candidate to Merge |
+| Merge | Right-click Merge row | Transfer candidate to Similarity, promoting the reference if needed |
 | Merge | Ctrl+Space | Select the next Similarity candidates |
 | Merge | Backspace | Clear only the Similarity selection |
 | Merge | `G` | Commit, return to Normal mode, and reveal the result in Cluster View |
