@@ -412,25 +412,79 @@ class CurationSelectionController:
         self._require_merge_mode()
         current = self._state
         removed = _as_unique_ids(cluster_ids)
-        if current.reference_id in removed:
-            raise ValueError('The merge reference cannot be removed.')
         if not set(removed) <= set(current.merge_ids):
             raise ValueError('Removed IDs must belong to the merge session.')
+        merge_ids = tuple(i for i in current.merge_ids if i not in removed)
+        if not merge_ids:
+            raise ValueError('The last staged merge cluster cannot be transferred.')
+        reference = merge_ids[0]
         merge = MergeSession(
-            current.reference_id,
-            tuple(i for i in current.merge_ids if i not in removed),
+            reference,
+            merge_ids,
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
         )
         similar = _ordered_union(current.similar_ids, removed)
         effective = _ordered_union(merge.ordered_ids, similar)
+        slots = self._promote_reference_slot(reference)
         return self._apply(
             CurationSelectionState(
                 mode=WorkflowMode.MERGE,
                 similar_ids=similar,
-                reference_id=current.reference_id,
+                reference_id=reference,
                 merge=merge,
-                color_slots=self._merge_slots(effective),
+                color_slots=self._preserve_and_allocate(slots, effective),
+            )
+        )
+
+    def transfer_to_primary(self, cluster_ids):
+        """Transfer IDs into the active primary role without changing membership."""
+        requested = _as_unique_ids(cluster_ids)
+        if self._state.is_merge_mode:
+            return self.add_to_merge(requested)
+        current = self._state
+        clusters = _ordered_union(current.cluster_ids, requested)
+        similar = tuple(i for i in current.similar_ids if i not in requested)
+        reference = current.reference_id or (clusters[0] if clusters else None)
+        order = _ordered_union((reference,) if reference is not None else (), clusters, similar)
+        slots = self._preserve_and_allocate(
+            current.color_slots, _ordered_union(clusters, similar), primary_ids=clusters
+        )
+        return self._apply(
+            CurationSelectionState(
+                cluster_ids=clusters,
+                similar_ids=similar,
+                reference_id=reference,
+                presentation_order=order,
+                color_slots=slots,
+            )
+        )
+
+    def transfer_to_similarity(self, cluster_ids):
+        """Transfer IDs into Similarity, promoting a remaining primary reference."""
+        requested = _as_unique_ids(cluster_ids)
+        if self._state.is_merge_mode:
+            return self.remove_from_merge(requested)
+        current = self._state
+        clusters = tuple(i for i in current.cluster_ids if i not in requested)
+        if not clusters:
+            raise ValueError('The last primary cluster cannot be transferred.')
+        reference = current.reference_id if current.reference_id in clusters else clusters[0]
+        similar = _ordered_union(
+            tuple(i for i in current.similar_ids if i not in clusters), requested
+        )
+        order = _ordered_union((reference,), clusters, similar)
+        slots = self._promote_reference_slot(reference)
+        slots = self._preserve_and_allocate(
+            slots, _ordered_union(clusters, similar), primary_ids=clusters
+        )
+        return self._apply(
+            CurationSelectionState(
+                cluster_ids=clusters,
+                similar_ids=similar,
+                reference_id=reference,
+                presentation_order=order,
+                color_slots=slots,
             )
         )
 
@@ -453,16 +507,13 @@ class CurationSelectionController:
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
         )
-        slots = list(current.color_slots)
-        if reference != current.reference_id:
-            reference_slot = slots.index(reference)
-            slots[0], slots[reference_slot] = slots[reference_slot], slots[0]
+        slots = self._promote_reference_slot(reference)
         return self._apply(
             CurationSelectionState(
                 mode=WorkflowMode.MERGE,
                 similar_ids=current.similar_ids,
                 reference_id=reference,
-                color_slots=tuple(slots),
+                color_slots=slots,
                 merge=merge,
             )
         )
@@ -538,6 +589,14 @@ class CurationSelectionController:
 
     def _merge_slots(self, effective):
         return self._preserve_and_allocate(self._state.color_slots, effective)
+
+    def _promote_reference_slot(self, reference):
+        """Put a promoted reference in blue while preserving all other bindings."""
+        slots = list(self._state.color_slots)
+        if reference != self._state.reference_id:
+            reference_slot = slots.index(reference)
+            slots[0], slots[reference_slot] = slots[reference_slot], slots[0]
+        return tuple(slots)
 
     def _require_normal_mode(self):
         if self._state.is_merge_mode:

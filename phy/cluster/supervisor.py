@@ -362,6 +362,7 @@ class ClusterView(Table):
         return {
             'current_sort': current_sort,
             'selected': selected,
+            'column_order': self.column_order(),
         }
 
     def set_state(self, state):
@@ -369,6 +370,7 @@ class ClusterView(Table):
         sort_by, sort_dir = state.get('current_sort', (None, None))
         if sort_by:
             self.sort_by(sort_by, sort_dir)
+        self.set_column_order(state.get('column_order', ()))
         selected = state.get('selected', [])
         if selected:
             self.select(selected)
@@ -452,10 +454,6 @@ class MergeView(Table):
         self.remove_all_and_add(data, fit_columns=not self._column_widths_fitted)
         self.set_selected_index_mapping(color_indices)
         self.set_selected_ids(cluster_ids)
-
-    def _drag_ids_for_index(self, index):
-        ids = super()._drag_ids_for_index(index)
-        return () if ids and ids[0] == self._reference_id else ids
 
 
 # -----------------------------------------------------------------------------
@@ -790,6 +788,7 @@ class Supervisor:
         self.merge_propositions = merge_propositions
         self._merge_close_callback = None
         self._merge_dock_state = None
+        self._table_column_orders = {}
         self._suspend_presentation_order_sync = False
         self._is_dirty = None
         self._sort = sort  # Initial sort requested in the constructor
@@ -931,6 +930,12 @@ class Supervisor:
         if self.selection.state.is_merge_mode:
             self._cancel_merge_mode()
         gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
+        self._table_column_orders = {
+            'cluster': self.cluster_view.column_order(),
+            'similarity': self.similarity_view.column_order(),
+            'merge': self.merge_view.column_order() if self.merge_view is not None else [],
+        }
+        gui.state['table_column_orders'] = self._table_column_orders
         gui.state['n_similar_clusters_to_select'] = self.n_similar_clusters_to_select
         gui.state['skip_masked_clusters'] = self.skip_masked_clusters
 
@@ -1022,6 +1027,11 @@ class Supervisor:
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
         connect(self._table_order_changed, event='table_sort', sender=self.cluster_view)
         connect(self._table_order_changed, event='table_filter', sender=self.cluster_view)
+        connect(
+            self._transfer_row_on_right_click,
+            event='row_right_click',
+            sender=self.cluster_view,
+        )
 
         # Create the similarity view.
         self.similarity_view = SimilarityView(
@@ -1039,7 +1049,7 @@ class Supervisor:
         connect(self._table_order_changed, event='table_sort', sender=self.similarity_view)
         connect(self._table_order_changed, event='table_filter', sender=self.similarity_view)
         connect(
-            self._add_similar_to_merge_on_right_click,
+            self._transfer_row_on_right_click,
             event='row_right_click',
             sender=self.similarity_view,
         )
@@ -1054,6 +1064,7 @@ class Supervisor:
         state = state or self.selection.state
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
         self.merge_view = MergeView(self.gui, data=data, columns=self.columns)
+        self.merge_view.set_column_order(self._table_column_orders.get('merge', ()))
         self.merge_view._reference_id = state.reference_id
         self.merge_view.configure_cluster_drag_drop(
             'merge', accepted_roles=('merge', 'similarity'), drag_selected_rows=False
@@ -1062,7 +1073,7 @@ class Supervisor:
             'similarity', accepted_roles=('merge',), drag_selected_rows=True
         )
         connect(
-            self._remove_merge_candidate_on_right_click,
+            self._transfer_row_on_right_click,
             event='row_right_click',
             sender=self.merge_view,
         )
@@ -1511,7 +1522,7 @@ class Supervisor:
         unconnect(
             view,
             self._on_cluster_drop,
-            self._remove_merge_candidate_on_right_click,
+            self._transfer_row_on_right_click,
         )
 
     def _on_cluster_drop(self, sender, payload):
@@ -1527,6 +1538,9 @@ class Supervisor:
         elif sender is self.similarity_view and source is self.merge_view:
             self.remove_from_merge(cluster_ids)
         elif sender is self.merge_view and source is self.merge_view:
+            if self.selection.state.reference_id in cluster_ids:
+                logger.warning('The merge reference cannot be reordered.')
+                return
             current = self.selection.state.merge_ids
             removed_before = sum(
                 current.index(cluster_id) < insertion for cluster_id in cluster_ids
@@ -1641,14 +1655,12 @@ class Supervisor:
         change = self.selection.set_normal_selection(next_clusters, next_similar)
         self._apply_selection_change(change)
 
-    def _add_similar_to_merge_on_right_click(self, sender, cluster_id):
-        """Transfer a right-clicked Similarity row only into an active Merge workspace."""
-        if not self.selection.state.is_merge_mode:
-            return
-        self.add_to_merge((cluster_id,))
-
-    def _remove_merge_candidate_on_right_click(self, sender, cluster_id):
-        emit('action', self.action_creator, 'remove_from_merge', cluster_id)
+    def _transfer_row_on_right_click(self, sender, cluster_id):
+        """Transfer exactly the secondary-clicked row to the opposite workflow role."""
+        if sender in (self.cluster_view, self.merge_view):
+            self.transfer_to_similarity((cluster_id,))
+        elif sender is self.similarity_view:
+            self.transfer_to_primary((cluster_id,))
 
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
@@ -1828,6 +1840,7 @@ class Supervisor:
         """Attach to the GUI."""
 
         self.gui = gui
+        self._table_column_orders = dict(gui.state.get('table_column_orders', {}))
 
         saved_n_similar = gui.state.get(
             'n_similar_clusters_to_select', self.n_similar_clusters_to_select
@@ -1859,6 +1872,8 @@ class Supervisor:
         self._create_views(
             gui=gui, sort=gui.state.get('ClusterView', {}).get('current_sort', None)
         )
+        self.cluster_view.set_column_order(self._table_column_orders.get('cluster', ()))
+        self.similarity_view.set_column_order(self._table_column_orders.get('similarity', ()))
 
         # Create the TaskLogger.
         self.task_logger = TaskLogger(
@@ -2402,6 +2417,39 @@ class Supervisor:
         change = self.selection.add_to_merge(cluster_ids, insertion=insertion)
         self._apply_selection_change(change, callback=callback)
         return change.after
+
+    def transfer_to_primary(self, cluster_ids, callback=None):
+        """Transfer visible IDs into Cluster selection or the active Merge workspace."""
+        if isinstance(cluster_ids, Integral):
+            cluster_ids = (int(cluster_ids),)
+        try:
+            change = self.selection.transfer_to_primary(cluster_ids)
+        except ValueError as e:
+            logger.warning('%s', e)
+            return
+        self._apply_selection_change(change, callback=callback)
+        return change.after
+
+    def transfer_to_similarity(self, cluster_ids, callback=None):
+        """Transfer IDs from the current primary role into Similarity."""
+        if isinstance(cluster_ids, Integral):
+            cluster_ids = (int(cluster_ids),)
+        try:
+            change = self.selection.transfer_to_similarity(cluster_ids)
+        except ValueError as e:
+            logger.warning('%s', e)
+            return
+        self._apply_selection_change(change, callback=callback)
+        return change.after
+
+    def transfer_cluster(self, cluster_id, callback=None):
+        """Transfer one effective cluster according to its current role."""
+        state = self.selection.state
+        if cluster_id in state.merge_ids:
+            return self.transfer_to_similarity((cluster_id,), callback=callback)
+        if cluster_id in state.similar_ids:
+            return self.transfer_to_primary((cluster_id,), callback=callback)
+        logger.warning('Cluster %s is not in the effective selection.', cluster_id)
 
     def remove_from_merge(self, cluster_ids, callback=None):
         """Transfer staged candidates back to Similarity View."""

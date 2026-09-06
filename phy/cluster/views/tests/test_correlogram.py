@@ -39,11 +39,11 @@ def test_correlogram_view(qtbot, gui):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    deselected = []
+    transferred = []
 
     @connect(sender=v)
-    def on_request_correlogram_deselect(sender, cluster_id_a, cluster_id_b):
-        deselected.append((cluster_id_a, cluster_id_b))
+    def on_request_correlogram_transfer(sender, cluster_id_a, cluster_id_b):
+        transferred.append((cluster_id_a, cluster_id_b))
 
     cluster_ids = list(range(v.max_n_clusters))
     v.on_select(cluster_ids=cluster_ids)
@@ -60,9 +60,8 @@ def test_correlogram_view(qtbot, gui):
             v.canvas,
             (0.5 * width * (x_ndc + 1), 0.5 * height * (1 - y_ndc)),
             button='Right',
-            modifiers=('Control',),
         )
-    # Plain clicks do nothing; modified cross-correlogram clicks report both clusters.
+    # An off-diagonal click reports both axes; the application targets its row.
     first_center = 0.5 * (1 - 0.9 * (1 - 1 / n))
     second_center = 0.5 * (1 - 0.9 * (1 - 3 / n))
     mouse_click(
@@ -70,17 +69,17 @@ def test_correlogram_view(qtbot, gui):
         v.canvas,
         (first_center * width, first_center * height),
         button='Right',
+        modifiers=('Control',),
     )
     mouse_click(
         qtbot,
         v.canvas,
         (second_center * width, first_center * height),
         button='Right',
-        modifiers=('Control',),
     )
 
-    assert deselected == [(cluster_id, cluster_id) for cluster_id in cluster_ids] + [(0, 1)]
-    unconnect(on_request_correlogram_deselect)
+    assert transferred == [(cluster_id, cluster_id) for cluster_id in cluster_ids] + [(0, 1)]
+    unconnect(on_request_correlogram_transfer)
 
     v.toggle_normalization(True)
     v.toggle_labels(False)

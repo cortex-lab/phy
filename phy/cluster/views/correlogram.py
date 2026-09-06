@@ -62,7 +62,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
         'change_bin_size': 'alt+wheel',
-        'deselect_cluster': 'ctrl+right click',
+        'transfer_cluster': 'right click',
     }
 
     default_snippets = {
@@ -241,8 +241,8 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.canvas.update()
 
     def on_mouse_release(self, e):
-        """Remove a cluster after a stationary Control-secondary click."""
-        if 'Control' not in e.modifiers or e.button != 'Right' or not self.cluster_ids:
+        """Request a row-cluster transfer after a stationary secondary click."""
+        if e.modifiers or e.button != 'Right' or not self.cluster_ids:
             return
         press_pos = self.canvas._mouse_press_position
         if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
@@ -251,7 +251,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         grid_ndc = self._display_scale.inverse().apply(ndc)[0]
         i, j = self.canvas.grid.get_closest_box(grid_ndc)
         emit(
-            'request_correlogram_deselect',
+            'request_correlogram_transfer',
             self,
             self.cluster_ids[i],
             self.cluster_ids[j],

@@ -10,7 +10,6 @@ import inspect
 import json
 import logging
 import re
-import sys
 from collections.abc import Mapping
 from contextlib import contextmanager
 from functools import partial
@@ -785,6 +784,7 @@ class Table(QWidget):
         self.table_view.setWordWrap(False)
         self.table_view.horizontalHeader().setStretchLastSection(False)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table_view.horizontalHeader().setSectionsMovable(True)
         # Sorting is managed explicitly below rather than through QTableView's
         # automatic sorting.  Keep the native header indicator in sync so the
         # active column and direction remain visible in every table view.
@@ -957,9 +957,9 @@ class Table(QWidget):
             and event.type() == QEvent.MouseButtonPress
             and event.button() == Qt.RightButton
         ):
-            # Qt maps Meta to the physical Control key on macOS.
-            control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-            if event.modifiers() & control_modifier:
+            # Transfer is deliberately bound only to an unmodified secondary click.
+            # Modified right-clicks are consumed without acting; they are not aliases.
+            if event.modifiers() == Qt.NoModifier:
                 index = self.table_view.indexAt(event.pos())
                 if index.isValid():
                     emit('row_right_click', self, self._visible_ids()[index.row()])
@@ -1233,8 +1233,38 @@ class Table(QWidget):
         return payload
 
     def _apply_filter_from_editor(self):
-        self.filter(self.filter_edit.text())
+        text = self.filter_edit.text().strip()
+        if re.fullmatch(r'[+-]?\d+', text):
+            row_id = int(text)
+            if self._model.row_by_id(row_id) is None:
+                logger.warning('Cluster ID %s is not present in this table.', row_id)
+                self.filter_edit.clearFocus()
+                return
+            # Exact lookup is selection, not expression filtering. Clear an existing
+            # expression so a previously hidden row can be selected and revealed.
+            self.filter('')
+            self.select((row_id,))
+            self.scroll_to(row_id, center=True)
+            self.filter_edit.clearFocus()
+            return
+        self.filter(text)
         self.filter_edit.clearFocus()
+
+    def column_order(self):
+        """Return column names in their current visual order."""
+        header = self.table_view.horizontalHeader()
+        return [self.columns[header.logicalIndex(i)] for i in range(header.count())]
+
+    def set_column_order(self, names):
+        """Restore a visual order by name, tolerating changed plugin columns."""
+        requested = [name for name in names or () if name in self.columns]
+        order = list(dict.fromkeys(requested + self.columns))
+        header = self.table_view.horizontalHeader()
+        for visual_index, name in enumerate(order):
+            logical_index = self.columns.index(name)
+            current_visual = header.visualIndex(logical_index)
+            if current_visual != visual_index:
+                header.moveSection(current_visual, visual_index)
 
     def _set_filter(self, text, update_text_field=True):
         self._filter_text = text or ''

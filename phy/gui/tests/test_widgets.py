@@ -484,7 +484,7 @@ def test_table_row_height_is_fitted_once(qtbot):
     table.close()
 
 
-def test_table_row_control_right_click(qtbot, table):
+def test_table_row_plain_right_click(qtbot, table):
     clicked = []
 
     @connect(sender=table)
@@ -495,17 +495,43 @@ def test_table_row_control_right_click(qtbot, table):
     index = table._proxy.index(4, 0)
     pos = table.table_view.visualRect(index).center()
 
-    # A plain right-click is non-mutating and reserved for a future context menu.
     qtbot.mouseClick(table.table_view.viewport(), Qt.RightButton, pos=pos)
-    qtbot.wait(10)
-    assert clicked == []
+    _block(lambda: clicked == [4])
     _assert(table.get_selected, [1, 2])
 
     control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
     qtbot.mouseClick(table.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
-    _block(lambda: clicked == [4])
+    qtbot.wait(10)
+    assert clicked == [4]
     _assert(table.get_selected, [1, 2])
     unconnect(on_row_right_click)
+
+
+def test_table_exact_id_lookup_reveals_and_selects_hidden_row(qtbot, table):
+    table.filter('id < 2')
+    table.filter_edit.setText('4')
+    qtbot.keyClick(table.filter_edit, Qt.Key_Return)
+
+    assert table._filter_text == ''
+    assert table.filter_edit.text() == ''
+    assert table.get_selected_ids() == [4]
+    assert table._proxy_index_for_id(4).isValid()
+
+
+def test_table_missing_id_lookup_is_non_mutating(qtbot, table, caplog):
+    table.select([1, 2])
+    table.filter_edit.setText('999')
+    qtbot.keyClick(table.filter_edit, Qt.Key_Return)
+
+    assert table.get_selected_ids() == [1, 2]
+    assert 'not present' in caplog.text
+
+
+def test_table_column_order_is_movable_and_reconciles_names(table):
+    assert table.column_order() == ['id', 'count']
+    table.set_column_order(['count', 'removed'])
+    assert table.column_order() == ['count', 'id']
+    assert not table.table_view.isColumnHidden(table.columns.index('id'))
 
 
 def test_table_scroll(qtbot, table):

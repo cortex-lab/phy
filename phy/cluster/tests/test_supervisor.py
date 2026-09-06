@@ -202,13 +202,21 @@ def test_cluster_view_1(qtbot, gui, data):
     cv.sort_by('n_spikes', 'asc')
     cv.select([1])
     qtbot.wait(10)
-    assert cv.state == {'current_sort': ('n_spikes', 'asc'), 'selected': [1]}
+    assert cv.state == {
+        'current_sort': ('n_spikes', 'asc'),
+        'selected': [1],
+        'column_order': ['id', 'n_spikes'],
+    }
 
     cv.set_state({'current_sort': ('id', 'desc'), 'selected': [2]})
-    assert cv.state == {'current_sort': ('id', 'desc'), 'selected': [2]}
+    assert cv.state == {
+        'current_sort': ('id', 'desc'),
+        'selected': [2],
+        'column_order': ['id', 'n_spikes'],
+    }
 
 
-def test_cluster_view_control_right_click_reports_unselected_row_without_selecting_it(
+def test_cluster_view_plain_right_click_reports_unselected_row_without_selecting_it(
     qtbot, gui, data
 ):
     cv = ClusterView(gui, data=data)
@@ -224,8 +232,7 @@ def test_cluster_view_control_right_click_reports_unselected_row_without_selecti
 
     index = cv._proxy_index_for_id(2)
     pos = cv.table_view.visualRect(index).center()
-    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-    qtbot.mouseClick(cv.table_view.viewport(), Qt.RightButton, control_modifier, pos=pos)
+    qtbot.mouseClick(cv.table_view.viewport(), Qt.RightButton, pos=pos)
 
     assert clicked == [2]
     assert cv.get_selected_ids() == [1]
@@ -555,7 +562,7 @@ def test_supervisor_merge_drag_drop_intents(supervisor):
     supervisor.merge_view.table_view.setCurrentIndex(movable)
     assert supervisor.merge_view._drag_ids_for_index(movable) == (30,)
     reference = supervisor.merge_view._proxy_index_for_id(10)
-    assert supervisor.merge_view._drag_ids_for_index(reference) == ()
+    assert supervisor.merge_view._drag_ids_for_index(reference) == (10,)
 
     supervisor.merge_view.emit_cluster_drop(supervisor.similarity_view, (candidate,), 1)
     assert supervisor.selected_merge == [10, candidate, 30, 20]
@@ -571,7 +578,7 @@ def test_supervisor_merge_drag_drop_intents(supervisor):
     assert not supervisor.similarity_view.table_view.dragEnabled()
 
 
-def test_supervisor_control_right_click_transfers_only_in_merge_mode(qtbot, supervisor):
+def test_supervisor_plain_right_click_transfers_in_both_modes(qtbot, supervisor):
     _select(supervisor, [10, 30], [20])
     candidate = next(
         cluster_id
@@ -580,34 +587,63 @@ def test_supervisor_control_right_click_transfers_only_in_merge_mode(qtbot, supe
     )
     index = supervisor.similarity_view._proxy_index_for_id(candidate)
     pos = supervisor.similarity_view.table_view.visualRect(index).center()
-    control_modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
-
     qtbot.mouseClick(
         supervisor.similarity_view.table_view.viewport(),
         Qt.RightButton,
-        control_modifier,
         pos=pos,
     )
     supervisor.block()
-    assert candidate not in supervisor.selected_clusters
+    assert candidate in supervisor.selected_clusters
+    assert candidate not in supervisor.selected_similar
+
+    cluster_candidate = next(
+        cluster_id
+        for cluster_id in supervisor.cluster_view.get_ids()
+        if cluster_id not in supervisor.selected
+    )
+    index = supervisor.cluster_view._proxy_index_for_id(cluster_candidate)
+    pos = supervisor.cluster_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(supervisor.cluster_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+    assert cluster_candidate in supervisor.selected_similar
 
     supervisor.toggle_merge_mode()
-    index = supervisor.similarity_view._proxy_index_for_id(candidate)
+    next_candidate = next(
+        cluster_id
+        for cluster_id in supervisor.similarity_view.get_ids()
+        if cluster_id not in supervisor.selected_similar
+    )
+    index = supervisor.similarity_view._proxy_index_for_id(next_candidate)
     pos = supervisor.similarity_view.table_view.visualRect(index).center()
 
     qtbot.mouseClick(
         supervisor.similarity_view.table_view.viewport(),
         Qt.RightButton,
-        control_modifier,
         pos=pos,
     )
     supervisor.block()
-    assert candidate in supervisor.selected_merge
+    assert next_candidate in supervisor.selected_merge
 
-    supervisor._remove_merge_candidate_on_right_click(supervisor.merge_view, candidate)
+    supervisor._transfer_row_on_right_click(supervisor.merge_view, next_candidate)
     supervisor.block()
-    assert candidate not in supervisor.selected_merge
-    assert candidate in supervisor.selected_similar
+    assert next_candidate not in supervisor.selected_merge
+    assert next_candidate in supervisor.selected_similar
+
+
+def test_supervisor_reference_transfer_promotes_and_recomputes(qtbot, supervisor):
+    _select(supervisor, [10, 30], [20])
+    supervisor.toggle_merge_mode()
+
+    index = supervisor.merge_view._proxy_index_for_id(10)
+    pos = supervisor.merge_view.table_view.visualRect(index).center()
+    qtbot.mouseClick(supervisor.merge_view.table_view.viewport(), Qt.RightButton, pos=pos)
+    supervisor.block()
+
+    assert supervisor.selected_merge == [30, 20]
+    assert supervisor.selected_similar == [10]
+    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.merge_view._selected_color_index(30) == 0
+    assert 10 in supervisor.similarity_view.get_ids()
 
 
 def test_closing_merge_view_cancels_mode(supervisor):
@@ -755,6 +791,23 @@ def test_merge_mode_merge_undo_redo_restores_workspace(supervisor):
     assert supervisor.actions.get('undo').isEnabled()
     assert events[-1] == [merged_id]
     unconnect(on_select)
+
+
+def test_merge_mode_merge_includes_filtered_selected_similarity(supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    candidate = supervisor.similarity_view.get_ids()[0]
+    supervisor.similarity_view.select([candidate])
+    supervisor.block()
+    supervisor.similarity_view.filter(f'id != {candidate}')
+
+    assert supervisor.selected_similar == [candidate]
+    assert candidate not in supervisor.similarity_view.get_selected_ids()
+
+    up = supervisor.merge()
+    supervisor.block()
+
+    assert set(up.deleted) == {30, 20, candidate}
 
 
 def test_manual_merge_returns_to_visible_cluster_for_quality_assignment(monkeypatch, supervisor):
@@ -1730,6 +1783,23 @@ def test_supervisor_select_first_similar_config(gui, cluster_ids, similarity):
         supervisor.select_first_similar(0)
     with raises(ValueError, match='positive integer'):
         supervisor.select_first_similar(1.5)
+
+
+def test_supervisor_restores_independent_table_column_orders(gui, cluster_ids, similarity):
+    gui.state['table_column_orders'] = {
+        'cluster': ['n_spikes', 'id'],
+        'similarity': ['similarity', 'id', 'n_spikes'],
+        'merge': ['n_spikes', 'id'],
+    }
+    supervisor = Supervisor(np.repeat(cluster_ids, 2), similarity=similarity)
+    supervisor.attach(gui)
+
+    assert supervisor.cluster_view.column_order()[:2] == ['n_spikes', 'id']
+    assert supervisor.similarity_view.column_order()[:3] == ['similarity', 'id', 'n_spikes']
+    supervisor.select([10, 20])
+    supervisor.block()
+    supervisor.toggle_merge_mode()
+    assert supervisor.merge_view.column_order()[:2] == ['n_spikes', 'id']
 
 
 def test_supervisor_skip_masked_config_menu_and_state(gui, cluster_ids, similarity):

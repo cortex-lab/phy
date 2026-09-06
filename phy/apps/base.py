@@ -2120,30 +2120,9 @@ class BaseController:
         )
 
         @connect(sender=view)
-        def on_request_correlogram_deselect(sender, cluster_id_a, cluster_id_b):
-            state = self.supervisor.selection.state
-            if cluster_id_a == cluster_id_b:
-                cluster_id = cluster_id_a
-            else:
-                selected_clusters = set(state.merge_ids)
-                selected_similar = set(state.similar_ids)
-                cluster_id = next(
-                    (
-                        cluster_id
-                        for cluster_id, other_cluster_id in (
-                            (cluster_id_a, cluster_id_b),
-                            (cluster_id_b, cluster_id_a),
-                        )
-                        if cluster_id in selected_similar and other_cluster_id in selected_clusters
-                    ),
-                    None,
-                )
-            if cluster_id in state.similar_ids:
-                self.supervisor.similarity_view.select_toggle(cluster_id)
-            elif not state.is_merge_mode and cluster_id in state.cluster_ids:
-                self.supervisor.cluster_view.select_toggle(cluster_id)
-            elif state.is_merge_mode and cluster_id in state.merge_ids:
-                self.supervisor.deselect_from_merge(cluster_id)
+        def on_request_correlogram_transfer(sender, row_cluster_id, column_cluster_id):
+            # The row determines the target for both diagonal and off-diagonal cells.
+            self.supervisor.transfer_cluster(row_cluster_id)
 
         @connect(sender=view)
         def on_view_attached(view_, gui):
@@ -2222,7 +2201,7 @@ class BaseController:
 
         @connect(sender=view)
         def on_close_view(view_, gui):
-            unconnect(on_request_correlogram_deselect)
+            unconnect(on_request_correlogram_transfer)
             unconnect(on_view_attached)
 
         return view

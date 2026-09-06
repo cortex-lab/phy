@@ -394,12 +394,45 @@ def test_merge_candidate_guards_reference_and_duplicate_membership():
 
     change = controller.add_to_merge((2,))
     assert not change.changed
-    with raises(ValueError, match='reference'):
-        controller.remove_from_merge((1,))
+    change = controller.remove_from_merge((1,))
+    assert change.after.merge_ids == (2,)
+    assert change.after.similar_ids == (1,)
+    assert change.after.reference_id == 2
+    assert change.after.color_slots == (2, 1)
+    with raises(ValueError, match='last staged'):
+        controller.remove_from_merge((2,))
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1, 2)))
+    controller.enter_merge_mode()
     with raises(ValueError, match='reference'):
         controller.reorder_merge((1,), 1)
     with raises(ValueError, match='merge session'):
         controller.remove_from_merge((9,))
+
+
+def test_normal_role_transfers_accept_unselected_rows_and_promote_reference():
+    controller = CurationSelectionController(
+        CurationSelectionState(cluster_ids=(1, 2), similar_ids=(3,), color_slots=(1, 2, 3))
+    )
+
+    change = controller.transfer_to_primary((3, 4))
+    assert change.after.cluster_ids == (1, 2, 3, 4)
+    assert change.after.similar_ids == ()
+    assert change.after.color_slots == (1, 2, 3, 4)
+
+    change = controller.transfer_to_similarity((1, 5))
+    assert change.after.cluster_ids == (2, 3, 4)
+    assert change.after.similar_ids == (1, 5)
+    assert change.after.reference_id == 2
+    assert change.after.color_slots == (2, 1, 3, 4, 5)
+    assert change.after.effective_ids == (2, 3, 4, 1, 5)
+
+
+def test_transfer_rejects_last_primary_without_mutating_state():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1,)))
+    before = controller.snapshot()
+    with raises(ValueError, match='last primary'):
+        controller.transfer_to_similarity((1,))
+    assert controller.state == before
 
 
 def test_merge_proposition_deselection_can_replace_reference():

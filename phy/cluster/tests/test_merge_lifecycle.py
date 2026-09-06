@@ -23,7 +23,7 @@ def test_supervisor_merge_mode_reuses_callbacks_until_shutdown(supervisor):  # n
         return retained
 
     assert callbacks_for(supervisor._on_cluster_drop) == []
-    assert callbacks_for(supervisor._remove_merge_candidate_on_right_click) == []
+    assert len(callbacks_for(supervisor._transfer_row_on_right_click)) == 2
 
     merge_view = None
     for _ in range(2):
@@ -33,12 +33,12 @@ def test_supervisor_merge_mode_reuses_callbacks_until_shutdown(supervisor):  # n
         assert supervisor.merge_view is merge_view
 
         assert len(callbacks_for(supervisor._on_cluster_drop)) == 2
-        assert len(callbacks_for(supervisor._remove_merge_candidate_on_right_click)) == 1
+        assert len(callbacks_for(supervisor._transfer_row_on_right_click)) == 3
 
         supervisor.toggle_merge_mode()
 
         assert len(callbacks_for(supervisor._on_cluster_drop)) == 2
-        assert len(callbacks_for(supervisor._remove_merge_candidate_on_right_click)) == 1
+        assert len(callbacks_for(supervisor._transfer_row_on_right_click)) == 3
         assert merge_view.dock.isHidden()
 
     close_callback = supervisor._merge_close_callback
@@ -49,7 +49,7 @@ def test_supervisor_merge_mode_reuses_callbacks_until_shutdown(supervisor):  # n
 
     assert callbacks_for(close_callback) == []
     assert callbacks_for(supervisor._on_cluster_drop) == []
-    assert callbacks_for(supervisor._remove_merge_candidate_on_right_click) == []
+    assert callbacks_for(supervisor._transfer_row_on_right_click) == []
     assert all(
         sender not in (merge_view, merge_view.dock) for _, sender, _, _ in _EVENT._callbacks
     )

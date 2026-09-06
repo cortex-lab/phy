@@ -167,7 +167,7 @@ def _mock_controller(tempdir, cls):
     )
 
 
-def test_correlogram_deselect_request_preserves_hidden_selection(qtbot, tempdir):
+def test_correlogram_transfer_request_preserves_effective_selection(qtbot, tempdir):
     controller = _mock_controller(tempdir, MyController)
     gui = controller.create_gui(do_prompt_save=False)
     with qtbot.waitExposed(gui):
@@ -189,38 +189,41 @@ def test_correlogram_deselect_request_preserves_hidden_selection(qtbot, tempdir)
             view.canvas,
             (first_center * width, first_center * height),
             button='Right',
-            modifiers=('Control',),
         )
         supervisor.block()
         assert supervisor.selected_clusters == [1, 2]
+        assert supervisor.selected_similar == [0]
+        assert set(supervisor.selected) == {0, 1, 2}
 
         supervisor.select(list(range(22)))
         supervisor.block()
 
-        emit('request_correlogram_deselect', view, 0, 1)
+        emit('request_correlogram_transfer', view, 0, 1)
         supervisor.block()
-        assert supervisor.selected_clusters == list(range(22))
-
-        emit('request_correlogram_deselect', view, 0, 0)
-        supervisor.block()
-
         assert supervisor.selected_clusters == list(range(1, 22))
+        assert supervisor.selected_similar == [0]
+
+        emit('request_correlogram_transfer', view, 0, 0)
+        supervisor.block()
+
+        assert supervisor.selected_clusters == list(range(1, 22)) + [0]
+        assert supervisor.selected_similar == []
 
         supervisor.similarity_view.select([22])
         supervisor.block()
         assert supervisor.selected_similar == [22]
 
-        emit('request_correlogram_deselect', view, 1, 22)
+        emit('request_correlogram_transfer', view, 1, 22)
         supervisor.block()
 
-        assert supervisor.selected_clusters == list(range(1, 22))
-        assert supervisor.selected_similar == []
+        assert 1 not in supervisor.selected_clusters
+        assert supervisor.selected_similar == [22, 1]
     finally:
         gui.close()
         controller.close()
 
 
-def test_correlogram_deselects_merge_proposition_reference(qtbot, tempdir):
+def test_correlogram_transfers_merge_proposition_reference(qtbot, tempdir):
     source = {
         'format_version': '2',
         'unit_ids': list(range(MyModel.n_clusters)),
@@ -239,10 +242,11 @@ def test_correlogram_deselects_merge_proposition_reference(qtbot, tempdir):
         assert supervisor.selected_merge == [0, 1, 2]
 
         view = gui.list_views(CorrelogramView)[0]
-        emit('request_correlogram_deselect', view, 0, 0)
+        emit('request_correlogram_transfer', view, 0, 0)
         supervisor.block()
 
         assert supervisor.selected_merge == [1, 2]
+        assert supervisor.selected_similar == [0]
         assert supervisor.selection.state.reference_id == 1
         assert supervisor.selection.state.merge.proposition_id == proposition.key
         assert supervisor.merge_view._reference_id == 1
@@ -250,10 +254,10 @@ def test_correlogram_deselects_merge_proposition_reference(qtbot, tempdir):
         candidate = supervisor.similarity_view.get_ids()[0]
         supervisor.similarity_view.select([candidate])
         supervisor.block()
-        emit('request_correlogram_deselect', view, 1, candidate)
+        emit('request_correlogram_transfer', view, candidate, 1)
         supervisor.block()
 
-        assert supervisor.selected_merge == [1, 2]
+        assert supervisor.selected_merge == [1, 2, candidate]
         assert supervisor.selected_similar == []
     finally:
         gui.close()
