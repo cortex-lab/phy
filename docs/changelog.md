@@ -124,6 +124,13 @@ behavior they verify rather than listed separately.
   outside clicks release filter focus so global shortcuts resume.
 - Display metadata columns containing multiple values in the Cluster and
   Similarity Views instead of leaving their cells blank.
+- Rescale the Waveform View y axis when the waveforms type changes. Templates
+  and mean waveforms are no longer drawn as flat lines after switching away
+  from raw waveforms, and raw waveforms no longer overflow their box after
+  switching back.
+- Sort text columns holding numbers, such as the channel column `ch`, by
+  numeric value in the Cluster and Similarity Views. Channel 2 no longer
+  appears after channel 10.
 
 ### Changed
 
@@ -216,6 +223,10 @@ behavior they verify rather than listed separately.
 - Added a task-oriented documentation navigation, synchronized API, shortcut,
   and plugin references, and strict documentation checks in continuous
   integration.
+- Corrected the `pc_features.npy` description. The file stores
+  `(n_spikes, n_pcs, n_channels_loc)`, phy swaps the last two axes on load,
+  array indices are zero-based, and `pc_feature_ind` is indexed by the
+  spike's template.
 
 ## [2.1.0] — 2026-07-17
 

@@ -10,6 +10,7 @@ from phylib.io.mock import artificial_waveforms
 from phylib.utils import Bunch, connect
 from phylib.utils.geometry import staggered_positions
 
+from phy.gui.qt import Qt
 from phy.plot.tests import key_press, key_release, mouse_click
 
 from ..waveform import WaveformView
@@ -172,4 +173,89 @@ def test_waveform_view_ignores_highlights_without_spike_identity(qtbot, gui):
     v.on_select(cluster_ids=[0])
     v.set_highlighted_spike_ids([10])
     assert v._displayed_bunchs[0].color == v._displayed_bunchs[0].base_color
+
+    _stop_and_close(qtbot, v)
+
+
+def test_waveform_view_rescale_on_waveforms_type(qtbot, gui):
+    nc = 5
+    ns = 10
+
+    raw = 100 * artificial_waveforms(ns, 20, nc)
+    # Mean waveforms are a thousand times smaller here, the way templates typically
+    # are next to raw traces.
+    mean = raw / 1000.0
+
+    def _waveforms(data):
+        def get_waveforms(cluster_id):
+            return Bunch(
+                data=data,
+                channel_ids=np.arange(nc),
+                channel_positions=staggered_positions(nc),
+            )
+
+        return get_waveforms
+
+    v = WaveformView(
+        waveforms={'waveforms': _waveforms(raw), 'mean_waveforms': _waveforms(mean)},
+        sample_rate=10000.0,
+    )
+    with qtbot.waitExposed(v.canvas):
+        v.show()
+    v.attach(gui)
+
+    v.on_select(cluster_ids=[0])
+    raw_max = v.data_bounds[3]
+    assert raw_max > 0
+
+    # The y axis follows the displayed waveforms type, otherwise the smaller
+    # waveforms are drawn as flat lines.
+    v.next_waveforms_type()
+    assert v.waveforms_type == 'mean_waveforms'
+    ac(v.data_bounds[3], raw_max / 1000.0, rtol=1e-5)
+
+    v.previous_waveforms_type()
+    assert v.waveforms_type == 'waveforms'
+    ac(v.data_bounds[3], raw_max, rtol=1e-5)
+
+    v.toggle_mean_waveforms(True)
+    assert v.waveforms_type == 'mean_waveforms'
+    ac(v.data_bounds[3], raw_max / 1000.0, rtol=1e-5)
+
+    v.toggle_mean_waveforms(False)
+    assert v.waveforms_type == 'waveforms'
+    ac(v.data_bounds[3], raw_max, rtol=1e-5)
+
+    v.waveforms_type = 'mean_waveforms'
+    v.plot()
+    ac(v.data_bounds[3], raw_max / 1000.0, rtol=1e-5)
+    _stop_and_close(qtbot, v)
+
+
+def test_waveform_view_type_shortcuts(qtbot, gui):
+    def get_waveforms(cluster_id):
+        return Bunch(
+            data=artificial_waveforms(2, 10, 2),
+            channel_ids=np.arange(2),
+            channel_positions=staggered_positions(2),
+        )
+
+    v = WaveformView(
+        waveforms={
+            'waveforms': get_waveforms,
+            'mean_waveforms': get_waveforms,
+            'templates': get_waveforms,
+        },
+        sample_rate=10000.0,
+    )
+    v.attach(gui)
+    v.on_select(cluster_ids=[0])
+    v.canvas.setFocus()
+
+    qtbot.keyClick(v.canvas, Qt.Key_W)
+    assert v.waveforms_type == 'mean_waveforms'
+
+    qtbot.keyClick(v.canvas, Qt.Key_W, modifier=Qt.ShiftModifier)
+    assert v.waveforms_type == 'waveforms'
+
     _stop_and_close(qtbot, v)

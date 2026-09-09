@@ -101,7 +101,7 @@ Most real sorting exports should also contain the following files:
 | `similar_templates.npy` | `(n_templates, n_templates)` similarity matrix used by the Template GUI's default similarity ranking. Larger values rank first; the score's scale is defined by the exporter. |
 | `whitening_mat.npy` | `(n_channels, n_channels)` whitening matrix. |
 | `whitening_mat_inv.npy` | `(n_channels, n_channels)` inverse whitening matrix used to display unwhitened templates. If absent, phy computes and writes it. |
-| `pc_features.npy` | `(n_spikes_subset, n_channels_loc, n_pcs)` floating-point principal-component features used by the Feature View. |
+| `pc_features.npy` | `(n_spikes_subset, n_pcs, n_channels_loc)` floating-point principal-component features used by the Feature View. phy swaps the last two axes on load, so `model.get_features()` returns `(n_spikes, n_channels, n_pcs)`. |
 | `pc_feature_ind.npy` | `(n_templates, n_channels_loc)` channel indices corresponding to PC features. |
 | `template_features.npy` | `(n_spikes_subset, n_template_features)` projections onto nearby templates. |
 | `template_feature_ind.npy` | `(n_templates, n_template_features)` template indices corresponding to template features. |
