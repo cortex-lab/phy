@@ -106,10 +106,10 @@ Similarity selections, including selected rows hidden by filtering.
 
 Controller tests should verify that transfers of active IDs preserve effective
 membership, assign the destination role without duplicate ownership, preserve
-unrelated selections, and use deterministic order and color behavior. Do not add
-a blanket Normal-mode disjointness invariant without auditing existing overlap
-semantics. Test reference promotion, absent IDs, repeated requests, last-member
-rejection, and invalid operations leaving state unchanged.
+unrelated selections, and use deterministic order and color behavior. Do not require
+Normal-mode roles to be disjoint without auditing existing overlap semantics. Test
+reference promotion, absent IDs, repeated requests, last-member rejection, and invalid
+operations leaving state unchanged.
 
 GUI tests must use actual mouse/key events as well as direct controller calls:
 
