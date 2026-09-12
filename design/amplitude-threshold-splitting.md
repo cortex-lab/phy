@@ -2,6 +2,13 @@
 
 Status: implemented on the unreleased phy 2.2 branch; final integration and manual validation pending
 
+For maintenance, use sections 2–4 for behavior and state contracts and the relevant
+acceptance tests below. Sections 5–10 and 12 preserve the original delegation plan:
+model suggestions, file ownership, branch assignments, and task order applied to
+that implementation only. They do not require delegation or restrict files for
+future fixes. Section 11's integration and manual safety checks remain applicable
+to feature acceptance.
+
 ## 1. Goal
 
 Add a fast way to split the low-amplitude part of exactly one selected cluster.
@@ -133,10 +140,11 @@ must join the same coordination contract explicitly.
 
 ## 5. Delegation map
 
-Each work package is intentionally bounded enough for a cheaper coding model at
-low reasoning effort. Agents must read `AGENTS.md` and this document completely
-before editing. They must inspect `git status`, preserve concurrent work, stage
-only listed files, and report any unexpected overlap instead of rewriting it.
+The original work packages were bounded for a cheaper coding model at low
+reasoning effort. Their file ownership and sequencing below record coordination
+of concurrent implementation work. For maintenance, follow `AGENTS.md`, inspect
+the affected contracts and acceptance tests, preserve concurrent work, and report
+overlaps that cannot be resolved without discarding someone else's changes.
 
 The integration owner should assign one package per branch or worktree. Packages
 B and C may run in parallel after A. Package D depends on both B and C. Package
@@ -156,9 +164,9 @@ A: split-preview coordination
                                                   F: final audit
 ```
 
-No package may edit `phy/cluster/_selection.py` or
-`phy/cluster/supervisor.py`; those files may contain concurrent selection work,
-and this feature does not require changes to either file.
+During the original implementation, packages excluded `phy/cluster/_selection.py`
+and `phy/cluster/supervisor.py` because concurrent selection work owned those
+files and the planned feature did not require changes to them.
 
 ## 6. Work package A: exclusive built-in split previews
 

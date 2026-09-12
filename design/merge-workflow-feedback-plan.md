@@ -10,20 +10,24 @@ table search, consistent mouse gestures, and column rearrangement. Consolidate
 workflow operations and regression-test complete sequences so future changes do
 not break selection, colors, merge contents, cancellation, or history.
 
-The user requested an assessment and this durable plan. No implementation was
-made, and this note does not authorize publishing, messaging reviewers, or merging
-PRs. GitHub state was not checked during the assessment.
+The initial assessment produced this plan without implementation or a GitHub
+state check. Implementation followed on 2026-09-06; its validation results and
+remaining real-dataset acceptance are recorded below. This note does not itself
+authorize publishing, messaging reviewers, or merging PRs.
 
-Read `AGENTS.md`, the issue audit when working on issues, and the existing
-workflow, architecture, proposition, and selection-order/color documents before
-implementation. This plan proposes changes to some existing contracts; update
-those documents alongside implementation rather than silently contradicting them.
+Follow `AGENTS.md` and read the issue audit when working on issues. For maintenance,
+consult the affected workflow behavior, architecture boundaries, proposition
+contracts, or selection-order/color policy. Update the relevant contracts when
+changing behavior rather than silently contradicting them.
 The dated integration handoff contains historical release gates, not verified
 current GitHub state.
 
-## Verified current behavior
+## Pre-implementation assessment baseline
 
-| Request | Evidence in the current checkout |
+This table records behavior observed before the approved changes were implemented.
+Use the approved behavior below and current code/tests when maintaining the feature.
+
+| Request | Evidence in the assessment checkout |
 | --- | --- |
 | Transfer the blue Merge reference into Similarity | `_selection.py:CurationSelectionController.remove_from_merge` rejects it. `deselect_from_merge` already promotes the next staged cluster, but removes the old reference from effective selection instead of transferring it. MergeView also prevents dragging the reference. |
 | Rearrange table columns | `gui/widgets.py:Table` uses native Qt headers, without movable sections or persisted column order. MergeView disables header sorting, independently of column layout. |
@@ -82,6 +86,9 @@ These decisions were approved during implementation.
 Similarity selections, including selected rows hidden by filtering.
 
 ## Implementation sequence
+
+This sequence records the original implementation plan. Future maintenance should
+target the affected behavior and regression requirements rather than repeat it.
 
 1. Re-read the current code and specifications; record the gesture/operation table
    for both modes, including reference and last-member cases. Add focused failing

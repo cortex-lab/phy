@@ -510,6 +510,10 @@ acceptable.
 
 ## 9. Incremental migration plan
 
+This section preserves the original implementation sequence. Maintenance changes
+do not need to restart these phases; use the affected contracts and the regression
+strategy in section 10. Deferred work is recorded in section 12.
+
 Each phase should leave the repository testable and avoid combining broad
 behavioral changes with mechanical moves.
 
@@ -726,13 +730,13 @@ Merge Propositions and their persistence are specified in
 
 ## 13. Handoff for future agents
 
-Before modifying code:
-
-1. Read the repository `AGENTS.md`.
-2. Read `design/merge-view-workflow.md` completely.
-3. Read this document completely.
-4. Inspect the current working tree and preserve unrelated user changes.
-5. Start with Phase 0 characterization tests; do not begin with Merge View UI.
+Follow the repository `AGENTS.md` and preserve unrelated working-tree changes.
+Read the affected behavior in `design/merge-view-workflow.md`, the relevant state,
+event, history, or view contracts in sections 3–8 here, and the corresponding
+regression requirements in section 10. Review the full workflow and architecture
+together when changing boundaries across the feature. Phase 0 belongs to the
+original migration; for maintenance, characterize the affected behavior and add
+focused regression coverage.
 
 Primary existing integration points are:
 
