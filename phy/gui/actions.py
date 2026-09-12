@@ -582,6 +582,7 @@ class Snippets:
     def __init__(self, gui):
         self.gui = gui
         self._status_message = gui.status_message
+        self._command = ''
 
         self.actions = Actions(gui, name='Snippets', menu='&File')
 
@@ -597,18 +598,14 @@ class Snippets:
 
     @property
     def command(self):
-        """This is used to write a snippet message in the status bar. A cursor is appended at
-        the end."""
-        msg = self.gui.status_message
-        n = len(msg)
-        n_cur = len(self.cursor)
-        return msg[: n - n_cur]
+        """Current snippet command, without the status-bar cursor or guidance."""
+        return self._command
 
     @command.setter
     def command(self, value):
-        value += self.cursor
+        self._command = value
         self.gui.unlock_status()
-        self.gui.status_message = value
+        self.gui.status_message = f'{value}{self.cursor}  Enter: run · Esc: cancel'
         self.gui.lock_status()
 
     def _backspace(self):
@@ -693,6 +690,12 @@ class Snippets:
 
     def mode_on(self):
         """Enable the snippet mode."""
+        # The activation shortcut remains enabled while collecting a command.
+        # Ignore repeated ':' presses: saving the in-progress prompt as the
+        # restoration message would leave the status bar looking active after
+        # Escape, while the Escape action has already been disabled.
+        if self.is_mode_on():
+            return
         logger.debug('Snippet mode enabled, press `escape` to leave this mode.')
         # Save the current status message.
         self._status_message = self.gui.status_message
@@ -708,6 +711,7 @@ class Snippets:
 
     def mode_off(self):
         """Disable the snippet mode."""
+        self._command = ''
         self.gui.unlock_status()
         # Reset the GUI status message that was set before the mode was
         # activated.

@@ -1,7 +1,7 @@
 # Release notes
 
 The current stable release is phy 2.1.0, published on 17 July 2026. The source
-tree is currently developing phy 2.1.1.
+tree is currently developing phy 2.2.0.
 
 This page describes the latest stable release. For a version-by-version list
 of user-visible changes, including work not yet released, see the

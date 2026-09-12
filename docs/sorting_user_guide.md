@@ -135,7 +135,7 @@ The raw traces are plotted in [TraceView](#TraceView) automatically when the app
 
 ![single cluster](https://raw.githubusercontent.com/kwikteam/phy-contrib/master/docs/screenshots/single_cluster.png)
 
-The scaling of the traces can be adjusted using the drop down toolbar for TraceView, using the mouse (`right click + drag`) or [keyboard shortcuts](#keyboard-shortcuts). TraceView shows only a subset of the total trace at any given time. The length of visible trace can be adjusted by using the command 'Widen Trace' (`Ctrl + Alt + right`) in the drop down menu.
+The scaling of the traces can be adjusted using the drop down toolbar for TraceView, using the mouse (`right click + drag`) or [keyboard shortcuts](#keyboard-shortcuts). TraceView shows only a subset of the total trace at any given time. The length of visible trace can be adjusted by using the command 'Widen Trace' (`Alt + -`) in the drop down menu.
 
 The displayed interval is visible at the bottom of the GUI if you hover the mouse over TraceView.
 
@@ -233,8 +233,8 @@ Classify selected similar cluster(s) as 'noise': `Ctrl + N`
 
 Drag: `Left mouse button`
 Zoom: `Right mouse button and drag`
-Increase scaling: `Alt + up`
-Decrease scaling: `Alt + down`
+Increase TraceView scaling: `Ctrl + Alt + up`
+Decrease TraceView scaling: `Ctrl + Alt + down`
 
 ### Misc
 

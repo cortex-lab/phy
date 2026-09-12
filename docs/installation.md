@@ -25,6 +25,44 @@ To upgrade the stable installation later:
 uv tool upgrade phy
 ```
 
+## Install a previous release
+
+Prefer an exact release number when reproducing an older workflow, a plugin
+setup, or an issue. Choose a release from [PyPI](https://pypi.org/project/phy/#history)
+or the [GitHub releases](https://github.com/cortex-lab/phy/releases), and check
+that its Python requirement is compatible with the interpreter you select.
+
+For a persistent historical installation that does not replace your usual
+`phy` command, create a dedicated environment. For example, to install 2.1.0:
+
+```bash
+uv venv --python 3.12 phy-2.1.0-env
+uv pip install --python phy-2.1.0-env "phy==2.1.0"
+```
+
+Activate the environment with the command printed by `uv venv`, then verify it:
+
+```bash
+phy --version
+```
+
+On Linux and macOS this is normally `source phy-2.1.0-env/bin/activate`; on
+Windows PowerShell it is normally `.\phy-2.1.0-env\Scripts\Activate.ps1`.
+Use a distinct environment for each version you need to retain. This keeps old
+dependencies separate from the current release and makes a result easier to
+reproduce.
+
+If you deliberately want the historical release to replace an existing
+`uv tool` installation, use an exact pin and `--force` instead:
+
+```bash
+uv tool install --force --python 3.12 "phy==2.1.0"
+```
+
+Run `uv tool install --force --python 3.12 phy` to restore the latest stable
+release later. The tool installation has one `phy` command, so this option does
+not keep both versions available at once.
+
 ### Alternative: venv and pip
 
 If you prefer Python's standard environment tools, create and activate a virtual
@@ -144,6 +182,34 @@ uv pip install --editable ../phylib
 In Windows PowerShell, `../phylib` may also be written as `..\phylib`.
 Re-running the sync picks up lockfile and package metadata changes, while the
 last command ensures the sibling phylib checkout remains installed.
+
+### Reproduce the CI test environment
+
+The unreleased phy branch uses phylib fixes newer than 2.7.0. To reproduce its
+tested dependency revision, run these commands from the phy checkout:
+
+```bash
+uv sync --frozen --dev
+uv pip install --refresh-package phylib --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@fc494f6ab9f03370c43e618d2ef9610c6781b0e6"
+uv run --no-sync pytest phy/cluster/tests/test_selection.py
+```
+
+The install command replaces any existing phylib installation in this environment,
+including an editable sibling checkout. The revision matches the test job in
+`.github/workflows/ci.yml`; keep this recipe aligned with that job until a released
+phylib version supplies the required fixes. Replace the example test path with
+the tests relevant to your change. For broad GUI, application, or data-model
+changes, run:
+
+```bash
+make test-full UV_RUN="uv run --no-sync"
+```
+
+`make test-full` includes lint and formatting checks. Use `--no-sync` for subsequent
+commands when preserving either this revision or an editable phylib override.
+After another `uv sync`, repeat the desired phylib install command before testing.
+Tests default to Qt's offscreen platform; Linux GUI tests also need the display
+and OpenGL setup recorded in the CI workflow.
 
 ## Start phy
 

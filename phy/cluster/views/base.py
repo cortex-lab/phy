@@ -7,7 +7,9 @@
 
 import gc
 import logging
+from collections.abc import Mapping
 from functools import partial
+from types import MappingProxyType
 
 import numpy as np
 from phylib.utils import Bunch, connect, emit, unconnect
@@ -17,9 +19,25 @@ from phy.cluster._utils import RotatingProperty
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, Worker, screenshot, screenshot_default_path, thread_pool
 from phy.plot import NDC, PlotCanvas, extend_bounds
+from phy.plot.axes import format_time_ticks
 from phy.utils.color import ClusterColorSelector
 
 logger = logging.getLogger(__name__)
+
+
+class RecordingTimeAxisMixin:
+    """Mixin for views whose x axis represents elapsed recording time."""
+
+    recording_time_unit = 's'
+    recording_time_decimals = 2
+
+    def _set_recording_time_format(self, unit, decimals):
+        """Set the displayed format for the elapsed recording-time x axis."""
+        self.recording_time_unit = unit
+        self.recording_time_decimals = decimals
+        self.canvas.axes.set_x_formatter(
+            lambda values: format_time_ticks(values, unit=unit, decimals=decimals)
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -73,6 +91,7 @@ class ManualClusteringView:
         self._dock_visible = True
         self._pending_selection = None
         self.cluster_ids = ()
+        self._cluster_color_index_by_id = MappingProxyType({})
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -144,6 +163,36 @@ class ManualClusteringView:
             return
         self.plot(**kwargs)
 
+    def _update_cluster_color_indices(self, sender, cluster_ids):
+        """Adopt and validate the authoritative selected-cluster color mapping.
+
+        A Supervisor publishes color slots separately from presentation order.
+        Keep its immutable projection intact: plotting code can therefore look up
+        a cluster's palette slot without inferring it from the render order.
+        Standalone views, which have no Supervisor projection, retain positional
+        colors.
+        """
+        try:
+            color_indices = sender.selection_color_indices
+        except AttributeError:
+            # Standalone views and other non-authoritative senders retain the
+            # traditional positional colors.
+            self._cluster_color_index_by_id = MappingProxyType({})
+            return
+        if not isinstance(color_indices, Mapping):
+            raise TypeError('selection_color_indices must be a mapping.')
+        missing_ids = set(cluster_ids).difference(color_indices)
+        if missing_ids:
+            raise ValueError(
+                'Authoritative selection color mapping is missing active cluster IDs: '
+                f'{sorted(missing_ids)}.'
+            )
+        self._cluster_color_index_by_id = color_indices
+
+    def cluster_color_index(self, cluster_id, fallback):
+        """Return the stable selected-color slot for a cluster."""
+        return self._cluster_color_index_by_id.get(cluster_id, fallback)
+
     def on_select_threaded(self, sender, cluster_ids, gui=None, **kwargs):
         # Decide whether the view should react to the select event or not.
         if not self.auto_update or self._closed:
@@ -154,6 +203,7 @@ class ManualClusteringView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
+        self._update_cluster_color_indices(sender, cluster_ids)
         # Limit the number of displayed clusters for performance reasons. Keep the
         # selection order so that a large selection still refreshes the view rather
         # than leaving its previous contents on screen.
@@ -305,7 +355,11 @@ class ManualClusteringView:
         )
         self.actions.add(self.screenshot, show_shortcut=False)
         self.actions.add(self.close, show_shortcut=False)
-        self.actions.separator()
+
+        # Subclasses and plugins add their content-specific actions after this
+        # method returns. When the menu is first opened, place shared utility
+        # actions at the bottom, with a single separator before them.
+        self.dock._menu.aboutToShow.connect(self._organize_menu_actions)
 
         on_select = partial(self.on_select_threaded, gui=gui)
         connect(on_select, event='select')
@@ -337,6 +391,33 @@ class ManualClusteringView:
             self.dock.setFloating(False)
 
         emit('view_attached', self, gui)
+
+    def _organize_menu_actions(self):
+        """Put view utilities in a consistent footer and normalize separators."""
+        menu = self.dock._menu
+        utilities = [
+            self.actions.get(name) for name in ('toggle_auto_update', 'screenshot', 'close')
+        ]
+        for action in utilities:
+            menu.removeAction(action)
+
+        # Remove leading, trailing, and duplicate separators left behind by
+        # independently contributed view actions.
+        previous_is_separator = True
+        for action in list(menu.actions()):
+            if action.isSeparator():
+                if previous_is_separator:
+                    menu.removeAction(action)
+                previous_is_separator = True
+            else:
+                previous_is_separator = False
+        if menu.actions() and menu.actions()[-1].isSeparator():
+            menu.removeAction(menu.actions()[-1])
+
+        if menu.actions():
+            menu.addSeparator()
+        for action in utilities:
+            menu.addAction(action)
 
     @property
     def status(self):
@@ -461,6 +542,7 @@ class BaseGlobalView:
         assert isinstance(cluster_ids, list)
         if not cluster_ids:
             return
+        self._update_cluster_color_indices(sender, cluster_ids)
         self.cluster_ids = cluster_ids  # selected clusters
 
 
@@ -703,7 +785,51 @@ class MarkerSizeMixin(BaseWheelMixin):
                 self.decrease_marker_size()
 
 
-class LassoMixin:
+class SplitSelectionMixin:
+    """Coordinate transient built-in split selections between views in one GUI.
+
+    Split selections are deliberately view-local and transient.  This mixin only
+    makes them mutually exclusive; it does not participate in the
+    ``request_split`` commit event.
+    """
+
+    def clear_split_selection(self):
+        """Clear this view's transient split selection.
+
+        Views with another kind of split preview can override this hook, call
+        ``super()``, and clear their own preview state as well.
+        """
+        self.canvas.lasso.clear()
+
+    def activate_split_selection(self):
+        """Make this view's transient split selection the active built-in one."""
+        if self.gui is not None:
+            emit('split_selection_activated', self)
+
+    def attach(self, gui):
+        super().attach(gui)
+
+        @connect(event='lasso_updated')
+        def on_lasso_updated(sender, polygon):
+            if sender == self.canvas and len(polygon):
+                self.activate_split_selection()
+
+        @connect(event='split_selection_activated')
+        def on_split_selection_activated(sender):
+            if sender is self or getattr(sender, 'gui', None) is not self.gui:
+                return
+            self.clear_split_selection()
+
+        @connect(event='close_view')
+        def on_close_view(view, sender):
+            if view is not self:
+                return
+            unconnect(on_lasso_updated)
+            unconnect(on_split_selection_activated)
+            unconnect(on_close_view)
+
+
+class LassoMixin(SplitSelectionMixin):
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
         if self.canvas.lasso.count < 3 or not len(self.cluster_ids):  # pragma: no cover
@@ -741,3 +867,8 @@ class LassoMixin:
     def attach(self, gui):
         super().attach(gui)
         connect(self.on_request_split)
+
+        @connect(event='close_view', sender=self)
+        def on_close_view(view, gui):
+            unconnect(self.on_request_split)
+            unconnect(on_close_view)

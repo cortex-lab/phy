@@ -123,14 +123,42 @@ def test_gui_1(tempdir, qtbot):
     dock_view.close()
     assert _close == [1, 0]
 
+    reference = gui.help_actions.show_all_shortcuts()
+    assert reference.isVisible()
+    assert reference.entries.columnCount() == 5
+    assert any(
+        reference.entries.item(row, 1).text() == 'About'
+        for row in range(reference.entries.rowCount())
+    )
+    qtbot.keyClick(reference.search, Qt.Key_Escape)
+    assert not reference.isVisible()
+    assert gui.help_actions.get('show_all_shortcuts').text() == 'Show shortcuts and commands'
+
     gui.close()
 
     assert gui.state.geometry_state['geometry']
     assert gui.state.geometry_state['state']
 
-    gui.help_actions.show_all_shortcuts()
     gui.file_actions.save()
     gui.file_actions.exit()
+
+
+def test_gui_shortcut_reference_refreshes_plugin_actions(gui, qtbot):
+    plugin_actions = Actions(gui, name='Plugin')
+
+    @plugin_actions.add(shortcut='ctrl+alt+p', alias='plugin')
+    def plugin_action():
+        """Run the plugin action."""
+
+    reference = gui.show_shortcuts_and_commands()
+    assert any(
+        reference.entries.item(row, 1).text() == 'Plugin action'
+        for row in range(reference.entries.rowCount())
+    )
+
+    qtbot.keyClicks(reference.search, 'plugin')
+    assert reference.entries.rowCount() == 1
+    assert reference.entries.item(0, 4).text() == 'Run the plugin action.'
 
 
 def test_gui_creator(tempdir, qtbot):
@@ -168,6 +196,11 @@ def test_gui_creator(tempdir, qtbot):
     assert len(views) == 2
 
     add_action = gui.view_actions.get('Add MyCanvas')
+    view_menu = gui.get_menu('&View')
+    add_view_menu = next(
+        action.menu() for action in view_menu.actions() if action.text() == 'Add view'
+    )
+    assert add_action in add_view_menu.actions()
 
     # Close the first dock widget.
     views[0].dock.toggleViewAction().activate(0)

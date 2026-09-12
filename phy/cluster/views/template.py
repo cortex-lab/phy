@@ -206,7 +206,10 @@ class TemplateView(ScalingMixin, BaseColorView, BaseGlobalView, ManualClustering
         selected_clusters = self.cluster_ids
         if selected_clusters is not None:
             cluster_colors = _add_selected_clusters_colors(
-                selected_clusters, self.sorted_cluster_ids, cluster_colors
+                selected_clusters,
+                self.sorted_cluster_ids,
+                cluster_colors,
+                self._cluster_color_index_by_id,
             )
         # Number of vertices per cluster = number of vertices per signal
         n_vertices_clu = [
