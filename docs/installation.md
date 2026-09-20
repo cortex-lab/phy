@@ -190,7 +190,7 @@ tested dependency revision, run these commands from the phy checkout:
 
 ```bash
 uv sync --frozen --dev
-uv pip install --refresh-package phylib --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@fc494f6ab9f03370c43e618d2ef9610c6781b0e6"
+uv pip install --refresh-package phylib --python .venv "phylib @ https://github.com/cortex-lab/phylib/archive/fc494f6ab9f03370c43e618d2ef9610c6781b0e6.zip"
 uv run --no-sync pytest phy/cluster/tests/test_selection.py
 ```
 
