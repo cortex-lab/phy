@@ -7,6 +7,7 @@
 # from contextlib import contextmanager
 
 import sys
+from timeit import default_timer
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
@@ -127,6 +128,9 @@ def tl():
         def redo(self, callback=None):
             callback(Bunch())
 
+        def fail(self):
+            raise RuntimeError('task failed')
+
         def _select_after_merge(self, output, selection_before, **kwargs):
             self.post_actions = ('merge', output, selection_before, kwargs)
 
@@ -173,6 +177,18 @@ def test_task_logger_delegates_move_follow_up(tl):
     tl.process()
 
     assert tl.supervisor.post_actions == ('move', None, [0])
+
+
+def test_task_logger_cleans_temporary_callback_and_queue_after_failure(tl):
+    tl.enqueue(tl.supervisor, 'fail')
+    with raises(RuntimeError, match='task failed'):
+        tl.process()
+
+    assert not tl._processing
+    assert tl._queue == []
+    history = list(tl._history)
+    emit('cluster', tl.supervisor, Bunch())
+    assert tl._history == history
 
 
 # ------------------------------------------------------------------------------
@@ -1184,6 +1200,61 @@ def test_final_merge_proposition_returns_to_quality_assignment(
     assert supervisor.merge_view.dock.isHidden()
 
 
+def test_modified_proposition_accepts_numpy_candidate_and_restores_similarity_on_undo(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    proposition = supervisor.merge_propositions.catalog.propositions[0]
+    supervisor._review_merge_proposition(supervisor.merge_propositions_view, proposition.key)
+    candidate = np.int64(supervisor.similarity_view.get_ids()[0])
+    supervisor.add_to_merge((candidate,))
+    workspace = supervisor.selection.snapshot()
+
+    supervisor.merge()
+    supervisor.block()
+    review = supervisor.merge_propositions.catalog.reviews[proposition.key]
+    assert all(type(cluster_id) is int for cluster_id in review.applied_unit_ids)
+
+    supervisor.undo()
+    supervisor.block()
+
+    assert supervisor.selection.state == workspace
+    assert set(supervisor.selected_merge).isdisjoint(supervisor.similarity_view.get_ids())
+    supervisor.next()
+    supervisor.block()
+    assert set(supervisor.selected_merge).isdisjoint(supervisor.selected_similar)
+
+
+def test_proposition_acceptance_preflight_failure_is_atomic(
+    monkeypatch, gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    proposition = supervisor.merge_propositions.catalog.propositions[0]
+    supervisor._review_merge_proposition(supervisor.merge_propositions_view, proposition.key)
+    assignments = supervisor.clustering.spike_clusters.copy()
+    workspace = supervisor.selection.snapshot()
+    history_position = supervisor._global_history.current_position
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('review preflight failed')
+
+    monkeypatch.setattr(supervisor.merge_propositions, 'prepare_accept', fail)
+    with raises(RuntimeError, match='review preflight failed'):
+        supervisor.merge()
+
+    ae(supervisor.clustering.spike_clusters, assignments)
+    assert supervisor.selection.state is workspace
+    assert supervisor._global_history.current_position == history_position
+    assert (
+        supervisor.merge_propositions.catalog.status_for(proposition.key)
+        is PropositionStatus.PENDING
+    )
+
+
 def test_failed_proposition_merge_and_reject_history(
     monkeypatch, gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
 ):
@@ -1642,6 +1713,24 @@ def test_supervisor_select_first_similar(qtbot, supervisor, gui):
     # The preference is stored in global GUI state.
     supervisor._save_gui_state(gui)
     assert gui.state['n_similar_clusters_to_select'] == 100
+
+
+def test_select_first_similar_settles_pending_mutations_in_merge_mode(qtbot, supervisor):
+    _select(supervisor, [30])
+    supervisor.toggle_merge_mode()
+    view = supervisor.similarity_view
+    candidate = view.get_navigable_ids()[0]
+
+    view.debouncer._last_submission_time = default_timer()
+    view.select([candidate])
+    assert view.debouncer.has_pending
+    supervisor.select_first_similar()
+    supervisor.select_first_similar()
+    qtbot.wait(1)
+    supervisor.block()
+
+    assert tuple(view.get_selected_ids()) == supervisor.selection.state.similar_ids
+    assert set(supervisor.selected_merge).isdisjoint(supervisor.selected_similar)
 
 
 def test_filter_release_restores_space_shortcut(qtbot, supervisor, gui):

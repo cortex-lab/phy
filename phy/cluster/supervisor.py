@@ -170,8 +170,13 @@ class TaskLogger:
                 self._callback(task, up)
 
             connect(_cluster_callback, event='cluster', sender=self.supervisor)
-            f(*args, **kwargs)
-            unconnect(_cluster_callback)
+            try:
+                f(*args, **kwargs)
+            finally:
+                # An exception after a clustering event must not leave this task's
+                # completion callback attached. Otherwise an unrelated later metadata
+                # action is replayed as completion of the failed task.
+                unconnect(_cluster_callback)
 
     def process(self):
         """Process all tasks in queue."""
@@ -181,7 +186,12 @@ class TaskLogger:
             self._processing = False
             return
         # Process the first task in queue, or stop if the queue is empty.
-        self._eval(task)
+        try:
+            self._eval(task)
+        except Exception:
+            self._processing = False
+            self._queue.clear()
+            raise
 
     def enqueue_after(self, task, output):
         """Enqueue tasks after a given action."""
@@ -1567,7 +1577,10 @@ class Supervisor:
         if selection.is_merge_mode:
             self._ensure_merge_view(selection)
         change = self.selection.restore(selection)
-        self._apply_selection_change(change, refresh_similarity=False, sync_presentation=False)
+        # Rebuild Similarity against the restored reference before restoring its
+        # filter, sort, selection, and scroll context. Reusing post-action rows can
+        # expose staged Merge IDs as candidates after undo.
+        self._apply_selection_change(change, refresh_similarity=True, sync_presentation=False)
         if selection.is_merge_mode:
             self._set_merge_mode_ui(True)
             context = (
@@ -2032,7 +2045,8 @@ class Supervisor:
             return
         if cluster_ids is None:
             cluster_ids = self.selected
-        if len(cluster_ids or []) <= 1:
+        cluster_ids = tuple(map(int, cluster_ids))
+        if len(cluster_ids) <= 1:
             if merge_mode:
                 logger.warning('Select at least one additional candidate before merging.')
             return
@@ -2045,6 +2059,19 @@ class Supervisor:
         workflow_context = (
             {'mode': 'merge', 'tables': self._workflow_context()} if merge_mode else None
         )
+        prepared_review = None
+        review_before = None
+        if proposition_id is not None:
+            # Validate every review-side condition before changing spike assignments.
+            # ``to`` is made explicit so the preflight result and clustering result
+            # necessarily describe the same unit.
+            to = int(self.clustering.new_cluster_id() if to is None else to)
+            review_before = self.merge_propositions.snapshot()
+            prepared_review = self.merge_propositions.prepare_accept(
+                proposition_id, cluster_ids, to
+            )
+        elif to is not None:
+            to = int(to)
         # A merge synchronously emits several related table mutations: metadata
         # inheritance, addition of the merged cluster, and removal of its
         # ancestors. Fit each attached table once after the complete operation
@@ -2054,7 +2081,7 @@ class Supervisor:
                 table = getattr(self, table_name, None)
                 if table is not None:
                     stack.enter_context(table.batch_update())
-            out = self.clustering.merge(cluster_ids, to=to)
+            out = self.clustering.merge(list(cluster_ids), to=to)
         if not task_logger_processing:
             if merge_mode:
                 self._finish_merge(out, selection_before)
@@ -2062,7 +2089,7 @@ class Supervisor:
                 self._select_after_merge(out, selection_before)
         controllers = [self.clustering]
         if proposition_id is not None:
-            self.merge_propositions.accept(proposition_id, tuple(cluster_ids), int(out.added[0]))
+            self.merge_propositions.commit_prepared(review_before, prepared_review)
             controllers.append(self.merge_propositions)
         self._refresh_propositions()
         if proposition_id is not None:
@@ -2489,6 +2516,10 @@ class Supervisor:
         n = self.n_similar_clusters_to_select
 
         def select(cluster_ids):
+            # Batch selection is scheduled on the next Qt turn. Settle an earlier
+            # row click or batch first so this mutation's before_ids matches the
+            # authoritative controller state, including under rapid repetition.
+            self.similarity_view.debouncer.flush()
             start = 0
             if not select_from_start:
                 selected = self.similarity_view.get_selected_ids()

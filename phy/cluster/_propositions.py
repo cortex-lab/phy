@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from hashlib import sha256
+from numbers import Integral
 from types import MappingProxyType
 
 from ._history import History
@@ -24,8 +25,9 @@ def _ids(values, *, name='unit_ids', minimum=0):
     if not isinstance(values, (list, tuple)):
         raise ValueError(f'{name} must be a list of integer IDs.')
     ids = tuple(values)
-    if any(not isinstance(unit_id, int) or isinstance(unit_id, bool) for unit_id in ids):
+    if any(not isinstance(unit_id, Integral) or isinstance(unit_id, bool) for unit_id in ids):
         raise ValueError(f'{name} must contain only integer IDs.')
+    ids = tuple(map(int, ids))
     if len(ids) < minimum:
         raise ValueError(f'{name} must contain at least {minimum} IDs.')
     if len(ids) != len(set(ids)):
@@ -89,10 +91,12 @@ class MergeProposition:
     def __post_init__(self):
         ids = _ids(self.unit_ids, minimum=2)
         if self.new_unit_id is not None and (
-            not isinstance(self.new_unit_id, int) or isinstance(self.new_unit_id, bool)
+            not isinstance(self.new_unit_id, Integral) or isinstance(self.new_unit_id, bool)
         ):
             raise ValueError('new_unit_id must be an integer when supplied.')
         object.__setattr__(self, 'unit_ids', ids)
+        if self.new_unit_id is not None:
+            object.__setattr__(self, 'new_unit_id', int(self.new_unit_id))
         object.__setattr__(self, 'key', proposition_key(ids))
 
     @property
@@ -125,7 +129,9 @@ class PropositionReview:
             if self.applied_unit_ids is None:
                 raise ValueError('Accepted reviews require applied_unit_ids.')
             applied = _ids(self.applied_unit_ids, name='applied_unit_ids', minimum=2)
-            if not isinstance(self.result_unit_id, int) or isinstance(self.result_unit_id, bool):
+            if not isinstance(self.result_unit_id, Integral) or isinstance(
+                self.result_unit_id, bool
+            ):
                 raise ValueError('Accepted reviews require an integer result_unit_id.')
         else:
             if self.applied_unit_ids is not None or self.result_unit_id is not None:
@@ -133,6 +139,8 @@ class PropositionReview:
             applied = None
         object.__setattr__(self, 'decision', decision)
         object.__setattr__(self, 'applied_unit_ids', applied)
+        if self.result_unit_id is not None:
+            object.__setattr__(self, 'result_unit_id', int(self.result_unit_id))
 
     def mapping(self):
         result = {'decision': self.decision.value}
@@ -356,6 +364,18 @@ class MergePropositionController:
 
     def accept(self, key, applied_unit_ids, result_unit_id):
         return self._transition(self._catalog.accept(key, applied_unit_ids, result_unit_id))
+
+    def prepare_accept(self, key, applied_unit_ids, result_unit_id):
+        """Validate an acceptance without mutating review history."""
+        return self._catalog.accept(key, applied_unit_ids, result_unit_id)
+
+    def commit_prepared(self, before, after):
+        """Commit a previously validated acceptance against the same catalog."""
+        before = self._require_catalog(before)
+        after = self._require_catalog(after)
+        if self._catalog != before:
+            raise RuntimeError('Merge proposition state changed before acceptance commit.')
+        return self._transition(after)
 
     def reset(self, key):
         return self._transition(self._catalog.reset(key))

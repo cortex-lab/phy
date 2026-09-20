@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from numbers import Integral
 from types import MappingProxyType
 
 from phy.utils.selection import SelectionIntent, SelectionMutation
@@ -14,8 +15,18 @@ class WorkflowMode(Enum):
     MERGE = 'merge'
 
 
+def _as_id(cluster_id) -> int:
+    if isinstance(cluster_id, bool) or not isinstance(cluster_id, Integral):
+        raise ValueError('Cluster IDs must be integers.')
+    return int(cluster_id)
+
+
 def _as_unique_ids(cluster_ids) -> tuple[int, ...]:
     cluster_ids = tuple(cluster_ids)
+    # Table/model IDs frequently originate in NumPy arrays. Keep the domain
+    # state JSON-compatible and prevent equality-by-type surprises at review
+    # and persistence boundaries.
+    cluster_ids = tuple(map(_as_id, cluster_ids))
     if len(cluster_ids) != len(set(cluster_ids)):
         raise ValueError('Cluster IDs must be unique.')
     return cluster_ids
@@ -46,10 +57,12 @@ class MergeSession:
 
     def __post_init__(self):
         ordered = _as_unique_ids(self.ordered_ids)
-        if not ordered or ordered[0] != self.reference_id:
+        reference = _as_id(self.reference_id)
+        if not ordered or ordered[0] != reference:
             raise ValueError('The merge reference must be the first staged cluster.')
         if self.proposition_id is not None and not self.proposition_id:
             raise ValueError('The merge proposition ID cannot be empty.')
+        object.__setattr__(self, 'reference_id', reference)
         object.__setattr__(self, 'ordered_ids', ordered)
 
 
@@ -73,7 +86,7 @@ class CurationSelectionState:
     def __post_init__(self):
         clusters = _as_unique_ids(self.cluster_ids)
         similar = _as_unique_ids(self.similar_ids)
-        reference = self.reference_id
+        reference = _as_id(self.reference_id) if self.reference_id is not None else None
         merge = self.merge
         if self.mode is WorkflowMode.NORMAL:
             if merge is not None:
@@ -115,7 +128,14 @@ class CurationSelectionState:
                 raise ValueError('Merge presentation must begin with the staged merge order.')
             if set(presentation[len(primary) :]) != set(similar):
                 raise ValueError('Merge presentation tail must contain the Similarity selection.')
-        slots = presentation if self.color_slots is None else tuple(self.color_slots)
+        slots = (
+            presentation
+            if self.color_slots is None
+            else tuple(
+                None if cluster_id is None else _as_id(cluster_id)
+                for cluster_id in self.color_slots
+            )
+        )
         bindings = tuple(cluster_id for cluster_id in slots if cluster_id is not None)
         if len(bindings) != len(set(bindings)):
             raise ValueError('Color-slot bindings must be unique.')

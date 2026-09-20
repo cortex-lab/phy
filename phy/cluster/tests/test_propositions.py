@@ -2,6 +2,7 @@
 
 from dataclasses import FrozenInstanceError
 
+import numpy as np
 from pytest import raises
 
 from .._propositions import (
@@ -129,6 +130,21 @@ def test_review_transitions_are_immutable_and_modified_acceptance_is_derived():
 
     snapshot = accepted.snapshot()
     assert modified.restore(snapshot) is snapshot
+
+
+def test_proposition_domain_normalizes_numpy_integer_ids():
+    proposition = MergeProposition((np.int64(41), np.int32(56)), np.int64(1000))
+    review = PropositionReview(
+        ReviewDecision.ACCEPTED,
+        (np.int64(41), np.int32(56)),
+        np.int64(1001),
+    )
+
+    assert proposition.unit_ids == (41, 56)
+    assert proposition.new_unit_id == 1000
+    assert review.applied_unit_ids == (41, 56)
+    assert review.result_unit_id == 1001
+    assert all(type(unit_id) is int for unit_id in review.applied_unit_ids)
 
 
 def test_invalid_and_stale_entries_cannot_receive_or_reset_reviews():

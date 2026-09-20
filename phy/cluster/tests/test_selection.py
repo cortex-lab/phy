@@ -2,6 +2,7 @@
 
 from dataclasses import FrozenInstanceError
 
+import numpy as np
 from pytest import raises
 
 from phy.utils.selection import SelectionIntent, SelectionMutation
@@ -26,6 +27,19 @@ def test_state_derives_unique_effective_and_presentation_ids():
 
     assert state.effective_ids == (3, 1, 2)
     assert state.presentation_order == (3, 1, 2)
+
+
+def test_state_normalizes_numpy_integer_ids():
+    state = CurationSelectionState(
+        cluster_ids=(np.int64(3),),
+        similar_ids=(np.int32(2),),
+        color_slots=(np.int64(3), np.int32(2)),
+    )
+
+    assert state.cluster_ids == (3,)
+    assert state.similar_ids == (2,)
+    assert state.color_slots == (3, 2)
+    assert all(type(cluster_id) is int for cluster_id in state.effective_ids)
 
 
 def test_state_rejects_invalid_ids_reference_and_presentation():
