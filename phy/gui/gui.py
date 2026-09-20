@@ -28,6 +28,7 @@ from .qt import (
     QPoint,
     QPushButton,
     QSize,
+    QSizePolicy,
     QStatusBar,
     Qt,
     QTableWidget,
@@ -361,10 +362,12 @@ class DockWidget(QDockWidget):
 
     def set_status(self, text):
         """Set the status text of the widget."""
+        full_text = text
         n = self.max_status_length
         if len(text) >= n:
             text = f'{text[: n // 2]} ... {text[-n // 2 :]}'
         self._status.setText(text)
+        self._status.setToolTip(full_text)
 
     def _default_buttons(self):
         """Create the default buttons on the right."""
@@ -423,6 +426,9 @@ class DockWidget(QDockWidget):
 
         # Widget name.
         label = QLabel(self.windowTitle())
+        label.setMinimumWidth(0)
+        label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        label.setToolTip(self.windowTitle())
         self._layout.addWidget(label)
 
         # Space.
@@ -458,6 +464,8 @@ class DockWidget(QDockWidget):
 
         # Widget status text.
         self._status = QLabel('')
+        self._status.setMinimumWidth(0)
+        self._status.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self._status.setMaximumHeight(30)
         self._status.setStyleSheet(DOCK_STATUS_STYLESHEET)
         widget_layout.addWidget(self._status, 1)

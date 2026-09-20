@@ -52,9 +52,10 @@ def test_correlogram_view(qtbot, gui):
     # entire matrix is scaled to leave room for labels, so unscaled hit-testing
     # would map outer cells to an adjacent index when many clusters are displayed.
     n = len(cluster_ids)
+    sx, sy = v._display_scale.amount
     for k in range(n):
-        x_ndc = 0.9 * (-1 + (2 * k + 1) / n)
-        y_ndc = 0.9 * (+1 - (2 * k + 1) / n)
+        x_ndc = sx * (-1 + (2 * k + 1) / n)
+        y_ndc = sy * (+1 - (2 * k + 1) / n)
         mouse_click(
             qtbot,
             v.canvas,
@@ -62,19 +63,20 @@ def test_correlogram_view(qtbot, gui):
             button='Right',
         )
     # An off-diagonal click reports both axes; the application targets its row.
-    first_center = 0.5 * (1 - 0.9 * (1 - 1 / n))
-    second_center = 0.5 * (1 - 0.9 * (1 - 3 / n))
+    first_x = 0.5 * (1 - sx * (1 - 1 / n))
+    second_x = 0.5 * (1 - sx * (1 - 3 / n))
+    first_y = 0.5 * (1 - sy * (1 - 1 / n))
     mouse_click(
         qtbot,
         v.canvas,
-        (first_center * width, first_center * height),
+        (first_x * width, first_y * height),
         button='Right',
         modifiers=('Control',),
     )
     mouse_click(
         qtbot,
         v.canvas,
-        (second_center * width, first_center * height),
+        (second_x * width, first_y * height),
         button='Right',
     )
 
@@ -100,3 +102,23 @@ def test_correlogram_view(qtbot, gui):
     v.set_state(v.state)
 
     _stop_and_close(qtbot, v)
+
+
+def test_correlogram_label_gutter_tracks_id_width_and_canvas_size():
+    v = CorrelogramView(
+        correlograms=lambda cluster_ids, bin_size, window_size: artificial_correlograms(
+            len(cluster_ids), int(window_size / bin_size)
+        ),
+        sample_rate=100.0,
+    )
+    v.cluster_ids = [138, 144, 148]
+
+    wide = v._display_scale_for_size(1000, 800)
+    narrow = v._display_scale_for_size(400, 800)
+    v.cluster_ids = [101234, 144, 148]
+    long_id = v._display_scale_for_size(1000, 800)
+
+    assert narrow[0] < wide[0]
+    assert long_id[0] < wide[0]
+    assert narrow[1] == wide[1] == long_id[1]
+    v.canvas.close()

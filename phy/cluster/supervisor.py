@@ -448,6 +448,9 @@ class MergeView(Table):
             sort=None,
         )
         self.filter_edit.hide()
+        header = self.table_view.horizontalHeader()
+        header.setSortIndicatorShown(False)
+        header.setSectionsClickable(False)
         # A current row is required by QAbstractItemView to initiate a drag. The
         # selection is local interaction state only; every Merge row remains part of
         # the scientific selection projected through ``_selected_ids``.

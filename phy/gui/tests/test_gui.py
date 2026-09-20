@@ -17,7 +17,7 @@ from ..gui import (
     _try_get_matplotlib_canvas,
     _try_get_opengl_canvas,
 )
-from ..qt import QApplication, QMessageBox, Qt, QWidget
+from ..qt import QApplication, QLabel, QMessageBox, QSizePolicy, Qt, QWidget
 from . import show_and_wait
 
 logger = logging.getLogger(__name__)
@@ -258,8 +258,14 @@ def test_gui_dock_widget_1(qtbot, gui):
     assert v.dock.status == 'this is a status'
 
     # Set and check the title bar status text.
-    v.dock.set_status(f'---very long---{"------" * 10}')
+    full_status = f'---very long---{"------" * 10}'
+    v.dock.set_status(full_status)
     assert len(v.dock.status) <= v.dock.max_status_length + 5
+    assert v.dock._status.toolTip() == full_status
+    assert v.dock._status.sizePolicy().horizontalPolicy() == QSizePolicy.Ignored
+    title = v.dock.titleBarWidget().findChild(QLabel)
+    assert title.toolTip() == v.dock.windowTitle()
+    assert title.sizePolicy().horizontalPolicy() == QSizePolicy.Ignored
 
     b2.click()
     v.dock.get_widget('b1').click()

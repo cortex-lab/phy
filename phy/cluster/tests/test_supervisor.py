@@ -497,6 +497,22 @@ def test_supervisor_merge_view_restores_docked_extent(qtbot, supervisor):
     assert dock.size() == docked_size
 
 
+def test_merge_view_header_has_no_sort_affordance(supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    view = supervisor.merge_view
+    header = view.table_view.horizontalHeader()
+    ids = view.get_ids()
+
+    assert not header.isSortIndicatorShown()
+    assert not header.sectionsClickable()
+    assert header.sectionsMovable()
+    view._on_header_clicked(0)
+
+    assert view.get_ids() == ids
+    assert view._current_sort is None
+
+
 def test_supervisor_merge_candidate_interactions_follow_visible_role_order(supervisor):
     _select(supervisor, [10, 30], [20])
     supervisor.toggle_merge_mode()

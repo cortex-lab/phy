@@ -79,6 +79,7 @@ from PyQt5.QtWidgets import (  # noqa
     QVBoxLayout,
     QGridLayout,
     QScrollArea,
+    QSizePolicy,
     QPushButton,
     QLabel,
     QCheckBox,
