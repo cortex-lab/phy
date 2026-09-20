@@ -85,6 +85,12 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Allow narrow dock layouts in Merge mode, hide the non-functional Merge View
+  sort indicator, and keep long cluster IDs visible in Correlogram View as the
+  view is resized.
+- Keep merge proposition review and batch Similarity selection consistent after
+  failed actions, undo/redo, NumPy-backed cluster IDs, and rapid
+  `Control+Space` input.
 - Load and display stored spike-waveform subsets when waveform templates are absent, and derive
   cluster-specific channel rankings from those waveforms so Waveform and Probe views do not fall
   back to channel zero.
