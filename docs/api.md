@@ -5886,7 +5886,7 @@ Decrease the scaling parameter.
 #### AmplitudeView.get_clusters_data
 
 
-**`AmplitudeView.get_clusters_data(self, load_all=None)`**
+**`AmplitudeView.get_clusters_data(self, load_all=None, for_split=False)`**
 
 Return a list of Bunch instances, with attributes pos and spike_ids.
 
