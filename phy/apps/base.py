@@ -1395,11 +1395,12 @@ class BaseController:
                         'curation.json changed since its reviews were saved; matching '
                         'proposition decisions were retained and unmatched reviews are orphaned.'
                     )
+        # Supervisor projects live unit IDs from its clustering index. Avoid a
+        # second full-array scan of spike_clusters while loading this catalog.
         catalog = MergePropositionCatalog(
             catalog.source_unit_ids,
             catalog.entries,
             reviews=reviews,
-            live_unit_ids=tuple(map(int, np.unique(self.model.spike_clusters))),
             source_mapping=catalog.source_mapping,
         )
         return MergePropositionController(catalog)
@@ -1777,7 +1778,7 @@ class BaseController:
             return spike_ids
         return _sample_spikes_evenly(spike_ids, n)
 
-    def _amplitude_getter(self, cluster_ids, name=None, load_all=False):
+    def _amplitude_getter(self, cluster_ids, name=None, load_all=False, for_split=False):
         """Return the data requested by the amplitude view, which depends on the
         type of amplitude.
 
@@ -1851,12 +1852,15 @@ class BaseController:
                     subset_spikes=subset_spikes,
                     subset_chunks=subset_chunks,
                 )
-            # Get the spike times.
-            spike_times = self._get_spike_times_reordered(spike_ids)
+            # A threshold split consumes only spike ids and amplitudes. Avoid
+            # gathering the full spike-time array for this all-spikes request.
+            spike_times = None if for_split else self._get_spike_times_reordered(spike_ids)
             amplitudes = self._resolve_spike_amplitudes(spike_ids, name, first_cluster)
             if amplitudes is None:
                 continue
-            assert amplitudes.shape == spike_ids.shape == spike_times.shape
+            assert amplitudes.shape == spike_ids.shape
+            if spike_times is not None:
+                assert spike_times.shape == spike_ids.shape
             out.append(
                 Bunch(
                     amplitudes=amplitudes,
@@ -1887,6 +1891,10 @@ class BaseController:
             name: partial(self._amplitude_getter, name=name)
             for name in sorted(self._get_amplitude_functions())
         }
+        split_amplitudes_dict = {
+            name: partial(self._amplitude_getter, name=name, for_split=True)
+            for name in sorted(self._get_amplitude_functions())
+        }
         if not amplitudes_dict:
             return
         # NOTE: we disable raw amplitudes for now as they're either too slow to load,
@@ -1896,13 +1904,19 @@ class BaseController:
 
         def split_is_eligible():
             state = self.supervisor.selection.state
-            return len(self.supervisor.selected) == 1 and not state.is_merge_mode
+            return (
+                len(self.supervisor.selected) == 1
+                and not state.is_merge_mode
+                and view.amplitudes_type != 'raw'
+            )
 
         view = AmplitudeView(
             amplitudes=amplitudes_dict,
             amplitudes_type=None,  # TODO: GUI state
             duration=self.model.duration,
             split_is_eligible=split_is_eligible,
+            split_amplitudes=split_amplitudes_dict,
+            split_spike_ids_unique=True,
         )
         view._controller = self
 

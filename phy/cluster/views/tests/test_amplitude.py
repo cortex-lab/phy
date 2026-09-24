@@ -227,6 +227,39 @@ def test_amplitude_threshold_exact_split_is_strict_and_finite(qtbot):
     v.close()
 
 
+def test_amplitude_threshold_split_uses_spike_only_provider(qtbot):
+    calls = []
+
+    def display_amplitudes(cluster_ids, load_all=False):
+        return [
+            Bunch(
+                amplitudes=np.array([1.0, 3.0]),
+                spike_ids=np.array([10, 11]),
+                spike_times=np.array([0.0, 1.0]),
+            )
+        ]
+
+    def split_amplitudes(cluster_ids, load_all=False):
+        calls.append((tuple(cluster_ids), load_all))
+        return [
+            Bunch(
+                amplitudes=np.array([1.0, 1.0, 3.0]),
+                spike_ids=np.array([10, 10, 11]),
+            )
+        ]
+
+    v = AmplitudeView(
+        amplitudes=display_amplitudes,
+        split_amplitudes={'amplitude': split_amplitudes},
+    )
+    v.on_select(cluster_ids=[0])
+    v.split_threshold = 2.0
+
+    np.testing.assert_array_equal(v.on_request_split(), [10])
+    assert calls == [((0,), True)]
+    v.close()
+
+
 def test_amplitude_threshold_rejects_empty_whole_and_invalid_activation(qtbot):
     exact_amplitudes = np.array([1.0, 2.0, 3.0])
 

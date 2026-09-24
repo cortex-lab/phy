@@ -75,7 +75,13 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
     }
 
     def __init__(
-        self, amplitudes=None, amplitudes_type=None, duration=None, split_is_eligible=None
+        self,
+        amplitudes=None,
+        amplitudes_type=None,
+        duration=None,
+        split_is_eligible=None,
+        split_amplitudes=None,
+        split_spike_ids_unique=False,
     ):
         super().__init__()
         self.state_attrs += ('amplitudes_type',)
@@ -83,6 +89,8 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
         # The split preview is deliberately transient and is not part of view state.
         self.split_threshold = None
         self._split_is_eligible = split_is_eligible
+        self._split_amplitudes = split_amplitudes
+        self._split_spike_ids_unique = split_spike_ids_unique
         self._split_threshold_dragging = False
         self._displayed_bunchs = ()
 
@@ -252,7 +260,7 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
         self._update_split_threshold_visual()
         self.canvas.update()
 
-    def get_clusters_data(self, load_all=None):
+    def get_clusters_data(self, load_all=None, for_split=False):
         """Return a list of Bunch instances, with attributes pos and spike_ids."""
         if not len(self.cluster_ids):
             return
@@ -261,19 +269,25 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
         if not load_all:
             # Add None cluster which means background spikes.
             cluster_ids = [None] + cluster_ids
-        bunchs = self.amplitudes[self.amplitudes_type](cluster_ids, load_all=load_all) or ()
+        amplitudes = self.amplitudes
+        if for_split and self._split_amplitudes is not None:
+            amplitudes = self._split_amplitudes
+        bunchs = amplitudes[self.amplitudes_type](cluster_ids, load_all=load_all) or ()
         # Add a pos attribute in bunchs in addition to x and y.
         for i, (cluster_id, bunch) in enumerate(zip(cluster_ids, bunchs)):
             spike_ids = _as_array(bunch.spike_ids)
-            spike_times = _as_array(bunch.spike_times)
+            spike_times = None if for_split else _as_array(bunch.spike_times)
             amplitudes = _as_array(bunch.amplitudes)
-            assert spike_ids.shape == spike_times.shape == amplitudes.shape
+            assert spike_ids.shape == amplitudes.shape
+            if spike_times is not None:
+                assert spike_ids.shape == spike_times.shape
             bunch.spike_ids = spike_ids
             bunch.spike_times = spike_times
             bunch.amplitudes = amplitudes
-            # Ensure that bunch.pos exists, as it used by the LassoMixin.
-            bunch.pos = np.c_[spike_times, amplitudes]
-            assert bunch.pos.ndim == 2
+            if not for_split:
+                # Ensure that bunch.pos exists, as it used by the LassoMixin.
+                bunch.pos = np.c_[spike_times, amplitudes]
+                assert bunch.pos.ndim == 2
             bunch.cluster_id = cluster_id
             bunch.color = (
                 selected_cluster_color(
@@ -386,8 +400,8 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
             eligible = bool(self._split_is_eligible())
         if not eligible:
             self._show_split_status(
-                'Amplitude threshold splitting requires exactly one selected cluster '
-                'and inactive Merge mode.'
+                'Amplitude threshold splitting requires one selected cluster, a '
+                'full-cluster amplitude source, and inactive Merge mode.'
             )
         return eligible
 
@@ -466,7 +480,7 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
         if len(self.cluster_ids) != 1:
             return np.array([], dtype=np.int64)
 
-        bunchs = self.get_clusters_data(load_all=True) or ()
+        bunchs = self.get_clusters_data(load_all=True, for_split=True) or ()
         if len(bunchs) != 1:
             self._show_split_status('Amplitude threshold split has no eligible spikes.')
             return np.array([], dtype=np.int64)
@@ -485,6 +499,10 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
                 'Amplitude threshold split rejected: all spikes are below the threshold.'
             )
             return np.array([], dtype=np.int64)
-        out = np.unique(spike_ids[selected]).astype(np.int64, copy=False)
+        out = spike_ids[selected].astype(np.int64, copy=False)
+        if not self._split_spike_ids_unique:
+            # Custom providers may repeat spike IDs. Normalize them before
+            # passing the selection to clustering, which assumes unique IDs.
+            out = np.unique(out)
         self.clear_split_selection()
         return out

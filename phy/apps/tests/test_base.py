@@ -658,6 +658,35 @@ def test_amplitude_preview_highlights_waveforms_with_cached_resolver(qtbot, temp
     controller.close()
 
 
+def test_amplitude_split_data_skips_spike_times(tempdir):
+    controller = _mock_controller(tempdir, MyControllerFull)
+    try:
+        with patch.object(
+            controller,
+            '_get_spike_times_reordered',
+            side_effect=AssertionError('split data should not load spike times'),
+        ):
+            bunchs = controller._amplitude_getter(
+                [0], name='template', load_all=True, for_split=True
+            )
+        assert len(bunchs) == 1
+        assert bunchs[0].spike_times is None
+        assert bunchs[0].spike_ids.shape == bunchs[0].amplitudes.shape
+    finally:
+        controller.close()
+
+
+def test_raw_amplitude_threshold_split_is_disabled(tempdir):
+    controller = _mock_controller(tempdir, MyControllerW)
+    view = controller.create_amplitude_view()
+    try:
+        assert view.amplitudes_type == 'raw'
+        assert not view._can_set_split_threshold()
+    finally:
+        view.close()
+        controller.close()
+
+
 def test_amplitude_threshold_split_commits_exact_partition_and_undo_redo(qtbot, tempdir):
     """The sampled preview must commit the exact, all-spike threshold partition."""
     controller = _mock_controller(tempdir, MyControllerFull)
