@@ -237,7 +237,10 @@ class ClusterScatterView(MarkerSizeMixin, BaseColorView, BaseGlobalView, ManualC
         selected_clusters = self.cluster_ids
         if selected_clusters is not None and len(selected_clusters) > 0:
             colors = _add_selected_clusters_colors(
-                selected_clusters, self.all_cluster_ids, self.marker_colors.copy()
+                selected_clusters,
+                self.all_cluster_ids,
+                self.marker_colors.copy(),
+                self._cluster_color_index_by_id,
             )
             self.visual.set_color(colors)
             self.canvas.update()

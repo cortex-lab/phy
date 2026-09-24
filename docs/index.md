@@ -4,7 +4,7 @@ phy is an open-source graphical interface for visualizing and manually curating 
 electrophysiology datasets. It is optimized for high-density probes, including Neuropixels, and
 provides both an interactive curation workflow and Python extension points for specialized labs.
 
-> **Current stable release:** phy 2.1.0. The source tree is developing phy 2.1.1. See the
+> **Current stable release:** phy 2.1.0. The source tree is developing phy 2.2.0. See the
 > [release notes](release.md) and [changelog](changelog.md).
 
 [![Template GUI](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)](https://user-images.githubusercontent.com/1942359/74028054-c284b880-49a9-11ea-8815-1b7e727a8644.png)

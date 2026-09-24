@@ -8,7 +8,7 @@ import logging
 from copy import deepcopy
 
 import numpy as np
-from phylib.utils import Bunch, _as_list, _is_list, emit, silent
+from phylib.utils import Bunch, _as_list, _is_list, emit
 
 from ._history import History
 
@@ -32,13 +32,19 @@ def _join(clusters):
     return f'[{", ".join(map(str, clusters))}]'
 
 
-def create_cluster_meta(cluster_groups):
-    """Return a ClusterMeta instance with cluster group support."""
+def create_cluster_meta(cluster_groups, cluster_labels=None):
+    """Return a ClusterMeta instance initialized with groups and label columns."""
     meta = ClusterMeta()
     meta.add_field('group')
 
     cluster_groups = cluster_groups or {}
     data = {c: {'group': v} for c, v in cluster_groups.items()}
+    for field, values in (cluster_labels or {}).items():
+        if field == 'group':
+            continue
+        meta.add_field(field)
+        for cluster, value in values.items():
+            data.setdefault(cluster, {})[field] = value
     meta.from_dict(data)
 
     return meta
@@ -148,12 +154,15 @@ class ClusterMeta:
 
     def from_dict(self, dic):
         """Import data from a `{cluster_id: {field: value}}` dictionary."""
-        # self._reset_data()
-        # Do not raise events here.
-        with silent():
-            for cluster, vals in dic.items():
-                for field, value in vals.items():
-                    self.set(field, [cluster], value, add_to_stack=False)
+        # Initialization is deliberately a direct bulk update. Going through set()
+        # would allocate one UpdateInfo per cell and scan the global callback registry,
+        # even though imported metadata is neither undoable nor observable as an edit.
+        for cluster, values in dic.items():
+            row = self._data.setdefault(cluster, {})
+            for field, value in values.items():
+                if field not in self._fields:
+                    self.add_field(field)
+                row[field] = value
         self._data_base = deepcopy(self._data)
 
     def to_dict(self, field):
@@ -198,7 +207,7 @@ class ClusterMeta:
             metadata_changed=clusters,
             metadata_value=value,
         )
-        undo_state = emit('request_undo_state', self, up)
+        undo_state = emit('request_undo_state', self, up) if add_to_stack else None
 
         if add_to_stack:
             self._undo_stack.add((clusters, field, value, up, undo_state))

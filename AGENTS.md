@@ -18,14 +18,20 @@
 ## Development workflow
 
 - Use `uv` for development environments: `uv sync --dev`.
+- For tests requiring unreleased phylib fixes, use the CI-matching environment
+  recipe in `docs/installation.md#reproduce-the-ci-test-environment`.
 - Run the narrowest relevant tests while iterating, for example
-  `uv run pytest path/to/test_file.py`.
+  `uv run pytest path/to/test_file.py`. Use `uv run --no-sync` when preserving
+  a phylib source or CI-revision override.
 - Before handing off a code change, run `make lint`, `make format-check`, and
   the relevant test target. Use `make test-full` for broad GUI, application, or
-  data-model changes.
-- Run `make doc-check` for documentation, public API, shortcut, or plugin
-  documentation changes. It regenerates checked-in documentation and verifies
-  that generated output is current.
+  data-model changes. Checks included by the chosen target satisfy these
+  requirements; do not run them separately again unless a subsequent change
+  affects their results.
+- Run `make doc-check` for published documentation, public API, shortcut, or
+  plugin documentation changes. It regenerates checked-in documentation and
+  verifies that generated output is current. Standalone `AGENTS.md` and `design/`
+  edits do not require it unless they also affect published documentation.
 - Run `uv build` when changing packaging, dependencies, entry points, or package
   data.
 

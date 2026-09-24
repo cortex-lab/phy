@@ -219,9 +219,17 @@ class PlotCanvas(BaseCanvas):
         self.lasso = Lasso()
         self.lasso.attach(self)
 
-    def enable_axes(self, data_bounds=None, show_x=True, show_y=True):
+    def enable_axes(
+        self, data_bounds=None, show_x=True, show_y=True, format_x=None, format_y=None
+    ):
         """Show axes in the canvas."""
-        self.axes = Axes(data_bounds=data_bounds, show_x=show_x, show_y=show_y)
+        self.axes = Axes(
+            data_bounds=data_bounds,
+            show_x=show_x,
+            show_y=show_y,
+            format_x=format_x,
+            format_y=format_y,
+        )
         self.axes.attach(self)
 
 

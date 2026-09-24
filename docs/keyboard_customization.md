@@ -1,13 +1,14 @@
 # Customize keyboard shortcuts
 
-Press `H` or choose **Help > Show all shortcuts** to print the effective
-shortcuts and snippets in the console. The generated
+Press `H` or choose **Help > Show shortcuts and commands** to open a searchable reference
+of the effective shortcuts and command aliases. The generated
 [keyboard shortcut reference](shortcuts.md) lists the defaults, but `H` is the
 better source after plugins have changed them.
 
 Keyboard shortcuts invoke actions immediately. Snippets start with `:`, may
-take arguments, and run when you press Enter. For example, `:c 10 12` selects
-clusters 10 and 12. Rebinding an action does not change its snippet alias.
+take arguments, and run when you press Enter; the status bar shows how to run or
+cancel an active command. For example, `:c 10 12` selects clusters 10 and 12.
+Rebinding an action does not change its snippet alias.
 
 ## Install the example
 

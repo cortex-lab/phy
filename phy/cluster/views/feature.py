@@ -15,7 +15,7 @@ from phy.plot.transform import Range
 from phy.plot.visuals import LineVisual, ScatterVisual, TextVisual
 from phy.utils.color import selected_cluster_color
 
-from .base import ManualClusteringView, MarkerSizeMixin, ScalingMixin
+from .base import ManualClusteringView, MarkerSizeMixin, ScalingMixin, SplitSelectionMixin
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def _uniq(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
+class FeatureView(MarkerSizeMixin, ScalingMixin, SplitSelectionMixin, ManualClusteringView):
     """This view displays a 4x4 subplot matrix with different projections of the principal
     component features. This view keeps track of which channels are currently shown.
 
@@ -237,7 +237,11 @@ class FeatureView(MarkerSizeMixin, ScalingMixin, ManualClusteringView):
             self.visual.add_batch_data(
                 x=px.data,
                 y=py.data,
-                color=_get_point_color(clu_idx),
+                color=_get_point_color(
+                    self.cluster_color_index(cluster_id, clu_idx)
+                    if cluster_id is not None
+                    else None
+                ),
                 # Reduced marker size for background features
                 size=self._marker_size,
                 masks=_get_point_masks(clu_idx=clu_idx, masks=masks),

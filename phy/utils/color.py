@@ -181,12 +181,25 @@ def spike_colors(spike_clusters, cluster_ids):
     return add_alpha(colormaps.default[np.mod(spike_clusters_idx, colormaps.default.shape[0])])
 
 
-def _add_selected_clusters_colors(selected_clusters, cluster_ids, cluster_colors=None):
+def _add_selected_clusters_colors(
+    selected_clusters, cluster_ids, cluster_colors=None, color_index_by_id=None
+):
     """Take an array with colors of clusters as input, and add colors of selected clusters."""
     # clu_idx contains the index of the selected clusters within cluster_ids
     # cmap_idx contains 0, 1, 2... as the colormap index, but without the selected clusters
     # that are missing in cluster_ids.
     clu_idx, cmap_idx = _selected_cluster_idx(selected_clusters, cluster_ids)
+    if color_index_by_id:
+        selected_clusters = np.asarray(selected_clusters, dtype=np.int32)
+        cluster_ids = np.asarray(cluster_ids, dtype=np.int32)
+        kept = np.isin(selected_clusters, cluster_ids)
+        cmap_idx = np.asarray(
+            [
+                color_index_by_id.get(int(cluster_id), index)
+                for index, cluster_id in enumerate(selected_clusters[kept])
+            ],
+            dtype=np.int64,
+        )
     colormap = _categorical_colormap(colormaps.default, cmap_idx, categorize=False)
     # Inject those colors in cluster_colors.
     cluster_colors[clu_idx] = add_alpha(colormap, 1)

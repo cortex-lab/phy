@@ -8,11 +8,12 @@ import numpy as np
 import pytest
 from phylib.io.array import _spikes_per_cluster
 from phylib.io.mock import artificial_features, artificial_spike_clusters
-from phylib.utils import Bunch, connect
+from phylib.utils import Bunch, connect, emit
 
 from phy.plot.tests import mouse_click
 
 from ..feature import FeatureView, _get_default_grid
+from ..scatter import ScatterView
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
@@ -105,3 +106,22 @@ def test_feature_view(qtbot, gui, n_channels):
     v.set_state(v.state)
 
     _stop_and_close(qtbot, v)
+
+
+def test_feature_lasso_clears_other_builtin_split_selection(qtbot, gui):
+    feature = FeatureView(features=lambda *args, **kwargs: None)
+    scatter = ScatterView(coords=lambda *args, **kwargs: None)
+    feature.attach(gui)
+    scatter.attach(gui)
+
+    scatter.canvas.lasso.add((0, 0))
+    emit('lasso_updated', scatter.canvas, scatter.canvas.lasso.polygon)
+    assert scatter.canvas.lasso.count == 1
+
+    feature.canvas.lasso.add((0, 0))
+    emit('lasso_updated', feature.canvas, feature.canvas.lasso.polygon)
+    assert scatter.canvas.lasso.count == 0
+    assert feature.canvas.lasso.count == 1
+
+    _stop_and_close(qtbot, feature)
+    _stop_and_close(qtbot, scatter)

@@ -14,7 +14,7 @@ from phy.gui.widgets import view_settings_dialog
 from phy.plot.visuals import HistogramVisual, TextVisual
 from phy.utils.color import selected_cluster_color
 
-from .base import ManualClusteringView, ScalingMixin
+from .base import ManualClusteringView, RecordingTimeAxisMixin, ScalingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def _compute_histogram(
     assert x_min <= x_max
     assert n_bins >= 0
     n_bins = _clip(n_bins, 2, 1000000)
-    bins = np.linspace(float(x_min), float(x_max), int(n_bins))
+    bins = np.linspace(float(x_min), float(x_max), int(n_bins) + 1)
     if ignore_zeros:
         data = data[data != 0]
     histogram, _ = np.histogram(data, bins=bins)
@@ -151,6 +151,9 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             box_index=bunch.index,
         )
 
+    def _compute_histogram(self, data):
+        return _compute_histogram(data, x_min=self.x_min, x_max=self.x_max, n_bins=self.n_bins)
+
     def get_clusters_data(self, load_all=None):
         bunchs = []
         for i, cluster_id in enumerate(self.cluster_ids):
@@ -167,12 +170,10 @@ class HistogramView(ScalingMixin, ManualClusteringView):
             assert self.x_min <= self.x_max
 
             # Compute the histogram.
-            bunch.histogram = _compute_histogram(
-                bunch.data, x_min=self.x_min, x_max=self.x_max, n_bins=self.n_bins
-            )
+            bunch.histogram = self._compute_histogram(bunch.data)
             bunch.ylim = bunch.histogram.max()
 
-            bunch.color = selected_cluster_color(i)
+            bunch.color = selected_cluster_color(self.cluster_color_index(cluster_id, i))
             bunch.index = i
             bunch.cluster_id = cluster_id
             bunchs.append(bunch)
@@ -393,7 +394,7 @@ class ISIView(HistogramView):
     }
 
 
-class FiringRateView(HistogramView):
+class FiringRateView(RecordingTimeAxisMixin, HistogramView):
     """Histogram view showing the time-dependent firing rate."""
 
     n_bins = 200
@@ -414,3 +415,13 @@ class FiringRateView(HistogramView):
         f'set_x_min ({bin_unit})': f'{alias_char}min',
         f'set_x_max ({bin_unit})': f'{alias_char}max',
     }
+
+    def _compute_histogram(self, data):
+        counts = _compute_histogram(
+            data,
+            x_min=self.x_min,
+            x_max=self.x_max,
+            n_bins=self.n_bins,
+            normalize=False,
+        )
+        return counts / self.bin_size
