@@ -13,6 +13,8 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Reclustering example actions for the Template GUI, using ISO-SPLIT or a
+  Gaussian mixture on existing PC features.
 - Select the first eligible clusters in the Similarity View with
   `Control+Space`. The default is 15 clusters; **Select > Select N Similar**
   changes the number and remembers it across sessions.
