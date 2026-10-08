@@ -1,6 +1,28 @@
 # phy 2.2 merge-workflow integration handoff
 
-Status snapshot: 2026-08-09
+Status update: 2026-10-08
+
+Cyrille approved the release and integration handoff on 8 October 2026,
+including merging PR #1404. That approval replaces the historical requirement
+below to wait for a named external tester's acceptance. The dated sections are
+retained as historical context; their freeze and feedback gates no longer apply.
+
+Maintainer acceptance is based on automated regressions and an automated
+GUI smoke test on an isolated copy of the real SWAY dataset. Against the built
+phylib 2.7.1 wheel, the integrated phy branch passed 495 core/GUI tests and 155
+application tests, with one existing visual benchmark skipped. The same suite
+passed with Tornado 6.5.10. The real-dataset smoke test verified merge assignments,
+exact undo/redo, return to Normal mode, immediate quality assignment, save and
+reopen without templates, and preservation of producer-owned `curation.json`.
+The raw recording path was unavailable, so that smoke test exercised stored
+waveforms rather than raw trace extraction. It was not a human visual review.
+
+The current remaining gates are publication and fresh-install verification of
+phylib 2.7.1, integration of current master, removal of the temporary phylib CI
+substitution, a regenerated release-based lockfile, final local validation,
+and a green complete PR and post-merge CI matrix.
+
+Historical status snapshot: 2026-08-09
 
 This document records the remaining integration work around phy PR #1404. It
 is a point-in-time handoff, not a substitute for GitHub. Before acting, read
