@@ -37,14 +37,23 @@ from . import show_and_wait
 # ------------------------------------------------------------------------------
 
 
-def test_require_qt_with_app():
+def test_require_qt_with_app(monkeypatch):
+    calls = []
+
+    class NoApplication:
+        @staticmethod
+        def instance():
+            return None
+
+    monkeypatch.setattr('phy.gui.qt.QApplication', NoApplication)
+    monkeypatch.setattr('phy.gui.qt.create_app', lambda: calls.append('create'))
+
     @require_qt
     def f():
-        pass
+        calls.append('call')
 
-    if not QApplication.instance():
-        with raises(RuntimeError):  # pragma: no cover
-            f()
+    f()
+    assert calls == ['create', 'call']
 
 
 def test_require_qt_without_app(qapp):
@@ -81,7 +90,9 @@ def test_worker(qtbot):
     assert _l == [0]
 
 
-def test_debouncer_1(qtbot):
+def test_debouncer_1(qtbot, monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr('phy.gui.qt.default_timer', lambda: now[0])
     d = Debouncer(delay=50)
     _l = []
 
@@ -89,9 +100,12 @@ def test_debouncer_1(qtbot):
         _l.append(i)
 
     for i in range(10):
-        qtbot.wait(10)
+        now[0] += 0.01
         d.submit(f, i)
-    qtbot.wait(500)
+        d._timer_callback()
+    assert _l == [0]
+    now[0] += 0.5
+    d._timer_callback()
     assert _l == [0, 9]
 
 
