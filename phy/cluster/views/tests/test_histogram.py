@@ -7,12 +7,19 @@
 import numpy as np
 from phylib.utils import Bunch
 
-from ..histogram import FiringRateView, HistogramView, ISIView
+from ..histogram import FiringRateView, HistogramView, ISIView, _compute_histogram
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
 # Test Histogram view
 # ------------------------------------------------------------------------------
+
+
+def test_compute_histogram_n_bins():
+    histogram = _compute_histogram(
+        np.array([0.5, 1.5, 2.5, 3.5]), x_min=0, x_max=4, n_bins=4, normalize=False
+    )
+    np.testing.assert_array_equal(histogram, np.ones(4))
 
 
 def test_histogram_view_0(qtbot, gui):
@@ -84,6 +91,40 @@ def test_firing_rate_view_ignores_global_x_max(qtbot, gui):
     assert v.x_max is None
     v.on_select(cluster_ids=[0])
     assert v.x_max == 30.0
+
+    _stop_and_close(qtbot, v)
+
+
+def test_firing_rate_view_displays_spikes_per_second(qtbot):
+    v = FiringRateView(
+        cluster_stat=lambda cluster_id: Bunch(
+            data=np.arange(0.125, 2, 0.25),
+            x_min=0.0,
+            x_max=2.0,
+        )
+    )
+    v.n_bins = 2
+    v.cluster_ids = [0]
+
+    bunch = v.get_clusters_data()[0]
+
+    np.testing.assert_array_equal(bunch.histogram, np.array([4.0, 4.0]))
+    _stop_and_close(qtbot, v)
+
+
+def test_firing_rate_view_formats_recording_time_axis(qtbot):
+    v = FiringRateView(
+        cluster_stat=lambda cluster_id: Bunch(
+            data=np.array([1.0, 3600.0]),
+            x_min=0.0,
+            x_max=7200.0,
+        )
+    )
+    v.on_select(cluster_ids=[0])
+    v._set_recording_time_format('h', 2)
+
+    assert v.recording_time_unit == 'h'
+    assert all(label.endswith(' h') for label in v.canvas.axes.locator.xtext)
 
     _stop_and_close(qtbot, v)
 

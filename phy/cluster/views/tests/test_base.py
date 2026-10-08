@@ -4,12 +4,15 @@
 # Imports
 # ------------------------------------------------------------------------------
 
+from types import MappingProxyType
+
 import numpy as np
 from phylib.utils import emit
+from pytest import raises
 
 from phy.utils.color import colormaps, selected_cluster_color
 
-from ..base import BaseColorView, ManualClusteringView
+from ..base import BaseColorView, ManualClusteringView, SplitSelectionMixin
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
@@ -41,6 +44,12 @@ class DeferredView(ManualClusteringView):
         self.updates.append((list(self.cluster_ids), kwargs))
 
 
+class SplitSelectionView(SplitSelectionMixin, ManualClusteringView):
+    def __init__(self):
+        super().__init__()
+        self.canvas.enable_lasso()
+
+
 def test_manual_clustering_view_1(qtbot, tempdir):
     v = MyView()
     v.canvas.show()
@@ -70,9 +79,14 @@ def test_manual_clustering_view_2(qtbot, gui):
     v.attach(gui)
 
     class Supervisor:
-        pass
+        selection_color_indices = MappingProxyType({0: 0, 1: 2, 2: 1})
 
-    emit('select', Supervisor(), cluster_ids=[0, 1])
+    sender = Supervisor()
+    emit('select', sender, cluster_ids=[0, 1])
+    assert v.cluster_color_index(0, 0) == 0
+    assert v.cluster_color_index(1, 1) == 2
+    sender.selection_color_indices = MappingProxyType({0: 0, 1: 1, 2: 2})
+    assert v.cluster_color_index(1, 1) == 2
 
     v.actions.get('Change color scheme to myscheme').trigger()
     v.next_color_scheme()
@@ -84,6 +98,58 @@ def test_manual_clustering_view_2(qtbot, gui):
     v.canvas.close()
     v.actions.close()
     qtbot.wait(100)
+
+
+def test_manual_clustering_view_menu_utility_footer(qtbot, gui):
+    v = MyView()
+    v.attach(gui)
+    v.add_color_scheme(lambda cid: cid, name='myscheme')
+
+    v.dock._menu.aboutToShow.emit()
+    actions = v.dock._menu.actions()
+    assert actions[-3:] == [
+        v.actions.get('toggle_auto_update'),
+        v.actions.get('screenshot'),
+        v.actions.get('close'),
+    ]
+    assert actions[-4].isSeparator()
+    assert not any(
+        action.isSeparator() and next_action.isSeparator()
+        for action, next_action in zip(actions, actions[1:])
+    )
+
+    _stop_and_close(qtbot, v)
+
+
+def test_authoritative_selection_colors_require_every_active_cluster():
+    view = ManualClusteringView()
+
+    class Supervisor:
+        selection_color_indices = MappingProxyType({1: 0})
+
+    with raises(ValueError, match='missing active cluster IDs: \\[2\\]'):
+        view._update_cluster_color_indices(Supervisor(), [1, 2])
+
+
+def test_standalone_selection_uses_positional_colors():
+    view = ManualClusteringView()
+
+    view._update_cluster_color_indices(object(), [1, 2])
+
+    assert view.cluster_color_index(2, 1) == 1
+
+
+def test_authoritative_selection_color_mapping_is_used_directly():
+    view = ManualClusteringView()
+    color_indices = MappingProxyType({1: 3, 2: 0})
+
+    class Supervisor:
+        selection_color_indices = color_indices
+
+    view._update_cluster_color_indices(Supervisor(), [1, 2])
+
+    assert view._cluster_color_index_by_id is color_indices
+    assert view.cluster_color_index(1, 0) == 3
 
 
 def test_manual_clustering_view_selection_is_limited(qtbot, gui):
@@ -153,3 +219,32 @@ def test_manual_clustering_view_defers_inactive_tab(qtbot, gui):
 
     _stop_and_close(qtbot, hidden)
     _stop_and_close(qtbot, visible)
+
+
+def test_split_selection_is_exclusive_and_disconnects_on_close(qtbot, gui):
+    first = SplitSelectionView()
+    second = SplitSelectionView()
+    first.attach(gui)
+    second.attach(gui)
+
+    first.canvas.lasso.add((0, 0))
+    emit('lasso_updated', first.canvas, first.canvas.lasso.polygon)
+    assert first.canvas.lasso.count == 1
+
+    second.canvas.lasso.add((0, 0))
+    emit('lasso_updated', second.canvas, second.canvas.lasso.polygon)
+    assert first.canvas.lasso.count == 0
+    assert second.canvas.lasso.count == 1
+
+    first.canvas.lasso.add((0, 0))
+    emit('lasso_updated', first.canvas, first.canvas.lasso.polygon)
+    assert first.canvas.lasso.count == 1
+    assert second.canvas.lasso.count == 0
+
+    first.close()
+    calls = []
+    first.clear_split_selection = lambda: calls.append(True)
+    second.activate_split_selection()
+    assert not calls
+
+    _stop_and_close(qtbot, second)

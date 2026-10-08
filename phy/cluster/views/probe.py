@@ -155,7 +155,9 @@ class ProbeView(ManualClusteringView):
                 x += t
                 alpha = 1.0 if channel_id not in self.dead_channels else self.dead_channel_alpha
                 clu_pos.append((x, y))
-                clu_colors.append(selected_cluster_color(clu_idx, alpha=alpha))
+                cluster_id = cluster_ids[clu_idx]
+                color_index = self.cluster_color_index(cluster_id, clu_idx)
+                clu_colors.append(selected_cluster_color(color_index, alpha=alpha))
         return np.array(clu_pos), np.array(clu_colors)
 
     def on_select(self, cluster_ids=(), **kwargs):

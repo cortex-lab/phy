@@ -6,6 +6,7 @@
 
 import logging
 
+from phylib.utils import connect, unconnect
 from pytest import raises
 
 from .._utils import (
@@ -37,6 +38,47 @@ def test_create_cluster_meta():
     assert meta.group(5) == 1
     assert meta.group(7) == 2
     assert meta.group(8) is None
+
+
+def test_create_cluster_meta_bulk_labels_without_edit_events():
+    events = []
+
+    @connect(event='request_undo_state')
+    def on_request_undo_state(sender, up):
+        events.append(up)
+
+    labels = {
+        f'metric_{field}': {cluster: field + cluster for cluster in range(600)}
+        for field in range(45)
+    }
+    try:
+        meta = create_cluster_meta({0: 'good'}, labels)
+    finally:
+        unconnect(on_request_undo_state)
+
+    assert events == []
+    assert len(meta.fields) == 46
+    assert meta.group(0) == 'good'
+    assert meta.get('metric_44', 599) == 643
+    assert meta._data_base == meta._data
+
+
+def test_metadata_without_history_skips_undo_state_request():
+    meta = ClusterMeta()
+    events = []
+
+    @connect(event='request_undo_state', sender=meta)
+    def on_request_undo_state(sender, up):
+        events.append(up)
+
+    try:
+        up = meta.set('quality', [3], 'good', add_to_stack=False)
+    finally:
+        unconnect(on_request_undo_state)
+
+    assert up.description == 'metadata_quality'
+    assert events == []
+    assert meta.get('quality', 3) == 'good'
 
 
 def test_metadata_history_simple():

@@ -8,7 +8,6 @@ import numpy as np
 from phylib.io.mock import artificial_correlograms
 from phylib.utils import connect, unconnect
 
-from phy.gui.qt import QPoint, Qt
 from phy.plot.tests import mouse_click
 
 from ..correlogram import CorrelogramView
@@ -40,29 +39,49 @@ def test_correlogram_view(qtbot, gui):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    promoted = []
+    transferred = []
 
     @connect(sender=v)
-    def on_request_promote_similar(sender, cluster_id_a, cluster_id_b):
-        promoted.append((cluster_id_a, cluster_id_b))
+    def on_request_correlogram_transfer(sender, cluster_id_a, cluster_id_b):
+        transferred.append((cluster_id_a, cluster_id_b))
 
-    v.on_select(cluster_ids=[0, 2, 3])
+    cluster_ids = list(range(v.max_n_clusters))
+    v.on_select(cluster_ids=cluster_ids)
     width, height = v.canvas.get_size()
-    mouse_click(qtbot, v.canvas, (width / 2, height / 6), button='Right')
-    mouse_click(qtbot, v.canvas, (width / 6, height / 6), button='Right')
+    # Exercise every visual diagonal center, including the first/best cluster. The
+    # entire matrix is scaled to leave room for labels, so unscaled hit-testing
+    # would map outer cells to an adjacent index when many clusters are displayed.
+    n = len(cluster_ids)
+    sx, sy = v._display_scale.amount
+    for k in range(n):
+        x_ndc = sx * (-1 + (2 * k + 1) / n)
+        y_ndc = sy * (+1 - (2 * k + 1) / n)
+        mouse_click(
+            qtbot,
+            v.canvas,
+            (0.5 * width * (x_ndc + 1), 0.5 * height * (1 - y_ndc)),
+            button='Right',
+        )
+    # An off-diagonal click reports both axes; the application targets its row.
+    first_x = 0.5 * (1 - sx * (1 - 1 / n))
+    second_x = 0.5 * (1 - sx * (1 - 3 / n))
+    first_y = 0.5 * (1 - sy * (1 - 1 / n))
+    mouse_click(
+        qtbot,
+        v.canvas,
+        (first_x * width, first_y * height),
+        button='Right',
+        modifiers=('Control',),
+    )
+    mouse_click(
+        qtbot,
+        v.canvas,
+        (second_x * width, first_y * height),
+        button='Right',
+    )
 
-    assert promoted == [(0, 2)]
-
-    # Trackpad secondary clicks may be held longer than BaseCanvas' 250 ms
-    # synthetic mouse-click threshold. The release should still be actionable.
-    pos = QPoint(round(width / 2), round(height / 6))
-    qtbot.mousePress(v.canvas, Qt.RightButton, pos=pos)
-    qtbot.wait(300)
-    qtbot.mouseRelease(v.canvas, Qt.RightButton, pos=pos)
-
-    assert promoted == [(0, 2), (0, 2)]
-
-    unconnect(on_request_promote_similar)
+    assert transferred == [(cluster_id, cluster_id) for cluster_id in cluster_ids] + [(0, 1)]
+    unconnect(on_request_correlogram_transfer)
 
     v.toggle_normalization(True)
     v.toggle_labels(False)
@@ -83,3 +102,23 @@ def test_correlogram_view(qtbot, gui):
     v.set_state(v.state)
 
     _stop_and_close(qtbot, v)
+
+
+def test_correlogram_label_gutter_tracks_id_width_and_canvas_size():
+    v = CorrelogramView(
+        correlograms=lambda cluster_ids, bin_size, window_size: artificial_correlograms(
+            len(cluster_ids), int(window_size / bin_size)
+        ),
+        sample_rate=100.0,
+    )
+    v.cluster_ids = [138, 144, 148]
+
+    wide = v._display_scale_for_size(1000, 800)
+    narrow = v._display_scale_for_size(400, 800)
+    v.cluster_ids = [101234, 144, 148]
+    long_id = v._display_scale_for_size(1000, 800)
+
+    assert narrow[0] < wide[0]
+    assert long_id[0] < wide[0]
+    assert narrow[1] == wide[1] == long_id[1]
+    v.canvas.close()

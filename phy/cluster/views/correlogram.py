@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 from phylib.io.array import _clip
-from phylib.utils import Bunch, emit
+from phylib.utils import Bunch, connect, emit
 
 from phy.plot.transform import Scale
 from phy.plot.visuals import HistogramVisual, LineVisual, TextVisual
@@ -62,6 +62,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     default_shortcuts = {
         'change_window_size': 'ctrl+wheel',
         'change_bin_size': 'alt+wheel',
+        'transfer_cluster': 'right click',
     }
 
     default_snippets = {
@@ -81,8 +82,11 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.local_state_attrs += ('bin_size', 'window_size', 'refractory_period')
         self.canvas.set_layout(layout='grid')
 
-        # Outside margin to show labels.
-        self.canvas.gpu_transforms.add(Scale(0.9))
+        # Responsive outside gutters show pixel-sized labels without clipping.
+        # Mouse hit-testing inverts the same current transform below.
+        self._display_scale = Scale((0.9, 0.9), gpu_var='u_display_scale')
+        self.canvas.inserter.insert_vert('uniform vec2 u_display_scale;', 'header')
+        self.canvas.gpu_transforms.add(self._display_scale)
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
@@ -104,6 +108,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
         self.text_visual = TextVisual(color=(1.0, 1.0, 1.0, 1.0))
         self.canvas.add_visual(self.text_visual)
+        connect(self._on_canvas_resize, event='resize', sender=self.canvas)
 
     # -------------------------------------------------------------------------
     # Internal methods
@@ -113,6 +118,32 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         for i in range(n_clusters):
             for j in range(n_clusters):
                 yield i, j
+
+    def _display_scale_for_size(self, width, height):
+        """Return independent plot scales leaving enough room for current labels."""
+        width, height = max(int(width), 1), max(int(height), 1)
+        tex = self.text_visual._tex
+        glyph_width = tex.shape[1] // 16 * self.text_visual.font_size / 12
+        glyph_height = tex.shape[0] // 6 * self.text_visual.font_size / 12
+        max_chars = max((len(str(cluster_id)) for cluster_id in self.cluster_ids), default=1)
+        # A Scale maps each outer edge inward by half of ``1 - scale``.
+        # Keep a small pixel gap between the labels and the first/bottom cells.
+        horizontal_gutter = max_chars * glyph_width + 4
+        vertical_gutter = glyph_height + 4
+        sx = np.clip(1 - 2 * horizontal_gutter / width, 0.5, 0.98)
+        sy = np.clip(1 - 2 * vertical_gutter / height, 0.5, 0.98)
+        return float(sx), float(sy)
+
+    def _update_display_scale(self, width=None, height=None):
+        width, height = (width, height) if width is not None else self.canvas.get_size()
+        scale = self._display_scale_for_size(width, height)
+        self._display_scale.amount = scale
+        for visual in (self.correlogram_visual, self.line_visual, self.text_visual):
+            visual.program['u_display_scale'] = scale
+        return scale
+
+    def _on_canvas_resize(self, sender, width, height):
+        self._update_display_scale(width, height)
 
     def get_clusters_data(self, load_all=None):
         ccg = self.correlograms(self.cluster_ids, self.bin_size, self.window_size)
@@ -130,7 +161,8 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             b.firing_rate = fr[i, j] if fr is not None else None
             b.data_bounds = (0, 0, n_bins, m)
             b.pair_index = i, j
-            b.color = selected_cluster_color(i, 1)
+            color_index = self.cluster_color_index(self.cluster_ids[i], i)
+            b.color = selected_cluster_color(color_index, 1)
             if i != j:
                 b.color = add_alpha(_override_hsv(b.color[:3], s=0.1, v=1))
             bunchs.append(b)
@@ -179,14 +211,14 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
             self.text_visual.add_batch_data(
                 pos=[-1, 0],
                 text=str(self.cluster_ids[k]),
-                anchor=[-1.25, 0],
+                anchor=[-1, 0],
                 data_bounds=None,
                 box_index=(k, 0),
             )
             self.text_visual.add_batch_data(
                 pos=[0, -1],
                 text=str(self.cluster_ids[k]),
-                anchor=[0, -1.25],
+                anchor=[0, -1],
                 data_bounds=None,
                 box_index=(n - 1, k),
             )
@@ -201,6 +233,7 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
 
     def plot(self, **kwargs):
         """Update the view with the current cluster selection."""
+        self._update_display_scale()
         self.canvas.grid.shape = (len(self.cluster_ids), len(self.cluster_ids))
 
         bunchs = self.get_clusters_data()
@@ -237,17 +270,21 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
         self.canvas.update()
 
     def on_mouse_release(self, e):
-        """Promote a similarity cluster after a stationary secondary click."""
-        if e.button != 'Right' or len(self.cluster_ids) < 2:
+        """Request a row-cluster transfer after a stationary secondary click."""
+        if e.modifiers or e.button != 'Right' or not self.cluster_ids:
             return
         press_pos = self.canvas._mouse_press_position
         if press_pos is None or np.linalg.norm(np.asarray(e.pos) - press_pos) > 5:
             return
-        (i, j), _ = self.canvas.grid.box_map(e.pos)
-        logger.debug('Correlogram secondary click at %s maps to cell (%d, %d).', e.pos, i, j)
-        if i == j:
-            return
-        emit('request_promote_similar', self, self.cluster_ids[i], self.cluster_ids[j])
+        ndc = self.canvas.window_to_ndc(e.pos)
+        grid_ndc = self._display_scale.inverse().apply(ndc)[0]
+        i, j = self.canvas.grid.get_closest_box(grid_ndc)
+        emit(
+            'request_correlogram_transfer',
+            self,
+            self.cluster_ids[i],
+            self.cluster_ids[j],
+        )
 
     def attach(self, gui):
         """Attach the view to the GUI."""

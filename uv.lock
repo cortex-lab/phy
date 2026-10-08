@@ -1449,7 +1449,7 @@ wheels = [
 
 [[package]]
 name = "phy"
-version = "2.1.1.dev0"
+version = "2.2.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1519,7 +1519,7 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'dev'" },
     { name = "mtscomp" },
     { name = "numpy" },
-    { name = "phylib", specifier = ">=2.7.0,<3" },
+    { name = "phylib", specifier = ">=2.7.1,<3" },
     { name = "pillow" },
     { name = "pip" },
     { name = "pyopengl", specifier = ">=3.1.9" },
@@ -1555,7 +1555,7 @@ dev = [
 
 [[package]]
 name = "phylib"
-version = "2.7.0"
+version = "2.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dask" },
@@ -1570,9 +1570,9 @@ dependencies = [
     { name = "toolz" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/80/258006976d88285c6f24fbe5aa8e77f1eb6ac5ff799aad223543d224a6a0/phylib-2.7.0.tar.gz", hash = "sha256:e1b9ed5a53e2010030eebc61bad393b3787626f676ef4b0027b90b18fc8e167a", size = 70253, upload-time = "2025-12-12T15:28:02.73Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/4b/515a9372fb55064c03b92a905dbc918457231c79b513d844d92ed2c1cf7e/phylib-2.7.1.tar.gz", hash = "sha256:4007d35e43189495c460ba6c342ea84f9ef3632cf27384f56c2ae29f7b649721", size = 82956, upload-time = "2026-10-08T13:11:11.511Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/0e/6860178ec209314fdf39988deb3a3175b74446a6e4a5ccdaff3cce5ac519/phylib-2.7.0-py2.py3-none-any.whl", hash = "sha256:00f981c5d2260ab0e9e79ab35233f016fa4268fb8c0dc12632223a0e465111fd", size = 82121, upload-time = "2025-12-12T15:28:01.003Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/42/1dcc78f6c9d9667e540176c78a5859d4b99e7677bd1d95cc1e92ce1cd373/phylib-2.7.1-py3-none-any.whl", hash = "sha256:a9c58f5785f2370fcedd2f4850f6576595fba8817649a6e24e6b07287f8fa421", size = 93637, upload-time = "2026-10-08T13:11:10.119Z" },
 ]
 
 [[package]]

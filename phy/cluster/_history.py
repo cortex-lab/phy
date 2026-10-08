@@ -1,5 +1,7 @@
 """History class for undo stack."""
 
+from dataclasses import dataclass, replace
+
 # ------------------------------------------------------------------------------
 # Imports
 # ------------------------------------------------------------------------------
@@ -125,21 +127,67 @@ class History:
         return self.forward()
 
 
+@dataclass(frozen=True)
+class CurationHistoryEntry:
+    """Reversible data controllers plus the curation context around an action."""
+
+    controllers: tuple = ()
+    description: str = ''
+    selection_before: object = None
+    selection_after: object = None
+    workflow_context: object = None
+    workflow_context_after: object = None
+
+
 class GlobalHistory(History):
     """Merge several controllers with different undo stacks."""
 
-    def __init__(self, process_ups=None):
-        super().__init__(())
+    def __init__(self, process_ups=None, restore_context=None):
+        super().__init__(CurationHistoryEntry())
         self.process_ups = process_ups
+        self.restore_context = restore_context
 
-    def action(self, *controllers):
+    def action(
+        self,
+        *controllers,
+        description='',
+        selection_before=None,
+        selection_after=None,
+        workflow_context=None,
+        workflow_context_after=None,
+    ):
         """Register one or several controllers for this action."""
-        self.add(tuple(controllers))
+        self.add(
+            CurationHistoryEntry(
+                controllers=tuple(controllers),
+                description=description,
+                selection_before=selection_before,
+                selection_after=selection_after,
+                workflow_context=workflow_context,
+                workflow_context_after=workflow_context_after,
+            )
+        )
 
     def add_to_current_action(self, controller):
         """Add a controller to the current action."""
         item = self.current_item
-        self._history[self._index] = item + (controller,)
+        self._history[self._index] = replace(
+            item,
+            controllers=item.controllers + (controller,),
+        )
+
+    def update_current_context(self, **kwargs):
+        """Update contextual fields on the current action before undoing it."""
+        self._history[self._index] = replace(self.current_item, **kwargs)
+
+    def _restore(self, entry, selection, direction):
+        if self.restore_context is not None and selection is not None:
+            context = (
+                entry.workflow_context_after
+                if direction == 'redo' and entry.workflow_context_after is not None
+                else entry.workflow_context
+            )
+            self.restore_context(selection, context, direction)
 
     def undo(self):
         """Undo the last action.
@@ -147,11 +195,12 @@ class GlobalHistory(History):
         This will call `undo()` on all controllers involved in this action.
 
         """
-        controllers = self.back()
-        if controllers is None:
+        entry = self.back()
+        if entry is None:
             ups = ()
         else:
-            ups = tuple([controller.undo() for controller in controllers])
+            ups = tuple(controller.undo() for controller in entry.controllers)
+            self._restore(entry, entry.selection_before, 'undo')
         if self.process_ups is not None:
             return self.process_ups(ups)
         else:
@@ -163,11 +212,12 @@ class GlobalHistory(History):
         This will call `redo()` on all controllers involved in this action.
 
         """
-        controllers = self.forward()
-        if controllers is None:
+        entry = self.forward()
+        if entry is None:
             ups = ()
         else:
-            ups = tuple([controller.redo() for controller in controllers])
+            ups = tuple(controller.redo() for controller in entry.controllers)
+            self._restore(entry, entry.selection_after, 'redo')
         if self.process_ups is not None:
             return self.process_ups(ups)
         else:

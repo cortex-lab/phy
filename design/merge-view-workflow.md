@@ -1,13 +1,13 @@
 # Merge View workflow specification
 
-Status: proposed for phy 2.2.0
+Status: implemented and automatically validated on the unreleased phy 2.2 branch;
+manual dataset smoke testing and release acceptance remain
 
-Companion document: [Merge View architecture proposal](merge-view-architecture.md)
+Companion document: [Merge View architecture record](merge-view-architecture.md)
 
-This document fixes the intended user-facing behavior of the manual Merge View
-workflow before implementation. It deliberately does not specify Merge
-Propositions, their JSON format, or their review states; those will be designed
-separately after the manual workflow is validated.
+This document fixes the user-facing behavior of the manual Merge View workflow.
+Merge Propositions extend this contract in
+[their own specification](merge-propositions.md).
 
 ## Purpose
 
@@ -22,21 +22,23 @@ commits a curation change.
 The GUI has two mutually exclusive modes:
 
 - **Normal mode:** the effective selection is the union of the Cluster View and
-  Similarity View selections.
+  Similarity View selections. Scientific views show the blue reference first,
+  followed by the other selected Cluster View rows and selected Similarity View
+  rows in their visible table order.
 - **Merge mode:** the effective selection is the union of every cluster in Merge
   View and the Similarity View selection. Cluster View is disabled.
 
 The effective selection is what graphical and scientific views display. It is
 also what `G` merges. Transferring a cluster between Similarity View and Merge
-View does not change the effective selection and therefore must not cause an
-effective selection update or unnecessary redraw.
+View does not change effective membership. It publishes a render update only
+when the transfer also changes presentation order.
 
 Merge mode is active exactly while Merge View contains its blue reference
 cluster.
 
 ## Entering Merge mode
 
-`C` enters Merge mode. At least one cluster must be selected in Cluster View. If
+`V` enters Merge mode. At least one cluster must be selected in Cluster View. If
 there is no Cluster View selection, the action does nothing and reports why.
 
 Before changing the UI, phy snapshots the complete state needed to restore the
@@ -45,7 +47,7 @@ normal workflow on cancellation. At minimum, this includes:
 - Cluster View selection and its order;
 - Similarity View selection and its order;
 - the Similarity reference;
-- cluster-to-color assignments; and
+- presentation order and cluster colors; and
 - any filter, sort, scroll, or navigation state changed by entering the mode.
 
 All selected clusters are transferred into Merge View in this order:
@@ -57,11 +59,12 @@ All selected clusters are transferred into Merge View in this order:
 After the transfer:
 
 - Cluster View and Similarity View have no selected rows;
-- Cluster View remains visible but is clearly disabled and cannot be selected,
-  navigated, filtered, sorted, or used as a drag source or target;
+- Cluster View remains visible and scrollable but is clearly read-only: it
+  cannot be selected, navigated, filtered, sorted, or used as a drag source or
+  target;
 - Similarity View remains enabled and remains calculated relative to the blue
   reference; and
-- the effective selection, graphical displays, and cluster colors are unchanged.
+- the effective selection and graphical displays initially remain unchanged.
 
 Staged clusters are not offered again as active Similarity candidates while they
 remain in Merge View.
@@ -72,9 +75,15 @@ Merge View is tied to one blue reference cluster:
 
 - it is always the first row;
 - it remains the reference used to calculate Similarity;
-- it cannot be reordered;
-- it cannot be removed individually; and
-- its blue color is stable throughout the workflow.
+- it cannot be reordered within Merge View;
+- it can be transferred to Similarity when another staged cluster remains; and
+- the current reference always owns the blue palette slot.
+
+Transferring the reference promotes the next staged cluster in stable row order,
+moves the old reference into the selected Similarity role, and recomputes
+Similarity against the promoted blue reference. Transferring the final staged
+cluster is rejected without changing the workspace; cancellation remains the
+explicit way to leave Merge mode.
 
 When several clusters were selected in Cluster View, the cluster that was the
 Similarity reference on entry becomes the blue reference. The other clusters
@@ -86,9 +95,9 @@ Merge View has no selected-versus-unselected row state. Every cluster present in
 the view is included in the pending merge by definition. Removing a row means
 removing that cluster from Merge View.
 
-- Ctrl+right-click on a non-reference Merge row transfers that cluster to
+- Right-click on a Merge row transfers that cluster to
   Similarity View and selects it there.
-- Ctrl+right-click on a Similarity row transfers that cluster to Merge View.
+- Right-click on a Similarity row transfers that cluster to Merge View.
 - Drag-and-drop between Similarity View and Merge View provides the equivalent
   transfer operation.
 - Dragging within Merge View reorders candidates, except for the fixed blue
@@ -98,13 +107,36 @@ removing that cluster from Merge View.
 - Duplicate membership is not possible; adding an existing member is a no-op.
 
 Ctrl+click retains its existing multi-row selection meaning in Similarity View.
-Ctrl+right-click transfers only the clicked row. Dragging a selected Similarity
+Right-click transfers only the clicked row, without requiring prior selection;
+modified right-click is not a transfer alias. Dragging a selected Similarity
 row transfers all selected rows; dragging an unselected row transfers only that
 row.
 
-Cluster-to-color assignments belong to cluster IDs, not row positions. Adding,
-removing, or reordering rows must not reassign colors. Clicking or reordering a
-Merge row does not change the scientific views.
+In Merge mode, the presentation order delivered to scientific views is always
+the Merge View row order followed by selected Similarity View rows in visible
+table order.
+Adding, removing, or reordering rows may redraw order-dependent scientific
+views, but a cluster's color slot remains fixed across workflow tables and
+scientific views for the entire Merge session.
+
+The same role rule applies in Normal mode: right-click transfers the clicked
+Cluster row into Similarity or the clicked Similarity row into the Cluster
+selection. Other selections remain unchanged. Transferring the blue Cluster
+reference promotes the next selected Cluster row; transferring the final primary
+row is rejected.
+
+## Table lookup and layout
+
+Entering a bare integer in an enabled table filter and pressing Enter performs
+an exact ID lookup: it clears any expression filter, selects the row, centers it,
+and otherwise follows that table's ordinary selection semantics. A missing ID
+leaves selection and filtering unchanged. Expressions retain their filtering
+behavior, and lookup never stages or transfers a cluster implicitly.
+
+Cluster, Similarity, and Merge tables have independently movable columns. Their
+visual order is persisted by column name, ignores removed plugin columns, and
+appends newly added columns. The ID column may move but cannot be hidden. Visual
+column order never changes logical sorting, selection, or staged merge order.
 
 ## Exploring Similarity
 
@@ -141,35 +173,48 @@ GUI reports that another candidate is required.
 
 After a successful merge:
 
-- Merge mode ends;
-- Merge View is cleared and closed;
-- Cluster View is re-enabled;
-- the new merged cluster becomes the blue Cluster View selection; and
-- Similarity View is recomputed for the new cluster using the normal post-merge
-  workflow.
+- Merge mode closes and Merge View is hidden;
+- Cluster View clears its filter, preserves its sort, and reveals the new merged
+  cluster as its sole selection;
+- Similarity View clears its selection and is recomputed for the new cluster;
+- the curator may assign quality immediately or press `V` to begin another merge.
+
+Group and metadata changes remain unavailable only while Merge mode is active.
+
+Successful proposition merges use the same post-merge result workflow. The
+curator presses `Alt+Down` or `Alt+Up` to open another pending proposition.
 
 If the merge fails, the complete Merge-mode state remains unchanged.
 
-## Cancelling Merge mode
+## Cancelling or exiting Merge mode
 
-All of the following cancel Merge mode:
+Before a merge is committed, all of the following cancel Merge mode:
 
-- pressing `C` while Merge mode is active;
-- activating a prominent **Cancel Merge Mode** control; or
+- pressing `V` while Merge mode is active;
+- activating the prominent **Cancel Merge Mode** control; or
 - closing Merge View.
 
-Cancellation performs no clustering action. It restores the exact snapshot from
-immediately before Merge mode was entered, regardless of additions, removals, or
-reordering performed in Merge mode. In other words:
+Cancellation performs no clustering action. Before the first commit, it restores
+the exact snapshot from immediately before Merge mode was entered, regardless of
+additions, removals, or reordering performed in Merge mode. In other words:
 
 ```text
 state A -> enter Merge mode -> edit workspace -> cancel -> state A
 ```
 
+A successful merge exits directly to a new Normal-mode snapshot containing the
+merged cluster; it never leaves a continuation workspace that could restore
+source clusters that no longer exist.
+
 Closing Merge View must visibly communicate that it cancels the mode. Merge mode
 must also be unmistakable while active: Merge View is labelled **MERGE MODE**,
 Cluster View is dimmed or overlaid with an explanation, and the status area shows
 the pending merge count.
+
+Merge View and its dock are created lazily once per dataset session. Cancelling,
+closing, undoing, or re-entering Merge mode hides, reveals, and repopulates that
+same dock, preserving its placement and size without restoring the whole-window
+layout.
 
 ## Undo and redo
 
@@ -184,8 +229,12 @@ before `G`, including:
 
 Undoing that merge restores both the original clusters and the complete Merge
 workspace as it existed immediately before `G`. Redoing it reapplies the merge
-and exits Merge mode again. This special restoration applies only to merges
-initiated from Merge mode; ordinary merge undo behavior remains unchanged.
+and restores the singleton post-merge continuation workspace. `Undo` is
+available in that continuation workspace and targets the committed merge
+directly. A manually entered workspace that has not committed a merge still
+cannot undo an earlier curation action. This special restoration applies only
+to merges initiated from Merge mode; ordinary merge undo behavior remains
+unchanged.
 
 Workspace transfers and reordering are temporary UI operations and do not create
 entries in the clustering undo stack.
@@ -194,21 +243,20 @@ entries in the clustering undo stack.
 
 | State | Action | Result |
 | --- | --- | --- |
-| Normal | `C` | Snapshot state, transfer all selections, enter Merge mode |
-| Merge | Ctrl+right-click Similarity | Transfer clicked candidate to Merge |
-| Merge | Ctrl+right-click removable Merge row | Transfer candidate to Similarity |
+| Normal | `V` | Snapshot state, transfer all selections, enter Merge mode |
+| Normal | Right-click Cluster | Transfer clicked row to Similarity |
+| Normal | Right-click Similarity | Transfer clicked row to Cluster selection |
+| Merge | Right-click Similarity | Transfer clicked candidate to Merge |
+| Merge | Right-click Merge row | Transfer candidate to Similarity, promoting the reference if needed |
 | Merge | Ctrl+Space | Select the next Similarity candidates |
 | Merge | Backspace | Clear only the Similarity selection |
-| Merge | `G` | Merge Merge contents plus selected Similarity candidates |
-| Merge | `C`, Cancel, or close Merge View | Restore the entry snapshot exactly |
+| Merge | `G` | Commit, return to Normal mode, and reveal the result in Cluster View |
+| Merge | `V`, Cancel, or close Merge View | Restore the entry snapshot exactly |
 | After Merge-mode merge | Undo | Restore clusters and pre-commit Merge workspace |
-| Restored after undo | Redo | Reapply merge and return to normal mode |
+| Restored after undo | Redo | Reapply merge and reveal the post-commit Cluster View result |
 
-## Out of scope
+## Extension
 
-The following are intentionally deferred:
-
-- Merge Propositions view and workflow;
-- `curation.json` and external proposition-file schemas;
-- proposition review and resolution states; and
-- partial, overlapping, or invalid propositions.
+The [Merge Propositions specification](merge-propositions.md) defines how
+external propositions enter this workspace without changing the manual workflow
+contract.
