@@ -26,6 +26,28 @@ from ..clustering import (
 # ------------------------------------------------------------------------------
 
 
+def test_sparse_absolute_cluster_ids_do_not_allocate_dense_histograms(monkeypatch):
+    original = np.bincount
+
+    def bounded_bincount(values, *args, **kwargs):
+        assert not len(values) or np.max(values) < 1024
+        return original(values, *args, **kwargs)
+
+    monkeypatch.setattr(np, 'bincount', bounded_bincount)
+    high = 2_000_000_000
+    clustering = Clustering(np.array([0, 1, 1, high], dtype=np.int64))
+    first = clustering.merge([0, 1])
+    assert first.largest_old_cluster == 1
+    assert first.added == [high + 1]
+    second = clustering.merge([high, high + 1])
+    assert second.largest_old_cluster == high + 1
+    clustering.undo()
+    ae(clustering.spike_clusters, [high + 1, high + 1, high + 1, high])
+    clustering.split([0])
+    clustering.undo()
+    ae(clustering.spike_clusters, [high + 1, high + 1, high + 1, high])
+
+
 def test_extend_spikes_simple():
     spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
     spike_ids = np.array([2, 4, 0])
