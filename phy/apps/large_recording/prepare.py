@@ -32,10 +32,12 @@ def _row_bounds(times, windows):
     ]
 
 
-def _union(windows):
+def _union(windows, block_starts=()):
     result = []
     for start, end in sorted(windows):
-        if result and start <= result[-1][1]:
+        if result and (
+            start < result[-1][1] or (start == result[-1][1] and start not in block_starts)
+        ):
             result[-1][1] = max(result[-1][1], int(end))
         else:
             result.append([int(start), int(end)])
@@ -180,7 +182,7 @@ def _prepare_source(
     rng = np.random.default_rng(seed)
 
     def accept(start, end, kind, segment, stratum_id):
-        candidate = _union([*windows, [start, end]])
+        candidate = _union([*windows, [start, end]], set(source.valid_intervals[:, 0]))
         n = sum(stop - first for first, stop in _row_bounds(times, candidate))
         n_waveforms = _selected_waveform_count(source, candidate)
         size = fixed_bytes + n * row_bytes + n_waveforms * waveform_bytes + len(candidate) * 256
@@ -241,6 +243,17 @@ def _prepare_source(
             'or shorten window_seconds (tied spikes remain together).'
         )
     output_dir.parent.mkdir(parents=True, exist_ok=True)
+    estimated_bytes = (
+        fixed_bytes
+        + n_bounded * row_bytes
+        + _selected_waveform_count(source, windows) * waveform_bytes
+        + len(windows) * 256
+    )
+    free = shutil.disk_usage(output_dir.parent).free
+    if free < estimated_bytes:
+        raise OSError(
+            f'Insufficient disk space for bounded preparation: estimated {estimated_bytes:,} bytes, {free:,} available.'
+        )
     temporary = Path(
         tempfile.mkdtemp(prefix=f'.{output_dir.name}.prepare-', dir=output_dir.parent)
     )
@@ -280,6 +293,17 @@ def _prepare_source(
             shutil.copyfile(source.path / name, temporary / name)
         if source.arrays.keys() >= WAVEFORMS:
             _copy_waveforms(source, temporary, global_ids, row_bounds)
+        waveform_counts = {int(unit): 0 for unit in source.unit_ids}
+        waveform_ids_path = temporary / '_phy_spikes_subset.spikes.npy'
+        if waveform_ids_path.exists():
+            waveform_ids = np.load(waveform_ids_path, mmap_mode='r')
+            for start in range(0, len(waveform_ids), batch_size):
+                ids, counts = np.unique(
+                    base[waveform_ids[start : start + batch_size]], return_counts=True
+                )
+                for unit, count in zip(ids, counts):
+                    waveform_counts[int(unit)] += int(count)
+            waveform_ids._mmap.close()
         np.save(temporary / '_phy_curation_windows.npy', np.asarray(windows, dtype=np.int64))
         _write_metadata(temporary, source.metadata)
         (temporary / '_phy_cluster_metadata.json').write_text(
@@ -350,6 +374,7 @@ def _prepare_source(
             'unit_ids': source.unit_ids.tolist(),
             'counts': source.counts.tolist(),
             'bounded_counts': [bounded_counts[int(unit)] for unit in source.unit_ids],
+            'waveform_counts': [waveform_counts[int(unit)] for unit in source.unit_ids],
             'next_cluster_id': source.next_cluster_id,
             'global_spike_ids_file': '_phy_spike_global_ids.npy',
             'base_assignments_file': '_phy_spike_clusters_base.npy',
@@ -387,7 +412,7 @@ def _prepare_source(
                 'predicate_split_attributes': (
                     ['amplitudes.npy'] if 'amplitude' in scalar_attributes(source) else []
                 ),
-                'stored_waveforms': source.arrays.keys() >= WAVEFORMS,
+                'stored_waveforms': bool(sum(waveform_counts.values())),
                 'raw_traces': False,
                 'normalized_correlograms': False,
             },

@@ -136,6 +136,48 @@ def test_prepare_missing_waveforms_is_explicit(tmp_path):
     assert not (output / '_phy_spikes_subset.waveforms.npy').exists()
 
 
+def test_spikeinterface_singular_sparse_template_indices(tmp_path):
+    params = make_sorting(tmp_path / 'full')
+    templates = np.load(params.parent / 'templates.npy')[:, :, :2]
+    templates[1, :, 1] = 0
+    np.save(params.parent / 'templates.npy', templates)
+    indices = np.array([[0, 2], [1, -1], [2, 0]], dtype=np.int32)
+    np.save(params.parent / 'template_ind.npy', indices)
+    output = prepare_large(params, tmp_path / 'bounded', window_seconds=20, stratum_seconds=20)
+    model = load_model(output / 'params.py')
+    try:
+        np.testing.assert_array_equal(model.sparse_templates.cols, indices)
+    finally:
+        model.close()
+
+
+def test_adjacent_acquisition_blocks_retain_observation_boundaries(tmp_path):
+    params = make_sorting(tmp_path / 'full')
+    output = prepare_large(
+        params,
+        tmp_path / 'bounded',
+        valid_intervals=[[0, 10], [10, 20]],
+        window_seconds=10,
+        stratum_seconds=10,
+    )
+    manifest = json.loads((output / '_phy_curation_manifest.json').read_text())
+    np.testing.assert_array_equal(np.load(output / manifest['windows_file']), [[0, 10], [10, 20]])
+    assert manifest['windows'][0]['block'] != manifest['windows'][1]['block']
+
+
+def test_disk_preflight_rejects_before_writing_package(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from phy.apps.large_recording import prepare
+
+    params = make_sorting(tmp_path / 'full')
+    monkeypatch.setattr(prepare.shutil, 'disk_usage', lambda path: SimpleNamespace(free=0))
+    with pytest.raises(OSError, match='Insufficient disk'):
+        prepare_large(params, tmp_path / 'bounded', window_seconds=20, stratum_seconds=20)
+    assert not (tmp_path / 'bounded').exists()
+    assert not list(tmp_path.glob('.bounded.prepare-*'))
+
+
 def test_final_windows_records_match_retained_samples_and_gaps(tmp_path):
     params = make_sorting(tmp_path / 'full')
     output = prepare_large(

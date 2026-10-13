@@ -59,6 +59,48 @@ def test_source_batches_ties_counts_columns(tmp_path, columns):
     assert source.metadata['group'][99] == 'noise'
 
 
+def test_declared_waveform_source_identity_is_checked(tmp_path):
+    params = make_sorting(tmp_path / 'full')
+    manifest = {
+        'format': 'phy_spikes_subset',
+        'format_version': 1,
+        'recording': {'num_samples': 20, 'sampling_frequency_hz': 1},
+        'source_sorting': {'num_spikes': 12, 'spike_times_sha256': '0' * 64},
+    }
+    path = params.parent / '_phy_spikes_subset.manifest.json'
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match='fingerprint'):
+        Source(params)
+    manifest['source_sorting']['spike_times_sha256'] = hash_file(params.parent / 'spike_times.npy')
+    path.write_text(json.dumps(manifest))
+    Source(params).close()
+    manifest['source_sorting']['num_spikes'] = 13
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match='spike count'):
+        Source(params)
+
+
+def test_failed_source_validation_closes_readers_and_rejects_unsupported_ids(
+    tmp_path, monkeypatch
+):
+    params = make_sorting(tmp_path / 'full')
+    labels = np.load(params.parent / 'spike_clusters.npy').astype(np.int64)
+    labels[-1] = 2**31
+    np.save(params.parent / 'spike_clusters.npy', labels)
+    original = np.load
+    readers = []
+
+    def read(*args, **kwargs):
+        array = original(*args, **kwargs)
+        readers.append(array)
+        return array
+
+    monkeypatch.setattr(np, 'load', read)
+    with pytest.raises(ValueError, match='int32'):
+        Source(params)
+    assert all(array._mmap.closed for array in readers)
+
+
 def test_identity_assignment_and_feature_layers(tmp_path):
     params = make_sorting(tmp_path / 'full')
     source = Source(params)

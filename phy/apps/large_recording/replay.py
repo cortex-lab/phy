@@ -119,6 +119,17 @@ def _apply_curation(source, session, output_dir, batch_size):
     if output == source.path or source.path in output.parents:
         raise ValueError('Curated output must be outside the immutable source directory.')
     output.parent.mkdir(parents=True, exist_ok=True)
+    estimated_bytes = sum(
+        (source.path / name).stat().st_size
+        for name in source.arrays
+        if name != 'spike_clusters.npy'
+    )
+    estimated_bytes += source.n_spikes * 8 + 1024 * 1024
+    free = shutil.disk_usage(output.parent).free
+    if free < estimated_bytes:
+        raise OSError(
+            f'Insufficient disk space for full replay: estimated at least {estimated_bytes:,} bytes, {free:,} available.'
+        )
     stage = Path(tempfile.mkdtemp(prefix=f'.{output.name}-', dir=output.parent))
     curated = None
     assignments = None

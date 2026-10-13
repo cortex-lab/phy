@@ -28,6 +28,7 @@ STATIC = frozenset(
     (
         'templates.npy',
         'templates_ind.npy',
+        'template_ind.npy',
         'channel_map.npy',
         'channel_positions.npy',
         'channel_shanks.npy',
@@ -182,6 +183,16 @@ class Source:
     def __init__(
         self, params_path, duration_seconds=None, valid_intervals=None, batch_size=100000
     ):
+        self.arrays = {}
+        try:
+            self._initialize(params_path, duration_seconds, valid_intervals, batch_size)
+        except BaseException:
+            self.close()
+            raise
+
+    def _initialize(
+        self, params_path, duration_seconds=None, valid_intervals=None, batch_size=100000
+    ):
         self.params_path = Path(params_path).resolve()
         self.path = self.params_path.parent
         self.params = {
@@ -204,6 +215,7 @@ class Source:
             raise ValueError('A positive finite sample_rate is required.')
         upstream = self.path / '_phy_spikes_subset.manifest.json'
         recording = {}
+        info = {}
         if upstream.exists():
             info = json.loads(upstream.read_text(encoding='utf-8'))
             if info.get('format') != 'phy_spikes_subset' or info.get('format_version') != 1:
@@ -318,6 +330,10 @@ class Source:
                 if not isinstance(unit, int) or unit < 0:
                     raise ValueError('Lineage unit IDs must be nonnegative integers.')
                 counts.setdefault(unit, 0)
+        if any(unit < 0 or unit > np.iinfo(np.int32).max for unit in counts):
+            raise ValueError(
+                'Unit IDs must fit nonnegative int32 for the current Phy loader; spike sample/row coordinates remain int64.'
+            )
         self.unit_ids = np.array(sorted(counts), dtype=np.int64)
         minimum_next = int(self.unit_ids[-1]) + 1 if len(self.unit_ids) else 0
         self.next_cluster_id = lineage.get('next_cluster_id', minimum_next)
@@ -355,6 +371,19 @@ class Source:
             'arrays': {name: hash_file(self.path / name) for name in immutable},
         }
         self.identity['sha256'] = hash_json(self.identity)
+        declared_source = info.get('source_sorting', {})
+        if not isinstance(declared_source, dict):
+            raise ValueError('Waveform manifest source_sorting must be a mapping.')
+        if declared_source.get('num_spikes', self.n_spikes) != self.n_spikes:
+            raise ValueError('Waveform reservoir source spike count does not match this sorting.')
+        declared_times = declared_source.get('spike_times_sha256')
+        if (
+            declared_times is not None
+            and declared_times != self.identity['arrays']['spike_times.npy']
+        ):
+            raise ValueError(
+                'Waveform reservoir source coordinate fingerprint does not match this sorting.'
+            )
         self.revision = assignment_revision(self.path, self.metadata)
         if lineage:
             if (
@@ -489,18 +518,23 @@ class Source:
                     raise ValueError(f'{name} must contain a model-channel square matrix.')
             templates = self.arrays.get('templates.npy')
             if templates is not None:
-                sparse = self.arrays.get('templates_ind.npy')
+                # phylib uses singular template_ind; KS2's plural sidecar does
+                # not turn a dense tensor into a sparse tensor in the loader.
+                sparse = self.arrays.get('template_ind.npy')
                 if templates.ndim != 3:
                     raise ValueError('templates.npy must be a template/sample/channel tensor.')
                 if sparse is None and templates.shape[2] != len(channels):
                     raise ValueError('Dense templates must align with model channels.')
-                if sparse is not None:
+                for index_name in ('template_ind.npy', 'templates_ind.npy'):
+                    sparse = self.arrays.get(index_name)
+                    if sparse is None:
+                        continue
                     if sparse.shape != (len(templates), templates.shape[2]):
-                        raise ValueError('templates_ind.npy must align with sparse templates.')
+                        raise ValueError(f'{index_name} must align with sparse templates.')
                     if not np.issubdtype(sparse.dtype, np.integer):
-                        raise ValueError('templates_ind.npy must contain integer channel indices.')
+                        raise ValueError(f'{index_name} must contain integer channel indices.')
                     if np.any((sparse < -1) | (sparse >= len(channels))):
-                        raise ValueError('templates_ind.npy contains invalid model channel IDs.')
+                        raise ValueError(f'{index_name} contains invalid model channel IDs.')
             positions = self.arrays.get('channel_positions.npy')
             if positions is not None and (positions.ndim != 2 or len(positions) != len(channels)):
                 raise ValueError('channel_positions.npy must align with model channels.')
