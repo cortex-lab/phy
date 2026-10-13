@@ -31,7 +31,19 @@ class BoundedTemplateModel(TemplateModel):
             {name: MappingProxyType(values) for name, values in self.metadata.items()}
         )
         names.update(
-            ('metadata', 'save_spike_clusters', 'save_metadata', 'save_spikes_subset_waveforms')
+            (
+                'metadata',
+                'save_spike_clusters',
+                'save_metadata',
+                'save_spikes_subset_waveforms',
+                'sample_rate',
+                'duration',
+                'n_channels',
+                'n_channels_dat',
+                'n_samples_waveforms',
+                'dtype',
+                'offset',
+            )
         )
         self._protected_source_names = frozenset(names)
 

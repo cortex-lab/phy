@@ -57,6 +57,8 @@ def test_manifest_factory_reserves_complete_ids_and_guards_mutations(tmp_path):
             controller.model.spike_clusters[0] = 123
         with pytest.raises(ValueError):
             controller.model.spike_clusters = np.array([123])
+        with pytest.raises(ValueError):
+            controller.model.sample_rate = 1.0
         with pytest.raises(TypeError):
             controller.model.metadata['group'][0] = 'noise'
         supervisor = controller.supervisor
