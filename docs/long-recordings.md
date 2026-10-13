@@ -16,7 +16,7 @@ gaps from periods with no spikes. Intervals use half-open sample coordinates
 The screenshots below show the actual bounded GUI views using a deterministic
 synthetic eight-hour sorting. The overview plots full-duration rates and
 available source means; gray marks the synthetic acquisition gap and cyan marks
-the inspected evidence window. The evidence view places windowed amplitudes at
+the retained evidence windows. The evidence view places windowed amplitudes at
 top left, sampled ISI at top right, sampled correlograms at middle right, and
 features below. They illustrate the interface and its sampling context; they
 are not biological data or scientific examples.
