@@ -757,7 +757,8 @@ class BoundedSession:
         pointer_tmp = root / f'.current-{identifier}.tmp'
         try:
             np.save(stage / 'spike_clusters.npy', values)
-            with (stage / 'spike_clusters.npy').open('rb') as stream:
+            # Windows _commit (os.fsync) requires a writable descriptor.
+            with (stage / 'spike_clusters.npy').open('r+b') as stream:
                 os.fsync(stream.fileno())
             _write_json(stage / 'journal.json', events)
             _write_json(stage / 'metadata.json', metadata)

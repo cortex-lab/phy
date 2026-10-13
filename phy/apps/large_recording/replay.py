@@ -211,7 +211,8 @@ def _apply_curation(source, session, output_dir, batch_size):
         curated.close()
         for path in stage.iterdir():
             if path.is_file():
-                with path.open('rb') as stream:
+                # Windows _commit (os.fsync) requires a writable descriptor.
+                with path.open('r+b') as stream:
                     os.fsync(stream.fileno())
         _fsync_directory(stage)
         # Refuse replacement even when a racing caller creates the target.

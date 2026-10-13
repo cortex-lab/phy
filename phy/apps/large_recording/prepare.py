@@ -464,7 +464,8 @@ def _prepare_source(
             close_array(array)
         for path in temporary.iterdir():
             if path.is_file():
-                with path.open('rb') as stream:
+                # Windows _commit (os.fsync) requires a writable descriptor.
+                with path.open('r+b') as stream:
                     os.fsync(stream.fileno())
         _fsync_directory(temporary)
         if output_dir.exists():

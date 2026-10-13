@@ -104,16 +104,19 @@ def test_failed_source_validation_closes_readers_and_rejects_unsupported_ids(
 def test_identity_assignment_and_feature_layers(tmp_path):
     params = make_sorting(tmp_path / 'full')
     source = Source(params)
+    source.close()
     clusters = np.load(params.parent / 'spike_clusters.npy')
     clusters[clusters == 1] = 0
     np.save(params.parent / 'spike_clusters.npy', clusters)
     merged = Source(params)
+    merged.close()
     assert merged.identity == source.identity
     assert merged.revision != source.revision
     values = np.load(params.parent / 'amplitudes.npy')
     values[0] = 99
     np.save(params.parent / 'amplitudes.npy', values)
     altered = Source(params)
+    altered.close()
     assert altered.identity != merged.identity
     assert altered.revision == merged.revision
     assert (

@@ -15,7 +15,7 @@ over the original implementation sequence in Section 9.
 
 ## 1. Objective and boundaries
 
-Curate chronic Neuropixels sortings of roughly 1000 hours without opening hundreds
+Curate chronic Neuropixels sorting datasets of roughly 1000 hours without opening hundreds
 of millions or billions of spikes in the existing in-memory Phy clustering model.
 The workstation downloads the **complete sorter output once**; downloading the
 complete raw voltage recording is **not required**. All preparation, interactive

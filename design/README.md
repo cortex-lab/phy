@@ -61,7 +61,7 @@ The implementation and user documentation are complete on the unreleased phy
 ## Long-recording curation (proposed)
 
 The [long-recording curation Phy-side design contract](large-recording-curation.md)
-describes bounded local datasets for ~1000-hour sortings, the three spike-index
+describes bounded local datasets for ~1000-hour sorting datasets, the three spike-index
 spaces, optional upstream waveform evidence, full-duration metrics, replay safety,
 and the implementation stages. The accompanying synthetic 1000-hour
 fixture and reference tests are in `phy/apps/tests/large_recording_fixtures.py`
