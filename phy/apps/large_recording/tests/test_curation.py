@@ -144,6 +144,7 @@ def test_checkpoint_corruption_is_rejected(tmp_path):
 
 def test_bound_base_corruption_is_rejected(tmp_path):
     _, session = make_session(tmp_path)
+    session.close()
     shutil.copyfile(session.path / 'spike_times.npy', session.path / BASE_ASSIGNMENTS)
     with pytest.raises(ValueError, match='integrity'):
         BoundedSession(session.path)

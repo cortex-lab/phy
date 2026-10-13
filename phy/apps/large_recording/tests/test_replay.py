@@ -45,11 +45,12 @@ def test_source_revision_and_feature_identity_are_independently_bound(tmp_path):
     source, session = make_session(tmp_path)
     session.save()
     clusters = source.arrays['spike_clusters.npy'].copy()
+    amplitudes = source.arrays['amplitudes.npy'].copy()
+    source.close()
     clusters[0] = 2
     np.save(source.path / 'spike_clusters.npy', clusters)
     with pytest.raises(ValueError, match='revision'):
         apply_curation(source.params_path, session.path, tmp_path / 'wrong_revision')
-    amplitudes = source.arrays['amplitudes.npy'].copy()
     amplitudes[0] += 1
     np.save(source.path / 'amplitudes.npy', amplitudes)
     with pytest.raises(ValueError, match='identity'):
@@ -132,6 +133,7 @@ def test_replay_preserves_empty_split_children_and_allocator_lineage(tmp_path):
 def test_bounded_threshold_attribute_must_match_exact_source_rows(tmp_path):
     source, session = make_session(tmp_path)
     session.save()
+    session.close()
     # Even a manifest that does not hash this optional attribute must not allow
     # evidence values different from those used by the full-data predicate.
     values = np.load(session.path / 'amplitudes.npy')
