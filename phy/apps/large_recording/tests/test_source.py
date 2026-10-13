@@ -264,6 +264,16 @@ def test_exporter_channel_sidecars_and_raw_map_validation(tmp_path):
         Source(params)
 
 
+@pytest.mark.parametrize(
+    'positions', [np.zeros((3, 1)), np.zeros((3, 3)), np.full((3, 2), np.nan)]
+)
+def test_channel_geometry_must_match_gui_contract(tmp_path, positions):
+    params = make_sorting(tmp_path / 'source')
+    np.save(params.parent / 'channel_positions.npy', positions)
+    with pytest.raises(ValueError, match='finite x/y'):
+        Source(params)
+
+
 def test_exclusive_publish_preserves_racing_empty_destination(tmp_path):
     from phy.apps.large_recording.source import publish_directory
 

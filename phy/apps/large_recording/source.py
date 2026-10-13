@@ -536,8 +536,12 @@ class Source:
                     if np.any((sparse < -1) | (sparse >= len(channels))):
                         raise ValueError(f'{index_name} contains invalid model channel IDs.')
             positions = self.arrays.get('channel_positions.npy')
-            if positions is not None and (positions.ndim != 2 or len(positions) != len(channels)):
-                raise ValueError('channel_positions.npy must align with model channels.')
+            if positions is not None and (
+                positions.shape != (len(channels), 2) or not np.all(np.isfinite(positions))
+            ):
+                raise ValueError(
+                    'channel_positions.npy must contain finite x/y model channel coordinates.'
+                )
         for feature, indices in (
             ('pc_features.npy', 'pc_feature_ind.npy'),
             ('template_features.npy', 'template_feature_ind.npy'),

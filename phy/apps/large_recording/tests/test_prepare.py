@@ -11,8 +11,10 @@ from phy.apps.large_recording.source import PER_SPIKE, hash_file
 from phy.apps.large_recording.tests.test_source import make_sorting
 
 
-def test_prepare_exact_arrays_waveforms_and_source_unchanged(tmp_path):
+@pytest.mark.parametrize('channel_map', [[0, 1, 2], [2, 0, 1]])
+def test_prepare_exact_arrays_waveforms_and_source_unchanged(tmp_path, channel_map):
     params = make_sorting(tmp_path / 'full', columns=True)
+    np.save(params.parent / 'channel_map.npy', np.asarray(channel_map, dtype=np.int32))
     before = {p.name: hash_file(p) for p in params.parent.iterdir()}
     output = prepare_large(
         params,
