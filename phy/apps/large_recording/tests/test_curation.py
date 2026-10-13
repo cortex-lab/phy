@@ -44,6 +44,12 @@ def make_session(tmp_path):
         'global_spike_ids_file': '_phy_spike_global_ids.npy',
         'windows_file': 'windows.npy',
         'base_metadata': source.metadata,
+        'capabilities': {
+            'merge': True,
+            'label': True,
+            'split': False,
+            'predicate_split_attributes': ['amplitudes.npy'],
+        },
         'bounded_files': {
             name: hash_file(fixture.bounded / name)
             for name in (
@@ -253,3 +259,168 @@ def test_session_close_releases_own_file_mappings(tmp_path):
     session.close()
     assert all(mapping.closed for mapping in mappings)
     session.close()
+
+
+def test_stale_session_save_rejected_without_losing_first_commit(tmp_path):
+    _, first = make_session(tmp_path)
+    second = BoundedSession(first.path)
+    first.record_merge([0, 1], 100, {'group': 'good'})
+    second.record_merge([1, 2], 100, {'group': 'noise'})
+    first.save(extra_documents={'curation_review.json': {'accepted': [100]}})
+    with pytest.raises(ValueError, match='reopen'):
+        second.save(extra_documents={'curation_review.json': {'rejected': [100]}})
+    reopened = BoundedSession(first.path)
+    assert reopened.events == first.events
+    assert reopened.extra_documents == first.extra_documents
+    assert second.events != reopened.events
+    # The winning session can commit again without reopening.
+    first.record_label('group', [100], 'mua')
+    first.save()
+    assert BoundedSession(first.path).metadata['group'][100] == 'mua'
+
+
+def test_failed_save_releases_commit_lock(tmp_path, monkeypatch):
+    from phy.apps.large_recording import curation
+
+    _, session = make_session(tmp_path)
+    session.save()
+    other = BoundedSession(session.path)
+    original = curation._write_json
+
+    def fail(path, value):
+        if path.name == 'journal.json':
+            raise OSError('injected locked save failure')
+        return original(path, value)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(curation, '_write_json', fail)
+        with pytest.raises(OSError, match='locked'):
+            session.save()
+    other.record_label('group', [0], 'mua')
+    other.save()
+    assert BoundedSession(session.path).metadata['group'][0] == 'mua'
+
+
+def _concurrent_save_worker(path, barrier, results, label):
+    session = BoundedSession(path)
+    try:
+        session.record_label('group', [0], label)
+        barrier.wait(timeout=20)
+        try:
+            session.save()
+        except ValueError as error:
+            results.put(('conflict', str(error)))
+        else:
+            results.put(('saved', label))
+    finally:
+        session.close()
+
+
+def test_concurrent_process_saves_compare_generation_under_lock(tmp_path):
+    import multiprocessing
+
+    _, session = make_session(tmp_path)
+    session.save()
+    context = multiprocessing.get_context('spawn')
+    barrier = context.Barrier(2)
+    results = context.Queue()
+    processes = [
+        context.Process(
+            target=_concurrent_save_worker,
+            args=(str(session.path), barrier, results, label),
+        )
+        for label in ('good', 'noise')
+    ]
+    for process in processes:
+        process.start()
+    try:
+        outcomes = [results.get(timeout=30) for _ in processes]
+        for process in processes:
+            process.join(timeout=10)
+            assert process.exitcode == 0
+        assert sorted(status for status, _ in outcomes) == ['conflict', 'saved']
+        winner = next(value for status, value in outcomes if status == 'saved')
+        assert 'reopen' in next(value for status, value in outcomes if status == 'conflict')
+        assert BoundedSession(session.path).metadata['group'][0] == winner
+    finally:
+        for process in processes:
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=5)
+        results.close()
+
+
+def _replace_capabilities(session, capabilities):
+    session.close()
+    path = session.path / '_phy_curation_manifest.json'
+    manifest = json.loads(path.read_text())
+    if capabilities is None:
+        manifest.pop('capabilities', None)
+    else:
+        manifest['capabilities'] = capabilities
+    path.write_text(json.dumps(manifest))
+    return BoundedSession(session.path)
+
+
+@pytest.mark.parametrize(
+    'capabilities', [None, {}, {'merge': False, 'label': False, 'split': False}]
+)
+def test_readonly_capabilities_reject_public_mutations_without_state_changes(
+    tmp_path, capabilities
+):
+    _, session = make_session(tmp_path)
+    session = _replace_capabilities(session, capabilities)
+    before = session.snapshot()
+    predicate = {
+        'attribute': 'amplitudes.npy',
+        'operator': '<',
+        'threshold': 15.0,
+        'nonfinite': 'keep',
+    }
+    commands = [
+        lambda: session.preflight_merge([0, 1], 100),
+        lambda: session.record_merge([0, 1], 100),
+        lambda: session.preflight_label('group', [0], 'good'),
+        lambda: session.record_label('group', [0], 'good'),
+        lambda: session.preflight_split(2, 100, 101, predicate),
+        lambda: session.record_split(2, 100, 101, predicate),
+        lambda: session.record_threshold_split(2, [101, 100], predicate),
+    ]
+    for command in commands:
+        with pytest.raises(ValueError, match='capability'):
+            command()
+        assert session.events == before['events']
+        assert session.metadata == before['metadata']
+        assert session.next_cluster_id == before['next_cluster_id']
+        assert np.array_equal(session.assignments, before['assignments'])
+
+
+@pytest.mark.parametrize(
+    'capabilities',
+    [
+        {'merge': 'true'},
+        {'label': 'false'},
+        {'stored_waveforms': 1},
+        {'raw_traces': None},
+        {'split': True},
+        {'predicate_split_attributes': 'amplitudes.npy'},
+        {'predicate_split_attributes': ['amplitudes.npy', 'amplitudes.npy']},
+        {'predicate_split_attributes': ['spike_templates.npy']},
+        {'predicate_split_attributes': ['waveform_peak']},
+        {'predicate_split_attributes': [True]},
+        {'full_attributes': 'amplitude'},
+    ],
+)
+def test_malformed_or_unsupported_capabilities_fail_validation(tmp_path, capabilities):
+    _, session = make_session(tmp_path)
+    with pytest.raises(ValueError, match='capability|capabilities|unsupported|Unsupported'):
+        _replace_capabilities(session, capabilities)
+
+
+def test_predicate_capability_requires_an_available_scalar_source_attribute(tmp_path):
+    _, session = make_session(tmp_path)
+    session.close()
+    values = np.load(session.path / 'amplitudes.npy')
+    np.save(session.path / 'amplitudes.npy', np.column_stack([values, values]))
+    with pytest.raises(ValueError, match='source scalar'):
+        BoundedSession(session.path)

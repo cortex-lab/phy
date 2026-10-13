@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +15,14 @@ from .source import hash_json
 
 MANIFEST = '_phy_curation_manifest.json'
 BASE_ASSIGNMENTS = '_phy_spike_clusters_base.npy'
+BOOLEAN_CAPABILITIES = (
+    'merge',
+    'label',
+    'split',
+    'stored_waveforms',
+    'raw_traces',
+    'normalized_correlograms',
+)
 
 
 def _json_bytes(value):
@@ -64,10 +73,83 @@ def _safe_file(root, name):
     return path
 
 
+@contextmanager
+def _commit_lock(root):
+    """Hold a process-safe OS lock; process exit releases it automatically."""
+    with _safe_file(root, 'commit.lock').open('a+b') as stream:
+        if os.name == 'nt':
+            import msvcrt
+
+            # Windows byte-range locking requires at least one byte in the file.
+            stream.seek(0, os.SEEK_END)
+            if stream.tell() == 0:
+                stream.write(b'\0')
+                stream.flush()
+            stream.seek(0)
+            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+def _current_pointer(root):
+    try:
+        return _read_json(root / 'current.json')
+    except FileNotFoundError:
+        return None
+
+
 def _integer(value, name):
     if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 0:
         raise ValueError(f'{name} must be a nonnegative integer.')
     return int(value)
+
+
+def _validate_capabilities(manifest):
+    capabilities = manifest.get('capabilities', {})
+    if not isinstance(capabilities, dict):
+        raise ValueError('Bounded capabilities must be a mapping.')
+    if (
+        set(capabilities)
+        - set(BOOLEAN_CAPABILITIES)
+        - {
+            'full_attributes',
+            'predicate_split_attributes',
+        }
+    ):
+        raise ValueError('Unsupported bounded capability declaration.')
+    result = {}
+    for name in BOOLEAN_CAPABILITIES:
+        value = capabilities.get(name, False)
+        if type(value) is not bool:
+            raise ValueError(f'Bounded capability {name!r} must be a boolean.')
+        result[name] = value
+    if result['split']:
+        raise ValueError('General selected-row splits are unsupported in bounded mode.')
+    for name in ('full_attributes', 'predicate_split_attributes'):
+        values = capabilities.get(name, [])
+        if (
+            not isinstance(values, list)
+            or any(not isinstance(value, str) for value in values)
+            or len(set(values)) != len(values)
+        ):
+            raise ValueError(f'Bounded capability {name!r} must be a unique string list.')
+        result[name] = list(values)
+    if set(result['predicate_split_attributes']) - {'amplitudes.npy'}:
+        raise ValueError(
+            'Unsupported bounded predicate attribute; only raw amplitudes are supported.'
+        )
+    return result
 
 
 def _field_name(field):
@@ -152,6 +234,8 @@ def interpret_events(unit_ids, metadata, events):
                 raise ValueError('Malformed merge event.')
             parents = [_integer(i, 'Parent ID') for i in event['parents']]
             target = _integer(event['target'], 'Target ID')
+            if target > np.iinfo(np.int32).max:
+                raise ValueError('Target cluster ID exceeds the current Phy loader namespace.')
             if len(parents) < 2 or len(set(parents)) != len(parents):
                 raise ValueError('Merge requires at least two distinct complete units.')
             if not set(parents) <= active or target in allocated or target < next_id:
@@ -195,6 +279,8 @@ def interpret_events(unit_ids, metadata, events):
                 raise ValueError('Malformed threshold split event.')
             parent = _integer(event['parent'], 'Parent ID')
             children = [_integer(i, 'Child ID') for i in event['children']]
+            if any(child > np.iinfo(np.int32).max for child in children):
+                raise ValueError('Child cluster ID exceeds the current Phy loader namespace.')
             validate_predicate(event['predicate'])
             if parent not in active or len(children) != 2 or len(set(children)) != 2:
                 raise ValueError('Threshold split requires an active parent and two children.')
@@ -247,6 +333,16 @@ class BoundedSession:
     """
 
     def __init__(self, dataset_path):
+        self.global_ids = None
+        self.base_assignments = None
+        self.attributes = {}
+        try:
+            self._initialize(dataset_path)
+        except BaseException:
+            self.close()
+            raise
+
+    def _initialize(self, dataset_path):
         self.path = Path(dataset_path)
         if self.path.is_file():
             self.path = self.path.parent
@@ -300,7 +396,10 @@ class BoundedSession:
             'valid_intervals': manifest['valid_intervals'],
         }:
             raise ValueError('Bounded time base disagrees with immutable source identity.')
+        self.capabilities = _validate_capabilities(manifest)
         self.unit_ids = [_integer(i, 'Unit ID') for i in manifest['unit_ids']]
+        if any(unit > np.iinfo(np.int32).max for unit in self.unit_ids):
+            raise ValueError('Unit IDs exceed the current Phy loader namespace.')
         if not self.unit_ids or len(set(self.unit_ids)) != len(self.unit_ids):
             raise ValueError('Full unit catalog must contain distinct unit IDs.')
         counts = np.asarray(manifest['counts'])
@@ -395,17 +494,31 @@ class BoundedSession:
         for name in ('amplitudes.npy', 'spike_templates.npy'):
             if (self.path / name).exists():
                 self.attributes[name] = np.load(self.path / name, mmap_mode='r')
+        for name in self.capabilities['predicate_split_attributes']:
+            array = self.attributes.get(name)
+            if (
+                array is None
+                or name not in identity['arrays']
+                or not (array.ndim == 1 or array.shape[1:] == (1,))
+                or len(array) != n
+                or array.dtype.kind not in 'iuf'
+            ):
+                raise ValueError(
+                    f'Bounded predicate attribute is not available as a source scalar: {name}.'
+                )
         self.assignments = np.asarray(self.base_assignments, dtype=np.int64).copy()
         self.metadata = copy.deepcopy(self.base_metadata)
         self.events = []
         self.extra_documents = {}
         self.next_cluster_id = self.base_next_cluster_id
         self.checkpoint_path = None
+        self._expected_pointer = None
         pointer_path = self.path / '.phy-curation' / 'current.json'
         if pointer_path.exists():
             self._load_checkpoint(pointer_path)
 
     def _validated_state(self, assignments, metadata, events, next_cluster_id):
+        self._validate_event_capabilities(events)
         _, projected_metadata, minimum = interpret_events(
             self.unit_ids, self.base_metadata, events
         )
@@ -451,6 +564,7 @@ class BoundedSession:
         self.events = events
         self.next_cluster_id = next_id
         self.checkpoint_path = generation
+        self._expected_pointer = copy.deepcopy(pointer)
         self.extra_documents = {
             name: _read_json(generation / name) for name in descriptor.get('extra_documents', [])
         }
@@ -474,6 +588,7 @@ class BoundedSession:
     def restore_journal(self, state):
         """Restore an active history prefix while preserving allocator high-water."""
         events = list(state['events'])
+        self._validate_event_capabilities(events)
         _, metadata, minimum = interpret_events(self.unit_ids, self.base_metadata, events)
         next_id = _integer(state['next_cluster_id'], 'Next cluster ID')
         if next_id < max(minimum, self.base_next_cluster_id):
@@ -496,6 +611,7 @@ class BoundedSession:
         self.next_cluster_id = next_id
 
     def _append(self, event):
+        self._validate_event_capabilities([event])
         events = self.events + [event]
         _, metadata, next_id = interpret_events(self.unit_ids, self.base_metadata, events)
         assignments = project_assignments(self.base_assignments, events, self.attributes)
@@ -503,7 +619,27 @@ class BoundedSession:
         self.next_cluster_id = max(self.next_cluster_id, next_id)
         return copy.deepcopy(event)
 
+    def _require_capability(self, operation, predicate=None):
+        if operation == 'threshold_split':
+            predicate = validate_predicate(predicate)
+            if predicate['attribute'] not in self.capabilities['predicate_split_attributes']:
+                raise ValueError(
+                    'Predicate split capability is unavailable in this bounded package.'
+                )
+        elif not self.capabilities.get(operation, False):
+            raise ValueError(
+                f'{operation.capitalize()} capability is disabled in this bounded package.'
+            )
+
+    def _validate_event_capabilities(self, events):
+        for event in events:
+            if isinstance(event, dict):
+                operation = event.get('operation')
+                if operation in ('merge', 'label', 'threshold_split'):
+                    self._require_capability(operation, event.get('predicate'))
+
     def preflight_merge(self, parents, target, metadata=None):
+        self._require_capability('merge')
         event = {
             'version': 1,
             'operation': 'merge',
@@ -519,19 +655,24 @@ class BoundedSession:
     def record_merge(self, parents, target, metadata=None):
         return self._append(self.preflight_merge(parents, target, metadata))
 
+    def preflight_label(self, field, ids, value):
+        self._require_capability('label')
+        event = {
+            'version': 1,
+            'operation': 'label',
+            'field': field,
+            'ids': [int(i) for i in ids],
+            'value': copy.deepcopy(value),
+        }
+        interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
+        return event
+
     def record_label(self, field, ids, value):
-        return self._append(
-            {
-                'version': 1,
-                'operation': 'label',
-                'field': field,
-                'ids': [int(i) for i in ids],
-                'value': copy.deepcopy(value),
-            }
-        )
+        return self._append(self.preflight_label(field, ids, value))
 
     def record_threshold_split(self, parent, children, predicate, metadata=None):
-        """Pure replay service; the bounded GUI currently keeps splits disabled."""
+        """Apply an explicitly enabled full-source scalar predicate."""
+        self._require_capability('threshold_split', predicate)
         children = [int(i) for i in children]
         if any(i < self.next_cluster_id for i in children):
             raise ValueError('Threshold children collide with the complete catalog allocator.')
@@ -547,6 +688,7 @@ class BoundedSession:
         )
 
     def preflight_split(self, parent, selected_id, remainder_id, predicate, metadata=None):
+        self._require_capability('threshold_split', predicate)
         children = [int(remainder_id), int(selected_id)]
         if any(i < self.next_cluster_id for i in children):
             raise ValueError('Threshold children collide with the complete catalog allocator.')
@@ -598,6 +740,16 @@ class BoundedSession:
         generations.mkdir(parents=True, exist_ok=True)
         _fsync_directory(root)
         _fsync_directory(self.path)
+        with _commit_lock(root):
+            if _current_pointer(root) != self._expected_pointer:
+                raise ValueError(
+                    'Bounded curation checkpoint changed in another session; '
+                    'reopen the dataset before saving to avoid losing its changes.'
+                )
+            return self._save_generation(generations, values, metadata, events, next_id, documents)
+
+    def _save_generation(self, generations, values, metadata, events, next_id, documents):
+        root = generations.parent
         identifier = uuid.uuid4().hex
         stage = generations / f'.{identifier}.tmp'
         final = generations / identifier
@@ -625,7 +777,8 @@ class BoundedSession:
             _fsync_directory(stage)
             os.replace(stage, final)
             _fsync_directory(generations)
-            _write_json(pointer_tmp, {'generation': identifier, 'sha256': _digest(descriptor)})
+            pointer = {'generation': identifier, 'sha256': _digest(descriptor)}
+            _write_json(pointer_tmp, pointer)
             os.replace(pointer_tmp, root / 'current.json')
             _fsync_directory(root)
         except BaseException:
@@ -635,4 +788,5 @@ class BoundedSession:
         self.assignments, self.metadata, self.events = values, metadata, copy.deepcopy(events)
         self.next_cluster_id, self.checkpoint_path = next_id, final
         self.extra_documents = documents
+        self._expected_pointer = pointer
         return final
