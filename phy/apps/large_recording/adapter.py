@@ -303,6 +303,11 @@ class BoundedTemplateController(TemplateController):
             split_is_eligible=lambda: False,
         )
         view.ex_status = self._window_status()
+        view.set_window_context(
+            self.evidence_window_index,
+            start / self.model.sample_rate,
+            end / self.model.sample_rate,
+        )
         return view
 
     def _window_status(self):
@@ -324,6 +329,9 @@ class BoundedTemplateController(TemplateController):
                 view.ex_status = self._window_status()
                 if isinstance(view, EvidenceAmplitudeView):
                     view.duration = (end - start) / self.model.sample_rate
+                    view.set_window_context(
+                        index, start / self.model.sample_rate, end / self.model.sample_rate
+                    )
                 view.canvas.panzoom.reset()
                 if view.cluster_ids:
                     view.plot()

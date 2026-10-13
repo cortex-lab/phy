@@ -11,6 +11,25 @@ from phy.apps.large_recording.tests.test_adapter import make_controller, make_gu
 from phy.apps.template.gui import TemplateController
 
 
+def test_window_time_labels_follow_navigation(qtbot, tmp_path):
+    _, controller = make_controller(tmp_path, sparse=True)
+    gui = controller.create_gui(default_views=['EvidenceAmplitudeView'], do_prompt_save=False)
+    try:
+        view = gui.get_view('EvidenceAmplitudeView')
+        assert view.time_axis_label.text() == 'Seconds from window start'
+        initial = view.window_label.text()
+        controller.inspect_evidence_window(1)
+        start, end = controller.current_evidence_window / controller.model.sample_rate
+        assert view.window_label.text() == (
+            f'Evidence window 1 | Recording time: {start:.3f}–{end:.3f} s'
+        )
+        assert view.window_label.text() != initial
+        assert view.duration == end - start
+    finally:
+        gui.close()
+        controller.close()
+
+
 def test_gui_observer_mutation_rolls_back_views_selection_and_journal(qtbot, tmp_path):
     _, controller = make_controller(tmp_path)
     gui = controller.create_gui(default_views=[], do_prompt_save=False)

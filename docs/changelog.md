@@ -22,6 +22,8 @@ behavior they verify rather than listed separately.
 - Bounded saves use validated atomic generations and reject conflicting saves
   from stale sessions. Unsupported selected-row splits are blocked.
 - Sparse cluster IDs no longer require dense allocations during clustering.
+- Bounded amplitude plots label seconds from window start and display the
+  window's recording-time range above the plot.
 
 ### Documentation
 

@@ -100,8 +100,10 @@ evidence windows, and acquisition gaps. Missing measurements and units without
 evidence remain visible as unavailable.
 
 Evidence Amplitude shows raw source scalar amplitudes from the currently
-selected evidence window. The Feature view also uses window-relative seconds;
-both views label the current window and reset their time origin when it changes.
+selected evidence window. The Feature view also uses window-relative seconds.
+The amplitude plot labels this axis as **Seconds from window start** and shows
+the window's recording-time range above the plot.
+Both views label the current window and reset their time origin when it changes.
 To inspect another retained window, choose **View > Inspect evidence window**
 and enter its zero-based index. Unit Stability keeps the full-recording time
 context visible while you inspect individual windows.
