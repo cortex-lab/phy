@@ -265,13 +265,19 @@ supports one segment and distinguishes Phy channel indices from exported origina
 channel IDs. Do not assume that arbitrary multi-session inputs already satisfy
 this contract or that a deployed exporter matches this inspected revision.
 
-## Validation of this design branch
+## Implementation and validation status
 
-On 2026-10-13, the locked development environment with phylib 2.7.1 passed
-all ten reference tests, including the loader and returned waveform values.
-`make test-apps format-check` passed all 165 application tests, lint and
-formatting checks. Patch whitespace validation also passed. The test process
-reported pending ipykernel tasks during shutdown after successful completion.
-This branch changes design documents and reference tests only; it does not
-implement preparation, replay, transactional saves or a stability view, and
-does not establish realistic long-recording capacity.
+The branch now includes batched source validation and preparation, full-source
+summaries, bounded GUI curation and checkpoints, semantic replay, Unit Stability,
+and dedicated long-recording tests. The feature is implemented, but its
+acceptance remains incomplete: this test and synthetic benchmark evidence does
+not replace real chronic-recording review by domain curators.
+
+On 2026-10-13, `make test-full` completed with 745 passed and 1 skipped. Three
+additional bounded GUI lifecycle regressions pass in
+`phy/apps/large_recording/tests/test_gui_lifecycle.py`.
+[`design/large-recording-validation.md`](large-recording-validation.md) records
+the synthetic capacity runs and their limits. The separate 32-spike, 1000-hour
+fixture verifies sample-coordinate handling and file mapping; it is not a
+billion-spike capacity test or evidence of chronic biological identity. Curator
+acceptance on real chronic recordings remains outstanding.

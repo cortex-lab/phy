@@ -10117,6 +10117,13 @@ Component that brings manual clustering facilities to a GUI:
     Whether automatic navigation and similar-cluster selection skip noise and MUA
     clusters. The default is True.
 
+* `clustering_factory : callable, optional`
+    Construct the clustering model. Defaults to Clustering; bounded curation
+    supplies a guarded implementation with the same constructor interface.
+
+* `cluster_meta_factory : callable, optional`
+    Construct metadata from groups and labels. Defaults to create_cluster_meta.
+
 **Events**
 
 When this component is attached to a GUI, the following events are emitted:
@@ -13194,6 +13201,15 @@ Create a trace image view.
 **`TemplateController.create_trace_view(self)`**
 
 Create a trace view.
+
+---
+
+#### TemplateController.create_unit_stability_view
+
+
+**`TemplateController.create_unit_stability_view(self)`**
+
+Optionally inspect selected-unit activity over the loaded recording.
 
 ---
 

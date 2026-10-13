@@ -1,9 +1,12 @@
 # Long-recording curation in Phy 2.x: Phy-side design contract
 
-**Status:** proposed; implementation sequence and file contracts for review. This
-specification is for Phy-side development; it does not authorize changes to the
-AIND/Code Ocean export pipeline. Current Phy behavior remains unchanged until
-the implementation is complete and validated.
+**Status:** implementation present; acceptance validation is ongoing. This
+specification is for Phy-side behavior; it does not authorize changes to the
+AIND/Code Ocean export pipeline. The current branch implements the bounded
+workflow behind an explicit manifest while retaining standard behavior for
+ordinary datasets. See the [integration plan](large-recording-integration-plan.md)
+and [validation record](large-recording-validation.md) for implementation scope,
+checks, and remaining acceptance work.
 
 The [integration audit and plan](large-recording-integration-plan.md) refines
 this proposal with assignment revisions, transactional persistence, capability
