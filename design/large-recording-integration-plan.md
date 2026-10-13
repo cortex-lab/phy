@@ -113,11 +113,18 @@ commands. Do not hide full-data scans in a selected-unit GUI callback. Limit
 changes to phylib to demonstrated loader/coordinate fixes, with separate tests
 and dependency requirements. Preserve existing ordinary-dataset behavior.
 
-## Ordered PRs and acceptance gates
+## One implementation PR with ordered commits and acceptance gates
+
+Implement the complete workflow on `feature/long-recording-curation` in the
+main phy checkout. Use the stages below as reviewable commit groups within one
+PR. Intermediate capability gates support development; merge the PR only after
+the complete prepare, curate, save, replay and regenerate workflow passes its
+acceptance checks. Predicate splits require their own full-data equivalence
+checks within the same PR if included in its supported functionality.
 
 ### 1. Contract and reference fixtures
 
-Land the revised contract, this plan and format fixtures on a design branch.
+Start with the revised contract, this plan and format fixtures.
 Fix the bundle's missing `dtype` in `params.py`, allow equal sample times, and
 reject malformed reference row IDs. Run the real released-phylib loader test
 without accepting a skip. Its success proves this small file layout loads,
@@ -203,6 +210,32 @@ revision and explicit child IDs. The same predicate must evaluate identically
 on GUI evidence and all source spikes. Stored waveform-derived or local PCA
 amplitudes do not automatically define a full-data predicate. Lasso splits
 remain unavailable without a separately validated full-data rule.
+
+## Standard recording compatibility gate
+
+Recording length must never select a new behavior implicitly. Activate bounded
+curation only through an explicit validated bounded manifest. Without that
+manifest, retain the standard loader, selector, metrics, mutation capabilities,
+save format and history behavior. A malformed bounded manifest must produce an
+actionable error rather than silently enter standard editable mode. Optional
+Unit Stability on ordinary recordings must not replace their existing views,
+change their default layout or introduce full-source scans at GUI startup.
+
+Keep the semantic command, replay and transactional save implementation behind
+the bounded adapter wherever possible. Any necessary shared-code change requires
+focused standard-mode regression coverage in addition to bounded-mode tests.
+Do not impose bounded split restrictions or journal files on ordinary datasets.
+
+Before merging the single PR, run `make test-full` and verify ordinary datasets
+with raw traces, stored waveforms only, and sparse features. Cover standard
+merge and label inheritance, lasso/threshold/template splits, undo/redo and
+branching, save/reopen assignments and metadata, merge proposals, plugin-driven
+edits, channel mapping, sampled views and existing rate/ISI/CCG behavior. Assert
+that ordinary saves do not create bounded journals or manifests. Compare startup
+memory and selection latency on the same ordinary datasets before and after the
+change; any meaningful regression must be explained and resolved before merge.
+Existing tests and these checks establish compatibility evidence; the plan
+itself does not guarantee compatibility before implementation.
 
 ## Capacity and scientific acceptance
 

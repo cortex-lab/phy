@@ -3,11 +3,11 @@
 **Status:** proposed; implementation sequence and file contracts for review. This
 specification is for Phy-side development; it does not authorize changes to the
 AIND/Code Ocean export pipeline. Current Phy behavior remains unchanged until
-subsequent implementation PRs land.
+the implementation is complete and validated.
 
 The [integration audit and plan](large-recording-integration-plan.md) refines
 this proposal with assignment revisions, transactional persistence, capability
-gates and ordered PR acceptance criteria. Its enablement gates take precedence
+gates and ordered commit acceptance criteria for one implementation PR. Its enablement gates take precedence
 over the original implementation sequence in Section 9.
 
 ## 1. Objective and boundaries
@@ -310,8 +310,8 @@ before enabling bounded curation on real datasets.
    sorting, write a new curated full sorting, verify, then regenerate a bounded
    package. Test deterministic repeatability and failures atomically.
 
-A future release may choose a different PR order for journal/prepare integration,
-but **do not ship an editable bounded GUI without replay safety**.
+The integration plan now organizes these stages as commits within a single PR,
+rather than separate PRs. **Do not ship an editable bounded GUI without replay safety**.
 
 Agent starting points: `AGENTS.md`, `design/README.md`,
 `phy/apps/__init__.py` (Click CLI), `phy/apps/template/gui.py` (controller),

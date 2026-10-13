@@ -63,7 +63,7 @@ The implementation and user documentation are complete on the unreleased phy
 The [long-recording curation Phy-side design contract](large-recording-curation.md)
 describes bounded local datasets for ~1000-hour sortings, the three spike-index
 spaces, optional upstream waveform evidence, full-duration metrics, replay safety,
-and the sequence of implementation PRs. The accompanying synthetic 1000-hour
+and the implementation stages. The accompanying synthetic 1000-hour
 fixture and reference tests are in `phy/apps/tests/large_recording_fixtures.py`
 and `phy/apps/tests/test_large_recording_contract.py`.
 
@@ -71,5 +71,5 @@ This is a proposal and a reference test contract, **not yet** a `prepare-large`
 implementation or an upstream export-format agreement.
 
 The [integration audit and plan](large-recording-integration-plan.md) refines
-the contract with correctness findings, module boundaries, ordered PRs and
+the contract with correctness findings, module boundaries, ordered commits in one PR and
 acceptance gates. Follow its gates before enabling editable bounded sessions.
