@@ -13,6 +13,27 @@ dataset metadata. Duration describes exposure; Phy cannot infer acquisition
 gaps from periods with no spikes. Intervals use half-open sample coordinates
 `[start, end)`.
 
+The screenshots below show the actual bounded GUI views using a deterministic
+synthetic eight-hour sorting. The overview plots full-duration rates and
+available source means; gray marks the synthetic acquisition gap and cyan marks
+the inspected evidence window. The evidence view places windowed amplitudes at
+top left, sampled ISI at top right, sampled correlograms at middle right, and
+features below. They illustrate the interface and its sampling context; they
+are not biological data or scientific examples.
+
+![Full-duration Unit Stability with a synthetic acquisition gap](images/long-recording-overview.png)
+
+![Windowed source amplitudes, features, sampled ISI and correlogram](images/long-recording-evidence.png)
+
+Recreate these images from source with Qt's X11 platform and software OpenGL
+(the script writes a temporary synthetic source and bounded package):
+
+```bash
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
+  xvfb-run -a -s '-screen 0 2400x1600x24 +extension GLX' \
+  uv run python tools/capture_long_recording_views.py
+```
+
 ## Prepare bounded evidence
 
 Run `prepare-large` with the source `params.py` and a new output directory:
