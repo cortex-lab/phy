@@ -11,10 +11,27 @@ been included in a stable release. The current entries cover all user-visible
 changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
+### Long recordings
+
+- Added `prepare-large` and `apply-curation` for bounded shared-window evidence,
+  full-duration exposure-aware summaries, semantic merges/labels/source-amplitude
+  splits, and replay into a new complete sorting.
+- Added Unit Stability, precise window-relative amplitude/feature inspection,
+  sampled interval/correlogram views, and explicit full-versus-evidence counts.
+  Standard datasets retain their existing curation workflow and default layout.
+- Bounded saves use validated atomic generations and reject conflicting saves
+  from stale sessions. Unsupported selected-row splits are blocked.
+- Sparse cluster IDs no longer require dense allocations during clustering.
+- Bounded amplitude plots label seconds from window start and display the
+  window's recording-time range above the plot.
+
 ### Documentation
 
 - Documented uv-first installation of exact previous phy releases in separate
   environments, including how to intentionally replace a tool installation.
+- Added a long-recording workflow guide covering bounded evidence preparation,
+  supported curation, full-sorting replay, and limits on interpreting sampled
+  measurements.
 
 ### Added
 

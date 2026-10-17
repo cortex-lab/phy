@@ -755,6 +755,11 @@ class Supervisor:
     skip_masked_clusters : bool
         Whether automatic navigation and similar-cluster selection skip noise and MUA
         clusters. The default is True.
+    clustering_factory : callable, optional
+        Construct the clustering model. Defaults to Clustering; bounded curation
+        supplies a guarded implementation with the same constructor interface.
+    cluster_meta_factory : callable, optional
+        Construct metadata from groups and labels. Defaults to create_cluster_meta.
 
     Events
     ------
@@ -790,6 +795,8 @@ class Supervisor:
         n_similar_clusters_to_select=None,
         skip_masked_clusters=True,
         merge_propositions=None,
+        clustering_factory=None,
+        cluster_meta_factory=None,
     ):
         super().__init__()
         self.context = context
@@ -833,7 +840,7 @@ class Supervisor:
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
         spc = context.load('spikes_per_cluster') if context else None
-        self.clustering = Clustering(
+        self.clustering = (clustering_factory or Clustering)(
             spike_clusters, spikes_per_cluster=spc, new_cluster_id=new_cluster_id
         )
 
@@ -841,7 +848,9 @@ class Supervisor:
         self._save_spikes_per_cluster()
 
         # Create the ClusterMeta instance.
-        self.cluster_meta = create_cluster_meta(cluster_groups or {}, self.cluster_labels)
+        self.cluster_meta = (cluster_meta_factory or create_cluster_meta)(
+            cluster_groups or {}, self.cluster_labels
+        )
 
         # Create the GlobalHistory instance.
         self._global_history = GlobalHistory(

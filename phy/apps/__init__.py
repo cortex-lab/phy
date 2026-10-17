@@ -175,6 +175,57 @@ def cli_template_describe(ctx, params_path):
 
 
 # ------------------------------------------------------------------------------
+# Long-recording batch commands
+# ------------------------------------------------------------------------------
+
+
+@phycli.command('prepare-large')
+@click.argument('params-path', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--duration', 'duration_seconds', type=click.FloatRange(min=0, min_open=True))
+@click.option('--valid-intervals', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option('--max-spikes', type=click.IntRange(min=1), default=2000000, show_default=True)
+@click.option('--max-bytes', type=click.IntRange(min=1), default=536870912, show_default=True)
+@click.option('--window-seconds', type=click.FloatRange(min=0, min_open=True), default=30.0)
+@click.option('--stratum-seconds', type=click.FloatRange(min=0, min_open=True), default=3600.0)
+@click.option('--seed', type=click.IntRange(min=0), default=0)
+@click.option('--bin-seconds', type=click.FloatRange(min=0, min_open=True), default=3600.0)
+@click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
+    """Prepare bounded shared-window evidence and complete-sorting summaries.
+
+    VALID_INTERVALS is an optional int64 .npy array of acquisition sample [start, end) pairs.
+    Duration/exposure must be authoritative; it is never inferred from spike silence.
+    """
+    import numpy as np
+
+    from .large_recording.prepare import prepare_large
+
+    try:
+        intervals = np.load(valid_intervals, allow_pickle=False) if valid_intervals else None
+        output = prepare_large(params_path, output_dir, valid_intervals=intervals, **kwargs)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Prepared bounded evidence: {output}')
+
+
+@phycli.command('apply-curation')
+@click.argument('source-params', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+def cli_apply_curation(source_params, bounded_dir, output_dir, batch_size):
+    """Replay committed bounded curation into a new complete sorting."""
+    from .large_recording.replay import apply_curation
+
+    try:
+        output = apply_curation(source_params, bounded_dir, output_dir, batch_size=batch_size)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Published complete curated sorting: {output}')
+
+
+# ------------------------------------------------------------------------------
 # Kwik GUI
 # ------------------------------------------------------------------------------
 
@@ -224,6 +275,11 @@ def cli_alf_convert(ctx, subdirs, out_dir):
     from phylib.io.merge import Merger
     from phylib.io.model import load_model
 
+    if any((Path(path) / '_phy_curation_manifest.json').exists() for path in subdirs):
+        raise click.ClickException(
+            'Apply bounded curation to the complete sorting before ALF conversion.'
+        )
+
     out_dir = Path(out_dir)
 
     if len(subdirs) >= 2:
@@ -252,6 +308,11 @@ def template_extract_waveforms(
 ):  # pragma: no cover
     """Extract spike waveforms."""
     from phylib.io.model import load_model
+
+    if (Path(params_path).parent / '_phy_curation_manifest.json').exists():
+        raise click.ClickException(
+            'Extract waveforms on the original source and regenerate bounded evidence; bounded package assets are immutable.'
+        )
 
     model = load_model(params_path)
     model.save_spikes_subset_waveforms(
