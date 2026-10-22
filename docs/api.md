@@ -11194,7 +11194,7 @@ are saved in `~/.phy/screenshots/`.
 #### TraceImageView.set_interval
 
 
-**`TraceImageView.set_interval(self, interval=None)`**
+**`TraceImageView.set_interval(self, interval=None, *, navigation=None)`**
 
 Display the traces and spikes in a given interval.
 
@@ -11255,6 +11255,15 @@ Toggle automatic scaling of the traces.
 **`TraceImageView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### TraceImageView.toggle_background_prefetch
+
+
+**`TraceImageView.toggle_background_prefetch(self, checked)`**
+
+Allow background lookahead for this view until the GUI is closed.
 
 ---
 
@@ -11701,7 +11710,7 @@ are saved in `~/.phy/screenshots/`.
 #### TraceView.set_interval
 
 
-**`TraceView.set_interval(self, interval=None)`**
+**`TraceView.set_interval(self, interval=None, *, navigation=None)`**
 
 Display the traces and spikes in a given interval.
 
@@ -11762,6 +11771,15 @@ Toggle automatic scaling of the traces.
 **`TraceView.toggle_auto_update(self, checked)`**
 
 When on, the view is automatically updated when the cluster selection changes.
+
+---
+
+#### TraceView.toggle_background_prefetch
+
+
+**`TraceView.toggle_background_prefetch(self, checked)`**
+
+Allow background lookahead for this view until the GUI is closed.
 
 ---
 

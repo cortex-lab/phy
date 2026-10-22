@@ -15,7 +15,7 @@ from phy.apps.template import get_template_params
 from phy.cluster.views.trace import TraceView, select_traces
 from phy.gui import GUI, create_app, run_app
 
-from .._utils import _close_trace_reader
+from .._utils import _close_trace_reader, _TraceNavigationPrefetch
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,12 @@ def create_trace_gui(obj, **kwargs):
     create_app()
     gui = GUI(name=gui_name, subtitle=str(obj), enable_threading=False)
     gui._trace_reader = traces
+    gui._trace_prefetch = prefetch = _TraceNavigationPrefetch(traces)
     gui.set_default_actions()
 
     @connect(sender=gui)
-    def on_close(sender):
+    def on_closed(sender):
+        prefetch.close()
         _close_trace_reader(traces)
 
     def _get_traces(interval):
@@ -87,6 +89,7 @@ def create_trace_gui(obj, **kwargs):
         duration=traces.duration,
         enable_threading=False,
     )
+    prefetch.register(view)
     view.attach(gui)
 
     return gui

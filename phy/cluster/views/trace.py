@@ -170,6 +170,10 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     ):
         self.do_show_labels = True
         self.show_all_spikes = False
+        # Worker-thread access is explicit permission for this view and this session only.
+        self.background_prefetch = False
+        self._prefetch_available = False
+        self._navigation_serial = 0
 
         self.get_spike_times = spike_times
 
@@ -417,22 +421,55 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         self._update_axes()
         self.canvas.update()
 
-    def set_interval(self, interval=None):
+    def set_interval(self, interval=None, *, navigation=None):
         """Display the traces and spikes in a given interval."""
+        requested = interval is not None
         if interval is None:
             interval = self._interval
         interval = self._restrict_interval(interval)
 
-        if interval != self._interval:
-            logger.log(5, 'Redraw the entire trace view.')
-            self._interval = interval
-            emit('is_busy', self, True)
-            self.plot(update_traces=True, update_waveforms=True)
-            emit('is_busy', self, False)
-            emit('time_range_selected', self, interval)
-            self.update_status()
-        else:
-            self.plot(update_traces=False, update_waveforms=True)
+        # Redraws have no navigation intent. Discrete moves withdraw old lookahead,
+        # while continuous navigation can explicitly request a new directional hint.
+        navigating = requested and (navigation is None or interval != self._interval)
+        if navigating:
+            self._navigation_serial += 1
+            serial = self._navigation_serial
+            emit('trace_navigation', self, interval, navigation, 'before', serial)
+
+        try:
+            if interval != self._interval:
+                logger.log(5, 'Redraw the entire trace view.')
+                self._interval = interval
+                emit('is_busy', self, True)
+                try:
+                    self.plot(update_traces=True, update_waveforms=True)
+                finally:
+                    emit('is_busy', self, False)
+                emit('time_range_selected', self, interval)
+                self.update_status()
+            else:
+                self.plot(update_traces=False, update_waveforms=True)
+        except Exception:
+            if navigating:
+                emit('trace_navigation', self, interval, navigation, 'failed', serial)
+            raise
+        if navigating:
+            emit('trace_navigation', self, interval, navigation, 'after', serial)
+
+    def _add_prefetch_action(self):
+        if self._prefetch_available:
+            self.actions.add(
+                self.toggle_background_prefetch,
+                name='Background prefetch',
+                checkable=True,
+                checked=False,
+                show_shortcut=False,
+            )
+
+    def toggle_background_prefetch(self, checked):
+        """Allow background lookahead for this view until the GUI is closed."""
+        self.background_prefetch = bool(checked)
+        emit('trace_prefetch_changed', self, self.background_prefetch)
 
     def on_select(self, cluster_ids=None, **kwargs):
         self.cluster_ids = cluster_ids
@@ -444,6 +481,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super().attach(gui)
+        self._add_prefetch_action()
 
         self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.add(
@@ -554,13 +592,18 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         """Go to right."""
         start, end = self._interval
         delay = (end - start) * 0.1
-        self.shift(delay)
+        self._scroll(delay)
 
     def go_left(self):
         """Go to left."""
         start, end = self._interval
         delay = (end - start) * 0.1
-        self.shift(-delay)
+        self._scroll(-delay)
+
+    def _scroll(self, delay):
+        if delay:
+            start, end = self._interval
+            self.set_interval((start + delay, end + delay), navigation=1 if delay > 0 else -1)
 
     def jump_right(self):
         """Jump to right."""
@@ -691,7 +734,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         if e.modifiers == ('Alt',):
             start, end = self._interval
             delay = e.delta * (end - start) * 0.1
-            self.shift(-delay)
+            self._scroll(-delay)
 
 
 # -----------------------------------------------------------------------------
@@ -803,6 +846,7 @@ class TraceImageView(TraceView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         ManualClusteringView.attach(self, gui)
+        self._add_prefetch_action()
         # ScalingMixin.attach(self, gui)
 
         # self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)

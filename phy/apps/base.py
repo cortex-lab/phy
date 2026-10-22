@@ -55,7 +55,7 @@ from phy.utils.context import Context, _cache_methods
 from phy.utils.plugin import attach_plugins
 
 from ._proposition_io import load_proposition_documents, write_review_document
-from ._utils import _close_trace_reader
+from ._utils import _close_trace_reader, _TraceNavigationPrefetch
 
 logger = logging.getLogger(__name__)
 
@@ -930,6 +930,7 @@ class TraceMixin:
 
         view.traces = _get_traces
         view.ex_status = self.raw_data_filter.current
+        self._trace_prefetch.register(view)
 
         @connect(sender=view)
         def on_select_spike(sender, channel_id=None, spike_id=None, cluster_id=None):
@@ -967,6 +968,7 @@ class TraceMixin:
             channel_labels=self._get_channel_labels(),
             channel_positions=self.model.channel_positions,
         )
+        self._trace_prefetch.register(view)
 
         @connect
         def on_select_time(sender, time):
@@ -1188,6 +1190,7 @@ class BaseController:
         # Create or reuse a Model instance (any object)
         self.model = self._create_model(dir_path=dir_path, **kwargs) if model is None else model
         self._model_closed = False
+        self._trace_prefetch = _TraceNavigationPrefetch(getattr(self.model, 'traces', None))
 
         # Set up the cache.
         self._set_cache(clear_cache)
@@ -1247,6 +1250,7 @@ class BaseController:
         Closing a GUI does not necessarily end a controller's lifetime: callers may
         recreate a GUI around the same model. Resource cleanup is therefore explicit.
         """
+        self._trace_prefetch.close()
         if close_model and not self._model_closed:
             _close_trace_reader(getattr(self.model, 'traces', None))
             close = getattr(self.model, 'close', None)

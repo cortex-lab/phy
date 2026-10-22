@@ -755,10 +755,14 @@ class GUI(QMainWindow):
 
         # Save the state to disk when closing the GUI.
         logger.debug('Save the geometry state.')
-        gs = self.save_geometry_state()
-        self.state['geometry_state'] = gs
-        self.state['view_count'] = self.view_count
-        self.state.save()
+        try:
+            gs = self.save_geometry_state()
+            self.state['geometry_state'] = gs
+            self.state['view_count'] = self.view_count
+            self.state.save()
+        finally:
+            # Accepted closure releases resources even if saving geometry fails.
+            emit('closed', self)
 
     def show(self):
         """Show the window."""
