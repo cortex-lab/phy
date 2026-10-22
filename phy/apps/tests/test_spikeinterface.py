@@ -115,8 +115,17 @@ def test_spikeinterface_trace_gui(qtbot, tmp_path, si_dataset, kind):
     gui = create_trace_gui(str(path))
     try:
         assert_array_equal(gui._trace_reader[480:530], si_dataset.recording.get_traces()[480:530])
+        view = gui.views[0]
+        gui.show()
+        qtbot.wait(1)
+        assert not view.background_prefetch
+        view.actions.get('Background prefetch').trigger()
+        view.set_interval((0.1, 0.35))
+        view.go_right()
+        assert gui._trace_prefetch._owner is view
     finally:
         gui.close()
+    assert not gui._trace_prefetch._views
     assert not gui._trace_reader._cache
 
 
