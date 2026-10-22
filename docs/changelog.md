@@ -18,6 +18,11 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Documented SpikeInterface JSON/Zarr recordings with current phylib source and
+  added GUI integration coverage. Standalone TraceGUI accepts string paths and
+  preserves every binary part listed in `params.py`, with clear errors for empty
+  or unsupported inputs.
+
 - Right-clicking a correlogram transfers its row cluster between the primary and
   Similarity roles. This also works during Merge mode and proposition review;
   transferring the reference promotes the next staged cluster and retains the old

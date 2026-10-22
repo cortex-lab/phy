@@ -119,3 +119,32 @@ jobs:
 
     - name: Generate and validate documentation
       run: make doc-check
+
+  spikeinterface:
+    name: SpikeInterface application integration
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      with:
+        version: "0.11.31"
+    - name: Install locked development environment
+      run: uv sync --frozen --dev --python 3.12
+    - name: Install reviewed phylib and SpikeInterface
+      run: >-
+        uv pip install --python .venv
+        "phylib[spikeinterface] @ git+https://github.com/cortex-lab/phylib.git@ded47ba902b4470405138e8af7febd8d02094b1b"
+        "spikeinterface==0.105.3" "zarr<3"
+    - name: Check required integration capabilities
+      run: >-
+        uv run --no-sync python -c
+        "import spikeinterface, zarr; from phylib.io.traces import SpikeInterfaceEphysReader"
+    - name: Set up display
+      run: sudo apt-get update && sudo apt-get install -y xvfb
+    - name: Test application integration
+      run: >-
+        xvfb-run -a uv run --no-sync pytest --no-cov
+        phy/apps/tests/test_spikeinterface.py phy/apps/trace/tests/test_gui.py
+      env:
+        QT_QPA_PLATFORM: offscreen
+        LIBGL_ALWAYS_SOFTWARE: "1"
