@@ -18,6 +18,11 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Added session-only, opt-in background lookahead for TraceView and TraceImageView
+  with supporting phylib readers. Explicit scrolling hints share the reader cache
+  without enabling speculation during waveform reads. Added an accepted `closed`
+  GUI event so cancelling a save prompt preserves navigation resources.
+
 - Documented SpikeInterface JSON/Zarr recordings with current phylib source and
   added GUI integration coverage. Standalone TraceGUI accepts string paths and
   preserves every binary part listed in `params.py`, with clear errors for empty

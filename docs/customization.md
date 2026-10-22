@@ -286,3 +286,17 @@ from phy.apps.template import template_gui
 # Launch the GUI using the params.py file found in the current directory.
 template_gui('params.py')
 ```
+
+### Accepted GUI closure and trace navigation
+
+The existing `close` event can be vetoed by a save prompt. Use
+`connect(callback, event='closed', sender=gui)` for cleanup that must happen only
+after closure is accepted. A cancelled prompt emits no `closed` event.
+
+Trace views keep their `traces(interval)` provider contract. Explicit navigation
+emits `trace_navigation(view, interval, direction, phase, serial)`: `direction` is
+`+1` or `-1` for continuous scrolling and `None` for a discrete move; `phase` is
+`before`, `after`, or `failed`. Intervals are restricted and rounded to samples.
+Redraws emit no navigation intent. The serial identifies a move within one view;
+application adapters use it to ignore superseded or detached moves. Views and
+plugins should leave backend scheduling to the recording reader.

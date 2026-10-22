@@ -144,7 +144,8 @@ jobs:
     - name: Test application integration
       run: >-
         xvfb-run -a uv run --no-sync pytest --no-cov
-        phy/apps/tests/test_spikeinterface.py phy/apps/trace/tests/test_gui.py
+        phy/apps/tests/test_spikeinterface.py phy/apps/tests/test_trace_prefetch.py
+        phy/apps/trace/tests/test_gui.py
       env:
         QT_QPA_PLATFORM: offscreen
         LIBGL_ALWAYS_SOFTWARE: "1"
