@@ -12,14 +12,20 @@ Run with a display, or under a virtual X server::
 """
 
 import argparse
+import json
+import shutil
+import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
+from PyQt5.QtCore import QCoreApplication, QEvent
 from PyQt5.QtTest import QTest
 
 from phy.apps.large_recording.prepare import prepare_large
+from phy.apps.large_recording.source import hash_file
 from phy.apps.template.gui import TemplateController
 from phy.gui.qt import QApplication, Qt
 
@@ -30,11 +36,11 @@ HOURS = 8
 CLUSTER_IDS = np.array([0, 2, 7, 99], dtype=np.int32)
 
 
-def _make_source(path):
+def _make_source(path, hours=HOURS):
     """Write a varied but deterministic synthetic source sorting."""
     path.mkdir(parents=True)
     rng = np.random.default_rng(20261013)
-    samples = SAMPLE_RATE * 3600 * HOURS
+    samples = SAMPLE_RATE * 3600 * hours
     intervals = np.array(
         [[0, 3 * 3600 * SAMPLE_RATE], [int(3.5 * 3600 * SAMPLE_RATE), samples]],
         dtype=np.int64,
@@ -149,6 +155,72 @@ def _capture(gui, destination):
         raise OSError(f'Could not save screenshot: {destination}')
 
 
+def _close_capture(gui, controller):
+    gui.close()
+    controller.close()
+    gui.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    QApplication.processEvents()
+
+
+def _capture_comparison(bounded, config_dir, output_dir, selected, dataset_label):
+    """Capture actual GUI comparisons on an isolated, disposable package."""
+    controller = TemplateController(
+        dir_path=bounded, config_dir=config_dir, plugins=[], enable_threading=False
+    )
+    gui = controller.create_gui(default_views=['UnitStabilityView'], do_prompt_save=False)
+    try:
+        gui.resize(2100, 1200)
+        gui.show()
+        _wait_for_render()
+        supervisor = controller.supervisor
+        started = time.perf_counter()
+        supervisor.select(selected)
+        supervisor.block()
+        selection_seconds = time.perf_counter() - started
+        view = gui.get_view('UnitStabilityView')
+        assert list(view.cluster_ids) == supervisor.selected
+        assert len(view.cluster_ids) >= 2, 'Select at least two retained clusters.'
+        _capture(gui, output_dir / 'after-overview.png')
+        started = time.perf_counter()
+        view.toggle_amplitude(False)
+        view.toggle_depth(False)
+        rate_only_seconds = time.perf_counter() - started
+        _capture(gui, output_dir / 'after-rate-only.png')
+        supervisor.toggle_merge_mode()
+        supervisor.block()
+        assert supervisor.selection.state.is_merge_mode
+        assert list(view.cluster_ids) == supervisor.selected
+        _capture(gui, output_dir / 'after-merge.png')
+        manifest = controller.bounded_session.manifest
+        report = {
+            'dataset_label': dataset_label,
+            'capture_revision': subprocess.check_output(
+                ['git', 'rev-parse', 'HEAD'], cwd=REPOSITORY, text=True
+            ).strip(),
+            'clock_hours': manifest['num_samples'] / manifest['sample_rate'] / 3600,
+            'selected_cluster_ids': selected,
+            'displayed_cluster_ids': list(map(int, view.cluster_ids[: view.display_limit])),
+            'merge_cluster_ids': supervisor.selected_merge,
+            'summary_bins': len(view.get_data(selected[0]).exposure),
+            'full_counts': {
+                str(unit): int(view.get_data(unit).counts.sum())
+                for unit in view.cluster_ids[: view.display_limit]
+            },
+            'timing_seconds': {
+                'select_and_block': selection_seconds,
+                'rate_only_redraws': rate_only_seconds,
+            },
+            'gui_size': [gui.width(), gui.height()],
+            'screenshots': ['after-overview.png', 'after-rate-only.png', 'after-merge.png'],
+            'source_arrays_modified': False,
+        }
+        (output_dir / 'capture.json').write_text(json.dumps(report, indent=2) + '\n')
+        print(json.dumps(report), flush=True)
+    finally:
+        _close_capture(gui, controller)
+
+
 def _capture_views(bounded, config_dir, output_dir, stability):
     views = (
         ['UnitStabilityView']
@@ -218,24 +290,74 @@ def _capture_views(bounded, config_dir, output_dir, stability):
             f'{counts[best_window]} evidence spikes)'
         )
     finally:
-        gui.close()
-        controller.close()
+        _close_capture(gui, controller)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        '--bounded-dir', type=Path, help='Existing package; copied before opening.'
+    )
+    parser.add_argument(
+        '--comparison', action='store_true', help='Capture cluster overlay controls.'
+    )
+    parser.add_argument('--cluster-ids', type=int, nargs='+', help='IDs for comparison captures.')
+    parser.add_argument('--dataset-label', help='Dataset provenance label stored in capture.json.')
+    parser.add_argument('--synthetic-hours', type=int, default=HOURS)
     args = parser.parse_args()
+    if args.synthetic_hours < 4:
+        parser.error('--synthetic-hours must be at least 4.')
+    if args.bounded_dir and not args.comparison:
+        parser.error('--bounded-dir requires --comparison.')
+    if args.bounded_dir:
+        source = args.bounded_dir.resolve()
+        if not (source / '_phy_curation_manifest.json').is_file():
+            parser.error('--bounded-dir must contain a bounded curation manifest.')
+        if source == args.output_dir.resolve() or source in args.output_dir.resolve().parents:
+            parser.error('--output-dir must be outside the input bounded package.')
+        if not args.cluster_ids or len(args.cluster_ids) < 2:
+            parser.error('--bounded-dir comparisons require at least two --cluster-ids.')
     args.output_dir.mkdir(parents=True, exist_ok=True)
     app = QApplication.instance() or QApplication(sys.argv[:1])
 
     with tempfile.TemporaryDirectory(prefix='phy-long-recording-screenshots-') as temporary:
         root = Path(temporary)
-        params, intervals = _make_source(root / 'source')
+        if args.bounded_dir:
+            bounded = root / 'bounded'
+            original_hashes = {
+                str(path.relative_to(source)): hash_file(path)
+                for path in source.rglob('*')
+                if path.is_file()
+            }
+            shutil.copytree(source, bounded, ignore=shutil.ignore_patterns('.phy', '*.log'))
+            _capture_comparison(
+                bounded,
+                root / 'config',
+                args.output_dir,
+                args.cluster_ids,
+                args.dataset_label
+                or 'Existing bounded package; acquisition exposure as declared.',
+            )
+            checked_hashes = {
+                str(path.relative_to(source)): hash_file(path)
+                for path in source.rglob('*')
+                if path.is_file()
+            }
+            if original_hashes != checked_hashes:
+                raise RuntimeError('The input bounded package changed during capture.')
+            report_path = args.output_dir / 'capture.json'
+            report = json.loads(report_path.read_text())
+            report['input_sha256'] = original_hashes
+            report['input_package_unchanged'] = True
+            report_path.write_text(json.dumps(report, indent=2) + '\n')
+            app.quit()
+            return
+        params, intervals = _make_source(root / 'source', hours=args.synthetic_hours)
         bounded = prepare_large(
             params,
             root / 'bounded',
-            duration_seconds=SAMPLE_RATE * 3600 * HOURS / SAMPLE_RATE,
+            duration_seconds=args.synthetic_hours * 3600,
             valid_intervals=intervals,
             max_spikes=20_000,
             max_bytes=268_435_456,
@@ -245,8 +367,17 @@ def main():
             batch_size=50_000,
             bin_seconds=1800,
         )
-        _capture_views(bounded, root / 'config-stability', args.output_dir, stability=True)
-        _capture_views(bounded, root / 'config-evidence', args.output_dir, stability=False)
+        if args.comparison:
+            _capture_comparison(
+                bounded,
+                root / 'config',
+                args.output_dir,
+                args.cluster_ids or list(map(int, CLUSTER_IDS[:3])),
+                args.dataset_label or f'Synthetic {args.synthetic_hours}-hour fixture.',
+            )
+        else:
+            _capture_views(bounded, root / 'config-stability', args.output_dir, stability=True)
+            _capture_views(bounded, root / 'config-evidence', args.output_dir, stability=False)
     app.quit()
 
 
