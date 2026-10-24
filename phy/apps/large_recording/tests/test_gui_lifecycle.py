@@ -206,3 +206,34 @@ def test_default_bounded_views_handle_threshold_children_with_pending_metrics(qt
     finally:
         gui.close()
         controller.close()
+
+
+def test_merge_redo_then_amplitude_split_saves_and_reopens(qtbot, tmp_path):
+    _, controller = make_controller(tmp_path)
+    bounded = controller.dir_path
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    supervisor = controller.supervisor
+    try:
+        supervisor.merge([0, 1])
+        supervisor.block()
+        supervisor.undo()
+        supervisor.block()
+        supervisor.redo()
+        supervisor.block()
+        split = supervisor.split_source_amplitude(2, 6.0)
+        supervisor.block()
+        assignments = supervisor.clustering.spike_clusters.copy()
+        supervisor.save()
+        children = list(split.added)
+    finally:
+        gui.close()
+        controller.close()
+    reopened = TemplateController(
+        dir_path=bounded, config_dir=tmp_path / 'config', plugins=[], enable_threading=False
+    )
+    try:
+        np.testing.assert_array_equal(reopened.bounded_session.assignments, assignments)
+        assert set(reopened.bounded_session.events[-1]['children']) == set(children)
+        assert len(reopened.bounded_session.events) == 2
+    finally:
+        reopened.close()

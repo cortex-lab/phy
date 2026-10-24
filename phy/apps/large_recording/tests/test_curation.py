@@ -64,6 +64,37 @@ def make_session(tmp_path):
     return source, BoundedSession(fixture.bounded)
 
 
+@pytest.mark.parametrize('command', ['record_threshold_split', 'record_split'])
+def test_split_numpy_metadata_keys_save_and_reopen(tmp_path, command):
+    source, session = make_session(tmp_path)
+    predicate = {
+        'attribute': 'amplitudes.npy',
+        'operator': '<',
+        'threshold': 0.5,
+        'nonfinite': 'keep',
+    }
+    children = [np.int64(100), np.int64(101)]
+    metadata = {'group': {children[0]: 'good', children[1]: 'noise'}}
+    try:
+        if command == 'record_threshold_split':
+            session.record_threshold_split(0, children, predicate, metadata)
+        else:
+            session.record_split(0, *children, predicate, metadata)
+        session.save()
+        with_metadata = session.events[-1]['metadata']['group']
+        assert all(type(key) is int for key in with_metadata)
+        reopened = BoundedSession(session.path)
+        try:
+            np.testing.assert_array_equal(reopened.assignments, session.assignments)
+            assert reopened.metadata['group'][100] == 'good'
+            assert reopened.metadata['group'][101] == 'noise'
+        finally:
+            reopened.close()
+    finally:
+        session.close()
+        source.close()
+
+
 def test_merge_label_snapshot_branch_reopen(tmp_path):
     source, session = make_session(tmp_path)
     baseline = session.snapshot()

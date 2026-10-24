@@ -13,6 +13,8 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Fixed saving bounded amplitude splits after merge undo/redo when NumPy cluster
+  IDs appear in journal metadata.
 - Added `prepare-large` and `apply-curation` for bounded shared-window evidence,
   full-duration exposure-aware summaries, semantic merges/labels/source-amplitude
   splits, and replay into a new complete sorting.

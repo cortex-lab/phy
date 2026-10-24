@@ -698,7 +698,7 @@ class BoundedSession:
                 'parent': int(parent),
                 'children': children,
                 'predicate': validate_predicate(predicate),
-                'metadata': copy.deepcopy(metadata or {}),
+                'metadata': normalize_metadata(metadata or {}),
             }
         )
 
@@ -713,7 +713,7 @@ class BoundedSession:
             'parent': int(parent),
             'children': children,
             'predicate': validate_predicate(predicate),
-            'metadata': copy.deepcopy(metadata or {}),
+            'metadata': normalize_metadata(metadata or {}),
         }
         interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
         project_assignments(self.base_assignments, self.events + [event], self.attributes)
