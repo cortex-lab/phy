@@ -7,6 +7,36 @@ chronic curation.
 
 ## Automated checks
 
+On 2026-10-24, the AIND time-coordinate follow-up passed `make test-full`:
+**818 passed, 1 existing benchmark skip** (496 core tests and 322 application
+tests). The environment used Python 3.12.3, released phylib 2.7.1, Linux,
+Xvfb, software OpenGL, and Qt's offscreen platform. The target included lint
+and formatting checks. The strict documentation check and `uv build` also
+passed; the wheel contains all 12 long-recording runtime modules.
+
+The follow-up has a 96-test focused source/preparation/replay run and an
+additional GUI regression for explicit elapsed clocks. Its independent
+discontinuous-clock oracle verifies per-bin exposure and unit counts, exact
+waveform sample-index alignment, merge assignments, save/reopen, replay,
+repreparation, timestamp provenance, and unchanged source bytes. The GUI test
+opens all default bounded views, checks exposure-based firing rate and window
+navigation, and confirms that elapsed ticks do not enable raw traces. All of
+these tests are included in the full-suite result above.
+
+Separate architecture, correctness, and final audit reviews used Sol at high
+reasoning effort. The correctness review found a legacy coordinate-name
+mismatch and a generated-policy bypass of producer waveform-window membership
+validation; both received regression coverage and were corrected. The final
+independent audit found no remaining blocking defect in the reviewed changes.
+
+These results validate the [explicit coordinate contract](large-recording-time-coordinates.md),
+not the supplied export's acquisition truth. The complete new Code Ocean export
+and its acquisition logs were unavailable. The supplied `timestamps.json` was
+inspected directly; spike-array counts and filler-spike claims remain attributed
+to Carl's report. No exporter repository was identified or modified. The
+[exporter handoff](aind-export-handoff.md) records the upstream work and real-data
+acceptance evidence still needed.
+
 On 2026-10-13, `make test-full` completed with **756 passed and 1
 skipped** (496 non-application tests and 260 application tests). Final channel
 geometry and nonidentity waveform-mapping additions passed a further focused

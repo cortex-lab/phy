@@ -82,7 +82,8 @@ phy prepare-large /data/recording/params.py /data/recording-bounded \
 The `.npy` valid-interval file contains an integer array of shape `[W, 2]` with
 ordered, nonoverlapping coordinate pairs. Without it, legacy acquisition-sample
 sources treat the full declared extent as valid exposure. Explicit elapsed
-sources require producer-declared `valid_intervals`; there is no full-extent
+sources require authoritative `valid_intervals` in metadata or supplied
+explicitly through the CLI/API; there is no full-extent
 default for them.
 
 `--max-bytes` limits the bounded output package size, including its summaries and
@@ -215,7 +216,7 @@ periods or units, and waveform availability can vary across units and time.
 These views do not establish full-recording quality, contamination, refractory
 violations, or continuous biological identity. Use them to guide review, not as
 scientific claims about unseen spikes. Long-duration coordinates preserve the
-source sample clock; silence alone is never evidence that the acquisition was
+declared source time axis; silence alone is never evidence that the acquisition was
 inactive.
 
 For reproducible synthetic capacity measurements, run

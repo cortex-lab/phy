@@ -11,6 +11,45 @@ from phy.apps.large_recording.tests.test_adapter import make_controller, make_gu
 from phy.apps.template.gui import TemplateController
 
 
+def test_elapsed_producer_windows_open_and_navigate_in_gui(qtbot, tmp_path):
+    params = make_gui_sorting(tmp_path / 'source')
+    intervals = [[0, 210000], [300000, 600000]]
+    contract = {'kind': 'elapsed_ticks', 'ticks_per_second': 30000.0}
+    params.write_text(
+        params.read_text() + f'time_base = {contract!r}\nvalid_intervals = {intervals!r}\n'
+    )
+    np.save(params.parent / '_phy_spikes_subset.window_bounds.npy', np.array(intervals, 'int64'))
+    (params.parent / '_phy_spikes_subset.manifest.json').write_text(
+        json.dumps(
+            {
+                'format': 'phy_spikes_subset',
+                'format_version': 1,
+                'recording': {'window_bounds_coordinates': 'elapsed_ticks'},
+            }
+        )
+    )
+    output = prepare_large(params, tmp_path / 'bounded', window_policy='producer', bin_seconds=5)
+    controller = TemplateController(
+        dir_path=output, config_dir=tmp_path / 'config', plugins=[], enable_threading=False
+    )
+    gui = None
+    try:
+        gui = controller.create_gui(do_prompt_save=False)
+        controller.supervisor.select([0, 1])
+        controller.supervisor.block()
+        controller.inspect_evidence_window(1)
+        assert controller.model.sample_rate == 30000.0
+        assert controller.model.traces is None
+        assert controller.get_mean_firing_rate(0) == pytest.approx(4 / 17)
+        view = gui.get_view('EvidenceAmplitudeView')
+        assert view.duration == 10
+        assert view.window_label.text() == ('Evidence window 1 | Recording time: 10.000–20.000 s')
+    finally:
+        if gui is not None:
+            gui.close()
+        controller.close()
+
+
 def test_window_time_labels_follow_navigation(qtbot, tmp_path):
     _, controller = make_controller(tmp_path, sparse=True)
     gui = controller.create_gui(default_views=['EvidenceAmplitudeView'], do_prompt_save=False)
