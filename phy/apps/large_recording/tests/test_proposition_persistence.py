@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from phy.apps.large_recording.adapter import BoundedTemplateController
 from phy.apps.large_recording.curation import BoundedSession, _digest
 from phy.apps.large_recording.prepare import prepare_large
 from phy.apps.large_recording.replay import apply_curation
@@ -11,6 +12,10 @@ from phy.apps.large_recording.source import Source, hash_file
 from phy.apps.large_recording.tests.test_adapter import make_gui_sorting
 from phy.apps.template.gui import TemplateController
 from phy.cluster._propositions import PropositionReview, encode_review_mapping, proposition_key
+
+
+class PropositionsDisabledController(BoundedTemplateController):
+    enable_merge_propositions = False
 
 
 def prepare(tmp_path):
@@ -39,13 +44,17 @@ def test_three_noop_rounds_preserve_exact_source_and_complete_ledger(tmp_path, m
             session.save()
             session.close()
         else:
-            controller = TemplateController(
-                dir_path=bounded,
-                config_dir=tmp_path / 'config',
-                plugins=[],
-                enable_merge_propositions=mode == 'enabled',
+            controller_class = (
+                PropositionsDisabledController if mode == 'disabled' else TemplateController
+            )
+            controller = controller_class(
+                dir_path=bounded, config_dir=tmp_path / 'config', plugins=[]
             )
             try:
+                if mode == 'disabled':
+                    assert controller.supervisor.merge_propositions is None
+                else:
+                    assert controller.supervisor.merge_propositions is not None
                 controller.supervisor.save()
             finally:
                 controller.close()
@@ -275,13 +284,11 @@ def test_suggestions_without_reviews_publish_empty_bound_ledger(tmp_path, mode):
         session.save()
         session.close()
     else:
-        controller = TemplateController(
-            dir_path=bounded,
-            config_dir=tmp_path / 'config',
-            plugins=[],
-            enable_merge_propositions=False,
+        controller = PropositionsDisabledController(
+            dir_path=bounded, config_dir=tmp_path / 'config', plugins=[]
         )
         try:
+            assert controller.supervisor.merge_propositions is None
             controller.supervisor.save()
         finally:
             controller.close()
