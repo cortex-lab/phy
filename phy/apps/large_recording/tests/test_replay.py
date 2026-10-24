@@ -174,6 +174,7 @@ def test_replay_preserves_explicit_clock_metadata_and_timestamp_bytes(tmp_path, 
     manifest_path = session.path / '_phy_curation_manifest.json'
     manifest = json.loads(manifest_path.read_text())
     manifest['source']['identity'] = source.identity
+    manifest['time_base'] = contract
     manifest_path.write_text(json.dumps(manifest))
     from phy.apps.large_recording.curation import BoundedSession
 
