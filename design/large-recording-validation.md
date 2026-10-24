@@ -7,6 +7,11 @@ chronic curation.
 
 ## Automated checks
 
+After the real-data split-journal fix described in the
+[AIND diagnostic record](aind-real-data-validation.md), `make test-full` passed
+**821 tests with 1 existing benchmark skip** (496 core and 325 application
+tests). Lint, formatting, documentation checks, and package build passed.
+
 On 2026-10-24, the AIND time-coordinate follow-up passed `make test-full`:
 **818 passed, 1 existing benchmark skip** (496 core tests and 322 application
 tests). The environment used Python 3.12.3, released phylib 2.7.1, Linux,
@@ -30,10 +35,12 @@ validation; both received regression coverage and were corrected. The final
 independent audit found no remaining blocking defect in the reviewed changes.
 
 These results validate the [explicit coordinate contract](large-recording-time-coordinates.md),
-not the supplied export's acquisition truth. The complete new Code Ocean export
-and its acquisition logs were unavailable. The supplied `timestamps.json` was
-inspected directly; spike-array counts and filler-spike claims remain attributed
-to Carl's report. No exporter repository was identified or modified. The
+not the supplied export's acquisition truth. During that initial follow-up the
+complete export and its acquisition logs were unavailable; its spike-array and
+filler-spike claims were attributed to Carl's report. A different computation
+was subsequently downloaded and tested as an explicitly modified engineering
+derivative, as recorded in the AIND diagnostic above. No exporter repository
+was identified or modified. The
 [exporter handoff](aind-export-handoff.md) records the upstream work and real-data
 acceptance evidence still needed.
 
