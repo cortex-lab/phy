@@ -40,7 +40,7 @@ cross unsupported gaps. The 512 MiB output cap applies to package bytes, not
 process RSS; waveform source, retained, and omitted counts are reported in the
 CLI and manifest.
 
-The screenshots below show the actual bounded GUI views using a deterministic
+The screenshots below show the bounded GUI views using a deterministic
 synthetic eight-hour sorting. The overview plots full-duration rates and
 available source means; gray marks the synthetic acquisition gap and cyan marks
 the retained evidence windows. The evidence view places windowed amplitudes at
@@ -60,6 +60,43 @@ QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
   xvfb-run -a -s '-screen 0 2400x1600x24 +extension GLX' \
   uv run python tools/capture_long_recording_views.py
 ```
+
+### Comparing clusters on a real recording
+
+These actual Qt captures use the same converted AIND test export, selected
+clusters **40, 44, and 48**, 113 summary bins, and 2100 × 1200 window size.
+The elapsed clock spans 112.9 hours including declared gaps. Rate and source
+amplitude are available; depth trends are unavailable. The exposure mask is
+the test conversion's declaration, not independent acquisition verification.
+
+| Before: only unit 40 displayed | After: all three selected units |
+| --- | --- |
+| ![Before: three selected clusters but one stability curve](images/unit-stability-comparison/before-overview.png) | ![After: selected cluster rate and amplitude overlays](images/unit-stability-comparison/after-overview.png) |
+
+Turning off **Show amplitude** and **Show depth** expands the rate comparison:
+
+![Rate-only comparison of units 40, 44 and 48](images/unit-stability-comparison/after-rate-only.png)
+
+The same colors and cluster IDs follow the staged Merge candidates:
+
+![Merge View candidates match the firing-rate curves](images/unit-stability-comparison/after-merge.png)
+
+To capture an existing package, use a fresh output directory outside it. The
+script opens a temporary copy and verifies the input file hashes are unchanged:
+
+```bash
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
+  xvfb-run -a -s '-screen 0 2400x1600x24 +extension GLX' \
+  uv run python tools/capture_long_recording_views.py --comparison \
+  --bounded-dir /data/recording-bounded --cluster-ids 40 44 48 \
+  --dataset-label 'Recording test export' --output-dir /tmp/stability-captures
+```
+
+A separate [synthetic 500-hour example](images/unit-stability-comparison/synthetic-500h-overview.png)
+exercises rate, amplitude, and depth together over 1000 bins. It is generated
+test data, not Carl's 500-hour recording. Reproduce it with `--comparison
+--synthetic-hours 500 --output-dir /tmp/stability-500h` instead of `--bounded-dir`
+and `--cluster-ids`.
 
 ## Prepare bounded evidence
 
@@ -142,6 +179,16 @@ shows time-binned counts/rates, available source scalar-amplitude means,
 evidence windows, and acquisition gaps. Missing measurements and units without
 evidence remain visible as unavailable.
 
+Unit Stability can overlay up to eight selected clusters. Multiple-cluster
+overlays use consistent colors and include a legend; the eight-cluster cap is
+reported in the view status and does not alter cluster selection or merge
+membership. Use the Unit Stability view menu's **Show firing rate**,
+**Show amplitude**, and **Show depth** toggles to choose the plotted
+measurements. These choices are saved across sessions and require no export or
+re-preparation. All three are on by default; turning all three off leaves the
+view empty. The full-source counts and rates use acquisition exposure, including
+declared gaps. Source amplitude and depth summaries appear only when available.
+
 Evidence Amplitude shows raw source scalar amplitudes from the currently
 selected evidence window. The Feature view also uses window-relative seconds.
 The amplitude plot labels this axis as **Seconds from window start** and shows
@@ -165,9 +212,10 @@ Bounded curation supports whole-unit merges, cluster labels, and a source
 amplitude threshold action. Use the GUI action **Split by source amplitude**
 with one unit selected and a threshold in the source amplitude units. The action
 uses the source `amplitudes.npy` scalar for every spike during replay; nonfinite
-values stay with the remainder. Child units show full-data metrics as pending
-until the replayed sorting is re-prepared, because their complete counts and
-trends have not yet been calculated. Merge and label actions are journaled with
+values stay with the remainder. A split marks affected child units' full-data
+metrics as pending individually; unrelated selected units retain their
+available metrics. Resolving pending full-data counts and trends requires full
+replay followed by re-preparation. Merge and label actions are journaled with
 the bounded assignments and metadata in an atomic checkpoint generation.
 Reopening loads the last complete generation. A reopened session starts a new
 undo baseline. Each save checks that the checkpoint has not changed since this
@@ -181,12 +229,14 @@ Standard, unbounded datasets retain their existing curation behavior.
 ## Unit Stability on ordinary recordings
 
 Unit Stability can also be opened as an optional view for an ordinary dataset.
-It evaluates only the selected unit and bins its loaded spikes over the recording
-duration. Since ordinary datasets do not supply valid acquisition intervals to
-this view, its rate assumes continuous acquisition; the plot labels that
-assumption. The ordinary default view layout remains unchanged. Use the bounded
-manifest workflow above when known acquisition gaps must be represented
-explicitly.
+It evaluates selected units and bins their loaded spikes over the recording
+duration. Its firing rate assumes continuous acquisition because ordinary
+datasets do not supply valid acquisition intervals to the view; the plot labels
+that assumption. The Unit Stability view menu's **Show firing rate**,
+**Show amplitude**, and **Show depth** toggles are saved across sessions, with
+all three on by default. The ordinary default view layout remains unchanged.
+Use the bounded manifest workflow above when known acquisition gaps must be
+represented explicitly.
 
 ## Apply to the complete sorting
 
@@ -203,9 +253,10 @@ complete assignment array in batches, and writes a new full sorting. It rejects
 a journal prepared from a different source revision. Keep the original source
 and bounded package; they establish the lineage of the curated output. To review
 the curated full sorting with bounded evidence again, run `prepare-large` on
-the curated output to produce a fresh package and revision-specific summaries.
-This replay and re-preparation step also resolves full-data counts and trends
-for threshold-split children.
+the curated output to produce a fresh package and revision-specific summaries;
+this resolves pending full-data counts and trends for split children. Replay
+applies the recorded threshold split to every source spike using its source
+amplitude value.
 
 When the source includes SLAY suggestions in `curation.json`, preparation and
 replay preserve that file exactly, together with saved accept/reject decisions

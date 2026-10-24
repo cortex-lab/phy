@@ -25,6 +25,13 @@ behavior they verify rather than listed separately.
 - Added Unit Stability, precise window-relative amplitude/feature inspection,
   sampled interval/correlogram views, and explicit full-versus-evidence counts.
   Standard datasets retain their existing curation workflow and default layout.
+- Unit Stability now overlays up to eight selected units with consistent colors
+  and a legend. Its saved **Show firing rate**, **Show amplitude**, and
+  **Show depth** view-menu toggles default on; turning all three off leaves the
+  plot empty. The cap is reported in view status and does not affect merge
+  membership. Full-source rates use acquisition exposure, and amplitude splits
+  mark only affected children’s metrics as pending. On ordinary recordings,
+  firing rates identify their continuous-acquisition assumption.
 - Bounded saves use validated atomic generations and reject conflicting saves
   from stale sessions. Unsupported selected-row splits are blocked.
 - Sparse cluster IDs no longer require dense allocations during clustering.
