@@ -109,13 +109,13 @@ def test_merge_label_snapshot_branch_reopen(tmp_path):
     session.restore(baseline)
     session.record_merge([1, 2], 100, {'group': 'noise'})
     session.record_label('custom', [99, 100], 'reviewed')
-    session.save(extra_documents={'curation_review.json': {'accepted': [100]}})
+    session.save(extra_documents={'supplemental.json': {'accepted': [100]}})
     reopened = BoundedSession(session.path)
     assert reopened.next_cluster_id == 101
     assert reopened.events == session.events
     assert reopened.metadata == session.metadata
     assert np.array_equal(reopened.assignments, session.assignments)
-    assert reopened.extra_documents == {'curation_review.json': {'accepted': [100]}}
+    assert reopened.extra_documents == {'supplemental.json': {'accepted': [100]}}
     assert source.unit_ids.tolist() == [0, 1, 2, 99]
     assert 99 not in session.base_assignments
 
@@ -298,9 +298,9 @@ def test_stale_session_save_rejected_without_losing_first_commit(tmp_path):
     second = BoundedSession(first.path)
     first.record_merge([0, 1], 100, {'group': 'good'})
     second.record_merge([1, 2], 100, {'group': 'noise'})
-    first.save(extra_documents={'curation_review.json': {'accepted': [100]}})
+    first.save(extra_documents={'supplemental.json': {'accepted': [100]}})
     with pytest.raises(ValueError, match='reopen'):
-        second.save(extra_documents={'curation_review.json': {'rejected': [100]}})
+        second.save(extra_documents={'supplemental.json': {'rejected': [100]}})
     reopened = BoundedSession(first.path)
     assert reopened.events == first.events
     assert reopened.extra_documents == first.extra_documents

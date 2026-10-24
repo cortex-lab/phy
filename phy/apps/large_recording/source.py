@@ -405,6 +405,47 @@ class Source:
                 if not isinstance(unit, int) or unit < 0:
                     raise ValueError('Lineage unit IDs must be nonnegative integers.')
                 counts.setdefault(unit, 0)
+        self.retired_units = lineage.get('retired_units', {})
+        if not isinstance(self.retired_units, dict):
+            raise ValueError('Lineage retired_units must be a mapping.')
+        for unit, record in self.retired_units.items():
+            if (
+                not isinstance(unit, str)
+                or not unit.isdecimal()
+                or str(int(unit)) != unit
+                or int(unit) > np.iinfo(np.int32).max
+                or not isinstance(record, dict)
+                or set(record) != {'operation', 'replacements'}
+                or record['operation'] not in ('merge', 'threshold_split')
+            ):
+                raise ValueError('Invalid lineage retired unit record.')
+            replacements = record['replacements']
+            if (
+                not isinstance(replacements, list)
+                or not replacements
+                or any(
+                    type(value) is not int or value < 0 or value > np.iinfo(np.int32).max
+                    for value in replacements
+                )
+                or len(set(replacements)) != len(replacements)
+                or len(replacements) != (1 if record['operation'] == 'merge' else 2)
+                or int(unit) in replacements
+                or int(unit) in counts
+            ):
+                raise ValueError('Invalid lineage retired unit replacements.')
+        documents = lineage.get('proposition_documents', {})
+        if not isinstance(documents, dict):
+            raise ValueError('Lineage proposition documents must be a mapping.')
+        for name, digest in documents.items():
+            if (
+                name not in ('curation.json', 'curation_review.json')
+                or not isinstance(digest, str)
+                or len(digest) != 64
+                or any(c not in '0123456789abcdef' for c in digest)
+                or (self.path / name).is_symlink()
+                or hash_file(self.path / name) != digest
+            ):
+                raise ValueError('Lineage proposition document integrity check failed.')
         if any(unit < 0 or unit > np.iinfo(np.int32).max for unit in counts):
             raise ValueError(
                 'Unit IDs must fit nonnegative int32 for the current Phy loader; spike sample/row coordinates remain int64.'

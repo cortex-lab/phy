@@ -65,12 +65,27 @@ def _fsync_directory(path):
 
 
 def _safe_file(root, name):
-    if not isinstance(name, str) or Path(name).name != name or name in ('', '.', '..'):
+    if (
+        not isinstance(name, str)
+        or Path(name).name != name
+        or name in ('', '.', '..')
+        or any(c in name for c in ('\\', '\0', '\n', '\r'))
+    ):
         raise ValueError('Manifest/checkpoint filename must be a plain local filename.')
     path = Path(root) / name
     if path.is_symlink():
         raise ValueError('Manifest/checkpoint files must not be symbolic links.')
     return path
+
+
+def _validate_digest(value):
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(c not in '0123456789abcdef' for c in value)
+    ):
+        raise ValueError('Invalid SHA-256 digest.')
+    return value
 
 
 @contextmanager
@@ -425,6 +440,11 @@ class BoundedSession:
             or sum(map(int, counts)) != full_n
         ):
             raise ValueError('Full unit counts do not match the source spike count/catalog.')
+        from phy.cluster._propositions import MergePropositionCatalog
+
+        MergePropositionCatalog((), (), retired_units=manifest.get('retired_units', {}))
+        if set(manifest.get('retired_units', {})) & set(map(str, self.unit_ids)):
+            raise ValueError('Retired units cannot remain in the active source catalog.')
         self.base_next_cluster_id = _integer(manifest['next_cluster_id'], 'Next cluster ID')
         if self.base_next_cluster_id <= max(self.unit_ids):
             raise ValueError('Cluster allocator collides with the complete source catalog.')
@@ -473,6 +493,7 @@ class BoundedSession:
             if not any(left <= start and stop <= right for left, right in intervals):
                 raise ValueError('Evidence windows cross unsupported acquisition gaps.')
         for name, digest in manifest.get('bounded_files', {}).items():
+            _validate_digest(digest)
             if _hash_file(_safe_file(self.path, name)) != digest:
                 raise ValueError(f'Bounded package integrity check failed: {name}.')
         hashed_files = manifest.get('bounded_files', {})
@@ -525,12 +546,98 @@ class BoundedSession:
         self.metadata = copy.deepcopy(self.base_metadata)
         self.events = []
         self.extra_documents = {}
+        if 'proposition_documents' not in manifest and any(
+            (self.path / name).exists() for name in ('curation.json', 'curation_review.json')
+        ):
+            raise ValueError(
+                'Legacy bounded propositions have no preparation binding; reprepare the source.'
+            )
+        self.proposition_documents = manifest.get('proposition_documents', {})
+        if not isinstance(self.proposition_documents, dict) or set(self.proposition_documents) - {
+            'curation.json',
+            'curation_review.json',
+        }:
+            raise ValueError('Invalid bounded proposition document inventory.')
+        for name, item in self.proposition_documents.items():
+            expected_name = (
+                '_phy_curation_review_base.json' if name == 'curation_review.json' else name
+            )
+            if (
+                not isinstance(item, dict)
+                or set(item) != {'filename', 'sha256'}
+                or item['filename'] != expected_name
+                or hashed_files.get(expected_name) != item['sha256']
+            ):
+                raise ValueError('Proposition documents must have immutable preparation digests.')
+            _validate_digest(item['sha256'])
+            value = _read_json(_safe_file(self.path, expected_name))
+            if not isinstance(value, dict):
+                raise ValueError('Proposition documents must contain JSON objects.')
+            if name == 'curation_review.json':
+                self.extra_documents[name] = value
+        if (
+            'curation.json' in self.proposition_documents
+            and 'curation_review.json' not in self.extra_documents
+        ):
+            from phy.cluster._propositions import encode_review_mapping
+
+            self.extra_documents['curation_review.json'] = encode_review_mapping(
+                {}, source_sha256=self.proposition_documents['curation.json']['sha256']
+            )
+        self.validate_proposition_documents()
         self.next_cluster_id = self.base_next_cluster_id
         self.checkpoint_path = None
         self._expected_pointer = None
         pointer_path = self.path / '.phy-curation' / 'current.json'
         if pointer_path.exists():
             self._load_checkpoint(pointer_path)
+
+    def validate_proposition_documents(self):
+        """Keep producer input and its inherited ledger bound to preparation."""
+        for name, item in self.proposition_documents.items():
+            path = _safe_file(self.path, item['filename'])
+            if not path.is_file() or _hash_file(path) != item['sha256']:
+                raise ValueError(f'Bounded proposition document changed: {name}.')
+        if 'proposition_documents' in self.manifest:
+            for name in ('curation.json',):
+                if name not in self.proposition_documents and (self.path / name).exists():
+                    raise ValueError('Unbound bounded proposition document.')
+        review = self.extra_documents.get('curation_review.json')
+        has_review = 'curation_review.json' in self.extra_documents
+        if has_review and 'proposition_documents' not in self.manifest:
+            raise ValueError(
+                'Legacy bounded reviews have no preparation binding; reprepare the source.'
+            )
+        if 'curation.json' in self.proposition_documents and not isinstance(review, dict):
+            raise ValueError('Bounded proposition checkpoints require a review ledger mapping.')
+        if has_review:
+            from phy.cluster._propositions import decode_review_mapping
+
+            source, _ = decode_review_mapping(review)
+            expected = self.proposition_documents.get('curation.json', {}).get('sha256')
+            if (
+                source.get('filename') != 'curation.json'
+                or expected is None
+                or source.get('sha256') != expected
+            ):
+                raise ValueError('Bounded review source filename/hash does not match preparation.')
+
+    @property
+    def retired_units(self):
+        """Cumulative retirement history, without retargeting source suggestions."""
+        result = copy.deepcopy(self.manifest.get('retired_units', {}))
+        # Events have already passed the complete-unit journal validator.
+        interpret_events(self.unit_ids, self.base_metadata, self.events)
+        for event in self.events:
+            if event['operation'] == 'merge':
+                for parent in event['parents']:
+                    result[str(parent)] = {'operation': 'merge', 'replacements': [event['target']]}
+            elif event['operation'] == 'threshold_split':
+                result[str(event['parent'])] = {
+                    'operation': 'threshold_split',
+                    'replacements': list(event['children']),
+                }
+        return result
 
     def _validated_state(self, assignments, metadata, events, next_cluster_id):
         self._validate_event_capabilities(events)
@@ -562,6 +669,7 @@ class BoundedSession:
         ):
             raise ValueError('Checkpoint belongs to a different bounded manifest.')
         for name, digest in descriptor['files'].items():
+            _validate_digest(digest)
             if _hash_file(_safe_file(generation, name)) != digest:
                 raise ValueError(f'Checkpoint corruption: {name}.')
         if not {'spike_clusters.npy', 'journal.json', 'metadata.json'} <= set(descriptor['files']):
@@ -580,9 +688,20 @@ class BoundedSession:
         self.next_cluster_id = next_id
         self.checkpoint_path = generation
         self._expected_pointer = copy.deepcopy(pointer)
+        documents = descriptor.get('extra_documents', [])
+        if (
+            not isinstance(documents, list)
+            or any(not isinstance(name, str) for name in documents)
+            or len(set(documents)) != len(documents)
+            or not set(documents) <= set(descriptor['files'])
+            or set(documents)
+            & {'checkpoint.json', 'spike_clusters.npy', 'journal.json', 'metadata.json'}
+        ):
+            raise ValueError('Extra checkpoint documents must be in the hash inventory.')
         self.extra_documents = {
-            name: _read_json(generation / name) for name in descriptor.get('extra_documents', [])
+            name: _read_json(_safe_file(generation, name)) for name in documents
         }
+        self.validate_proposition_documents()
 
     def snapshot(self):
         return {
@@ -733,6 +852,7 @@ class BoundedSession:
         extra_documents=None,
     ):
         """Validate, flush a generation, then atomically replace its commit pointer."""
+        self.validate_proposition_documents()
         assignments = self.assignments if assignments is None else assignments
         metadata = self.metadata if metadata is None else metadata
         events = self.events if events is None else events
@@ -740,9 +860,11 @@ class BoundedSession:
         values, metadata, next_id = self._validated_state(
             assignments, metadata, events, next_cluster_id
         )
-        documents = copy.deepcopy(
-            self.extra_documents if extra_documents is None else extra_documents
-        )
+        if extra_documents is not None and not isinstance(extra_documents, dict):
+            raise ValueError('Extra checkpoint documents must be a filename-to-JSON mapping.')
+        documents = copy.deepcopy(self.extra_documents)
+        if extra_documents is not None:
+            documents.update(copy.deepcopy(extra_documents))
         if not isinstance(documents, dict):
             raise ValueError('Extra checkpoint documents must be a filename-to-JSON mapping.')
         for name, value in documents.items():
@@ -750,6 +872,12 @@ class BoundedSession:
             if name in ('checkpoint.json', 'spike_clusters.npy', 'journal.json', 'metadata.json'):
                 raise ValueError('Extra document collides with a checkpoint state file.')
             _json_bytes(value)
+        previous_documents = self.extra_documents
+        try:
+            self.extra_documents = documents
+            self.validate_proposition_documents()
+        finally:
+            self.extra_documents = previous_documents
         root = self.path / '.phy-curation'
         generations = root / 'generations'
         generations.mkdir(parents=True, exist_ok=True)
@@ -795,6 +923,7 @@ class BoundedSession:
             _fsync_directory(generations)
             pointer = {'generation': identifier, 'sha256': _digest(descriptor)}
             _write_json(pointer_tmp, pointer)
+            self.validate_proposition_documents()
             os.replace(pointer_tmp, root / 'current.json')
             _fsync_directory(root)
         except BaseException:

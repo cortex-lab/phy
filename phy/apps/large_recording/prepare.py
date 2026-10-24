@@ -249,8 +249,12 @@ def _prepare_source(
         for name in ('curation.json', 'curation_review.json')
         if (source.path / name).is_file()
     ]
+    producer_hashes = {path.name: hash_file(path) for path in producer_documents}
     fixed_bytes = (
-        sum(path.stat().st_size for path in producer_documents)
+        sum(
+            path.stat().st_size * (2 if path.name == 'curation_review.json' else 1)
+            for path in producer_documents
+        )
         + summary_bytes
         + sum((source.path / name).stat().st_size for name in source.arrays.keys() & STATIC)
     )
@@ -605,12 +609,29 @@ def _prepare_source(
         }
         if getattr(source, 'time_base', None) is not None:
             manifest['time_base'] = source.time_base
+        manifest['retired_units'] = source.retired_units
+        manifest['proposition_documents'] = {}
         for document in producer_documents:
-            shutil.copyfile(document, temporary / document.name)
+            # Root review is a convenience copy; its inherited baseline is immutable.
+            name = (
+                '_phy_curation_review_base.json'
+                if document.name == 'curation_review.json'
+                else document.name
+            )
+            shutil.copyfile(document, temporary / name)
+            manifest['proposition_documents'][document.name] = {
+                'filename': name,
+                'sha256': producer_hashes[document.name],
+            }
+            if hash_file(temporary / name) != producer_hashes[document.name]:
+                raise ValueError('Producer proposition document changed during preparation.')
+            if name != document.name:
+                shutil.copyfile(document, temporary / document.name)
         bound_paths = [
             *temporary.glob('*.npy'),
             temporary / 'params.py',
             temporary / '_phy_cluster_metadata.json',
+            *(temporary / item['filename'] for item in manifest['proposition_documents'].values()),
         ]
         manifest['bounded_files'] = {p.name: hash_file(p) for p in sorted(bound_paths)}
         manifest['preparation_identity'] = hash_json(manifest)

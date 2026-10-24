@@ -16,7 +16,7 @@ from .curation import (
     interpret_events,
     project_assignments,
 )
-from .source import PER_SPIKE, Source, _has_raw_paths, close_array, publish_directory
+from .source import PER_SPIKE, Source, _has_raw_paths, close_array, hash_file, publish_directory
 
 
 def _merge_mapping(unit_ids, events):
@@ -76,6 +76,7 @@ def apply_curation(source_params, bounded_dir, output_dir, batch_size=100000):
 
 
 def _apply_curation(source, session, output_dir, batch_size):
+    session.validate_proposition_documents()
     manifest = session.manifest
     expected = manifest['source']
     if source.identity != expected['identity']:
@@ -87,6 +88,9 @@ def _apply_curation(source, session, output_dir, batch_size):
         or source.n_spikes != manifest['num_spikes']
     ):
         raise ValueError('Source catalog or spike count does not match bounded preparation.')
+    for name, item in session.proposition_documents.items():
+        if hash_file(source.path / name) != item['sha256']:
+            raise ValueError('Source proposition documents changed since preparation.')
     # Identity/revision bind the complete source. Validate the actual projection
     # too, so a tampered bounded base cannot silently replay unrelated evidence.
     source_assignments = source.arrays['spike_clusters.npy'].reshape(-1)
@@ -183,6 +187,17 @@ def _apply_curation(source, session, output_dir, batch_size):
         assignments = None
         _write_metadata(stage, metadata)
         _write_json(stage / '_phy_curation_journal.json', session.events)
+        proposition_hashes = {}
+        item = session.proposition_documents.get('curation.json')
+        if item is not None:
+            shutil.copyfile(session.path / item['filename'], stage / 'curation.json')
+            proposition_hashes['curation.json'] = hash_file(stage / 'curation.json')
+            if proposition_hashes['curation.json'] != item['sha256']:
+                raise ValueError('Producer propositions changed during replay.')
+        review = session.extra_documents.get('curation_review.json')
+        if review is not None and item is not None:
+            _write_json(stage / 'curation_review.json', review)
+            proposition_hashes['curation_review.json'] = hash_file(stage / 'curation_review.json')
         # Re-reading verifies alignment, full catalog and immutable byte digests.
         curated = Source(stage / 'params.py', batch_size=batch_size)
         if curated.identity != source.identity or curated.n_spikes != source.n_spikes:
@@ -211,6 +226,8 @@ def _apply_curation(source, session, output_dir, batch_size):
                 'preparation_sha256': _digest(manifest),
                 'next_cluster_id': session.next_cluster_id,
                 'unit_ids': sorted(active_units),
+                'retired_units': session.retired_units,
+                'proposition_documents': proposition_hashes,
             },
         )
         curated.close()
@@ -223,6 +240,7 @@ def _apply_curation(source, session, output_dir, batch_size):
         # Refuse replacement even when a racing caller creates the target.
         if output.exists():
             raise FileExistsError(f'Curated output already exists: {output}.')
+        session.validate_proposition_documents()
         publish_directory(stage, output)
         _fsync_directory(output.parent)
     except BaseException:

@@ -16,8 +16,10 @@ from phy.apps.large_recording.tests.test_source import make_sorting
 from phy.apps.template.gui import TemplateController
 
 
-def make_controller(tmp_path, sparse=False):
+def make_controller(tmp_path, sparse=False, propositions=None):
     params = make_gui_sorting(tmp_path / 'source')
+    if propositions is not None:
+        (params.parent / 'curation.json').write_text(json.dumps(propositions))
     output = prepare_large(
         params,
         tmp_path / 'bounded',
@@ -395,11 +397,10 @@ def test_empty_window_and_nonfinite_amplitude_measurements(qtbot, tmp_path):
 def test_proposition_reviews_checkpoint_and_failed_review_history(tmp_path):
     from phy.cluster._propositions import MergePropositionController, decode_curation_mapping
 
-    _, controller = make_controller(tmp_path)
-    supervisor = controller.supervisor
     mapping = {'format_version': '2', 'unit_ids': [0, 1, 2, 99], 'merges': [{'unit_ids': [0, 1]}]}
+    _, controller = make_controller(tmp_path, propositions=mapping)
+    supervisor = controller.supervisor
     producer = controller.dir_path / 'curation.json'
-    producer.write_text(json.dumps(mapping))
     supervisor.merge_propositions = MergePropositionController(decode_curation_mapping(mapping))
     key = supervisor.merge_propositions.catalog.propositions[0].key
     try:

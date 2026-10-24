@@ -301,6 +301,10 @@ class BoundedSupervisor(Supervisor):
         self.cluster_meta._data = data
 
     def _refresh_bounded(self):
+        if self.merge_propositions is not None:
+            self.merge_propositions.project_live_ids(
+                self.clustering.cluster_ids, retired_units=self.session.retired_units
+            )
         if self.gui is not None:
             data = self.cluster_info
             self.cluster_view.change(data)
@@ -438,15 +442,17 @@ class BoundedSupervisor(Supervisor):
 
     def save(self):
         self._validate_native()
+        self.session.validate_proposition_documents()
         documents = None
         if self.merge_propositions is not None:
-            from .source import hash_file
-
-            documents = {
-                'curation_review.json': self.merge_propositions.catalog.review_mapping(
-                    source_sha256=hash_file(self.session.path / 'curation.json')
-                )
-            }
+            documents = dict(self.session.extra_documents)
+            documents.update(
+                {
+                    'curation_review.json': self.merge_propositions.catalog.review_mapping(
+                        source_sha256=self.session.proposition_documents['curation.json']['sha256']
+                    )
+                }
+            )
         self.session.save(
             assignments=self.clustering.spike_clusters,
             metadata=self.session.metadata,

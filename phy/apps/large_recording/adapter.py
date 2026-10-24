@@ -7,7 +7,11 @@ import numpy as np
 from phylib.io.model import get_template_params
 from phylib.utils import Bunch
 
-from phy.cluster._propositions import MergePropositionController, decode_review_mapping
+from phy.cluster._propositions import (
+    MergePropositionController,
+    decode_curation_mapping,
+    decode_review_mapping,
+)
 
 from ..base import _allocate_spike_counts, _sample_spikes_evenly
 from ..template.gui import TemplateController
@@ -88,14 +92,25 @@ class BoundedTemplateController(TemplateController):
         self.supervisor._validate_native()
 
     def _load_merge_propositions(self):
-        controller = super()._load_merge_propositions()
-        reviews = self.bounded_session.extra_documents.get('curation_review.json')
-        if controller is not None and reviews is not None:
-            source, mapping = decode_review_mapping(reviews)
-            if source.get('sha256') != self._merge_proposition_sha256:
-                raise ValueError('Committed reviews belong to different merge propositions.')
-            controller = MergePropositionController(controller.catalog._replace(reviews=mapping))
-        return controller
+        session = self.bounded_session
+        session.validate_proposition_documents()
+        self._merge_proposition_sha256 = None
+        if not self.enable_merge_propositions:
+            return None
+        item = session.proposition_documents.get('curation.json')
+        if item is None:
+            return None
+        from .curation import _read_json
+
+        catalog = decode_curation_mapping(
+            _read_json(session.path / item['filename']), retired_units=session.retired_units
+        )
+        self._merge_proposition_sha256 = item['sha256']
+        reviews = session.extra_documents.get('curation_review.json')
+        if reviews is not None:
+            _, mapping = decode_review_mapping(reviews)
+            catalog = catalog._replace(reviews=mapping)
+        return MergePropositionController(catalog)
 
     def _set_cluster_metrics(self):
         super()._set_cluster_metrics()

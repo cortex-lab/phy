@@ -202,11 +202,21 @@ def test_final_windows_records_match_retained_samples_and_gaps(tmp_path):
 
 def test_prepare_protects_loader_and_preserves_producer_documents(tmp_path):
     params = make_sorting(tmp_path / 'full')
-    for name, value in (
-        ('curation.json', {'merge': [[0, 1]]}),
-        ('curation_review.json', {'accepted': []}),
-    ):
-        (params.parent / name).write_text(json.dumps(value))
+    (params.parent / 'curation.json').write_text(
+        json.dumps({'format_version': '2', 'unit_ids': [0, 1], 'merges': [{'unit_ids': [0, 1]}]})
+    )
+    (params.parent / 'curation_review.json').write_text(
+        json.dumps(
+            {
+                'format_version': '1',
+                'source': {
+                    'filename': 'curation.json',
+                    'sha256': hash_file(params.parent / 'curation.json'),
+                },
+                'reviews': {},
+            }
+        )
+    )
     output = prepare_large(params, tmp_path / 'bounded', window_seconds=20, stratum_seconds=20)
     manifest = json.loads((output / '_phy_curation_manifest.json').read_text())
     assert manifest['bounded_files']['params.py'] == hash_file(output / 'params.py')
