@@ -6,12 +6,39 @@ sorting. Preparation reads source arrays in batches; it does not load the full
 sorting into the GUI. The source dataset is retained unchanged, and replay
 writes a separate output dataset.
 
-This workflow is intended for a Phy sorting with one fixed-rate, monotonic sample
-clock. Multi-segment recordings are not supported. Supply acquisition duration
-and valid acquisition intervals when they are not already recorded in the
-dataset metadata. Duration describes exposure; Phy cannot infer acquisition
-gaps from periods with no spikes. Intervals use half-open sample coordinates
-`[start, end)`.
+This workflow supports a single monotonic event axis. Existing sources without
+an explicit time-base declaration use `acquisition_samples`, the legacy
+fixed-rate sample-coordinate contract. Sources with `time_base` may instead
+declare `elapsed_ticks`: nonnegative integer elapsed-time coordinates with a
+declared `ticks_per_second`. In either case, `num_samples` is the exclusive
+upper bound of the canonical coordinate axis, and `valid_intervals` are
+half-open `[start, end)` intervals on that same axis. For elapsed ticks,
+`num_samples` is a tick bound, not a physical frame count. Explicit elapsed
+sources must provide authoritative valid intervals; Phy cannot infer
+acquisition gaps or filler from periods with no spikes. Multi-segment recordings
+are not supported.
+
+The `time_base` declaration is a dictionary such as
+`{'kind': 'elapsed_ticks', 'ticks_per_second': 30000.0}` in `params.py` (or
+`recording.time_base` in the waveform manifest). For this workflow,
+`ticks_per_second`, `sample_rate`, and the physical waveform sample rate must
+be equal. Unequal event and waveform rates need separate waveform-axis support.
+A source containing `timestamps.json` must declare its coordinate contract
+explicitly; Phy does not parse that file to guess a conversion. Elapsed ticks
+cannot index raw voltage, so an elapsed source with a real `dat_path` is not
+supported. Stored waveforms can be used without raw data.
+
+For explicit elapsed exports, the waveform manifest must declare
+`recording.sample_index_coordinates` and
+`recording.window_bounds_coordinates` as `elapsed_ticks` when those sidecars are
+present. The waveform-aligned `sample_index[w]` must equal
+`spike_times[subset_spikes[w]]`; it is neither a source row ID nor a raw frame
+offset. The manifest's `sample_index_coordinates` and
+`window_bounds_coordinates` must each equal the declared `time_base.kind`.
+Producer window bounds describe canonical elapsed coordinates and must not
+cross unsupported gaps. The 512 MiB output cap applies to package bytes, not
+process RSS; waveform source, retained, and omitted counts are reported in the
+CLI and manifest.
 
 The screenshots below show the actual bounded GUI views using a deterministic
 synthetic eight-hour sorting. The overview plots full-duration rates and
@@ -53,31 +80,45 @@ phy prepare-large /data/recording/params.py /data/recording-bounded \
 
 `--duration` is in seconds and must agree with declared acquisition metadata.
 The `.npy` valid-interval file contains an integer array of shape `[W, 2]` with
-ordered, nonoverlapping sample pairs.
-Without it, the full declared duration is treated as valid exposure. Do not use
-that default when the recording contains acquisition gaps.
+ordered, nonoverlapping coordinate pairs. Without it, legacy acquisition-sample
+sources treat the full declared extent as valid exposure. Explicit elapsed
+sources require producer-declared `valid_intervals`; there is no full-extent
+default for them.
 
 `--max-bytes` limits the bounded output package size, including its summaries and
 window plan. It is not a process-memory or peak-RSS limit. The source unit IDs
 must fit nonnegative `int32`; sample coordinates and full-source spike row IDs
 use `int64`.
 
-Preparation chooses shared time windows under the spike and byte budgets. The
-window length, strata, and seed make the plan reproducible; inspect the saved
-window plan in the output package when documenting or repeating an analysis.
+Preparation uses `--window-policy auto` by default. When validated producer
+windows are available, it selects among those whole windows and preserves their
+acquisition boundaries. Producer-window mode requires valid producer windows;
+it does not generate rescue windows to compensate for missing or malformed
+producer evidence. Without producer windows, the original shared-window planner
+uses the configured window length, strata, and seed. Inspect the saved window
+plan in the output package when documenting or repeating an analysis.
 Windows that exceed the budget are omitted, so a high-density interval can
 reduce retained evidence. Preparation does not shorten an over-budget window or
-silently thin spikes inside it. A survey of shared windows is supplemented by
-deterministic rescue evidence for units missed by the survey. This improves the
-chance of seeing rare units, but makes the evidence selection unequal: rescue
-windows must not be treated as a probability sample.
+silently thin spikes inside it. The generated planner supplements its survey of
+shared windows with deterministic rescue evidence for units missed by the
+survey. This improves the chance of seeing rare units, but makes the evidence
+selection unequal: rescue windows must not be treated as a probability sample.
+Producer-window selection uses only the producer windows and does not generate
+rescue windows.
 
-Preparation records exact full-recording spike counts and rates using valid
-acquisition exposure. If source scalar amplitudes or depths are available, it
+Overlapping producer windows are allowed; selection uses their union while
+retaining their acquisition boundaries. Preparation records exact
+full-recording spike counts and rates using valid exposure. If source scalar
+amplitudes or depths are available, it
 also records per-bin finite-value means and availability counts. It does not
 invent missing measurements or convert source values to physical units. Stored
 waveforms are included only where available in the source; raw traces are not
 required when stored waveform data are sufficient for the views being used.
+The default spike and byte budgets remain 2,000,000 spikes and 512 MiB. Output
+byte budgets describe package bytes, not resident memory. Waveform availability
+can exceed the bounded output budget: preparation reports waveform counts
+retained, omitted, and available in the source on the CLI, and stores the counts
+in the manifest so truncation is visible.
 Producer-supplied per-unit metrics and annotations remain inherited metadata;
 Phy does not recalculate those values for merged or split units. Use the
 full-count, rate, amplitude-mean, and depth-mean summaries produced by this

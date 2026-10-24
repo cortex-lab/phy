@@ -24,6 +24,9 @@ behavior they verify rather than listed separately.
 - Sparse cluster IDs no longer require dense allocations during clustering.
 - Bounded amplitude plots label seconds from window start and display the
   window's recording-time range above the plot.
+- Long-recording preparation accepts explicitly declared elapsed-tick
+  coordinates and can select whole validated producer evidence windows, while
+  keeping the existing spike and output-byte budgets.
 
 ### Documentation
 
