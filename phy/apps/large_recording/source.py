@@ -427,6 +427,17 @@ class Source:
             array = _vector(self.arrays[name], name)
             if not np.issubdtype(array.dtype, np.integer):
                 raise ValueError(f'{name} must contain integer coordinates.')
+        times = _vector(self.arrays['spike_times.npy'], 'spike_times.npy')
+        # Monotonic sources expose a clock mismatch at their endpoints. Check
+        # these before scanning hundreds of millions of rows or hashing assets;
+        # the complete monotonicity and bounds validation below remains required.
+        if len(times) and (times[0] < 0 or times[-1] >= self.num_samples):
+            raise ValueError(
+                'Spike time endpoints fall outside declared num_samples; check that '
+                'spike_times.npy, num_samples, valid_intervals and waveform sidecars '
+                'use the same time base. Convert producer metadata to canonical '
+                'coordinates before preparing this sorting.'
+            )
         previous = -1
         for batch in self.iter_batches():
             times = batch['spike_times.npy']

@@ -293,3 +293,20 @@ def test_exclusive_publish_preserves_racing_empty_destination(tmp_path):
     publish_directory(staged, destination)
     assert not staged.exists()
     assert (destination / 'payload').read_text() == 'complete'
+
+
+def test_clock_endpoint_mismatch_fails_before_full_scan_or_hash(tmp_path, monkeypatch):
+    from phy.apps.large_recording import source as module
+
+    params = make_sorting(tmp_path / 'source')
+    times = np.load(params.parent / 'spike_times.npy')
+    times[-1] = 100
+    np.save(params.parent / 'spike_times.npy', times)
+
+    def unexpected(*args, **kwargs):
+        pytest.fail('Clock endpoint mismatch must fail before scans or hashing.')
+
+    monkeypatch.setattr(Source, 'iter_batches', unexpected)
+    monkeypatch.setattr(module, 'hash_file', unexpected)
+    with pytest.raises(ValueError, match='same time base'):
+        Source(params)
