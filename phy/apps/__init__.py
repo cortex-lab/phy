@@ -191,12 +191,21 @@ def cli_template_describe(ctx, params_path):
 @click.option('--seed', type=click.IntRange(min=0), default=0)
 @click.option('--bin-seconds', type=click.FloatRange(min=0, min_open=True), default=3600.0)
 @click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+@click.option(
+    '--window-policy',
+    type=click.Choice(['auto', 'producer', 'generated']),
+    default='auto',
+    show_default=True,
+    help='Prefer producer waveform windows, require them, or generate new windows.',
+)
 def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
     """Prepare bounded shared-window evidence and complete-sorting summaries.
 
-    VALID_INTERVALS is an optional int64 .npy array of acquisition sample [start, end) pairs.
+    VALID_INTERVALS is an optional int64 .npy array of acquisition [start, end) tick pairs.
     Duration/exposure must be authoritative; it is never inferred from spike silence.
     """
+    import json
+
     import numpy as np
 
     from .large_recording.prepare import prepare_large
@@ -207,6 +216,12 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
     except (ValueError, OSError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f'Prepared bounded evidence: {output}')
+    manifest = json.loads((output / '_phy_curation_manifest.json').read_text(encoding='utf-8'))
+    coverage = manifest['waveform_coverage']
+    click.echo(
+        f'Stored waveforms: {coverage["retained_rows"]:,} retained / '
+        f'{coverage["source_rows"]:,} source; {coverage["dropped_rows"]:,} omitted.'
+    )
 
 
 @phycli.command('apply-curation')
