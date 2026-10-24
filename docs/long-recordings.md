@@ -207,6 +207,28 @@ the curated output to produce a fresh package and revision-specific summaries.
 This replay and re-preparation step also resolves full-data counts and trends
 for threshold-split children.
 
+When the source includes SLAY suggestions in `curation.json`, preparation and
+replay preserve that file exactly, together with saved accept/reject decisions
+in `curation_review.json`. Subsequent bounded rounds retain those decisions,
+including rounds with no new edits or with the proposition view disabled.
+There is no need to copy either file by hand.
+
+Suggestions keep their original cluster IDs and source order. A saved acceptance
+remains part of the review history even if its resulting cluster is later
+merged or split. Pending suggestions whose original clusters disappear become
+stale; known merge or split causes are shown without assigning the suggestion
+to replacement clusters automatically. Legacy outputs without that history can
+only report that an original cluster is missing.
+
+Bounded packages bind suggestions and review history to file hashes. A committed
+checkpoint supplies the saved decisions even if a loose review copy is missing
+or outdated. Changing the bound suggestion file requires preparing a new
+package; incompatible or damaged documents stop saving or replay.
+Older bounded packages with unbound suggestion or review documents require
+migration before they can be replayed with this integrity check. Retain their
+source and saved checkpoints so existing curation can be recovered; preparing
+the original source again alone does not transfer those saved edits.
+
 ## Interpreting evidence
 
 Full counts and exposure-based rates describe the complete sorting. Window plots,

@@ -13,6 +13,10 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- SLAY merge suggestions and saved accept/reject decisions now survive bounded
+  curation, full-sorting replay, and subsequent preparation. Suggestions retain
+  their original IDs; pending suggestions affected by merges or splits become
+  stale rather than being silently reassigned.
 - Fixed saving bounded amplitude splits after merge undo/redo when NumPy cluster
   IDs appear in journal metadata.
 - Added `prepare-large` and `apply-curation` for bounded shared-window evidence,
