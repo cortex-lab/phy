@@ -60,3 +60,25 @@ still required; see `aind-native-export-acceptance.md`.
 Local reports and reproduction scripts are retained under
 `/home/cyrille/GIT/IBL/phy-data/carl/aind-b1b0782a-b3ea-4f34-81d7-b3c6e36452b3/slay-validation`.
 Large arrays and access credentials are not repository artifacts.
+
+## Results
+
+- All three rounds retained exactly two accepted and 91 pending suggestions,
+  identical producer bytes and review records, and matching assignments for
+  all 469,725,567 source rows. Each bounded package retained all 140,240
+  waveform rows and 7,298,318 evidence spikes at Carl's larger caps.
+- The independent hash oracle verified all 67 original files were unchanged
+  and 12 immutable files per full replay matched the converted source. Both
+  good labels and the seven retired parent records survived every round.
+- A separate final-code controller with proposition loading disabled saved and
+  reopened the real third-round checkpoint with both accepted reviews intact.
+- `make test-full` passed: 854 tests (499 core, 355 applications), with one
+  existing benchmark skip. Lint and formatting passed. The corrected disabled
+  controller tests subsequently passed all 22 persistence cases. `make doc-check`
+  passed; packaging was unchanged.
+- The combined three-round script completed every functional assertion and
+  wrote its success report, then exited with signal 11 during process shutdown.
+  A separate repeated six-controller/three-GUI lifecycle run with event
+  processing and reference cleanup exited successfully. The combined harness's
+  shutdown fault is retained as a limitation; its cause is not established as
+  a product defect or a data-integrity failure.
