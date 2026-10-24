@@ -310,3 +310,159 @@ def test_clock_endpoint_mismatch_fails_before_full_scan_or_hash(tmp_path, monkey
     monkeypatch.setattr(module, 'hash_file', unexpected)
     with pytest.raises(ValueError, match='same time base'):
         Source(params)
+
+
+def clock_manifest(params, recording):
+    path = params.parent / '_phy_spikes_subset.manifest.json'
+    path.write_text(
+        json.dumps(
+            {
+                'format': 'phy_spikes_subset',
+                'format_version': 1,
+                'recording': recording,
+            }
+        )
+    )
+    return path
+
+
+def test_explicit_clocks_and_legacy_identity(tmp_path):
+    params = make_sorting(tmp_path / 'source')
+    with Source(params) as source:
+        legacy = source.identity
+        assert source.time_base is None
+    # Existing exports preserve their exact identity schema.
+    assert set(legacy['time_base']) == {'sample_rate', 'num_samples', 'valid_intervals'}
+    contract = {'kind': 'acquisition_samples', 'ticks_per_second': 1}
+    params.write_text(params.read_text() + f'time_base = {contract!r}\n')
+    clock_manifest(params, {'time_base': contract})
+    with Source(params) as source:
+        assert source.time_base == contract
+        assert source.identity != legacy
+        explicit = source.identity
+    timestamps = params.parent / 'timestamps.json'
+    timestamps.write_text('{"mapping": "producer-owned"}')
+    with Source(params) as source:
+        assert source.identity != explicit
+        assert source.identity['time_base']['timestamps_sha256'] == hash_file(timestamps)
+    timestamps.write_text('{"mapping": "changed"}')
+    with Source(params) as source:
+        assert source.identity['time_base']['timestamps_sha256'] == hash_file(timestamps)
+
+
+@pytest.mark.parametrize(
+    'contract',
+    [
+        None,
+        {},
+        {'kind': 'clock', 'ticks_per_second': 1},
+        {'kind': 'elapsed_ticks', 'ticks_per_second': 0},
+        {'kind': 'elapsed_ticks', 'ticks_per_second': float('inf')},
+        {'kind': 'elapsed_ticks', 'ticks_per_second': True},
+        {'kind': 'elapsed_ticks', 'ticks_per_second': '1'},
+    ],
+)
+def test_invalid_explicit_clock_contract(tmp_path, contract):
+    params = make_sorting(tmp_path / 'source')
+    clock_manifest(params, {'time_base': contract})
+    with pytest.raises(ValueError, match='time_base'):
+        Source(params)
+
+
+def test_timestamps_without_contract_fail_before_arrays(tmp_path, monkeypatch):
+    params = make_sorting(tmp_path / 'source')
+    (params.parent / 'timestamps.json').write_text('{}')
+    monkeypatch.setattr(np, 'load', lambda *a, **kw: pytest.fail('Unexpected array read'))
+    with pytest.raises(ValueError, match='explicit time_base'):
+        Source(params)
+
+
+@pytest.mark.parametrize(
+    'failure',
+    [
+        'clock',
+        'ticks',
+        'waveform_rate',
+        'manifest_rate',
+        'frame_coordinates',
+        'missing_intervals',
+        'raw',
+        'window_coordinates',
+        'sample_coordinates',
+    ],
+)
+def test_explicit_elapsed_clock_rejects_ambiguous_producer_metadata(tmp_path, failure):
+    params = make_sorting(tmp_path / 'source')
+    contract = {'kind': 'elapsed_ticks', 'ticks_per_second': 1}
+    recording = {'time_base': contract, 'valid_intervals': [[0, 20]]}
+    if failure == 'clock':
+        params.write_text(
+            params.read_text()
+            + "time_base = {'kind': 'acquisition_samples', 'ticks_per_second': 1}\n"
+        )
+    elif failure == 'ticks':
+        recording['time_base'] = {**contract, 'ticks_per_second': 2}
+    elif failure == 'waveform_rate':
+        params.write_text(params.read_text() + 'waveform_sample_rate = 2\n')
+    elif failure == 'manifest_rate':
+        recording['sampling_frequency_hz'] = 2
+    elif failure == 'frame_coordinates':
+        recording['frame_coordinates'] = 'before any clock-time conversion'
+    elif failure == 'missing_intervals':
+        recording.pop('valid_intervals')
+    elif failure == 'raw':
+        params.write_text(params.read_text() + "dat_path = ['None', 'raw.bin']\n")
+    elif failure == 'window_coordinates':
+        np.save(params.parent / '_phy_spikes_subset.window_bounds.npy', [[0, 20]])
+    else:
+        np.save(params.parent / '_phy_spikes_subset.sample_index.npy', [0, 1, 2, 14, 19])
+        recording['sample_index_coordinates'] = 'acquisition_samples'
+    clock_manifest(params, recording)
+    with pytest.raises(ValueError):
+        Source(params)
+
+
+@pytest.mark.parametrize('raw', [None, 'None', '', [], [None, 'None', '']])
+def test_elapsed_clock_canonical_sidecars_and_no_raw_sentinels(tmp_path, raw):
+    params = make_sorting(tmp_path / 'source')
+    contract = {'kind': 'elapsed_ticks', 'ticks_per_second': 1}
+    params.write_text(params.read_text() + f'dat_path = {raw!r}\n')
+    recording = {
+        'time_base': contract,
+        'valid_intervals': [[0, 7], [10, 20]],
+        'frame_coordinates': 'elapsed_ticks',
+        'window_bounds_coordinates': 'elapsed_ticks',
+        'sample_index_coordinates': 'elapsed_ticks',
+    }
+    clock_manifest(params, recording)
+    np.save(params.parent / '_phy_spikes_subset.window_bounds.npy', [[0, 7], [10, 20]])
+    np.save(params.parent / '_phy_spikes_subset.sample_index.npy', [0, 1, 2, 14, 19])
+    with Source(params) as source:
+        assert source.time_base == contract
+        assert source.upstream_recording == recording
+        assert source.valid_intervals.tolist() == [[0, 7], [10, 20]]
+
+
+@pytest.mark.parametrize(
+    'values',
+    [
+        [0, 1, 2, 14],
+        [[0], [1], [2], [14], [19]],
+        [0.0, 1.0, 2.0, 14.0, 19.0],
+        [-1, 1, 2, 14, 19],
+        [0, 1, 2, 14, 20],
+        [0, 1, 2, 13, 19],
+    ],
+)
+def test_waveform_sample_index_requires_exact_canonical_alignment(tmp_path, values):
+    params = make_sorting(tmp_path / 'source')
+    np.save(params.parent / '_phy_spikes_subset.sample_index.npy', values)
+    with pytest.raises(ValueError, match='sample_index'):
+        Source(params)
+
+
+def test_waveform_sample_index_legacy_default_is_acquisition_samples(tmp_path):
+    params = make_sorting(tmp_path / 'source', columns=True)
+    np.save(params.parent / '_phy_spikes_subset.sample_index.npy', [0, 1, 2, 14, 19])
+    with Source(params) as source:
+        assert '_phy_spikes_subset.sample_index.npy' in source.identity['arrays']

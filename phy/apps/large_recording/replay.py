@@ -16,7 +16,7 @@ from .curation import (
     interpret_events,
     project_assignments,
 )
-from .source import PER_SPIKE, Source, close_array, publish_directory
+from .source import PER_SPIKE, Source, _has_raw_paths, close_array, publish_directory
 
 
 def _merge_mapping(unit_ids, events):
@@ -142,12 +142,17 @@ def _apply_curation(source, session, output_dir, batch_size):
         upstream_manifest = source.path / '_phy_spikes_subset.manifest.json'
         if upstream_manifest.exists():
             shutil.copyfile(upstream_manifest, stage / upstream_manifest.name)
+        if source.time_base is not None and source.timestamps_path.exists():
+            shutil.copyfile(source.timestamps_path, stage / 'timestamps.json')
         # Preserve source params semantics and make external raw paths absolute.
         # The full export can contain no raw traces; immutable array rows suffice.
         dat_path = source.params.get('dat_path')
-        if dat_path:
+        if _has_raw_paths(dat_path):
             raw_paths = dat_path if isinstance(dat_path, (list, tuple)) else [dat_path]
-            resolved = [str((source.path / raw).resolve()) for raw in raw_paths]
+            resolved = [
+                str((source.path / raw).resolve()) if _has_raw_paths(raw) else raw
+                for raw in raw_paths
+            ]
             dat_path = resolved if isinstance(dat_path, (list, tuple)) else resolved[0]
         with (stage / 'params.py').open('a', encoding='utf8') as stream:
             stream.write(f'\nnum_samples = {source.num_samples!r}\n')

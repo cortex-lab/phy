@@ -142,3 +142,49 @@ def test_bounded_threshold_attribute_must_match_exact_source_rows(tmp_path):
     with pytest.raises(ValueError, match='does not match source rows'):
         apply_curation(source.params_path, session.path, tmp_path / 'bad_evidence')
     assert not (tmp_path / 'bad_evidence').exists()
+
+
+@pytest.mark.parametrize('kind', ['acquisition_samples', 'elapsed_ticks'])
+def test_replay_preserves_explicit_clock_metadata_and_timestamp_bytes(tmp_path, kind):
+    source, session = make_session(tmp_path)
+    params = source.params_path
+    intervals = source.valid_intervals.tolist()
+    rate = source.sample_rate
+    source.close()
+    session.close()
+    contract = {'kind': kind, 'ticks_per_second': rate}
+    params.write_text(
+        params.read_text()
+        + f'\ntime_base = {contract!r}\nvalid_intervals = {intervals!r}\ndat_path = "None"\n'
+    )
+    timestamps = params.parent / 'timestamps.json'
+    timestamps.write_bytes(b'{"producer": "clock mapping", "gaps": [4, 8]}\n')
+    upstream_path = params.parent / '_phy_spikes_subset.manifest.json'
+    upstream = json.loads(upstream_path.read_text())
+    upstream['recording'].update(
+        {
+            'time_base': contract,
+            'frame_coordinates': kind,
+            'window_bounds_coordinates': kind,
+            'sample_index_coordinates': kind,
+        }
+    )
+    upstream_path.write_text(json.dumps(upstream))
+    source = Source(params)
+    manifest_path = session.path / '_phy_curation_manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    manifest['source']['identity'] = source.identity
+    manifest_path.write_text(json.dumps(manifest))
+    from phy.apps.large_recording.curation import BoundedSession
+
+    session = BoundedSession(session.path)
+    session.record_merge([0, 1], 100)
+    session.save()
+    output = apply_curation(params, session.path, tmp_path / 'curated')
+    assert (output / 'timestamps.json').read_bytes() == timestamps.read_bytes()
+    with Source(output / 'params.py') as curated:
+        assert curated.identity == source.identity
+        assert curated.time_base == contract
+        assert curated.params['dat_path'] == 'None'
+    session.close()
+    source.close()

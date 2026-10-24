@@ -48,6 +48,7 @@ WAVEFORMS = frozenset(
         '_phy_spikes_subset.waveforms.npy',
     )
 )
+WAVEFORM_SIDECARS = frozenset(('_phy_spikes_subset.sample_index.npy',))
 WINDOW_SIDECARS = frozenset(
     (
         '_phy_spikes_subset.window_bounds.npy',
@@ -173,6 +174,26 @@ def _metadata(path):
     return result
 
 
+def _time_base(value):
+    """Normalize an explicit producer clock without inferring conversions."""
+    if not isinstance(value, dict) or set(value) != {'kind', 'ticks_per_second'}:
+        raise ValueError('time_base must declare kind and ticks_per_second.')
+    if value['kind'] not in ('acquisition_samples', 'elapsed_ticks'):
+        raise ValueError('time_base.kind must be acquisition_samples or elapsed_ticks.')
+    rate = value['ticks_per_second']
+    if isinstance(rate, bool) or not isinstance(rate, (int, float)):
+        raise ValueError('time_base.ticks_per_second must be positive and finite.')
+    rate = float(rate)
+    if not np.isfinite(rate) or rate <= 0:
+        raise ValueError('time_base.ticks_per_second must be positive and finite.')
+    return {'kind': value['kind'], 'ticks_per_second': rate}
+
+
+def _has_raw_paths(dat_path):
+    paths = dat_path if isinstance(dat_path, (list, tuple)) else [dat_path]
+    return any(path is not None and str(path).strip() not in ('', 'None') for path in paths)
+
+
 class Source:
     """Read source arrays in batches without constructing a GUI model.
 
@@ -224,6 +245,43 @@ class Source:
             upstream_rate = recording.get('sampling_frequency_hz', self.sample_rate)
             if upstream_rate != self.sample_rate:
                 raise ValueError('Waveform manifest sampling rate disagrees with params.py.')
+        self.upstream_recording = recording
+        declared_clocks = [
+            _time_base(container['time_base'])
+            for container in (self.params, recording)
+            if 'time_base' in container
+        ]
+        if len(declared_clocks) == 2 and declared_clocks[0] != declared_clocks[1]:
+            raise ValueError('time_base disagrees between params and waveform manifest.')
+        self.time_base = declared_clocks[0] if declared_clocks else None
+        self.timestamps_path = self.path / 'timestamps.json'
+        if self.time_base is None and self.timestamps_path.exists():
+            raise ValueError(
+                'timestamps.json requires an explicit time_base in params.py or manifest '
+                'recording. Convert num_samples, valid_intervals and waveform sidecars '
+                'to the spike_times.npy coordinates; automatic timestamp mapping is unsupported.'
+            )
+        if self.time_base is not None:
+            if self.time_base['ticks_per_second'] != self.sample_rate:
+                raise ValueError('time_base ticks_per_second must equal sample_rate.')
+            for container in (self.params, recording):
+                if container.get('waveform_sample_rate', self.sample_rate) != self.sample_rate:
+                    raise ValueError('waveform_sample_rate must equal sample_rate.')
+            kind = self.time_base['kind']
+            if recording.get('frame_coordinates', kind) != kind:
+                raise ValueError('recording.frame_coordinates must equal time_base.kind.')
+            for suffix, field in (
+                ('window_bounds', 'window_bounds_coordinates'),
+                ('sample_index', 'sample_index_coordinates'),
+            ):
+                if (self.path / f'_phy_spikes_subset.{suffix}.npy').exists():
+                    coordinates = recording.get(field)
+                    if coordinates is None and kind == 'acquisition_samples':
+                        coordinates = kind
+                    if coordinates != kind:
+                        raise ValueError(f'recording.{field} must equal time_base.kind.')
+            if kind == 'elapsed_ticks' and _has_raw_paths(self.params.get('dat_path')):
+                raise ValueError('elapsed_ticks cannot reference raw dat_path traces.')
         if self.params.get('num_segments', recording.get('num_segments', 1)) != 1:
             raise ValueError('Only a single monotonic acquisition segment is supported.')
         duration_samples = None
@@ -278,6 +336,12 @@ class Source:
                 raise ValueError('Explicit valid_intervals disagree with acquisition metadata.')
         if valid_intervals is None:
             valid_intervals = declared_intervals
+        if (
+            self.time_base is not None
+            and self.time_base['kind'] == 'elapsed_ticks'
+            and valid_intervals is None
+        ):
+            raise ValueError('elapsed_ticks requires explicit authoritative valid_intervals.')
         intervals = [[0, self.num_samples]] if valid_intervals is None else valid_intervals
         raw_intervals = np.asarray(intervals)
         if raw_intervals.ndim != 2 or raw_intervals.shape[1] != 2 or not len(raw_intervals):
@@ -293,8 +357,19 @@ class Source:
             raise ValueError(
                 'valid_intervals must be ordered, disjoint integer acquisition samples.'
             )
+        sample_index_path = self.path / '_phy_spikes_subset.sample_index.npy'
+        if (
+            self.time_base is None
+            and sample_index_path.exists()
+            and recording.get('sample_index_coordinates', 'acquisition_samples')
+            != 'acquisition_samples'
+        ):
+            raise ValueError(
+                'Legacy waveform sample_index coordinates must be acquisition_samples; '
+                'declare an explicit time_base for elapsed_ticks.'
+            )
         names = {p.name for p in self.path.glob('*.npy')}
-        unknown = names - PER_SPIKE - STATIC - WAVEFORMS - WINDOW_SIDECARS
+        unknown = names - PER_SPIKE - STATIC - WAVEFORMS - WAVEFORM_SIDECARS - WINDOW_SIDECARS
         # Replay lineage and original optional sidecars are retained; bounded
         # outputs deliberately cannot be used as full-source sorting inputs.
         if unknown:
@@ -370,6 +445,10 @@ class Source:
             },
             'arrays': {name: hash_file(self.path / name) for name in immutable},
         }
+        if self.time_base is not None:
+            self.identity['time_base']['contract'] = self.time_base.copy()
+            if self.timestamps_path.exists():
+                self.identity['time_base']['timestamps_sha256'] = hash_file(self.timestamps_path)
         self.identity['sha256'] = hash_json(self.identity)
         declared_source = info.get('source_sorting', {})
         if not isinstance(declared_source, dict):
@@ -464,6 +543,9 @@ class Source:
         waveforms = self.arrays.keys() & WAVEFORMS
         if waveforms and waveforms != WAVEFORMS:
             raise ValueError('Stored waveforms require spikes, channels, and waveforms together.')
+        sample_index = self.arrays.get('_phy_spikes_subset.sample_index.npy')
+        if sample_index is not None and not waveforms:
+            raise ValueError('Stored waveform sample_index requires the waveform triplet.')
         if waveforms:
             ids = self.arrays['_phy_spikes_subset.spikes.npy']
             if ids.ndim != 1 or ids.dtype != np.dtype('int64'):
@@ -478,6 +560,12 @@ class Source:
                 or not np.issubdtype(channels.dtype, np.integer)
             ):
                 raise ValueError('Stored waveform tensors and channels are not aligned.')
+            if sample_index is not None and (
+                sample_index.ndim != 1
+                or not np.issubdtype(sample_index.dtype, np.integer)
+                or len(sample_index) != len(ids)
+            ):
+                raise ValueError('Stored waveform sample_index must be an aligned integer vector.')
             last = -1
             # Sparse-padding checks create temporary boolean arrays and gathers;
             # cap their tensor bytes independently of the source row batch size.
@@ -493,6 +581,19 @@ class Source:
                     or np.any(rows >= self.n_spikes)
                 ):
                     raise ValueError('Stored waveform row IDs must be sorted, unique source rows.')
+                if sample_index is not None:
+                    coordinates = sample_index[start : start + waveform_batch]
+                    if (
+                        np.any(coordinates < 0)
+                        or np.any(coordinates >= self.num_samples)
+                        or not np.array_equal(
+                            coordinates, self.arrays['spike_times.npy'].reshape(-1)[rows]
+                        )
+                    ):
+                        raise ValueError(
+                            'Stored waveform sample_index must equal spike_times.npy at waveform '
+                            'row IDs in canonical time-base coordinates.'
+                        )
                 if len(rows):
                     last = int(rows[-1])
                 if np.any((slots < -1) | (slots >= n_channels)):
