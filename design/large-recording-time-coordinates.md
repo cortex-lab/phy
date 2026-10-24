@@ -125,13 +125,16 @@ clock conversion must be corrected explicitly for an elapsed export.
 The sidecars have these meanings and validation obligations:
 
 - `_phy_spikes_subset.window_bounds.npy`: `int64[W, 2]` event-coordinate
-  `[start, end)` intervals, ordered and nonoverlapping, within the declared
-  extent and valid exposure. A window cannot bridge an unsupported interruption.
-- `_phy_spikes_subset.window_types.npy`: `uint8[W]`, with `0` survey and `1`
-  rescue.
-- `_phy_spikes_subset.window_strata.npy`: `int32[W]`, nonnegative survey
-  stratum IDs and `-1` for rescue. The three window arrays are aligned.
-- Optional `_phy_spikes_subset.sample_index.npy`: `int64[N_waveforms]`, aligned
+  `[start, end)` intervals, ordered by start, within the declared extent and
+  valid exposure. Overlapping windows are unioned without double counting;
+  acquisition block boundaries remain distinct. A window cannot bridge an
+  unsupported interruption.
+- Optional `_phy_spikes_subset.window_types.npy`: integer `[W]`, conventionally
+  `uint8`, with `0` survey and `1` rescue; absent types default to survey.
+- Optional `_phy_spikes_subset.window_strata.npy`: integer `[W]`, conventionally
+  `int32`, nonnegative survey stratum IDs and `-1` for rescue. Supplied arrays
+  align with the window bounds; absent strata receive deterministic defaults.
+- Optional `_phy_spikes_subset.sample_index.npy`: integer `[N_waveforms]`, aligned
   with waveform rows, containing canonical event-center coordinates. For every
   waveform row `w`, it equals
   `spike_times[subset_spikes[w]]`. It is not a source spike row ID or a raw-file
@@ -223,9 +226,10 @@ Before considering the extension complete, require concrete checks for:
    identify the conflicting coordinate meanings before the expensive scan.
 4. Spikes in filler/excluded exposure, internal reversals and invalid interval
    boundaries; none are silently dropped or accepted as valid exposure.
-5. Malformed or partially supplied producer sidecars, invalid dtypes/lengths,
-   overlapping windows, windows crossing gaps, waveform centers outside windows,
-   and sample-index values inconsistent with their source spike rows.
+5. Malformed producer sidecars, policy labels without bounds, invalid
+   dtypes/lengths, overlapping-window union without double counting, windows
+   crossing gaps, waveform centers outside windows, and sample-index values
+   inconsistent with their source spike rows.
 6. Budget-constrained producer-window selection with exact retained/omitted
    waveform reporting and deterministic complete-window selection.
 7. Prepare, merge/label, save/reopen, replay and reprepare preserving explicit

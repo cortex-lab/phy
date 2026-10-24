@@ -1,4 +1,4 @@
-"""Validated, file-backed source sorting on one monotonic sample clock."""
+"""Validated, file-backed source sorting on one monotonic integer time axis."""
 
 import csv
 import ctypes

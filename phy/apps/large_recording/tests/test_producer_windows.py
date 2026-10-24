@@ -129,13 +129,29 @@ def test_overlaps_union_without_duplicate_spikes(tmp_path):
     np.testing.assert_array_equal(np.load(output / manifest['windows_file']), [[0, 20]])
 
 
-def test_waveforms_outside_producer_windows_rejected(tmp_path):
+@pytest.mark.parametrize('policy', ['auto', 'producer', 'generated'])
+def test_waveforms_outside_producer_windows_rejected(tmp_path, policy):
     params = producer_sorting(tmp_path / 'source')
     np.save(params.parent / (STEM + 'window_bounds.npy'), np.array([[0, 3]]))
     for suffix in ('window_types.npy', 'window_strata.npy'):
         (params.parent / (STEM + suffix)).unlink()
     with pytest.raises(ValueError, match='outside'):
-        prepare_large(params, tmp_path / 'bounded', window_policy='producer')
+        prepare_large(params, tmp_path / 'bounded', window_policy=policy)
+
+
+def test_legacy_acquisition_coordinate_declaration(tmp_path):
+    params = producer_sorting(tmp_path / 'source')
+    (params.parent / (STEM + 'manifest.json')).write_text(
+        json.dumps(
+            {
+                'format': 'phy_spikes_subset',
+                'format_version': 1,
+                'recording': {'window_bounds_coordinates': 'acquisition_samples'},
+            }
+        )
+    )
+    output = prepare_large(params, tmp_path / 'bounded', window_policy='producer')
+    assert read_manifest(output)['waveform_coverage']['retained_rows'] == 5
 
 
 def test_wrong_window_coordinates_rejected_for_generated(tmp_path):

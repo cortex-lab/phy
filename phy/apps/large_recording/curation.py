@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .source import hash_json
+from .source import _time_base, hash_json
 
 MANIFEST = '_phy_curation_manifest.json'
 BASE_ASSIGNMENTS = '_phy_spike_clusters_base.npy'
@@ -390,11 +390,26 @@ class BoundedSession:
             raise ValueError('Invalid bounded counts or recording duration.')
         if manifest['sample_rate'] <= 0:
             raise ValueError('Sampling rate must be positive.')
-        if identity['time_base'] != {
+        expected_time_base = {
             'sample_rate': manifest['sample_rate'],
             'num_samples': samples,
             'valid_intervals': manifest['valid_intervals'],
-        }:
+        }
+        if manifest.get('time_base') is not None:
+            contract = _time_base(manifest['time_base'])
+            if contract['ticks_per_second'] != manifest['sample_rate']:
+                raise ValueError('Bounded tick frequency disagrees with sampling rate.')
+            expected_time_base['contract'] = contract
+            timestamps_hash = identity['time_base'].get('timestamps_sha256')
+            if timestamps_hash is not None:
+                if (
+                    not isinstance(timestamps_hash, str)
+                    or len(timestamps_hash) != 64
+                    or any(c not in '0123456789abcdef' for c in timestamps_hash)
+                ):
+                    raise ValueError('Invalid source timestamps digest.')
+                expected_time_base['timestamps_sha256'] = timestamps_hash
+        if identity['time_base'] != expected_time_base:
             raise ValueError('Bounded time base disagrees with immutable source identity.')
         self.capabilities = _validate_capabilities(manifest)
         self.unit_ids = [_integer(i, 'Unit ID') for i in manifest['unit_ids']]

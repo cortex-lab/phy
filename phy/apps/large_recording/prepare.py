@@ -91,7 +91,7 @@ def _producer_windows(source):
     info = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
     coordinates = info.get('recording', {}).get('window_bounds_coordinates')
     clock = getattr(source, 'time_base', None)
-    kind = clock['kind'] if clock else 'samples'
+    kind = clock['kind'] if clock else 'acquisition_samples'
     if coordinates is not None and coordinates != kind:
         raise ValueError('Producer window_bounds_coordinates disagrees with the source time_base.')
     if kind == 'elapsed_ticks' and coordinates is None:
@@ -115,6 +115,10 @@ def _producer_windows(source):
             raise ValueError(
                 'Producer window_strata must be nonnegative for survey and -1 for rescue.'
             )
+    if source.arrays.keys() >= WAVEFORMS:
+        union = _union(bounds, set(source.valid_intervals[:, 0]))
+        if _selected_waveform_count(source, union) != len(source.arrays[stem + 'spikes.npy']):
+            raise ValueError('Stored waveform rows fall outside the producer window plan.')
     provenance = {
         'sha256': hash_json(
             {
@@ -316,8 +320,6 @@ def _prepare_source(
         union = _union(bounds, set(source.valid_intervals[:, 0]))
         all_spikes = sum(stop - first for first, stop in _row_bounds(times, union))
         all_waveforms = _selected_waveform_count(source, union)
-        if all_waveforms != len(source.arrays['_phy_spikes_subset.spikes.npy']):
-            raise ValueError('Stored waveform rows fall outside the producer window plan.')
         producer_estimate = {
             'spikes': all_spikes,
             'waveform_rows': all_waveforms,

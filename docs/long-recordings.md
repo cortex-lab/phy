@@ -103,8 +103,9 @@ silently thin spikes inside it. The generated planner supplements its survey of
 shared windows with deterministic rescue evidence for units missed by the
 survey. This improves the chance of seeing rare units, but makes the evidence
 selection unequal: rescue windows must not be treated as a probability sample.
-Producer-window selection uses only the producer windows and does not generate
-rescue windows.
+The explicit `producer` policy uses only producer windows. The `auto` policy
+can supplement producer windows with generated rescue evidence for units still
+missing from the selected evidence.
 
 Overlapping producer windows are allowed; selection uses their union while
 retaining their acquisition boundaries. Preparation records exact
