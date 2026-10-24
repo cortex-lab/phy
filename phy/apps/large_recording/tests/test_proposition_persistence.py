@@ -1,6 +1,7 @@
 """Producer bytes, durable decisions and retirement survive bounded replay rounds."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -180,9 +181,7 @@ def test_copy_race_rejects_producer_mutation_without_publication(tmp_path, monke
 
     def mutate_copy(source, destination, *args, **kwargs):
         result = original_copy(source, destination, *args, **kwargs)
-        if str(destination).endswith('/curation.json'):
-            from pathlib import Path
-
+        if Path(destination).name == 'curation.json':
             Path(destination).write_text('{}')
         return result
 
