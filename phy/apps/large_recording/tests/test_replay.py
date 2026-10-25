@@ -186,6 +186,6 @@ def test_replay_preserves_explicit_clock_metadata_and_timestamp_bytes(tmp_path, 
     with Source(output / 'params.py') as curated:
         assert curated.identity == source.identity
         assert curated.time_base == contract
-        assert curated.params['dat_path'] == 'None'
+        assert curated.params['dat_path'] is None
     session.close()
     source.close()
