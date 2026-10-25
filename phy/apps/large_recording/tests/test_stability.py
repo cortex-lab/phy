@@ -572,3 +572,34 @@ def test_pending_summaries_also_obey_cache_budget(summary_view):
     assert (
         sum(map(view._data_bytes, view._selected_summaries.values())) <= view.summary_cache_bytes
     )
+
+
+@pytest.mark.parametrize(
+    'edges',
+    [
+        [0, 10, 25, 30],
+        [0, 10, 20, 35],
+        [0, 10, 20, 20],
+        [0, 10, 20, np.inf],
+    ],
+)
+def test_seconds_coarsening_rejects_nonuniform_or_invalid_native_bins(summary_view, edges):
+    view = summary_view
+    view._common().edges = np.asarray(edges, dtype=float)
+    assert view._display_factor(0) == 1
+    with pytest.raises(ValueError, match='requires uniform native bins'):
+        view.set_display_bin_seconds(20)
+    assert view.display_bin_seconds == 0
+    view.set_state({'display_bin_seconds': 20})
+    assert view.display_bin_seconds == 0
+
+
+def test_seconds_coarsening_supports_short_final_native_bin(summary_view):
+    view = summary_view
+    # The fixture's native widths are 10, 10, 5 seconds.
+    assert view._display_factor(20) == 2
+    view.set_display_bin_seconds(20)
+    data = view.get_display_data(1)
+    np.testing.assert_array_equal(data.edges, [0, 20, 25])
+    np.testing.assert_array_equal(data.counts, [4, 3])
+    np.testing.assert_array_equal(data.exposure, [8, 3])

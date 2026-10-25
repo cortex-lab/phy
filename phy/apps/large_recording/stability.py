@@ -194,7 +194,20 @@ class UnitStabilityView(ManualClusteringView):
             raise ValueError('Display bin size must be zero (native) or finite and positive.')
         if seconds == 0:
             return 1
-        native = np.diff(self._common().edges)[0]
+        widths = np.diff(self._common().edges)
+        native = widths[0] if len(widths) else np.nan
+        if (
+            not np.all(np.isfinite(widths))
+            or not np.isfinite(native)
+            or native <= 0
+            or not np.allclose(widths[:-1], native, rtol=1e-10, atol=1e-10)
+            or widths[-1] <= 0
+            or (widths[-1] > native and not np.isclose(widths[-1], native, rtol=1e-10, atol=1e-10))
+        ):
+            raise ValueError(
+                'Display bin size in seconds requires uniform native bins, '
+                'with an optional shorter final bin. Use 0 for native bins.'
+            )
         factor = seconds / native
         if (
             not np.isfinite(factor)
