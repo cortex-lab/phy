@@ -98,6 +98,12 @@ including two added encoding regressions. This covers 934 distinct current
 tests; full CI runs the final tree together. Lint and format checks passed.
 Documentation and wheel checks are recorded with the final handoff.
 
+`make doc-check` and `uv build` passed. The built wheel contains both new
+runtime modules (`metadata.py` and `parameters.py`) with bytes matching the
+working source. All refreshed image files were visually inspected. Source
+symlink regressions skip only the specific Windows missing-privilege condition;
+they run normally on systems supporting symlink creation.
+
 Local reports/scripts are under
 `/home/cyrille/GIT/IBL/phy-data/carl/aind-b1b0782a-b3ea-4f34-81d7-b3c6e36452b3/pdf-metadata-validation/`.
 Captures are in sibling `pdf-refinements-screenshots` and

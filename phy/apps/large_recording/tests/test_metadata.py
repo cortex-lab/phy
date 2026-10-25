@@ -429,7 +429,7 @@ def test_readonly_source_symlink_preserves_table_alias_and_target(tmp_path):
     producer = tmp_path / 'immutable-producer-si.tsv'
     producer.write_text('cluster_id\tsi_unit_id\n0\t40\n1\t44\n2\t48\n99\t99\n')
     alias = params.parent / 'cluster_si_unit_ids.tsv'
-    alias.symlink_to(producer)
+    _symlink_or_skip(alias, producer)
     original_hash = hash_file(producer)
     with Source(params) as source:
         assert source.metadata['si_unit_id'][0] == '40'
@@ -452,7 +452,7 @@ def test_metadata_output_refuses_existing_symlink_without_mutating_target(tmp_pa
     producer.write_text('immutable producer data')
     destination = tmp_path / 'out'
     destination.mkdir()
-    (destination / 'cluster_si_unit_ids.tsv').symlink_to(producer)
+    _symlink_or_skip(destination / 'cluster_si_unit_ids.tsv', producer)
     schema = {
         'version': 1,
         'tables': [
@@ -467,3 +467,12 @@ def test_metadata_output_refuses_existing_symlink_without_mutating_target(tmp_pa
     with pytest.raises(ValueError, match='output must not overwrite a symbolic link'):
         write_metadata(destination, {'si_unit_id': {0: '40'}}, schema)
     assert hash_file(producer) == original_hash
+
+
+def _symlink_or_skip(path, target):
+    try:
+        path.symlink_to(target)
+    except OSError as error:
+        if getattr(error, 'winerror', None) == 1314:
+            pytest.skip('This Windows account has no symbolic-link privilege.')
+        raise
