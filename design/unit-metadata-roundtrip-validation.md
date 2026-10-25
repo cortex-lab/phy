@@ -94,8 +94,8 @@ weighted means and final partial bins.
 Local verification ran `make test-full` (499 core + 431 application tests, one
 existing benchmark skip), then the application target after two added symlink
 regressions (433 passed). The final parameter/replay run passed 23 cases,
-including two added encoding regressions. This covers 934 distinct current
-tests; full CI runs the final tree together. Lint and format checks passed.
+including two added encoding regressions. The final metadata run passed 24 cases, including two added structured-label
+serialization regressions. This covers 936 distinct current tests; full CI runs the final tree together. Lint and format checks passed.
 Documentation and wheel checks are recorded with the final handoff.
 
 `make doc-check` and `uv build` passed. The built wheel contains both new

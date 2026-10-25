@@ -476,3 +476,21 @@ def _symlink_or_skip(path, target):
         if getattr(error, 'winerror', None) == 1314:
             pytest.skip('This Windows account has no symbolic-link privilege.')
         raise
+
+
+@pytest.mark.parametrize('value', [{'z': (1, 2), 'a': True}, [{'z': 2, 'a': True}]])
+def test_legacy_structured_label_key_order_and_tuple_json_equivalence(tmp_path, value):
+    metadata = {'details': {0: value}}
+    table = tmp_path / 'cluster_details.tsv'
+    with table.open('w', newline='') as stream:
+        writer = csv.writer(stream, delimiter='\t')
+        writer.writerow(['cluster_id', 'details'])
+        writer.writerow([0, value])
+    sidecar = tmp_path / '_phy_cluster_metadata.json'
+    sidecar.write_text(json.dumps(metadata, sort_keys=True))
+    actual, _ = read_metadata(tmp_path)
+    assert actual['details'][0] == json.loads(json.dumps(value))
+    # A changed boolean is a real conflict, not legacy serialization variance.
+    table.write_text(table.read_text().replace('True', '1'))
+    with pytest.raises(ValueError, match='field details, unit 0'):
+        read_metadata(tmp_path)

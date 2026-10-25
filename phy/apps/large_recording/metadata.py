@@ -1,5 +1,6 @@
 """Lossless producer table layout and typed canonical unit metadata."""
 
+import ast
 import csv
 import json
 from pathlib import Path
@@ -19,6 +20,22 @@ def cell(value):
     if isinstance(value, (dict, list, bool)):
         return json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False)
     return str(value)
+
+
+def _legacy_cell_matches(text, value):
+    if text == str(value):
+        return True
+    if not isinstance(value, (dict, list)):
+        return False
+    try:
+        # Old csv.writer used Python repr, while the JSON sidecar sorted keys
+        # and converted tuples to lists. Compare JSON meaning without exec or
+        # Python's bool/int equality conflating true with 1.
+        candidate = json.loads(json.dumps(ast.literal_eval(text), allow_nan=False))
+        options = {'sort_keys': True, 'separators': (',', ':'), 'allow_nan': False}
+        return json.dumps(candidate, **options) == json.dumps(value, **options)
+    except (SyntaxError, TypeError, ValueError):
+        return False
 
 
 def validate_schema(schema):
@@ -157,7 +174,7 @@ def read_metadata(path):
                     declared is None
                     and unit in left
                     and unit in right
-                    and left[unit] == str(right[unit])
+                    and _legacy_cell_matches(left[unit], right[unit])
                 ):
                     continue  # Legacy csv.writer used Python representations for typed values.
                 if unit not in left or unit not in right or cell(left[unit]) != cell(right[unit]):
