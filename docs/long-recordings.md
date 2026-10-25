@@ -41,7 +41,9 @@ process RSS; waveform source, retained, and omitted counts are reported in the
 CLI and manifest.
 
 The screenshots below show the bounded GUI views using a deterministic
-synthetic eight-hour sorting. The overview plots full-duration rates and
+synthetic eight-hour sorting. These captures document the interface before
+the latest Unit Stability display refinements; their unit cap and legend are
+historical. The overview plots full-duration rates and
 available source means; gray marks the synthetic acquisition gap and cyan marks
 the retained evidence windows. The evidence view places windowed amplitudes at
 top left, sampled ISI at top right, sampled correlograms at middle right, and
@@ -77,7 +79,10 @@ Turning off **Show amplitude** and **Show depth** expands the rate comparison:
 
 ![Rate-only comparison of units 40, 44 and 48](images/unit-stability-comparison/after-rate-only.png)
 
-The same colors and cluster IDs follow the staged Merge candidates:
+These captures predate the current Unit Stability display refinements; the
+overlaid rates remain representative, while any legend or unit-display limit
+visible in them is historical. The same colors and cluster IDs follow the staged
+Merge candidates:
 
 ![Merge View candidates match the firing-rate curves](images/unit-stability-comparison/after-merge.png)
 
@@ -97,6 +102,31 @@ exercises rate, amplitude, and depth together over 1000 bins. It is generated
 test data, not Carl's 500-hour recording. Reproduce it with `--comparison
 --synthetic-hours 500 --output-dir /tmp/stability-500h` instead of `--bounded-dir`
 and `--cluster-ids`.
+
+### Latest display refinements
+
+The following captures show the current controls on Carl's earlier converted
+112.9-hour test export, with units **24, 26, 27, and 32**. The camera image was
+saved through Unit Stability's own screenshot action. Legends are removed and
+native rate lines use the new 0.6-point default. Declared exposure remains the
+conversion's test mask, not independent acquisition verification.
+
+![Camera capture with no legend and thin rate lines](images/unit-metadata-refinements/carl-camera.png)
+
+A separate generated 513-hour fixture displays twelve selected units with
+6156 native five-minute bins. Selecting ten-minute display bins groups these
+into 3078 bins by adding counts/exposure and measurement sums/counts; prepared
+files remain unchanged. This is generated test data, not Carl's 500-hour export.
+
+| Native five-minute bins | Ten-minute display bins |
+| --- | --- |
+| ![Twelve synthetic units at native resolution](images/unit-metadata-refinements/synthetic-513h-native.png) | ![The same units with exact display coarsening](images/unit-metadata-refinements/synthetic-513h-coarsened.png) |
+
+Reproduce the generated stress captures with `--comparison --synthetic-hours
+513 --synthetic-units 12 --summary-bin-seconds 300 --output-dir
+/tmp/stability-513h`. The capture script also exercises the view's camera action
+and writes `camera-rate-only.png`. Display coarsening starts at the native
+prepared resolution; it never changes preparation's default bin size.
 
 ## Prepare bounded evidence
 
@@ -158,10 +188,48 @@ byte budgets describe package bytes, not resident memory. Waveform availability
 can exceed the bounded output budget: preparation reports waveform counts
 retained, omitted, and available in the source on the CLI, and stores the counts
 in the manifest so truncation is visible.
-Producer-supplied per-unit metrics and annotations remain inherited metadata;
-Phy does not recalculate those values for merged or split units. Use the
-full-count, rate, amplitude-mean, and depth-mean summaries produced by this
-workflow for the measurements they explicitly cover.
+Producer metadata tables retain their source filenames, delimiters, and column
+order, including multi-column CSV files. For a new merge or split membership,
+producer values and source-unit IDs are blank; imported custom fields are also
+cleared. Quality labels belong to the current unit
+membership: a new membership starts unreviewed until explicitly labeled.
+Untouched memberships keep their labels, and label history remains in the
+curation journal. Existing legacy journals keep their inherited-metadata
+behavior until explicitly migrated with the bounded session's
+`migrate_metadata()` API. This migration preserves label intent while adopting
+membership-scoped metadata. Use the full-count, rate, amplitude-mean, and
+depth-mean summaries for the measurements they explicitly cover; producer
+metrics are not recomputed during merge or split.
+
+For an already saved legacy bounded session, close the GUI and explicitly
+migrate before applying its curation. Supply the original producer params if
+the source has moved; this also recovers its original metadata filenames:
+
+```python
+from phy.apps.large_recording.curation import BoundedSession
+
+session = BoundedSession('/data/recording-bounded')
+try:
+    session.migrate_metadata('/data/original-recording/params.py')
+    session.save()
+finally:
+    session.close()
+```
+
+Migration publishes a new save generation and retains the older generations,
+assignments, review decisions, and explicit label events. A legacy session
+remains readable under its old rules until migrated. Already exported values
+alone cannot reveal whether a label was inherited or explicitly assigned; keep
+the original source and saved bounded journal to recover that distinction.
+The same applies to metadata filenames already changed by an older export.
+Conflicting JSON/table metadata is reported with the filename, field, and unit;
+reconcile the input representations rather than relying on silent precedence.
+
+Replay keeps source parameter code intact and maintains one final marked block
+for its `num_samples`, `valid_intervals`, and `dat_path` overrides. Original
+assignments can remain in the file because they may be used by other user
+expressions; the managed block, rather than every declaration in the file, is
+the stable replay override.
 
 ## Review and curate
 
@@ -179,15 +247,24 @@ shows time-binned counts/rates, available source scalar-amplitude means,
 evidence windows, and acquisition gaps. Missing measurements and units without
 evidence remain visible as unavailable.
 
-Unit Stability can overlay up to eight selected clusters. Multiple-cluster
-overlays use consistent colors and include a legend; the eight-cluster cap is
-reported in the view status and does not alter cluster selection or merge
-membership. Use the Unit Stability view menu's **Show firing rate**,
-**Show amplitude**, and **Show depth** toggles to choose the plotted
-measurements. These choices are saved across sessions and require no export or
-re-preparation. All three are on by default; turning all three off leaves the
-view empty. The full-source counts and rates use acquisition exposure, including
-declared gaps. Source amplitude and depth summaries appear only when available.
+Unit Stability overlays up to 32 selected clusters by default for responsiveness,
+using the same
+colors as the cluster and Merge views and no legend. The view menu's display
+limit can be changed; zero displays all selected units, with no hard positive
+upper limit. A nonzero limit affects only the displayed curves, not cluster
+selection or merge membership. Use the **Show firing rate**, **Show amplitude**,
+and **Show depth** toggles to choose plotted measurements. These choices are
+saved across sessions; all three are on by default, and turning all three off
+leaves the view empty. The default rate-line width is 0.6 points; its positive
+width setting is saved with the view. The display-bin setting is local to the
+dataset: zero uses the prepared native bins (or the view's native bins on an
+ordinary recording), while a coarser bin groups adjacent bins by adding counts
+and exposure, and additive trend summaries, exactly. It accepts only integer
+multiples of the native bin width, so it cannot display finer bins. The default
+is native resolution, preserving the prepared bin size (for example, 300 or
+3600 seconds). The screenshot action captures the Matplotlib Qt canvas. The
+full-source counts and rates use acquisition exposure, including declared gaps;
+source amplitude and depth summaries appear only when available.
 
 Evidence Amplitude shows raw source scalar amplitudes from the currently
 selected evidence window. The Feature view also uses window-relative seconds.
@@ -233,8 +310,9 @@ It evaluates selected units and bins their loaded spikes over the recording
 duration. Its firing rate assumes continuous acquisition because ordinary
 datasets do not supply valid acquisition intervals to the view; the plot labels
 that assumption. The Unit Stability view menu's **Show firing rate**,
-**Show amplitude**, and **Show depth** toggles are saved across sessions, with
-all three on by default. The ordinary default view layout remains unchanged.
+**Show amplitude**, and **Show depth** toggles and rate-line width are saved
+across sessions, with all three toggles on by default. The display-bin setting
+is dataset-local. The ordinary default view layout remains unchanged.
 Use the bounded manifest workflow above when known acquisition gaps must be
 represented explicitly.
 
