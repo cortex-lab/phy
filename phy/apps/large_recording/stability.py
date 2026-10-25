@@ -1,20 +1,27 @@
 """Selected-unit full-duration evidence with explicit acquisition exposure."""
 
+from collections import OrderedDict
+from sys import getsizeof
+
 import numpy as np
 from phylib.utils import Bunch, connect, unconnect
 
 from phy.cluster.views import ManualClusteringView
+from phy.gui.qt import screenshot, screenshot_default_path
 from phy.plot.plot import PlotCanvasMpl
 from phy.utils.color import selected_cluster_color
 
 
 class UnitStabilityView(ManualClusteringView):
-    """Compare exact rates and available source trends for up to eight selected units."""
+    """Compare exact rates and available source trends for selected units."""
 
     plot_canvas_class = PlotCanvasMpl
     # Apply the display limit locally, retaining the full presentation selection.
     max_n_clusters = 0
-    display_limit = 8
+    display_limit = 32
+    rate_line_width = 0.6
+    display_bin_seconds = 0.0
+    summary_cache_bytes = 64 * 1024 * 1024
     _default_position = 'right'
     ex_status = 'Full-duration evidence; sampling cannot establish chronic unit identity.'
     _metrics = ('firing_rate', 'amplitude', 'depth')
@@ -25,8 +32,10 @@ class UnitStabilityView(ManualClusteringView):
         self.canvas.subplots(3, 1, sharex=True)
         self.show_firing_rate = self.show_amplitude = self.show_depth = True
         self.state_attrs += tuple(f'show_{metric}' for metric in self._metrics)
+        self.state_attrs += ('display_limit', 'rate_line_width')
+        self.local_state_attrs += ('display_bin_seconds',)
         self._summary_arrays = {}
-        self._selected_summaries = {}
+        self._selected_summaries = OrderedDict()
         self._common_data = None
         self._attaching = False
         self._footer = self.canvas.figure.text(0.12, 0.025, '', fontsize=8)
@@ -85,7 +94,15 @@ class UnitStabilityView(ManualClusteringView):
         session = getattr(controller, 'bounded_session', None)
         if data is None:
             data = Bunch(common.copy())
-            data.update(counts=None, trends={}, loaded=set(), pending=False)
+            data.update(
+                counts=None,
+                trends={},
+                trend_sums={},
+                trend_counts={},
+                loaded=set(),
+                pending=False,
+                display=None,
+            )
             if session is None:
                 data.provenance = 'Loaded recording; continuous acquisition assumed.'
             else:
@@ -97,11 +114,11 @@ class UnitStabilityView(ManualClusteringView):
                     if data.pending
                     else 'Complete source sorting; exact counts and finite-value means.'
                 )
-            # Keep at most eight summaries, including direct source-unit inspection.
-            if len(self._selected_summaries) >= self.display_limit:
-                self._selected_summaries.pop(next(iter(self._selected_summaries)))
             self._selected_summaries[cluster_id] = data
+        else:
+            self._selected_summaries.move_to_end(cluster_id)
         if data.pending:
+            self._trim_cache()
             return data
         for metric in metrics:
             if metric in data.loaded:
@@ -130,17 +147,160 @@ class UnitStabilityView(ManualClusteringView):
                         total += sums[row]
                         valid += counts[row]
                     mean = np.full(len(data.exposure), np.nan)
-                    np.divide(total, valid, out=mean, where=valid > 0)
+                    np.divide(total, valid, out=mean, where=(valid > 0) & (data.exposure > 0))
+                    data.trend_sums[metric] = total
+                    data.trend_counts[metric] = valid
                     data.trends[metric] = mean
             data.loaded.add(metric)
+            data.display = None
+        self._trim_cache()
         return data
+
+    @property
+    def displayed_ids(self):
+        """Presentation subset; the supervisor selection remains authoritative."""
+        return self.cluster_ids[: self.display_limit] if self.display_limit else self.cluster_ids
+
+    @staticmethod
+    def _data_bytes(data):
+        # Common arrays are shared/mapped, and are deliberately outside the row cache.
+        overhead = getsizeof(data) + getsizeof(data.loaded)
+        rows = data.get('rows', [])
+        overhead += getsizeof(rows) + sum(map(getsizeof, rows))
+        arrays = [data.get('counts'), data.get('rates')]
+        for key in ('trends', 'trend_sums', 'trend_counts'):
+            overhead += getsizeof(data.get(key, {}))
+            arrays.extend(data.get(key, {}).values())
+        display = data.get('display')
+        if display is not None:
+            overhead += getsizeof(display) + getsizeof(display.trends)
+            arrays.extend([display.edges, display.exposure, display.counts, display.rates])
+            arrays.extend(display.trends.values())
+        return overhead + sum(
+            a.nbytes + getsizeof(a) - (a.nbytes if a.flags.owndata else 0)
+            for a in arrays
+            if isinstance(a, np.ndarray)
+        )
+
+    def _trim_cache(self):
+        total = sum(self._data_bytes(data) for data in self._selected_summaries.values())
+        while self._selected_summaries and total > self.summary_cache_bytes:
+            _, data = self._selected_summaries.popitem(last=False)
+            total -= self._data_bytes(data)
+
+    def _display_factor(self, seconds=None):
+        seconds = self.display_bin_seconds if seconds is None else float(seconds)
+        if not np.isfinite(seconds) or seconds < 0:
+            raise ValueError('Display bin size must be zero (native) or finite and positive.')
+        if seconds == 0:
+            return 1
+        native = np.diff(self._common().edges)[0]
+        factor = seconds / native
+        if (
+            not np.isfinite(factor)
+            or factor < 1
+            or not np.isclose(factor, round(factor), rtol=1e-10, atol=1e-10)
+        ):
+            raise ValueError(
+                'Display bin size must be an integer multiple of the native bin size.'
+            )
+        return int(round(factor))
+
+    def get_display_data(self, cluster_id, metrics=None):
+        """Group adjacent native bins using additive evidence, without accessing spikes."""
+        data = self.get_data(cluster_id, metrics)
+        factor = self._display_factor()
+        if data.pending or factor == 1:
+            return data
+        if data.display is None or data.display.factor != factor:
+            starts = np.arange(0, len(data.exposure), min(factor, len(data.exposure)))
+            exposure = np.add.reduceat(data.exposure, starts)
+            counts = None if data.counts is None else np.add.reduceat(data.counts, starts)
+            rates = np.full(len(starts), np.nan)
+            if counts is not None:
+                np.divide(counts, exposure, out=rates, where=exposure > 0)
+            trends = {}
+            for metric, total in data.trend_sums.items():
+                sums = np.add.reduceat(total, starts)
+                valid = np.add.reduceat(data.trend_counts[metric], starts)
+                mean = np.full(len(starts), np.nan)
+                np.divide(sums, valid, out=mean, where=(valid > 0) & (exposure > 0))
+                trends[metric] = mean
+            data.display = Bunch(
+                factor=factor,
+                edges=np.r_[data.edges[starts], data.edges[-1]],
+                exposure=exposure,
+                counts=counts,
+                rates=rates,
+                trends=trends,
+                pending=False,
+                provenance=data.provenance,
+            )
+        display = data.display
+        self._trim_cache()
+        return display
+
+    def set_display_limit(self, value):
+        """Set maximum displayed units (0 for all; otherwise a positive integer)."""
+        number = float(value)
+        if not np.isfinite(number) or number != int(number) or number < 0:
+            raise ValueError('Display limit must be an nonnegative integer (0 shows all).')
+        self.display_limit = int(number)
+        self.plot()
+
+    def set_rate_line_width(self, value):
+        """Set rate line width in points (finite and positive)."""
+        number = float(value)
+        if not np.isfinite(number) or number <= 0:
+            raise ValueError('Rate line width must be finite and positive.')
+        self.rate_line_width = number
+        self.plot()
+
+    def set_display_bin_seconds(self, value):
+        """Set display bin size in seconds (0 uses native prepared bins)."""
+        self._display_factor(value)
+        self.display_bin_seconds = float(value)
+        for data in self._selected_summaries.values():
+            data.display = None
+        self.plot()
+
+    def set_state(self, state):
+        state = dict(state)
+        for key, default in (
+            ('display_limit', 32),
+            ('rate_line_width', 0.6),
+            ('display_bin_seconds', 0.0),
+        ):
+            if key not in state:
+                continue
+            try:
+                number = float(state[key])
+                valid = np.isfinite(number)
+                if key == 'display_limit':
+                    valid = valid and number.is_integer() and number >= 0
+                elif key == 'rate_line_width':
+                    valid = valid and number > 0
+                else:
+                    self._display_factor(number)
+                state[key] = int(number) if key == 'display_limit' and valid else number
+                if not valid:
+                    state[key] = default
+            except (ValueError, TypeError, OverflowError):
+                state[key] = default
+        super().set_state(state)
+
+    def screenshot(self, dir=None):
+        """Save the actual Matplotlib Qt canvas using normal screenshot naming."""
+        path = screenshot_default_path(self, dir=dir)
+        return screenshot(self.canvas.canvas, path=path)
 
     @property
     def status(self):
         n = len(self.cluster_ids)
         return (
-            f'Showing first {self.display_limit} of {n} selected units.'
-            if n > self.display_limit
+            f'Showing first {self.display_limit} of {n} selected units; '
+            'display truncation does not change the selection or merge operation.'
+            if self.display_limit and n > self.display_limit
             else ''
         )
 
@@ -188,8 +348,8 @@ class UnitStabilityView(ManualClusteringView):
             unavailable = {metric: [] for metric in visible}
             if not self.cluster_ids:
                 notes.append('Select a unit to inspect full-duration evidence.')
-            for index, cluster_id in enumerate(self.cluster_ids[: self.display_limit]):
-                data = self.get_data(cluster_id, visible)
+            for index, cluster_id in enumerate(self.displayed_ids):
+                data = self.get_display_data(cluster_id, visible)
                 if data.pending:
                     notes.append(f'Unit {cluster_id}: {data.provenance}')
                     continue
@@ -199,7 +359,13 @@ class UnitStabilityView(ManualClusteringView):
                     ax = axes[self._metrics.index(metric)]
                     values = data.rates if metric == 'firing_rate' else data.trends.get(metric)
                     if values is not None and np.any(np.isfinite(values)):
-                        ax.plot(x, values, color=color, label=str(cluster_id))
+                        ax.plot(
+                            x,
+                            values,
+                            color=color,
+                            label=str(cluster_id),
+                            linewidth=self.rate_line_width if metric == 'firing_rate' else 1.5,
+                        )
                     elif metric != 'firing_rate':
                         unavailable[metric].append(cluster_id)
             labels = ('Rate (Hz)', 'Mean amplitude\n(source units)', 'Mean depth\n(source units)')
@@ -225,10 +391,6 @@ class UnitStabilityView(ManualClusteringView):
                 if previous < common.edges[-1]:
                     ax.axvspan(previous / 3600, common.edges[-1] / 3600, color='gray', alpha=0.4)
                 ax.set_xlim(common.edges[0] / 3600, common.edges[-1] / 3600)
-                if ax.lines:
-                    ax.legend(
-                        title='Unit', fontsize=8, loc='upper right', ncol=min(4, len(ax.lines))
-                    )
             provenance = (
                 'Complete source sorting; exact counts and finite-value means.'
                 if getattr(self.controller, 'bounded_session', None) is not None
@@ -253,10 +415,10 @@ class UnitStabilityView(ManualClusteringView):
             cluster_ids = supervisor.selected
             self._update_cluster_color_indices(supervisor, cluster_ids)
         self.cluster_ids = tuple(cluster_ids or ())
-        selected = set(self.cluster_ids[: self.display_limit])
-        self._selected_summaries = {
-            c: d for c, d in self._selected_summaries.items() if c in selected
-        }
+        selected = set(self.displayed_ids)
+        self._selected_summaries = OrderedDict(
+            (c, d) for c, d in self._selected_summaries.items() if c in selected
+        )
         self.plot(**kwargs)
 
     def _update_cluster_color_indices(self, sender, cluster_ids):
@@ -305,6 +467,17 @@ class UnitStabilityView(ManualClusteringView):
     def _invalidate(self):
         self._selected_summaries.clear()
 
+    def _release_cache(self):
+        self._summary_arrays.clear()
+        self._selected_summaries.clear()
+        self._common_data = None
+
+    def close(self):
+        """Release mapped summary references and cached rows, including unattached views."""
+        result = super().close()
+        self._release_cache()
+        return result
+
     def attach(self, gui):
         self._attaching = True
         try:
@@ -319,6 +492,13 @@ class UnitStabilityView(ManualClusteringView):
                 docstring=f'Show {metric.replace("_", " ")}.',
             )
             self.actions.get(f'toggle_{metric}').setText(f'Show {metric.replace("_", " ")}')
+
+        for action in (
+            self.set_display_limit,
+            self.set_rate_line_width,
+            self.set_display_bin_seconds,
+        ):
+            self.actions.add(action, prompt=True)
 
         @self.actions.add(prompt=True)
         def show_source_unit(cluster_id):
@@ -351,6 +531,4 @@ class UnitStabilityView(ManualClusteringView):
         @connect(event='close_view', sender=self)
         def on_close(sender, *args):
             unconnect(on_state, on_cluster, on_close)
-            self._summary_arrays.clear()
-            self._selected_summaries.clear()
-            self._common_data = None
+            self._release_cache()

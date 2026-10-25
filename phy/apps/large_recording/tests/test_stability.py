@@ -132,6 +132,7 @@ def test_lazy_metrics_selected_cache_and_all_toggle_layouts(summary_view, monkey
 
 def test_selection_limit_palette_and_clear_lifecycle(summary_view):
     view = summary_view
+    view.display_limit = 8
     # Repeat source rows under distinct cluster IDs to test the display bound.
     view.controller._source_units = lambda cluster: [1]
     selected = list(range(20, 30))
@@ -144,7 +145,8 @@ def test_selection_limit_palette_and_clear_lifecycle(summary_view):
     assert len(view._selected_summaries) == 8
     ax = next(view.canvas.iter_ax())
     assert len(ax.lines) == 8
-    assert view.status == 'Showing first 8 of 10 selected units.'
+    assert 'Showing first 8 of 10 selected units' in view.status
+    assert 'does not change the selection or merge operation' in view.status
     for i, line in enumerate(ax.lines):
         np.testing.assert_allclose(line.get_color(), selected_cluster_color(9 - i))
     view.auto_update = False
@@ -195,7 +197,7 @@ def test_ordinary_continuous_assumption_and_invalidation(qtbot):
         view.close()
 
 
-def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_path):
+def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_path, monkeypatch):
     _, controller = make_controller(tmp_path, sparse=True)
     gui = controller.create_gui(default_views=[], do_prompt_save=False)
     supervisor = controller.supervisor
@@ -214,6 +216,27 @@ def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_pat
         assert not view.actions.get('toggle_amplitude').isChecked()
         view.toggle_depth(False)
         assert not view.actions.get('toggle_depth').isChecked()
+        # Exercise the real dock camera callback with the Matplotlib Qt widget.
+        from phy.apps.large_recording import stability
+
+        default_path = stability.screenshot_default_path
+        paths = []
+
+        def screenshot_path(widget, dir=None):
+            path = default_path(widget, dir=tmp_path)
+            paths.append(path)
+            return path
+
+        monkeypatch.setattr(stability, 'screenshot_default_path', screenshot_path)
+        view.dock._dock_widgets['screenshot'].click()
+        assert paths[-1].read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
+        assert paths[-1].name.endswith('_UnitStabilityView.png')
+        assert view.screenshot(tmp_path) == paths[-1]
+        view.actions.run('set_rate_line_width', 0.75)
+        view.actions.run('set_display_limit', 64)
+        view.actions.run('set_display_bin_seconds', 20)
+        assert 'display_bin_seconds' in view.local_state_attrs
+        assert 'display_bin_seconds' not in view.state_attrs
         state = view.state.copy()
         supervisor.toggle_merge_mode()
         supervisor.block()
@@ -241,6 +264,9 @@ def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_pat
         view.close()
         restored = UnitStabilityView(controller)
         restored.attach(gui)
+        assert restored.rate_line_width == 0.75
+        assert restored.display_limit == 64
+        assert restored.display_bin_seconds == 20
         assert restored.show_firing_rate
         assert not restored.show_amplitude and not restored.show_depth
         assert not restored.actions.get('toggle_amplitude').isChecked()
@@ -253,12 +279,15 @@ def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_pat
         supervisor.merge([0, 1])
         supervisor.block()
         assert view.get_data(100).counts.sum() == 7
+        assert view.get_display_data(100).counts.sum() == 7
         supervisor.undo()
         supervisor.block()
         assert view.get_data(0).counts.sum() == 4
+        assert view.get_display_data(0).counts.sum() == 4
         supervisor.redo()
         supervisor.block()
         assert view.get_data(100).counts.sum() == 7
+        assert view.get_display_data(100).counts.sum() == 7
         supervisor.undo()
         supervisor.block()
         up = supervisor.split_source_amplitude(0, 2)
@@ -271,6 +300,7 @@ def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_pat
         supervisor.undo()
         supervisor.block()
         assert view.get_data(0).counts.sum() == 4
+        assert view.get_display_data(0).counts.sum() == 4
         supervisor.redo()
         supervisor.block()
         assert view.get_data(children[0]).pending
@@ -342,7 +372,203 @@ def test_ordinary_gui_cluster_event_refreshes_cached_counts(qtbot, tmp_path):
         ax = next(view.canvas.iter_ax())
         assert np.nansum(ax.lines[0].get_ydata() * 0.2) == pytest.approx(4)
         assert view.get_data(0).counts.sum() == 4
+        assert view.get_display_data(0).counts.sum() == 4
     finally:
         view.close()
         gui.close()
         controller.close()
+
+
+def test_display_limit_all_and_large_values_preserve_selection(summary_view):
+    view = summary_view
+    assert view.display_limit == 32
+    view.controller._source_units = lambda cluster: [1]
+    selected = list(range(40))
+    view.on_select(selected)
+    assert view.cluster_ids == tuple(selected)
+    assert len(view.displayed_ids) == len(next(view.canvas.iter_ax()).lines) == 32
+    assert 'merge operation' in view.status
+    for limit in (0, 64, 128):
+        view.set_display_limit(limit)
+        assert view.displayed_ids == tuple(selected)
+        assert len(next(view.canvas.iter_ax()).lines) == 40
+        assert not view.status
+        assert view.cluster_ids == tuple(selected)
+    for ax in view.canvas.iter_ax():
+        assert ax.get_legend() is None
+    assert all(line.get_linewidth() == 0.6 for line in next(view.canvas.iter_ax()).lines)
+    view.set_rate_line_width(0.7)
+    assert all(line.get_linewidth() == 0.7 for line in next(view.canvas.iter_ax()).lines)
+
+
+@pytest.mark.parametrize('value', [None, 'bad', np.nan, np.inf, -1, 0])
+def test_invalid_line_width_state_and_action(summary_view, value):
+    view = summary_view
+    with pytest.raises((ValueError, TypeError)):
+        view.set_rate_line_width(value)
+    view.set_state({'rate_line_width': value})
+    assert view.rate_line_width == 0.6
+
+
+@pytest.mark.parametrize('value', [None, 'bad', np.nan, np.inf, -1, 1.5])
+def test_invalid_display_limit_state_and_action(summary_view, value):
+    view = summary_view
+    with pytest.raises((ValueError, TypeError)):
+        view.set_display_limit(value)
+    view.set_state({'display_limit': value})
+    assert view.display_limit == 32
+
+
+@pytest.mark.parametrize('value', [None, 'bad', np.nan, np.inf, -1, 5, 15])
+def test_invalid_display_bins_state_and_action(summary_view, value):
+    view = summary_view
+    with pytest.raises((ValueError, TypeError)):
+        view.set_display_bin_seconds(value)
+    view.set_state({'display_bin_seconds': value})
+    assert view.display_bin_seconds == 0
+
+
+@pytest.mark.parametrize(
+    'seconds, expected_edges, counts, exposure, amplitude',
+    [
+        (0, [0, 10, 20, 25], [16, 0, 9], [8, 0, 3], [6.8, np.nan, 5.75]),
+        (20, [0, 20, 25], [16, 9], [8, 3], [6.8, 5.75]),
+        (30, [0, 25], [25], [11], [57 / 9]),
+        (100, [0, 25], [25], [11], [57 / 9]),
+    ],
+)
+def test_display_rebin_exact_merged_primitives(
+    summary_view, seconds, expected_edges, counts, exposure, amplitude
+):
+    view = summary_view
+    view.set_display_bin_seconds(seconds)
+    data = view.get_display_data(4)
+    np.testing.assert_array_equal(data.edges, expected_edges)
+    np.testing.assert_array_equal(data.counts, counts)
+    np.testing.assert_array_equal(data.exposure, exposure)
+    np.testing.assert_allclose(data.trends['amplitude'], amplitude, equal_nan=True)
+    expected_rates = np.full(len(exposure), np.nan)
+    np.divide(counts, exposure, out=expected_rates, where=np.asarray(exposure) > 0)
+    np.testing.assert_allclose(data.rates, expected_rates, equal_nan=True)
+    view.on_select([4])
+    axes = list(view.canvas.iter_ax())
+    for ax in axes:
+        np.testing.assert_allclose(
+            ax.lines[0].get_xdata(), (data.edges[:-1] + data.edges[1:]) / 7200
+        )
+    assert all(ax.get_legend() is None for ax in axes)
+
+
+def test_300_second_native_bins_and_weighted_trends(summary_view, monkeypatch):
+    view = summary_view
+    common = view._common()
+    common.edges = np.array([0, 300, 600, 900, 1000])
+    common.exposure = np.array([300.0, 0.0, 100.0, 40.0])
+    common.intervals = [[0, 300], [600, 700], [900, 940]]
+    # Means 1 and 9 have different finite counts: their aggregate is 7, not 5.
+    view._summary_arrays.update(
+        {
+            'counts.npy': np.array([[30, 0, 20, 4]]),
+            'amplitude_sum.npy': np.array([[1.0, 0.0, 27.0, 20.0]]),
+            'amplitude_count.npy': np.array([[1, 0, 3, 2]]),
+            'depth_sum.npy': np.array([[10.0, 0.0, 270.0, 200.0]]),
+            'depth_count.npy': np.array([[1, 0, 3, 2]]),
+        }
+    )
+    source = view.get_data(1)
+    assert view._display_factor() == 1
+    np.testing.assert_allclose(source.rates, [0.1, np.nan, 0.2, 0.1], equal_nan=True)
+    monkeypatch.setattr(view, '_array', lambda name: pytest.fail('Cached rows need no I/O'))
+    for seconds, edges, counts, exposures, means in (
+        (600, [0, 600, 1000], [30, 24], [300, 140], [1, 47 / 5]),
+        (900, [0, 900, 1000], [50, 4], [400, 40], [7, 10]),
+        (1800, [0, 1000], [54], [440], [8]),
+    ):
+        view.set_display_bin_seconds(seconds)
+        data = view.get_display_data(1)
+        np.testing.assert_array_equal(data.edges, edges)
+        np.testing.assert_array_equal(data.counts, counts)
+        np.testing.assert_array_equal(data.exposure, exposures)
+        np.testing.assert_allclose(data.trends['amplitude'], means)
+        assert view.get_display_data(1) is data
+    view.set_display_bin_seconds(0)
+    assert view.get_display_data(1) is source
+
+
+def test_cache_budget_independent_of_limit_and_released(summary_view):
+    view = summary_view
+    view.controller._source_units = lambda cluster: [1]
+    view.display_limit = 0
+    budget = 2 * view._data_bytes(view.get_data(-1))
+    view._invalidate()
+    view.summary_cache_bytes = budget
+    for cluster in range(20):
+        data = view.get_display_data(cluster)
+        assert data.counts.sum() == 7
+        assert sum(map(view._data_bytes, view._selected_summaries.values())) <= budget
+    assert 19 in view._selected_summaries and 0 not in view._selected_summaries
+    view.summary_cache_bytes = 0
+    assert view.get_data(30).counts.sum() == 7
+    assert not view._selected_summaries
+    view._invalidate()
+    assert not view._selected_summaries
+
+
+def test_6156_bins_many_units_cached_operation_bounds(summary_view, monkeypatch):
+    view = summary_view
+    bins = 6156
+    common = view._common()
+    common.edges = np.arange(bins + 1) * 300.0
+    common.exposure = np.full(bins, 300.0)
+    common.summary = {'counts_file': 'virtual_counts'}
+    common.intervals = [[0, bins * 300]]
+    rows = []
+
+    class Grid:
+        def __getitem__(self, row):
+            rows.append(row)
+            return np.ones(bins, dtype=np.int64)
+
+    view._summary_arrays['virtual_counts'] = Grid()
+    view.controller._source_units = lambda cluster: [1]
+    view.show_amplitude = view.show_depth = False
+    view.on_select(list(range(12)))
+    assert len(rows) == 12
+    assert len(next(view.canvas.iter_ax()).lines) == 12
+    assert all(len(line.get_ydata()) == bins for line in next(view.canvas.iter_ax()).lines)
+    monkeypatch.setattr(view, '_array', lambda name: pytest.fail('Must reuse cached source rows'))
+    view.set_display_bin_seconds(900)
+    view.plot()
+    assert len(rows) == 12
+    assert all(len(line.get_ydata()) == bins // 3 for line in next(view.canvas.iter_ax()).lines)
+    view.set_display_bin_seconds(0)
+    assert len(rows) == 12
+
+
+def test_display_gap_and_unattached_cache_release(summary_view):
+    view = summary_view
+    common = view._common()
+    common.exposure = np.array([0.0, 0.0, 3.0])
+    view.set_display_bin_seconds(20)
+    data = view.get_display_data(4)
+    assert data.exposure[0] == 0
+    assert np.isnan(data.rates[0])
+    assert np.isnan(data.trends['amplitude'][0])
+    assert np.isnan(data.trends['depth'][0])
+    assert view._selected_summaries and view._summary_arrays
+    view.close()
+    assert not view._selected_summaries and not view._summary_arrays
+    assert view._common_data is None
+
+
+def test_pending_summaries_also_obey_cache_budget(summary_view):
+    view = summary_view
+    view.controller._source_units = lambda cluster: None
+    pending = view.get_data(5)
+    view.summary_cache_bytes = 2 * view._data_bytes(pending)
+    for cluster in range(20):
+        assert view.get_data(cluster).pending
+    assert len(view._selected_summaries) <= 2
+    assert (
+        sum(map(view._data_bytes, view._selected_summaries.values())) <= view.summary_cache_bytes
+    )
