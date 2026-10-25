@@ -36,10 +36,11 @@ HOURS = 8
 CLUSTER_IDS = np.array([0, 2, 7, 99], dtype=np.int32)
 
 
-def _make_source(path, hours=HOURS):
+def _make_source(path, hours=HOURS, unit_count=4):
     """Write a varied but deterministic synthetic source sorting."""
     path.mkdir(parents=True)
     rng = np.random.default_rng(20261013)
+    cluster_ids = CLUSTER_IDS if unit_count == 4 else np.arange(unit_count, dtype=np.int32)
     samples = SAMPLE_RATE * 3600 * hours
     intervals = np.array(
         [[0, 3 * 3600 * SAMPLE_RATE], [int(3.5 * 3600 * SAMPLE_RATE), samples]],
@@ -54,7 +55,7 @@ def _make_source(path, hours=HOURS):
     order = np.argsort(spike_times, kind='stable')
     spike_times = spike_times[order]
 
-    unit_index = np.arange(len(spike_times), dtype=np.int64) % len(CLUSTER_IDS)
+    unit_index = np.arange(len(spike_times), dtype=np.int64) % len(cluster_ids)
     unit_index = unit_index[order]
     elapsed = spike_times / SAMPLE_RATE
     hour_phase = elapsed / 3600
@@ -74,7 +75,7 @@ def _make_source(path, hours=HOURS):
     templates_for_spike = unit_index.astype(np.int32)
 
     np.save(path / 'spike_times.npy', spike_times.astype(np.int64))
-    np.save(path / 'spike_clusters.npy', CLUSTER_IDS[unit_index])
+    np.save(path / 'spike_clusters.npy', cluster_ids[unit_index])
     np.save(path / 'spike_templates.npy', templates_for_spike)
     np.save(path / 'amplitudes.npy', amplitudes)
     np.save(path / 'spike_depths.npy', depths)
@@ -84,19 +85,21 @@ def _make_source(path, hours=HOURS):
     np.save(path / 'channel_map.npy', channel_map)
     np.save(path / 'channel_positions.npy', channel_positions)
 
-    templates = np.zeros((len(CLUSTER_IDS), 40, len(channel_map)), dtype=np.float32)
+    templates = np.zeros((len(cluster_ids), 40, len(channel_map)), dtype=np.float32)
     time = np.arange(40, dtype=np.float32)
-    for unit in range(len(CLUSTER_IDS)):
-        center = 13 + unit * 3
+    for unit in range(len(cluster_ids)):
+        center = 13 + (unit % len(channel_map)) * 3
         pulse = -np.exp(-0.5 * ((time - center) / 3.5) ** 2) * (35 + 8 * unit)
         for channel in range(len(channel_map)):
-            templates[unit, :, channel] = pulse * np.exp(-0.7 * abs(channel - unit))
+            templates[unit, :, channel] = pulse * np.exp(
+                -0.7 * abs(channel - unit % len(channel_map))
+            )
     np.save(path / 'templates.npy', templates)
 
     pc_feature_ind = np.array(
         [
-            [unit, (unit + 1) % len(channel_map), (unit + 2) % len(channel_map)]
-            for unit in range(len(CLUSTER_IDS))
+            [unit % len(channel_map), (unit + 1) % len(channel_map), (unit + 2) % len(channel_map)]
+            for unit in range(len(cluster_ids))
         ],
         dtype=np.int32,
     )
@@ -124,7 +127,9 @@ def _make_source(path, hours=HOURS):
     np.save(path / f'{stem}.waveforms.npy', waveforms)
 
     with (path / 'cluster_group.tsv').open('w', encoding='utf-8') as stream:
-        stream.write('cluster_id\tgroup\n0\tgood\n2\tgood\n7\tmua\n99\tgood\n')
+        stream.write('cluster_id\tgroup\n')
+        for unit in cluster_ids:
+            stream.write(f'{unit}\t{"mua" if unit == 7 else "good"}\n')
     (path / 'params.py').write_text(
         f'sample_rate = {SAMPLE_RATE}.0\n'
         f'num_samples = {samples}\n'
@@ -181,12 +186,18 @@ def _capture_comparison(bounded, config_dir, output_dir, selected, dataset_label
         view = gui.get_view('UnitStabilityView')
         assert list(view.cluster_ids) == supervisor.selected
         assert len(view.cluster_ids) >= 2, 'Select at least two retained clusters.'
+        assert all(ax.get_legend() is None for ax in view.canvas.iter_ax())
         _capture(gui, output_dir / 'after-overview.png')
         started = time.perf_counter()
         view.toggle_amplitude(False)
         view.toggle_depth(False)
         rate_only_seconds = time.perf_counter() - started
         _capture(gui, output_dir / 'after-rate-only.png')
+        camera = view.screenshot(dir=output_dir / 'camera')
+        shutil.copyfile(camera, output_dir / 'camera-rate-only.png')
+        native = float(np.diff(view.get_data(selected[0]).edges)[0])
+        view.set_display_bin_seconds(2 * native)
+        _capture(gui, output_dir / 'after-rate-coarsened.png')
         supervisor.toggle_merge_mode()
         supervisor.block()
         assert supervisor.selection.state.is_merge_mode
@@ -200,19 +211,28 @@ def _capture_comparison(bounded, config_dir, output_dir, selected, dataset_label
             ).strip(),
             'clock_hours': manifest['num_samples'] / manifest['sample_rate'] / 3600,
             'selected_cluster_ids': selected,
-            'displayed_cluster_ids': list(map(int, view.cluster_ids[: view.display_limit])),
+            'displayed_cluster_ids': list(map(int, view.displayed_ids)),
             'merge_cluster_ids': supervisor.selected_merge,
             'summary_bins': len(view.get_data(selected[0]).exposure),
             'full_counts': {
-                str(unit): int(view.get_data(unit).counts.sum())
-                for unit in view.cluster_ids[: view.display_limit]
+                str(unit): int(view.get_data(unit).counts.sum()) for unit in view.displayed_ids
             },
             'timing_seconds': {
                 'select_and_block': selection_seconds,
                 'rate_only_redraws': rate_only_seconds,
             },
             'gui_size': [gui.width(), gui.height()],
-            'screenshots': ['after-overview.png', 'after-rate-only.png', 'after-merge.png'],
+            'display_bins': len(view.get_display_data(selected[0]).exposure),
+            'rate_line_width': view.rate_line_width,
+            'display_limit': view.display_limit,
+            'display_bin_seconds': view.display_bin_seconds,
+            'screenshots': [
+                'after-overview.png',
+                'after-rate-only.png',
+                'after-merge.png',
+                'after-rate-coarsened.png',
+                'camera-rate-only.png',
+            ],
             'source_arrays_modified': False,
         }
         (output_dir / 'capture.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -305,9 +325,13 @@ def main():
     parser.add_argument('--cluster-ids', type=int, nargs='+', help='IDs for comparison captures.')
     parser.add_argument('--dataset-label', help='Dataset provenance label stored in capture.json.')
     parser.add_argument('--synthetic-hours', type=int, default=HOURS)
+    parser.add_argument('--synthetic-units', type=int, default=4)
+    parser.add_argument('--summary-bin-seconds', type=float, default=1800)
     args = parser.parse_args()
     if args.synthetic_hours < 4:
         parser.error('--synthetic-hours must be at least 4.')
+    if args.synthetic_units < 2:
+        parser.error('--synthetic-units must be at least 2.')
     if args.bounded_dir and not args.comparison:
         parser.error('--bounded-dir requires --comparison.')
     if args.bounded_dir:
@@ -353,7 +377,9 @@ def main():
             report_path.write_text(json.dumps(report, indent=2) + '\n')
             app.quit()
             return
-        params, intervals = _make_source(root / 'source', hours=args.synthetic_hours)
+        params, intervals = _make_source(
+            root / 'source', hours=args.synthetic_hours, unit_count=args.synthetic_units
+        )
         bounded = prepare_large(
             params,
             root / 'bounded',
@@ -365,14 +391,19 @@ def main():
             stratum_seconds=3600,
             seed=0,
             batch_size=50_000,
-            bin_seconds=1800,
+            bin_seconds=args.summary_bin_seconds,
         )
         if args.comparison:
             _capture_comparison(
                 bounded,
                 root / 'config',
                 args.output_dir,
-                args.cluster_ids or list(map(int, CLUSTER_IDS[:3])),
+                args.cluster_ids
+                or (
+                    list(map(int, CLUSTER_IDS[:3]))
+                    if args.synthetic_units == 4
+                    else list(range(min(12, args.synthetic_units)))
+                ),
                 args.dataset_label or f'Synthetic {args.synthetic_hours}-hour fixture.',
             )
         else:
