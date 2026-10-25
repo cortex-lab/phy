@@ -4,7 +4,12 @@ import ast
 
 import pytest
 
-from phy.apps.large_recording.parameters import BEGIN, END, rewrite_replay_params
+from phy.apps.large_recording.parameters import (
+    BEGIN,
+    END,
+    rewrite_replay_params,
+    rewrite_replay_params_bytes,
+)
 
 VALUES = {'num_samples': 20, 'valid_intervals': [[0, 8], [10, 20]], 'dat_path': None}
 
@@ -88,6 +93,19 @@ def test_crlf_prefix_is_preserved_byte_for_byte():
     assert result.startswith(original)
     assert '\n' not in result.replace('\r\n', '')
     assert rewrite_replay_params(result, **VALUES) == result
+
+
+@pytest.mark.parametrize('encoding', ['utf-8-sig', 'cp1252'])
+def test_python_encoding_and_bom_survive_with_unicode_generated_paths(encoding):
+    text = f'# coding: {encoding}\r\n# \u00e9lectrode\r\nnum_samples = 7\r\n'
+    original = text.encode(encoding)
+    values = dict(VALUES, dat_path='\u00e9lectrode/\u4e2d\u6587.bin')
+    result = rewrite_replay_params_bytes(original, **values)
+    assert result.startswith(original)
+    assert rewrite_replay_params_bytes(result, **values) == result
+    namespace = {}
+    exec(result, namespace)
+    assert namespace['dat_path'] == values['dat_path']
 
 
 def test_three_replay_rounds_preserve_crlf_and_stable_file_size(tmp_path):

@@ -16,7 +16,7 @@ from .curation import (
     project_assignments,
 )
 from .metadata import complete_schema, write_metadata
-from .parameters import rewrite_replay_params
+from .parameters import rewrite_replay_params_bytes
 from .source import PER_SPIKE, Source, _has_raw_paths, close_array, hash_file, publish_directory
 
 
@@ -161,12 +161,12 @@ def _apply_curation(source, session, output_dir, batch_size):
             dat_path = resolved if isinstance(dat_path, (list, tuple)) else resolved[0]
         params_path = stage / 'params.py'
         params_path.write_bytes(
-            rewrite_replay_params(
-                params_path.read_bytes().decode('utf8'),
+            rewrite_replay_params_bytes(
+                params_path.read_bytes(),
                 num_samples=source.num_samples,
                 valid_intervals=source.valid_intervals.tolist(),
                 dat_path=dat_path,
-            ).encode('utf8')
+            )
         )
         assignments = np.lib.format.open_memmap(
             stage / 'spike_clusters.npy',

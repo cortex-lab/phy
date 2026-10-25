@@ -109,5 +109,11 @@ def rewrite_replay_params(text, *, num_samples, valid_intervals, dat_path):
     newline = '\r\n' if '\r\n' in text else '\n'
     if prefix and not prefix.endswith(newline * 2):
         prefix += newline if prefix.endswith(newline) else newline * 2
-    block = newline.join([BEGIN, *(f'{key} = {overrides[key]!r}' for key in KEYS), END, ''])
+    block = newline.join([BEGIN, *(f'{key} = {ascii(overrides[key])}' for key in KEYS), END, ''])
     return prefix + block
+
+
+def rewrite_replay_params_bytes(contents, **overrides):
+    """Preserve a Python encoding cookie/BOM as well as original line endings."""
+    encoding, _ = tokenize.detect_encoding(io.BytesIO(contents).readline)
+    return rewrite_replay_params(contents.decode(encoding), **overrides).encode(encoding)
