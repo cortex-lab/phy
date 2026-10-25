@@ -93,8 +93,6 @@ def read_metadata(path):
     for filename in filenames:
         if filename.stem == 'cluster_info':
             continue
-        if filename.is_symlink():
-            raise ValueError(f'Metadata table must not be a symbolic link: {filename.name}.')
         with filename.open(encoding='utf-8', newline='') as stream:
             reader = csv.reader(stream, delimiter='\t' if filename.suffix == '.tsv' else ',')
             columns = next(reader, [])
@@ -174,6 +172,10 @@ def read_metadata(path):
 def write_metadata(path, metadata, schema):
     """Keep source basenames, delimiters and column order, including blank rows."""
     schema = complete_schema(schema, metadata)
+    filenames = [table['filename'] for table in schema['tables']]
+    for filename in [*filenames, '_phy_cluster_metadata.json', SCHEMA_FILE]:
+        if (path / filename).is_symlink():
+            raise ValueError(f'Metadata output must not overwrite a symbolic link: {filename}.')
     for table in schema['tables']:
         fields = [f for f in table['columns'] if f != 'cluster_id']
         units = sorted({u for f in fields for u in metadata.get(f, {})})

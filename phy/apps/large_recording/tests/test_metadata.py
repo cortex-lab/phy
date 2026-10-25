@@ -422,3 +422,48 @@ def test_replay_rejects_changed_original_table_basename(tmp_path):
     with pytest.raises(ValueError, match='metadata schema changed'):
         apply_curation(params, session.path, tmp_path / 'out')
     session.close()
+
+
+def test_readonly_source_symlink_preserves_table_alias_and_target(tmp_path):
+    params = make_sorting(tmp_path / 'source')
+    producer = tmp_path / 'immutable-producer-si.tsv'
+    producer.write_text('cluster_id\tsi_unit_id\n0\t40\n1\t44\n2\t48\n99\t99\n')
+    alias = params.parent / 'cluster_si_unit_ids.tsv'
+    alias.symlink_to(producer)
+    original_hash = hash_file(producer)
+    with Source(params) as source:
+        assert source.metadata['si_unit_id'][0] == '40'
+        descriptor = next(
+            table for table in source.metadata_schema['tables'] if 'si_unit_id' in table['columns']
+        )
+        assert descriptor['filename'] == 'cluster_si_unit_ids.tsv'
+    session = prepared(params, tmp_path / 'bounded')
+    session.save()
+    output = apply_curation(params, session.path, tmp_path / 'out')
+    assert (output / 'cluster_si_unit_ids.tsv').is_file()
+    assert not (output / 'cluster_si_unit_ids.tsv').is_symlink()
+    assert alias.is_symlink()
+    assert hash_file(producer) == original_hash
+    session.close()
+
+
+def test_metadata_output_refuses_existing_symlink_without_mutating_target(tmp_path):
+    producer = tmp_path / 'producer.tsv'
+    producer.write_text('immutable producer data')
+    destination = tmp_path / 'out'
+    destination.mkdir()
+    (destination / 'cluster_si_unit_ids.tsv').symlink_to(producer)
+    schema = {
+        'version': 1,
+        'tables': [
+            {
+                'filename': 'cluster_si_unit_ids.tsv',
+                'delimiter': '\t',
+                'columns': ['cluster_id', 'si_unit_id'],
+            }
+        ],
+    }
+    original_hash = hash_file(producer)
+    with pytest.raises(ValueError, match='output must not overwrite a symbolic link'):
+        write_metadata(destination, {'si_unit_id': {0: '40'}}, schema)
+    assert hash_file(producer) == original_hash
