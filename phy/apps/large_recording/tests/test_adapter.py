@@ -139,8 +139,8 @@ def test_merge_label_history_save_reopen_replay_regenerate(tmp_path):
         assert controller.get_full_count(100) == 7
         supervisor.label('group', 'noise', [100])
         supervisor.undo()
-        assert controller.bounded_session.metadata['group'][100] == 'good'
-        assert supervisor.cluster_meta.get('group', 100) == 'good'
+        assert controller.bounded_session.metadata['group'][100] is None
+        assert supervisor.cluster_meta.get('group', 100) is None
         supervisor.redo()
         assert controller.bounded_session.metadata['group'][100] == 'noise'
         supervisor.undo()
@@ -225,7 +225,7 @@ def test_failed_save_leaves_dirty_previous_checkpoint(tmp_path, monkeypatch):
         with pytest.raises(OSError, match='interrupted'):
             supervisor.save()
         assert supervisor.is_dirty()
-        assert BoundedSession(controller.dir_path).metadata['group'][100] == 'good'
+        assert BoundedSession(controller.dir_path).metadata['group'][100] is None
     finally:
         controller.close()
 

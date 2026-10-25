@@ -314,6 +314,8 @@ class BoundedSupervisor(Supervisor):
         emit('bounded_state_changed', self)
 
     def _capture(self):
+        if self.session.metadata_policy:
+            self._synchronize_metadata()
         self._validate_native()
         self.session_history.capture()
         self._global_history.add_to_current_action(self.session_history)

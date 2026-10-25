@@ -6,11 +6,13 @@ import json
 import os
 import shutil
 import uuid
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
 
+from .metadata import POLICY, complete_schema, validate_schema
 from .source import _time_base, hash_json
 
 MANIFEST = '_phy_curation_manifest.json'
@@ -240,11 +242,35 @@ def interpret_events(unit_ids, metadata, events):
     if not isinstance(events, list):
         raise ValueError('Semantic journal must be an ordered event list.')
     next_id = max(active) + 1
-    for event in events:
-        if not isinstance(event, dict) or event.get('version') != 1:
+    for event_index, event in enumerate(events):
+        if not isinstance(event, dict) or event.get('version') not in (1, 2):
             raise ValueError('Unsupported semantic journal event version.')
         operation = event.get('operation')
-        if operation == 'merge':
+        if operation == 'metadata_policy':
+            if (
+                set(event) != {'version', 'operation', 'policy', 'schema'}
+                or event['version'] != 2
+                or event['policy'] != POLICY
+            ):
+                raise ValueError('Malformed metadata policy migration event.')
+            validate_schema(event['schema'])
+            # Old resolved values have no reliable curator intent. Preserve only
+            # explicit label events on the current membership scope.
+            derived = set()
+            labels = {}
+            for previous in events[:event_index]:
+                op = previous['operation']
+                if op == 'merge':
+                    derived.add(previous['target'])
+                elif op == 'threshold_split':
+                    derived.update(previous['children'])
+                elif op == 'label':
+                    for unit in previous['ids']:
+                        labels[(previous['field'], unit)] = previous['value']
+            for field, values in metadata.items():
+                for unit in derived & active:
+                    values[unit] = copy.deepcopy(labels.get((field, unit)))
+        elif operation == 'merge':
             if set(event) != {'version', 'operation', 'parents', 'target', 'metadata'}:
                 raise ValueError('Malformed merge event.')
             parents = [_integer(i, 'Parent ID') for i in event['parents']]
@@ -258,6 +284,10 @@ def interpret_events(unit_ids, metadata, events):
             resolved = event['metadata']
             if not isinstance(resolved, dict) or any(not isinstance(f, str) for f in resolved):
                 raise ValueError('Merge metadata must contain resolved field values.')
+            if event['version'] == 2:
+                expected = dict.fromkeys(set(metadata) | {'group'})
+                if resolved != expected:
+                    raise ValueError('New membership must clear producer metadata and quality.')
             _json_bytes(resolved)
             for field in resolved:
                 _field_name(field)
@@ -302,6 +332,10 @@ def interpret_events(unit_ids, metadata, events):
             if any(i in allocated or i < next_id for i in children):
                 raise ValueError('Threshold split child ID collision.')
             resolved = normalize_metadata(event['metadata'])
+            if event['version'] == 2:
+                expected = {field: dict.fromkeys(children) for field in set(metadata) | {'group'}}
+                if resolved != expected:
+                    raise ValueError('New membership must clear producer metadata and quality.')
             if any(not set(v) <= set(children) for v in resolved.values()):
                 raise ValueError('Split metadata must refer only to explicit children.')
             active.remove(parent)
@@ -511,6 +545,11 @@ class BoundedSession:
             or not set(np.unique(self.base_assignments)) <= set(self.unit_ids)
         ):
             raise ValueError('Immutable bounded assignments do not match the full catalog.')
+        self.metadata_schema = validate_schema(
+            manifest.get('metadata_schema', {'version': 1, 'tables': []})
+        )
+        if manifest.get('metadata_policy') not in (None, POLICY):
+            raise ValueError('Unsupported bounded metadata policy.')
         self.base_metadata = normalize_metadata(
             manifest.get('base_metadata', manifest.get('metadata', {}))
         )
@@ -591,6 +630,13 @@ class BoundedSession:
         pointer_path = self.path / '.phy-curation' / 'current.json'
         if pointer_path.exists():
             self._load_checkpoint(pointer_path)
+        if self.metadata_policy is None:
+            warnings.warn(
+                'Legacy bounded metadata preserves inherited values; use '
+                'migrate_metadata() to adopt membership-scoped metadata.',
+                UserWarning,
+                stacklevel=2,
+            )
 
     def validate_proposition_documents(self):
         """Keep producer input and its inherited ledger bound to preparation."""
@@ -685,6 +731,14 @@ class BoundedSession:
         )
         self.assignments, self.metadata = values, metadata
         self.events = events
+        if 'metadata_policy' in descriptor and (
+            descriptor['metadata_policy'] != self.metadata_policy
+            or descriptor.get('metadata_schema') != self.effective_metadata_schema
+            or descriptor.get('metadata_provenance') != self.metadata_provenance
+        ):
+            raise ValueError(
+                'Checkpoint metadata policy/schema/provenance disagrees with journal.'
+            )
         self.next_cluster_id = next_id
         self.checkpoint_path = generation
         self._expected_pointer = copy.deepcopy(pointer)
@@ -745,8 +799,8 @@ class BoundedSession:
         self.next_cluster_id = next_id
 
     def _append(self, event):
-        self._validate_event_capabilities([event])
         events = self.events + [event]
+        self._validate_event_capabilities(events)
         _, metadata, next_id = interpret_events(self.unit_ids, self.base_metadata, events)
         assignments = project_assignments(self.base_assignments, events, self.attributes)
         self.assignments, self.metadata, self.events = assignments, metadata, events
@@ -766,20 +820,138 @@ class BoundedSession:
             )
 
     def _validate_event_capabilities(self, events):
+        policy = self.manifest.get('metadata_policy') == POLICY
         for event in events:
             if isinstance(event, dict):
                 operation = event.get('operation')
-                if operation in ('merge', 'label', 'threshold_split'):
+                if operation == 'metadata_policy':
+                    if policy:
+                        raise ValueError('Metadata policy migration has already been applied.')
+                    policy = True
+                elif operation in ('merge', 'label', 'threshold_split'):
+                    if event.get('version') != (2 if policy else 1):
+                        raise ValueError('Semantic event version disagrees with metadata policy.')
                     self._require_capability(operation, event.get('predicate'))
+
+    @property
+    def metadata_policy(self):
+        return self._metadata_policy(self.events)
+
+    def _metadata_policy(self, events):
+        return (
+            POLICY
+            if (
+                self.manifest.get('metadata_policy') == POLICY
+                or any(e['operation'] == 'metadata_policy' for e in events)
+            )
+            else None
+        )
+
+    @property
+    def effective_metadata_schema(self):
+        return self._metadata_schema(self.events, self.metadata)
+
+    def _metadata_schema(self, events, metadata):
+        schema = self.metadata_schema
+        for event in events:
+            if event['operation'] == 'metadata_policy':
+                schema = event['schema']
+        return complete_schema(schema, metadata)
+
+    @property
+    def metadata_provenance(self):
+        return self._metadata_provenance(self.events)
+
+    def _metadata_provenance(self, events):
+        result = copy.deepcopy(self.manifest.get('metadata_provenance', {'history': []}))
+        metadata = copy.deepcopy(self.base_metadata)
+        for index, event in enumerate(events):
+            operation = event['operation']
+            if operation in ('merge', 'threshold_split'):
+                parents = event['parents'] if operation == 'merge' else [event['parent']]
+                children = [event['target']] if operation == 'merge' else event['children']
+                result.setdefault('history', []).append(
+                    {
+                        'operation': operation,
+                        'source_revision': self.manifest['source']['revision'],
+                        'event_index': index,
+                        **(
+                            {'predicate': copy.deepcopy(event['predicate'])}
+                            if operation == 'threshold_split'
+                            else {}
+                        ),
+                        'parents': parents,
+                        'children': children,
+                        'parent_metadata': {
+                            field: {str(unit): values.get(unit) for unit in parents}
+                            for field, values in metadata.items()
+                        },
+                        'policy': POLICY if event['version'] == 2 else 'legacy_inherited',
+                    }
+                )
+            elif operation == 'label' or operation == 'metadata_policy':
+                result.setdefault('history', []).append(copy.deepcopy(event))
+            # Event metadata is already resolved and validated. Scan it once
+            # instead of replaying every prefix of a potentially long journal.
+            if operation in ('merge', 'threshold_split'):
+                for values in metadata.values():
+                    for parent in parents:
+                        values.pop(parent, None)
+                for field, resolved in event['metadata'].items():
+                    values = {event['target']: resolved} if operation == 'merge' else resolved
+                    metadata.setdefault(field, {}).update(copy.deepcopy(values))
+            elif operation == 'label':
+                values = metadata.setdefault(event['field'], {})
+                for unit in event['ids']:
+                    values[unit] = copy.deepcopy(event['value'])
+            elif operation == 'metadata_policy':
+                _, metadata, _ = interpret_events(
+                    self.unit_ids, self.base_metadata, events[: index + 1]
+                )
+        return result
+
+    def migrate_metadata(self, source_params=None):
+        """Explicitly clear ambiguous inherited values; retain label journal intent.
+
+        The original manifest and generations remain immutable. Saving commits a
+        policy transition and schema in the same atomic generation as assignments.
+        Reopen a supervisor after migrating an already-open GUI session.
+        """
+        if self.metadata_policy == POLICY:
+            return None
+        from .source import Source
+
+        source_params = source_params or self.manifest.get('source', {}).get('path')
+        if not source_params:
+            raise ValueError('Migration requires source_params to recover original table names.')
+        with Source(
+            source_params,
+            duration_seconds=self.manifest['num_samples'] / self.manifest['sample_rate'],
+            valid_intervals=self.manifest['valid_intervals'],
+        ) as source:
+            if source.identity != self.manifest['source']['identity']:
+                raise ValueError('Migration source identity does not match preparation.')
+            if source.revision != self.manifest['source']['revision']:
+                raise ValueError('Migration source revision does not match preparation.')
+            if source.metadata != self.base_metadata:
+                raise ValueError('Migration base metadata does not match source metadata.')
+            schema = source.metadata_schema
+        return self._append(
+            {'version': 2, 'operation': 'metadata_policy', 'policy': POLICY, 'schema': schema}
+        )
 
     def preflight_merge(self, parents, target, metadata=None):
         self._require_capability('merge')
         event = {
-            'version': 1,
+            'version': 2 if self.metadata_policy else 1,
             'operation': 'merge',
             'parents': [int(i) for i in parents],
             'target': _integer(target, 'Target ID'),
-            'metadata': copy.deepcopy(metadata or {}),
+            'metadata': (
+                dict.fromkeys(set(self.metadata) | {'group'})
+                if self.metadata_policy
+                else copy.deepcopy(metadata or {})
+            ),
         }
         if event['target'] < self.next_cluster_id:
             raise ValueError('Merge target is below the complete catalog allocator.')
@@ -791,8 +963,9 @@ class BoundedSession:
 
     def preflight_label(self, field, ids, value):
         self._require_capability('label')
+        complete_schema(self.effective_metadata_schema, {**self.metadata, field: {}})
         event = {
-            'version': 1,
+            'version': 2 if self.metadata_policy else 1,
             'operation': 'label',
             'field': field,
             'ids': [int(i) for i in ids],
@@ -812,12 +985,16 @@ class BoundedSession:
             raise ValueError('Threshold children collide with the complete catalog allocator.')
         return self._append(
             {
-                'version': 1,
+                'version': 2 if self.metadata_policy else 1,
                 'operation': 'threshold_split',
                 'parent': int(parent),
                 'children': children,
                 'predicate': validate_predicate(predicate),
-                'metadata': normalize_metadata(metadata or {}),
+                'metadata': (
+                    {field: dict.fromkeys(children) for field in set(self.metadata) | {'group'}}
+                    if self.metadata_policy
+                    else normalize_metadata(metadata or {})
+                ),
             }
         )
 
@@ -827,12 +1004,16 @@ class BoundedSession:
         if any(i < self.next_cluster_id for i in children):
             raise ValueError('Threshold children collide with the complete catalog allocator.')
         event = {
-            'version': 1,
+            'version': 2 if self.metadata_policy else 1,
             'operation': 'threshold_split',
             'parent': int(parent),
             'children': children,
             'predicate': validate_predicate(predicate),
-            'metadata': normalize_metadata(metadata or {}),
+            'metadata': (
+                {field: dict.fromkeys(children) for field in set(self.metadata) | {'group'}}
+                if self.metadata_policy
+                else normalize_metadata(metadata or {})
+            ),
         }
         interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
         project_assignments(self.base_assignments, self.events + [event], self.attributes)
@@ -911,6 +1092,9 @@ class BoundedSession:
                 'version': 1,
                 'manifest_sha256': _digest(self.manifest),
                 'next_cluster_id': next_id,
+                'metadata_policy': self._metadata_policy(events),
+                'metadata_schema': self._metadata_schema(events, metadata),
+                'metadata_provenance': self._metadata_provenance(events),
                 'files': {
                     name: _hash_file(stage / name)
                     for name in ('spike_clusters.npy', 'journal.json', 'metadata.json', *documents)

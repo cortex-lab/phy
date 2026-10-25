@@ -1,6 +1,5 @@
 """Validated, file-backed source sorting on one monotonic integer time axis."""
 
-import csv
 import ctypes
 import errno
 import hashlib
@@ -11,6 +10,8 @@ import sys
 from pathlib import Path
 
 import numpy as np
+
+from .metadata import read_metadata
 
 PER_SPIKE = frozenset(
     (
@@ -142,36 +143,7 @@ def _vector(array, name):
 
 
 def _metadata(path):
-    sidecar = path / '_phy_cluster_metadata.json'
-    if sidecar.exists():
-        metadata = json.loads(sidecar.read_text(encoding='utf-8'))
-        if not isinstance(metadata, dict):
-            raise ValueError('Cluster metadata JSON must be a field mapping.')
-        result = {}
-        for field, values in metadata.items():
-            if not isinstance(values, dict):
-                raise ValueError('Cluster metadata fields must map integer cluster IDs to values.')
-            result[field] = {int(key): value for key, value in values.items()}
-            if any(key < 0 for key in result[field]):
-                raise ValueError('Cluster metadata IDs must be nonnegative.')
-        return result
-    result = {}
-    for filename in sorted([*path.glob('cluster_*.tsv'), *path.glob('cluster_*.csv')]):
-        # cluster_info is generated GUI metrics, not a source label table.
-        if filename.stem == 'cluster_info':
-            continue
-        with filename.open(encoding='utf-8', newline='') as stream:
-            reader = csv.DictReader(stream, delimiter='\t' if filename.suffix == '.tsv' else ',')
-            if not reader.fieldnames or 'cluster_id' not in reader.fieldnames:
-                raise ValueError(f'{filename.name} requires a cluster_id column.')
-            for row in reader:
-                cluster_id = int(row['cluster_id'])
-                if cluster_id < 0:
-                    raise ValueError('Cluster metadata IDs must be nonnegative.')
-                for field, value in row.items():
-                    if field != 'cluster_id':
-                        result.setdefault(field, {})[cluster_id] = value
-    return result
+    return read_metadata(path)[0]
 
 
 def _time_base(value):
@@ -382,7 +354,7 @@ class Source:
             if required not in self.arrays:
                 raise ValueError(f'Missing required source array {required}.')
         self.n_spikes = len(_vector(self.arrays['spike_times.npy'], 'spike_times.npy'))
-        self.metadata = _metadata(self.path)
+        self.metadata, self.metadata_schema = read_metadata(self.path)
         self.validate()
         counts = {}
         for batch in self.iter_batches():
@@ -405,6 +377,7 @@ class Source:
                 if not isinstance(unit, int) or unit < 0:
                     raise ValueError('Lineage unit IDs must be nonnegative integers.')
                 counts.setdefault(unit, 0)
+        self.metadata_provenance = lineage.get('metadata_provenance', {'history': []})
         self.retired_units = lineage.get('retired_units', {})
         if not isinstance(self.retired_units, dict):
             raise ValueError('Lineage retired_units must be a mapping.')

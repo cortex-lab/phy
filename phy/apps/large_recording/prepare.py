@@ -1,6 +1,5 @@
 """Publish a self-contained bounded evidence package from a full sorting."""
 
-import csv
 import json
 import os
 import shutil
@@ -9,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .metadata import POLICY, SCHEMA_FILE, write_metadata
 from .source import (
     PER_SPIKE,
     STATIC,
@@ -42,22 +42,6 @@ def _union(windows, block_starts=()):
         else:
             result.append([int(start), int(end)])
     return result
-
-
-def _write_metadata(path, metadata):
-    for field, values in metadata.items():
-        if (
-            not isinstance(field, str)
-            or not field
-            or '/' in field
-            or '\\' in field
-            or field in ('.', '..')
-        ):
-            raise ValueError('Metadata field names must be safe filenames.')
-        with (path / f'cluster_{field}.tsv').open('w', encoding='utf-8', newline='') as stream:
-            writer = csv.writer(stream, delimiter='\t')
-            writer.writerow(['cluster_id', field])
-            writer.writerows(sorted(values.items()))
 
 
 def _selected_waveform_count(source, windows):
@@ -447,10 +431,8 @@ def _prepare_source(
                     waveform_counts[int(unit)] += int(count)
             waveform_ids._mmap.close()
         np.save(temporary / '_phy_curation_windows.npy', np.asarray(windows, dtype=np.int64))
-        _write_metadata(temporary, source.metadata)
-        (temporary / '_phy_cluster_metadata.json').write_text(
-            json.dumps(source.metadata, sort_keys=True) + '\n', encoding='utf-8'
-        )
+        metadata = source.metadata
+        write_metadata(temporary, metadata, source.metadata_schema)
         # Standard loader stays self-contained; no original raw path is referenced.
         params = {
             key: source.params[key]
@@ -540,8 +522,11 @@ def _prepare_source(
             'windows': final_windows,
             'accepted_window_candidates': plan,
             'omitted_windows': omitted,
-            'metadata': source.metadata,
-            'base_metadata': source.metadata,
+            'metadata': metadata,
+            'base_metadata': metadata,
+            'metadata_schema': source.metadata_schema,
+            'metadata_policy': POLICY,
+            'metadata_provenance': source.metadata_provenance,
             'summaries': summaries,
             **{key: value for key, value in summaries.items() if key.endswith('_file')},
             'selection': {
@@ -601,6 +586,7 @@ def _prepare_source(
                 not in (
                     'params.py',
                     '_phy_cluster_metadata.json',
+                    SCHEMA_FILE,
                     'curation.json',
                     'curation_review.json',
                 )
@@ -631,6 +617,8 @@ def _prepare_source(
             *temporary.glob('*.npy'),
             temporary / 'params.py',
             temporary / '_phy_cluster_metadata.json',
+            temporary / SCHEMA_FILE,
+            *(temporary / table['filename'] for table in source.metadata_schema['tables']),
             *(temporary / item['filename'] for item in manifest['proposition_documents'].values()),
         ]
         manifest['bounded_files'] = {p.name: hash_file(p) for p in sorted(bound_paths)}

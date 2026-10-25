@@ -162,6 +162,7 @@ def test_reject_ambiguous_or_misaligned_sources(tmp_path, failure):
 
 def test_metadata_json_preserves_typed_values(tmp_path):
     params = make_sorting(tmp_path / 'full')
+    (params.parent / 'cluster_group.tsv').write_text('cluster_id\tgroup\n0\tgood\n')
     metadata = {'group': {'0': 'good'}, 'custom': {'99': None, '2': 4}}
     (params.parent / '_phy_cluster_metadata.json').write_text(json.dumps(metadata))
     assert Source(params).metadata == {'group': {0: 'good'}, 'custom': {99: None, 2: 4}}

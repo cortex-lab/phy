@@ -1,6 +1,5 @@
 """Stream semantic curation into a new complete sorting, never the source."""
 
-import csv
 import os
 import shutil
 import tempfile
@@ -16,6 +15,7 @@ from .curation import (
     interpret_events,
     project_assignments,
 )
+from .metadata import complete_schema, write_metadata
 from .parameters import rewrite_replay_params
 from .source import PER_SPIKE, Source, _has_raw_paths, close_array, hash_file, publish_directory
 
@@ -35,19 +35,8 @@ def _merge_mapping(unit_ids, events):
     return keys, targets
 
 
-def _write_metadata(path, metadata):
-    for field, values in sorted(metadata.items()):
-        if not field or any(char in field for char in ('/', '\\', '\0')):
-            raise ValueError('Metadata fields must be safe local filenames.')
-        with (path / f'cluster_{field}.tsv').open('w', encoding='utf8', newline='') as stream:
-            writer = csv.writer(stream, delimiter='\t')
-            writer.writerow(['cluster_id', field])
-            for cluster, value in sorted(values.items()):
-                if value is not None:
-                    writer.writerow([cluster, value])
-            stream.flush()
-            os.fsync(stream.fileno())
-    _write_json(path / '_phy_cluster_metadata.json', metadata)
+def _write_metadata(path, metadata, schema=None):
+    return write_metadata(path, metadata, schema or {'version': 1, 'tables': []})
 
 
 def apply_curation(source_params, bounded_dir, output_dir, batch_size=100000):
@@ -79,11 +68,20 @@ def apply_curation(source_params, bounded_dir, output_dir, batch_size=100000):
 def _apply_curation(source, session, output_dir, batch_size):
     session.validate_proposition_documents()
     manifest = session.manifest
+    if 'metadata_schema' in manifest and source.metadata_schema != manifest['metadata_schema']:
+        raise ValueError('Source metadata schema changed since bounded preparation.')
+    if (
+        'metadata_provenance' in manifest
+        and source.metadata_provenance != manifest['metadata_provenance']
+    ):
+        raise ValueError('Source metadata provenance changed since bounded preparation.')
     expected = manifest['source']
     if source.identity != expected['identity']:
         raise ValueError('Source coordinate/feature identity does not match bounded preparation.')
     if source.revision != expected['revision']:
         raise ValueError('Source assignment revision does not match journal parent revision.')
+    if source.metadata != session.base_metadata:
+        raise ValueError('Bounded base metadata does not match the source metadata revision.')
     if (
         source.unit_ids.tolist() != manifest['unit_ids']
         or source.n_spikes != manifest['num_spikes']
@@ -117,7 +115,9 @@ def _apply_curation(source, session, output_dir, batch_size):
                     raise ValueError(f'Bounded attribute does not match source rows: {name}.')
         finally:
             close_array(bounded)
-    active_units, metadata, _ = interpret_events(source.unit_ids, source.metadata, session.events)
+    active_units, metadata, _ = interpret_events(
+        source.unit_ids, session.base_metadata, session.events
+    )
     output = Path(output_dir).resolve()
     if output.exists():
         raise FileExistsError(f'Curated output already exists: {output}.')
@@ -191,7 +191,7 @@ def _apply_curation(source, session, output_dir, batch_size):
         assignments._mmap.close()
         del flat, assignments
         assignments = None
-        _write_metadata(stage, metadata)
+        _write_metadata(stage, metadata, complete_schema(source.metadata_schema, metadata))
         _write_json(stage / '_phy_curation_journal.json', session.events)
         proposition_hashes = {}
         item = session.proposition_documents.get('curation.json')
@@ -234,6 +234,8 @@ def _apply_curation(source, session, output_dir, batch_size):
                 'unit_ids': sorted(active_units),
                 'retired_units': session.retired_units,
                 'proposition_documents': proposition_hashes,
+                'metadata_provenance': session.metadata_provenance,
+                'metadata_policy': session.metadata_policy,
             },
         )
         curated.close()
