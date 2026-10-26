@@ -86,8 +86,10 @@ and save boundaries.
 ```
 
 Use the actual final unit identities returned by each run to fill the aliases.
-Run ordinary GUI acceptance with the graphical threshold interaction (Alt plus
-right-drag, then `K`) and bounded GUI acceptance with the same threshold. Use
+In ordinary Amplitude View, select the **template** amplitude type, which reads
+`amplitudes.npy`; feature and template-feature amplitudes define different
+quantities. Run ordinary GUI acceptance with the graphical threshold interaction
+(Alt plus right-drag, then `K`) and bounded GUI acceptance with the same threshold. Use
 source units whose amplitudes are all finite for this graphical equivalence
 check. Bounded splitting assigns finite values strictly below the threshold to
 the selected side; equal and nonfinite values stay in the remainder. Require

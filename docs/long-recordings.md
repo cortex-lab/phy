@@ -340,7 +340,9 @@ differ between runs. Use a fresh report path outside both input folders.
 Producer metrics intentionally cleared on changed memberships are excluded.
 For graphical split comparisons, choose finite source amplitudes: ordinary
 TemplateModel displays nonfinite amplitudes as zero, while bounded replay
-keeps them in the remainder. The tool also provides independent ordinary-engine
+keeps them in the remainder. Select **template** amplitudes in ordinary
+Amplitude View to compare its stored `amplitudes.npy` values; feature amplitudes
+represent a different quantity. The tool also provides independent ordinary-engine
 and streamed references; neither replaces a full ordinary GUI acceptance run.
 The repository's `design/curation-user-acceptance.md` provides the action ledger,
 additional user checks and evidence limits.
