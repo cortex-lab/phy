@@ -80,7 +80,15 @@ def write_labels(path, data):
             writer.writerows(sorted(values.items()))
 
 
-def compare_outputs(left, right, fields=('group', 'notes'), chunk_size=100000):
+def compare_outputs(
+    left,
+    right,
+    fields=('group', 'notes'),
+    chunk_size=100000,
+    source=None,
+    expected_labels=None,
+    bounded_dir=None,
+):
     """Exact all-row partition equivalence, O(chunk_size + number of units) RAM.
 
     A two-way raw-ID mapping proves equivalence without partition hash collisions.
@@ -160,12 +168,31 @@ def compare_outputs(left, right, fields=('group', 'notes'), chunk_size=100000):
             }
             for side, p in (('left', left), ('right', right))
         }
-        a_labels, b_labels = labels(left, fields), labels(right, fields)
+        permitted = set()
+        if source is not None:
+            if __package__:
+                from tools.curation_output_contract import compare_file_contract
+            else:
+                from curation_output_contract import compare_file_contract
+
+            contract, a_labels, b_labels = compare_file_contract(
+                left, right, source, forward, expected_labels, bounded_dir, chunk_size
+            )
+            report['file_contract'] = contract
+            permitted = {
+                (d['field'], d['left_id'], d['right_id'], d['left'], d['right'])
+                for d in contract['permitted_metadata_differences']
+            }
+            report['permitted_membership_policy_differences'] = contract[
+                'permitted_metadata_differences'
+            ]
+        else:
+            a_labels, b_labels = labels(left, fields), labels(right, fields)
         differences = []
         for field in fields:
             for a, b in forward.items():
-                av, bv = a_labels[field].get(a, ''), b_labels[field].get(b, '')
-                if av != bv:
+                av, bv = a_labels.get(field, {}).get(a, ''), b_labels.get(field, {}).get(b, '')
+                if av != bv and (field, a, b, av, bv) not in permitted:
                     differences.append(
                         {'field': field, 'left_id': a, 'right_id': b, 'left': av, 'right': bv}
                     )
@@ -185,7 +212,7 @@ def compare_outputs(left, right, fields=('group', 'notes'), chunk_size=100000):
             and not differences
             and not any(ids for side in unmapped.values() for ids in side.values())
         )
-    except (ValueError, OSError, KeyError) as error:
+    except (ValueError, OSError, KeyError, TypeError, AttributeError, IndexError) as error:
         report['error'] = str(error)
     return report
 
@@ -469,6 +496,15 @@ def main():
     compare.add_argument('--fields', nargs='+', default=['group', 'notes'])
     compare.add_argument('--output', required=True)
     compare.add_argument('--chunk-size', type=int, default=100000)
+    compare.add_argument(
+        '--source', help='Original immutable sorting: enable the whole-file contract.'
+    )
+    compare.add_argument(
+        '--expectations', help='JSON map of replay unit IDs to explicit final field values.'
+    )
+    compare.add_argument(
+        '--bounded-dir', help='Final round package, to verify preparation/parent binding.'
+    )
     reference = sub.add_parser('reference')
     reference.add_argument('source')
     reference.add_argument('ledger')
@@ -478,9 +514,25 @@ def main():
     args = parser.parse_args()
     if args.command == 'compare':
         try:
-            destination = report_path(args.output, (args.ordinary, args.bounded_replay))
+            if (args.expectations or args.bounded_dir) and not args.source:
+                raise ValueError('--expectations and --bounded-dir require --source')
+            inputs = [args.ordinary, args.bounded_replay]
+            if args.bounded_dir:
+                inputs.append(args.bounded_dir)
+            if args.source:
+                source_path = Path(args.source).resolve()
+                inputs.append(source_path.parent if source_path.is_file() else source_path)
+            destination = report_path(args.output, inputs)
             result = compare_outputs(
-                args.ordinary, args.bounded_replay, args.fields, args.chunk_size
+                args.ordinary,
+                args.bounded_replay,
+                args.fields,
+                args.chunk_size,
+                source=args.source,
+                expected_labels=json.loads(Path(args.expectations).read_text())
+                if args.expectations
+                else None,
+                bounded_dir=args.bounded_dir,
             )
             # Exclusive creation also rejects another writer winning after validation.
             with destination.open('x') as stream:
