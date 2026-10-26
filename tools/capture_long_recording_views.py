@@ -1,14 +1,19 @@
 """Capture reproducible screenshots of the bounded-evidence Qt views.
 
 The script builds a temporary synthetic Phy sorting, prepares it with the real
-long-recording workflow, opens the real GUI, and saves two screenshots. It does
-not download or modify a recording.
+long-recording workflow, opens the real GUI, and saves screenshots. Existing
+bounded inputs are copied into a temporary directory before opening.
 
 Run with a display, or under a virtual X server::
 
     QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
       xvfb-run -a -s '-screen 0 2400x1600x24 +extension GLX' \
-      uv run python tools/capture_long_recording_views.py
+      uv run python tools/capture_long_recording_views.py --amplitude-split
+
+Use ``--amplitude-split --bounded-dir PATH --cluster-ids ID`` for an existing
+fresh bounded package, optionally with ``--threshold SOURCE_VALUE``. The three
+PNG captures and ``capture.json`` include the exact committed threshold and
+retained child sizes; graphical threshold values reflect pixel quantization.
 """
 
 import argparse
@@ -21,13 +26,15 @@ import time
 from pathlib import Path
 
 import numpy as np
-from PyQt5.QtCore import QCoreApplication, QEvent
+from PyQt5.QtCore import QCoreApplication, QEvent, QPoint, QPointF
+from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtTest import QTest
 
 from phy.apps.large_recording.prepare import prepare_large
 from phy.apps.large_recording.source import hash_file
 from phy.apps.template.gui import TemplateController
 from phy.gui.qt import QApplication, Qt
+from phy.plot.transform import NDC, Range
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPOSITORY / 'docs' / 'images'
@@ -241,6 +248,123 @@ def _capture_comparison(bounded, config_dir, output_dir, selected, dataset_label
         _close_capture(gui, controller)
 
 
+def _capture_amplitude_split(bounded, config_dir, output_dir, selected, threshold, dataset_label):
+    """Capture a real threshold drag and K commit on a disposable bounded copy."""
+    controller = TemplateController(
+        dir_path=bounded, config_dir=config_dir, plugins=[], enable_threading=False
+    )
+    gui = controller.create_gui(
+        default_views=['EvidenceAmplitudeView', 'WaveformView'], do_prompt_save=False
+    )
+    try:
+        supervisor = controller.supervisor
+        if controller.bounded_session.events:
+            raise ValueError('Amplitude capture requires a fresh bounded package without edits.')
+        if len(selected) != 1:
+            raise ValueError('Amplitude capture requires exactly one cluster ID.')
+        unit = selected[0]
+        ids = supervisor.clustering.spikes_per_cluster.get(unit, np.array([], dtype=np.int64))
+        values = controller.bounded_session.attributes.get('amplitudes.npy')
+        if values is None or not len(ids):
+            raise ValueError('Select a retained unit with source amplitude evidence.')
+        amplitudes = values.reshape(-1)[ids]
+        finite = amplitudes[np.isfinite(amplitudes)]
+        if not len(finite):
+            raise ValueError('The selected unit has no finite source amplitudes.')
+        threshold = float(np.median(finite)) if threshold is None else float(threshold)
+        if not np.isfinite(threshold):
+            raise ValueError('The threshold must be finite.')
+        if not np.any(np.isfinite(amplitudes) & (amplitudes < threshold)) or not np.any(
+            ~(np.isfinite(amplitudes) & (amplitudes < threshold))
+        ):
+            raise ValueError('Both threshold children must have retained evidence.')
+
+        gui.resize(2200, 1250)
+        gui.show()
+        _wait_for_render()
+        for name in ('ClusterView', 'SimilarityView', 'MergePropositionsView', 'PropositionView'):
+            for view in gui.list_views(name):
+                view.dock.hide()
+        amplitude = gui.get_view('EvidenceAmplitudeView')
+        waveform = gui.get_view('WaveformView')
+        gui.splitDockWidget(amplitude.dock, waveform.dock, Qt.Horizontal)
+        gui.resizeDocks([amplitude.dock, waveform.dock], [1450, 700], Qt.Horizontal)
+        controller.n_spikes_waveforms = 60
+        controller.n_spikes_waveforms_total = 60
+        supervisor.select(selected)
+        supervisor.block()
+        amplitude.amplitude_scope = 'overview'
+        waveform.waveforms_type = 'waveforms'
+        waveform.plot()
+        _wait_for_render()
+        _capture(gui, output_dir / 'amplitude-before.png')
+
+        # Deliver actual Qt events to the native OpenGL window. Reuse the view's
+        # transform so the drag is expressed in unscaled source amplitude units.
+        canvas = amplitude.canvas
+        width, height = canvas.get_size()
+        ndc = Range(amplitude.data_bounds, NDC).apply([[amplitude.duration / 2, threshold]])[0]
+        screen = (ndc + np.asarray(canvas.panzoom.pan)) * canvas.panzoom._zoom_aspect()
+        point = QPoint(round((screen[0] + 1) * width / 2), round((1 - screen[1]) * height / 2))
+        if not 0 <= point.y() < height:
+            raise ValueError('The threshold is outside the displayed amplitude range.')
+        start = QPoint(max(0, point.x() - 20), point.y())
+        QTest.mousePress(canvas, Qt.RightButton, Qt.AltModifier, start)
+        move = QMouseEvent(
+            QEvent.MouseMove, QPointF(point), Qt.NoButton, Qt.RightButton, Qt.AltModifier
+        )
+        QApplication.sendEvent(canvas, move)
+        QTest.mouseRelease(canvas, Qt.RightButton, Qt.AltModifier, point)
+        _wait_for_render()
+        actual_threshold = amplitude.split_threshold
+        if actual_threshold is None or not supervisor.actions.get('split').isEnabled():
+            raise RuntimeError('The actual Alt-right drag did not create an eligible preview.')
+        _capture(gui, output_dir / 'amplitude-preview.png')
+        highlighted = int(len(waveform._highlighted_spike_ids))
+        if hasattr(canvas, 'requestActivate'):
+            canvas.requestActivate()
+        elif hasattr(canvas, 'setFocus'):
+            canvas.setFocus()
+        _wait_for_render()
+        QTest.keyClick(canvas, Qt.Key_K)
+        supervisor.block()
+        _wait_for_render()
+        if not controller.bounded_session.events:
+            raise RuntimeError('The actual K key did not commit the threshold predicate.')
+        event = controller.bounded_session.events[-1]
+        if event['operation'] != 'threshold_split' or amplitude.split_threshold is not None:
+            raise RuntimeError('K did not finish the expected semantic threshold split.')
+        _capture(gui, output_dir / 'amplitude-after.png')
+        report = {
+            'dataset_label': dataset_label,
+            'workflow': 'amplitude_split',
+            'selected_cluster_ids': selected,
+            'amplitude_scope': amplitude.amplitude_scope,
+            'requested_source_threshold': threshold,
+            'exact_source_threshold': event['predicate']['threshold'],
+            'predicate': event['predicate'],
+            'retained_parent_count': int(len(ids)),
+            'retained_split_sizes': {
+                str(child): int(supervisor.n_spikes(child)) for child in event['children']
+            },
+            'highlighted_waveform_traces': highlighted,
+            'gui_size': [gui.width(), gui.height()],
+            'screenshots': [
+                'amplitude-before.png',
+                'amplitude-preview.png',
+                'amplitude-after.png',
+            ],
+            'source_arrays_modified': False,
+            'capture_revision': subprocess.check_output(
+                ['git', 'rev-parse', 'HEAD'], cwd=REPOSITORY, text=True
+            ).strip(),
+        }
+        (output_dir / 'capture.json').write_text(json.dumps(report, indent=2) + '\n')
+        print(json.dumps(report), flush=True)
+    finally:
+        _close_capture(gui, controller)
+
+
 def _capture_views(bounded, config_dir, output_dir, stability):
     views = (
         ['UnitStabilityView']
@@ -319,10 +443,24 @@ def main():
     parser.add_argument(
         '--bounded-dir', type=Path, help='Existing package; copied before opening.'
     )
-    parser.add_argument(
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument(
         '--comparison', action='store_true', help='Capture cluster overlay controls.'
     )
-    parser.add_argument('--cluster-ids', type=int, nargs='+', help='IDs for comparison captures.')
+    modes.add_argument(
+        '--amplitude-split',
+        action='store_true',
+        help='Capture a source-amplitude drag and K split.',
+    )
+    parser.add_argument(
+        '--threshold', type=float, help='Source amplitude threshold; default: median.'
+    )
+    parser.add_argument(
+        '--cluster-ids',
+        type=int,
+        nargs='+',
+        help='Selected IDs; exactly one for amplitude splits.',
+    )
     parser.add_argument('--dataset-label', help='Dataset provenance label stored in capture.json.')
     parser.add_argument('--synthetic-hours', type=int, default=HOURS)
     parser.add_argument('--synthetic-units', type=int, default=4)
@@ -332,15 +470,24 @@ def main():
         parser.error('--synthetic-hours must be at least 4.')
     if args.synthetic_units < 2:
         parser.error('--synthetic-units must be at least 2.')
-    if args.bounded_dir and not args.comparison:
-        parser.error('--bounded-dir requires --comparison.')
+    if args.bounded_dir and not (args.comparison or args.amplitude_split):
+        parser.error('--bounded-dir requires --comparison or --amplitude-split.')
+    if args.threshold is not None and not args.amplitude_split:
+        parser.error('--threshold requires --amplitude-split.')
+    if args.amplitude_split and args.cluster_ids and len(args.cluster_ids) != 1:
+        parser.error('--amplitude-split requires exactly one --cluster-ids ID.')
     if args.bounded_dir:
         source = args.bounded_dir.resolve()
         if not (source / '_phy_curation_manifest.json').is_file():
             parser.error('--bounded-dir must contain a bounded curation manifest.')
         if source == args.output_dir.resolve() or source in args.output_dir.resolve().parents:
             parser.error('--output-dir must be outside the input bounded package.')
-        if not args.cluster_ids or len(args.cluster_ids) < 2:
+        if args.amplitude_split:
+            if not args.cluster_ids or len(args.cluster_ids) != 1:
+                parser.error(
+                    '--bounded-dir amplitude splits require exactly one --cluster-ids ID.'
+                )
+        elif not args.cluster_ids or len(args.cluster_ids) < 2:
             parser.error('--bounded-dir comparisons require at least two --cluster-ids.')
     args.output_dir.mkdir(parents=True, exist_ok=True)
     app = QApplication.instance() or QApplication(sys.argv[:1])
@@ -355,11 +502,14 @@ def main():
                 if path.is_file()
             }
             shutil.copytree(source, bounded, ignore=shutil.ignore_patterns('.phy', '*.log'))
-            _capture_comparison(
+            capture = _capture_amplitude_split if args.amplitude_split else _capture_comparison
+            extra = [args.threshold] if args.amplitude_split else []
+            capture(
                 bounded,
                 root / 'config',
                 args.output_dir,
                 args.cluster_ids,
+                *extra,
                 args.dataset_label
                 or 'Existing bounded package; acquisition exposure as declared.',
             )
@@ -393,7 +543,16 @@ def main():
             batch_size=50_000,
             bin_seconds=args.summary_bin_seconds,
         )
-        if args.comparison:
+        if args.amplitude_split:
+            _capture_amplitude_split(
+                bounded,
+                root / 'config',
+                args.output_dir,
+                args.cluster_ids or [0],
+                args.threshold,
+                args.dataset_label or f'Synthetic {args.synthetic_hours}-hour fixture.',
+            )
+        elif args.comparison:
             _capture_comparison(
                 bounded,
                 root / 'config',
