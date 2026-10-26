@@ -2,7 +2,7 @@
 
 This checker does not call the bounded assignment projector or metadata event
 interpreter. It checks native files, full row identities, and cumulative action
-ancestry against the original source and explicit final curator expectations.
+semantics against the original source and explicit final curator expectations.
 """
 
 import ast
@@ -311,7 +311,6 @@ def _history(source, curated, journal, manifest, expected_labels):
         int(u): {f: {_cell(source.metadata.get(f, {}).get(int(u)))} for f in fields}
         for u in source.unit_ids
     }
-    origins = {int(u): {int(u)} for u in source.unit_ids}
     resolved = {
         f: {int(u): _cell(v) for u, v in values.items()} for f, values in source.metadata.items()
     }
@@ -381,7 +380,6 @@ def _history(source, curated, journal, manifest, expected_labels):
             }
             if snapshot != recorded:
                 raise ValueError('Parent metadata provenance disagrees with independent history')
-            inherited_origins = set().union(*(origins[u] for u in parents))
             inherited = {f: set().union(*(candidates[u][f] for u in parents)) for f in fields}
             active.difference_update(parents)
             for parent in parents:
@@ -393,7 +391,6 @@ def _history(source, curated, journal, manifest, expected_labels):
             resolved.setdefault('group', {})
             for child in children:
                 candidates[child] = {f: set(v) for f, v in inherited.items()}
-                origins[child] = set(inherited_origins)
                 for values in resolved.values():
                     values[child] = ''
                 active.add(child)
@@ -424,7 +421,68 @@ def _history(source, curated, journal, manifest, expected_labels):
             )
             if value != intended:
                 raise ValueError('Independent expectation disagrees with recorded label intent')
-    return fields, candidates, explicit, active, origins
+    return fields, candidates, explicit, active, history[len(original) :]
+
+
+def _assignment_oracle(source, curated, history, chunk_size):
+    """Independently execute cumulative membership intent on every original row.
+
+    Attribute values always come from the immutable original source. Only a
+    chunk of assignments is copied, including when earlier rounds split a unit
+    that is subsequently merged or split again. Labels have no row effect.
+    """
+    original = source.arrays['spike_clusters.npy'].reshape(-1)
+    current = curated.arrays['spike_clusters.npy'].reshape(-1)
+    membership = [r for r in history if r['operation'] != 'label']
+    attributes = {}
+    for record in membership:
+        if record['operation'] != 'threshold_split':
+            continue
+        name = record['predicate']['attribute']
+        values = source.arrays[name]
+        if values.shape not in ((len(original),), (len(original), 1)):
+            raise ValueError('Predicate attribute must be a scalar per source spike')
+        attributes[name] = values.reshape(-1)
+    if len(current) != len(original):
+        raise ValueError('Assignment oracle requires complete source rows')
+    for start in range(0, len(original), chunk_size):
+        stop = start + chunk_size
+        expected = np.array(original[start:stop], dtype=np.int64, copy=True)
+        for record in membership:
+            parents, children = record['parents'], record['children']
+            if record['operation'] == 'merge':
+                expected[np.isin(expected, parents)] = children[0]
+                continue
+            parent_rows = np.flatnonzero(expected == parents[0])
+            predicate = record['predicate']
+            values = attributes[predicate['attribute']][start:stop][parent_rows]
+            finite = np.isfinite(values)
+            if predicate['nonfinite'] == 'reject' and not finite.all():
+                raise ValueError('Predicate rejects nonfinite values in source parent rows')
+            threshold = predicate['threshold']
+            operator = predicate['operator']
+            if operator == '<':
+                selected = values < threshold
+            elif operator == '<=':
+                selected = values <= threshold
+            elif operator == '>':
+                selected = values > threshold
+            else:  # Schema has already restricted the fourth operator to >=.
+                selected = values >= threshold
+            # Nonfinite values always remain in the first (remainder) child.
+            expected[parent_rows] = np.where(finite & selected, children[1], children[0])
+        mismatch = np.flatnonzero(expected != current[start:stop])
+        if len(mismatch):
+            row = start + int(mismatch[0])
+            raise ValueError(
+                f'Assignment disagrees with cumulative source predicates at spike {row}'
+            )
+    return {
+        'verified': True,
+        'source_rows': len(original),
+        'membership_events': len(membership),
+        'threshold_splits': sum(r['operation'] == 'threshold_split' for r in membership),
+    }
 
 
 def _local_file(root, name):
@@ -581,7 +639,7 @@ def compare_file_contract(
                 raise ValueError('Lineage parent/identity disagrees with preparation')
         elif lineage.get('parent_revision') != source.revision:
             raise ValueError('Later-round parent verification requires bounded_dir')
-        fields, candidates, explicit, active, origins = _history(
+        fields, candidates, explicit, active, history = _history(
             source, curated, journal, manifest, expected_labels
         )
         saved_generation = None
@@ -601,20 +659,7 @@ def compare_file_contract(
         if len(reverse) != len(mapped) or not set(reverse) <= active:
             raise ValueError('Partition mapping disagrees with final catalog')
         untouched = set(map(int, source.unit_ids)) & active
-        original = source.arrays['spike_clusters.npy'].reshape(-1)
-        current = curated.arrays['spike_clusters.npy'].reshape(-1)
-        for start in range(0, len(original), chunk_size):
-            aa, bb = original[start : start + chunk_size], current[start : start + chunk_size]
-            preserved = np.isin(aa, list(untouched)) | np.isin(bb, list(untouched))
-            if not np.array_equal(aa[preserved], bb[preserved]):
-                raise ValueError('Original unit identity retained with changed spike membership')
-            # Source admits only nonnegative int32 unit IDs: packing two IDs in
-            # uint64 is an exact pair representation, not a probabilistic hash.
-            pairs = np.unique((aa.astype(np.uint64) << np.uint64(32)) | bb.astype(np.uint64))
-            for pair in pairs:
-                old, unit = int(pair >> np.uint64(32)), int(pair & np.uint64(0xFFFFFFFF))
-                if old not in origins[unit]:
-                    raise ValueError('Spike contribution disagrees with recorded unit ancestry')
+        assignment_oracle = _assignment_oracle(source, curated, history, chunk_size)
         differences = []
         for field in fields:
             for unit in active:
@@ -786,6 +831,7 @@ def compare_file_contract(
         return (
             {
                 'ok': True,
+                'assignment_oracle': assignment_oracle,
                 'immutable_files': sorted(immutable),
                 'native_derived_static_files': derived_static,
                 'all_metadata_fields': sorted(fields),

@@ -24,7 +24,7 @@ def _inventory(path):
     }
 
 
-def _pair(tmp_path, aliases=False, twin=False, split=False, unclassified=False):
+def _pair(tmp_path, aliases=False, twin=False, split=False, unclassified=False, sparse=False):
     params = make_sorting(tmp_path / 'source')
     source = params.parent
     assert sum((twin, split, unclassified)) <= 1
@@ -107,9 +107,10 @@ def _pair(tmp_path, aliases=False, twin=False, split=False, unclassified=False):
     bounded = prepare_large(
         params,
         tmp_path / 'bounded',
-        window_seconds=20,
-        stratum_seconds=20,
-        max_spikes=100,
+        window_seconds=2 if sparse else 20,
+        stratum_seconds=5 if sparse else 20,
+        max_spikes=6 if sparse else 100,
+        window_policy='generated' if sparse else 'auto',
         bin_seconds=5,
         batch_size=2,
     )
@@ -205,6 +206,150 @@ def _edit_metadata(right, field, unit, value):
 def _journal_hash(journal):
     payload = json.dumps(journal, sort_keys=True, separators=(',', ':'), allow_nan=False) + '\n'
     return hashlib.sha256(payload.encode('utf-8')).hexdigest()
+
+
+def _forge_split_threshold(pair, threshold, inherited=False):
+    """Change intent coherently, leaving assignments and curator expectations untouched."""
+    journal_path = pair.right / '_phy_curation_journal.json'
+    lineage_path = pair.right / '_phy_curation_lineage.json'
+    journal = json.loads(journal_path.read_text())
+    lineage = json.loads(lineage_path.read_text())
+    lineage['metadata_provenance']['history'][1]['predicate']['threshold'] = threshold
+    if not inherited:
+        journal[1]['predicate']['threshold'] = threshold
+    lineage['journal_sha256'] = _journal_hash(journal)
+    journal_path.write_text(json.dumps(journal) + '\n')
+    manifest_path = pair.bounded / '_phy_curation_manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    if inherited:
+        manifest['metadata_provenance']['history'][1]['predicate']['threshold'] = threshold
+        manifest_path.write_text(json.dumps(manifest) + '\n')
+        lineage['preparation_sha256'] = _journal_hash(manifest)
+    lineage_path.write_text(json.dumps(lineage) + '\n')
+    pointer_path = pair.bounded / '.phy-curation/current.json'
+    pointer = json.loads(pointer_path.read_text())
+    generation = pair.bounded / '.phy-curation/generations' / pointer['generation']
+    saved_journal = generation / 'journal.json'
+    saved_journal.write_text(json.dumps(journal) + '\n')
+    descriptor_path = generation / 'checkpoint.json'
+    descriptor = json.loads(descriptor_path.read_text())
+    descriptor['files']['journal.json'] = hash_file(saved_journal)
+    descriptor['metadata_provenance'] = lineage['metadata_provenance']
+    descriptor['manifest_sha256'] = _journal_hash(manifest)
+    descriptor_path.write_text(json.dumps(descriptor) + '\n')
+    pointer['sha256'] = _journal_hash(descriptor)
+    pointer_path.write_text(json.dumps(pointer) + '\n')
+
+
+@pytest.mark.parametrize('bounded', [False, True])
+def test_coherent_threshold_forgery_rejected_by_source_assignments(tmp_path, bounded):
+    pair = _pair(tmp_path, split=True)
+    try:
+        assert _compare(pair, bounded=bounded)['ok']
+        # All amplitudes are <1000; the unchanged output still has two children.
+        # Journal, cumulative provenance, saved generation and all hashes agree.
+        _forge_split_threshold(pair, 1000.0)
+        assert comparison.compare_outputs(pair.ordinary, pair.right)['ok']
+        result = _compare(pair, bounded=bounded)
+        assert not result['ok'], result
+        assert 'cumulative source predicates' in result['error'], result
+    finally:
+        assert _inventory(pair.source) == pair.original
+
+
+def test_threshold_oracle_checks_spikes_absent_from_bounded_evidence(tmp_path):
+    pair = _pair(tmp_path, split=True, sparse=True)
+    try:
+        assert _compare(pair)['ok']
+        manifest = json.loads((pair.bounded / '_phy_curation_manifest.json').read_text())
+        retained = np.load(pair.bounded / manifest['global_spike_ids_file'])
+        amplitudes = np.load(pair.source / 'amplitudes.npy')
+        parents = np.isin(np.load(pair.source / 'spike_clusters.npy'), [0, 1])
+        changed = parents & ((amplitudes < 4.0) != (amplitudes < 5.0))
+        assert np.flatnonzero(changed).tolist() == [4]
+        assert not changed[retained].any()
+        # Saved retained assignments still obey either threshold; only a check
+        # over all original-source rows can detect this contradiction.
+        _forge_split_threshold(pair, 5.0)
+        result = _compare(pair)
+        assert not result['ok'], result
+        assert 'cumulative source predicates' in result['error'], result
+    finally:
+        assert _inventory(pair.source) == pair.original
+
+
+def test_inherited_split_semantics_checked_after_no_edit_round(tmp_path):
+    pair = _pair(tmp_path, split=True)
+    try:
+        pair.bounded = prepare_large(
+            pair.right / 'params.py',
+            tmp_path / 'bounded-next',
+            window_seconds=20,
+            stratum_seconds=20,
+            max_spikes=100,
+            bin_seconds=5,
+            batch_size=2,
+        )
+        session = BoundedSession(pair.bounded)
+        try:
+            assert session.events == []
+            session.save()
+        finally:
+            session.close()
+        pair.right = apply_curation(
+            pair.right / 'params.py', pair.bounded, tmp_path / 'replay-next', batch_size=2
+        )
+        assert _compare(pair)['ok']
+        # There are no current membership events: checking just the latest
+        # journal would miss this forged threshold in an earlier round.
+        assert json.loads((pair.right / '_phy_curation_journal.json').read_text()) == []
+        _forge_split_threshold(pair, 1000.0, inherited=True)
+        assert comparison.compare_outputs(pair.ordinary, pair.right)['ok']
+        result = _compare(pair)
+        assert not result['ok'], result
+        assert 'cumulative source predicates' in result['error'], result
+    finally:
+        assert _inventory(pair.source) == pair.original
+
+
+def test_curated_original_history_is_not_reapplied_to_source_assignments(tmp_path):
+    pair = _pair(tmp_path, split=True)
+    original = pair.source
+    try:
+        pair.source = pair.right
+        curated_source_inventory = _inventory(pair.source)
+        pair.ordinary = tmp_path / 'ordinary-curated-source'
+        shutil.copytree(pair.source, pair.ordinary)
+        pair.bounded = prepare_large(
+            pair.source / 'params.py',
+            tmp_path / 'bounded-from-curated-source',
+            window_seconds=20,
+            stratum_seconds=20,
+            max_spikes=100,
+            bin_seconds=5,
+            batch_size=2,
+        )
+        session = BoundedSession(pair.bounded)
+        try:
+            assert session.events == []
+            session.save()
+        finally:
+            session.close()
+        pair.right = apply_curation(
+            pair.source / 'params.py',
+            pair.bounded,
+            tmp_path / 'replay-from-curated-source',
+            batch_size=2,
+        )
+        pair.expected = {}
+        result = _compare(pair)
+        assert result['ok'], result
+        oracle = result['file_contract']['assignment_oracle']
+        assert oracle['membership_events'] == oracle['threshold_splits'] == 0
+        assert oracle['source_rows'] == 12
+        assert _inventory(pair.source) == curated_source_inventory
+    finally:
+        assert _inventory(original) == pair.original
 
 
 @pytest.mark.parametrize('aliases', [False, True])
@@ -485,7 +630,7 @@ def test_source_only_contract_checks_new_unit_row_ancestry(tmp_path):
         expected_labels=pair.expected,
         chunk_size=2,
     )
-    assert not result['ok'] and 'ancestry' in result['error']
+    assert not result['ok'] and 'Assignment disagrees' in result['error']
     assert _inventory(pair.source) == pair.original
 
 
