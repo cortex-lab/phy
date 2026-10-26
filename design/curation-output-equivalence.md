@@ -158,15 +158,26 @@ The final standalone CLI run passed over all **469,725,567 rows**, including
 all 46 metadata fields, 20 immutable files, the exact saved generation and full
 file inventories. It reported zero unexpected partition or manual-label
 mismatches and zero producer-value differences for this particular saved pair.
+The subsequent predicate-oracle run independently checked all 469,725,567
+original rows through two merges and one threshold split, with no assignment
+contradictions. The runtime checker is commit `eb7983f0`; the complete local
+report is `contract-comparison-predicate-oracle-committed.json` in the acceptance
+directory below.
 The [committed report summary](curation-output-contract-result.json) records the
 runtime revision, input hashes, checked fields/files and admitted native artifacts.
 
-`make test-full` passed **1,009 tests** (499 core +510 application) with one
-existing benchmark skip, including lint and formatting. A final additional
-ancestral-value boundary case was added afterward and the complete **47-case
-file-contract target** passed; it rejects arbitrary native metrics even when
-inheritance differences are admitted. The final CI run covers the complete tree.
-Independent targeted verification also passed all three controller plans.
+After the predicate-oracle fix, `make test-full` passed **1,041 tests** (499 core
+and 542 application) with one existing benchmark skip, including lint and
+formatting. The complete **52-case file-contract target** includes coherent
+current/inherited threshold forgeries, an unseen-row-only contradiction, and
+an already-curated source whose incorporated history must be skipped.
+The **26 literal oracle cases** cover all four operators, equality, child
+ordering, scalar vector/column attributes, wide allocated IDs, nonfinite policy
+and mixed cumulative actions across chunk boundaries. Independent targeted
+verification also passed all three controller plans and 18 comparison cases.
+The Sol 6.1 high auditor independently reran the original forged-checkpoint
+reproduction: it is now rejected at source spike 4, and the implementation review
+found no further issue.
 Documentation and cross-platform CI links are recorded at handoff. Local
 reports and reproducibility scripts remain in the dataset's
 `main-versus-pr-gui-acceptance/` directory; no source or prior baseline output was

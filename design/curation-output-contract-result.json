@@ -1,7 +1,7 @@
 {
   "ok": true,
   "method": "exact all-row two-way ID mapping",
-  "revision": "d20e5109a15d3ac1a637408064b2c3e85b33e25a",
+  "revision": "eb7983f0cd435c8acd5ef3722e19df00356b3ef8",
   "rows": 469725567,
   "assignment_dtypes": [
     "int32",
@@ -21,6 +21,12 @@
   },
   "file_contract": {
     "ok": true,
+    "assignment_oracle": {
+      "verified": true,
+      "source_rows": 469725567,
+      "membership_events": 3,
+      "threshold_splits": 1
+    },
     "immutable_files": [
       "_phy_spikes_subset.channels.npy",
       "_phy_spikes_subset.manifest.json",
@@ -42,6 +48,9 @@
       "template_ind.npy",
       "templates.npy",
       "timestamps.json"
+    ],
+    "native_derived_static_files": [
+      "whitening_mat_inv.npy"
     ],
     "all_metadata_fields": [
       "amplitude_cutoff",
@@ -114,9 +123,6 @@
         "policy": "byte-pinned blank source column"
       }
     ],
-    "native_derived_static_files": [
-      "whitening_mat_inv.npy"
-    ],
     "preparation_verified": true,
     "saved_generation_verified": "96fce3cd8e02474f8a175ddbb89c571c",
     "historical_parents": "recorded cumulative ancestry; current parent bound to supplied manifest"
@@ -136,5 +142,5 @@
       "optional_artifacts": []
     }
   },
-  "scope": "Full source logical output contract; explicit optional artifacts have their own checks, only GUI caches/logs excluded from byte identity."
+  "scope": "Full source logical output contract with independent cumulative predicate execution over every source row; explicit optional artifacts have their own checks, only GUI caches/logs excluded from byte identity."
 }
