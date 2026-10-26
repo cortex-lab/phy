@@ -265,8 +265,9 @@ nonfinite semantics, ID renumbering, metadata differences, callback cleanup,
 history and output protection. The independent Sol 6.1-high audit found no
 remaining concrete blocker. Documentation checks and CI are recorded at handoff.
 
-Carl's ordinary-main versus PR GUI trial is still a useful user acceptance step.
-It should follow the same ledger and full-output comparator above, with finite
-amplitudes for graphical equivalence, and add the small practical variants in
-the matrix. The automated run does not establish scientific validity of splits
-or of the acquisition exposure declaration.
+The later [main-GUI comparison](curation-main-gui-validation.md) completed this
+same ledger on unmodified main and matched every assignment and manual label.
+It retains baseline Feature View rendering errors as an explicit limitation.
+Carl's manual usability and scientific review remain useful, together with the
+small practical variants in the matrix. Neither automated run establishes the
+scientific validity of splits or of the acquisition exposure declaration.
