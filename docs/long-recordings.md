@@ -266,14 +266,9 @@ is native resolution, preserving the prepared bin size (for example, 300 or
 full-source counts and rates use acquisition exposure, including declared gaps;
 source amplitude and depth summaries appear only when available.
 
-Evidence Amplitude shows raw source scalar amplitudes from the currently
-selected evidence window. The Feature view also uses window-relative seconds.
-The amplitude plot labels this axis as **Seconds from window start** and shows
-the window's recording-time range above the plot.
-Both views label the current window and reset their time origin when it changes.
-To inspect another retained window, choose **View > Inspect evidence window**
-and enter its zero-based index. Unit Stability keeps the full-recording time
-context visible while you inspect individual windows.
+Feature View uses window-relative seconds and labels the current window with its
+recording-time range. Unit Stability keeps the full-recording time context
+visible while individual windows are inspected.
 
 The Sampled ISI view excludes intervals crossing retained-window boundaries.
 The Sampled Correlogram view shows raw pair counts from retained windows; it
@@ -285,15 +280,37 @@ For exact pair counts, each unit may have at most 46,340 spikes in an evidence
 window; the view reports an error for a larger per-unit window. Prepare shorter
 windows if this limit is reached.
 
-Bounded curation supports whole-unit merges, cluster labels, and a source
-amplitude threshold action. Use the GUI action **Split by source amplitude**
-with one unit selected and a threshold in the source amplitude units. The action
-uses the source `amplitudes.npy` scalar for every spike during replay; nonfinite
-values stay with the remainder. A split marks affected child units' full-data
-metrics as pending individually; unrelated selected units retain their
-available metrics. Resolving pending full-data counts and trends requires full
-replay followed by re-preparation. Merge and label actions are journaled with
-the bounded assignments and metadata in an atomic checkpoint generation.
+The Evidence Amplitude view opens in a sampled **overview**: its horizontal
+axis uses the original recording clock and displays retained evidence windows
+together. Use the view menu's **Toggle amplitude scope** action to switch between
+this overview and the current evidence window. **View > Inspect evidence
+window** selects a retained window and switches Evidence Amplitude to that
+window context; the overview remains available by toggling the scope back.
+The window scope uses seconds from that window's start and shows its recording-
+time range. Changing the inspected window resets its time origin.
+Displayed points may be further limited by the view's point budget. This only
+limits what is drawn: split predicates are evaluated over every source spike
+when applied.
+
+Bounded curation supports whole-unit merges, cluster labels, and source-amplitude
+splits. Outside Merge mode, select exactly one unit in Evidence Amplitude and
+use `Alt` plus right-drag to place or adjust the horizontal threshold preview.
+Finite source amplitudes strictly below the threshold are selected; equality
+and nonfinite values stay in the remainder. The preview is visual evidence from
+the displayed sample. Pressing `K` requires evidence on both sides of the
+threshold and commits the predicate. Preview state clears when selection or
+view context changes. The command action **Split by source amplitude** remains
+available for directly entering a threshold.
+In bounded mode, `K` splits the retained evidence rows and records the semantic
+source-amplitude predicate; `phy apply-curation` later evaluates that predicate
+against every source spike. Thus the bounded GUI assignment is provisional for
+unseen spikes until full-source replay. Source `amplitudes.npy` values are used
+during replay. A split marks affected child units' full-data metrics as pending
+individually; unrelated selected units retain their available metrics.
+Resolving pending full-data counts and
+trends requires full replay followed by re-preparation. Merge and label actions
+are journaled with the bounded assignments and metadata in an atomic checkpoint
+generation.
 Reopening loads the last complete generation. A reopened session starts a new
 undo baseline. Each save checks that the checkpoint has not changed since this
 session opened. If another session has saved first, the stale save fails; reopen
@@ -301,7 +318,32 @@ the bounded dataset before continuing to avoid overwriting that generation.
 
 Lasso, feature, and waveform splits remain unavailable in bounded mode because
 the selected rows do not define how unseen source spikes should be assigned.
-Standard, unbounded datasets retain their existing curation behavior.
+Ordinary datasets retain their standard split tools, including the graphical
+amplitude-threshold preview.
+
+### Comparing ordinary and bounded curation
+
+Perform the same documented merges, amplitude threshold splits and explicit
+manual-label decisions on separate copies of one source. Compare the ordinary
+saved sorting against the complete `apply-curation` output, rather than against
+the retained evidence package:
+
+```bash
+uv run python tools/compare_curation_modes.py compare \
+  /data/ordinary-final /data/bounded-full-output \
+  --fields group notes --output /data/comparison.json
+```
+
+The report checks every spike's time and cluster partition through a two-way
+ID mapping, then checks the requested manual labels. Numeric cluster IDs may
+differ between runs. Use a fresh report path outside both input folders.
+Producer metrics intentionally cleared on changed memberships are excluded.
+For graphical split comparisons, choose finite source amplitudes: ordinary
+TemplateModel displays nonfinite amplitudes as zero, while bounded replay
+keeps them in the remainder. The tool also provides independent ordinary-engine
+and streamed references; neither replaces a full ordinary GUI acceptance run.
+The repository's `design/curation-user-acceptance.md` provides the action ledger,
+additional user checks and evidence limits.
 
 ## Unit Stability on ordinary recordings
 

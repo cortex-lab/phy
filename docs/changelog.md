@@ -25,6 +25,12 @@ behavior they verify rather than listed separately.
 - Added Unit Stability, precise window-relative amplitude/feature inspection,
   sampled interval/correlogram views, and explicit full-versus-evidence counts.
   Standard datasets retain their existing curation workflow and default layout.
+- Bounded Evidence Amplitude now defaults to an all-retained-windows overview on
+  the recording clock, with a saved overview/window scope toggle. Inspecting a
+  window switches the view to that window. `Alt`-right-drag previews a source
+  amplitude threshold. `K` splits retained evidence and records the predicate;
+  `apply-curation` evaluates every source spike. Finite values strictly below
+  the threshold are selected; equality and nonfinite values stay in the remainder.
 - Unit Stability overlays up to 32 selected units by default, with consistent
   colors and no legend. Its saved display limit accepts zero to show all selected
   units, without a hard positive upper limit. Saved view settings include the
