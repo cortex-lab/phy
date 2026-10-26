@@ -337,7 +337,46 @@ uv run python tools/compare_curation_modes.py compare \
 The report checks every spike's time and cluster partition through a two-way
 ID mapping, then checks the requested manual labels. Numeric cluster IDs may
 differ between runs. Use a fresh report path outside both input folders.
-Producer metrics intentionally cleared on changed memberships are excluded.
+This basic mode compares only the requested manual fields; it excludes producer
+metrics whose inheritance policy may differ.
+
+For acceptance, enable the stronger whole-output contract with the original
+immutable source, the bounded package used for the final replay, and independent
+expected final curator decisions:
+
+```bash
+uv run python tools/compare_curation_modes.py compare \
+  /data/ordinary-final /data/bounded-full-output \
+  --source /data/original-source --bounded-dir /data/final-bounded \
+  --expectations /data/expected-labels.json --output /data/full-comparison.json
+```
+
+The expectations file maps replay unit IDs to reviewed fields, for example
+`{"708": {"group": "good", "notes": "reviewed"}, "49": {"group": null}}`.
+Write it from the planned decisions and the allocated ID ledger, rather than
+copying values from an output being tested. Include every surviving explicit
+label decision, including cleared labels. Across multiple rounds, keep
+`--source` pointing to the original source and supply the final round's package.
+Put the report outside every input folder.
+
+This mode checks every imported metadata field, byte-identical immutable
+arrays/sidecars, preserved replay table layouts, parameters, and the exact saved
+generation's journal, metadata, review state and retained assignments. Unknown
+or missing files fail. New memberships must have cleared producer values unless
+explicitly reviewed; native ancestor inheritance is checked and reported as a
+permitted difference. Native source aliases and untouched blank source columns
+are admitted only when their original bytes match. A generated native whitening
+inverse is checked against its source matrix. GUI caches/logs may differ;
+generated cluster summaries must still have the correct catalog and manual
+labels. Existing suggestion decisions must survive unchanged; new SLAY decisions
+use the separate proposition acceptance procedure.
+
+Without `--bounded-dir`, first-round source checks do not verify preparation or
+saved-generation binding. Later-round verification requires that package.
+The report states which bindings were verified; use the complete command above
+for acceptance. The repository's `design/curation-output-equivalence.md` records
+the contract, permanent controller tests and real-data evidence.
+
 For graphical split comparisons, choose finite source amplitudes: ordinary
 TemplateModel displays nonfinite amplitudes as zero, while bounded replay
 keeps them in the remainder. Select **template** amplitudes in ordinary

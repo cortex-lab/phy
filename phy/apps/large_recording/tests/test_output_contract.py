@@ -605,3 +605,25 @@ def test_source_only_rejects_invalid_threshold_predicate(tmp_path, key, value):
     )
     assert not result['ok'] and 'predicate schema' in result['error'], result
     assert _inventory(pair.source) == pair.original
+
+
+def test_native_transformed_producer_difference_is_ancestry_bounded(contract_pair):
+    pair = contract_pair
+    path = pair.ordinary / 'cluster_snr.tsv'
+    with path.open(newline='') as stream:
+        rows = list(csv.reader(stream, delimiter='\t'))
+    rows = [row for row in rows if row[0] != '100']
+    rows.append(['100', '12'])  # A real source parent's metric, not a new measurement.
+    with path.open('w', newline='') as stream:
+        csv.writer(stream, delimiter='\t').writerows(rows)
+    result = _compare(pair)
+    assert result['ok'], result
+    assert any(
+        d['field'] == 'snr' and d['right_id'] == 100 and d['left'] == '12' and d['right'] == ''
+        for d in result['permitted_membership_policy_differences']
+    )
+    rows[-1] = ['100', '999']
+    with path.open('w', newline='') as stream:
+        csv.writer(stream, delimiter='\t').writerows(rows)
+    result = _compare(pair)
+    assert not result['ok'] and 'unsupported ancestor value' in result['error']

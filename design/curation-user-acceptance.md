@@ -3,6 +3,10 @@
 Status: protocol for the graphical bounded curation workflow; run both GUI
 branches against the same full-source data before accepting the feature.
 
+Permanent controller-to-controller tests and the stronger whole-output checker
+are now described in [the executable equivalence contract](curation-output-equivalence.md).
+They supplement the manual protocol and the pinned main-branch GUI trial below.
+
 ## Purpose and evidence boundary
 
 This is an end-to-end acceptance check for ordinary and bounded curation. It
