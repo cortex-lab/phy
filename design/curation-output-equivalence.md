@@ -62,7 +62,7 @@ comparison remains available for complete partition/selected-label comparisons.
 
 | Output class | Required check |
 | --- | --- |
-| `spike_clusters.npy` | Every source row belongs to the same final partition through a two-way ID bijection; all IDs and source-to-final ancestry are consistent. Assignment dtype/vector-column representation and allocated IDs may differ. |
+| `spike_clusters.npy` | Every source row belongs to the same final partition through a two-way ID bijection. An independent chunked oracle also executes cumulative merges/split predicates on original source rows and checks exact replay IDs. Assignment dtype/vector-column representation and native allocated IDs may differ. |
 | Immutable NPY arrays and producer sidecars | Every full array/file matches the original bytes, including times, amplitudes, features, templates, channels, waveform rows/channels/samples, producer window plans, timestamps and suggestion bytes when present. |
 | Imported and curator metadata | All fields are checked. Untouched units retain source values. New identities clear bounded producer fields unless explicitly reviewed. Every surviving label event requires an independent final expectation, including clear/null. Native differences must be supported ancestor values or empty values and are reported individually. |
 | Metadata files/schema | Replay preserves producer basenames, delimiters and columns. Native canonical field tables may supersede byte-identical source aliases. Entirely blank native source columns may retain retired rows only when their original file is byte-identical. Missing blank tables still fail. Typed sidecars and tables must agree. |
@@ -75,7 +75,14 @@ comparison remains available for complete partition/selected-label comparisons.
 
 The checker does not call the bounded assignment projector or event metadata
 interpreter. It uses the source format reader for admission and independently
-tracks action ancestry, clearing and label intent. Native producer inheritance
+executes cumulative membership intent and tracks clearing and label intent.
+The assignment oracle reads original scalar attributes for every source spike,
+including spikes omitted from every bounded package. It applies earlier-round
+actions before later actions, skips history already incorporated in the supplied
+original source, and compares the resulting IDs exactly with the replay. Split
+child order, comparator equality and parent-local nonfinite policy are checked.
+Memory use is bounded by the requested chunk size and action history.
+Native producer inheritance
 is constrained to supported ancestor values/empty values; it does not reconstruct
 every intermediate largest-parent inheritance choice. Historical parent revisions
 are recorded ancestry, not fetched historical files. The current parent and
@@ -112,7 +119,15 @@ A standalone CLI regression catches import/path problems outside pytest.
 
 A two-merge case swaps derived unit IDs while preserving the same partitions
 and identical labels. The basic comparison accepts that rename; the strict
-ancestry check rejects its now-incorrect recorded source-parent relationships.
+assignment oracle rejects its now-incorrect recorded source-parent relationships.
+
+A subsequent independent audit exposed a checker false acceptance: a split
+threshold could be changed in both journal and provenance, with repaired
+checkpoint hashes, while leaving the old assignments in place. Schema, ancestry
+and saved-row agreement did not establish predicate semantics. The independent
+all-source oracle closes that gap; the corruption is now a regression, including
+source-only and cumulative-round checks. This was a validation gap, not evidence
+that the normal curation producer generated an incorrect split.
 
 These tests guard the supported workflows and declared exceptions. They do not
 prove equivalence for every possible action sequence or arbitrary lasso/feature

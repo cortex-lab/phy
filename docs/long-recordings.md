@@ -362,7 +362,12 @@ Put the report outside every input folder.
 This mode checks every imported metadata field, byte-identical immutable
 arrays/sidecars, preserved replay table layouts, parameters, and the exact saved
 generation's journal, metadata, review state and retained assignments. Unknown
-or missing files fail. New memberships must have cleared producer values unless
+or missing files fail. An independent chunked oracle applies the cumulative
+merge and threshold-split history to every original source spike, including
+spikes omitted from the bounded evidence, and checks exact replay assignments.
+It evaluates original scalar attributes, comparator equality and the declared
+nonfinite policy across repeated curation rounds.
+New memberships must have cleared producer values unless
 explicitly reviewed; native ancestor inheritance is checked and reported as a
 permitted difference. Native source aliases and untouched blank source columns
 are admitted only when their original bytes match. A generated native whitening

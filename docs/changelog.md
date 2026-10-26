@@ -32,7 +32,8 @@ behavior they verify rather than listed separately.
   `apply-curation` evaluates every source spike. Finite values strictly below
   the threshold are selected; equality and nonfinite values stay in the remainder.
 - Added source-grounded whole-output curation acceptance checks, with explicit
-  metadata-policy differences and saved-generation binding. Permanent controller
+  metadata-policy differences, saved-generation binding, and independent
+  all-source validation of cumulative merge and split predicates. Permanent controller
   tests run the same actions through full and bounded modes across four rounds
   and three sampling configurations, including points omitted from display.
 - Unit Stability overlays up to 32 selected units by default, with consistent
