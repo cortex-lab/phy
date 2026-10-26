@@ -368,11 +368,70 @@ class BoundedSupervisor(Supervisor):
         self.session.record_label(name, ids, value)
         self._capture()
 
-    def split(self, *args, **kwargs):
-        raise ValueError(
-            'Lasso, feature and waveform splits cannot be replayed on unseen spikes. '
-            'Use Split by source amplitude for a full-source scalar predicate.'
-        )
+    def _graphical_split_views(self):
+        if self.gui is None:
+            return []
+        return [
+            view
+            for view in self.gui.list_views('EvidenceAmplitudeView')
+            if not view._closed
+            and view.gui is self.gui
+            and view._dock_visible
+            and view.split_threshold is not None
+            and np.isfinite(view.split_threshold)
+            and list(view.cluster_ids) == list(self.selected)
+            and len(self.selected) == 1
+            and not self.selection.state.is_merge_mode
+            and view.amplitudes_type == 'source'
+        ]
+
+    def _update_graphical_split_action(self):
+        actions = getattr(self, 'actions', None)
+        action = actions.get('split') if actions is not None else None
+        if action is not None:
+            capable = 'amplitudes.npy' in self.session.capabilities['predicate_split_attributes']
+            action.setEnabled(capable and len(self._graphical_split_views()) == 1)
+
+    def _set_merge_mode_ui(self, active):
+        if self.gui is None:
+            return
+        super()._set_merge_mode_ui(active)
+        if active:
+            for view in self.gui.list_views('EvidenceAmplitudeView'):
+                view.clear_amplitude_split_threshold()
+        self._update_graphical_split_action()
+
+    def split(self, spike_ids=None, spike_clusters_rel=0):
+        if spike_ids is not None or spike_clusters_rel != 0:
+            raise ValueError(
+                'Lasso, feature and waveform splits cannot be replayed on unseen spikes. '
+                'Use Split by source amplitude for a full-source scalar predicate.'
+            )
+        views = self._graphical_split_views()
+        if len(views) != 1:
+            raise ValueError('Exactly one visible source-amplitude threshold preview is required.')
+        view = views[0]
+        threshold = view.split_threshold
+        cluster_id = int(self.selected[0])
+        try:
+            out = self.split_source_amplitude(cluster_id, threshold)
+        except Exception as error:
+            # A transaction may have published transient native selection updates
+            # before rollback. Keep the user's predicate available for correction.
+            view.split_threshold = threshold
+            view._replot_displayed_amplitudes()
+            emit(
+                'amplitude_split_preview_changed',
+                view,
+                cluster_id=cluster_id,
+                amplitudes_type='source',
+                threshold=threshold,
+            )
+            view._show_split_status(str(error))
+            raise
+        view.clear_split_selection()
+        self._update_graphical_split_action()
+        return out
 
     @semantic_command
     def split_source_amplitude(self, cluster_id, threshold):

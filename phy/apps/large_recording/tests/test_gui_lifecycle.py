@@ -55,7 +55,8 @@ def test_window_time_labels_follow_navigation(qtbot, tmp_path):
     gui = controller.create_gui(default_views=['EvidenceAmplitudeView'], do_prompt_save=False)
     try:
         view = gui.get_view('EvidenceAmplitudeView')
-        assert view.time_axis_label.text() == 'Seconds from window start'
+        assert view.time_axis_label.text() == 'Recording time (seconds)'
+        assert view.amplitude_scope == 'overview'
         initial = view.window_label.text()
         controller.inspect_evidence_window(1)
         start, end = controller.current_evidence_window / controller.model.sample_rate

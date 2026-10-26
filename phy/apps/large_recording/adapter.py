@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from phylib.io.model import get_template_params
-from phylib.utils import Bunch
+from phylib.utils import Bunch, connect, unconnect
 
 from phy.cluster._propositions import (
     MergePropositionController,
@@ -146,6 +146,23 @@ class BoundedTemplateController(TemplateController):
             functions.pop('mean_waveforms', None)
         return functions
 
+    def create_waveform_view(self):
+        view = super().create_waveform_view()
+        if view is None:
+            return
+        plot = view.plot
+
+        def plot_and_clear_preview(**kwargs):
+            # Sampling, waveform mode, and channel layout may change the drawn
+            # traces. Require a fresh preview rather than leaving stale colors.
+            result = plot(**kwargs)
+            for amplitude_view in getattr(self, '_evidence_amplitude_views', ()):
+                amplitude_view.clear_amplitude_split_threshold()
+            return result
+
+        view.plot = plot_and_clear_preview
+        return view
+
     def create_feature_view(self):
         if (
             self.model.features is None
@@ -280,9 +297,42 @@ class BoundedTemplateController(TemplateController):
             lim=(0.0, (end - start) / self.model.sample_rate),
         )
 
-    def _evidence_amplitudes(self, cluster_ids, load_all=False):
+    def _resolve_spike_amplitudes(self, spike_ids, name, first_cluster):
+        if name == 'source':
+            return self.bounded_session.attributes['amplitudes.npy'].reshape(-1)[spike_ids]
+        return super()._resolve_spike_amplitudes(spike_ids, name, first_cluster)
+
+    def _evidence_amplitudes(self, cluster_ids, load_all=False, scope='window'):
+        def eligible_ids(cluster_id=None):
+            if cluster_id is None:
+                # Sample conceptual row coordinates before gathering assignments.
+                # Interactive updates must not scan all retained spikes.
+                first, last = 0, self.model.n_spikes
+                if scope == 'window':
+                    first, last = np.searchsorted(
+                        self.model.spike_samples, self.current_evidence_window
+                    )
+                count = min(last - first, self.n_spikes_amplitudes_background)
+                if not count:
+                    return np.array([], dtype=np.int64)
+                ids = np.arange(count, dtype=np.int64)
+                if count > 1:
+                    ids *= last - first - 1
+                    ids //= count - 1
+                return ids + first
+            if scope == 'window':
+                return self._window_ids(cluster_id)
+            return self.supervisor.clustering.spikes_per_cluster.get(
+                cluster_id, np.array([], dtype=np.int64)
+            )
+
+        def spike_times(ids):
+            if scope == 'window':
+                return self._window_time(ids)
+            return self.model.spike_samples[ids] / self.model.sample_rate
+
         active = [c for c in cluster_ids if c is not None]
-        eligible = [self._window_ids(c) for c in active]
+        eligible = [eligible_ids(c) for c in active]
         counts = _allocate_spike_counts(
             [len(ids) for ids in eligible],
             per_cluster=None if load_all else self.n_spikes_amplitudes,
@@ -291,18 +341,18 @@ class BoundedTemplateController(TemplateController):
         values = self.bounded_session.attributes['amplitudes.npy'].reshape(-1)
         output = []
         if None in cluster_ids:
-            ids = self._window_ids()
+            ids = eligible_ids()
             ids = ids[~np.isin(self.supervisor.clustering.spike_clusters[ids], active)]
             ids = _sample_spikes_evenly(ids, self.n_spikes_amplitudes_background)
             ids = ids[np.isfinite(values[ids])]
             output.append(
-                Bunch(amplitudes=values[ids], spike_ids=ids, spike_times=self._window_time(ids))
+                Bunch(amplitudes=values[ids], spike_ids=ids, spike_times=spike_times(ids))
             )
         for ids, count in zip(eligible, counts):
             ids = _sample_spikes_evenly(ids, int(count))
             ids = ids[np.isfinite(values[ids])]
             output.append(
-                Bunch(amplitudes=values[ids], spike_ids=ids, spike_times=self._window_time(ids))
+                Bunch(amplitudes=values[ids], spike_ids=ids, spike_times=spike_times(ids))
             )
         return output
 
@@ -311,19 +361,103 @@ class BoundedTemplateController(TemplateController):
         if array is None or (array.ndim != 1 and array.shape[1:] != (1,)):
             return
         start, end = self.current_evidence_window
+
+        def amplitudes(cluster_ids, load_all=False):
+            return self._evidence_amplitudes(
+                cluster_ids, load_all=load_all, scope=view.amplitude_scope
+            )
+
+        def split_is_eligible():
+            return (
+                len(self.supervisor.selected) == 1
+                and not self.supervisor.selection.state.is_merge_mode
+                and 'amplitudes.npy'
+                in self.bounded_session.capabilities['predicate_split_attributes']
+            )
+
         view = EvidenceAmplitudeView(
-            amplitudes={'source': self._evidence_amplitudes},
+            amplitudes={'source': amplitudes},
             amplitudes_type='source',
             duration=(end - start) / self.model.sample_rate,
-            split_is_eligible=lambda: False,
+            split_is_eligible=split_is_eligible,
         )
-        view.ex_status = self._window_status()
-        view.set_window_context(
-            self.evidence_window_index,
-            start / self.model.sample_rate,
-            end / self.model.sample_rate,
-        )
+        view._controller = self
+        self._evidence_amplitude_views = getattr(self, '_evidence_amplitude_views', [])
+        self._evidence_amplitude_views.append(view)
+        self._update_amplitude_scope(view)
+
+        @connect(sender=self.supervisor)
+        def on_select(sender, cluster_ids, **kwargs):
+            view.clear_amplitude_split_threshold()
+            self.supervisor._update_graphical_split_action()
+
+        @connect(sender=self.supervisor)
+        def on_bounded_state_changed(sender):
+            view.clear_amplitude_split_threshold()
+
+        @connect(event='amplitude_split_preview_changed', sender=view)
+        def on_preview(sender, **kwargs):
+            self.supervisor._update_graphical_split_action()
+
+        @connect(event='view_attached', sender=view)
+        def on_attached(sender, gui):
+            def visibility_changed(visible):
+                if not visible:
+                    view.clear_amplitude_split_threshold()
+                self.supervisor._update_graphical_split_action()
+
+            view.dock.visibilityChanged.connect(visibility_changed)
+
+        @connect(event='selected_channel_changed')
+        @connect(event='selected_feature_changed')
+        def on_context_changed(sender):
+            if getattr(sender, 'gui', None) is self.supervisor.gui:
+                view.clear_amplitude_split_threshold()
+
+        @connect(event='close_view', sender=view)
+        def on_close(view_, gui):
+            view.clear_amplitude_split_threshold()
+            self._evidence_amplitude_views.remove(view)
+            for callback in (
+                on_select,
+                on_bounded_state_changed,
+                on_preview,
+                on_context_changed,
+                on_attached,
+                on_close,
+            ):
+                unconnect(callback)
+            self.supervisor._update_graphical_split_action()
+
         return view
+
+    def _update_amplitude_scope(self, view):
+        start, end = self.current_evidence_window
+        overview = view.amplitude_scope == 'overview'
+        view.duration = self.model.duration if overview else (end - start) / self.model.sample_rate
+        if overview:
+            view.window_caption = 'Sampled overview | All retained evidence windows'
+            if hasattr(view, 'window_label'):
+                view.window_label.setText(view.window_caption)
+        else:
+            view.set_window_context(
+                self.evidence_window_index,
+                start / self.model.sample_rate,
+                end / self.model.sample_rate,
+            )
+        view.ex_status = (
+            'All retained windows; original recording clock; sampled source amplitudes.'
+            if overview
+            else self._window_status()
+        )
+        if hasattr(view, 'time_axis_label'):
+            view.time_axis_label.setText(
+                'Recording time (seconds)' if overview else 'Seconds from window start'
+            )
+        view.canvas.panzoom.reset()
+        if view.cluster_ids:
+            view.plot()
+        view.update_status()
 
     def _window_status(self):
         start, end = self.current_evidence_window
@@ -337,16 +471,12 @@ class BoundedTemplateController(TemplateController):
         if not 0 <= index < len(self.evidence_windows):
             raise ValueError('Evidence window index is outside the retained plan.')
         self.evidence_window_index = index
+        for view in getattr(self, '_evidence_amplitude_views', ()):
+            view.amplitude_scope = 'window'
         gui = getattr(self.supervisor, 'gui', None)
         if gui is not None:
-            start, end = self.current_evidence_window
-            for view in gui.list_views('EvidenceAmplitudeView', 'FeatureView'):
+            for view in gui.list_views('FeatureView'):
                 view.ex_status = self._window_status()
-                if isinstance(view, EvidenceAmplitudeView):
-                    view.duration = (end - start) / self.model.sample_rate
-                    view.set_window_context(
-                        index, start / self.model.sample_rate, end / self.model.sample_rate
-                    )
                 view.canvas.panzoom.reset()
                 if view.cluster_ids:
                     view.plot()
@@ -374,7 +504,7 @@ class BoundedTemplateController(TemplateController):
 
         split_action = self.supervisor.actions.get('split')
         if split_action is not None:
-            split_action.setEnabled(False)
+            self.supervisor._update_graphical_split_action()
             split_action.setToolTip(
                 'Selected-row splits cannot assign unseen source spikes; use a source-amplitude predicate.'
             )
