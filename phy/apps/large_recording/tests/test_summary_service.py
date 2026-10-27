@@ -329,7 +329,9 @@ def test_real_worker_exact_primitives_merge_offline_and_no_curation_side_effects
         assert session.metadata == metadata
         np.testing.assert_array_equal(session.assignments, assignments)
         assert {p: p.read_bytes() for p in original_files} == original_files
+        worker = service._worker
         service.suspend()
+        qtbot.waitUntil(lambda: not worker.thread.is_alive())
         params.parent.rename(tmp_path / 'source-offline')
         session.record_merge([100, 1], 102)
         service.synchronize()

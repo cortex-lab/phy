@@ -1,6 +1,7 @@
 """Live memberships and exact summaries compared with independent full replay."""
 
 import json
+import os
 from concurrent.futures import CancelledError
 
 import numpy as np
@@ -269,8 +270,14 @@ def test_same_job_source_replacement_never_publishes(tmp_path):
                 replaced.append(True)
             return False
 
-        with pytest.raises(ValueError, match='changed'):
+        # Windows can prevent replacement of an open file altogether. Either
+        # that refusal or our fingerprint check must abort without publishing.
+        with pytest.raises((ValueError, PermissionError)) as failure:
             engine.resolve(expressions, mutate)
+        if isinstance(failure.value, PermissionError):
+            assert os.name == 'nt'
+        else:
+            assert 'changed' in str(failure.value)
         assert not engine.arrays and not engine.handles
         assert not list(engine.cache_dir.glob('*.npz'))
 
