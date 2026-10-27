@@ -305,10 +305,32 @@ In bounded mode, `K` splits the retained evidence rows and records the semantic
 source-amplitude predicate; `phy apply-curation` later evaluates that predicate
 against every source spike. Thus the bounded GUI assignment is provisional for
 unseen spikes until full-source replay. Source `amplitudes.npy` values are used
-during replay. A split marks affected child units' full-data metrics as pending
-individually; unrelated selected units retain their available metrics.
-Resolving pending full-data counts and
-trends requires full replay followed by re-preparation. Merge and label actions
+during replay. After a split, Phy automatically computes exact full-recording
+counts, rates and available amplitude/depth trends in the background. It reads
+the original source in bounded chunks, applies the recorded membership
+predicates, and uses the preparation's existing time bins and acquisition
+exposure. The split children show a computation status until complete results
+are ready; unrelated selected units retain their plots. This does not require
+applying curation or exporting a full dataset.
+
+Computed summaries combine on subsequent merges, and completed results are
+reused after undo/redo and reopening. A separate bounded cache in
+`.phy/live-summary-cache` is disposable; deleting or losing it does not affect
+curation saves. Computation leaves the source, preparation manifest and saved
+curation generations unchanged. First use validates the required source files;
+later splits reuse validated readers while their file fingerprints remain
+unchanged. Closing the GUI cancels work without waiting for a complete scan.
+Saving curation does not wait for summary computation.
+
+New computations require the original source directory to be accessible and
+match the prepared source revision. If it moved, use **File > Locate summary
+source**; the location is remembered in dataset-local GUI state without changing
+the manifest. Use **File > Retry full summaries** after resolving an error. Valid
+cached results can be displayed even when the original source is offline.
+Summary arrays that exceed the cache budget report unavailable rather than
+showing a sampled estimate; exact known table counts remain available.
+
+Merge and label actions
 are journaled with the bounded assignments and metadata in an atomic checkpoint
 generation.
 Reopening loads the last complete generation. A reopened session starts a new
@@ -419,8 +441,9 @@ complete assignment array in batches, and writes a new full sorting. It rejects
 a journal prepared from a different source revision. Keep the original source
 and bounded package; they establish the lineage of the curated output. To review
 the curated full sorting with bounded evidence again, run `prepare-large` on
-the curated output to produce a fresh package and revision-specific summaries;
-this resolves pending full-data counts and trends for split children. Replay
+the curated output to produce a fresh package and revision-specific summaries.
+Live summary recomputation already provides split-child rates and trends during
+the original session; re-preparation starts a new curation round. Replay
 applies the recorded threshold split to every source spike using its source
 amplitude value.
 

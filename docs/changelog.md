@@ -19,6 +19,10 @@ behavior they verify rather than listed separately.
   stale rather than being silently reassigned.
 - Fixed saving bounded amplitude splits after merge undo/redo when NumPy cluster
   IDs appear in journal metadata.
+- Bounded amplitude splits now recompute exact full-recording rates, counts and
+  available amplitude/depth trends in the background. Results combine on merges
+  and survive save/reopen through a disposable cache. Source validation, retry
+  and relocation controls preserve curation when the source is unavailable.
 - Added `prepare-large` and `apply-curation` for bounded shared-window evidence,
   full-duration exposure-aware summaries, semantic merges/labels/source-amplitude
   splits, and replay into a new complete sorting.
@@ -44,8 +48,8 @@ behavior they verify rather than listed separately.
   dataset-local display-bin setting defaults to native resolution and permits
   exact coarsening by integer multiples of the native bin width. The screenshot
   action captures the Matplotlib Qt canvas. Full-source rates use acquisition
-  exposure, and amplitude splits mark only affected children’s metrics as
-  pending. On ordinary recordings, firing rates identify their
+  exposure, and split-child metrics show computation status until exact live
+  summaries are ready. On ordinary recordings, firing rates identify their
   continuous-acquisition assumption.
 - Bounded replay preserves producer metadata table filenames, delimiters, and
   column layouts. New merge and split memberships clear producer values and

@@ -187,6 +187,79 @@ The independent high-effort audit found and regression-tested missing blank
 table coverage, journal/history agreement, new-unit ancestry, malformed history
 and invalid event payloads. Its final read found no remaining must-fix issue.
 
+## Live post-split summaries
+
+Commits through `6a5c9824` add automatic background computation of exact counts and
+available finite amplitude/depth summaries for split descendants. The service
+uses native preparation bins and acquisition exposure. Immutable membership
+expressions identify cached results independently of labels and allocated IDs;
+merges add counts and scalar sums/counts. Source readers are validated once and
+reused while their file and metadata fingerprints remain unchanged. A separate
+bounded derived cache cannot change or prevent curation saves.
+
+The controller schedules work after transaction completion, delivers results on
+the GUI thread and maps results to current memberships. Undo/redo, rollback,
+branching, hidden views, source relocation, accepted GUI closure and reopening
+have regressions. Scalar full counts remain available if plot arrays are evicted.
+Unavailable source/cache capacity produces an explicit status rather than a
+sampled rate. Finite-sum comparisons allow floating-point reduction tolerance;
+spike and finite-value counts must match exactly.
+
+The actual GUI trial ran on a copy of Carl's earlier converted 112.859-hour
+engineering dataset, with **469,725,567 spikes**, **113 native bins** and
+unverified exposure. It split unit 49 at source amplitude **-341.797119140625**,
+producing units 709 and 710 with **292,990** and **346,764** full spikes.
+Unrelated control unit 50 retained **541,925** spikes and its rate curve during
+the computation. Three earlier saved membership actions were present in the
+copied package; this run added the new split and resolved the missing summaries.
+
+First-job source validation, computation and GUI delivery took **8.331 seconds**;
+the checked source arrays totaled **9,394,511,724 bytes**. A completed summary
+lookup took **0.000603 seconds**. Hash preflight warmed the filesystem cache:
+these timings are not cold-storage measurements or a latency guarantee for the
+newer 500-hour recording. No responsiveness timing threshold is claimed.
+
+An independent chunked replay checked every original source row and compared
+the two children and control against the displayed counts and finite scalar
+summaries. Counts matched exactly; float64 sums and means matched at the
+declared tolerance. All required source-array hashes and all **99 original
+package-file hashes** were unchanged. The [committed result](live-summary-result.json)
+records revision, source bindings, thresholds, timings and comparisons. Full
+local artifacts remain in `live-summary-acceptance-2026-10-27-final/` under the dataset.
+
+These are actual application screenshots of that trial:
+
+- [Before splitting](../docs/images/live-summaries/before-split.png): parent 49
+  and control 50 have their original full-recording rate curves.
+- [Recomputing](../docs/images/live-summaries/recomputing.png): both children
+  explicitly show pending computation while the control curve remains.
+- [After computation](../docs/images/live-summaries/after-split.png): both child
+  curves and the unchanged control are available together.
+
+Reproduce on a fresh output directory using:
+
+```bash
+xvfb-run -a -s '-screen 0 2400x1500x24' \
+  env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
+  uv run --no-sync python tools/capture_live_summaries.py \
+  --bounded /data/existing-bounded --output /data/fresh-live-summary-trial \
+  --unit 49 --control 50 --rate-only
+```
+
+The tool copies the package, makes the split only in that copy, captures the
+three stages and verifies full-source summaries. Existing valid cache entries
+are reusable offline; new computations need matching original source files.
+The high Sol 6.1 review found and regression-tested unsafe cache payload
+allocation, redundant source hashing, hidden-view refresh and cache-eviction
+rescan hazards. Its final read found no remaining correctness blocker, and an
+independent run of the 40 engine/service cases passed.
+
+The full local suite passed **1,086 tests** (500 core and 586 application) with
+one existing benchmark skip, including lint and format checks. After the final
+cache-key performance change, all **40 engine/service cases** and **four live
+GUI integration cases** passed again. Strict documentation checks and final CI
+results are recorded at handoff.
+
 ## Parallel phylib follow-up
 
 [phylib PR #70](https://github.com/cortex-lab/phylib/pull/70) returns the existing
