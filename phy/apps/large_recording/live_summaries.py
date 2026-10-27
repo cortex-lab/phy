@@ -19,7 +19,7 @@ from .curation import evaluate_predicate, validate_predicate
 from .metadata import read_metadata
 from .source import close_array, hash_json
 
-VERSION = 1
+VERSION = 2
 
 
 def _union(parts):
@@ -136,13 +136,14 @@ class LiveSummaryEngine:
             'edges': self.edges.tolist(),
             'fields': self.fields,
         }
+        self.binding_digest = hash_json(self.binding)
         self.cache_dir = self.path / '.phy' / 'live-summary-cache'
         self.arrays, self.handles, self.signatures = {}, {}, {}
         self.metadata_signature = None
         self.resident = {}
 
     def key(self, expression):
-        return hash_json({'binding': self.binding, 'expression': expression})
+        return hash_json({'binding_sha256': self.binding_digest, 'expression': expression})
 
     def close(self):
         for array in self.arrays.values():
