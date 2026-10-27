@@ -107,10 +107,17 @@ class UnitStabilityView(ManualClusteringView):
                 data.provenance = 'Loaded recording; continuous acquisition assumed.'
             else:
                 units = controller._source_units(cluster_id)
-                data.pending = units is None
+                get_live = getattr(controller, 'get_live_summary', lambda c: None)
+                data.live_summary = get_live(cluster_id) if units is None else None
+                data.pending = units is None and data.live_summary is None
                 data.rows = [] if units is None else [common.lookup[c] for c in units]
+                get_status = getattr(
+                    controller,
+                    'get_summary_status',
+                    lambda c: 'Split evidence pending full-data replay.',
+                )
                 data.provenance = (
-                    'Split evidence pending full-data replay.'
+                    get_status(cluster_id)
                     if data.pending
                     else 'Complete source sorting; exact counts and finite-value means.'
                 )
@@ -129,23 +136,30 @@ class UnitStabilityView(ManualClusteringView):
                         0
                     ]
                 else:
-                    counts = np.zeros(len(data.exposure), dtype=np.int64)
-                    grid = self._array(common.summary['counts_file'])
-                    for row in data.rows:
-                        counts += grid[row]
+                    if data.live_summary is not None:
+                        counts = data.live_summary['counts']
+                    else:
+                        counts = np.zeros(len(data.exposure), dtype=np.int64)
+                        grid = self._array(common.summary['counts_file'])
+                        for row in data.rows:
+                            counts += grid[row]
                     data.counts = counts
                 data.rates = np.full(len(data.exposure), np.nan)
                 np.divide(data.counts, data.exposure, out=data.rates, where=data.exposure > 0)
             elif session is not None:
                 sum_file, count_file = f'{metric}_sum_file', f'{metric}_count_file'
                 if sum_file in common.summary and count_file in common.summary:
-                    total = np.zeros(len(data.exposure))
-                    valid = np.zeros(len(data.exposure), dtype=np.int64)
-                    sums = self._array(common.summary[sum_file])
-                    counts = self._array(common.summary[count_file])
-                    for row in data.rows:
-                        total += sums[row]
-                        valid += counts[row]
+                    if data.live_summary is not None:
+                        total = data.live_summary['trend_sums'][metric]
+                        valid = data.live_summary['trend_counts'][metric]
+                    else:
+                        total = np.zeros(len(data.exposure))
+                        valid = np.zeros(len(data.exposure), dtype=np.int64)
+                        sums = self._array(common.summary[sum_file])
+                        counts = self._array(common.summary[count_file])
+                        for row in data.rows:
+                            total += sums[row]
+                            valid += counts[row]
                     mean = np.full(len(data.exposure), np.nan)
                     np.divide(total, valid, out=mean, where=(valid > 0) & (data.exposure > 0))
                     data.trend_sums[metric] = total
@@ -541,7 +555,17 @@ class UnitStabilityView(ManualClusteringView):
             ):
                 self.plot()
 
+        @connect(event='bounded_summary_changed', sender=self.controller.supervisor)
+        def on_summary(sender):
+            self._invalidate()
+            if self.auto_update and not self._closed:
+                if self.defer_hidden_updates and not self._dock_visible:
+                    if self._pending_selection is None:
+                        self._pending_selection = (list(self.cluster_ids), {})
+                else:
+                    self.plot()
+
         @connect(event='close_view', sender=self)
         def on_close(sender, *args):
-            unconnect(on_state, on_cluster, on_close)
+            unconnect(on_state, on_cluster, on_summary, on_close)
             self._release_cache()

@@ -290,6 +290,7 @@ def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_pat
         assert view.get_display_data(100).counts.sum() == 7
         supervisor.undo()
         supervisor.block()
+        controller._live_summaries.suspend()
         up = supervisor.split_source_amplitude(0, 2)
         supervisor.block()
         children = up.added
@@ -304,6 +305,9 @@ def test_gui_initial_authoritative_selection_actions_and_curation(qtbot, tmp_pat
         supervisor.redo()
         supervisor.block()
         assert view.get_data(children[0]).pending
+        controller._live_summaries.resume()
+        qtbot.waitUntil(lambda: controller.get_full_count(children[0]) == 1)
+        assert not view.get_data(children[0]).pending
         view.close()
         assert not view._summary_arrays and not view._selected_summaries
     finally:

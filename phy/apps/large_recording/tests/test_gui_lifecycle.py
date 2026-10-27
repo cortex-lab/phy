@@ -191,10 +191,11 @@ def test_gui_proposition_review_undo_redo_and_checkpoint_reopen(qtbot, tmp_path)
         reopened.close()
 
 
-def test_default_bounded_views_handle_threshold_children_with_pending_metrics(qtbot, tmp_path):
+def test_default_bounded_views_refresh_threshold_child_metrics(qtbot, tmp_path):
     _, controller = make_controller(tmp_path)
     gui = controller.create_gui(do_prompt_save=False)
     try:
+        controller._live_summaries.suspend()
         supervisor = controller.supervisor
         update = supervisor.split_source_amplitude(0, 4)
         supervisor.block()
@@ -203,7 +204,14 @@ def test_default_bounded_views_handle_threshold_children_with_pending_metrics(qt
             row = supervisor.cluster_view._model.row_by_id(cluster_id)
             assert row['fr'] is None
             assert row['full_count'] is None
-            assert row['evidence'] == 'pending replay'
+            assert 'suspended' in row['evidence']
+        controller._live_summaries.resume()
+        qtbot.waitUntil(lambda: all(controller.get_full_count(c) == 2 for c in update.added))
+        supervisor.block()
+        for cluster_id in update.added:
+            row = supervisor.cluster_view._model.row_by_id(cluster_id)
+            assert row['full_count'] == 2
+            assert row['fr'] == 0.1
     finally:
         gui.close()
         controller.close()

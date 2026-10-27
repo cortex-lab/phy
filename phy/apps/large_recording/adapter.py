@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from phylib.io.model import get_template_params
-from phylib.utils import Bunch, connect, unconnect
+from phylib.utils import Bunch, connect, emit, unconnect
 
 from phy.cluster._propositions import (
     MergePropositionController,
@@ -73,9 +73,80 @@ class BoundedTemplateController(TemplateController):
         return
 
     def close(self, close_model=True):
+        cleanup = getattr(self, '_live_summary_cleanup', None)
+        if cleanup is not None:
+            cleanup()
+        service = getattr(self, '_live_summaries', None)
+        if service is not None:
+            service.close()
+            self._live_summaries = None
         super().close(close_model=close_model)
         if close_model:
             self.bounded_session.close()
+
+    def _attach_live_summaries(self, gui):
+        service = self._live_summaries
+        gui.state.add_local_keys(['LiveSummaries.source_path'])
+        source_path = gui.state.get('LiveSummaries', {}).get('source_path')
+        if source_path:
+            service.retry(source_path=source_path)
+
+        def refresh_summaries():
+            if gui._closed:
+                return
+            supervisor = self.supervisor
+            data = supervisor.cluster_info
+            for view in (
+                supervisor.cluster_view,
+                supervisor.similarity_view,
+                supervisor.merge_view,
+            ):
+                if view is not None:
+                    view.change(data)
+            emit('bounded_summary_changed', supervisor)
+
+        @connect(event='bounded_state_changed', sender=self.supervisor)
+        def on_state(sender):
+            service.synchronize()
+
+        def cleanup():
+            service.suspend()
+            service.changed.disconnect(refresh_summaries)
+            unconnect(on_state, on_closed)
+            self._live_summary_cleanup = None
+
+        @connect(event='closed', sender=gui)
+        def on_closed(sender):
+            cleanup()
+
+        service.changed.connect(refresh_summaries)
+        self._live_summary_cleanup = cleanup
+
+        @gui.file_actions.add
+        def retry_full_summaries():
+            """Retry computing exact full-recording summaries after a split."""
+            service.retry()
+
+        @gui.file_actions.add(prompt=True)
+        def locate_summary_source(path):
+            """Locate the original source directory for exact summary computation."""
+            source_path = Path(path).expanduser().resolve()
+            gui.state['LiveSummaries'] = {'source_path': str(source_path)}
+            service.retry(source_path=source_path)
+
+        service.resume()
+
+    def get_live_summary(self, cluster_id):
+        service = getattr(self, '_live_summaries', None)
+        return None if service is None else service.get_summary(int(cluster_id))
+
+    def get_summary_status(self, cluster_id):
+        service = getattr(self, '_live_summaries', None)
+        return (
+            'Split evidence pending full-data replay.'
+            if service is None
+            else service.status(int(cluster_id))
+        )
 
     def _set_supervisor(self):
         session = self.bounded_session
@@ -118,7 +189,7 @@ class BoundedTemplateController(TemplateController):
         self.cluster_metrics['evidence_count'] = lambda c: self.supervisor.n_spikes(c)
         self.cluster_metrics['waveform_count'] = self.get_waveform_count
         self.cluster_metrics['evidence'] = lambda c: (
-            'pending replay' if self.get_full_count(c) is None else 'sampled windows'
+            self.get_summary_status(c) if self.get_full_count(c) is None else 'sampled windows'
         )
 
     def _set_view_creator(self):
@@ -195,7 +266,11 @@ class BoundedTemplateController(TemplateController):
     def get_full_count(self, cluster_id):
         units = self._source_units(cluster_id)
         if units is None:
-            return None
+            summary = self.get_live_summary(cluster_id)
+            if summary is not None:
+                return int(np.sum(summary['counts']))
+            service = getattr(self, '_live_summaries', None)
+            return None if service is None else service.total_count(int(cluster_id))
         if not hasattr(self, '_full_counts'):
             self._full_counts = dict(
                 zip(self.bounded_session.unit_ids, self.bounded_session.manifest['counts'])
@@ -483,6 +558,10 @@ class BoundedTemplateController(TemplateController):
                 view.update_status()
 
     def create_gui(self, *args, **kwargs):
+        from .summary_service import LiveSummaryService
+
+        if getattr(self, '_live_summaries', None) is None:
+            self._live_summaries = LiveSummaryService(self.bounded_session)
         gui = super().create_gui(*args, **kwargs)
         gui.setWindowTitle(
             f'phy — Bounded evidence ({self.model.n_spikes:,} / '
@@ -514,4 +593,5 @@ class BoundedTemplateController(TemplateController):
                 'amplitudes.npy' in self.bounded_session.capabilities['predicate_split_attributes']
             )
 
+        self._attach_live_summaries(gui)
         return gui

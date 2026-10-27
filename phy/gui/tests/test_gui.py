@@ -76,6 +76,33 @@ def test_opengl_view():
 # ------------------------------------------------------------------------------
 
 
+def test_closed_notification_follows_accepted_close(qtbot, tmp_path):
+    gui = GUI(config_dir=tmp_path)
+    qtbot.addWidget(gui)
+    closed = []
+
+    @connect(event='close', sender=gui)
+    def reject(sender):
+        return False
+
+    @connect(event='closed', sender=gui)
+    def accepted(sender):
+        assert sender._closed
+        closed.append(sender)
+
+    try:
+        gui.show()
+        assert not gui.close()
+        assert not gui._closed and not closed
+        unconnect(reject)
+        assert gui.close()
+        assert closed == [gui]
+        gui.close()
+        assert closed == [gui]
+    finally:
+        unconnect(reject, accepted)
+
+
 def test_gui_noapp(tempdir):
     if not QApplication.instance():
         with raises(RuntimeError):  # pragma: no cover
