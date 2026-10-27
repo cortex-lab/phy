@@ -7,10 +7,10 @@ from concurrent.futures import CancelledError
 import numpy as np
 import pytest
 
-from phy.apps.large_recording.curation import project_assignments
+from phy.apps.large_recording.curation import BoundedSession, project_assignments
 from phy.apps.large_recording.live_summaries import LiveSummaryEngine, membership_expressions
 from phy.apps.large_recording.prepare import prepare_large
-from phy.apps.large_recording.source import hash_file
+from phy.apps.large_recording.source import hash_file, hash_json
 from phy.apps.large_recording.tests.test_source import make_sorting
 
 
@@ -59,6 +59,25 @@ def package(tmp_path, columns=False, positions=False):
         valid_intervals=[[0, 7], [10, 20]],
     )
     return params.parent, bounded
+
+
+def test_accepted_top_level_summary_manifest_still_resolves(tmp_path):
+    _, bounded = package(tmp_path)
+    path = bounded / '_phy_curation_manifest.json'
+    manifest = json.loads(path.read_text())
+    manifest.pop('summaries')
+    manifest.pop('preparation_identity')
+    manifest['preparation_identity'] = hash_json(manifest)
+    path.write_text(json.dumps(manifest))
+    session = BoundedSession(bounded)
+    try:
+        expressions = membership_expressions(session.unit_ids, [split(0, [100, 101])])
+        with LiveSummaryEngine(bounded, batch_size=2) as engine:
+            result = engine.resolve({c: expressions[c] for c in (100, 101)})
+        np.testing.assert_array_equal(result[100]['counts'], [2, 0, 0, 0])
+        np.testing.assert_array_equal(result[101]['counts'], [0, 0, 1, 1])
+    finally:
+        session.close()
 
 
 def oracle(source, engine, events, unit):

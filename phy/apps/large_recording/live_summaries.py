@@ -113,7 +113,7 @@ class LiveSummaryEngine:
         self.max_bytes, self.cache_bytes = int(max_bytes), int(cache_bytes)
         if self.batch_size <= 0 or self.max_bytes <= 0 or self.cache_bytes < 0:
             raise ValueError('Live summary budgets must be positive.')
-        self.files = self.manifest['summaries']
+        self.files = self.manifest.get('summaries', self.manifest)
         self.fields = sorted(key[:-9] for key in self.files if key.endswith('_sum_file'))
         self.edges = np.load(self.path / self.files['edges_file'], allow_pickle=False)
         self.exposure = np.load(self.path / self.files['exposure_file'], allow_pickle=False)
