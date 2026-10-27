@@ -243,9 +243,14 @@ def test_pinned_source_change_between_jobs_rejected(tmp_path):
     with LiveSummaryEngine(bounded) as engine:
         engine.resolve(membership_expressions([0, 1, 2, 99], events))
         path = source / 'amplitudes.npy'
-        values = np.load(path)
-        values[0] = 500
-        np.save(path, values)
+        # Mutate a mapped payload without truncating its file (unsupported on Windows).
+        before = path.stat()
+        with path.open('r+b') as stream:
+            stream.seek(engine.arrays['amplitudes.npy'].offset)
+            stream.write(np.array([500], dtype=engine.arrays['amplitudes.npy'].dtype).tobytes())
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
         events.append(split(0, [102, 103]))
         with pytest.raises(ValueError, match='changed'):
             engine.resolve(membership_expressions([0, 1, 2, 99], events))
