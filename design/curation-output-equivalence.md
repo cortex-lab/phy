@@ -260,6 +260,18 @@ cache-key performance change, all **40 engine/service cases** and **four live
 GUI integration cases** passed again. Strict documentation checks and final CI
 results are recorded at handoff.
 
+Windows 3.12 CI exposed differing `stat()` and `fstat()` timestamp semantics,
+consistent with [CPython issue 157671](https://github.com/python/cpython/issues/157671).
+The source reader now captures path and descriptor fingerprints separately,
+compares each against its own later samples, and retains common identity/size/
+modification-time binding plus the original file hashes. Three regressions cover
+different timestamps, changes reported by either provider and replacement
+between sampling the path and opening it. All **44 engine/service cases** and
+the **four live GUI cases** passed after this fix. Source-edit fault injection
+also writes the mapped payload in place, since Windows prevents truncation of
+an open mapping. Summary arithmetic and the recorded real-data results are
+unchanged.
+
 ## Parallel phylib follow-up
 
 [phylib PR #70](https://github.com/cortex-lab/phylib/pull/70) returns the existing

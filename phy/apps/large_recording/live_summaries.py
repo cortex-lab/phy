@@ -139,6 +139,7 @@ class LiveSummaryEngine:
         self.binding_digest = hash_json(self.binding)
         self.cache_dir = self.path / '.phy' / 'live-summary-cache'
         self.arrays, self.handles, self.signatures = {}, {}, {}
+        self.path_signatures = {}
         self.metadata_signature = None
         self.resident = {}
 
@@ -153,6 +154,7 @@ class LiveSummaryEngine:
         self.arrays.clear()
         self.handles.clear()
         self.signatures.clear()
+        self.path_signatures.clear()
         self.resident.clear()
 
     def __enter__(self):
@@ -327,7 +329,7 @@ class LiveSummaryEngine:
             expected = self.signatures[name]
             if (
                 _signature(os.fstat(handle.fileno())) != expected
-                or _signature((self.source_dir / name).stat()) != expected
+                or _signature((self.source_dir / name).stat()) != self.path_signatures[name]
             ):
                 raise ValueError(f'Source changed during live summary: {name}.')
         if (
@@ -343,9 +345,16 @@ class LiveSummaryEngine:
             for name in sorted(names - self.arrays.keys()):
                 _check_cancel(cancel)
                 path = self.source_dir / name
+                self.path_signatures[name] = _signature(path.stat())
                 handle = path.open('rb')
                 self.handles[name] = handle
                 self.signatures[name] = _signature(os.fstat(handle.fileno()))
+                # Windows 3.12 path stat reports creation time as ctime, while
+                # fstat can report metadata change time. Bind both snapshots
+                # using identity/size/mtime, and retain each provider's ctime
+                # for its own subsequent stability checks.
+                if self.path_signatures[name][:-1] != self.signatures[name][:-1]:
+                    raise ValueError(f'Source changed during live summary: {name}.')
                 digest = hashlib.sha256()
                 while block := handle.read(1024 * 1024):
                     _check_cancel(cancel)
@@ -378,6 +387,7 @@ class LiveSummaryEngine:
                     )
                     if revision != self.manifest['source']['revision']:
                         raise ValueError('Source assignment revision mismatch.')
+                self._unchanged()
             if metadata_before != self._metadata_state():
                 raise ValueError('Source metadata changed during validation.')
             self.metadata_signature = metadata_before

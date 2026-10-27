@@ -485,3 +485,90 @@ def test_cache_header_claiming_huge_array_is_rejected_before_numpy_load(tmp_path
 
         monkeypatch.setattr(np, 'load', guarded)
         assert engine.cached({100: expression}) == {}
+
+
+@pytest.mark.parametrize('changed_provider', ['path', 'descriptor'])
+def test_distinct_path_descriptor_ctime_preserves_each_provider_checks(
+    tmp_path, monkeypatch, changed_provider
+):
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    source, bounded = package(tmp_path)
+    original_stat, original_fstat = Path.stat, os.fstat
+    changed = False
+
+    def copy_stat(result, ctime_offset):
+        values = {name: getattr(result, name) for name in dir(result) if name.startswith('st_')}
+        values['st_ctime_ns'] += ctime_offset
+        return SimpleNamespace(**values)
+
+    with LiveSummaryEngine(bounded) as engine:
+
+        def path_stat(path, *args, **kwargs):
+            result = original_stat(path, *args, **kwargs)
+            if path.parent == source and path.suffix == '.npy':
+                offset = 1000
+                if changed and changed_provider == 'path' and path.name == 'amplitudes.npy':
+                    offset += 1
+                return copy_stat(result, offset)
+            return result
+
+        def descriptor_stat(fd):
+            result = original_fstat(fd)
+            offset = 0
+            if (
+                changed
+                and changed_provider == 'descriptor'
+                and 'amplitudes.npy' in engine.handles
+                and fd == engine.handles['amplitudes.npy'].fileno()
+            ):
+                offset = 1
+            return copy_stat(result, offset)
+
+        monkeypatch.setattr(Path, 'stat', path_stat)
+        monkeypatch.setattr(os, 'fstat', descriptor_stat)
+        events = [split(1, [100, 101])]
+        expressions = membership_expressions([0, 1, 2, 99], events)
+        actual = engine.resolve(expressions)
+        for unit in (100, 101):
+            expected = oracle(source, engine, events, unit)
+            for name, values in engine._flat(actual[unit]).items():
+                np.testing.assert_allclose(values, engine._flat(expected)[name])
+        before_cache = {p.name: hash_file(p) for p in engine.cache_dir.glob('*.npz')}
+        changed = True
+        events.append(split(0, [102, 103]))
+        with pytest.raises(ValueError, match='Source changed'):
+            engine.resolve(membership_expressions([0, 1, 2, 99], events))
+        assert not engine.arrays and not engine.handles
+        assert not engine.signatures and not engine.path_signatures
+        assert {p.name: hash_file(p) for p in engine.cache_dir.glob('*.npz')} == before_cache
+
+
+def test_source_replacement_between_path_stat_and_open_is_rejected(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    source, bounded = package(tmp_path)
+    path = source / 'amplitudes.npy'
+    replacement = source / 'replacement.npy'
+    replacement.write_bytes(path.read_bytes())
+    original_open = Path.open
+    replaced = False
+
+    def replace_before_open(current, *args, **kwargs):
+        nonlocal replaced
+        if current == path and args == ('rb',) and not replaced:
+            replaced = True
+            current.rename(source / 'previous.npy')
+            replacement.rename(current)
+        return original_open(current, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'open', replace_before_open)
+    expressions = membership_expressions([0, 1, 2, 99], [split(1, [100, 101])])
+    with LiveSummaryEngine(bounded) as engine:
+        with pytest.raises(ValueError, match='Source changed'):
+            engine.resolve(expressions)
+        assert replaced
+        assert not engine.arrays and not engine.handles
+        assert not engine.signatures and not engine.path_signatures
+        assert not list(engine.cache_dir.glob('*.npz'))
