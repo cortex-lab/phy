@@ -41,3 +41,43 @@ def test_prepare_cli_explains_missing_producer_windows(tmp_path):
     assert result.exit_code == 1
     assert 'producer' in result.output.lower()
     assert not output.exists()
+
+
+def test_build_and_attach_summary_store_commands(tmp_path):
+    from phy.apps.large_recording.live_summaries import LiveSummaryEngine
+    from phy.apps.large_recording.summary_store import SummaryStore
+    from phy.apps.large_recording.tests.test_live_summaries import package
+
+    _, bounded = package(tmp_path)
+    output = tmp_path / 'store'
+    runner = CliRunner()
+    result = runner.invoke(
+        phycli, ['build-summary-store', str(bounded), str(output), '--batch-size', '2']
+    )
+    assert result.exit_code == 0, result.output
+    assert 'building summary store: 100%' in result.output
+    (bounded / '.phy' / 'live-summary-store.json').unlink()
+    result = runner.invoke(phycli, ['attach-summary-store', str(bounded), str(output)])
+    assert result.exit_code == 0, result.output
+    with LiveSummaryEngine(bounded) as engine, SummaryStore(engine) as store:
+        assert sum(len(data) for data in store.batches(0, 2)) == 4
+
+
+def test_prepare_with_summary_store_and_recoverable_optional_failure(tmp_path):
+    params = make_sorting(tmp_path / 'source')
+    runner = CliRunner()
+    bounded = tmp_path / 'bounded'
+    output = tmp_path / 'store'
+    result = runner.invoke(
+        phycli, ['prepare-large', str(params), str(bounded), '--summary-store', str(output)]
+    )
+    assert result.exit_code == 0, result.output
+    assert output.is_dir()
+    failed_bounded = tmp_path / 'bounded-second'
+    result = runner.invoke(
+        phycli, ['prepare-large', str(params), str(failed_bounded), '--summary-store', str(output)]
+    )
+    assert result.exit_code == 1
+    assert 'Bounded package is ready' in result.output
+    assert 'build-summary-store to retry' in result.output
+    assert (failed_bounded / '_phy_curation_manifest.json').is_file()

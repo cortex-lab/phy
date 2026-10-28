@@ -106,6 +106,7 @@ class LiveSummaryService(QObject):
         self._suspended = True
         self._running = None
         self._progress_text = None
+        self._running_keys = set()
         self._worker = None
         self._delivery = _Delivery()
         self._delivery.finished.connect(self._completed, Qt.QueuedConnection)
@@ -216,7 +217,7 @@ class LiveSummaryService(QObject):
             return 'unavailable: summary cache budget; retry full summaries'
         if self._suspended:
             return 'cancelled: summary computation suspended'
-        if self._running is not None:
+        if self._running is not None and key in self._running_keys:
             return self._progress_text or 'validating source / recomputing full summaries'
         return 'pending full summary computation'
 
@@ -250,6 +251,7 @@ class LiveSummaryService(QObject):
         expressions = deepcopy(missing)
         cancel = Event()
         self._running = cancel
+        self._running_keys = {self._engine.key(e) for e in expressions.values()}
         self._progress_text = None
         if self._worker is None:
             self._worker = _SummaryWorker(self._package_path, self._source_path, self._delivery)
@@ -261,6 +263,11 @@ class LiveSummaryService(QObject):
         cancel, phase, done, total = payload
         if self._closed or self._suspended or cancel is not self._running or cancel.is_set():
             return
+        self._refresh()
+        if not self._running_keys.intersection(
+            self._engine.key(e) for e in self._expressions.values()
+        ):
+            return
         self._progress_text = f'{phase}: {min(100, int(100 * done / max(1, total)))}%'
         self.changed.emit()
 
@@ -270,6 +277,7 @@ class LiveSummaryService(QObject):
         if self._closed:
             return
         self._running = None
+        self._running_keys.clear()
         self._progress_text = None
         self._refresh()
         # A cancelled/relocated source job must never overwrite a later retry.

@@ -73,6 +73,9 @@ def build_summary_store(
         raise ValueError('Summary store budgets must be positive.')
     temporary = None
     with LiveSummaryEngine(package_path, source_dir=source_dir, batch_size=batch_size) as engine:
+        source_path = engine.source_dir.resolve()
+        if output_dir == source_path or source_path in output_dir.parents:
+            raise ValueError('Summary store must be outside the original source.')
         inventory = engine.manifest['source_array_inventory']
         names = {'spike_times.npy', 'spike_clusters.npy'}
         specs = [('bin', _bin_dtype(engine.bins))]
@@ -221,8 +224,8 @@ def build_summary_store(
             _check_cancel(cancel)
             # Refuse a competing completed build rather than replacing it.
             publish_directory(temporary, output_dir)
-            _fsync_directory(output_dir.parent)
             temporary = None
+            _fsync_directory(output_dir.parent)
             _atomic_json(
                 package_path / '.phy' / REFERENCE,
                 {

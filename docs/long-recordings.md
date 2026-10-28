@@ -306,10 +306,11 @@ source-amplitude predicate; `phy apply-curation` later evaluates that predicate
 against every source spike. Thus the bounded GUI assignment is provisional for
 unseen spikes until full-source replay. Source `amplitudes.npy` values are used
 during replay. After a split, Phy automatically computes exact full-recording
-counts, rates and available amplitude/depth trends in the background. It reads
-the original source in bounded chunks, applies the recorded membership
-predicates, and uses the preparation's existing time bins and acquisition
-exposure. The split children show a computation status until complete results
+counts, rates and available amplitude/depth trends in the background. With an
+attached summary store (below), it reads only the required original units.
+Otherwise it reads the original source in bounded chunks. Both paths apply
+the recorded membership predicates and use the preparation's existing time
+bins and acquisition exposure. The split children show a computation status until complete results
 are ready; unrelated selected units retain their plots. This does not require
 applying curation or exporting a full dataset.
 
@@ -317,13 +318,13 @@ Computed summaries combine on subsequent merges, and completed results are
 reused after undo/redo and reopening. A separate bounded cache in
 `.phy/live-summary-cache` is disposable; deleting or losing it does not affect
 curation saves. Computation leaves the source, preparation manifest and saved
-curation generations unchanged. First use validates the required source files;
-later splits reuse validated readers while their file fingerprints remain
-unchanged. Closing the GUI cancels work without waiting for a complete scan.
+curation generations unchanged. The original-source fallback validates the
+required files on first use; later splits reuse validated readers while their
+file fingerprints remain unchanged. Closing the GUI cancels work without waiting for a complete scan.
 Saving curation does not wait for summary computation.
 
-New computations require the original source directory to be accessible and
-match the prepared source revision. If it moved, use **File > Locate summary
+Without a compatible summary store, new computations require the original
+source directory to be accessible and match the prepared source revision. If it moved, use **File > Locate summary
 source**; the location is remembered in dataset-local GUI state without changing
 the manifest. Use **File > Retry full summaries** after resolving an error. Valid
 cached results can be displayed even when the original source is offline.
@@ -342,6 +343,71 @@ Lasso, feature, and waveform splits remain unavailable in bounded mode because
 the selected rows do not define how unseen source spikes should be assigned.
 Ordinary datasets retain their standard split tools, including the graphical
 amplitude-threshold preview.
+
+### Accelerate summaries on very long recordings
+
+On billion-spike datasets, scanning the entire source after each split can take
+minutes. Build an optional unit-contiguous summary snapshot once, then reopen
+Phy or use **File > Retry full summaries** if a previous computation failed:
+
+```bash
+phy build-summary-store BOUNDED /data/summary-store
+phy template-gui BOUNDED/params.py
+```
+
+The destination must be a new directory outside the bounded package and original
+source. The command validates the original source and stores exact scalar values
+and native time-bin IDs grouped by original unit. It does not change the
+preparation manifest, journal, assignments or saved checkpoint. Construction uses
+bounded batches and write buffers; it requires enough free space for the new
+store. The default independent store budget is 64 GiB; increase `--max-bytes`
+when needed. `--source-dir` locates a relocated original source. Keep the store
+on fast local storage where possible.
+
+For a new package, `prepare-large --summary-store /data/summary-store` also
+builds it after preparation; `--summary-store-max-bytes` sets its budget. If that
+optional step fails, the error identifies the completed bounded package. Retry
+with `build-summary-store` rather than preparing the package again.
+
+A 1,000-bin dataset with float32 amplitudes needs approximately six bytes per
+source spike: two for the bin and four for the amplitude (about 29.2 GB for
+4.87 billion spikes). Depth, when available, adds its original scalar width.
+Bin IDs use the smallest suitable unsigned dtype; offsets and counts retain
+64-bit range. No lossy amplitude conversion is performed.
+
+Splits verify and read only the relevant original-unit ranges, sharing reads
+between children and overlapping ancestry. Cost depends on original ancestry:
+a nested split still reads its original unit; splitting a merge of many original
+units reads all of them. Counts are exact; floating sums may differ in their last
+bits because accumulation order changes. Merges continue to combine completed
+summaries without a scan. Status reports progress for validation and scanning.
+
+The store represents the **source snapshot used during preparation**, just like
+prepared summaries. Each consumed unit is checksum-verified before results are
+published. It can compute new summaries with the original source offline; it does
+not certify that current original files are unchanged. Full-source replay/export
+continues to validate the original source. Missing, incompatible or corrupt
+stores fall back to fully validated source reads. Template-based engine
+predicates also use that fallback because template values are not indexed.
+
+The small discovery reference is `.phy/live-summary-store.json`. To move a store,
+recover a lost reference, or share it with another package having the identical
+source snapshot, summary grid and scalar definitions:
+
+```bash
+phy attach-summary-store BOUNDED /new/location/summary-store
+```
+
+Payload checks remain selective after attachment. Stores are separate from the
+256 MiB disposable result cache and are never automatically evicted. To remove
+one, close Phy, remove its reference, and delete the store only after checking
+that no other package uses it. Saving curation never depends on either cache.
+
+The reproducible `tools/benchmark_summary_store.py` compares indexed results
+against a full scan and independent cumulative assignment replay. Run it on a
+fresh copy of the bounded package. Report build time, peak memory, disk usage,
+cache conditions and split timings separately. Measurements on smaller datasets
+do not establish acceptance on a 1,000-hour dataset.
 
 ### Comparing ordinary and bounded curation
 

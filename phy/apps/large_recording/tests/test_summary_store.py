@@ -281,3 +281,106 @@ def test_cancel_indexed_scan_never_publishes(tmp_path):
     with LiveSummaryEngine(bounded, batch_size=1) as engine, pytest.raises(CancelledError):
         engine.resolve(expressions, cancel=lambda: stopped[0], progress=progress)
     assert not list((bounded / '.phy' / 'live-summary-cache').glob('*.npz'))
+
+
+def test_racing_publication_never_replaces_empty_target(tmp_path, monkeypatch):
+    from phy.apps.large_recording import summary_store
+
+    _, bounded = package(tmp_path)
+    output = tmp_path / 'store'
+    original = summary_store.publish_directory
+
+    def race(staged, destination):
+        destination.mkdir()
+        return original(staged, destination)
+
+    monkeypatch.setattr(summary_store, 'publish_directory', race)
+    with pytest.raises(OSError):
+        build_summary_store(bounded, output)
+    assert output.is_dir() and not list(output.iterdir())
+    assert not list(tmp_path.glob('.*.building-*'))
+    assert not (bounded / '.phy' / 'live-summary-store.json').exists()
+
+
+def test_disk_failure_cleans_unpublished_store(tmp_path, monkeypatch):
+    import errno
+
+    from phy.apps.large_recording import summary_store
+
+    _, bounded = package(tmp_path)
+
+    def full(*args):
+        raise OSError(errno.ENOSPC, 'disk full')
+
+    monkeypatch.setattr(summary_store.os, 'fsync', full)
+    with pytest.raises(OSError, match='disk full'):
+        build_summary_store(bounded, tmp_path / 'store')
+    assert not (tmp_path / 'store').exists()
+    assert not list(tmp_path.glob('.*.building-*'))
+
+
+def test_completed_store_can_attach_after_reference_write_failure(tmp_path, monkeypatch):
+    from phy.apps.large_recording import summary_store
+
+    _, bounded = package(tmp_path)
+    output = tmp_path / 'store'
+    original = summary_store._atomic_json
+
+    def fail_reference(path, value):
+        if path.name == summary_store.REFERENCE:
+            raise OSError('reference write failed')
+        original(path, value)
+
+    monkeypatch.setattr(summary_store, '_atomic_json', fail_reference)
+    with pytest.raises(OSError, match='reference write failed'):
+        build_summary_store(bounded, output)
+    assert output.is_dir()
+    monkeypatch.setattr(summary_store, '_atomic_json', original)
+    summary_store.attach_summary_store(bounded, output)
+    with LiveSummaryEngine(bounded) as engine, SummaryStore(engine) as store:
+        assert len(np.concatenate(list(store.batches(0, 2)))) == 4
+
+
+def test_wide_real_scalars_use_float64_accumulators(tmp_path):
+    from phy.apps.large_recording.live_summaries import membership_expressions
+    from phy.apps.large_recording.prepare import prepare_large
+    from phy.apps.large_recording.tests.test_live_summaries import split
+    from phy.apps.large_recording.tests.test_source import make_sorting
+
+    params = make_sorting(tmp_path / 'source')
+    for name in ('amplitudes.npy', 'spike_depths.npy'):
+        np.save(params.parent / name, np.load(params.parent / name).astype(np.longdouble))
+    bounded = prepare_large(params, tmp_path / 'bounded', bin_seconds=5)
+    expressions = membership_expressions([0, 1, 2, 99], [split(0, [100, 101])])
+    with LiveSummaryEngine(bounded) as engine:
+        baseline = engine.resolve(expressions)
+    build_summary_store(bounded, tmp_path / 'store')
+    import shutil
+
+    shutil.rmtree(bounded / '.phy' / 'live-summary-cache')
+    with LiveSummaryEngine(bounded) as engine:
+        indexed = engine.resolve(expressions)
+        for unit in expressions:
+            for name, actual in engine._flat(indexed[unit]).items():
+                np.testing.assert_array_equal(actual, engine._flat(baseline[unit])[name])
+
+
+def test_post_publication_sync_failure_preserves_attachable_store(tmp_path, monkeypatch):
+    from phy.apps.large_recording import summary_store
+
+    _, bounded = package(tmp_path)
+    output = tmp_path / 'store'
+    original = summary_store._fsync_directory
+
+    def fail_parent(path):
+        if path == output.parent and output.exists():
+            raise OSError('parent sync failed')
+        original(path)
+
+    monkeypatch.setattr(summary_store, '_fsync_directory', fail_parent)
+    with pytest.raises(OSError, match='parent sync failed'):
+        build_summary_store(bounded, output)
+    assert output.is_dir()
+    assert not list(tmp_path.glob('.*.building-*'))
+    monkeypatch.setattr(summary_store, '_fsync_directory', original)
+    summary_store.attach_summary_store(bounded, output)

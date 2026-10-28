@@ -3,6 +3,7 @@
 import json
 
 import numpy as np
+import pytest
 from phylib.utils import connect, unconnect
 
 from phy.apps.large_recording.prepare import prepare_large
@@ -16,11 +17,22 @@ def _files(path):
     return {p.name: hash_file(p) for p in path.iterdir() if p.is_file()}
 
 
-def test_split_refreshes_views_and_table_then_merge_reopen(qtbot, tmp_path):
+@pytest.mark.parametrize('indexed', [False, True])
+def test_split_refreshes_views_and_table_then_merge_reopen(qtbot, tmp_path, monkeypatch, indexed):
     params, controller = make_controller(tmp_path)
     source_files = _files(params.parent)
     package = controller.dir_path
     manifest_hash = hash_file(package / '_phy_curation_manifest.json')
+    if indexed:
+        from phy.apps.large_recording.live_summaries import LiveSummaryEngine
+        from phy.apps.large_recording.summary_store import build_summary_store
+
+        build_summary_store(package, tmp_path / 'summary-store', batch_size=2)
+
+        def no_source(*args, **kwargs):
+            raise AssertionError('Indexed GUI opened full source')
+
+        monkeypatch.setattr(LiveSummaryEngine, '_open', no_source)
     gui = controller.create_gui(default_views=['UnitStabilityView'], do_prompt_save=False)
     service = controller._live_summaries
     supervisor = controller.supervisor
@@ -125,8 +137,6 @@ def test_summary_worker_ignores_rolled_back_split(qtbot, tmp_path):
         raise RuntimeError('observer rejects edit')
 
     try:
-        import pytest
-
         with pytest.raises(RuntimeError, match='observer rejects'):
             supervisor.split_source_amplitude(0, 4)
         unconnect(reject)

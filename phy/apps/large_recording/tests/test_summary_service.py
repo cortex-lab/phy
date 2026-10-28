@@ -392,3 +392,20 @@ def test_progress_is_queued_and_stale_or_cancelled_updates_are_ignored(qtbot, co
     assert 'cancelled' not in f.service._progress_text
     job.release.set()
     qtbot.waitUntil(lambda: f.service._running is None)
+
+
+def test_progress_for_undone_memberships_is_ignored(qtbot, controlled_service):
+    f = controlled_service
+    job = f.control()
+    f.service.resume()
+    split(f)
+    qtbot.waitUntil(job.started.is_set)
+    job.progress('reading prepared unit summaries', 1, 2)
+    qtbot.waitUntil(lambda: '50%' in f.service.status(1))
+    split(f, {3: 'other-left', 4: 'other-right'})
+    f.service._progress((f.service._running, 'old branch', 9, 10))
+    assert f.service.status(3) == 'pending full summary computation'
+    assert 'old branch' not in f.service._progress_text
+    # Teardown releases the pending original request; do not start a new one.
+    f.service.suspend()
+    job.release.set()

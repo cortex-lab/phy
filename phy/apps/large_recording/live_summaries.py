@@ -444,7 +444,7 @@ class LiveSummaryEngine:
         for field, values in scalars.items():
             finite = selected & np.isfinite(values)
             summary['trend_sums'][field] += np.bincount(
-                columns[finite], weights=values[finite], minlength=self.bins
+                columns[finite], weights=values[finite].astype(np.float64), minlength=self.bins
             )
             summary['trend_counts'][field] += np.bincount(columns[finite], minlength=self.bins)
 
