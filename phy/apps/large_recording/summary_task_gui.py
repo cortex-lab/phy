@@ -31,8 +31,10 @@ from phy.gui.tasks import BackgroundTaskManager, TaskSpec
 from .summary_store import summary_store_reference
 from .summary_tasks import (
     StoreRequest,
+    connect_amplitude_index,
     connect_summary_store,
     inspect_summary_store,
+    prepare_amplitude_index,
     prepare_summary_store,
 )
 
@@ -105,14 +107,24 @@ class StorePrompt(QDialog):
         self.setWindowTitle('Prepare faster full-recording summaries?')
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         layout = QVBoxLayout(self)
-        text = 'Build a reusable store so splits read only the affected original units. You can keep curating while it runs.'
-        layout.addWidget(QLabel(text, self))
+        text = 'Prepare faster full-recording rate and trend updates after amplitude splits. This one-time task can take a while. You can keep curating while it runs.'
+        explanation = QLabel(text, self)
+        explanation.setWordWrap(True)
+        layout.addWidget(explanation)
         layout.addWidget(
             QLabel(
-                f'Estimated additional space: {inspection.estimate.estimated_bytes / 1e9:.2f} GB',
+                f'Estimated additional space: {(inspection.additional_bytes or inspection.estimate.estimated_bytes) / 1e9:.2f} GB',
                 self,
             )
         )
+        if inspection.peak_bytes:
+            layout.addWidget(
+                QLabel(
+                    f'Free space needed during preparation: {inspection.peak_bytes / 1e9:.2f} GB; '
+                    f'combined store estimate: {inspection.budget_bytes / 1e9:.2f} GB',
+                    self,
+                )
+            )
         row = QHBoxLayout()
         self.destination = QLineEdit(str(destination), self)
         self.choose = QPushButton('Choose parent folder…', self)
@@ -198,9 +210,13 @@ class StorePrompt(QDialog):
             problem = (
                 'Choose a new directory. Use File > Attach summary store for an existing store.'
             )
-        elif result.free_bytes < self.inspection.estimate.estimated_bytes:
+        elif result.free_bytes < (
+            self.inspection.peak_bytes or self.inspection.estimate.estimated_bytes
+        ):
             problem = 'There is not enough free space at this location.'
-        elif self.inspection.estimate.estimated_bytes > self.budget.value() * 1073741824:
+        elif (
+            self.inspection.budget_bytes or self.inspection.estimate.estimated_bytes
+        ) > self.budget.value() * 1073741824:
             problem = 'The estimate exceeds the store budget. Increase the budget to build.'
         elif not self.inspection.source_available:
             problem = 'Source unavailable. Use File > Locate summary source, or attach an existing store.'
@@ -246,6 +262,8 @@ class SummaryStoreActions(QObject):
         self._manual = False
         self._mode = None
         self._request = None
+        self._inspection = None
+        self._prepare_ranges = False
         self._binding = controller.bounded_session.manifest.get('preparation_identity', '')
         gui.state.add_local_keys(
             ['SummaryStore.suppress_prompt', 'SummaryStore.destination', 'SummaryStore.max_bytes']
@@ -268,6 +286,16 @@ class SummaryStoreActions(QObject):
             path = QFileDialog.getExistingDirectory(gui, 'Attach summary store')
             if path:
                 self.attach(path)
+
+        @gui.file_actions.add
+        def attach_amplitude_index():
+            """Attach a compatible amplitude index stored separately from its row store."""
+            if self.manager.busy:
+                self.widget.show()
+                return
+            path = QFileDialog.getExistingDirectory(gui, 'Attach amplitude index')
+            if path:
+                self.attach_index(path)
 
         @gui.file_actions.add
         def show_background_task():
@@ -330,6 +358,8 @@ class SummaryStoreActions(QObject):
                         'inspect': 'Checking summary store',
                         'build': 'Preparing faster summaries',
                         'attach': 'Attaching summary store',
+                        'build-range': 'Preparing fast amplitude splits',
+                        'attach-range': 'Attaching amplitude index',
                     }[mode],
                     worker,
                     request,
@@ -377,16 +407,35 @@ class SummaryStoreActions(QObject):
         request = replace(request, max_bytes=int(max_bytes))
         self._paused = True
         self.service.pause('waiting for summary-store preparation')
-        self._submit('build', prepare_summary_store, request, True)
+        inspection = self._inspection
+        self._prepare_ranges = inspection is None or inspection.range_supported
+        if inspection is not None and inspection.compatible and inspection.range_supported:
+            self._submit('build-range', prepare_amplitude_index, request, True)
+        else:
+            self._submit('build', prepare_summary_store, request, True)
 
     def attach(self, path):
         if not self._valid() or self.manager.busy:
             return
+        self._prepare_ranges = False
         self._paused = True
         self.service.pause('waiting for summary-store attachment')
         self._submit(
             'attach',
             connect_summary_store,
+            self._request_for(str(Path(path).expanduser().absolute())),
+            False,
+        )
+
+    def attach_index(self, path):
+        if not self._valid() or self.manager.busy:
+            return
+        self._prepare_ranges = False
+        self._paused = True
+        self.service.pause('waiting for amplitude-index attachment')
+        self._submit(
+            'attach-range',
+            connect_amplitude_index,
             self._request_for(str(Path(path).expanduser().absolute())),
             False,
         )
@@ -402,18 +451,26 @@ class SummaryStoreActions(QObject):
         mode, request = self._mode, self._request
         if outcome.state != 'succeeded':
             self._resume()
-            if mode == 'attach':
+            if mode in ('attach', 'attach-range'):
                 self.widget.notice(
                     f'Store remains at {request.destination}; attachment did not complete. See Details.'
                 )
             return
         if mode == 'inspect':
             self.widget.hide()
-            inspection = outcome.result
-            if inspection.compatible and not self._manual:
+            inspection = self._inspection = outcome.result
+            if (
+                inspection.compatible
+                and (inspection.optimized or not inspection.range_supported)
+                and not self._manual
+            ):
                 return
             state = self.gui.state.get('SummaryStore', {})
             destination = state.get('destination', self.package + '.summary-store')
+            if inspection.compatible and inspection.range_supported:
+                destination = str(Path(inspection.path) / 'amplitude-index')
+                if Path(destination).exists():
+                    destination += '-' + uuid4().hex[:8]
             self.dialog = StorePrompt(
                 inspection,
                 destination,
@@ -434,7 +491,9 @@ class SummaryStoreActions(QObject):
                 # Native platform activation may arrive after QWidget.show().
                 QTimer.singleShot(0, lambda: self._restore_activation(active, focus))
             self._manual = False
-        elif mode == 'build':
+        elif mode in ('build', 'build-range'):
+            if self.manager.cancellation_requested:
+                self._prepare_ranges = False
             artifact = outcome.result
             if artifact.warning:
                 self.widget.notice(
@@ -444,12 +503,35 @@ class SummaryStoreActions(QObject):
                 self._resume()
             else:
                 self._submit(
-                    'attach',
-                    connect_summary_store,
+                    'attach-range' if mode == 'build-range' else 'attach',
+                    connect_amplitude_index if mode == 'build-range' else connect_summary_store,
                     replace(request, destination=artifact.path),
                     False,
                 )
-        elif mode == 'attach':
+        elif mode == 'attach' and (self._prepare_ranges or outcome.result.amplitude_index):
+            self.service.retry()
+            # A committed row snapshot remains usable after cancellation; avoid
+            # starting another long task if cancellation arrived during commit.
+            if self.manager.cancellation_requested:
+                self.service.retry()
+                self._resume()
+                self.widget.notice('Summary store ready; amplitude-index preparation cancelled.')
+                return
+            self._submit(
+                'build-range' if self._prepare_ranges else 'attach-range',
+                prepare_amplitude_index if self._prepare_ranges else connect_amplitude_index,
+                replace(
+                    request,
+                    destination=(
+                        str(Path(outcome.result.path) / 'amplitude-index')
+                        if self._prepare_ranges
+                        else outcome.result.amplitude_index
+                    ),
+                    expected_reference=outcome.result.reference,
+                ),
+                self._prepare_ranges,
+            )
+        elif mode in ('attach', 'attach-range'):
             self.service.retry()
             self._resume()
             self.widget.notice('Summary store ready. New splits use the prepared store.')

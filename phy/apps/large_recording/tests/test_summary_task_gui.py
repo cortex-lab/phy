@@ -306,3 +306,119 @@ def test_prompt_disables_build_with_insufficient_free_space(qtbot, tmp_path, mon
         assert '0.00 GB' in prompt.available.text()
     finally:
         prompt.close()
+
+
+def test_existing_row_store_upgrades_without_source_or_row_rebuild(
+    qtbot, opened, tmp_path, monkeypatch
+):
+    from phy.apps.large_recording.live_summaries import LiveSummaryEngine
+    from phy.apps.large_recording.range_index import AmplitudeRangeIndex
+    from phy.apps.large_recording.summary_store import build_summary_store
+
+    controller, gui, actions = opened
+    store = build_summary_store(controller.dir_path, tmp_path / 'store')
+    source = controller.bounded_session.manifest['source']['path']
+    from pathlib import Path
+
+    Path(source).rename(tmp_path / 'offline-source')
+
+    def forbid(*args, **kwargs):
+        raise AssertionError('Upgrade rebuilt existing rows')
+
+    monkeypatch.setattr(summary_task_gui, 'prepare_summary_store', forbid)
+    actions.build_dialog()
+    qtbot.waitUntil(lambda: actions.dialog is not None)
+    assert actions._inspection.compatible
+    assert not actions._inspection.optimized
+    assert actions._inspection.source_available
+    actions.dialog.close()
+    actions.build(store / 'amplitude-index')
+    qtbot.waitUntil(lambda: actions._mode == 'attach-range' and not actions.manager.busy)
+    with LiveSummaryEngine(controller.dir_path) as engine:
+        index = AmplitudeRangeIndex(engine)
+        index.close()
+    assert not controller._live_summaries._suspended
+
+
+def test_cancelling_amplitude_preparation_preserves_usable_rows(
+    qtbot, opened, tmp_path, monkeypatch
+):
+    controller, gui, actions = opened
+    started, release = Event(), Event()
+
+    def blocked(request, context):
+        started.set()
+        assert release.wait(5)
+        context.check_cancel()
+
+    monkeypatch.setattr(summary_task_gui, 'prepare_amplitude_index', blocked)
+    controller._live_summaries._errors['stale-error'] = 'unavailable: old source error'
+    try:
+        actions.build(tmp_path / 'store')
+        qtbot.waitUntil(started.is_set)
+        assert summary_store_reference(controller.dir_path) is not None
+        actions.manager.cancel()
+        release.set()
+        qtbot.waitUntil(lambda: not actions.manager.busy)
+        assert actions.manager.state == 'cancelled'
+        assert not controller._live_summaries._errors
+        assert not controller._live_summaries._suspended
+        children = controller.supervisor.split_source_amplitude(0, 4).added
+        qtbot.waitUntil(lambda: controller.get_full_count(children[0]) == 2)
+    finally:
+        release.set()
+        qtbot.waitUntil(lambda: not actions.manager.busy)
+
+
+def test_late_row_commit_cancel_stops_next_long_stage(qtbot, opened, tmp_path, monkeypatch):
+    controller, gui, actions = opened
+    original = summary_task_gui.prepare_summary_store
+    committed, release = Event(), Event()
+    calls = []
+
+    def controlled(request, context):
+        result = original(request, context)
+        committed.set()
+        assert release.wait(5)
+        return result
+
+    def forbid(*args):
+        calls.append(True)
+        raise AssertionError('Late cancel started another long stage')
+
+    monkeypatch.setattr(summary_task_gui, 'prepare_summary_store', controlled)
+    monkeypatch.setattr(summary_task_gui, 'prepare_amplitude_index', forbid)
+    try:
+        actions.build(tmp_path / 'store')
+        qtbot.waitUntil(committed.is_set)
+        actions.manager.cancel()
+        release.set()
+        qtbot.waitUntil(lambda: actions._mode == 'attach' and not actions.manager.busy)
+        assert not calls
+        assert summary_store_reference(controller.dir_path) is not None
+        assert not controller._live_summaries._suspended
+    finally:
+        release.set()
+        qtbot.waitUntil(lambda: not actions.manager.busy)
+
+
+def test_attach_independent_amplitude_index_from_gui(qtbot, opened, tmp_path):
+    from phy.apps.large_recording.live_summaries import LiveSummaryEngine
+    from phy.apps.large_recording.range_build import build_amplitude_index
+    from phy.apps.large_recording.range_index import AmplitudeRangeIndex
+    from phy.apps.large_recording.summary_store import attach_summary_store, build_summary_store
+
+    controller, gui, actions = opened
+    store = build_summary_store(controller.dir_path, tmp_path / 'store')
+    index = build_amplitude_index(controller.dir_path, tmp_path / 'independent-index')
+    attach_summary_store(controller.dir_path, store)
+    moved = tmp_path / 'moved-index'
+    index.rename(moved)
+    actions.attach_index(moved)
+    qtbot.waitUntil(lambda: not actions.manager.busy)
+    assert actions.manager.state == 'succeeded'
+    with LiveSummaryEngine(controller.dir_path) as engine:
+        reader = AmplitudeRangeIndex(engine)
+        assert reader.path == moved
+        reader.close()
+    assert not controller._live_summaries._suspended

@@ -266,6 +266,11 @@ class BackgroundTaskManager(QObject):
         finally:
             _MANAGERS.pop(outcome.task_id, None)
 
+    @property
+    def cancellation_requested(self):
+        """A late cancel preserves a committed artifact but stops a task pipeline."""
+        return self._cancel.is_set() if self._cancel is not None else False
+
     def cancel(self):
         if self.busy:
             with self._lock:

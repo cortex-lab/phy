@@ -236,6 +236,12 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
 @click.option('--source-dir', type=click.Path(exists=True, path_type=Path))
 @click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
 @click.option('--batch-size', type=click.IntRange(min=1), default=1000000)
+@click.option(
+    '--amplitude-index/--rows-only',
+    default=True,
+    show_default=True,
+    help='Also prepare fast amplitude-threshold summaries.',
+)
 def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
     """Accelerate an existing bounded package without changing its saved curation."""
     from .large_recording.summary_store import build_summary_store
@@ -249,10 +255,26 @@ def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
             click.echo(f'{phase}: {percent}%')
             last_percent[0] = marker
 
+    accelerate = kwargs.pop('amplitude_index')
+    output = None
     try:
+        if accelerate:
+            from .large_recording.range_build import preflight_summary_store
+
+            preflight_summary_store(bounded_dir, kwargs['max_bytes'])
         output = build_summary_store(bounded_dir, output_dir, progress=progress, **kwargs)
+        if accelerate:
+            _build_amplitude_index(
+                bounded_dir, output / 'amplitude-index', kwargs['max_bytes'], progress
+            )
     except (ValueError, OSError) as error:
-        raise click.ClickException(str(error)) from error
+        message = str(error)
+        if output is not None:
+            message = (
+                f'Row snapshot ready at {output}; amplitude-index preparation failed: '
+                f'{error}. Retry with build-amplitude-index.'
+            )
+        raise click.ClickException(message) from error
     click.echo(f'Prepared summary snapshot: {output}')
 
 
@@ -264,10 +286,63 @@ def cli_attach_summary_store(bounded_dir, store_dir):
     from .large_recording.summary_store import attach_summary_store
 
     try:
-        attach_summary_store(bounded_dir, store_dir)
+        _, reference = attach_summary_store(bounded_dir, store_dir, return_reference=True)
+        candidate = store_dir / 'amplitude-index'
+        if candidate.is_dir():
+            from .large_recording.range_index import attach_amplitude_index
+
+            attach_amplitude_index(bounded_dir, candidate, expected_reference=reference)
     except (ValueError, OSError, KeyError, TypeError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f'Attached summary snapshot: {store_dir}')
+
+
+def _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress):
+    from .large_recording.range_build import build_amplitude_index
+    from .large_recording.range_intervals import RangeUnavailableError
+
+    try:
+        return build_amplitude_index(
+            bounded_dir, output_dir, max_bytes=max_bytes, progress=progress
+        )
+    except RangeUnavailableError as error:
+        click.echo(f'Using the verified row store: {error}')
+
+
+@phycli.command('build-amplitude-index')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
+def cli_build_amplitude_index(bounded_dir, output_dir, max_bytes):
+    """Add fast amplitude queries to an existing attached summary store."""
+    last = [None]
+
+    def progress(phase, done, total):
+        marker = (phase, int(100 * done / max(1, total)))
+        if marker != last[0]:
+            click.echo(f'{marker[0]}: {marker[1]}%')
+            last[0] = marker
+
+    try:
+        path = _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
+    if path:
+        click.echo(f'Prepared amplitude index: {path}')
+
+
+@phycli.command('attach-amplitude-index')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('index-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+def cli_attach_amplitude_index(bounded_dir, index_dir):
+    """Attach a compatible amplitude index to its original row store."""
+    from .large_recording.range_index import attach_amplitude_index
+
+    try:
+        attach_amplitude_index(bounded_dir, index_dir)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Attached amplitude index: {index_dir}')
 
 
 @phycli.command('apply-curation')

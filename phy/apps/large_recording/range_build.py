@@ -94,6 +94,24 @@ def estimate_range_index(engine, block_rows=128, units=None):
     return RangeEstimate(final, final + scratch, data)
 
 
+def preflight_summary_store(package_path, max_bytes):
+    """Check the combined metadata estimate before expensive row preparation."""
+    from .live_summaries import LiveSummaryEngine
+    from .summary_store import estimate_summary_store
+
+    with LiveSummaryEngine(package_path) as engine:
+        try:
+            estimate = estimate_range_index(engine).final_bytes
+        except RangeUnavailableError:
+            return  # Unsupported scalar layouts keep verified rows.
+        estimate += estimate_summary_store(package_path).estimated_bytes
+        if estimate > max_bytes:
+            raise ValueError(
+                f'Combined store estimate {estimate:,} exceeds max_bytes; '
+                'increase the store budget or use build-summary-store --rows-only.'
+            )
+
+
 class _SortedRuns:
     """Stable bounded runs and vectorized pairwise merging, never row-wise heap merge."""
 

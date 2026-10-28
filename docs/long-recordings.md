@@ -307,8 +307,9 @@ against every source spike. Thus the bounded GUI assignment is provisional for
 unseen spikes until full-source replay. Source `amplitudes.npy` values are used
 during replay. After a split, Phy automatically computes exact full-recording
 counts, rates and available amplitude/depth trends in the background. With an
-attached summary store (below), it reads only the required original units.
-Otherwise it reads the original source in bounded chunks. Both paths apply
+attached amplitude index (below), it queries sorted ranges for the required
+original units without reading every spike. A row-only store scans those units;
+otherwise it reads the original source in bounded chunks. All paths apply
 the recorded membership predicates and use the preparation's existing time
 bins and acquisition exposure. The split children show a computation status until complete results
 are ready; unrelated selected units retain their plots. This does not require
@@ -347,8 +348,11 @@ amplitude-threshold preview.
 ### Accelerate summaries on very long recordings
 
 On billion-spike datasets, scanning the entire source after each split can take
-minutes. When opening a bounded dataset without a compatible summary store,
-Phy offers to prepare one. The nonmodal prompt shows estimated additional disk
+minutes, and even scanning one very large unit can interrupt curation.
+An amplitude index moves this work into one-time preparation. When opening a
+bounded dataset without a compatible indexed store, Phy offers to prepare one.
+If a row store already exists, it offers to add only the amplitude index; this
+upgrade works even with the original source offline. The nonmodal prompt shows estimated additional disk
 space, a destination picker, available space and an independent store budget
 (default 64 GiB). It never starts a large build without your choice.
 
@@ -356,11 +360,13 @@ Choose **Build in background** to keep curating while it runs, or **Continue
 without** to retain the existing full-source fallback. **Don't ask again for this
 dataset** suppresses future prompts for that package. Build and attach actions
 remain available from **File > Build summary store** and **File > Attach summary
-store**. Compatible stores are reused automatically, including offline snapshots.
+store**. **File > Attach amplitude index** reconnects an index stored separately.
+Compatible stores are reused automatically, including offline snapshots.
 
 The status bar shows the current stage and progress, then an estimated time
 remaining **for that stage** once throughput settles. Validation measures bytes;
-construction measures rows. Finalizing and attachment are indeterminate stages,
+construction and amplitude sorting measure rows; index authentication measures
+bytes. Finalizing and attachment are indeterminate stages,
 so a completed scan is not presented as a completed task. **Hide** hides only the
 display; **File > Show background task** restores it. **Cancel** cleans unfinished
 staging data. A short final publication step cannot be cancelled and displays
@@ -372,7 +378,9 @@ Existing cached curves remain available, and merges/splits/undo and curation
 saves remain independent. Successful construction attaches the store and retries
 summaries for the current curation without reopening. If attachment fails, the
 completed store is retained; **Details** identifies its path for a later attach.
-A newer store choice made during a build is preserved.
+A newer store choice made during a build is preserved. Cancellation between
+stages retains completed artifacts and stops subsequent long preparation; a
+completed row store remains usable if amplitude-index construction is cancelled.
 
 Actual screenshots from the earlier converted engineering dataset:
 [prompt](images/summary-store-task/prompt.png),
@@ -395,31 +403,56 @@ store. The default independent store budget is 64 GiB; increase `--max-bytes`
 when needed. `--source-dir` locates a relocated original source. Keep the store
 on fast local storage where possible.
 
-For a new package, `prepare-large --summary-store /data/summary-store` also
-builds it after preparation; `--summary-store-max-bytes` sets its budget. If that
-optional step fails, the error identifies the completed bounded package. Retry
-with `build-summary-store` rather than preparing the package again.
+Both this command and `prepare-large --summary-store /data/summary-store`
+build the row snapshot and its amplitude index. For `prepare-large`,
+`--summary-store-max-bytes` sets the combined budget. If an optional stage fails,
+keep the completed bounded package and row store. Retry only the failed stage
+with `build-summary-store` or `build-amplitude-index`.
 
 A 1,000-bin dataset with float32 amplitudes needs approximately six bytes per
-source spike: two for the bin and four for the amplitude (about 29.2 GB for
+source spike for its row snapshot: two for the bin and four for the amplitude (about 29.2 GB for
 4.87 billion spikes). Depth, when available, adds its original scalar width.
 Bin IDs use the smallest suitable unsigned dtype; offsets and counts retain
-64-bit range. No lossy amplitude conversion is performed.
+64-bit range. No lossy amplitude conversion is performed. The amplitude index additionally
+stores finite amplitudes/depths in sorted order plus block aggregates and
+authentication data; the GUI estimate includes both assets.
 
-Splits verify and read only the relevant original-unit ranges, sharing reads
-between children and overlapping ancestry. Cost depends on original ancestry:
-a nested split still reads its original unit; splitting a merge of many original
-units reads all of them. Counts are exact; floating sums may differ in their last
-bits because accumulation order changes. Merges continue to combine completed
-summaries without a scan. Status reports progress for validation and scanning.
+An existing row store can be upgraded without revalidating the original source:
+
+```bash
+phy build-amplitude-index BOUNDED /data/summary-store/amplitude-index
+```
+
+`build-summary-store --rows-only` retains the row-only preparation option.
+The 64 GiB budget covers the **combined** row store and amplitude index. The GUI
+also checks the additional temporary disk space needed for sorting. Preparation
+can take several minutes and uses bounded memory and external sorting for large
+segments. Keep the resulting store on fast local storage.
+
+For each original unit and native time bin, the index sorts finite amplitudes
+using their original dtype and builds a tree of counts and scalar sums. A new
+threshold queries aggregate ranges plus small endpoint blocks. Nested splits
+and splits of merged units combine those intervals. Query cost depends on the
+number of original units, bins and intervals, rather than every source spike.
+Counts and finite-value counts remain exact. Floating sums must meet the
+existing tolerance (relative 1e-9, absolute 1e-6); numerically unstable cases use
+the verified row path. NaN/infinity and threshold boundary semantics match
+full-source replay. Merges continue to combine completed summaries without a scan.
 
 The store represents the **source snapshot used during preparation**, just like
-prepared summaries. Each consumed unit is checksum-verified before results are
-published. It can compute new summaries with the original source offline; it does
-not certify that current original files are unchanged. Full-source replay/export
-continues to validate the original source. Missing, incompatible or corrupt
-stores fall back to fully validated source reads. Template-based engine
-predicates also use that fallback because template values are not indexed.
+prepared summaries. Range queries verify the pages they consume against pinned
+SHA-256 tree roots, avoiding a whole-unit integrity scan on every split. Row-only
+queries checksum each consumed unit before publication. Neither certifies that
+current original files are unchanged. Full-source replay/export continues to
+validate the original source. Missing, incompatible or corrupt amplitude indexes
+fall back to verified rows; missing/damaged rows fall back to validated source
+reads. Template-based engine predicates also use source reads because template
+values are not indexed. Neither accelerator changes curation assignments or replay.
+
+The range reader keeps at most 64 MiB of authenticated data pages with the default
+engine budget, an 8 MiB endpoint-block cache per query, and separately capped hash
+node caches (16,384 entries per file). Query outputs and arithmetic scratch are
+bounded; complex or oversized histories can fall back to the chunked row path.
 
 The small discovery reference is `.phy/live-summary-store.json`. To move a store,
 recover a lost reference, or share it with another package having the identical
@@ -427,6 +460,14 @@ source snapshot, summary grid and scalar definitions:
 
 ```bash
 phy attach-summary-store BOUNDED /new/location/summary-store
+```
+
+The conventional `amplitude-index` subdirectory is rediscovered by the CLI and
+GUI attach action after moving the entire store. For an index kept elsewhere,
+attach its matching row store first, then use:
+
+```bash
+phy attach-amplitude-index BOUNDED /new/location/amplitude-index
 ```
 
 Payload checks remain selective after attachment. Stores are separate from the

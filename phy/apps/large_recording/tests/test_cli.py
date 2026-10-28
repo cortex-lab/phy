@@ -81,3 +81,37 @@ def test_prepare_with_summary_store_and_recoverable_optional_failure(tmp_path):
     assert 'Bounded package is ready' in result.output
     assert 'build-summary-store to retry' in result.output
     assert (failed_bounded / '_phy_curation_manifest.json').is_file()
+
+
+def test_upgrade_row_store_and_attach_index_commands(tmp_path):
+    from phy.apps.large_recording.summary_store import summary_store_reference
+    from phy.apps.large_recording.tests.test_live_summaries import package
+
+    _, bounded = package(tmp_path)
+    store, ranges = tmp_path / 'store', tmp_path / 'ranges'
+    runner = CliRunner()
+    result = runner.invoke(
+        phycli, ['build-summary-store', str(bounded), str(store), '--rows-only']
+    )
+    assert result.exit_code == 0, result.output
+    assert 'amplitude_index' not in json.loads(summary_store_reference(bounded))
+    result = runner.invoke(phycli, ['build-amplitude-index', str(bounded), str(ranges)])
+    assert result.exit_code == 0, result.output
+    assert 'amplitude_index' in json.loads(summary_store_reference(bounded))
+    runner.invoke(phycli, ['attach-summary-store', str(bounded), str(store)])
+    result = runner.invoke(phycli, ['attach-amplitude-index', str(bounded), str(ranges)])
+    assert result.exit_code == 0, result.output
+    assert 'amplitude_index' in json.loads(summary_store_reference(bounded))
+
+
+def test_combined_budget_fails_before_row_preparation(tmp_path):
+    from phy.apps.large_recording.tests.test_live_summaries import package
+
+    _, bounded = package(tmp_path)
+    store = tmp_path / 'store'
+    result = CliRunner().invoke(
+        phycli, ['build-summary-store', str(bounded), str(store), '--max-bytes', '1000000']
+    )
+    assert result.exit_code == 1
+    assert 'Combined store estimate' in result.output
+    assert not store.exists()

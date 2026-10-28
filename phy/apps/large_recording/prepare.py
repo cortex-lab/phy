@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 import numpy as np
@@ -178,12 +179,25 @@ def prepare_large(
         from .summary_store import build_summary_store
 
         try:
+            from .range_build import preflight_summary_store
+
+            preflight_summary_store(output, summary_store_max_bytes)
             build_summary_store(
                 output,
                 summary_store,
                 source_dir=source.path,
                 max_bytes=summary_store_max_bytes,
             )
+            from .range_build import build_amplitude_index
+            from .range_intervals import RangeUnavailableError
+
+            # Unsupported scalar dtypes keep the verified row snapshot.
+            with suppress(RangeUnavailableError):
+                build_amplitude_index(
+                    output,
+                    Path(summary_store) / 'amplitude-index',
+                    max_bytes=summary_store_max_bytes,
+                )
         except (ValueError, OSError) as error:
             raise ValueError(
                 f'Bounded package is ready at {output}; optional summary store failed: '

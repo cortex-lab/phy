@@ -41,9 +41,11 @@ def authenticate_file(path, cancel=None, progress=None):
             raw = source.read(PAGE_BYTES) if done < size else b''
             done += len(raw)
             target.write(hashlib.sha256(b'P' + raw).digest() if raw else _EMPTY)
-            if progress and index % 4096 == 0:
+            if progress and index % 4096 == 0 and done < size:
                 progress('authenticating range index', min(done, size), size)
         target.flush()
+        if progress:
+            progress('finalizing range authentication', 0, 0)
         width = leaves // 2
         while width:
             for start in range(width, 2 * width, 8192):

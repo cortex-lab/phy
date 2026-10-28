@@ -453,6 +453,7 @@ def attach_summary_store(
     expected_reference=_ANY_REFERENCE,
     before_attach=None,
     check_cancel=None,
+    return_reference=False,
 ):
     """Attach a snapshot under a short cross-process reference lock.
 
@@ -474,11 +475,11 @@ def attach_summary_store(
                 )
             if before_attach is not None:
                 before_attach()
-            _atomic_json(
-                engine.path / '.phy' / REFERENCE,
-                {
-                    'path': str(store.path.resolve()),
-                    'index_sha256': hash_json(store.index),
-                },
-            )
+            reference = {
+                'path': str(store.path.resolve()),
+                'index_sha256': hash_json(store.index),
+            }
+            _atomic_json(engine.path / '.phy' / REFERENCE, reference)
+    if return_reference:
+        return Path(store_path), json.dumps(reference, sort_keys=True).encode()
     return Path(store_path)
