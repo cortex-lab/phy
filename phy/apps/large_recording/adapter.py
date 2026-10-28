@@ -73,6 +73,9 @@ class BoundedTemplateController(TemplateController):
         return
 
     def close(self, close_model=True):
+        actions = getattr(self, '_summary_store_actions', None)
+        if actions is not None:
+            actions.close()
         cleanup = getattr(self, '_live_summary_cleanup', None)
         if cleanup is not None:
             cleanup()
@@ -594,4 +597,7 @@ class BoundedTemplateController(TemplateController):
             )
 
         self._attach_live_summaries(gui)
+        from .summary_task_gui import SummaryStoreActions
+
+        self._summary_store_actions = SummaryStoreActions(self, gui)
         return gui

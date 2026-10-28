@@ -13,6 +13,12 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- The bounded GUI offers to build missing summary stores in the background,
+  with a destination picker, independent disk budget, per-stage progress and ETA,
+  cancellation and task details. Curation remains available during construction;
+  completed stores take effect without reopening. Build and attach actions are
+  also available from File, with dataset-local prompt preferences.
+
 - Bounded split summaries can read only the original units needed from an
   attached summary snapshot, rather than scanning the full recording. Shared
   calculations and histogram accumulation also speed up the source fallback.
