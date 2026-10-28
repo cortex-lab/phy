@@ -100,7 +100,7 @@ class LiveSummaryEngine:
         self,
         package_path,
         source_dir=None,
-        batch_size=100000,
+        batch_size=1000000,
         max_bytes=67108864,
         cache_bytes=268435456,
     ):
@@ -412,22 +412,111 @@ class LiveSummaryEngine:
             return {expression['predicate']['attribute']} | self._required(expression['parent'])
         raise ValueError('Unsupported membership expression.')
 
-    def _mask(self, expression, batch):
+    def _mask(self, expression, batch, memo=None):
+        # Parents and sibling predicates are shared within a bounded batch.
+        memo = {} if memo is None else memo
+        key = hash_json(expression)
+        if key in memo:
+            return memo[key]
         kind = expression['kind']
         if kind == 'source':
-            return batch['spike_clusters.npy'] == expression['unit']
-        if kind == 'union':
+            mask = batch['spike_clusters.npy'] == expression['unit']
+        elif kind == 'union':
             mask = np.zeros(len(batch['spike_times.npy']), dtype=bool)
             for part in expression['parts']:
-                mask |= self._mask(part, batch)
-            return mask
-        mask = self._mask(expression['parent'], batch)
-        predicate = expression['predicate']
-        # Reject applies only to the parent's rows; keep retains NaN/inf in
-        # the remainder child, exactly as semantic journal replay does.
-        selected = evaluate_predicate(batch[predicate['attribute']][mask], predicate)
-        mask[mask] = selected if expression['selected'] else ~selected
+                mask |= self._mask(part, batch, memo)
+        else:
+            parent = self._mask(expression['parent'], batch, memo)
+            predicate = expression['predicate']
+            predicate_key = hash_json({'parent': expression['parent'], 'predicate': predicate})
+            if predicate_key not in memo:
+                memo[predicate_key] = evaluate_predicate(
+                    batch[predicate['attribute']][parent], predicate
+                )
+            selected = memo[predicate_key]
+            mask = parent.copy()
+            mask[parent] = selected if expression['selected'] else ~selected
+        memo[key] = mask
         return mask
+
+    def _accumulate(self, summary, columns, selected, scalars):
+        summary['counts'] += np.bincount(columns[selected], minlength=self.bins)
+        for field, values in scalars.items():
+            finite = selected & np.isfinite(values)
+            summary['trend_sums'][field] += np.bincount(
+                columns[finite], weights=values[finite], minlength=self.bins
+            )
+            summary['trend_counts'][field] += np.bincount(columns[finite], minlength=self.bins)
+
+    def _chunk_size(self, expressions, row_bytes=64):
+        nodes = set()
+
+        def visit(e):
+            key = hash_json(e)
+            if key in nodes:
+                return
+            nodes.add(key)
+            if e['kind'] == 'split':
+                visit(e['parent'])
+            elif e['kind'] == 'union':
+                for part in e['parts']:
+                    visit(part)
+
+        for expression in expressions.values():
+            visit(expression)
+        return min(self.batch_size, max(1, self.max_bytes // (row_bytes + 2 * len(nodes))))
+
+    def _indexed(self, expressions, cancel, progress):
+        from .summary_store import StoreIntegrityError, SummaryStore
+
+        # Template predicates are supported by the source fallback. They must
+        # never be evaluated from a lossy or absent indexed scalar.
+        if any(self._required(e) - {'amplitudes.npy'} for e in expressions.values()):
+            return None
+
+        def ancestors(expression):
+            if expression['kind'] == 'source':
+                return {expression['unit']}
+            if expression['kind'] == 'split':
+                return ancestors(expression['parent'])
+            return set().union(*(ancestors(p) for p in expression['parts']))
+
+        ancestry = {unit: ancestors(e) for unit, e in expressions.items()}
+        originals = sorted(set().union(*ancestry.values()))
+        outputs = {unit: self._empty() for unit in expressions}
+        try:
+            store = SummaryStore(self)
+        except (OSError, ValueError, KeyError, TypeError, OverflowError):
+            return None
+        with store:
+            total = sum(store.index['units'][str(u)]['count'] for u in originals)
+            done = 0
+            # Bound all masks, input records and bin-index scratch space, even
+            # for long journals. No recording-sized expression intermediates.
+            chunk_size = self._chunk_size(expressions, store.dtype.itemsize + 64)
+            for original in originals:
+                targets = {u: e for u, e in expressions.items() if original in ancestry[u]}
+                for data in store.batches(original, chunk_size, cancel):
+                    columns = data['bin'].astype(np.intp)
+                    if np.any(columns >= self.bins):
+                        raise StoreIntegrityError('Summary store bin outside native grid.')
+                    batch = {
+                        'spike_times.npy': columns,
+                        'spike_clusters.npy': np.full(len(data), original, dtype=np.int64),
+                    }
+                    if 'amplitude' in self.fields:
+                        batch['amplitudes.npy'] = data['amplitude']
+                    memo = {}
+                    scalars = {field: data[field] for field in self.fields}
+                    for unit, expression in targets.items():
+                        _check_cancel(cancel)
+                        selected = self._mask(expression, batch, memo)
+                        self._accumulate(outputs[unit], columns, selected, scalars)
+                    done += len(data)
+                    if progress:
+                        progress('reading prepared unit summaries', done, total)
+            _check_cancel(cancel)
+        return outputs
 
     def remember(self, expressions, results):
         """Remember immutable completed results within the resident byte budget."""
@@ -473,13 +562,26 @@ class LiveSummaryEngine:
                 results[unit] = value
         return results
 
-    def resolve(self, expressions, cancel=None):
+    def resolve(self, expressions, cancel=None, progress=None):
         """Return complete summaries, scanning every unresolved membership once."""
         results = self.cached(expressions, cancel)
         missing = {
             unit: expression for unit, expression in expressions.items() if unit not in results
         }
         if not missing:
+            return results
+        from .summary_store import StoreIntegrityError
+
+        try:
+            indexed = self._indexed(missing, cancel, progress)
+        except (OSError, StoreIntegrityError):
+            # Missing, incompatible or damaged acceleration is disposable.
+            # The original source retains its full validation guarantees.
+            indexed = None
+        if indexed is not None:
+            for unit, summary in indexed.items():
+                results[unit] = _freeze(summary)
+                self._publish(self.key(missing[unit]), summary)
             return results
         names = {'spike_times.npy', 'spike_clusters.npy'}
         for expression in missing.values():
@@ -491,12 +593,13 @@ class LiveSummaryEngine:
             if depth_name not in self.manifest['source_array_inventory']:
                 depth_name = 'spike_positions.npy'
             names.add(depth_name)
-        self._open(names, cancel)
+        self._open(names, cancel, progress=progress)
         outputs = {unit: self._empty() for unit in missing}
         try:
-            for start in range(0, self.manifest['num_spikes'], self.batch_size):
+            chunk_size = self._chunk_size(missing, 128)
+            for start in range(0, self.manifest['num_spikes'], chunk_size):
                 _check_cancel(cancel)
-                stop = start + self.batch_size
+                stop = start + chunk_size
                 batch = {
                     name: array[start:stop].reshape(-1)
                     for name, array in self.arrays.items()
@@ -519,15 +622,17 @@ class LiveSummaryEngine:
                         scalars['depth'] = self.arrays[depth_name][start:stop, axis]
                     else:
                         scalars['depth'] = batch[depth_name]
+                memo = {}
                 for unit, expression in missing.items():
                     _check_cancel(cancel)
-                    selected = self._mask(expression, batch)
-                    summary = outputs[unit]
-                    np.add.at(summary['counts'], columns[selected], 1)
-                    for field, values in scalars.items():
-                        finite = selected & np.isfinite(values)
-                        np.add.at(summary['trend_sums'][field], columns[finite], values[finite])
-                        np.add.at(summary['trend_counts'][field], columns[finite], 1)
+                    selected = self._mask(expression, batch, memo)
+                    self._accumulate(outputs[unit], columns, selected, scalars)
+                if progress:
+                    progress(
+                        'scanning full source',
+                        min(stop, self.manifest['num_spikes']),
+                        self.manifest['num_spikes'],
+                    )
             _check_cancel(cancel)
             self._unchanged()
             for unit, summary in outputs.items():

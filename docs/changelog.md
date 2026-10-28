@@ -13,6 +13,11 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Bounded split summaries can read only the original units needed from an
+  attached summary snapshot, rather than scanning the full recording. Shared
+  calculations and histogram accumulation also speed up the source fallback.
+  Background summary status now reports validation and scan progress.
+
 - Added optional, independently budgeted per-unit summary snapshot stores, with
   build and attach commands for existing bounded packages. Stores preserve the
   original scalar values and native time bins without changing saved curation.

@@ -46,10 +46,11 @@ def controlled_service(qtbot, tmp_path, monkeypatch):
         def remember(self, expressions, results):
             self.cache.update({expressions[c]: result for c, result in results.items()})
 
-        def resolve(self, expressions, cancel=None):
+        def resolve(self, expressions, cancel=None, progress=None):
             assert get_ident() != owner
             control = controls[len(calls)]
             calls.append((expressions, self.source_dir))
+            control.progress = progress
             control.started.set()
             assert control.release.wait(10), 'test did not release summary worker'
             if cancel():
@@ -373,3 +374,21 @@ def test_evicted_rows_do_not_restart_scans_on_table_redraw(qtbot, controlled_ser
     assert f.service.total_count(1) == 5
     assert f.service.total_count(4) == 9
     assert len(f.calls) == 2
+
+
+def test_progress_is_queued_and_stale_or_cancelled_updates_are_ignored(qtbot, controlled_service):
+    f = controlled_service
+    job = f.control()
+    f.service.resume()
+    split(f)
+    qtbot.waitUntil(job.started.is_set)
+    job.progress('reading prepared unit summaries', 1, 2)
+    qtbot.waitUntil(lambda: '50%' in f.service.status(1))
+    running = f.service._running
+    f.service._progress((Event(), 'stale', 1, 1))
+    assert '50%' in f.service.status(1)
+    running.set()
+    f.service._progress((running, 'cancelled', 1, 1))
+    assert 'cancelled' not in f.service._progress_text
+    job.release.set()
+    qtbot.waitUntil(lambda: f.service._running is None)

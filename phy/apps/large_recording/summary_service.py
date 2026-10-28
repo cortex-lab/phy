@@ -6,6 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from queue import Full, Queue
 from threading import Event, Thread
+from time import monotonic
 
 from phy.gui.qt import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
 
@@ -14,6 +15,7 @@ from .live_summaries import LiveSummaryEngine, membership_expressions
 
 class _Delivery(QObject):
     finished = pyqtSignal(object)
+    progress = pyqtSignal(object)
 
 
 class _SummaryWorker:
@@ -51,7 +53,15 @@ class _SummaryWorker:
                         raise CancelledError()
                     if engine is None:
                         engine = LiveSummaryEngine(self.package_path, source_dir=self.source_path)
-                    results = engine.resolve(expressions, cancel=cancel.is_set)
+                    last_progress = [0.0]
+
+                    def progress(phase, done, total, last_progress=last_progress, cancel=cancel):
+                        now = monotonic()
+                        if now - last_progress[0] >= 0.25 or done == total:
+                            last_progress[0] = now
+                            self.delivery.progress.emit((cancel, phase, done, total))
+
+                    results = engine.resolve(expressions, cancel=cancel.is_set, progress=progress)
                 except Exception as exc:
                     error = exc
                 if self.stopped.is_set():
@@ -95,9 +105,11 @@ class LiveSummaryService(QObject):
         self._closed = False
         self._suspended = True
         self._running = None
+        self._progress_text = None
         self._worker = None
         self._delivery = _Delivery()
         self._delivery.finished.connect(self._completed, Qt.QueuedConnection)
+        self._delivery.progress.connect(self._progress, Qt.QueuedConnection)
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._synchronize)
@@ -205,7 +217,7 @@ class LiveSummaryService(QObject):
         if self._suspended:
             return 'cancelled: summary computation suspended'
         if self._running is not None:
-            return 'validating source / recomputing full summaries'
+            return self._progress_text or 'validating source / recomputing full summaries'
         return 'pending full summary computation'
 
     def synchronize(self):
@@ -238,9 +250,18 @@ class LiveSummaryService(QObject):
         expressions = deepcopy(missing)
         cancel = Event()
         self._running = cancel
+        self._progress_text = None
         if self._worker is None:
             self._worker = _SummaryWorker(self._package_path, self._source_path, self._delivery)
         self._worker.submit(expressions, cancel)
+        self.changed.emit()
+
+    @pyqtSlot(object)
+    def _progress(self, payload):
+        cancel, phase, done, total = payload
+        if self._closed or self._suspended or cancel is not self._running or cancel.is_set():
+            return
+        self._progress_text = f'{phase}: {min(100, int(100 * done / max(1, total)))}%'
         self.changed.emit()
 
     @pyqtSlot(object)
@@ -249,6 +270,7 @@ class LiveSummaryService(QObject):
         if self._closed:
             return
         self._running = None
+        self._progress_text = None
         self._refresh()
         # A cancelled/relocated source job must never overwrite a later retry.
         if not cancel.is_set():
@@ -312,3 +334,4 @@ class LiveSummaryService(QObject):
         self._timer.stop()
         self._engine.close()
         self._delivery.finished.disconnect(self._completed)
+        self._delivery.progress.disconnect(self._progress)

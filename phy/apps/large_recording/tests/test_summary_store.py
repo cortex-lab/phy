@@ -76,9 +76,8 @@ def test_store_selective_hash_and_corruption(tmp_path):
     catalog = json.loads(index.read_text())
     catalog['units']['0']['count'] += 1
     index.write_text(json.dumps(catalog))
-    with LiveSummaryEngine(bounded) as engine:
-        with pytest.raises(ValueError, match='binding'):
-            SummaryStore(engine)
+    with LiveSummaryEngine(bounded) as engine, pytest.raises(ValueError, match='binding'):
+        SummaryStore(engine)
 
 
 def test_bin_dtype_boundaries_and_64bit_catalog(tmp_path):
@@ -124,6 +123,7 @@ def test_attach_completed_store_after_reference_loss(tmp_path):
 def test_real_sparse_payload_seek_beyond_32bit_rows(tmp_path):
     import hashlib
     from types import SimpleNamespace
+
     from phy.apps.large_recording.source import hash_json
     from phy.apps.large_recording.summary_store import binding
 
@@ -169,3 +169,115 @@ def test_real_sparse_payload_seek_beyond_32bit_rows(tmp_path):
         data = np.concatenate(list(store.batches(1, 2)))
     assert data['bin'].tolist() == [2]
     assert data['amplitude'].tolist() == [3.5]
+
+
+@pytest.mark.parametrize('operator', ['<', '<=', '>', '>='])
+def test_indexed_nested_histories_match_independent_replay_offline(
+    tmp_path, monkeypatch, operator
+):
+    from phy.apps.large_recording.live_summaries import membership_expressions
+    from phy.apps.large_recording.tests.test_live_summaries import merge, oracle, split
+
+    source, bounded = package(tmp_path, columns=True, positions=True)
+    build_summary_store(bounded, tmp_path / 'store', batch_size=3)
+    events = [split(1, [100, 101]), merge([101, 2], 102), split(102, [103, 104], threshold=7)]
+    events[-1]['predicate']['operator'] = operator
+    expressions = membership_expressions([0, 1, 2, 99], events)
+    with LiveSummaryEngine(bounded) as engine:
+        expected = {u: oracle(source, engine, events, u) for u in expressions}
+    source.rename(tmp_path / 'source-offline')
+
+    def no_source(*args, **kwargs):
+        raise AssertionError('Indexed summaries opened the original source')
+
+    monkeypatch.setattr(LiveSummaryEngine, '_open', no_source)
+    progress = []
+    with LiveSummaryEngine(bounded, batch_size=2) as engine:
+        results = engine.resolve(expressions, progress=lambda *p: progress.append(p))
+        for unit, summary in results.items():
+            for name, values in engine._flat(summary).items():
+                np.testing.assert_allclose(values, engine._flat(expected[unit])[name])
+    # Only original units 1 and 2 are read, once each, for all their descendants.
+    assert progress[-1] == ('reading prepared unit summaries', 6, 6)
+
+
+def test_corrupt_index_falls_back_without_publishing_partial_results(tmp_path, monkeypatch):
+    from phy.apps.large_recording.live_summaries import membership_expressions
+    from phy.apps.large_recording.tests.test_live_summaries import oracle, split
+
+    source, bounded = package(tmp_path)
+    output = build_summary_store(bounded, tmp_path / 'store')
+    with LiveSummaryEngine(bounded) as engine, SummaryStore(engine) as store:
+        offset = store.index['units']['0']['start'] * store.dtype.itemsize
+    with (output / 'data.bin').open('r+b') as stream:
+        stream.seek(offset + 1)
+        stream.write(b'\xff')
+    events = [split(0, [100, 101])]
+    expressions = membership_expressions([0, 1, 2, 99], events)
+    calls = []
+    original = LiveSummaryEngine._open
+
+    def opened(self, *args, **kwargs):
+        calls.append(True)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(LiveSummaryEngine, '_open', opened)
+    with LiveSummaryEngine(bounded) as engine:
+        results = engine.resolve(expressions)
+        for unit in (100, 101):
+            for name, values in engine._flat(results[unit]).items():
+                np.testing.assert_allclose(
+                    values, engine._flat(oracle(source, engine, events, unit))[name]
+                )
+    assert calls == [True]
+
+
+def test_indexed_nonfinite_reject_is_semantic_error_not_source_fallback(tmp_path, monkeypatch):
+    from phy.apps.large_recording.live_summaries import membership_expressions
+    from phy.apps.large_recording.tests.test_live_summaries import split
+
+    _, bounded = package(tmp_path)
+    build_summary_store(bounded, tmp_path / 'store')
+
+    def no_source(*args, **kwargs):
+        raise AssertionError('Semantic rejection should not rescan the original source')
+
+    monkeypatch.setattr(LiveSummaryEngine, '_open', no_source)
+    expressions = membership_expressions([0, 1, 2, 99], [split(1, [100, 101], nonfinite='reject')])
+    with LiveSummaryEngine(bounded) as engine, pytest.raises(ValueError, match='Nonfinite'):
+        engine.resolve(expressions)
+    assert not list((bounded / '.phy' / 'live-summary-cache').glob('*.npz'))
+
+
+def test_template_predicate_uses_validated_source_fallback(tmp_path):
+    from phy.apps.large_recording.live_summaries import membership_expressions
+    from phy.apps.large_recording.tests.test_live_summaries import oracle, split
+
+    source, bounded = package(tmp_path)
+    build_summary_store(bounded, tmp_path / 'store')
+    events = [split(0, [100, 101], attribute='spike_templates.npy', threshold=1)]
+    expressions = membership_expressions([0, 1, 2, 99], events)
+    progress = []
+    with LiveSummaryEngine(bounded) as engine:
+        results = engine.resolve(expressions, progress=lambda *p: progress.append(p))
+        np.testing.assert_array_equal(
+            results[100]['counts'], oracle(source, engine, events, 100)['counts']
+        )
+    assert progress[-1][0] == 'scanning full source'
+
+
+def test_cancel_indexed_scan_never_publishes(tmp_path):
+    from phy.apps.large_recording.live_summaries import membership_expressions
+    from phy.apps.large_recording.tests.test_live_summaries import split
+
+    _, bounded = package(tmp_path)
+    build_summary_store(bounded, tmp_path / 'store')
+    expressions = membership_expressions([0, 1, 2, 99], [split(0, [100, 101])])
+    stopped = [False]
+
+    def progress(*args):
+        stopped[0] = True
+
+    with LiveSummaryEngine(bounded, batch_size=1) as engine, pytest.raises(CancelledError):
+        engine.resolve(expressions, cancel=lambda: stopped[0], progress=progress)
+    assert not list((bounded / '.phy' / 'live-summary-cache').glob('*.npz'))
