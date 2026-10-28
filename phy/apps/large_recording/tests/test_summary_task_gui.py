@@ -133,7 +133,8 @@ def test_reference_read_error_is_recoverable(qtbot, opened, monkeypatch):
     assert not actions.service._suspended
 
 
-def test_prompt_budget_and_async_preflight(qtbot, tmp_path):
+def test_prompt_budget_and_async_preflight(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(summary_task_gui, '_free_space', lambda path: 1024 * 1073741824)
     estimate = StoreEstimate(100 * 1073741824, 100 * 1073741824, 100, 6, str(tmp_path / 'source'))
     prompt = summary_task_gui.StorePrompt(
         StoreInspection(estimate, False, True), tmp_path / 'store'
@@ -291,3 +292,17 @@ def test_automatic_prompt_keeps_main_window_shortcut_ownership(qtbot, opened):
     qtbot.waitUntil(lambda: actions.dialog is not None and actions.dialog.isVisible())
     qtbot.waitUntil(lambda: QApplication.activeWindow() is gui)
     assert actions.dialog.isVisible()
+
+
+def test_prompt_disables_build_with_insufficient_free_space(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(summary_task_gui, '_free_space', lambda path: 0)
+    estimate = StoreEstimate(100, 100, 10, 6, str(tmp_path / 'source'))
+    prompt = summary_task_gui.StorePrompt(
+        StoreInspection(estimate, False, True), tmp_path / 'store'
+    )
+    try:
+        qtbot.waitUntil(lambda: 'not enough free space' in prompt.problem.text())
+        assert not prompt.build_button.isEnabled()
+        assert '0.00 GB' in prompt.available.text()
+    finally:
+        prompt.close()
