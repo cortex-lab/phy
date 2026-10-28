@@ -349,3 +349,109 @@ of every original unit can read the entire store. The compact 1,000-bin,
 float32-amplitude layout requires roughly 29.2 GB for 4.87 billion spikes, before
 optional depth. Carl's actual 1,000-hour dataset still needs owner-run cold/warm
 split and build measurements. No universal one-second bound is claimed.
+
+
+## Large-dataset scaling and GUI background preparation
+
+The fixed implementation at `f2c53f69` was benchmarked serially on the local
+Linux host (134,698,618,880 bytes physical RAM). The real 100-hour sorting has
+418,167,522 spikes. The 200-hour and 1,000-hour engineering datasets repeat its
+arrays two and ten times, offsetting time by 100 hours per segment. They test
+scale, not independent biology or Carl's native 4.873-billion-spike export.
+The assumed continuous exposure on the real legacy 100-hour input is also an
+engineering declaration, not a new validation of acquisition timing.
+
+Each case resolves both children together. Result-cache lookup and publication
+are disabled, and each scenario gets a fresh engine. These are first-request
+computation timings, excluding GUI delivery. OS page caches are uncontrolled;
+repeated requests are recorded in the linked JSON. They are not cold-storage
+measurements or latency guarantees on a laptop with less RAM.
+
+| Dataset | Source spikes | Median unit | Largest unit | Nested median split | Merge two largest, then split | Merge ten typical, then split |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Real 100 h | 418,167,522 | 0.020 s | 0.215 s | 0.019 s | 0.447 s | 0.113 s |
+| Synthetic 200 h | 836,335,044 | 0.038 s | 0.429 s | 0.038 s | 0.880 s | 0.248 s |
+| Synthetic 1,000 h | 4,181,675,220 | 0.170 s | 2.137 s | 0.174 s | 4.738 s | 1.224 s |
+
+The 1,000-hour median unit contains 4,481,760 spikes; the largest contains
+77,538,160. The two largest ancestors together contain 154,940,400 spikes.
+Merging ten typical ancestors produces 44,726,720 spikes. Query time still
+scales with this original ancestry, including nested descendants.
+
+One-time store creation took approximately **41 s / 2.09 GB** for 100 hours,
+**83 s / 4.18 GB** for 200 hours, and **420 s / 25.09 GB** for 1,000 hours.
+Peak builder RSS stayed between **347 and 353 MB**. Build measurements came
+from separate earlier child processes; the frozen runtime rerun reused their
+completed compatible stores. The 1,000-hour format uses two bytes per native
+bin ID instead of one, explaining its larger bytes-per-spike footprint.
+
+All cases matched a combined fully validated source scan and a separate
+cumulative assignment replay using independent histogram accumulation. Every
+original source row was traversed in each dataset: **5,436,177,786 rows** across
+the three runs. Integer spike and finite-value counts matched exactly; trend
+sums matched at `rtol=1e-9, atol=1e-6`. The combined source scan computes all five
+scenario expressions in one pass; its duration must not be compared as though
+it measured a single split. Top-level bounded input hashes were unchanged.
+Reports record runtime source-component hashes, recipes, byte counts, and timings:
+[100 h](summary-scaling/100h.json), [200 h](summary-scaling/200h.json),
+[1,000 h](summary-scaling/1000h.json).
+
+Reproduce on a fresh bounded benchmark package with:
+
+```bash
+uv run --no-sync python tools/benchmark_summary_scenarios.py \
+  --bounded /data/bounded-copy --store /data/summary-store \
+  --output /data/result.json --label 'identified dataset and provenance'
+```
+
+The GUI trial at `0da082b1` used a fresh copy of the earlier converted
+469,725,567-spike package. Building, attaching and restoring the two split-child
+summaries took **49.61 seconds** while curation remained unsaved. A 10 ms Qt
+heartbeat had **9.62 ms median**, **10.64 ms p95**, and **333.68 ms maximum** across
+4,659 intervals, excluding screenshot capture intervals. This supports normal
+responsiveness; it does not establish a hard maximum event-loop latency. The
+children contained **292,990** and **346,764** spikes. The store was adopted
+without reopening. [GUI report](summary-store-gui-result.json) and actual
+[prompt](../docs/images/summary-store-task/prompt.png),
+[progress/ETA](../docs/images/summary-store-task/building.png), and
+[completion](../docs/images/summary-store-task/ready.png) captures are committed.
+
+The task runner has bounded latest-only progress, staged ETA, shared recording
+I/O exclusion, cooperative cancellation and a short publication boundary.
+Regressions cover cancellation/publication races, failed thread startup,
+worker exits, detached QObject ownership, GUI deletion before controller close,
+vetoed close, slow destination checks, newer attachment references, persisted
+budgets, and automatic prompts retaining keyboard-shortcut ownership. The
+ordinary/bounded controller equivalence and graphical K-split tests pass with
+the new prompt behavior.
+
+### Next interactive-latency improvement
+
+One-time preparation cost is secondary to interactive split latency. The current
+row store greatly reduces source I/O, but the 2.1-second largest-unit and
+4.7-second largest-parent-merge cases remain targets for further improvement.
+The high-effort Sol architecture audit recommends an optional amplitude range
+accelerator, not merely more batching or a faster builder:
+
+- Sort exact finite amplitudes within each original-unit/native-bin segment.
+  Keep aligned raw depth when needed; track nonfinite membership separately.
+- Compile supported merge/split expressions into disjoint amplitude intervals
+  per original unit. Preserve inherited parent rejection obligations.
+- Use small endpoint blocks and balanced aggregate range trees, avoiding
+  cancellation-prone subtraction of large floating prefixes. Benchmark block
+  sizes 64, 128 and 256 before selecting a default.
+- Authenticate only consumed metadata pages, aggregate nodes and data blocks.
+  Retaining a whole-unit hash scan would erase the latency improvement.
+- Reproduce canonical evaluator comparison semantics. Raw `searchsorted` can
+  disagree with float32 weak-scalar comparisons near a threshold. Counts must
+  remain exact; document and test trend arithmetic tolerances.
+- Keep the existing verified row store as fallback. Preflight extra final and
+  scratch disk space; perform bounded-memory sorting and atomic publication in
+  another adapter for the same GUI task runner.
+
+This is an audited proposal, not an implemented accelerator or an asserted speed
+result. Initial prototype targets are below 50 ms for typical warm queries and
+below 200 ms for the largest-parent cases, including selective integrity work.
+Cold-query behavior needs separate device measurements. The key acceptance
+criterion is that query work no longer grows linearly with source spike count
+when bins, ancestry and predicates are fixed.
