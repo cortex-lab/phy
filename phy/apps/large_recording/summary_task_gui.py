@@ -1,14 +1,17 @@
 """Dataset-specific store controls on top of reusable background task UI."""
 
 import shutil
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from pathlib import Path
 from uuid import uuid4
 
 from phylib.utils import connect, unconnect
+from PyQt5 import sip
 from PyQt5.QtWidgets import QFileDialog
 
 from phy.gui.qt import (
+    QApplication,
     QCheckBox,
     QDialog,
     QHBoxLayout,
@@ -17,6 +20,7 @@ from phy.gui.qt import (
     QObject,
     QPushButton,
     QSpinBox,
+    Qt,
     QTimer,
     QVBoxLayout,
     pyqtSignal,
@@ -99,6 +103,7 @@ class StorePrompt(QDialog):
         self._disk_timer.timeout.connect(self._disk_check)
         self.finished.connect(self._dispose_preflight)
         self.setWindowTitle('Prepare faster full-recording summaries?')
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         layout = QVBoxLayout(self)
         text = 'Build a reusable store so splits read only the affected original units. You can keep curating while it runs.'
         layout.addWidget(QLabel(text, self))
@@ -246,6 +251,8 @@ class SummaryStoreActions(QObject):
             ['SummaryStore.suppress_prompt', 'SummaryStore.destination', 'SummaryStore.max_bytes']
         )
         self.manager.finished.connect(self._finished)
+        # Some embedders delete the GUI before closing its controller.
+        gui.destroyed.connect(lambda: self.close())
 
         @gui.file_actions.add
         def build_summary_store():
@@ -417,7 +424,15 @@ class SummaryStoreActions(QObject):
             )
             self.dialog.build_requested.connect(self.build)
             self.dialog.continued.connect(self._remember)
+            active, focus = QApplication.activeWindow(), QApplication.focusWidget()
+            self.dialog.setAttribute(Qt.WA_ShowWithoutActivating, not self._manual)
             self.dialog.show()
+            if self._manual:
+                self.dialog.raise_()
+                self.dialog.activateWindow()
+            else:
+                # Native platform activation may arrive after QWidget.show().
+                QTimer.singleShot(0, lambda: self._restore_activation(active, focus))
             self._manual = False
         elif mode == 'build':
             artifact = outcome.result
@@ -439,13 +454,25 @@ class SummaryStoreActions(QObject):
             self._resume()
             self.widget.notice('Summary store ready. New splits use the prepared store.')
 
+    def _restore_activation(self, active, focus):
+        if not self._valid() or QApplication.activeWindow() not in (self.dialog, None):
+            return
+        target = active if active is not None and not sip.isdeleted(active) else self.gui
+        target.activateWindow()
+        if target.windowHandle() is not None:
+            target.windowHandle().requestActivate()
+        QApplication.setActiveWindow(target)
+        if focus is not None and not sip.isdeleted(focus):
+            focus.setFocus(Qt.OtherFocusReason)
+
     def close(self):
         if self._closed:
             return
         self._closed = True
-        self.manager.finished.disconnect(self._finished)
+        with suppress(TypeError, RuntimeError):
+            self.manager.finished.disconnect(self._finished)
         self.widget.dispose()
         self.manager.detach()
-        if self.dialog is not None:
+        if self.dialog is not None and not sip.isdeleted(self.dialog):
             self.dialog.close()
         unconnect(self._on_closed, self._on_shown)

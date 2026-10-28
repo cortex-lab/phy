@@ -347,8 +347,39 @@ amplitude-threshold preview.
 ### Accelerate summaries on very long recordings
 
 On billion-spike datasets, scanning the entire source after each split can take
-minutes. Build an optional unit-contiguous summary snapshot once, then reopen
-Phy or use **File > Retry full summaries** if a previous computation failed:
+minutes. When opening a bounded dataset without a compatible summary store,
+Phy offers to prepare one. The nonmodal prompt shows estimated additional disk
+space, a destination picker, available space and an independent store budget
+(default 64 GiB). It never starts a large build without your choice.
+
+Choose **Build in background** to keep curating while it runs, or **Continue
+without** to retain the existing full-source fallback. **Don't ask again for this
+dataset** suppresses future prompts for that package. Build and attach actions
+remain available from **File > Build summary store** and **File > Attach summary
+store**. Compatible stores are reused automatically, including offline snapshots.
+
+The status bar shows the current stage and progress, then an estimated time
+remaining **for that stage** once throughput settles. Validation measures bytes;
+construction measures rows. Finalizing and attachment are indeterminate stages,
+so a completed scan is not presented as a completed task. **Hide** hides only the
+display; **File > Show background task** restores it. **Cancel** cleans unfinished
+staging data. A short final publication step cannot be cancelled and displays
+**Finishing…**. Accepted GUI closure cancels/detaches work without waiting for a
+scan; cancelling the save/close prompt keeps the task alive.
+
+New full-source summary scans wait while construction owns recording I/O.
+Existing cached curves remain available, and merges/splits/undo and curation
+saves remain independent. Successful construction attaches the store and retries
+summaries for the current curation without reopening. If attachment fails, the
+completed store is retained; **Details** identifies its path for a later attach.
+A newer store choice made during a build is preserved.
+
+Actual screenshots from the earlier converted engineering dataset:
+[prompt](images/summary-store-task/prompt.png),
+[background progress and ETA](images/summary-store-task/building.png), and
+[ready with restored child rates](images/summary-store-task/ready.png).
+
+The equivalent command-line workflow remains available:
 
 ```bash
 phy build-summary-store BOUNDED /data/summary-store

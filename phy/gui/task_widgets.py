@@ -1,5 +1,8 @@
 """Reusable nonmodal task presentation; hiding never cancels work."""
 
+from contextlib import suppress
+
+from PyQt5 import sip
 from PyQt5.QtWidgets import QProgressBar
 
 from .qt import QDialog, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
@@ -113,7 +116,16 @@ class TaskWidget(QWidget):
         self.show()
 
     def dispose(self):
-        self.manager.progress.disconnect(self.on_progress)
-        self.manager.finished.disconnect(self.on_finished)
-        self.manager.state_changed.disconnect(self.on_state)
-        self.details.close()
+        if getattr(self, '_disposed', False):
+            return
+        self._disposed = True
+        for signal, slot in (
+            (self.manager.progress, self.on_progress),
+            (self.manager.finished, self.on_finished),
+            (self.manager.state_changed, self.on_state),
+        ):
+            # Qt can disconnect receivers while deleting their parent GUI.
+            with suppress(TypeError, RuntimeError):
+                signal.disconnect(slot)
+        if not sip.isdeleted(self.details):
+            self.details.close()

@@ -2533,6 +2533,8 @@ class BaseController:
         handler = StatusBarHandler(gui)
         handler.setLevel(logging.INFO)
         logging.getLogger('phy').addHandler(handler)
+        # Embedders may destroy the GUI without sending an accepted close.
+        gui.destroyed.connect(lambda: logging.getLogger('phy').removeHandler(handler))
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)  # noqa

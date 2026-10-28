@@ -247,3 +247,47 @@ def test_vetoed_close_keeps_task_alive(qtbot, opened, tmp_path, monkeypatch):
         actions.manager.cancel()
         release.set()
         qtbot.waitUntil(lambda: not actions.manager.busy)
+
+
+def test_gui_deletion_detaches_worker_before_controller_cleanup(qtbot, tmp_path, monkeypatch):
+    from PyQt5 import sip
+    from PyQt5.QtCore import QCoreApplication, QEvent
+
+    _, controller = make_controller(tmp_path)
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    actions = controller._summary_store_actions
+    actions._checked = True
+    started, release = Event(), Event()
+
+    def blocked(request, context):
+        started.set()
+        assert release.wait(5)
+        context.check_cancel()
+
+    monkeypatch.setattr(summary_task_gui, 'prepare_summary_store', blocked)
+    try:
+        actions.build(tmp_path / 'store')
+        qtbot.waitUntil(started.is_set)
+        gui.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        assert sip.isdeleted(gui)
+        assert actions._closed
+        assert actions.manager._cancel.is_set()
+        release.set()
+        qtbot.waitUntil(lambda: not actions.manager.busy)
+    finally:
+        release.set()
+        if not sip.isdeleted(gui):
+            gui.close()
+        controller.close()
+
+
+def test_automatic_prompt_keeps_main_window_shortcut_ownership(qtbot, opened):
+    from phy.gui.qt import QApplication
+
+    _, gui, actions = opened
+    actions._checked = False
+    gui.show()
+    qtbot.waitUntil(lambda: actions.dialog is not None and actions.dialog.isVisible())
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is gui)
+    assert actions.dialog.isVisible()
