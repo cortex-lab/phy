@@ -144,6 +144,21 @@ def test_real_sparse_payload_seek_beyond_32bit_rows(tmp_path):
     dtype = np.dtype([('bin', 'uint8'), ('amplitude', 'float32')])
     row = np.array([(2, 3.5)], dtype=dtype).tobytes()
     with (store_path / 'data.bin').open('wb') as stream:
+        import os
+
+        if os.name == 'nt':
+            import ctypes
+            import msvcrt
+
+            # NTFS requires explicit sparse marking before extending a file:
+            # https://learn.microsoft.com/windows/win32/api/winioctl/ni-winioctl-fsctl_set_sparse
+            returned = ctypes.c_ulong()
+            handle = ctypes.c_void_p(msvcrt.get_osfhandle(stream.fileno()))
+            success = ctypes.windll.kernel32.DeviceIoControl(
+                handle, 0x900C4, None, 0, None, 0, ctypes.byref(returned), None
+            )
+            if not success:
+                pytest.skip('Test filesystem cannot create sparse files.')
         stream.seek(count * dtype.itemsize)
         stream.write(row)
     index = {

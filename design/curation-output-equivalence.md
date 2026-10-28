@@ -287,3 +287,65 @@ tracebacks**, versus five Feature View errors in the original equivalent reopen.
 Complete assignments and group/notes files remained byte-identical. Original
 validation data and installed environments were preserved. This addresses the
 recorded baseline renderer failure and does not change PR #1428's dependency pin.
+
+
+## Unit-indexed summary acceleration
+
+The 1,000-hour feedback exposed full-source scan and first-session hashing costs.
+The optional summary store groups exact source scalars and native bin IDs by
+original unit. It is independently budgeted, atomically published outside the
+bounded package, and attached through a small `.phy` reference. Existing package
+manifests and saved curation generations are unchanged. Payload checksums are
+verified only for consumed units before any result is published. This certifies
+the prepared source snapshot, not the present contents of original files;
+full-source replay and the unindexed fallback retain source validation.
+
+At revision `9e4ac004`, the earlier converted 112.859-hour engineering dataset
+contained **469,725,567 spikes** and 113 native bins. The reusable store occupied
+**2,348,718,604 bytes**, took **47.389 seconds** to build (including required
+source validation), and peaked at **335,151,104 bytes RSS** in a separate process.
+The input arrays were read in bounded batches, without touching every page of a
+recording-sized memory mapping or allocating a full permutation.
+
+Splitting unit 49 at **-341.797119140625** read only its **639,754 original spikes**
+(approximately 3.2 MB). The first indexed request took **0.01795 seconds**, and a
+repeated uncached request **0.01683 seconds**. The updated source fallback took
+**6.470 seconds** including required-source hashing, and **2.176 seconds** with
+validated readers reused. Result-cache lookups and publication were disabled for
+both paths, so these are computation timings rather than result-cache hits.
+These measurements exclude GUI delivery and use uncontrolled OS cache state;
+they are not cold-storage or 1,000-hour acceptance measurements.
+
+Counts were **346,764** and **292,990**. Integer counts and finite counts matched
+exactly. Float64 sums matched at `rtol=1e-9, atol=1e-6`. Besides comparing indexed
+and full-scan engines, independent cumulative assignment replay traversed **all
+469,725,567 original rows** and used histogram accumulation to verify the indexed
+outputs. Top-level bounded-package file hashes were unchanged. The
+[committed result](summary-store-result.json) records the measurements; full
+artifacts remain under `summary-store-acceptance-2026-10-28/` in the dataset.
+
+Regressions cover native-bin boundaries and acquisition gaps, every comparator,
+nonfinite rejection and remainder membership, nested split/merge ancestry,
+source-offline computation, template-predicate fallback, corrupt stores,
+cancellation, interrupted and racing publication, disk failure, lost references,
+Fortran-order depth coordinates, wide scalar dtypes, and actual sparse-file
+seeks past `2**32` rows. The real GUI split/merge/undo/redo/save/replay/reopen test
+runs with and without an index; its indexed variant forbids source access.
+Progress ignores cancelled or undone memberships. The high-effort Sol audit's
+identified issues were corrected and regression-tested; its final read found no
+remaining must-fix issue.
+
+Reproduce on a fresh copy of the bounded package:
+
+```bash
+uv run --no-sync python tools/benchmark_summary_store.py \
+  --bounded /data/bounded-copy --store /data/new-summary-store \
+  --output /data/summary-store-result.json --unit 49 \
+  --threshold -341.797119140625 --dataset-label 'engineering dataset'
+```
+
+Cost scales with original ancestry, not surviving child size: a split of a merge
+of every original unit can read the entire store. The compact 1,000-bin,
+float32-amplitude layout requires roughly 29.2 GB for 4.87 billion spikes, before
+optional depth. Carl's actual 1,000-hour dataset still needs owner-run cold/warm
+split and build measurements. No universal one-second bound is claimed.
