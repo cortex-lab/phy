@@ -16,6 +16,7 @@ from .range_intervals import RangeUnavailableError
 from .range_math import add_stats, node_dtype, row_stats
 from .source import hash_json, publish_directory
 from .summary_store import (
+    _ANY_REFERENCE,
     SummaryStore,
     SummaryStorePublishedError,
     _atomic_json,
@@ -342,6 +343,7 @@ def build_amplitude_index(
     progress=None,
     before_publish=None,
     attach=True,
+    expected_reference=_ANY_REFERENCE,
 ):
     """Prepare an optional sorted range accelerator from a verified row snapshot."""
     from .live_summaries import LiveSummaryEngine, _check_cancel
@@ -354,10 +356,12 @@ def build_amplitude_index(
     if memory_bytes < 1048576 or max_bytes <= 0:
         raise ValueError('Index memory must be at least 1 MiB and disk budget must be positive.')
     staged = None
+    initial_reference = summary_store_reference(package, allow_invalid=True)
+    if expected_reference is not _ANY_REFERENCE and initial_reference != expected_reference:
+        raise ValueError('The attached summary store changed before amplitude-index preparation.')
     with LiveSummaryEngine(package) as engine, SummaryStore(engine) as store:
         if output == engine.source_dir.resolve() or engine.source_dir.resolve() in output.parents:
             raise ValueError('Amplitude index must be outside the original source.')
-        initial_reference = summary_store_reference(package)
         estimate = estimate_range_index(engine, block_rows, units)
         row_bytes = sum((store.path / name).stat().st_size for name in ('data.bin', 'index.json'))
         if row_bytes + estimate.final_bytes > max_bytes:

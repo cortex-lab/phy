@@ -399,3 +399,23 @@ def test_post_publication_sync_failure_preserves_attachable_store(tmp_path, monk
     assert not list(tmp_path.glob('.*.building-*'))
     monkeypatch.setattr(summary_store, '_fsync_directory', original)
     summary_store.attach_summary_store(bounded, output)
+
+
+def test_automatic_build_attachment_preserves_newer_store_choice(tmp_path):
+    from phy.apps.large_recording.summary_store import (
+        SummaryStorePublishedError,
+        attach_summary_store,
+        summary_store_reference,
+    )
+
+    _, bounded = package(tmp_path)
+    first = build_summary_store(bounded, tmp_path / 'first', attach=False)
+
+    def choose_first():
+        attach_summary_store(bounded, first)
+
+    with pytest.raises(SummaryStorePublishedError, match='changed while'):
+        build_summary_store(bounded, tmp_path / 'second', before_publish=choose_first)
+    assert (tmp_path / 'second' / 'index.json').is_file()
+    reference = json.loads(summary_store_reference(bounded))
+    assert reference['path'] == str(first)

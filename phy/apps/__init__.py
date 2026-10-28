@@ -262,10 +262,12 @@ def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
             from .large_recording.range_build import preflight_summary_store
 
             preflight_summary_store(bounded_dir, kwargs['max_bytes'])
-        output = build_summary_store(bounded_dir, output_dir, progress=progress, **kwargs)
+        output, reference = build_summary_store(
+            bounded_dir, output_dir, progress=progress, return_reference=True, **kwargs
+        )
         if accelerate:
             _build_amplitude_index(
-                bounded_dir, output / 'amplitude-index', kwargs['max_bytes'], progress
+                bounded_dir, output / 'amplitude-index', kwargs['max_bytes'], progress, reference
             )
     except (ValueError, OSError) as error:
         message = str(error)
@@ -297,13 +299,14 @@ def cli_attach_summary_store(bounded_dir, store_dir):
     click.echo(f'Attached summary snapshot: {store_dir}')
 
 
-def _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress):
+def _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress, reference=None):
     from .large_recording.range_build import build_amplitude_index
     from .large_recording.range_intervals import RangeUnavailableError
 
     try:
+        options = {'expected_reference': reference} if reference is not None else {}
         return build_amplitude_index(
-            bounded_dir, output_dir, max_bytes=max_bytes, progress=progress
+            bounded_dir, output_dir, max_bytes=max_bytes, progress=progress, **options
         )
     except RangeUnavailableError as error:
         click.echo(f'Using the verified row store: {error}')

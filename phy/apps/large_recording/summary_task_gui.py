@@ -155,7 +155,7 @@ class StorePrompt(QDialog):
         self.build_button.clicked.connect(self._build)
         self.continue_button.clicked.connect(self._continue)
         self._check()
-        self.resize(650, 220)
+        self.resize(750, 320)
 
     def _choose(self):
         parent = QFileDialog.getExistingDirectory(

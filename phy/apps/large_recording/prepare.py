@@ -182,11 +182,12 @@ def prepare_large(
             from .range_build import preflight_summary_store
 
             preflight_summary_store(output, summary_store_max_bytes)
-            build_summary_store(
+            _, reference = build_summary_store(
                 output,
                 summary_store,
                 source_dir=source.path,
                 max_bytes=summary_store_max_bytes,
+                return_reference=True,
             )
             from .range_build import build_amplitude_index
             from .range_intervals import RangeUnavailableError
@@ -197,6 +198,7 @@ def prepare_large(
                     output,
                     Path(summary_store) / 'amplitude-index',
                     max_bytes=summary_store_max_bytes,
+                    expected_reference=reference,
                 )
         except (ValueError, OSError) as error:
             raise ValueError(

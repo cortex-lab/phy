@@ -109,6 +109,7 @@ def build_summary_store(
     progress=None,
     attach=True,
     before_publish=None,
+    return_reference=False,
 ):
     """Build an exact prepared-snapshot asset without modifying saved curation.
 
@@ -127,6 +128,8 @@ def build_summary_store(
     if min(max_bytes, batch_size, buffer_bytes) <= 0:
         raise ValueError('Summary store budgets must be positive.')
     temporary = None
+    initial_reference = summary_store_reference(package_path, allow_invalid=True)
+    published_reference = None
     with LiveSummaryEngine(package_path, source_dir=source_dir, batch_size=batch_size) as engine:
         source_path = engine.source_dir.resolve()
         if output_dir == source_path or source_path in output_dir.parents:
@@ -278,10 +281,15 @@ def build_summary_store(
                 if attach:
                     if progress:
                         progress('attaching summary store', 0, 0)
-                    attach_summary_store(package_path, output_dir)
+                    _, published_reference = attach_summary_store(
+                        package_path,
+                        output_dir,
+                        expected_reference=initial_reference,
+                        return_reference=True,
+                    )
             except (OSError, ValueError) as error:
                 raise SummaryStorePublishedError(output_dir, str(error)) from error
-            return output_dir
+            return (output_dir, published_reference) if return_reference else output_dir
         finally:
             if temporary is not None:
                 shutil.rmtree(temporary)

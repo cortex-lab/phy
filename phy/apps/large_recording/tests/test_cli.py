@@ -115,3 +115,28 @@ def test_combined_budget_fails_before_row_preparation(tmp_path):
     assert result.exit_code == 1
     assert 'Combined store estimate' in result.output
     assert not store.exists()
+
+
+def test_default_pipeline_preserves_newer_choice_between_stages(tmp_path, monkeypatch):
+    from phy.apps.large_recording import summary_store
+    from phy.apps.large_recording.range_build import build_amplitude_index
+    from phy.apps.large_recording.tests.test_live_summaries import package
+
+    _, bounded = package(tmp_path)
+    original = summary_store.build_summary_store
+    chosen = tmp_path / 'newer-index'
+
+    def choose_between_stages(*args, **kwargs):
+        result = original(*args, **kwargs)
+        build_amplitude_index(bounded, chosen)
+        return result
+
+    monkeypatch.setattr(summary_store, 'build_summary_store', choose_between_stages)
+    store = tmp_path / 'store'
+    result = CliRunner().invoke(phycli, ['build-summary-store', str(bounded), str(store)])
+    assert result.exit_code == 1
+    assert 'Row snapshot ready' in result.output
+    assert 'changed before' in result.output
+    assert not (store / 'amplitude-index').exists()
+    reference = json.loads(summary_store.summary_store_reference(bounded))
+    assert reference['amplitude_index']['path'] == str(chosen)
