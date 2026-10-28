@@ -15,6 +15,7 @@ from .qt import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
 
 _HEAVY_IO = Lock()
 _ACTIVE = set()
+_MANAGERS = {}
 _ACTIVE_LOCK = Lock()
 
 
@@ -23,12 +24,16 @@ class TaskCancelledError(Exception):
 
 
 @contextmanager
-def heavy_io(check_cancel):
+def heavy_io(check_cancel, waiting=None):
     """Share one cancellable full-source I/O permit across task implementations."""
+    notified = False
     while True:
         check_cancel()
         if _HEAVY_IO.acquire(timeout=0.05):
             break
+        if waiting is not None and not notified:
+            waiting()
+            notified = True
     try:
         check_cancel()
         yield
@@ -102,7 +107,8 @@ class StageETA:
         if self.last_time is not None and now > self.last_time and progress.done > self.last_done:
             rate = (progress.done - self.last_done) / (now - self.last_time)
             self.rate = rate if self.rate is None else 0.25 * rate + 0.75 * self.rate
-        self.last_time, self.last_done = now, progress.done
+        if self.last_done is None or progress.done > self.last_done:
+            self.last_time, self.last_done = now, progress.done
         if now - self.started < 2 or not self.rate or progress.done < 1:
             return None
         return max(0, (progress.total - progress.done) / self.rate)
@@ -122,13 +128,22 @@ class TaskContext:
     def report(self, progress):
         if not isinstance(progress, TaskProgress):
             raise TypeError('Expected TaskProgress.')
+        _immutable(progress)
+        if not all(isinstance(v, str) for v in (progress.stage, progress.unit, progress.message)):
+            raise TypeError('Progress labels must be strings.')
+        if progress.done is not None and (type(progress.done) is not int or progress.done < 0):
+            raise ValueError('Progress done must be a nonnegative integer.')
+        if progress.total is not None and (type(progress.total) is not int or progress.total < 0):
+            raise ValueError('Progress total must be a nonnegative integer.')
         with self.lock:
             self.mailbox[0] = progress
 
     def commit(self):
         """Enter a short noncancellable publication boundary after a final check."""
-        self.check_cancel()
-        self.committing = True
+        with self.lock:
+            if self.cancelled.is_set():
+                raise TaskCancelledError()
+            self.committing = True
         self.report(
             TaskProgress('Finalizing', message='Finishing; publication cannot be cancelled.')
         )
@@ -187,9 +202,19 @@ class BackgroundTaskManager(QObject):
         self._cancel = Event()
         self._mailbox = [None]
         self._context = TaskContext(self._cancel, self._lock, self._mailbox)
+        _MANAGERS[self.task_id] = self
         self._set_state('pending')
         self._timer.start()
-        Thread(target=self._run, args=(spec, self.task_id, self._context), daemon=True).start()
+        try:
+            Thread(target=self._run, args=(spec, self.task_id, self._context), daemon=True).start()
+        except BaseException as error:
+            with _ACTIVE_LOCK:
+                _ACTIVE.discard(spec.key)
+            self._delivery.terminal.emit(
+                TaskOutcome(
+                    self.task_id, 'failed', error=f'Could not start background worker: {error}'
+                )
+            )
         return self.task_id
 
     def _run(self, spec, task_id, context):
@@ -209,7 +234,7 @@ class BackgroundTaskManager(QObject):
             outcome = TaskOutcome(task_id, 'succeeded', result=result)
         except TaskCancelledError:
             outcome = TaskOutcome(task_id, 'cancelled')
-        except Exception as error:
+        except BaseException as error:
             outcome = TaskOutcome(task_id, 'failed', error=str(error))
         finally:
             with _ACTIVE_LOCK:
@@ -235,13 +260,18 @@ class BackgroundTaskManager(QObject):
         self._poll()
         self._timer.stop()
         self._set_state(outcome.state)
-        if not self._detached:
-            self.finished.emit(outcome)
+        try:
+            if not self._detached:
+                self.finished.emit(outcome)
+        finally:
+            _MANAGERS.pop(outcome.task_id, None)
 
     def cancel(self):
         if self.busy:
-            self._cancel.set()
-            self._set_state('committing' if self._context.committing else 'cancelling')
+            with self._lock:
+                self._cancel.set()
+                committing = self._context.committing
+            self._set_state('committing' if committing else 'cancelling')
 
     def detach(self):
         self._detached = True

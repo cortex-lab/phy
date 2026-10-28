@@ -142,3 +142,98 @@ def test_eta_resets_per_stage_and_uses_injected_clock():
     now[0] = 7
     assert eta.update(TaskProgress('Build', 20, 100, 'rows')) == 16
     assert eta.update(TaskProgress('Finalize')) is None
+
+
+def test_worker_base_exception_and_startup_failure_are_terminal(qtbot, monkeypatch):
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+
+    def exit_worker(request, context):
+        raise SystemExit('worker exit')
+
+    manager.submit(TaskSpec('exit', 'Exit', exit_worker, Request(1)))
+    qtbot.waitUntil(lambda: len(outcomes) == 1)
+    assert outcomes[0].state == 'failed'
+    assert not manager.busy
+
+    def fail_start(self):
+        raise RuntimeError('no thread available')
+
+    monkeypatch.setattr(tasks.Thread, 'start', fail_start)
+    manager.submit(TaskSpec('startup', 'Startup', exit_worker, Request(1)))
+    qtbot.waitUntil(lambda: len(outcomes) == 2)
+    assert outcomes[-1].state == 'failed'
+    assert not manager.busy
+    assert 'startup' not in tasks._ACTIVE
+    assert manager.task_id not in tasks._MANAGERS
+
+
+def test_detached_manager_lives_until_gui_terminal_delivery(qtbot):
+    import gc
+    import weakref
+
+    from phy.gui import tasks
+
+    started, release = Event(), Event()
+    manager = BackgroundTaskManager()
+
+    def worker(request, context):
+        started.set()
+        assert release.wait(5)
+        context.check_cancel()
+
+    task_id = manager.submit(TaskSpec('lifetime', 'Lifetime', worker, Request(1)))
+    assert started.wait(5)
+    reference = weakref.ref(manager)
+    manager.detach()
+    del manager
+    gc.collect()
+    assert reference() is not None
+    release.set()
+    qtbot.waitUntil(lambda: task_id not in tasks._MANAGERS)
+    gc.collect()
+    assert task_id not in tasks._MANAGERS
+
+
+def test_cancel_wins_before_commit_and_progress_types_are_checked(qtbot):
+    started, release = Event(), Event()
+    manager = BackgroundTaskManager()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+    published = []
+
+    def worker(request, context):
+        with pytest.raises(ValueError):
+            context.report(TaskProgress('Bad', -1, 100))
+        with pytest.raises(TypeError):
+            context.report(TaskProgress('Bad', message=[]))
+        started.set()
+        assert release.wait(5)
+        context.commit()
+        published.append(True)
+
+    manager.submit(TaskSpec('cancel-boundary', 'Cancel boundary', worker, Request(1)))
+    assert started.wait(5)
+    manager.cancel()
+    release.set()
+    qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0].state == 'cancelled'
+    assert not published
+
+
+def test_eta_stalls_contribute_to_next_rate_sample():
+    now = [0.0]
+    eta = StageETA(clock=lambda: now[0])
+    eta.update(TaskProgress('Scan', 0, 100))
+    now[0] = 1
+    eta.update(TaskProgress('Scan', 10, 100))
+    now[0] = 10
+    eta.update(TaskProgress('Scan', 10, 100))
+    now[0] = 19
+    eta.update(TaskProgress('Scan', 10, 100))
+    now[0] = 20
+    remaining = eta.update(TaskProgress('Scan', 20, 100))
+    assert remaining > 8  # The 19-second stall must lower the 10 units/s rate.

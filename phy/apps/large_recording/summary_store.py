@@ -1,16 +1,20 @@
 """Optional, independently budgeted unit-contiguous summary snapshot storage."""
 
+import errno
 import hashlib
 import json
 import os
 import shutil
 import tempfile
 from collections import OrderedDict
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
+from time import sleep
 
 import numpy as np
 
-from .curation import _fsync_directory
+from .curation import _commit_lock, _fsync_directory, _safe_file
 from .source import hash_json, publish_directory
 
 VERSION = 1
@@ -45,6 +49,55 @@ def _bin_dtype(bins):
     raise ValueError('Too many native summary bins.')
 
 
+@dataclass(frozen=True)
+class StoreEstimate:
+    payload_bytes: int
+    estimated_bytes: int
+    source_spikes: int
+    record_bytes: int
+    source_path: str
+
+
+class SummaryStorePublishedError(OSError):
+    """A completed artifact remains available after finalization/attachment failed."""
+
+    def __init__(self, path, message):
+        self.path = Path(path)
+        super().__init__(message)
+
+
+def _layout(engine):
+    inventory = engine.manifest['source_array_inventory']
+    names = {'spike_times.npy', 'spike_clusters.npy'}
+    specs = [('bin', _bin_dtype(engine.bins))]
+    scalar_names = {}
+    for field in engine.fields:
+        name = 'amplitudes.npy' if field == 'amplitude' else 'spike_depths.npy'
+        if name not in inventory and field == 'depth':
+            name = 'spike_positions.npy'
+        names.add(name)
+        scalar_names[field] = name
+        specs.append((field, np.dtype(inventory[name]['dtype'])))
+    return np.dtype(specs), names, scalar_names
+
+
+def estimate_summary_store(package_path, source_dir=None):
+    """Read package metadata only; use exactly the builder's disk calculation."""
+    from .live_summaries import LiveSummaryEngine
+
+    with LiveSummaryEngine(package_path, source_dir=source_dir) as engine:
+        dtype, _, _ = _layout(engine)
+        count = int(engine.manifest['num_spikes'])
+        payload = count * dtype.itemsize
+        return StoreEstimate(
+            payload,
+            payload + 65536 + 512 * len(engine.manifest['unit_ids']),
+            count,
+            dtype.itemsize,
+            str(engine.source_dir),
+        )
+
+
 def build_summary_store(
     package_path,
     output_dir,
@@ -54,6 +107,8 @@ def build_summary_store(
     buffer_bytes=33554432,
     cancel=None,
     progress=None,
+    attach=True,
+    before_publish=None,
 ):
     """Build an exact prepared-snapshot asset without modifying saved curation.
 
@@ -76,18 +131,7 @@ def build_summary_store(
         source_path = engine.source_dir.resolve()
         if output_dir == source_path or source_path in output_dir.parents:
             raise ValueError('Summary store must be outside the original source.')
-        inventory = engine.manifest['source_array_inventory']
-        names = {'spike_times.npy', 'spike_clusters.npy'}
-        specs = [('bin', _bin_dtype(engine.bins))]
-        scalar_names = {}
-        for field in engine.fields:
-            name = 'amplitudes.npy' if field == 'amplitude' else 'spike_depths.npy'
-            if name not in inventory and field == 'depth':
-                name = 'spike_positions.npy'
-            names.add(name)
-            scalar_names[field] = name
-            specs.append((field, np.dtype(inventory[name]['dtype'])))
-        dtype = np.dtype(specs)
+        dtype, names, scalar_names = _layout(engine)
         count = int(engine.manifest['num_spikes'])
         payload_bytes = count * dtype.itemsize
         # Includes the small catalog and headers, independently of bounded budgets.
@@ -196,6 +240,8 @@ def build_summary_store(
                             flush(unit)
                     if progress:
                         progress('building summary store', stop, count)
+                if progress:
+                    progress('finalizing summary store', 0, 0)
                 while buffers:
                     _check_cancel(cancel)
                     flush(next(iter(buffers)))
@@ -222,17 +268,19 @@ def build_summary_store(
             if actual_bytes > max_bytes:
                 raise ValueError(f'Summary store exceeds max_bytes: {actual_bytes:,} bytes.')
             _check_cancel(cancel)
-            # Refuse a competing completed build rather than replacing it.
+            # A GUI task may enter its noncancellable publication boundary here.
+            if before_publish is not None:
+                before_publish()
             publish_directory(temporary, output_dir)
             temporary = None
-            _fsync_directory(output_dir.parent)
-            _atomic_json(
-                package_path / '.phy' / REFERENCE,
-                {
-                    'path': str(output_dir),
-                    'index_sha256': hash_json(catalog),
-                },
-            )
+            try:
+                _fsync_directory(output_dir.parent)
+                if attach:
+                    if progress:
+                        progress('attaching summary store', 0, 0)
+                    attach_summary_store(package_path, output_dir)
+            except (OSError, ValueError) as error:
+                raise SummaryStorePublishedError(output_dir, str(error)) from error
             return output_dir
         finally:
             if temporary is not None:
@@ -252,7 +300,7 @@ class SummaryStore:
 
     def __init__(self, engine, path=None):
         reference = (
-            json.loads((engine.path / '.phy' / REFERENCE).read_text())
+            json.loads(summary_store_reference(engine.path))
             if path is None
             else {'path': str(path)}
         )
@@ -329,16 +377,108 @@ class SummaryStore:
         self.close()
 
 
-def attach_summary_store(package_path, store_path):
-    """Attach a compatible completed snapshot; payload checks remain selective."""
+@contextmanager
+def _attachment_lock(path, check_cancel=None):
+    if check_cancel is None:
+        with _commit_lock(path):
+            yield
+        return
+    with _safe_file(path, 'commit.lock').open('a+b') as stream:
+        if os.name == 'nt':
+            import msvcrt
+
+            stream.seek(0, os.SEEK_END)
+            if stream.tell() == 0:
+                stream.write(b'\0')
+                stream.flush()
+
+            def acquire():
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+
+            def release():
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            def acquire():
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+            def release():
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+        while True:
+            check_cancel()
+            try:
+                acquire()
+                break
+            except OSError as error:
+                if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                    raise
+                sleep(0.05)
+        try:
+            check_cancel()
+            yield
+        finally:
+            release()
+
+
+_ANY_REFERENCE = object()
+
+
+@dataclass(frozen=True)
+class ReferenceStamp:
+    signature: tuple
+
+
+def summary_store_reference(package_path, allow_invalid=False):
+    path = Path(package_path) / '.phy' / REFERENCE
+    try:
+        stat = path.stat()
+        if stat.st_size > 65536:
+            if allow_invalid:
+                return ReferenceStamp(
+                    (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+                )
+            raise ValueError('Summary store reference exceeds limit.')
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def attach_summary_store(
+    package_path,
+    store_path,
+    expected_reference=_ANY_REFERENCE,
+    before_attach=None,
+    check_cancel=None,
+):
+    """Attach a snapshot under a short cross-process reference lock.
+
+    An optional expected reference prevents overwriting a newer user choice.
+    Payload integrity checks remain selective during use.
+    """
     from .live_summaries import LiveSummaryEngine
 
     with LiveSummaryEngine(package_path) as engine, SummaryStore(engine, path=store_path) as store:
-        _atomic_json(
-            engine.path / '.phy' / REFERENCE,
-            {
-                'path': str(store.path.resolve()),
-                'index_sha256': hash_json(store.index),
-            },
-        )
+        lock_path = engine.path / '.phy' / 'summary-store-attachment'
+        lock_path.mkdir(parents=True, exist_ok=True)
+        with _attachment_lock(lock_path, check_cancel):
+            if (
+                expected_reference is not _ANY_REFERENCE
+                and summary_store_reference(engine.path, allow_invalid=True) != expected_reference
+            ):
+                raise ValueError(
+                    'The attached summary store changed while this build was running; attach the completed store manually.'
+                )
+            if before_attach is not None:
+                before_attach()
+            _atomic_json(
+                engine.path / '.phy' / REFERENCE,
+                {
+                    'path': str(store.path.resolve()),
+                    'index_sha256': hash_json(store.index),
+                },
+            )
     return Path(store_path)

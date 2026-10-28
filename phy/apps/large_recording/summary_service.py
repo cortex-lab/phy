@@ -9,8 +9,9 @@ from threading import Event, Thread
 from time import monotonic
 
 from phy.gui.qt import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
+from phy.gui.tasks import heavy_io
 
-from .live_summaries import LiveSummaryEngine, membership_expressions
+from .live_summaries import LiveSummaryEngine, _check_cancel, membership_expressions
 
 
 class _Delivery(QObject):
@@ -61,7 +62,19 @@ class _SummaryWorker:
                             last_progress[0] = now
                             self.delivery.progress.emit((cancel, phase, done, total))
 
-                    results = engine.resolve(expressions, cancel=cancel.is_set, progress=progress)
+                    def check_cancel(cancel=cancel):
+                        _check_cancel(lambda: self.stopped.is_set() or cancel.is_set())
+
+                    with heavy_io(
+                        check_cancel, waiting=lambda: progress('waiting for recording I/O', 0, 0)
+                    ):
+                        try:
+                            results = engine.resolve(
+                                expressions, cancel=cancel.is_set, progress=progress
+                            )
+                        finally:
+                            if self.stopped.is_set():
+                                engine.close()
                 except Exception as exc:
                     error = exc
                 if self.stopped.is_set():
@@ -104,6 +117,7 @@ class LiveSummaryService(QObject):
         self._pending = {}
         self._closed = False
         self._suspended = True
+        self._waiting_reason = None
         self._running = None
         self._progress_text = None
         self._running_keys = set()
@@ -215,6 +229,8 @@ class LiveSummaryService(QObject):
             return self._errors[key]
         if key in self._completed_keys:
             return 'unavailable: summary cache budget; retry full summaries'
+        if self._waiting_reason:
+            return self._waiting_reason
         if self._suspended:
             return 'cancelled: summary computation suspended'
         if self._running is not None and key in self._running_keys:
@@ -325,9 +341,16 @@ class LiveSummaryService(QObject):
         self._timer.stop()
         self._stop_worker()
 
+    def pause(self, reason):
+        """Keep cached plots available while another task owns recording I/O."""
+        self.suspend()
+        self._waiting_reason = str(reason)
+        self.changed.emit()
+
     def resume(self):
         """Resume a newly attached GUI without touching curation persistence."""
         if not self._closed:
+            self._waiting_reason = None
             self._suspended = False
             self._pending = dict(self._expressions)
             self.synchronize()
