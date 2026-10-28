@@ -142,11 +142,17 @@ class LiveSummaryEngine:
         self.path_signatures = {}
         self.metadata_signature = None
         self.resident = {}
+        self.range_index = None
+        self.range_reference = None
 
     def key(self, expression):
         return hash_json({'binding_sha256': self.binding_digest, 'expression': expression})
 
     def close(self):
+        if self.range_index is not None:
+            self.range_index.close()
+            self.range_index = None
+        self.range_reference = None
         for array in self.arrays.values():
             close_array(array)
         for handle in self.handles.values():
@@ -473,6 +479,29 @@ class LiveSummaryEngine:
         # never be evaluated from a lossy or absent indexed scalar.
         if any(self._required(e) - {'amplitudes.npy'} for e in expressions.values()):
             return None
+
+        # Keep authenticated immutable pages across worker queries. Reattachment
+        # changes the small reference and invalidates all pinned range readers.
+        from .range_index import AmplitudeRangeIndex
+        from .range_intervals import RangeUnavailableError
+        from .summary_store import summary_store_reference
+
+        reference = summary_store_reference(self.path, allow_invalid=True)
+        if reference != self.range_reference:
+            if self.range_index is not None:
+                self.range_index.close()
+                self.range_index = None
+            self.range_reference = reference
+            with suppress(OSError, ValueError, KeyError, TypeError, OverflowError):
+                self.range_index = AmplitudeRangeIndex(self)
+        if self.range_index is not None:
+            try:
+                return self.range_index.resolve(expressions, cancel, progress)
+            except RangeUnavailableError:
+                pass  # Unsupported/numerically unstable queries use verified rows.
+            except (OSError, StoreIntegrityError):
+                self.range_index.close()
+                self.range_index = None
 
         def ancestors(expression):
             if expression['kind'] == 'source':

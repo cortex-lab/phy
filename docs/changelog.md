@@ -13,6 +13,12 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Prepared amplitude indexes accelerate full-recording rate and trend updates
+  after threshold splits without scanning every spike in the original units.
+  Existing stores can be upgraded from the GUI in the background or with
+  `build-amplitude-index`. Indexes preserve native threshold comparisons,
+  authenticate only the pages used, and fall back to verified rows when needed.
+
 - The bounded GUI offers to build missing summary stores in the background,
   with a destination picker, independent disk budget, per-stage progress and ETA,
   cancellation and task details. Curation remains available during construction;
