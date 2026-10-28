@@ -151,6 +151,8 @@ def prepare_large(
     batch_size=100000,
     bin_seconds=3600,
     window_policy='auto',
+    summary_store=None,
+    summary_store_max_bytes=68719476736,
 ):
     """Choose complete shared windows, write bounded arrays, and publish atomically.
 
@@ -160,7 +162,7 @@ def prepare_large(
     within accepted windows are never independently thinned.
     """
     with Source(params_path, duration_seconds, valid_intervals, batch_size) as source:
-        return _prepare_source(
+        output = _prepare_source(
             source,
             output_dir,
             max_spikes,
@@ -172,6 +174,22 @@ def prepare_large(
             bin_seconds,
             window_policy,
         )
+    if summary_store is not None:
+        from .summary_store import build_summary_store
+
+        try:
+            build_summary_store(
+                output,
+                summary_store,
+                source_dir=source.path,
+                max_bytes=summary_store_max_bytes,
+            )
+        except (ValueError, OSError) as error:
+            raise ValueError(
+                f'Bounded package is ready at {output}; optional summary store failed: '
+                f'{error}. Use build-summary-store to retry without preparing again.'
+            ) from error
+    return output
 
 
 def _prepare_source(

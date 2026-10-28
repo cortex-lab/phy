@@ -338,11 +338,14 @@ class LiveSummaryEngine:
         ):
             raise ValueError('Source metadata changed during live summary.')
 
-    def _open(self, names, cancel):
+    def _open(self, names, cancel, progress=None):
         try:
             self._unchanged()
             metadata_before = self._metadata_state()
-            for name in sorted(names - self.arrays.keys()):
+            new_names = names - self.arrays.keys()
+            total_bytes = sum((self.source_dir / n).stat().st_size for n in new_names)
+            hashed_bytes = 0
+            for name in sorted(new_names):
                 _check_cancel(cancel)
                 path = self.source_dir / name
                 self.path_signatures[name] = _signature(path.stat())
@@ -359,6 +362,9 @@ class LiveSummaryEngine:
                 while block := handle.read(1024 * 1024):
                     _check_cancel(cancel)
                     digest.update(block)
+                    hashed_bytes += len(block)
+                    if progress:
+                        progress('validating source', hashed_bytes, total_bytes)
                 array = np.load(path, mmap_mode='r', allow_pickle=False)
                 self.arrays[name] = array
                 inventory = self.manifest['source_array_inventory'][name]

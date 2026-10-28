@@ -198,6 +198,12 @@ def cli_template_describe(ctx, params_path):
     show_default=True,
     help='Prefer producer waveform windows, require them, or generate new windows.',
 )
+@click.option(
+    '--summary-store',
+    type=click.Path(path_type=Path),
+    help='Build a separate unit-contiguous acceleration store at this new path.',
+)
+@click.option('--summary-store-max-bytes', type=click.IntRange(min=1), default=68719476736)
 def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
     """Prepare bounded shared-window evidence and complete-sorting summaries.
 
@@ -222,6 +228,46 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
         f'Stored waveforms: {coverage["retained_rows"]:,} retained / '
         f'{coverage["source_rows"]:,} source; {coverage["dropped_rows"]:,} omitted.'
     )
+
+
+@phycli.command('build-summary-store')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--source-dir', type=click.Path(exists=True, path_type=Path))
+@click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
+@click.option('--batch-size', type=click.IntRange(min=1), default=1000000)
+def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
+    """Accelerate an existing bounded package without changing its saved curation."""
+    from .large_recording.summary_store import build_summary_store
+
+    last_percent = [-1]
+
+    def progress(phase, done, total):
+        percent = int(100 * done / max(1, total))
+        marker = (phase, percent)
+        if marker != last_percent[0]:
+            click.echo(f'{phase}: {percent}%')
+            last_percent[0] = marker
+
+    try:
+        output = build_summary_store(bounded_dir, output_dir, progress=progress, **kwargs)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Prepared summary snapshot: {output}')
+
+
+@phycli.command('attach-summary-store')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('store-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+def cli_attach_summary_store(bounded_dir, store_dir):
+    """Attach an existing compatible summary snapshot without rebuilding."""
+    from .large_recording.summary_store import attach_summary_store
+
+    try:
+        attach_summary_store(bounded_dir, store_dir)
+    except (ValueError, OSError, KeyError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Attached summary snapshot: {store_dir}')
 
 
 @phycli.command('apply-curation')

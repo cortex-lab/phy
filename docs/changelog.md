@@ -13,6 +13,10 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Added optional, independently budgeted per-unit summary snapshot stores, with
+  build and attach commands for existing bounded packages. Stores preserve the
+  original scalar values and native time bins without changing saved curation.
+
 - SLAY merge suggestions and saved accept/reject decisions now survive bounded
   curation, full-sorting replay, and subsequent preparation. Suggestions retain
   their original IDs; pending suggestions affected by merges or splits become
