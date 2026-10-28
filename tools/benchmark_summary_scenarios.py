@@ -85,7 +85,41 @@ def run(args):
         Path(module.__file__).name: hash_file(module.__file__)
         for module in (curation, live_summaries, source, summary_store)
     }
+    if args.amplitude_index:
+        from phy.apps.large_recording import (
+            range_build,
+            range_files,
+            range_index,
+            range_intervals,
+            range_math,
+        )
+
+        components.update(
+            {
+                Path(module.__file__).name: hash_file(module.__file__)
+                for module in (range_build, range_files, range_index, range_intervals, range_math)
+            }
+        )
     started = perf_counter()
+    if args.build_range_only:
+        from phy.apps.large_recording.range_build import build_amplitude_index
+
+        build_amplitude_index(args.bounded, args.amplitude_index, progress=progress_logger())
+        import resource
+
+        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        args.output.write_text(
+            json.dumps(
+                {
+                    'seconds': perf_counter() - started,
+                    'peak_rss_bytes': int(rss if sys.platform == 'darwin' else rss * 1024),
+                    'index_bytes': sum(p.stat().st_size for p in args.amplitude_index.iterdir()),
+                },
+                indent=2,
+            )
+            + '\n'
+        )
+        return
     if args.build_only:
         build_summary_store(args.bounded, args.store, progress=progress_logger())
         try:
@@ -119,6 +153,27 @@ def run(args):
             check=True,
         )
     attach_summary_store(args.bounded, args.store)
+    if args.amplitude_index:
+        if not args.amplitude_index.exists():
+            subprocess.run(
+                [
+                    sys.executable,
+                    __file__,
+                    '--bounded',
+                    str(args.bounded),
+                    '--store',
+                    str(args.store),
+                    '--amplitude-index',
+                    str(args.amplitude_index),
+                    '--output',
+                    str(args.output.with_suffix('.range-build.json')),
+                    '--build-range-only',
+                ],
+                check=True,
+            )
+        from phy.apps.large_recording.range_index import attach_amplitude_index
+
+        attach_amplitude_index(args.bounded, args.amplitude_index)
     before = {p.name: hash_file(p) for p in args.bounded.iterdir() if p.is_file()}
     session = BoundedSession(args.bounded)
     try:
@@ -208,6 +263,11 @@ def run(args):
                     expressions, progress=lambda *p, progress=progress: progress.append(p)
                 )
                 first = perf_counter() - start
+                first_metrics = (
+                    dict(engine.range_index.last_metrics) if engine.range_index else None
+                )
+                if args.amplitude_index and first_metrics is None:
+                    raise AssertionError('Range benchmark used row fallback')
                 start = perf_counter()
                 repeat = engine.resolve(expressions)
                 second = perf_counter() - start
@@ -219,8 +279,15 @@ def run(args):
                     'scenario': name,
                     'events': events,
                     'original_units': sorted(original),
-                    'source_rows_read': rows,
-                    'payload_bytes_read': rows * record_bytes,
+                    'source_rows_read': 0 if first_metrics else rows,
+                    'original_rows_represented': rows,
+                    'payload_bytes_read': first_metrics['payload_bytes_read']
+                    if first_metrics
+                    else rows * record_bytes,
+                    'first_range_metrics': first_metrics,
+                    'repeat_range_metrics': dict(engine.range_index.last_metrics)
+                    if engine.range_index
+                    else None,
                     'first_seconds': first,
                     'repeat_seconds': second,
                     'counts': {str(u): int(v['counts'].sum()) for u, v in result.items()},
@@ -299,6 +366,9 @@ def run(args):
                 else None,
             },
             'build': json.loads(build_report.read_text()) if build_report.exists() else None,
+            'range_build': json.loads(args.output.with_suffix('.range-build.json').read_text())
+            if args.output.with_suffix('.range-build.json').exists()
+            else None,
             'build_note': 'Build cost may be from an earlier invocation; runtime component hashes identify this verification run.',
             'scenarios': reports,
             'combined_full_source_scan_seconds': full_seconds,
@@ -320,4 +390,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--label', default='Unspecified engineering dataset')
     parser.add_argument('--build-only', action='store_true')
+    parser.add_argument('--amplitude-index', type=Path)
+    parser.add_argument('--build-range-only', action='store_true')
     run(parser.parse_args())

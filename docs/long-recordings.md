@@ -383,9 +383,10 @@ stages retains completed artifacts and stops subsequent long preparation; a
 completed row store remains usable if amplitude-index construction is cancelled.
 
 Actual screenshots from the earlier converted engineering dataset:
-[prompt](images/summary-store-task/prompt.png),
-[background progress and ETA](images/summary-store-task/building.png), and
-[ready with restored child rates](images/summary-store-task/ready.png).
+[prompt](images/amplitude-index-task/prompt.png),
+[row preparation](images/amplitude-index-task/building.png),
+[amplitude-index progress and ETA](images/amplitude-index-task/indexing.png), and
+[ready with restored child rates](images/amplitude-index-task/ready.png).
 
 The equivalent command-line workflow remains available:
 

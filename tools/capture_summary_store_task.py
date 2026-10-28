@@ -77,7 +77,11 @@ def run(args):
         eta_ready = time.perf_counter() + 3
         wait_until(lambda: time.perf_counter() >= eta_ready)
         capture('building.png')
-        wait_until(lambda: not actions.manager.busy and actions._mode == 'attach')
+        wait_until(lambda: any(stage == 'Sorting amplitude ranges' for _, stage in phases))
+        eta_ready = time.perf_counter() + 3
+        wait_until(lambda: time.perf_counter() >= eta_ready)
+        capture('indexing.png')
+        wait_until(lambda: not actions.manager.busy and actions._mode == 'attach-range')
         wait_until(lambda: all(controller.get_full_count(u) is not None for u in children))
         duration = time.perf_counter() - started
         timer.stop()
@@ -105,7 +109,7 @@ def run(args):
             'child_counts': [int(controller.get_full_count(u)) for u in children],
             'curation_remained_unsaved': controller.supervisor.is_dirty(),
             'stages': list(dict.fromkeys(stage for _, stage in phases)),
-            'screenshots': ['prompt.png', 'building.png', 'ready.png'],
+            'screenshots': ['prompt.png', 'building.png', 'indexing.png', 'ready.png'],
         }
         (args.output / 'capture.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps(report, indent=2), flush=True)

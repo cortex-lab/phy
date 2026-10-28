@@ -455,3 +455,75 @@ below 200 ms for the largest-parent cases, including selective integrity work.
 Cold-query behavior needs separate device measurements. The key acceptance
 criterion is that query work no longer grows linearly with source spike count
 when bins, ancestry and predicates are fixed.
+
+
+## Authenticated amplitude-range acceleration (28 October 2026)
+
+Implemented on the same PR1428 branch. Preparation now optionally sorts finite
+raw amplitudes per original unit/native bin and builds bounded-block aggregate
+trees. Queries compile split/merge membership into rank intervals and verify only
+consumed pages against pinned SHA-256 roots. Original dtype comparisons, nonfinite
+policies and rejection obligations remain unchanged. Counts/finite counts are
+exact; conservative error bounds require existing float64 sum tolerance (1e-9
+relative, 1e-6 absolute), otherwise verified rows are used. Replay/assignments are
+unchanged. No recording-sized index array is built in memory.
+
+The GUI reuses the generic background task manager: inspect → rows if missing →
+attach rows → amplitude index → attach index. Existing rows can be upgraded while
+the original source is offline. Late cancellation stops subsequent long stages;
+completed rows remain usable. Each automatic attachment is fenced against newer
+choices. Independent indexes can be reattached from File or CLI. Combined disk
+budgets and temporary sorting space are checked before expensive preparation.
+
+### Reproducible measurements
+
+`tools/benchmark_summary_scenarios.py --amplitude-index PATH` uses the same five
+scenarios as the earlier row-store benchmark. Every scenario uses a fresh engine;
+a second query reuses authenticated pages but no completed summary result. OS page
+cache is uncontrolled. These timings include summary computation and selective
+integrity checks, and exclude GUI delivery/rendering. The 1000h source is ten
+repetitions of Carl's real 100h source, **not** an independently acquired 1000h
+recording; legacy 100h acquisition/exposure construction is not certified here.
+
+| Scenario | Real 100h: first / repeat | Synthetic 1000h: first / repeat | Earlier 1000h row-only first |
+| --- | ---: | ---: | ---: |
+| median unit | 6.5 / 4.4 ms | 55.1 / 40.2 ms | 169.9 ms |
+| largest unit | 11.4 / 5.9 ms | 115.5 / 57.2 ms | 2137.3 ms |
+| nested split median | 8.1 / 5.7 ms | 73.6 / 54.2 ms | 174.4 ms |
+| merge two largest then split | 24.3 / 12.3 ms | 244.2 / 120.1 ms | 4737.7 ms |
+| merge ten typical then split | 53.7 / 38.8 ms | 524.2 / 540.1 ms | 1223.5 ms |
+
+Both runs compared every native-bin count, finite-value count and scalar sum with
+one validated full-source scan and a separate independent sequential semantic
+curation replay over all source spikes. All comparisons passed; bounded-package
+files were unchanged. The earlier row-only results are historical measurements,
+not an interleaved controlled A/B trial. Machine details, runtime component hashes,
+cache conditions and complete recipes are in
+[100h results](summary-scaling/amplitude-index-100h.json) and
+[1000h results](summary-scaling/amplitude-index-1000h.json). Runtime hashes identify
+the tested implementation even where the recorded HEAD predates its commit.
+
+The 4.18-billion-spike index added 20.27 GB to the existing 25.09 GB row store;
+construction took 264.3 seconds at 314 MB peak RSS. The real 418-million-spike
+index added 2.04 GB, built in 26.0 seconds at 235 MB peak RSS. Construction is an
+offline cost; these figures are not interactive latency guarantees. A ten-unit
+query exceeds the 64 MiB page cache in the 1000h run and takes about half a second
+on repeats; broad merged ancestry still increases work.
+
+The refreshed real converted 469,725,567-spike GUI trial completed row build,
+index build, attachment and current child summaries in 84.9 seconds. Curation
+remained unsaved. Its 10 ms heartbeat measured p95 10.70 ms and maximum 322.84 ms
+excluding screenshot intervals: responsive overall, with occasional larger pauses.
+See [GUI results](amplitude-index-gui-result.json) and the actual
+[prompt](../docs/images/amplitude-index-task/prompt.png),
+[row preparation](../docs/images/amplitude-index-task/building.png),
+[indexing with ETA](../docs/images/amplitude-index-task/indexing.png), and
+[restored child rates](../docs/images/amplitude-index-task/ready.png).
+
+Focused regressions cover all comparators, weak float32 boundaries, int64/uint64
+extremes, nested/merged memberships, nonfinite-only bins, depth, stable external
+merge sorting, real ill-conditioned arithmetic fallback, selective corruption,
+reattachment invalidation, cancellation, injected sort/hash/publication failures,
+newer-choice conflicts, offline upgrade and GUI lifecycle/adoption. High-sol
+read-only audits checked reader correctness, resource bounds and task publication
+boundaries; their concrete findings were fixed and regression-tested.
