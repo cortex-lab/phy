@@ -226,6 +226,8 @@ class AmplitudeRangeIndex:
         program = IntervalProgram(expressions)
         if not set(program.originals) <= self.indexed_units:
             raise RangeUnavailableError('Some original units use the row fallback.')
+        if self.block_rows * (self.payload.itemsize + 40) + 256 > self.engine.max_bytes:
+            raise RangeUnavailableError('Range endpoint exceeds arithmetic scratch budget.')
         self.unchanged()
         for file in self.files.values():
             file.cancel = cancel

@@ -118,7 +118,10 @@ class _SortedRuns:
 
     def __init__(self, directory, dtype, memory_bytes, cancel):
         self.directory, self.dtype = directory, dtype
-        self.limit = max(dtype.itemsize, memory_bytes // 4)
+        # Reserve stable-sort permutations/workspace even for one-byte scalars.
+        self.limit = max(
+            dtype.itemsize, memory_bytes // (4 * dtype.itemsize + 16) * dtype.itemsize
+        )
         self.parts, self.bytes, self.runs = [], 0, []
         self.cancel = cancel
         self.merge_rows = max(1, memory_bytes // (8 * dtype.itemsize + 96))

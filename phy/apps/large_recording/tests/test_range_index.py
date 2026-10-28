@@ -235,3 +235,31 @@ def test_failed_build_cleans_staging_without_changing_attachment(tmp_path, monke
     assert not (tmp_path / 'failed').exists()
     assert not list(tmp_path.glob('.*.building-*'))
     assert summary_store_reference(bounded) == previous
+
+
+def test_small_query_budget_falls_back_before_endpoint_allocation(tmp_path):
+    from phy.apps.large_recording.range_intervals import RangeUnavailableError
+
+    _, bounded = package(tmp_path)
+    build_summary_store(bounded, tmp_path / 'store')
+    build_amplitude_index(bounded, tmp_path / 'ranges')
+    events = [split(0, [100, 101])]
+    with LiveSummaryEngine(bounded, max_bytes=512) as engine:
+        expressions = membership_expressions(engine.manifest['unit_ids'], events)
+        expression = {100: expressions[100]}
+        index = AmplitudeRangeIndex(engine)
+        try:
+            with pytest.raises(RangeUnavailableError, match='endpoint'):
+                index.resolve(expression)
+        finally:
+            index.close()
+        engine.resolve(expression)
+        assert not engine.arrays
+
+
+def test_tiny_scalar_sort_reserves_permutation_workspace(tmp_path):
+    from phy.apps.large_recording.range_build import _SortedRuns
+
+    dtype = np.dtype([('amplitude', 'u1')])
+    sorter = _SortedRuns(tmp_path, dtype, 1048576, None)
+    assert sorter.limit * (4 + 16) <= 1048576
