@@ -131,6 +131,7 @@ class SessionHistory(History):
 def semantic_command(method):
     @wraps(method)
     def execute(self, *args, **kwargs):
+        self._settle_selection()
         with self._transaction():
             return method(self, *args, **kwargs)
 
@@ -402,6 +403,7 @@ class BoundedSupervisor(Supervisor):
         self._update_graphical_split_action()
 
     def split(self, spike_ids=None, spike_clusters_rel=0):
+        self._settle_selection()
         if spike_ids is not None or spike_clusters_rel != 0:
             raise ValueError(
                 'Lasso, feature and waveform splits cannot be replayed on unseen spikes. '
@@ -502,6 +504,7 @@ class BoundedSupervisor(Supervisor):
         self._refresh_bounded()
 
     def save(self):
+        self._settle_selection()
         self._validate_native()
         self.session.validate_proposition_documents()
         documents = None

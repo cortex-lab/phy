@@ -448,3 +448,67 @@ def test_nonfinite_source_amplitudes_are_omitted_from_plots_and_kept_in_replay(q
     finally:
         view.canvas.close()
         controller.close()
+
+
+@pytest.mark.parametrize('operation', ['merge', 'label', 'move'])
+@pytest.mark.parametrize('shortcut', [False, True])
+def test_pending_navigation_settles_exact_native_and_semantic_targets(
+    qtbot, tmp_path, operation, shortcut
+):
+    from timeit import default_timer
+
+    params, controller = make_controller(tmp_path)
+    gui = controller.create_gui(view_count={}, default_views=[], do_prompt_save=False)
+    qtbot.addWidget(gui)
+    supervisor = controller.supervisor
+    try:
+        supervisor.select([0])
+        supervisor.block()
+        view = supervisor.similarity_view
+        view.sort_by('id', 'asc')
+        view.select([1])
+        supervisor.block()
+        view.debouncer.delay = 60_000
+        view.debouncer._last_submission_time = default_timer()
+        view.next()
+        view.select_toggle(1)
+        view.select_toggle(1)
+        assert view.get_selected_ids() == [2]
+        assert supervisor.selected == [0, 1]
+        assert view.debouncer.has_pending
+
+        args = {
+            'merge': (),
+            'label': ('group', 'noise'),
+            'move': ('noise', 'similar'),
+        }[operation]
+        if shortcut:
+            supervisor._on_action(supervisor.action_creator, operation, *args)
+        else:
+            getattr(supervisor, operation)(*args)
+        supervisor.block()
+        event = controller.bounded_session.events[-1]
+        source = np.load(params.parent / 'spike_clusters.npy')
+        expected = source.copy()
+        if operation == 'merge':
+            assert event['parents'] == [0, 2]
+            expected[np.isin(source, [0, 2])] = event['target']
+            assert set(supervisor.clustering.cluster_ids) == {1, 99, event['target']}
+        else:
+            assert event['ids'] == ([2] if operation == 'move' else [0, 2])
+            assert supervisor.cluster_meta.get('group', 2) == 'noise'
+            assert supervisor.cluster_meta.get('group', 1) == 'mua'
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, expected)
+        before = supervisor._global_history.current_item.selection_before
+        assert before.cluster_ids == (0,)
+        assert before.similar_ids == (2,)
+        supervisor.save()
+        replay = apply_curation(params, controller.dir_path, tmp_path / 'replay', batch_size=2)
+        np.testing.assert_array_equal(np.load(replay / 'spike_clusters.npy'), expected)
+        if operation != 'merge':
+            replay_groups = (replay / 'cluster_group.tsv').read_text()
+            assert '1\tmua\n' in replay_groups
+            assert '2\tnoise\n' in replay_groups
+    finally:
+        gui.close()
+        controller.close()

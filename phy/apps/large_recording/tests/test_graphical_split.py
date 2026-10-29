@@ -309,3 +309,38 @@ def test_failed_semantic_observer_preserves_preview_and_assignments(qtbot, tmp_p
     finally:
         gui.close()
         controller.close()
+
+
+def test_pending_reference_selection_invalidates_old_split_preview(qtbot, tmp_path):
+    from timeit import default_timer
+
+    _, controller = make_controller(tmp_path)
+    gui = controller.create_gui(
+        view_count={'EvidenceAmplitudeView': 1},
+        default_views=['EvidenceAmplitudeView'],
+        do_prompt_save=False,
+    )
+    supervisor = controller.supervisor
+    try:
+        gui.show()
+        supervisor.select([0])
+        supervisor.block()
+        view = gui.get_view('EvidenceAmplitudeView')
+        drag_threshold(qtbot, view, 4.5)
+        assert supervisor._graphical_split_views() == [view]
+        assignments = supervisor.clustering.spike_clusters.copy()
+        supervisor.cluster_view.debouncer.delay = 60_000
+        supervisor.cluster_view.debouncer._last_submission_time = default_timer()
+        supervisor.cluster_view.select([1])
+        assert supervisor.selected == [0]
+        assert supervisor.cluster_view.get_selected_ids() == [1]
+
+        with pytest.raises(ValueError, match='threshold preview'):
+            supervisor.split()
+        assert supervisor.selected == [1]
+        assert view.split_threshold is None
+        assert not controller.bounded_session.events
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, assignments)
+    finally:
+        gui.close()
+        controller.close()
