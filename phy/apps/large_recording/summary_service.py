@@ -79,7 +79,7 @@ class _SummaryWorker:
                         finally:
                             logger.debug(
                                 'Full summary job: path=%s, units=%d, elapsed=%.3fs',
-                                engine.last_resolution_path,
+                                getattr(engine, 'last_resolution_path', 'unknown'),
                                 len(expressions),
                                 monotonic() - started,
                             )
