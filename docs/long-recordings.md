@@ -323,6 +323,10 @@ curation generations unchanged. The original-source fallback validates the
 required files on first use; later splits reuse validated readers while their
 file fingerprints remain unchanged. Closing the GUI cancels work without waiting for a complete scan.
 Saving curation does not wait for summary computation.
+The debug console records one `Full summary job` line per computation, including
+elapsed seconds and its path: `amplitude-index`, `row-store`, `source`, or
+`prepared/cache`. This distinguishes indexed work from fallback scans or reused
+results when reporting performance problems.
 
 Without a compatible summary store, new computations require the original
 source directory to be accessible and match the prepared source revision. If it moved, use **File > Locate summary

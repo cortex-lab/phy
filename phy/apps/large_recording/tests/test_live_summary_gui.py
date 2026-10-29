@@ -17,17 +17,39 @@ def _files(path):
     return {p.name: hash_file(p) for p in path.iterdir() if p.is_file()}
 
 
-@pytest.mark.parametrize('indexed', [False, True])
-def test_split_refreshes_views_and_table_then_merge_reopen(qtbot, tmp_path, monkeypatch, indexed):
+@pytest.mark.parametrize('indexed', [False, 'rows', 'amplitude'])
+def test_split_refreshes_views_and_table_then_merge_reopen(
+    qtbot, tmp_path, monkeypatch, indexed, caplog
+):
+    caplog.set_level('DEBUG', logger='phy.apps.large_recording.summary_service')
     params, controller = make_controller(tmp_path)
     source_files = _files(params.parent)
     package = controller.dir_path
     manifest_hash = hash_file(package / '_phy_curation_manifest.json')
+    range_queries = []
     if indexed:
         from phy.apps.large_recording.live_summaries import LiveSummaryEngine
         from phy.apps.large_recording.summary_store import build_summary_store
 
-        build_summary_store(package, tmp_path / 'summary-store', batch_size=2)
+        store = build_summary_store(package, tmp_path / 'summary-store', batch_size=2)
+        if indexed == 'amplitude':
+            from phy.apps.large_recording.range_build import build_amplitude_index
+            from phy.apps.large_recording.range_index import AmplitudeRangeIndex
+            from phy.apps.large_recording.summary_store import SummaryStore
+
+            ranges = build_amplitude_index(package, store / 'amplitude-index')
+            original_resolve = AmplitudeRangeIndex.resolve
+
+            def observe_range(self, expressions, *args, **kwargs):
+                result = original_resolve(self, expressions, *args, **kwargs)
+                range_queries.append((self.path, set(expressions)))
+                return result
+
+            def no_rows(*args, **kwargs):
+                raise AssertionError('Amplitude-index GUI used the row fallback')
+
+            monkeypatch.setattr(AmplitudeRangeIndex, 'resolve', observe_range)
+            monkeypatch.setattr(SummaryStore, 'batches', no_rows)
 
         def no_source(*args, **kwargs):
             raise AssertionError('Indexed GUI opened full source')
@@ -54,6 +76,13 @@ def test_split_refreshes_views_and_table_then_merge_reopen(qtbot, tmp_path, monk
         service.resume()
         qtbot.waitUntil(lambda: controller.get_full_count(selected) == 2, timeout=10000)
         supervisor.block()
+        if indexed == 'amplitude':
+            assert range_queries
+            assert any(
+                'Full summary job: path=amplitude-index' in r.getMessage() for r in caplog.records
+            )
+            assert all(path == ranges for path, _ in range_queries)
+            assert {selected, remainder} <= set().union(*(units for _, units in range_queries))
         np.testing.assert_array_equal(view.get_data(selected).counts, [2, 0, 0, 0])
         np.testing.assert_array_equal(view.get_data(remainder).counts, [0, 0, 1, 1])
         np.testing.assert_allclose(view.get_data(selected).rates, [0.4, 0, 0, 0])

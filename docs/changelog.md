@@ -13,6 +13,14 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Rapid candidate navigation preserves pending selection operations. Curation
+  actions settle the displayed selection before choosing targets and recording
+  undo history, including bounded merges, labels and quality assignments.
+
+- Background task cleanup tolerates Qt destruction order when closing Phy.
+  Detached workers finish without retaining Qt objects or sending callbacks to
+  deleted owners. Store-preparation dialogs clean up their preflight tasks too.
+
 - Prepared amplitude indexes accelerate full-recording rate and trend updates
   after threshold splits without scanning every spike in the original units.
   Existing stores can be upgraded from the GUI in the background or with

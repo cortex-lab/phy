@@ -144,6 +144,7 @@ class LiveSummaryEngine:
         self.resident = {}
         self.range_index = None
         self.range_reference = None
+        self.last_resolution_path = 'prepared/cache'
 
     def key(self, expression):
         return hash_json({'binding_sha256': self.binding_digest, 'expression': expression})
@@ -496,7 +497,9 @@ class LiveSummaryEngine:
                 self.range_index = AmplitudeRangeIndex(self)
         if self.range_index is not None:
             try:
-                return self.range_index.resolve(expressions, cancel, progress)
+                result = self.range_index.resolve(expressions, cancel, progress)
+                self.last_resolution_path = 'amplitude-index'
+                return result
             except RangeUnavailableError:
                 pass  # Unsupported/numerically unstable queries use verified rows.
             except (OSError, StoreIntegrityError):
@@ -545,6 +548,7 @@ class LiveSummaryEngine:
                     if progress:
                         progress('reading prepared unit summaries', done, total)
             _check_cancel(cancel)
+        self.last_resolution_path = 'row-store'
         return outputs
 
     def remember(self, expressions, results):
@@ -593,6 +597,7 @@ class LiveSummaryEngine:
 
     def resolve(self, expressions, cancel=None, progress=None):
         """Return complete summaries, scanning every unresolved membership once."""
+        self.last_resolution_path = 'prepared/cache'
         results = self.cached(expressions, cancel)
         missing = {
             unit: expression for unit, expression in expressions.items() if unit not in results
@@ -612,6 +617,7 @@ class LiveSummaryEngine:
                 results[unit] = _freeze(summary)
                 self._publish(self.key(missing[unit]), summary)
             return results
+        self.last_resolution_path = 'source'
         names = {'spike_times.npy', 'spike_clusters.npy'}
         for expression in missing.values():
             names |= self._required(expression)

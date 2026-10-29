@@ -1174,8 +1174,11 @@ bounded details. A different stage or progress unit starts a fresh ETA estimate.
 
 On accepted GUI closure, disconnect your completion callback, call
 `widget.dispose()`, then `manager.detach()`. Do not detach when a close/save
-prompt is vetoed. Retained task ownership permits cleanup and terminal delivery
-after the GUI has gone away. For dataset tasks, check the dataset and GUI
+prompt is vetoed. The manager keeps terminal polling active after detachment,
+without calling the owner's callbacks. Workers retain only plain Python task
+state; they never access Qt delivery objects. If Qt destroys the manager first,
+its destruction handler requests cancellation and releases retained manager
+ownership on the GUI thread. No worker join is required during closure. For dataset tasks, check the dataset and GUI
 identity again before adopting results; do not restore a selection captured at
 submission time.
 

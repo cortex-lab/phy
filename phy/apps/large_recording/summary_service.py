@@ -1,5 +1,6 @@
 """Controller-owned, deferred coordination of exact full-recording summaries."""
 
+import logging
 from concurrent.futures import CancelledError
 from contextlib import suppress
 from copy import deepcopy
@@ -12,6 +13,8 @@ from phy.gui.qt import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
 from phy.gui.tasks import heavy_io
 
 from .live_summaries import LiveSummaryEngine, _check_cancel, membership_expressions
+
+logger = logging.getLogger(__name__)
 
 
 class _Delivery(QObject):
@@ -68,11 +71,18 @@ class _SummaryWorker:
                     with heavy_io(
                         check_cancel, waiting=lambda: progress('waiting for recording I/O', 0, 0)
                     ):
+                        started = monotonic()
                         try:
                             results = engine.resolve(
                                 expressions, cancel=cancel.is_set, progress=progress
                             )
                         finally:
+                            logger.debug(
+                                'Full summary job: path=%s, units=%d, elapsed=%.3fs',
+                                engine.last_resolution_path,
+                                len(expressions),
+                                monotonic() - started,
+                            )
                             if self.stopped.is_set():
                                 engine.close()
                 except Exception as exc:
