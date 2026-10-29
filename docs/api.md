@@ -2035,7 +2035,7 @@ Restore a visual order by name, tolerating changed plugin columns.
 #### Table.set_selected_ids
 
 
-**`Table.set_selected_ids(self, ids)`**
+**`Table.set_selected_ids(self, ids, *, _invalidate_pending=True)`**
 
 Project selected row IDs without emitting a selection event.
 
@@ -7045,7 +7045,7 @@ Restore a visual order by name, tolerating changed plugin columns.
 #### ClusterView.set_selected_ids
 
 
-**`ClusterView.set_selected_ids(self, ids)`**
+**`ClusterView.set_selected_ids(self, ids, *, _invalidate_pending=True)`**
 
 Project selected row IDs without emitting a selection event.
 
@@ -10006,7 +10006,7 @@ Restore a visual order by name, tolerating changed plugin columns.
 #### SimilarityView.set_selected_ids
 
 
-**`SimilarityView.set_selected_ids(self, ids)`**
+**`SimilarityView.set_selected_ids(self, ids, *, _invalidate_pending=True)`**
 
 Project selected row IDs without emitting a selection event.
 
