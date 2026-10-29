@@ -237,3 +237,133 @@ def test_eta_stalls_contribute_to_next_rate_sample():
     now[0] = 20
     remaining = eta.update(TaskProgress('Scan', 20, 100))
     assert remaining > 8  # The 19-second stall must lower the 10 units/s rate.
+
+
+def test_finished_callback_can_chain_task_without_losing_terminal_poll(qtbot):
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    outcomes, ids = [], []
+
+    def finished(outcome):
+        outcomes.append(outcome)
+        if len(outcomes) == 1:
+            ids.append(manager.submit(TaskSpec('chain-2', 'Second', lambda r, c: 2, None)))
+
+    manager.finished.connect(finished)
+    ids.append(manager.submit(TaskSpec('chain-1', 'First', lambda r, c: 1, None)))
+    qtbot.waitUntil(lambda: len(outcomes) == 2)
+    assert [o.result for o in outcomes] == [1, 2]
+    assert not manager.busy
+    assert all(task not in tasks._MANAGERS for task in ids)
+    assert not manager._timer.isActive()
+
+
+@pytest.mark.parametrize('delete_when', ['pending', 'running', 'succeeded'])
+def test_state_observer_can_delete_manager_without_late_qt_access(qtbot, delete_when):
+    from PyQt5 import sip
+
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    started, release = Event(), Event()
+
+    def worker(request, context):
+        context.report(TaskProgress('Working', 1, 2))
+        started.set()
+        assert release.wait(3)
+        context.check_cancel()
+        return 1
+
+    def state_changed(state):
+        if state == delete_when:
+            sip.delete(manager)
+
+    manager.state_changed.connect(state_changed)
+    task = manager.submit(TaskSpec('delete-state-' + delete_when, 'Delete observer', worker, None))
+    record = manager._lifetime.record
+    if delete_when == 'running':
+        assert started.wait(3)
+        qtbot.waitUntil(lambda: sip.isdeleted(manager))
+    release.set()
+    qtbot.waitUntil(lambda: task not in tasks._MANAGERS)
+    qtbot.waitUntil(lambda: manager.spec.key not in tasks._ACTIVE)
+    assert sip.isdeleted(manager)
+    assert manager._lifetime.dead
+    assert record.context.cancelled.is_set()
+
+
+def test_terminal_registry_released_even_if_state_presentation_fails(qtbot, monkeypatch):
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    manager.task_id = 'raising-terminal'
+    tasks._MANAGERS[manager.task_id] = manager
+
+    def fail(state):
+        raise RuntimeError('observer failed')
+
+    monkeypatch.setattr(manager, '_set_state', fail)
+    with pytest.raises(RuntimeError, match='observer failed'):
+        manager._terminal(tasks.TaskOutcome(manager.task_id, 'succeeded'))
+    assert manager.task_id not in tasks._MANAGERS
+
+
+@pytest.mark.parametrize('committing', [False, True])
+def test_deleted_manager_worker_finishes_without_qt_ownership_in_subprocess(tmp_path, committing):
+    import subprocess
+    import sys
+
+    script = r"""
+import gc
+import threading
+import time
+import weakref
+from PyQt5 import sip
+from phy.gui.qt import create_app
+from phy.gui.tasks import BackgroundTaskManager, TaskSpec, _ACTIVE, _MANAGERS
+app = create_app()
+errors=[]
+threading.excepthook = lambda arg: errors.append(str(arg.exc_value))
+started, release=threading.Event(), threading.Event()
+committing = COMMITTING
+
+def worker(request, context):
+    if committing:
+        context.commit()
+    started.set()
+    assert release.wait(3)
+    context.check_cancel()
+    return 123
+
+manager=BackgroundTaskManager()
+task=manager.submit(TaskSpec('destroy-worker', 'Destroy worker', worker, None, heavy=False))
+assert started.wait(3)
+record=manager._lifetime.record
+reference=weakref.ref(manager)
+sip.delete(manager)
+manager.detach()
+assert task not in _MANAGERS
+assert record.context.cancelled.is_set()
+del manager
+gc.collect()
+assert reference() is None, 'worker retains the deleted Qt manager'
+release.set()
+end=time.monotonic()+3
+while record.outcome is None and time.monotonic()<end:
+    app.processEvents()
+    time.sleep(.005)
+assert record.outcome is not None
+assert record.outcome.state == ('succeeded' if committing else 'cancelled')
+assert 'destroy-worker' not in _ACTIVE
+assert task not in _MANAGERS
+assert not errors, errors
+print('deleted manager worker completed safely')
+""".replace('COMMITTING', repr(committing))
+    result = subprocess.run(
+        [sys.executable, '-c', script], capture_output=True, text=True, timeout=15
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'completed safely' in result.stdout
+    assert 'RuntimeError' not in result.stderr
+    assert 'Timers cannot' not in result.stderr

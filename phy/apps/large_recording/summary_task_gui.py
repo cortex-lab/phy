@@ -104,6 +104,7 @@ class StorePrompt(QDialog):
         self._disk_timer.setInterval(250)
         self._disk_timer.timeout.connect(self._disk_check)
         self.finished.connect(self._dispose_preflight)
+        self.destroyed.connect(lambda *_: self._dispose_preflight())
         self.setWindowTitle('Prepare faster full-recording summaries?')
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         layout = QVBoxLayout(self)
@@ -227,8 +228,10 @@ class StorePrompt(QDialog):
         if self._preflight_closed:
             return
         self._preflight_closed = True
-        self._disk_timer.stop()
-        self._disk_manager.finished.disconnect(self._disk_finished)
+        with suppress(TypeError, RuntimeError):
+            self._disk_timer.stop()
+        with suppress(TypeError, RuntimeError):
+            self._disk_manager.finished.disconnect(self._disk_finished)
         self._disk_manager.detach()
 
     def _build(self):
@@ -537,7 +540,9 @@ class SummaryStoreActions(QObject):
             self.widget.notice('Summary store ready. New splits use the prepared store.')
 
     def _restore_activation(self, active, focus):
-        if not self._valid() or QApplication.activeWindow() not in (self.dialog, None):
+        # Reassert the GUI even if it is still active: native activation of
+        # the newly shown dialog may already be queued behind this callback.
+        if not self._valid() or QApplication.activeWindow() not in (self.dialog, None, self.gui):
             return
         target = active if active is not None and not sip.isdeleted(active) else self.gui
         target.activateWindow()
@@ -553,8 +558,14 @@ class SummaryStoreActions(QObject):
         self._closed = True
         with suppress(TypeError, RuntimeError):
             self.manager.finished.disconnect(self._finished)
-        self.widget.dispose()
-        self.manager.detach()
-        if self.dialog is not None and not sip.isdeleted(self.dialog):
-            self.dialog.close()
-        unconnect(self._on_closed, self._on_shown)
+        try:
+            self.widget.dispose()
+        finally:
+            try:
+                self.manager.detach()
+            finally:
+                try:
+                    if self.dialog is not None and not sip.isdeleted(self.dialog):
+                        self.dialog.close()
+                finally:
+                    unconnect(self._on_closed, self._on_shown)

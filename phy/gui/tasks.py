@@ -11,7 +11,7 @@ from threading import Event, Lock, Thread
 from time import monotonic
 from uuid import uuid4
 
-from .qt import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
+from .qt import QObject, QTimer, pyqtSignal, pyqtSlot
 
 _HEAVY_IO = Lock()
 _ACTIVE = set()
@@ -149,16 +149,66 @@ class TaskContext:
         )
 
 
-class _Delivery(QObject):
-    terminal = pyqtSignal(object)
+@dataclass
+class _TaskRecord:
+    """Plain Python worker ownership, independent of the manager's Qt lifetime."""
+
+    task_id: str
+    context: TaskContext
+    outcome: TaskOutcome | None = None
+
+
+class _ManagerLifetime:
+    """The destruction callback captures no QObject or bound Qt method."""
+
+    def __init__(self):
+        self.dead = False
+        self.record = None
+
+    def destroy(self, *args):
+        self.dead = True
+        record = self.record
+        if record is not None:
+            with record.context.lock:
+                record.context.cancelled.set()
+            # QObject.destroyed runs on its GUI owner thread. Workers retain
+            # only the plain record, so releasing this wrapper here is safe.
+            _MANAGERS.pop(record.task_id, None)
+
+
+def _run_task(spec, record):
+    """A worker never retains, calls, or releases a Qt wrapper."""
+    context = record.context
+    try:
+        if spec.heavy:
+            context.report(
+                TaskProgress('Waiting', message='Waiting for other recording I/O to finish.')
+            )
+            with heavy_io(context.check_cancel):
+                result = spec.worker(spec.request, context)
+        else:
+            context.check_cancel()
+            result = spec.worker(spec.request, context)
+        _immutable(result)
+        context.check_cancel()
+        outcome = TaskOutcome(record.task_id, 'succeeded', result=result)
+    except TaskCancelledError:
+        outcome = TaskOutcome(record.task_id, 'cancelled')
+    except BaseException as error:
+        outcome = TaskOutcome(record.task_id, 'failed', error=str(error))
+    finally:
+        with _ACTIVE_LOCK:
+            _ACTIVE.discard(spec.key)
+    with context.lock:
+        record.outcome = outcome
 
 
 class BackgroundTaskManager(QObject):
-    """One task per manager, no queued backlog, and process-wide key deduplication.
+    """One task per manager, no backlog, and process-wide key deduplication.
 
-    Progress occupies one mailbox slot even when the GUI event loop is stalled.
-    A worker retains manager/delivery ownership through terminal cleanup. Owners
-    must disconnect their own callbacks on accepted closure, then call detach().
+    Workers retain only plain Python state. The GUI polls bounded progress and
+    terminal mailboxes; it owns Qt cleanup even after the task owner detaches.
+    QObject destruction cancels work and releases manager ownership immediately.
     """
 
     progress = pyqtSignal(object)
@@ -175,8 +225,8 @@ class BackgroundTaskManager(QObject):
         self._mailbox = [None]
         self._detached = False
         self._context = None
-        self._delivery = _Delivery()
-        self._delivery.terminal.connect(self._terminal, Qt.QueuedConnection)
+        self._lifetime = _ManagerLifetime()
+        self.destroyed.connect(self._lifetime.destroy)
         self._timer = QTimer(self)
         self._timer.setInterval(250)
         self._timer.timeout.connect(self._poll)
@@ -187,11 +237,11 @@ class BackgroundTaskManager(QObject):
 
     def _set_state(self, state):
         self.state = state
-        if not self._detached:
+        if not self._detached and not self._lifetime.dead:
             self.state_changed.emit(state)
 
     def submit(self, spec):
-        if self.busy or self._detached:
+        if self.busy or self._detached or self._lifetime.dead:
             raise ValueError('A background task is already active or its owner has closed.')
         _immutable(spec.request)
         with _ACTIVE_LOCK:
@@ -202,74 +252,69 @@ class BackgroundTaskManager(QObject):
         self._cancel = Event()
         self._mailbox = [None]
         self._context = TaskContext(self._cancel, self._lock, self._mailbox)
+        record = _TaskRecord(self.task_id, self._context)
+        self._lifetime.record = record
         _MANAGERS[self.task_id] = self
         self._set_state('pending')
-        self._timer.start()
+        # A state observer may synchronously close/delete the manager.
+        if not self._lifetime.dead:
+            self._timer.start()
         try:
-            Thread(target=self._run, args=(spec, self.task_id, self._context), daemon=True).start()
+            Thread(target=_run_task, args=(spec, record), daemon=True).start()
         except BaseException as error:
             with _ACTIVE_LOCK:
                 _ACTIVE.discard(spec.key)
-            self._delivery.terminal.emit(
-                TaskOutcome(
-                    self.task_id, 'failed', error=f'Could not start background worker: {error}'
+            with record.context.lock:
+                record.outcome = TaskOutcome(
+                    record.task_id, 'failed', error=f'Could not start background worker: {error}'
                 )
-            )
-        return self.task_id
+        return record.task_id
 
-    def _run(self, spec, task_id, context):
-        try:
-            if spec.heavy:
-                context.report(
-                    TaskProgress('Waiting', message='Waiting for other recording I/O to finish.')
-                )
-                with heavy_io(context.check_cancel):
-                    result = spec.worker(spec.request, context)
-            else:
-                context.check_cancel()
-                result = spec.worker(spec.request, context)
-            _immutable(result)
-            # A committed artifact remains success even if a late cancel arrives.
-            context.check_cancel()
-            outcome = TaskOutcome(task_id, 'succeeded', result=result)
-        except TaskCancelledError:
-            outcome = TaskOutcome(task_id, 'cancelled')
-        except BaseException as error:
-            outcome = TaskOutcome(task_id, 'failed', error=str(error))
-        finally:
-            with _ACTIVE_LOCK:
-                _ACTIVE.discard(spec.key)
-        self._delivery.terminal.emit(outcome)
-
-    @pyqtSlot()
-    def _poll(self):
-        with self._lock:
-            progress, self._mailbox[0] = self._mailbox[0], None
-        if progress is None or self._detached:
+    def _present_progress(self, progress, context):
+        if progress is None or self._detached or self._lifetime.dead:
             return
-        if self._context.committing:
+        if context.committing:
             self._set_state('committing')
         elif self.state != 'cancelling':
             self._set_state('running')
-        self.progress.emit(progress)
+        if not self._detached and not self._lifetime.dead:
+            self.progress.emit(progress)
 
-    @pyqtSlot(object)
+    @pyqtSlot()
+    def _poll(self):
+        if self._lifetime.dead:
+            return
+        record = self._lifetime.record
+        if record is None:
+            return
+        with record.context.lock:
+            progress, record.context.mailbox[0] = record.context.mailbox[0], None
+            outcome, record.outcome = record.outcome, None
+        try:
+            self._present_progress(progress, record.context)
+        finally:
+            # Even a failing progress observer must not strand task ownership.
+            if outcome is not None:
+                self._terminal(outcome)
+
     def _terminal(self, outcome):
         if outcome.task_id != self.task_id:
             return
-        self._poll()
-        self._timer.stop()
-        self._set_state(outcome.state)
         try:
-            if not self._detached:
+            if not self._lifetime.dead:
+                self._timer.stop()
+            self._set_state(outcome.state)
+            if not self._detached and not self._lifetime.dead:
                 self.finished.emit(outcome)
         finally:
+            # A finished callback can submit a new task. Only release this run;
+            # its callback owns the new timer, mailbox, and registry entry.
             _MANAGERS.pop(outcome.task_id, None)
 
     @property
     def cancellation_requested(self):
         """A late cancel preserves a committed artifact but stops a task pipeline."""
-        return self._cancel.is_set() if self._cancel is not None else False
+        return self._cancel.is_set()
 
     def cancel(self):
         if self.busy:
@@ -281,4 +326,7 @@ class BackgroundTaskManager(QObject):
     def detach(self):
         self._detached = True
         self.cancel()
-        self._timer.stop()
+        # Keep polling until terminal cleanup on the GUI thread. If Qt already
+        # deleted this manager, its destruction callback released ownership.
+        if not self.busy and not self._lifetime.dead:
+            self._timer.stop()

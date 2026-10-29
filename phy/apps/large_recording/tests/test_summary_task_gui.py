@@ -29,7 +29,17 @@ def test_build_keeps_gui_responsive_and_adopts_store_after_curation(
     qtbot, opened, tmp_path, monkeypatch
 ):
     from phy.apps.large_recording.live_summaries import LiveSummaryEngine
+    from phy.apps.large_recording.range_index import AmplitudeRangeIndex
 
+    range_queries = []
+    original_range = AmplitudeRangeIndex.resolve
+
+    def observe_range(self, expressions, *args, **kwargs):
+        result = original_range(self, expressions, *args, **kwargs)
+        range_queries.append(set(expressions))
+        return result
+
+    monkeypatch.setattr(AmplitudeRangeIndex, 'resolve', observe_range)
     controller, gui, actions = opened
     original = summary_task_gui.prepare_summary_store
     started, release, built, deliver = Event(), Event(), Event(), Event()
@@ -71,6 +81,8 @@ def test_build_keeps_gui_responsive_and_adopts_store_after_curation(
         assert actions.manager.state == 'succeeded'
         assert controller.supervisor.is_dirty()  # Building must not save curation.
         assert 'ready' in actions.widget.label.text().lower()
+        assert range_queries
+        assert set(children) <= set().union(*range_queries)
     finally:
         timer.stop()
         release.set()
@@ -422,3 +434,122 @@ def test_attach_independent_amplitude_index_from_gui(qtbot, opened, tmp_path):
         assert reader.path == moved
         reader.close()
     assert not controller._live_summaries._suspended
+
+
+@pytest.mark.parametrize('state', ['idle', 'completed', 'active'])
+def test_deleted_task_manager_does_not_interrupt_owner_cleanup(qtbot, opened, state):
+    from PyQt5 import sip
+
+    from phy.gui import tasks
+
+    controller, gui, actions = opened
+    manager = actions.manager
+    started, release = Event(), Event()
+
+    def worker(request, context):
+        started.set()
+        assert release.wait(3)
+        context.check_cancel()
+        return None
+
+    record = None
+    try:
+        if state != 'idle':
+            manager.submit(tasks.TaskSpec('owner-delete-' + state, 'Delete owner', worker, None))
+            assert started.wait(3)
+            record = manager._lifetime.record
+            if state == 'completed':
+                release.set()
+                qtbot.waitUntil(lambda: not manager.busy)
+        sip.delete(manager)
+        actions.close()
+        actions.close()
+        assert actions._closed
+        assert actions.widget._disposed
+        assert manager._detached
+        if record is not None:
+            assert record.context.cancelled.is_set()
+            assert record.task_id not in tasks._MANAGERS
+    finally:
+        release.set()
+        if record is not None and state == 'active':
+            qtbot.waitUntil(lambda: record.outcome is not None)
+
+
+def test_owner_cleanup_cancels_task_even_if_widget_cleanup_raises(qtbot, opened, monkeypatch):
+    _, _, actions = opened
+
+    def fail():
+        raise RuntimeError('injected cleanup failure')
+
+    monkeypatch.setattr(actions.widget, 'dispose', fail)
+    with pytest.raises(RuntimeError, match='injected'):
+        actions.close()
+    assert actions.manager._detached
+    assert actions._closed
+    actions.close()
+
+
+@pytest.mark.parametrize('deleted', ['manager', 'timer', 'dialog'])
+def test_prompt_preflight_cleanup_survives_qt_deletion(qtbot, tmp_path, deleted):
+    from PyQt5 import sip
+
+    estimate = StoreEstimate(100, 100, 10, 6, str(tmp_path / 'source'))
+    prompt = summary_task_gui.StorePrompt(
+        StoreInspection(estimate, False, True), tmp_path / 'store'
+    )
+    manager = prompt._disk_manager
+    if deleted == 'manager':
+        sip.delete(manager)
+    elif deleted == 'timer':
+        sip.delete(prompt._disk_timer)
+    else:
+        sip.delete(prompt)
+    prompt._dispose_preflight()
+    prompt._dispose_preflight()
+    assert prompt._preflight_closed
+    assert manager._detached
+    if not sip.isdeleted(prompt):
+        prompt.close()
+
+
+@pytest.mark.parametrize('completed', [False, True])
+def test_gui_destruction_after_manager_deletion_exits_cleanly_in_subprocess(tmp_path, completed):
+    import subprocess
+    import sys
+
+    script = r"""
+import sys
+import time
+from pathlib import Path
+from PyQt5 import sip
+from phy.gui.qt import create_app
+from phy.gui.tasks import TaskSpec
+from phy.apps.large_recording.tests.test_adapter import make_controller
+app = create_app()
+_, controller = make_controller(Path(sys.argv[1]))
+gui = controller.create_gui(default_views=[], do_prompt_save=False)
+actions = controller._summary_store_actions
+actions._checked = True
+if COMPLETED:
+    actions.manager.submit(TaskSpec('destroy-after-completion', 'Complete', lambda r,c: None, None))
+    end=time.monotonic()+3
+    while actions.manager.busy and time.monotonic()<end:
+        app.processEvents()
+        time.sleep(.005)
+    assert not actions.manager.busy
+sip.delete(actions.manager)
+sip.delete(gui)
+assert actions._closed
+assert actions.widget._disposed
+assert actions.manager._detached
+controller.close()
+print('GUI shutdown completed safely')
+""".replace('COMPLETED', repr(completed))
+    result = subprocess.run(
+        [sys.executable, '-c', script, str(tmp_path)], capture_output=True, text=True, timeout=20
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'shutdown completed safely' in result.stdout
+    assert 'RuntimeError' not in result.stderr
+    assert 'Aborted' not in result.stderr

@@ -20,6 +20,7 @@ class TaskWidget(QWidget):
 
     def __init__(self, manager, parent=None):
         super().__init__(parent)
+        self._disposed = False
         self.manager = manager
         self.eta = StageETA()
         self._last_stage = None
@@ -119,13 +120,13 @@ class TaskWidget(QWidget):
         if getattr(self, '_disposed', False):
             return
         self._disposed = True
-        for signal, slot in (
-            (self.manager.progress, self.on_progress),
-            (self.manager.finished, self.on_finished),
-            (self.manager.state_changed, self.on_state),
+        for name, slot in (
+            ('progress', self.on_progress),
+            ('finished', self.on_finished),
+            ('state_changed', self.on_state),
         ):
             # Qt can disconnect receivers while deleting their parent GUI.
             with suppress(TypeError, RuntimeError):
-                signal.disconnect(slot)
+                getattr(self.manager, name).disconnect(slot)
         if not sip.isdeleted(self.details):
             self.details.close()
