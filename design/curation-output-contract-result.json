@@ -1,0 +1,146 @@
+{
+  "ok": true,
+  "method": "exact all-row two-way ID mapping",
+  "revision": "eb7983f0cd435c8acd5ef3722e19df00356b3ef8",
+  "rows": 469725567,
+  "assignment_dtypes": [
+    "int32",
+    "int64"
+  ],
+  "partition_mismatch_rows": 0,
+  "manual_label_mismatches": [],
+  "input_hashes": {
+    "left": {
+      "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c",
+      "spike_clusters.npy": "3cbef5e08dc915ddd57aac9c214370a34282d264695f53959c184d6f8f2b7148"
+    },
+    "right": {
+      "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c",
+      "spike_clusters.npy": "b0223191c2cd29d2167b975175d22428bfe444175e19dc68e67aa9a82aea5168"
+    }
+  },
+  "file_contract": {
+    "ok": true,
+    "assignment_oracle": {
+      "verified": true,
+      "source_rows": 469725567,
+      "membership_events": 3,
+      "threshold_splits": 1
+    },
+    "immutable_files": [
+      "_phy_spikes_subset.channels.npy",
+      "_phy_spikes_subset.manifest.json",
+      "_phy_spikes_subset.sample_index.npy",
+      "_phy_spikes_subset.spikes.npy",
+      "_phy_spikes_subset.waveforms.npy",
+      "_phy_spikes_subset.window_bounds.npy",
+      "_phy_spikes_subset.window_strata.npy",
+      "_phy_spikes_subset.window_types.npy",
+      "amplitudes.npy",
+      "channel_groups.npy",
+      "channel_map.npy",
+      "channel_map_si.npy",
+      "channel_positions.npy",
+      "curation.json",
+      "similar_templates.npy",
+      "spike_templates.npy",
+      "spike_times.npy",
+      "template_ind.npy",
+      "templates.npy",
+      "timestamps.json"
+    ],
+    "native_derived_static_files": [
+      "whitening_mat_inv.npy"
+    ],
+    "all_metadata_fields": [
+      "amplitude_cutoff",
+      "amplitude_cv_median",
+      "amplitude_cv_range",
+      "amplitude_median",
+      "bombcell_label",
+      "channel_group",
+      "default_qc",
+      "exp_decay",
+      "firing_range",
+      "group",
+      "isi_violations_count",
+      "isi_violations_ratio",
+      "main_peak_to_trough_ratio",
+      "main_to_next_extremum_duration",
+      "noise_cutoff",
+      "noise_ratio",
+      "notes",
+      "num_negative_peaks",
+      "num_positive_peaks",
+      "peak_after_to_trough_ratio",
+      "peak_after_width",
+      "peak_before_to_peak_after_ratio",
+      "peak_before_to_trough_ratio",
+      "peak_before_width",
+      "peak_half_width",
+      "peak_to_trough_duration",
+      "presence_ratio",
+      "recovery_slope",
+      "repolarization_slope",
+      "rp_contamination",
+      "rp_violations",
+      "sd_ratio",
+      "si_unit_id",
+      "sliding_rp_violation",
+      "snr",
+      "spread",
+      "sync_spike_2",
+      "sync_spike_4",
+      "sync_spike_8",
+      "trough_half_width",
+      "trough_width",
+      "unitrefine_label",
+      "unitrefine_probability",
+      "velocity_above",
+      "velocity_below",
+      "waveform_baseline_flatness"
+    ],
+    "permitted_metadata_differences": [],
+    "ordinary_aliases": [
+      {
+        "filename": "cluster_si_unit_ids.tsv",
+        "field": "si_unit_id",
+        "policy": "unchanged source alias"
+      },
+      {
+        "filename": "cluster_sync_spike_2.tsv",
+        "field": "sync_spike_2",
+        "policy": "byte-pinned blank source column"
+      },
+      {
+        "filename": "cluster_sync_spike_4.tsv",
+        "field": "sync_spike_4",
+        "policy": "byte-pinned blank source column"
+      },
+      {
+        "filename": "cluster_sync_spike_8.tsv",
+        "field": "sync_spike_8",
+        "policy": "byte-pinned blank source column"
+      }
+    ],
+    "preparation_verified": true,
+    "saved_generation_verified": "96fce3cd8e02474f8a175ddbb89c571c",
+    "historical_parents": "recorded cumulative ancestry; current parent bound to supplied manifest"
+  },
+  "file_inventory_counts": {
+    "ordinary": {
+      "required": 70,
+      "optional_artifacts": [
+        ".phy",
+        "cluster_info.tsv",
+        "curation_review.json",
+        "phy.log"
+      ]
+    },
+    "replay": {
+      "required": 73,
+      "optional_artifacts": []
+    }
+  },
+  "scope": "Full source logical output contract with independent cumulative predicate execution over every source row; explicit optional artifacts have their own checks, only GUI caches/logs excluded from byte identity."
+}

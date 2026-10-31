@@ -1167,6 +1167,7 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
 **Events**
 
 close(gui)
+closed(gui)  # Emitted only after closure is accepted.
 show(gui)
 close_view(view, gui)
 
@@ -2034,7 +2035,7 @@ Restore a visual order by name, tolerating changed plugin columns.
 #### Table.set_selected_ids
 
 
-**`Table.set_selected_ids(self, ids)`**
+**`Table.set_selected_ids(self, ids, *, _invalidate_pending=True)`**
 
 Project selected row IDs without emitting a selection event.
 
@@ -7044,7 +7045,7 @@ Restore a visual order by name, tolerating changed plugin columns.
 #### ClusterView.set_selected_ids
 
 
-**`ClusterView.set_selected_ids(self, ids)`**
+**`ClusterView.set_selected_ids(self, ids, *, _invalidate_pending=True)`**
 
 Project selected row IDs without emitting a selection event.
 
@@ -10005,7 +10006,7 @@ Restore a visual order by name, tolerating changed plugin columns.
 #### SimilarityView.set_selected_ids
 
 
-**`SimilarityView.set_selected_ids(self, ids)`**
+**`SimilarityView.set_selected_ids(self, ids, *, _invalidate_pending=True)`**
 
 Project selected row IDs without emitting a selection event.
 
@@ -10116,6 +10117,13 @@ Component that brings manual clustering facilities to a GUI:
 * `skip_masked_clusters : bool`
     Whether automatic navigation and similar-cluster selection skip noise and MUA
     clusters. The default is True.
+
+* `clustering_factory : callable, optional`
+    Construct the clustering model. Defaults to Clustering; bounded curation
+    supplies a guarded implementation with the same constructor interface.
+
+* `cluster_meta_factory : callable, optional`
+    Construct metadata from groups and labels. Defaults to create_cluster_meta.
 
 **Events**
 
@@ -13194,6 +13202,15 @@ Create a trace image view.
 **`TemplateController.create_trace_view(self)`**
 
 Create a trace view.
+
+---
+
+#### TemplateController.create_unit_stability_view
+
+
+**`TemplateController.create_unit_stability_view(self)`**
+
+Optionally inspect selected-unit activity over the loaded recording.
 
 ---
 
