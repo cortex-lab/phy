@@ -13,6 +13,10 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Unit Stability automatically marks and omits rate bins with negligible recorded
+  time from the plotted trace, keeping tiny acquisition fragments from flattening
+  the rest of the rate plot. Exact summaries and saved curation remain unchanged.
+
 - Rapid candidate navigation preserves pending selection operations. Curation
   actions settle the displayed selection before choosing targets and recording
   undo history, including bounded merges, labels and quality assignments.

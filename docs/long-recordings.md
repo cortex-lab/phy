@@ -266,6 +266,26 @@ is native resolution, preserving the prepared bin size (for example, 300 or
 full-source counts and rates use acquisition exposure, including declared gaps;
 source amplitude and depth summaries appear only when available.
 
+The firing-rate trace automatically leaves gaps in bins with less than 0.1% of
+their displayed duration recorded. Small gray ticks mark these bins, and a note
+reports how many were omitted. This display convention prevents tiny fragments
+of acquisition near gaps from dominating the rate scale; it is not a confidence
+estimate or a limit on firing rate. High rates in bins meeting the coverage rule
+remain visible. Coverage is evaluated after display coarsening, using the actual
+bin widths, including a shorter final bin. Exact counts, exposure, cached rates,
+and saved curation are unchanged. No summary-store rebuild is needed. Exposure
+still depends on the producer's recording intervals; this display rule cannot
+correct inaccurate acquisition metadata.
+
+The following generated example has a 19–22 Hz trace and one spike in a bin
+with only 0.4 ms recorded. Previously the resulting 2500 Hz estimate flattened
+the trace; the updated plot marks the low-coverage bin and keeps the normal
+rates readable. These are synthetic GUI captures, not Carl's native dataset.
+
+| Before | After |
+| --- | --- |
+| ![Before: tiny exposure dominates the rate scale](images/rate-coverage/before.png) | ![After: low-coverage bin marked and normal rates visible](images/rate-coverage/after.png) |
+
 Feature View uses window-relative seconds and labels the current window with its
 recording-time range. Unit Stability keeps the full-recording time context
 visible while individual windows are inspected.

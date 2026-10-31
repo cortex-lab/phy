@@ -499,6 +499,82 @@ def test_300_second_native_bins_and_weighted_trends(summary_view, monkeypatch):
     assert view.get_display_data(1) is source
 
 
+def test_negligible_exposure_masks_plot_only_for_sources_merges_and_live_splits(summary_view):
+    view = summary_view
+    common = view._common()
+    common.edges = np.array([0, 300, 600, 900, 1200])
+    common.exposure = np.array([300.0, 0.0004, 300.0, 0.0])
+    common.intervals = [[0, 300.0004], [600, 900]]
+    view.show_amplitude = view.show_depth = False
+    counts = np.array([[6000, 1, 6000, 0], [9000, 0, 9000, 0], [0, 0, 0, 0]])
+    view._summary_arrays['counts.npy'] = counts
+    view.on_select([1, 2, 4])
+    ax = next(view.canvas.iter_ax())
+    curves = {line.get_label(): line for line in ax.lines if line.get_label().isdigit()}
+    assert set(curves) == {'1', '2', '4'}
+    for label, expected in [('1', 20), ('2', 30), ('4', 50)]:
+        np.testing.assert_allclose(
+            curves[label].get_ydata(), [expected, np.nan, expected, np.nan], equal_nan=True
+        )
+        assert curves[label].get_marker() == '.'
+        assert curves[label].get_markevery() == [0, 2]
+    assert ax.get_ylim()[1] < 100  # Includes the axes-relative omission marker.
+    assert '1 rate bin omitted: too little recorded time.' in view._footer.get_text()
+    raw = view.get_data(1, ['firing_rate'])
+    np.testing.assert_allclose(raw.rates, [20, 2500, 20, np.nan], equal_nan=True)
+    np.testing.assert_array_equal(raw.counts, counts[0])
+    # A completed split uses the same exposure mask as original or merged units.
+    view.controller.get_live_summary = lambda c: {'counts': counts[0]}
+    view.on_select([5])
+    curve = next(line for line in ax.lines if line.get_label() == '5')
+    np.testing.assert_allclose(curve.get_ydata(), [20, np.nan, 20, np.nan], equal_nan=True)
+    assert view.get_data(5, ['firing_rate']).rates[1] == 2500
+    # Existing coarsening adds counts/exposure first, then reevaluates coverage.
+    view.set_display_bin_seconds(600)
+    curve = next(line for line in ax.lines if line.get_label() == '5')
+    np.testing.assert_allclose(curve.get_ydata(), [6001 / 300.0004, 20])
+    assert 'omitted' not in view._footer.get_text()
+    assert len(ax.lines) == 1
+    view.set_display_bin_seconds(0)
+    assert '1 rate bin omitted' in view._footer.get_text()
+    np.testing.assert_array_equal(view._summary_arrays['counts.npy'], counts)
+
+
+def test_high_rates_and_short_fully_recorded_final_bins_are_preserved(summary_view):
+    view = summary_view
+    common = view._common()
+    common.edges = np.array([0, 300, 600, 600.0004])
+    common.exposure = np.array([300.0, 0.3, 0.0004])
+    common.intervals = [[0, 300.3], [600, 600.0004]]
+    view.show_amplitude = view.show_depth = False
+    view._summary_arrays['counts.npy'] = np.array([[6000, 750, 1]])
+    view.on_select([1])
+    ax = next(view.canvas.iter_ax())
+    np.testing.assert_allclose(ax.lines[0].get_ydata(), [20, 2500, 2500])
+    assert ax.get_ylim()[1] > 2500
+    assert 'omitted' not in view._footer.get_text()
+    # The actual width of the final coarse bin matters too.
+    view.set_display_bin_seconds(600)
+    np.testing.assert_allclose(ax.lines[0].get_ydata(), [6750 / 300.3, 2500])
+
+
+@pytest.mark.parametrize('zero_exposure', [False, True])
+def test_all_low_coverage_rates_are_explicitly_unavailable(summary_view, zero_exposure):
+    view = summary_view
+    common = view._common()
+    common.exposure = np.array([0 if zero_exposure else 0.0004, 0.0004, 0.0004])
+    view.show_amplitude = view.show_depth = False
+    view._summary_arrays['counts.npy'] = np.array([[0, 1, 0]])
+    view.on_select([1])
+    ax = next(view.canvas.iter_ax())
+    assert not any(line.get_label().isdigit() for line in ax.lines)
+    assert any('No rate bins with sufficient recorded time.' in t.get_text() for t in ax.texts)
+    assert f'{2 if zero_exposure else 3} rate bins omitted' in view._footer.get_text()
+    assert ax.get_ylim()[1] < 1  # Neither the raw peak nor markers set the scale.
+    view.toggle_firing_rate(False)
+    assert 'omitted' not in view._footer.get_text()
+
+
 def test_cache_budget_independent_of_limit_and_released(summary_view):
     view = summary_view
     view.controller._source_units = lambda cluster: [1]

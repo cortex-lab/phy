@@ -22,6 +22,8 @@ class UnitStabilityView(ManualClusteringView):
     rate_line_width = 0.6
     display_bin_seconds = 0.0
     summary_cache_bytes = 64 * 1024 * 1024
+    # A display convention, not a confidence or physiological rate threshold.
+    _min_rate_coverage = 0.001
     _default_position = 'right'
     ex_status = 'Full-duration evidence; sampling cannot establish chronic unit identity.'
     _metrics = ('firing_rate', 'amplitude', 'depth')
@@ -373,6 +375,8 @@ class UnitStabilityView(ManualClusteringView):
             first_ax = axes[self._metrics.index(visible[0])]
             notes = []
             unavailable = {metric: [] for metric in visible}
+            low_rate_coverage = None
+            rate_plotted = False
             if not self.cluster_ids:
                 notes.append('Select a unit to inspect full-duration evidence.')
             for index, cluster_id in enumerate(self.displayed_ids):
@@ -385,16 +389,68 @@ class UnitStabilityView(ManualClusteringView):
                 for metric in visible:
                     ax = axes[self._metrics.index(metric)]
                     values = data.rates if metric == 'firing_rate' else data.trends.get(metric)
+                    rate_markers = {}
+                    if metric == 'firing_rate':
+                        if low_rate_coverage is None:
+                            low_rate_coverage = (data.exposure > 0) & (
+                                data.exposure < self._min_rate_coverage * np.diff(data.edges)
+                            )
+                        # Keep exact cached rates available; only the trace is masked.
+                        values = np.where(low_rate_coverage, np.nan, values)
+                        finite = np.isfinite(values)
+                        isolated = finite & ~np.r_[False, finite[:-1]] & ~np.r_[finite[1:], False]
+                        if np.any(isolated):
+                            rate_markers = {
+                                'marker': '.',
+                                'markersize': 3,
+                                'markevery': np.flatnonzero(isolated).tolist(),
+                            }
                     if values is not None and np.any(np.isfinite(values)):
+                        rate_plotted |= metric == 'firing_rate'
                         ax.plot(
                             x,
                             values,
                             color=color,
                             label=str(cluster_id),
                             linewidth=self.rate_line_width if metric == 'firing_rate' else 1.5,
+                            **rate_markers,
                         )
                     elif metric != 'firing_rate':
                         unavailable[metric].append(cluster_id)
+            if low_rate_coverage is not None and np.any(low_rate_coverage):
+                ax = axes[0]
+                n_omitted = np.count_nonzero(low_rate_coverage)
+                # Axes-relative y coordinates cannot inflate the firing-rate scale.
+                ax.plot(
+                    x[low_rate_coverage],
+                    np.full(n_omitted, 0.02),
+                    transform=ax.get_xaxis_transform(),
+                    linestyle='none',
+                    marker='|',
+                    color='0.5',
+                    label='_low_acquisition_coverage',
+                )
+                self._footer.set_text(
+                    '\n'.join(
+                        filter(
+                            None,
+                            (
+                                common.footer,
+                                f'{n_omitted} rate bin{"s" if n_omitted != 1 else ""} omitted: '
+                                'too little recorded time.',
+                            ),
+                        )
+                    )
+                )
+                if not rate_plotted:
+                    ax.text(
+                        0.02,
+                        0.85,
+                        'No rate bins with sufficient recorded time.',
+                        transform=ax.transAxes,
+                        va='top',
+                        fontsize=8,
+                    )
             labels = ('Rate (Hz)', 'Mean amplitude\n(source units)', 'Mean depth\n(source units)')
             for metric in visible:
                 ax = axes[self._metrics.index(metric)]
