@@ -152,12 +152,33 @@ uv pip install --editable ..\phylib
 These commands create the same editable development environment as the Linux and
 macOS instructions.
 
+### Read a SpikeInterface recording
+
+This capability currently requires the latest phylib source; released phylib
+2.7.1 does not include it. After installing the source checkouts above, install
+SpikeInterface into the same environment:
+
+```bash
+uv pip install --editable "../phylib[spikeinterface]"
+uv run --no-sync phy template-gui /path/to/output/params.py
+```
+
+In PowerShell, the editable path can also be written as
+`"..\phylib[spikeinterface]"`. Use `uv run --no-sync` after the override;
+ordinary `uv run` or `uv sync` can restore the released phylib from the lockfile.
+After syncing, reinstall the editable override before using this feature.
+
+See [SpikeInterface recordings](dataset.md#spikeinterface-recordings) for the
+input format and channel mapping requirements. For a recording without a sorting
+export, use `uv run --no-sync phy trace-gui /path/to/recording.json` or supply a
+saved `.zarr` recording directory.
+
 ### Verify which source is running
 
 Run the following commands from either operating system:
 
 ```bash
-uv run phy --version
+uv run --no-sync phy --version
 uv pip show phy phylib
 git log -1 --oneline
 git -C ../phylib log -1 --oneline

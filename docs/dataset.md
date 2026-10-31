@@ -68,6 +68,41 @@ Relative paths are resolved from the dataset directory. Prefer forward slashes,
 raw strings, or `pathlib` paths for Windows paths so that backslashes are not
 interpreted as Python escapes.
 
+## SpikeInterface recordings
+
+With [the phylib source installation](installation.md#read-a-spikeinterface-recording),
+`dat_path` can point to a single-segment recording's provenance JSON:
+
+```python
+dat_path = 'source/recording.json'  # recording.dump_to_json(...)
+n_channels_dat = 384
+sample_rate = 30000.0
+dtype = 'float32'
+offset = 0
+```
+
+A saved `.zarr` recording directory from `recording.save(format='zarr')` is
+another supported input. Sorting analyzers, arbitrary saved directories, multiple
+recordings, and multi-segment recordings are not supported by this reader.
+
+Set the sample rate, channel count, and dtype to match the **output recording**.
+The recording and sorting must use the same sample clock. `channel_map.npy`
+selects column positions in that output; SpikeInterface channel identifiers do
+not automatically remap an existing sorting export.
+
+The JSON path is relative to `params.py`; source paths saved relative to the JSON
+resolve from the JSON's directory. Provenance is not a self-contained export:
+its source data and any dependencies must remain accessible. The reader computes
+preprocessing lazily, without exporting the full recording. Remote source access
+belongs in the recording's provenance; `dat_path` itself is a local path.
+
+Returned samples already include SpikeInterface preprocessing and are unscaled,
+in the recording's dtype. Template GUI adds its existing 150 Hz high-pass filter
+by default. Use **Alt+R** to select `raw` if you do not want that additional
+filter. This selects the recording's output, not the original acquisition data;
+trace displays still perform their normal baseline centering. Standalone Trace
+GUI does not apply the Template GUI's high-pass filter.
+
 ## Core arrays
 
 These files form the smallest useful Template GUI dataset:
