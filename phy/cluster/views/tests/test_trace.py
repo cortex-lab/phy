@@ -36,6 +36,7 @@ from . import _stop_and_close
         ([1.0], 0, 0.002, None),
         ([0.0, 0.5, 1.0], 0, 0.002, None),
         ([0.25, 0.375, 0.75], 0, 0.125, None),
+        ([2.0, 2.002], 0, 0.002, None),
         ([0.25, 0.375, 0.75], 0, 0.25, 0.25),
         ([0.25, 0.26, 0.75, 0.76], 0.25, 0.02, 0.75),
         ([0.25, 0.26, 0.75, 0.76], 0.8, 0.02, 0.25),
@@ -45,13 +46,13 @@ from . import _stop_and_close
 )
 def test_next_short_isi(spike_times, time, period, expected):
     times = None if spike_times is None else np.asarray(spike_times)
-    assert _next_short_isi(times, time, period, block_size=2) == expected
+    assert _next_short_isi(times, time, period, sample_rate=1000, block_size=2) == expected
 
 
 def test_next_short_isi_block_boundary():
     times = np.array([0, 1, 2, 2.001, 4, 5])
-    assert _next_short_isi(times, 0, 0.002, block_size=2) == 2
-    assert _next_short_isi(times, 4, 0.002, block_size=2) == 2
+    assert _next_short_isi(times, 0, 0.002, sample_rate=1000, block_size=2) == 2
+    assert _next_short_isi(times, 4, 0.002, sample_rate=1000, block_size=2) == 2
 
 
 def test_trace_short_isi_navigation(qtbot, gui):

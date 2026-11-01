@@ -30,11 +30,12 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 
-def _next_short_isi(spike_times, time, refractory_period, block_size=10000):
+def _next_short_isi(spike_times, time, refractory_period, sample_rate, block_size=10000):
     """Return the leading spike time of the next short-ISI pair, wrapping once.
 
     Spike times must be sorted. Scan in bounded blocks rather than allocating
-    interspike intervals for the full cluster on each navigation action.
+    interspike intervals for the full cluster on each navigation action. Compare
+    sample gaps to avoid cancellation errors at the refractory-period boundary.
     """
     if spike_times is None or len(spike_times) < 2:
         return
@@ -45,8 +46,9 @@ def _next_short_isi(spike_times, time, refractory_period, block_size=10000):
     for first, stop in ((start, n_pairs), (0, start)):
         for lo in range(first, stop, block_size):
             hi = min(lo + block_size, stop)
-            intervals = np.diff(spike_times[lo : hi + 1])
-            matches = np.flatnonzero(intervals < refractory_period)
+            samples = np.rint(spike_times[lo : hi + 1] * sample_rate)
+            intervals = np.diff(samples)
+            matches = np.flatnonzero(intervals < refractory_period * sample_rate)
             if matches.size:
                 return spike_times[lo + matches[0]]
 
@@ -635,7 +637,9 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         # the requested spike, not that clipped center, to avoid repeating it.
         start = self._short_isi_time if self._short_isi_period == period else None
         spike_times = self.get_spike_times() if self.get_spike_times is not None else None
-        time = _next_short_isi(spike_times, self.time if start is None else start, period)
+        time = _next_short_isi(
+            spike_times, self.time if start is None else start, period, self.sample_rate
+        )
         if time is None:
             logger.info(
                 'No spike pair is shorter than the refractory period in the selected cluster.'
