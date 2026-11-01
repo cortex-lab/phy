@@ -374,6 +374,16 @@ This view shows the raw data traces across all channels, with spikes from the se
 
 You can switch the origin (top or bottom) with the `alt+o` shortcut.
 
+To inspect short interspike intervals, open a Correlogram View and press
+`shift+alt+pgdown` in the Trace View, or choose **Go to next short isi** from
+its menu. This jumps to the first spike of the next pair whose interval is
+strictly shorter than the refractory period set in the first open Correlogram
+View. Navigation uses all spikes in the first selected cluster, wraps at the
+end, and reads the current selection and threshold each time. If no pair
+qualifies, or no Correlogram View is open, the current time stays unchanged.
+Short intervals identify candidates for inspection; they do not by themselves
+establish that either spike should be excluded.
+
 #### Keyboard shortcuts
 
 ```text
@@ -388,6 +398,7 @@ Keyboard shortcuts
 - go_right                                 alt+right
 - go_to                                    alt+t
 - go_to_end                                alt+end
+- go_to_next_short_isi                     shift+alt+pgdown
 - go_to_next_spike                         alt+pgdown
 - go_to_previous_spike                     alt+pgup
 - go_to_start                              alt+home

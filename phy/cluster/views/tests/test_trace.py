@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose as ac
 from phylib.io.mock import artificial_spike_clusters, artificial_traces
 from phylib.utils import Bunch, connect
@@ -12,12 +13,100 @@ from phylib.utils.geometry import linear_positions
 
 from phy.plot.tests import mouse_click
 
-from ..trace import TraceImageView, TraceView, _iter_spike_waveforms, select_traces
+from ..correlogram import CorrelogramView
+from ..trace import (
+    TraceImageView,
+    TraceView,
+    _iter_spike_waveforms,
+    _next_short_isi,
+    select_traces,
+)
 from . import _stop_and_close
 
 # ------------------------------------------------------------------------------
 # Test trace view
 # ------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    'spike_times,time,period,expected',
+    [
+        (None, 0, 0.002, None),
+        ([], 0, 0.002, None),
+        ([1.0], 0, 0.002, None),
+        ([0.0, 0.5, 1.0], 0, 0.002, None),
+        ([0.25, 0.375, 0.75], 0, 0.125, None),
+        ([0.25, 0.375, 0.75], 0, 0.25, 0.25),
+        ([0.25, 0.26, 0.75, 0.76], 0.25, 0.02, 0.75),
+        ([0.25, 0.26, 0.75, 0.76], 0.8, 0.02, 0.25),
+        ([0.25, 0.25, 0.75], 0, 0.002, 0.25),
+        ([0.25, 0.26], 0, 0, None),
+    ],
+)
+def test_next_short_isi(spike_times, time, period, expected):
+    times = None if spike_times is None else np.asarray(spike_times)
+    assert _next_short_isi(times, time, period, block_size=2) == expected
+
+
+def test_next_short_isi_block_boundary():
+    times = np.array([0, 1, 2, 2.001, 4, 5])
+    assert _next_short_isi(times, 0, 0.002, block_size=2) == 2
+    assert _next_short_isi(times, 4, 0.002, block_size=2) == 2
+
+
+def test_trace_short_isi_navigation(qtbot, gui):
+    selection = {'times': np.array([0.3, 0.301, 0.6, 0.604])}
+    view = TraceView(
+        traces=lambda interval: Bunch(data=np.zeros((100, 2)), waveforms=[]),
+        spike_times=lambda: selection['times'],
+        n_channels=2,
+        sample_rate=1000,
+        duration=1,
+    )
+    correlogram = CorrelogramView(
+        correlograms=lambda *args, **kwargs: np.zeros((1, 1, 51)),
+        firing_rate=lambda *args, **kwargs: np.zeros((1, 1)),
+        sample_rate=1000,
+    )
+    try:
+        view.attach(gui)
+        view.go_to(0.2)
+        view.go_to_next_short_isi()
+        ac(view.time, 0.2)  # No correlogram: do not guess a threshold.
+
+        correlogram.attach(gui)
+        correlogram.set_refractory_period(2)  # Milliseconds, stored in seconds.
+        view.actions.get('go_to_next_short_isi').trigger()
+        ac(view.time, 0.3)
+        view.go_to_next_short_isi()
+        ac(view.time, 0.3)  # Only one qualifying pair: wrap to it.
+
+        correlogram.set_refractory_period(5)
+        view.go_to_next_short_isi()
+        ac(view.time, 0.6)  # Read the current threshold on every action.
+
+        selection['times'] = np.array([0.4, 0.401])
+        view.on_select(cluster_ids=[1])
+        view.go_to_next_short_isi()
+        ac(view.time, 0.4)  # A new selection must not reuse old candidates.
+
+        for times in (None, np.array([]), np.array([0.5]), np.array([0.2, 0.8])):
+            selection['times'] = times
+            view.go_to_next_short_isi()
+            ac(view.time, 0.4)
+
+        selection['times'] = np.array([0.01, 0.011, 0.99, 0.991])
+        view.on_select(cluster_ids=[2])
+        view.go_to(0.5)
+        view.go_to_next_short_isi()
+        ac(view.time, 0.875)  # The target is near the end; the viewport is clipped.
+        view.go_to_next_short_isi()
+        ac(view.time, 0.125)  # Wrap rather than getting stuck at the last pair.
+        view.go_to_next_short_isi()
+        ac(view.time, 0.875)
+    finally:
+        _stop_and_close(qtbot, correlogram)
+        _stop_and_close(qtbot, view)
 
 
 def test_iter_spike_waveforms():

@@ -18,6 +18,9 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Jump to the next short-ISI spike pair in the Trace View with
+  `Shift+Alt+PageDown`, using the first open Correlogram View's refractory period
+  and all spikes from the first selected cluster.
 - Right-clicking a correlogram transfers its row cluster between the primary and
   Similarity roles. This also works during Merge mode and proposition review;
   transferring the reference promotes the next staged cluster and retains the old
