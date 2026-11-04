@@ -88,6 +88,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Treat a spike gap exactly at the Correlogram View's refractory threshold as
+  non-qualifying when navigating short ISIs, even if millisecond-to-sample
+  conversion rounds the threshold slightly upward.
 - Allow narrow dock layouts in Merge mode, hide the non-functional Merge View
   sort indicator, and keep long cluster IDs visible in Correlogram View as the
   view is resized.

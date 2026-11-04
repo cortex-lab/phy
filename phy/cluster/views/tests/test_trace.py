@@ -55,6 +55,22 @@ def test_next_short_isi_block_boundary():
     assert _next_short_isi(times, 4, 0.002, sample_rate=1000, block_size=2) == 2
 
 
+@pytest.mark.parametrize(
+    'gap,period_ms,expected',
+    [
+        (38, 1.3, 0),
+        (39, 1.3, None),
+        (40, 1.3, None),
+        (39, 1.3001, 0),
+    ],
+)
+def test_next_short_isi_refractory_boundary(gap, period_ms, expected):
+    sample_rate = 30000
+    times = np.array([0, gap]) / sample_rate
+    period = period_ms * 1e-3  # CorrelogramView stores milliseconds as seconds.
+    assert _next_short_isi(times, 0, period, sample_rate) == expected
+
+
 def test_trace_short_isi_navigation(qtbot, gui):
     selection = {'times': np.array([0.3, 0.301, 0.6, 0.604])}
     view = TraceView(

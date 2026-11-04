@@ -41,6 +41,12 @@ def _next_short_isi(spike_times, time, refractory_period, sample_rate, block_siz
         return
     if not np.isfinite(refractory_period) or refractory_period <= 0:
         return
+    sample_limit = refractory_period * sample_rate
+    nearest_sample = np.rint(sample_limit)
+    # Converting a millisecond threshold to seconds can put an integral sample
+    # boundary a few ulps above the integer (e.g. 1.3 ms at 30 kHz).
+    if np.isclose(sample_limit, nearest_sample, rtol=0, atol=2 * np.spacing(sample_limit)):
+        sample_limit = nearest_sample
     n_pairs = len(spike_times) - 1
     start = min(np.searchsorted(spike_times, time, side='right'), n_pairs)
     for first, stop in ((start, n_pairs), (0, start)):
@@ -48,7 +54,7 @@ def _next_short_isi(spike_times, time, refractory_period, sample_rate, block_siz
             hi = min(lo + block_size, stop)
             samples = np.rint(spike_times[lo : hi + 1] * sample_rate)
             intervals = np.diff(samples)
-            matches = np.flatnonzero(intervals < refractory_period * sample_rate)
+            matches = np.flatnonzero(intervals < sample_limit)
             if matches.size:
                 return spike_times[lo + matches[0]]
 
