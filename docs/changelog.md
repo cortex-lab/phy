@@ -18,6 +18,9 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Jump to the next short-ISI spike pair in the Trace View with
+  `Shift+Alt+PageDown`, using the first open Correlogram View's refractory period
+  and all spikes from the first selected cluster.
 - Right-clicking a correlogram transfers its row cluster between the primary and
   Similarity roles. This also works during Merge mode and proposition review;
   transferring the reference promotes the next staged cluster and retains the old
@@ -85,6 +88,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Treat a spike gap exactly at the Correlogram View's refractory threshold as
+  non-qualifying when navigating short ISIs, even if millisecond-to-sample
+  conversion rounds the threshold slightly upward.
 - Allow narrow dock layouts in Merge mode, hide the non-functional Merge View
   sort indicator, and keep long cluster IDs visible in Correlogram View as the
   view is resized.
