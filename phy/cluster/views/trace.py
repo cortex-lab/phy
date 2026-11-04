@@ -833,6 +833,9 @@ class TraceImageView(TraceView):
         n_ch = self.n_channels
         assert traces.shape == (n_ch, n_samples)
 
+        # Match TraceView's physical channel order before applying the image origin.
+        traces = traces[np.argsort(self.channel_y_ranks)]
+
         if self.origin == 'bottom':
             traces = traces[::-1, ...]
 

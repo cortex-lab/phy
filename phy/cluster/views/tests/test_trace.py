@@ -12,6 +12,7 @@ from phylib.utils import Bunch, connect
 from phylib.utils.geometry import linear_positions
 
 from phy.plot.tests import mouse_click
+from phy.utils.color import _continuous_colormap, add_alpha, colormaps
 
 from ..correlogram import CorrelogramView
 from ..trace import (
@@ -328,6 +329,46 @@ def test_trace_view_1(qtbot, tempdir, gui):
 # ------------------------------------------------------------------------------
 # Test trace imageview
 # ------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    'depths',
+    [[0, 10, 20, 30], [20, 0, 30, 10], [20, 0, 20, 10], [0]],
+    ids=['sorted', 'shuffled', 'equal-depth', 'single-channel'],
+)
+def test_trace_image_channel_order(qtbot, depths):
+    n_channels = len(depths)
+    traces = np.arange(n_channels)[None, :] + np.linspace(-0.25, 0.25, 20)[:, None]
+    kwargs = {
+        'traces': lambda interval: Bunch(data=traces),
+        'n_channels': n_channels,
+        'sample_rate': 80,
+        'duration': 1,
+        'channel_positions': np.c_[np.zeros(n_channels), depths],
+    }
+    trace_view = TraceView(**kwargs)
+    image_view = TraceImageView(**kwargs)
+    try:
+        vmin, vmax = image_view.vrange
+        channel_images = add_alpha(
+            _continuous_colormap(colormaps.diverging, traces.T, vmin=vmin, vmax=vmax)
+        )
+        image_view.origin = 'bottom'
+        for origin in ('bottom', 'top', 'bottom'):
+            trace_view.origin = origin
+            if image_view.origin != origin:
+                image_view.switch_origin()
+            assert image_view.origin == origin
+
+            # Match the line view's screen order, including channels at equal depths.
+            channel_y = trace_view.stacked.box_pos[trace_view.channel_y_ranks, 1]
+            top_to_bottom = np.argsort(-channel_y)
+            # ImageVisual places the first texture row at the top of the screen.
+            image = np.asarray(image_view.trace_visual.program['u_tex'])
+            ac(image, channel_images[top_to_bottom])
+    finally:
+        _stop_and_close(qtbot, image_view)
+        _stop_and_close(qtbot, trace_view)
 
 
 def test_trace_image_view_1(qtbot, tempdir, gui):
