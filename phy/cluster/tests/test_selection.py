@@ -580,3 +580,44 @@ def test_merge_freezes_existing_bindings_and_unseen_candidates_fill_holes():
     controller.cancel_merge_mode()
     assert controller.state == initial
     assert entry_slots == initial.color_slots
+
+
+def test_similarity_batch_is_atomic_and_preserves_sequential_colors():
+    initial = CurationSelectionState(cluster_ids=(30,), similar_ids=(1, 11, 20))
+    operations = (
+        SelectionMutation.create(SelectionIntent.TOGGLE, (1, 11, 20), (1, 20)),
+        SelectionMutation.create(SelectionIntent.NAVIGATE, (1, 20), (11,)),
+        SelectionMutation.create(SelectionIntent.EXTEND, (11,), (11, 20)),
+        SelectionMutation.create(SelectionIntent.TOGGLE, (11, 20), (20,)),
+    )
+    sequential = CurationSelectionController(initial)
+    for operation in operations:
+        sequential.apply_similarity_mutation(operation)
+    batched = CurationSelectionController(initial)
+    change = batched.apply_similarity_mutations(operations)
+    assert change.before is initial
+    assert batched.state == sequential.state
+
+    invalid = SelectionMutation.create(SelectionIntent.TOGGLE, (99,), ())
+    controller = CurationSelectionController(initial)
+    with raises(ValueError, match='before_ids'):
+        controller.apply_similarity_mutations((*operations, invalid))
+    assert controller.state is initial
+
+
+def test_similarity_batch_order_callback_failure_is_atomic():
+    initial = CurationSelectionState(cluster_ids=(30,), similar_ids=(1,))
+    controller = CurationSelectionController(initial)
+    operations = (
+        SelectionMutation.create(SelectionIntent.NAVIGATE, (1,), (11,)),
+        SelectionMutation.create(SelectionIntent.NAVIGATE, (11,), (20,)),
+    )
+
+    def order(state, after_ids):
+        if after_ids == (20,):
+            raise ValueError('Invalid presentation')
+        return state.cluster_ids + after_ids
+
+    with raises(ValueError, match='Invalid presentation'):
+        controller.apply_similarity_mutations(operations, order)
+    assert controller.state is initial

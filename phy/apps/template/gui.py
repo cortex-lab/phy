@@ -81,6 +81,14 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     # Internal methods
     # -------------------------------------------------------------------------
 
+    def __new__(cls, dir_path=None, *args, **kwargs):
+        if cls is TemplateController and dir_path is not None:
+            if (Path(dir_path) / '_phy_curation_manifest.json').exists():
+                from ..large_recording.adapter import BoundedTemplateController
+
+                return object.__new__(BoundedTemplateController)
+        return object.__new__(cls)
+
     def _get_waveforms_dict(self):
         waveforms_dict = super()._get_waveforms_dict()
         # Remove waveforms and mean_waveforms if there is no raw data file.
@@ -142,6 +150,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
     def _set_view_creator(self):
         super()._set_view_creator()
         self.view_creator['TemplateFeatureView'] = self.create_template_feature_view
+        self.view_creator['UnitStabilityView'] = self.create_unit_stability_view
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -255,6 +264,12 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
             return
         return TemplateFeatureView(coords=self._get_template_features)
 
+    def create_unit_stability_view(self):
+        """Optionally inspect selected-unit activity over the loaded recording."""
+        from ..large_recording.stability import UnitStabilityView
+
+        return UnitStabilityView(self)
+
 
 # ------------------------------------------------------------------------------
 # Template commands
@@ -268,9 +283,14 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
     dir_path = p.parent
     _add_log_file(dir_path / 'phy.log')
 
-    model = load_model(params_path)
+    bounded = (dir_path / '_phy_curation_manifest.json').exists()
+    model = None if bounded else load_model(params_path)
     # Automatically export spike waveforms when using compressed raw ephys.
-    if model.spike_waveforms is None and isinstance(model.traces, MtscompEphysReader):
+    if (
+        model is not None
+        and model.spike_waveforms is None
+        and isinstance(model.traces, MtscompEphysReader)
+    ):
         # TODO: customizable values below.
         model.save_spikes_subset_waveforms(max_n_spikes_per_template=500, max_n_channels=16)
 
@@ -285,6 +305,22 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
 
 def template_describe(params_path):
     """Describe a template dataset."""
+    if (Path(params_path).parent / '_phy_curation_manifest.json').exists():
+        from ..large_recording.curation import BoundedSession
+
+        session = BoundedSession(Path(params_path).parent)
+        try:
+            print(f'Bounded evidence: {len(session.assignments):,} spikes')
+            print(
+                f'Complete source: {session.manifest["num_spikes"]:,} spikes, {len(session.unit_ids):,} units'
+            )
+            print(
+                f'Duration: {session.manifest["num_samples"] / session.manifest["sample_rate"]:.3f} s'
+            )
+            print(f'Committed curation: {len(session.events)} semantic operations')
+        finally:
+            session.close()
+        return
     model = load_model(params_path)
     model.describe()
     model.close()

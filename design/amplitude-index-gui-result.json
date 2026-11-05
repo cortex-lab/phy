@@ -1,0 +1,36 @@
+{
+  "revision": "7ad3454178174b3ab97f96d07b6ab2591f52fdb5",
+  "source_spikes": 469725567,
+  "label": "Earlier converted 112.859h engineering dataset; not native1000h acceptance",
+  "build_attach_and_child_summary_seconds": 84.87282061809674,
+  "heartbeat": {
+    "target_interval_ms": 10,
+    "samples": 8054,
+    "p50_ms": 9.663892909884453,
+    "p95_ms": 10.70371069945395,
+    "max_ms": 322.84208107739687,
+    "screenshot_intervals_excluded": true
+  },
+  "children": [
+    709,
+    710
+  ],
+  "child_counts": [
+    292990,
+    346764
+  ],
+  "curation_remained_unsaved": true,
+  "stages": [
+    "Validating source",
+    "Building summary store",
+    "Finalizing",
+    "Sorting amplitude ranges",
+    "Authenticating range index"
+  ],
+  "screenshots": [
+    "prompt.png",
+    "building.png",
+    "indexing.png",
+    "ready.png"
+  ]
+}

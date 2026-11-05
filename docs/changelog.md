@@ -11,10 +11,102 @@ been included in a stable release. The current entries cover all user-visible
 changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
+### Long recordings
+
+- Unit Stability automatically marks and omits rate bins with negligible recorded
+  time from the plotted trace, keeping tiny acquisition fragments from flattening
+  the rest of the rate plot. Exact summaries and saved curation remain unchanged.
+
+- Rapid candidate navigation preserves pending selection operations. Curation
+  actions settle the displayed selection before choosing targets and recording
+  undo history, including bounded merges, labels and quality assignments.
+
+- Background task cleanup tolerates Qt destruction order when closing Phy.
+  Detached workers finish without retaining Qt objects or sending callbacks to
+  deleted owners. Store-preparation dialogs clean up their preflight tasks too.
+
+- Prepared amplitude indexes accelerate full-recording rate and trend updates
+  after threshold splits without scanning every spike in the original units.
+  Existing stores can be upgraded from the GUI in the background or with
+  `build-amplitude-index`. Indexes preserve native threshold comparisons,
+  authenticate only the pages used, and fall back to verified rows when needed.
+
+- The bounded GUI offers to build missing summary stores in the background,
+  with a destination picker, independent disk budget, per-stage progress and ETA,
+  cancellation and task details. Curation remains available during construction;
+  completed stores take effect without reopening. Build and attach actions are
+  also available from File, with dataset-local prompt preferences.
+
+- Bounded split summaries can read only the original units needed from an
+  attached summary snapshot, rather than scanning the full recording. Shared
+  calculations and histogram accumulation also speed up the source fallback.
+  Background summary status now reports validation and scan progress.
+
+- Added optional, independently budgeted per-unit summary snapshot stores, with
+  build and attach commands for existing bounded packages. Stores preserve the
+  original scalar values and native time bins without changing saved curation.
+
+- SLAY merge suggestions and saved accept/reject decisions now survive bounded
+  curation, full-sorting replay, and subsequent preparation. Suggestions retain
+  their original IDs; pending suggestions affected by merges or splits become
+  stale rather than being silently reassigned.
+- Fixed saving bounded amplitude splits after merge undo/redo when NumPy cluster
+  IDs appear in journal metadata.
+- Bounded amplitude splits now recompute exact full-recording rates, counts and
+  available amplitude/depth trends in the background. Results combine on merges
+  and survive save/reopen through a disposable cache. Source validation, retry
+  and relocation controls preserve curation when the source is unavailable.
+- Added `prepare-large` and `apply-curation` for bounded shared-window evidence,
+  full-duration exposure-aware summaries, semantic merges/labels/source-amplitude
+  splits, and replay into a new complete sorting.
+- Added Unit Stability, precise window-relative amplitude/feature inspection,
+  sampled interval/correlogram views, and explicit full-versus-evidence counts.
+  Standard datasets retain their existing curation workflow and default layout.
+- Bounded Evidence Amplitude now defaults to an all-retained-windows overview on
+  the recording clock, with a saved overview/window scope toggle. Inspecting a
+  window switches the view to that window. `Alt`-right-drag previews a source
+  amplitude threshold. `K` splits retained evidence and records the predicate;
+  `apply-curation` evaluates every source spike. Finite values strictly below
+  the threshold are selected; equality and nonfinite values stay in the remainder.
+- Added source-grounded whole-output curation acceptance checks, with explicit
+  metadata-policy differences, saved-generation binding, and independent
+  all-source validation of cumulative merge and split predicates. Permanent controller
+  tests run the same actions through full and bounded modes across four rounds
+  and three sampling configurations, including points omitted from display.
+- Unit Stability overlays up to 32 selected units by default, with consistent
+  colors and no legend. Its saved display limit accepts zero to show all selected
+  units, without a hard positive upper limit. Saved view settings include the
+  positive rate-line width (0.6 points by default) and the **Show firing rate**,
+  **Show amplitude**, and **Show depth** toggles, which default on. Its
+  dataset-local display-bin setting defaults to native resolution and permits
+  exact coarsening by integer multiples of the native bin width. The screenshot
+  action captures the Matplotlib Qt canvas. Full-source rates use acquisition
+  exposure, and split-child metrics show computation status until exact live
+  summaries are ready. On ordinary recordings, firing rates identify their
+  continuous-acquisition assumption.
+- Bounded replay preserves producer metadata table filenames, delimiters, and
+  column layouts. New merge and split memberships clear producer values and
+  source IDs; quality labels are membership-scoped and start unreviewed until
+  assigned. Legacy journals retain inherited-metadata behavior until explicitly
+  migrated with the bounded session `migrate_metadata()` API. Replay parameter
+  overrides are kept in one managed final block while original source code
+  remains intact.
+- Bounded saves use validated atomic generations and reject conflicting saves
+  from stale sessions. Unsupported selected-row splits are blocked.
+- Sparse cluster IDs no longer require dense allocations during clustering.
+- Bounded amplitude plots label seconds from window start and display the
+  window's recording-time range above the plot.
+- Long-recording preparation accepts explicitly declared elapsed-tick
+  coordinates and can select whole validated producer evidence windows, while
+  keeping the existing spike and output-byte budgets.
+
 ### Documentation
 
 - Documented uv-first installation of exact previous phy releases in separate
   environments, including how to intentionally replace a tool installation.
+- Added a long-recording workflow guide covering bounded evidence preparation,
+  supported curation, full-sorting replay, and limits on interpreting sampled
+  measurements.
 
 ### Added
 

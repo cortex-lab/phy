@@ -735,6 +735,7 @@ class Table(QWidget):
     """A sortable native Qt table with a compatibility API for legacy callers."""
 
     _ready = False
+    _selection_batch_limit = 256
 
     def __init__(
         self,
@@ -761,6 +762,8 @@ class Table(QWidget):
         self._selected_index_offset = 0
         self._selected_index_by_id = None
         self._selection_revision = 0
+        self._selection_generation = 0
+        self._pending_selection_mutations = []
         self._filter_text = ''
         self._filter_is_active = False
         self._current_sort = None
@@ -1051,6 +1054,7 @@ class Table(QWidget):
         )
 
     def _init_table(self, columns=None, value_names=None, data=None, sort=None):
+        self._invalidate_selection_batch()
         columns = columns or ['id']
         value_names = value_names or columns
         data = data or []
@@ -1091,7 +1095,11 @@ class Table(QWidget):
 
     def _emit_event(self, name, payload):
         if name in self._debounce_events:
-            self._debouncer.submit(emit, name, self, payload)
+            if name == 'select':
+                # Selection batches must survive coalescing unrelated table events.
+                self._debouncer.submit(self._deliver_selection, payload, key='select')
+            else:
+                self._debouncer.submit(emit, name, self, payload)
         else:
             emit(name, self, payload)
 
@@ -1243,6 +1251,23 @@ class Table(QWidget):
         after_ids = tuple(self._selected_ids)
         return SelectionMutation.create(intent, before_ids, after_ids)
 
+    def _invalidate_selection_batch(self):
+        """Discard operations superseded by an authoritative projection or reset."""
+        self._selection_generation += 1
+        self._pending_selection_mutations = []
+
+    def _prepare_selection_mutation(self):
+        # Bound retained operations without dropping any part of their ordered chain.
+        if len(self._pending_selection_mutations) >= self._selection_batch_limit:
+            self._debouncer.flush()
+
+    def _deliver_selection(self, payload):
+        if payload.get('generation') != self._selection_generation:
+            return
+        # Clear before observers run: reentrant operations belong to the next batch.
+        self._pending_selection_mutations = []
+        emit('select', self, payload)
+
     def _emit_selected(self, kwargs=None, mutation=None):
         self._selection_revision += 1
         kwargs = dict(kwargs or {})
@@ -1250,7 +1275,11 @@ class Table(QWidget):
             # This stays in the private kwargs channel so existing consumers see
             # the same top-level select payload.
             kwargs['_selection_mutation'] = mutation
+            if 'select' in self._debounce_events:
+                self._pending_selection_mutations.append(mutation)
+                kwargs['_selection_mutations'] = tuple(self._pending_selection_mutations)
         payload = self._selected_payload(kwargs)
+        payload['generation'] = self._selection_generation
         self._emit_event('select', payload)
         return payload
 
@@ -1289,6 +1318,7 @@ class Table(QWidget):
                 header.moveSection(current_visual, visual_index)
 
     def _set_filter(self, text, update_text_field=True):
+        self._debouncer.flush()
         self._filter_text = text or ''
         if update_text_field and self.filter_edit.text() != self._filter_text:
             self.filter_edit.setText(self._filter_text)
@@ -1340,6 +1370,7 @@ class Table(QWidget):
         return [row_id for row_id in self._selected_ids if row_id in visible]
 
     def select_toggle(self, row_id):
+        self._prepare_selection_mutation()
         before_ids = tuple(self._selected_ids)
         if row_id in self._selected_ids:
             self._selected_ids.remove(row_id)
@@ -1351,6 +1382,7 @@ class Table(QWidget):
         )
 
     def select_until(self, row_id):
+        self._prepare_selection_mutation()
         before_ids = tuple(self._selected_ids)
         visible = self._visible_ids()
         if row_id not in visible:
@@ -1403,6 +1435,7 @@ class Table(QWidget):
         return None
 
     def sort_by(self, name, sort_dir='asc'):
+        self._debouncer.flush()
         logger.log(5, 'Sort by `%s` %s.', name, sort_dir)
         if name not in self.columns:
             return
@@ -1473,6 +1506,7 @@ class Table(QWidget):
         return self._async_return(self._move_to_sibling(None, 'previous'), callback)
 
     def select(self, ids, callback=None, **kwargs):
+        self._prepare_selection_mutation()
         ids = tuple(ids)
         before_ids = tuple(self._selected_ids)
         intent = kwargs.pop('_selection_intent', None)
@@ -1482,14 +1516,16 @@ class Table(QWidget):
             intent = SelectionIntent.CLEAR if not ids else SelectionIntent.REPLACE
         if not isinstance(intent, SelectionIntent):
             raise TypeError('_selection_intent must be a SelectionIntent.')
-        self.set_selected_ids(ids)
+        self.set_selected_ids(ids, _invalidate_pending=False)
         payload = self._emit_selected(
             kwargs, mutation=self._selection_mutation(before_ids, intent)
         )
         return self._async_return(payload, callback)
 
-    def set_selected_ids(self, ids):
+    def set_selected_ids(self, ids, *, _invalidate_pending=True):
         """Project selected row IDs without emitting a selection event."""
+        if _invalidate_pending:
+            self._invalidate_selection_batch()
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
         self._selected_ids = [
@@ -1524,6 +1560,7 @@ class Table(QWidget):
         objects = self._ensure_list(objects)
         if not objects:
             return
+        self._debouncer.flush()
         data = self._model._rows + objects
         self._model.set_rows(data)
         if self._current_sort:
@@ -1539,6 +1576,7 @@ class Table(QWidget):
         objects = self._ensure_list(objects)
         if not objects:
             return
+        self._debouncer.flush()
         changed_rows = []
         for patch in objects:
             row_id = patch['id']
@@ -1566,6 +1604,8 @@ class Table(QWidget):
         ids = set(ids)
         if not objects and not ids:
             return
+        self._debouncer.flush()
+        self._invalidate_selection_batch()
         self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
         data = [row for row in self._model._rows if row['id'] not in ids]
         data.extend(objects)
@@ -1583,18 +1623,22 @@ class Table(QWidget):
         ids = set(ids)
         if not ids:
             return
+        self._debouncer.flush()
+        self._invalidate_selection_batch()
         self._selected_ids = [row_id for row_id in self._selected_ids if row_id not in ids]
         self._model.set_rows([row for row in self._model._rows if row['id'] not in ids])
         self._refresh_selection()
         self._request_fit_columns()
 
     def remove_all(self):
+        self._invalidate_selection_batch()
         self._selected_ids = []
         self._model.set_rows([])
         self._refresh_selection()
         self._request_fit_columns()
 
     def remove_all_and_add(self, objects, fit_columns=True):
+        self._invalidate_selection_batch()
         objects = self._ensure_list(objects)
         if not objects:
             if fit_columns:
