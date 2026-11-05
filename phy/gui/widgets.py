@@ -50,6 +50,7 @@ from .qt import (
     QPalette,
     QPlainTextEdit,
     QPoint,
+    QProxyStyle,
     QSize,
     QSortFilterProxyModel,
     QSpinBox,
@@ -562,6 +563,15 @@ def _install_table_filter_focus_watcher():
         app.installEventFilter(watcher)
 
 
+class _TableScrollbarStyle(QProxyStyle):
+    """Reserve horizontal scrollbar space instead of covering the final table row."""
+
+    def pixelMetric(self, metric, option=None, widget=None):
+        if metric == QStyle.PM_ScrollView_ScrollBarOverlap:
+            return 0
+        return super().pixelMetric(metric, option, widget)
+
+
 class _TableView(QTableView):
     """QTableView adapter for cluster-ID-only drag-and-drop intents."""
 
@@ -826,6 +836,14 @@ class Table(QWidget):
         self.table_view.setModel(self._proxy)
         self.table_view.setItemDelegate(_TableItemDelegate(self))
         self._apply_dark_style()
+        # Cocoa's transient scrollbar otherwise covers the bottom of the last
+        # row even at maximum scroll. Keep its native appearance and let Qt
+        # reserve the space. A default proxy owns its own base style; passing
+        # QApplication.style() would incorrectly transfer the shared style.
+        self._horizontal_scrollbar_style = _TableScrollbarStyle()
+        scrollbar = self.table_view.horizontalScrollBar()
+        self._horizontal_scrollbar_style.setParent(scrollbar)
+        scrollbar.setStyle(self._horizontal_scrollbar_style)
 
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
         _install_table_filter_focus_watcher()

@@ -9,11 +9,12 @@ from functools import partial
 
 import numpy as np
 from phylib.utils import connect, unconnect
+from PyQt5 import sip
 from pytest import fixture, mark, raises
 
 from phy.utils.selection import SelectionIntent, SelectionMutation
 
-from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, Qt
+from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, QPoint, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
@@ -538,6 +539,66 @@ def test_table_scroll(qtbot, table):
     table.add([{'id': 1000 + i, 'count': i} for i in range(1000)])
     qtbot.wait(50)
     table.scroll_to(1400)
+
+
+def test_table_last_row_is_not_covered_by_horizontal_scrollbar(qtbot):
+    table = Table(
+        columns=['id', 'count', 'rate'],
+        data=[{'id': i, 'count': 1000 + i, 'rate': 5.8} for i in range(640)],
+    )
+    qtbot.addWidget(table)
+    table.show()
+    view = table.table_view
+
+    def last_row_is_readable():
+        bar = view.verticalScrollBar()
+        bar.setValue(bar.maximum())
+        last = view.visualRect(table._proxy.index(table._proxy.rowCount() - 1, 0))
+        viewport = view.viewport().rect()
+        if last.top() < viewport.top() or last.bottom() > viewport.bottom():
+            return False
+        # A Cocoa overlay scrollbar lies *inside* the viewport: containment
+        # alone passes even while it hides the lower half of the final row.
+        horizontal = view.horizontalScrollBar()
+        if horizontal.isVisible():
+            position = view.viewport().mapFromGlobal(horizontal.mapToGlobal(QPoint()))
+            scrollbar_rect = horizontal.rect().translated(position)
+            last.setLeft(viewport.left())
+            last.setRight(viewport.right())
+            return not last.intersects(scrollbar_rect)
+        return True
+
+    for width, height in [(350, 250), (850, 300), (350, 267)]:
+        table.resize(width, height)
+        for column in range(3):
+            view.setColumnWidth(column, 180)
+        for text, order in [('', 'asc'), ('id >= 600', 'desc')]:
+            table.filter(text)
+            table.sort_by('id', order)
+            qtbot.waitUntil(last_row_is_readable)
+        assert view.horizontalScrollBar().isVisible() == (width == 350)
+
+    horizontal = view.horizontalScrollBar()
+    horizontal.setValue(0)
+    qtbot.mouseClick(
+        horizontal, Qt.LeftButton, pos=QPoint(horizontal.width() - 4, horizontal.height() // 2)
+    )
+    assert horizontal.value() > 0
+
+
+def test_table_scrollbar_style_is_destroyed_without_owning_application_style(qtbot, qapp):
+    application_style = qapp.style()
+    table = Table(data=[{'id': 0}])
+    scrollbar_style = table.table_view.horizontalScrollBar().style()
+    assert scrollbar_style is not application_style
+    sip.delete(table)
+    assert sip.isdeleted(scrollbar_style)
+    assert not sip.isdeleted(application_style)
+    # A second table still gets a usable native base style after the first dies.
+    other = Table(data=[{'id': 0}])
+    qtbot.addWidget(other)
+    other.show()
+    assert not other.grab().isNull()
 
 
 def test_table_busy(qtbot, table):
