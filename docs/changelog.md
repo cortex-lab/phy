@@ -13,6 +13,11 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Completed background preparation shows a clear terminal state with a Close
+  button. Task details remain available from **File > Show background task**.
+- The curation comparison tool can run from a data directory or another checkout.
+  It records its own checkout revision, or `unknown` when Git metadata is unavailable.
+
 - Unit Stability automatically marks and omits rate bins with negligible recorded
   time from the plotted trace, keeping tiny acquisition fragments from flattening
   the rest of the rate plot. Exact summaries and saved curation remain unchanged.
@@ -177,6 +182,10 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Action prompts and snippets accept negative numbers, scientific notation, and
+  comma-separated negative values without confusing their signs with ID ranges.
+- On macOS, horizontal table scrollbars reserve space so the last cluster row
+  remains fully visible when scrolling to the bottom.
 - Allow narrow dock layouts in Merge mode, hide the non-functional Merge View
   sort indicator, and keep long cluster IDs visible in Correlogram View as the
   view is resized.
