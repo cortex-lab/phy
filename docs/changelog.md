@@ -18,6 +18,13 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Added a standalone graphics diagnostic with embedded coding-agent instructions,
+  selectable probes, synthetic selection tests and screenshots, crash/hang logs,
+  and incremental workspaces for a shareable ZIP report. It runs against existing
+  phy installations without requiring a new release. Frame history, exposure,
+  context, and input traces distinguish rendering anomalies from invalid test
+  conditions; controlled-fault tests validate these classifications.
+
 - Jump to the next short-ISI spike pair in the Trace View with
   `Shift+Alt+PageDown`, using the first open Correlogram View's refractory period
   and all spikes from the first selected cluster.

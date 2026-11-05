@@ -21,6 +21,82 @@ When calling the phy GUI from the command-line interface, append the `--debug` o
 
 Please copy and paste the full console output to the GitHub issue if requested.
 
+## Standalone graphics diagnostic
+
+For frozen or blank plots, the repository provides a standalone
+[graphics diagnostic script](https://github.com/cortex-lab/phy/blob/master/scripts/diagnose_graphics.py).
+It works with an existing installation; no new phy release is required. It has
+been exercised against phy 2.1.0 and a development checkout.
+
+You can give a coding agent this short prompt:
+
+> Follow the instructions in [the graphics diagnostic script](https://github.com/cortex-lab/phy/blob/master/scripts/diagnose_graphics.py).
+
+For reproducible support requests, a maintainer can substitute a commit permalink
+for the branch link. The script contains the agent instructions, diagnostic code,
+and interpretation guidance. The agent locates your existing phy environment,
+runs synthetic graphics tests, investigates findings with selectable follow-up
+probes, and returns a ZIP to send to the maintainer. Use an agent with terminal
+access to the affected machine and graphical session. A cloud-only session tests
+its own environment. Tool approvals depend on the agent's configuration; the
+diagnostic itself requires no user feedback.
+
+To run it yourself, download the raw Python file, activate the environment you
+normally use for phy, and run `python diagnose_graphics.py` from your affected
+desktop session. Small test windows will open. The script compares available
+Linux backend settings in separate processes and writes `phy-graphics-*.zip`
+in the current directory. Use `--baseline-only` to skip the comparisons.
+
+The ZIP contains a summary, structured findings and results, logs, synthetic PNGs,
+and the exact diagnostic script. A scene probe uses the installed ClusterView,
+Supervisor, WaveformView, and CorrelogramView with deterministic synthetic data
+and an automated Qt mouse click. Images include capture type and expected content
+so an agent can inspect them where its tools support images. The script captures
+only its synthetic surfaces/widgets, not the whole desktop or any recordings.
+Home/current-directory paths are redacted on a best-effort basis. Inspect the
+bundle before sharing if local paths are sensitive. No packages are installed
+and user phy settings are not changed; scene state is stored in a temporary directory.
+These checks do not establish correctness with a real dataset or prove desktop
+presentation. An SSH run characterizes that session and may differ from the
+affected desktop.
+
+Agents can query `python diagnose_graphics.py --list-probes` for JSON capabilities.
+`--workspace DIR` preserves attempts, logs, images, and findings across calls;
+`--probe`, `--configuration`, `--scenario`, and `--repeat` select bounded follow-ups.
+For example, `--probe docked --configuration baseline --scenario hide-show` tests
+one docking operation. `--budget` bounds each invocation and crashes/hangs retain
+available fault-handler output. The agent writes its interpretation and evidence
+references to `AGENT_NOTES.md` in the workspace, then uses
+`--workspace DIR --bundle --output report.zip` to package all attempts without
+rerunning them. Script measurements and agent interpretations remain distinct.
+
+Frame checks record the original redraw request, a bounded first/last frame
+history, a Qt timer heartbeat, window/container exposure, context lifecycle and
+ownership, viewport/framebuffer geometry, and intended versus actual pan/zoom.
+Incorrect early frames can recover naturally; a later incorrect frame still
+invalidates the observation. A separately recorded recovery redraw never erases
+the original outcome. Hidden/unexposed surfaces or inconsistent sampling return
+an inconclusive result instead of an unexplained colour failure.
+
+Input-event traces contain event kinds and wheel deltas, without key values or
+text. `--input-mode block` isolates external input to the synthetic canvases.
+`--capture-mode metrics` skips PNG capture/encoding to investigate timing effects;
+it retains primitive frame measurements but reduces scene coverage. These are
+control experiments, and passing them does not establish normal interaction.
+
+Maintainers can validate controlled faults in a real desktop session with
+`PHY_DIAGNOSTIC_GL_TESTS=1 uv run pytest scripts/tests/test_diagnose_graphics.py`.
+Those opt-in tests deliberately inject a wrong colour, wheel input, or a hidden
+canvas and verify the expected failure/inconclusive classifications and PNG hashes.
+Linux CI runs the controlled faults through xcb/software OpenGL as well. The
+remaining standalone tests run without opening native GL surfaces.
+
+Interrupted collections can resume their workspace without deleting lock files;
+unrecorded outcomes remain marked as interrupted or unknown. Missing or damaged
+images are omitted with reasons while the other logs and results are preserved.
+Reports retain historical failures and distinguish consistently passing alternative
+configurations from a claim that an intermittent failure has been fixed.
+
 ## Sending your dataset to the main developer
 
 In some cases, the [main phy developer](https://cyrille.rossant.net/) will ask you to send him your dataset in order to identify and fix the problem. You should compress the whole folder, **excluding**:

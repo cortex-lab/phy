@@ -49,16 +49,25 @@ jobs:
       run: uv sync --frozen --dev --python ${{ matrix.python-version }}
 
     - name: Lint with ruff
-      run: uv run --frozen ruff check phy
+      run: uv run --frozen ruff check phy scripts/diagnose_graphics.py scripts/tests
 
     - name: Check formatting with ruff
-      run: uv run --frozen ruff format --check phy
+      run: uv run --frozen ruff format --check phy scripts/diagnose_graphics.py scripts/tests
 
     - name: Test with pytest
-      run: uv run --no-sync pytest --cov=phy --cov-report=xml phy
+      run: uv run --no-sync pytest --cov=phy --cov-report=xml phy scripts/tests
       env:
         DISPLAY: ${{ runner.os == 'Linux' && ':99.0' || '' }}
         QT_QPA_PLATFORM: offscreen
+
+    - name: Validate graphics diagnostic with real OpenGL (Linux)
+      if: runner.os == 'Linux'
+      run: uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py -k real_gl_controlled_faults
+      env:
+        DISPLAY: ':99.0'
+        QT_QPA_PLATFORM: xcb
+        LIBGL_ALWAYS_SOFTWARE: 'true'
+        PHY_DIAGNOSTIC_GL_TESTS: '1'
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
