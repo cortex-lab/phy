@@ -53,6 +53,17 @@ def test_build_keeps_gui_responsive_and_adopts_store_after_curation(
         return result
 
     monkeypatch.setattr(summary_task_gui, 'prepare_summary_store', controlled)
+    pending_modes = []
+
+    def observe_pending(state):
+        if state == 'pending':
+            pending_modes.append(actions._mode)
+            assert not actions.widget.bar.isHidden()
+            assert not actions.widget.cancel_button.isHidden()
+            assert actions.widget.cancel_button.isEnabled()
+            assert actions.widget.hide_button.text() == 'Hide'
+
+    actions.manager.state_changed.connect(observe_pending)
     heartbeat = []
     timer = QTimer()
     timer.setInterval(10)
@@ -81,6 +92,17 @@ def test_build_keeps_gui_responsive_and_adopts_store_after_curation(
         assert actions.manager.state == 'succeeded'
         assert controller.supervisor.is_dirty()  # Building must not save curation.
         assert 'ready' in actions.widget.label.text().lower()
+        assert pending_modes == ['build', 'attach', 'build-range', 'attach-range']
+        assert actions.widget.bar.isHidden()
+        assert actions.widget.cancel_button.isHidden()
+        assert actions.widget.hide_button.text() == 'Close'
+        log = actions.widget.log.toPlainText()
+        actions.widget.hide_button.click()
+        assert actions.widget.isHidden()
+        gui.file_actions.run('show_background_task')
+        assert not actions.widget.isHidden()
+        assert actions.widget.bar.isHidden()
+        assert actions.widget.log.toPlainText() == log
         assert range_queries
         assert set(children) <= set().union(*range_queries)
     finally:
@@ -142,6 +164,32 @@ def test_reference_read_error_is_recoverable(qtbot, opened, monkeypatch):
     actions.build_dialog()
     assert 'permission denied' in actions.widget.label.text()
     assert not actions.manager.busy
+    assert not actions.service._suspended
+    assert actions.widget.bar.isHidden()
+    assert actions.widget.cancel_button.isHidden()
+    assert actions.widget.hide_button.text() == 'Close'
+
+
+def test_preparation_warning_stays_visible_without_completed_progress(
+    qtbot, opened, tmp_path, monkeypatch
+):
+    from phy.apps.large_recording.summary_tasks import StoreArtifact
+
+    _, _, actions = opened
+
+    def warning(request, context):
+        return StoreArtifact(request.destination, warning='Could not publish reference')
+
+    monkeypatch.setattr(summary_task_gui, 'prepare_summary_store', warning)
+    actions.build(tmp_path / 'store')
+    qtbot.waitUntil(lambda: not actions.manager.busy)
+    assert actions._mode == 'build'
+    assert 'needs attention' in actions.widget.label.text()
+    assert 'Could not publish reference' in actions.widget.log.toPlainText()
+    assert not actions.widget.isHidden()
+    assert actions.widget.bar.isHidden()
+    assert actions.widget.cancel_button.isHidden()
+    assert actions.widget.hide_button.text() == 'Close'
     assert not actions.service._suspended
 
 

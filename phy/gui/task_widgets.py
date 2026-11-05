@@ -63,6 +63,8 @@ class TaskWidget(QWidget):
             self.eta.reset()
             self._last_stage = None
             self.label.setText(self.manager.spec.title)
+            self.label.setToolTip('')
+            self._set_active(True)
             self.bar.setRange(0, 0)
             self.estimate.setText('Estimating time remaining…')
             self.show()
@@ -96,14 +98,16 @@ class TaskWidget(QWidget):
         if progress.message:
             self.log.appendPlainText(progress.message)
 
+    def _set_active(self, active):
+        self.bar.setVisible(active)
+        self.cancel_button.setVisible(active)
+        self.hide_button.setText('Hide' if active else 'Close')
+
     def on_finished(self, outcome):
         self.cancel_button.setEnabled(False)
-        self.bar.setRange(0, 1000)
-        self.bar.setValue(1000 if outcome.state == 'succeeded' else 0)
+        self._set_active(False)
         self.label.setText(
-            {'succeeded': 'Complete', 'cancelled': 'Cancelled', 'failed': 'Task failed'}[
-                outcome.state
-            ]
+            {'succeeded': 'Done', 'cancelled': 'Cancelled', 'failed': 'Task failed'}[outcome.state]
         )
         self.estimate.setText('')
         if outcome.error:
@@ -114,6 +118,8 @@ class TaskWidget(QWidget):
         self.log.appendPlainText(str(message))
         self.label.setText(str(message)[:160])
         self.label.setToolTip(str(message))
+        if not self.manager.busy:
+            self._set_active(False)
         self.show()
 
     def dispose(self):
