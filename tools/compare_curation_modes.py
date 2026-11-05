@@ -46,7 +46,19 @@ def digest(path):
 
 
 def revision():
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    """Identify this checkout without depending on the report's working directory."""
+    root = Path(__file__).resolve().parents[1]
+    try:
+        top, commit = subprocess.check_output(
+            ['git', 'rev-parse', '--show-toplevel', 'HEAD'],
+            cwd=root,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        return 'unknown'
+    # An unpacked source archive may itself be inside an unrelated repository.
+    return commit if Path(top).resolve() == root else 'unknown'
 
 
 def labels(path, fields):

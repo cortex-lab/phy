@@ -1,5 +1,8 @@
 """Independent full ordinary Supervisor versus bounded journal/replay acceptance."""
 
+import subprocess
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -8,6 +11,55 @@ from phy.apps.large_recording.curation import BoundedSession
 from phy.apps.large_recording.prepare import prepare_large
 from phy.apps.large_recording.replay import apply_curation
 from phy.apps.large_recording.tests.test_source import make_sorting
+
+
+@pytest.mark.parametrize('other_repository', [False, True])
+def test_revision_uses_script_checkout_from_any_cwd(tmp_path, monkeypatch, other_repository):
+    root = Path(comparison.__file__).resolve().parents[1]
+    expected = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    if other_repository:
+        subprocess.run(['git', 'init', '--quiet', str(tmp_path)], check=True)
+    monkeypatch.chdir(tmp_path)
+    left, right = outputs(tmp_path, [0, 1], [8, 9])
+    result = comparison.compare_outputs(left, right)
+    assert result['ok'], result
+    assert result['revision'] == expected
+
+
+def test_revision_without_git_is_unknown(monkeypatch):
+    monkeypatch.setenv('PATH', '')
+    assert comparison.revision() == 'unknown'
+
+
+@pytest.mark.parametrize('enclosing_repository', [False, True])
+def test_revision_without_checkout_metadata_is_unknown(
+    tmp_path, monkeypatch, enclosing_repository
+):
+    if enclosing_repository:
+        subprocess.run(['git', 'init', '--quiet', str(tmp_path)], check=True)
+        subprocess.run(
+            [
+                'git',
+                '-C',
+                str(tmp_path),
+                '-c',
+                'user.name=Test',
+                '-c',
+                'user.email=test@example.invalid',
+                'commit',
+                '--quiet',
+                '--allow-empty',
+                '-m',
+                'Unrelated enclosing repository',
+            ],
+            check=True,
+        )
+    archive = tmp_path / 'archive'
+    (archive / 'tools').mkdir(parents=True)
+    monkeypatch.setattr(
+        comparison, '__file__', str(archive / 'tools' / 'compare_curation_modes.py')
+    )
+    assert comparison.revision() == 'unknown'
 
 
 def ledger():
