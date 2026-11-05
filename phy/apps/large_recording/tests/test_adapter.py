@@ -14,10 +14,13 @@ from phy.apps.large_recording.prepare import prepare_large
 from phy.apps.large_recording.replay import apply_curation
 from phy.apps.large_recording.tests.test_source import make_sorting
 from phy.apps.template.gui import TemplateController
+from phy.gui.qt import mock_dialogs
 
 
-def make_controller(tmp_path, sparse=False, propositions=None):
+def make_controller(tmp_path, sparse=False, propositions=None, amplitudes=None):
     params = make_gui_sorting(tmp_path / 'source')
+    if amplitudes is not None:
+        np.save(params.parent / 'amplitudes.npy', amplitudes)
     if propositions is not None:
         (params.parent / 'curation.json').write_text(json.dumps(propositions))
     output = prepare_large(
@@ -202,6 +205,40 @@ def test_source_threshold_replays_every_spike_and_full_metrics_pending(tmp_path)
         oracle[(source == 0) & ~(amplitudes < 4)] = 101
         np.testing.assert_array_equal(np.load(output / 'spike_clusters.npy'), oracle)
     finally:
+        controller.close()
+
+
+@pytest.mark.parametrize('entry', ['prompt', 'snippet'])
+def test_negative_source_threshold_entry_replays_exact_membership(qtbot, tmp_path, entry):
+    amplitudes = np.arange(12, dtype=np.float32)
+    # Equality and nonfinite source values belong to the remainder.
+    amplitudes[[0, 3, 6, 9]] = [-900, -896, np.nan, np.inf]
+    params, controller = make_controller(tmp_path, amplitudes=amplitudes)
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor = controller.supervisor
+        source = np.load(params.parent / 'spike_clusters.npy')
+        supervisor.select([0])
+        qtbot.waitUntil(lambda: supervisor.selected == [0])
+        if entry == 'prompt':
+            with mock_dialogs(('-896', True)):
+                supervisor.actions.get('Split by source amplitude').trigger()
+        else:
+            gui.snippets.run(':split_by_source_amplitude -8.96e2')
+        oracle = source.copy()
+        selected = (source == 0) & np.isfinite(amplitudes) & (amplitudes < -896)
+        oracle[selected] = 100
+        oracle[(source == 0) & ~selected] = 101
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, oracle)
+        supervisor.undo()
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, source)
+        supervisor.redo()
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, oracle)
+        supervisor.save()
+        output = apply_curation(params, controller.dir_path, tmp_path / 'curated', batch_size=2)
+        np.testing.assert_array_equal(np.load(output / 'spike_clusters.npy'), oracle)
+    finally:
+        gui.close()
         controller.close()
 
 
