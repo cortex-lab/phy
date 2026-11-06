@@ -65,10 +65,14 @@ jobs:
 
     - name: Validate graphics diagnostic with real OpenGL (Linux)
       if: runner.os == 'Linux'
-      run: uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py -k real_gl_controlled_faults
+      run: |
+        qt_plugin_path=$(uv run --no-sync python -c 'from PyQt5.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.PluginsPath) + "/platforms/libqxcb.so")')
+        ldd "$qt_plugin_path"
+        uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py -k real_gl_controlled_faults
       env:
         DISPLAY: ':99.0'
         QT_QPA_PLATFORM: xcb
+        QT_DEBUG_PLUGINS: '1'
         LIBGL_ALWAYS_SOFTWARE: 'true'
         PHY_DIAGNOSTIC_GL_TESTS: '1'
 
