@@ -105,14 +105,16 @@ def test_diagnostic_checks_survive_python_optimization():
 def test_redaction_of_structured_paths(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     value = diagnostic.redact_data({'path': [str(tmp_path / 'file'), str(Path.home() / 'env')]})
-    assert value == {'path': ['<CWD>/file', '<HOME>/env']}
+    assert value == {'path': [f'<CWD>{os.sep}file', f'<HOME>{os.sep}env']}
 
 
 def test_collection_without_phy_or_display(tmp_path):
     """The stdlib-only parent must still package failures when dependencies are absent."""
     target = tmp_path / 'report.zip'
     empty_env = tmp_path / 'empty-env'
-    venv.EnvBuilder(with_pip=False).create(empty_env)
+    # Copied uv-managed Python 3.10 executables lose their stdlib location when
+    # creating a nested venv. Use symlinks on POSIX, as `python -m venv` does.
+    venv.EnvBuilder(with_pip=False, symlinks=os.name != 'nt').create(empty_env)
     interpreter = empty_env / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
     env = os.environ.copy()
     for key in ('DISPLAY', 'WAYLAND_DISPLAY', 'PYTHONPATH'):
