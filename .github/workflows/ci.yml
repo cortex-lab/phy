@@ -27,7 +27,10 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y xvfb herbstluftwm
+        # The PyQt5 wheel's xcb platform plugin needs these system libraries.
+        sudo apt-get install -y xvfb herbstluftwm \
+          libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+          libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0
         export DISPLAY=:99.0
         Xvfb :99 -screen 0 1400x900x24 -ac +extension GLX +render &
         sleep 3
@@ -62,10 +65,14 @@ jobs:
 
     - name: Validate graphics diagnostic with real OpenGL (Linux)
       if: runner.os == 'Linux'
-      run: uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py -k real_gl_controlled_faults
+      run: |
+        qt_plugin_path=$(uv run --no-sync python -c 'from PyQt5.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.PluginsPath) + "/platforms/libqxcb.so")')
+        ldd "$qt_plugin_path"
+        uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py -k real_gl_controlled_faults
       env:
         DISPLAY: ':99.0'
         QT_QPA_PLATFORM: xcb
+        QT_DEBUG_PLUGINS: '1'
         LIBGL_ALWAYS_SOFTWARE: 'true'
         PHY_DIAGNOSTIC_GL_TESTS: '1'
 
