@@ -95,6 +95,8 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Order Trace Image View channels by their physical positions, matching Trace View
+  even when the recording stores channels in a different order.
 - Treat a spike gap exactly at the Correlogram View's refractory threshold as
   non-qualifying when navigating short ISIs, even if millisecond-to-sample
   conversion rounds the threshold slightly upward.
