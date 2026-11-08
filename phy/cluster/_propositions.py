@@ -182,6 +182,7 @@ class MergePropositionCatalog:
     reviews: Mapping[str, PropositionReview] = field(default_factory=dict)
     live_unit_ids: tuple[int, ...] | None = None
     source_mapping: Mapping = field(default_factory=dict)
+    retired_units: Mapping = field(default_factory=dict)
 
     def __post_init__(self):
         source_ids = _ids(self.source_unit_ids, minimum=0)
@@ -208,6 +209,23 @@ class MergePropositionCatalog:
         object.__setattr__(self, 'reviews', MappingProxyType(reviews))
         object.__setattr__(self, 'live_unit_ids', live_ids)
         object.__setattr__(self, 'source_mapping', source_mapping)
+        retired = {}
+        for key, value in _mapping(self.retired_units, name='retired_units').items():
+            if not isinstance(key, str) or not key.isdecimal() or str(int(key)) != key:
+                raise ValueError(
+                    'retired_units keys must be canonical non-negative integer strings.'
+                )
+            value = _mapping(value, name='retired unit')
+            operation = value.get('operation')
+            if operation not in {'merge', 'threshold_split'}:
+                raise ValueError('Unknown retired-unit operation.')
+            replacements = _ids(value.get('replacements'), name='replacements', minimum=1)
+            if any(unit < 0 for unit in replacements) or int(key) in replacements:
+                raise ValueError(
+                    'Retired-unit replacements must be distinct non-negative new IDs.'
+                )
+            retired[key] = {'operation': operation, 'replacements': replacements}
+        object.__setattr__(self, 'retired_units', _freeze(retired))
 
     @property
     def propositions(self):
@@ -259,11 +277,22 @@ class MergePropositionCatalog:
                 for unit_id in entry.proposition.unit_ids
                 if unit_id not in self.live_unit_ids
             )
+            causes = []
+            for unit_id in missing:
+                retirement = self.retired_units.get(str(unit_id))
+                if retirement is not None:
+                    verb = 'merged' if retirement['operation'] == 'merge' else 'split'
+                    causes.append(f'{unit_id} was {verb}')
+            if causes:
+                return f'Source clusters no longer exist: {missing}; ' + '; '.join(causes) + '.'
             return f'One or more source clusters no longer exist: {missing}.'
         return None
 
-    def project_live_ids(self, live_unit_ids):
-        return self._replace(live_unit_ids=_ids(live_unit_ids, name='live_unit_ids'))
+    def project_live_ids(self, live_unit_ids, *, retired_units=None):
+        changes = {'live_unit_ids': _ids(live_unit_ids, name='live_unit_ids')}
+        if retired_units is not None:
+            changes['retired_units'] = retired_units
+        return self._replace(**changes)
 
     def snapshot(self):
         """Return an immutable snapshot suitable for history entries."""
@@ -323,6 +352,7 @@ class MergePropositionCatalog:
             'reviews': self.reviews,
             'live_unit_ids': self.live_unit_ids,
             'source_mapping': self.source_mapping,
+            'retired_units': self.retired_units,
         }
         values.update(changes)
         return type(self)(**values)
@@ -355,8 +385,10 @@ class MergePropositionController:
         self._catalog = self._require_catalog(snapshot)
         return None
 
-    def project_live_ids(self, live_unit_ids):
-        self._catalog = self._catalog.project_live_ids(tuple(map(int, live_unit_ids)))
+    def project_live_ids(self, live_unit_ids, *, retired_units=None):
+        self._catalog = self._catalog.project_live_ids(
+            tuple(map(int, live_unit_ids)), retired_units=retired_units
+        )
         return None
 
     def reject(self, key):
@@ -422,7 +454,7 @@ class MergePropositionController:
         )
 
 
-def decode_curation_mapping(mapping) -> MergePropositionCatalog:
+def decode_curation_mapping(mapping, *, retired_units=None) -> MergePropositionCatalog:
     """Decode a supported AIND/SpikeInterface v2 curation document.
 
     Invalid individual ``merges`` entries become visible invalid catalog entries;
@@ -453,7 +485,12 @@ def decode_curation_mapping(mapping) -> MergePropositionCatalog:
             entries.append(PropositionEntry(index, proposition=proposition, raw_mapping=raw))
         except (TypeError, ValueError) as e:
             entries.append(PropositionEntry(index, invalid_reason=str(e), raw_mapping=raw))
-    return MergePropositionCatalog(source_ids, tuple(entries), source_mapping=mapping)
+    return MergePropositionCatalog(
+        source_ids,
+        tuple(entries),
+        source_mapping=mapping,
+        retired_units={} if retired_units is None else retired_units,
+    )
 
 
 def encode_curation_mapping(catalog: MergePropositionCatalog):

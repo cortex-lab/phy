@@ -30,6 +30,62 @@ def _source(merges=None):
     }
 
 
+def test_retired_units_explain_stale_without_retargeting_or_overwriting_reviews():
+    source = _source([{'unit_ids': [41, 56]}, {'unit_ids': [56, 72]}])
+    catalog = decode_curation_mapping(source)
+    accepted, pending = [entry.key for entry in catalog.entries]
+    catalog = catalog.accept(accepted, [41, 56], 100)
+    retired = {
+        '41': {'operation': 'merge', 'replacements': [100]},
+        '56': {'operation': 'merge', 'replacements': [100]},
+        '72': {'operation': 'threshold_split', 'replacements': [101, 102]},
+    }
+    catalog = catalog.project_live_ids([100, 101, 102], retired_units=retired)
+    assert catalog.status_for(accepted) is PropositionStatus.ACCEPTED
+    assert catalog.reason_for(accepted) is None
+    assert catalog.status_for(pending) is PropositionStatus.STALE
+    assert '56 was merged' in catalog.reason_for(pending)
+    assert '72 was split' in catalog.reason_for(pending)
+    assert encode_curation_mapping(catalog) == source
+    retired['56']['operation'] = 'threshold_split'
+    assert '56 was merged' in catalog.reason_for(pending)
+    controller = MergePropositionController(catalog)
+    controller.project_live_ids([100, 101, 102])
+    assert controller.catalog.reason_for(pending) == catalog.reason_for(pending)
+
+
+def test_retired_unit_validation():
+    for retired in (
+        [],
+        False,
+        {'01': {'operation': 'merge', 'replacements': [100]}},
+        {'41': {'operation': 'label', 'replacements': [100]}},
+        {'41': {'operation': 'merge', 'replacements': [41]}},
+        {'41': {'operation': 'merge', 'replacements': []}},
+        {'41': {'operation': 'threshold_split', 'replacements': [-1]}},
+    ):
+        with raises(ValueError):
+            decode_curation_mapping(_source(), retired_units=retired)
+
+
+def test_retirement_projection_undo_and_durable_modified_review():
+    catalog = decode_curation_mapping(_source())
+    key = catalog.propositions[0].key
+    controller = MergePropositionController(catalog)
+    before = controller.snapshot()
+    retired = {'41': {'operation': 'threshold_split', 'replacements': [100, 101]}}
+    controller.project_live_ids([56, 72, 100, 101], retired_units=retired)
+    assert '41 was split' in controller.catalog.reason_for(key)
+    controller.restore(before)
+    assert controller.catalog.status_for(key) is PropositionStatus.PENDING
+    modified = catalog.accept(key, [41, 72], 100).project_live_ids(
+        [56, 100], retired_units={'41': {'operation': 'merge', 'replacements': [100]}}
+    )
+    assert modified.status_for(key) is PropositionStatus.ACCEPTED_MODIFIED
+    rejected = catalog.reject(key).project_live_ids([56, 100], retired_units=retired)
+    assert rejected.status_for(key) is PropositionStatus.REJECTED
+
+
 def test_aind_v2_decode_preserves_source_and_proposition_order():
     source = _source([{'unit_ids': [56, 41], 'new_unit_id': 1000}])
 

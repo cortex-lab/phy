@@ -1,0 +1,302 @@
+{
+  "revision": "3419700463849757f91efc90b5b83f6856f725b2",
+  "component_sha256": {
+    "curation.py": "bb7c9ece0b18b8beb3ce1c9a2b2e30fac3d037b3a6b92291c0d141470b1ec097",
+    "live_summaries.py": "8b0877d31467262cc50694742167ab0f09492ec38a4ef32a4c51f476bacc9f83",
+    "source.py": "1de34e489eee0f416408030d5e1f19458f86018c81b2439fff34a6a9ee9ce856",
+    "summary_store.py": "8f75cb61816999148de9c4d83feeb8dd7d8b81d1f324179e5b8e9dd202753223",
+    "range_build.py": "ca3fc31a2d820e4f03a49e142cc75dc962ea8b3a0566cc32f26d0b6f766db968",
+    "range_files.py": "f7c553fd1849055961a0a2a711df6377ff477ef50a44d33a4ad3b83e6660993d",
+    "range_index.py": "f8a05926778c8a7875582a1746bc4211f35415a9d81f015eee8c876349acb85f",
+    "range_intervals.py": "4a9a52022c5df86efc6b5cb2bab118d204b41b5adf3ea1357e9964a38d39cc65",
+    "range_math.py": "c48c2c85127e29a3f9421fa2d01ef79cd8cc7a70a910686190e5378e509819a8"
+  },
+  "label": "1000h synthetic from Carl 100h source, 10 repetitions",
+  "source_spikes": 4181675220,
+  "duration_hours": 1000.0,
+  "native_bins": 1000,
+  "source_units": 635,
+  "source_dir": "/home/cyrille/GIT/IBL/phy-data/carl/carl-1000-synthetic",
+  "cache_conditions": "Uncontrolled OS page cache; no summary result-cache hits or publication. Indexed timings exclude GUI delivery.",
+  "hardware": {
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "ram_bytes": 134698618880
+  },
+  "build": null,
+  "range_build": {
+    "seconds": 264.32920015999116,
+    "peak_rss_bytes": 314470400,
+    "index_bytes": 20274424930
+  },
+  "build_note": "Build cost may be from an earlier invocation; runtime component hashes identify this verification run.",
+  "scenarios": [
+    {
+      "scenario": "median_unit",
+      "events": [
+        {
+          "operation": "threshold_split",
+          "parent": 259,
+          "children": [
+            734,
+            735
+          ],
+          "predicate": {
+            "attribute": "amplitudes.npy",
+            "operator": "<",
+            "threshold": -155.63975524902344,
+            "nonfinite": "keep"
+          }
+        }
+      ],
+      "original_units": [
+        259
+      ],
+      "source_rows_read": 0,
+      "original_rows_represented": 4481760,
+      "payload_bytes_read": 7798784,
+      "first_range_metrics": {
+        "payload_bytes_read": 7798784,
+        "authentication_bytes_read": 120864,
+        "pages_verified": 1904,
+        "resident_page_bytes": 7798784
+      },
+      "repeat_range_metrics": {
+        "payload_bytes_read": 0,
+        "authentication_bytes_read": 0,
+        "pages_verified": 0,
+        "resident_page_bytes": 7798784
+      },
+      "first_seconds": 0.05507006193511188,
+      "repeat_seconds": 0.04022911796346307,
+      "counts": {
+        "734": 2064950,
+        "735": 2416810
+      }
+    },
+    {
+      "scenario": "largest_unit",
+      "events": [
+        {
+          "operation": "threshold_split",
+          "parent": 393,
+          "children": [
+            834,
+            835
+          ],
+          "predicate": {
+            "attribute": "amplitudes.npy",
+            "operator": "<",
+            "threshold": -241.0890350341797,
+            "nonfinite": "keep"
+          }
+        }
+      ],
+      "original_units": [
+        393
+      ],
+      "source_rows_read": 0,
+      "original_rows_represented": 77538160,
+      "payload_bytes_read": 27078656,
+      "first_range_metrics": {
+        "payload_bytes_read": 27078656,
+        "authentication_bytes_read": 542080,
+        "pages_verified": 6611,
+        "resident_page_bytes": 27078656
+      },
+      "repeat_range_metrics": {
+        "payload_bytes_read": 0,
+        "authentication_bytes_read": 0,
+        "pages_verified": 0,
+        "resident_page_bytes": 27078656
+      },
+      "first_seconds": 0.1154752301517874,
+      "repeat_seconds": 0.05717089888639748,
+      "counts": {
+        "834": 22682900,
+        "835": 54855260
+      }
+    },
+    {
+      "scenario": "nested_split_median",
+      "events": [
+        {
+          "operation": "threshold_split",
+          "parent": 259,
+          "children": [
+            934,
+            935
+          ],
+          "predicate": {
+            "attribute": "amplitudes.npy",
+            "operator": "<",
+            "threshold": -155.63975524902344,
+            "nonfinite": "keep"
+          }
+        },
+        {
+          "operation": "threshold_split",
+          "parent": 935,
+          "children": [
+            936,
+            937
+          ],
+          "predicate": {
+            "attribute": "amplitudes.npy",
+            "operator": "<",
+            "threshold": -183.10560607910156,
+            "nonfinite": "keep"
+          }
+        }
+      ],
+      "original_units": [
+        259
+      ],
+      "source_rows_read": 0,
+      "original_rows_represented": 4481760,
+      "payload_bytes_read": 11509760,
+      "first_range_metrics": {
+        "payload_bytes_read": 11509760,
+        "authentication_bytes_read": 144416,
+        "pages_verified": 2810,
+        "resident_page_bytes": 11509760
+      },
+      "repeat_range_metrics": {
+        "payload_bytes_read": 0,
+        "authentication_bytes_read": 0,
+        "pages_verified": 0,
+        "resident_page_bytes": 11509760
+      },
+      "first_seconds": 0.07356515293940902,
+      "repeat_seconds": 0.054177568992599845,
+      "counts": {
+        "936": 1241070,
+        "937": 1175740
+      }
+    },
+    {
+      "scenario": "merge_two_largest_then_split",
+      "events": [
+        {
+          "operation": "merge",
+          "parents": [
+            320,
+            393
+          ],
+          "target": 1034
+        },
+        {
+          "operation": "threshold_split",
+          "parent": 1034,
+          "children": [
+            1035,
+            1036
+          ],
+          "predicate": {
+            "attribute": "amplitudes.npy",
+            "operator": "<",
+            "threshold": -241.0890350341797,
+            "nonfinite": "keep"
+          }
+        }
+      ],
+      "original_units": [
+        320,
+        393
+      ],
+      "source_rows_read": 0,
+      "original_rows_represented": 154940400,
+      "payload_bytes_read": 59379712,
+      "first_range_metrics": {
+        "payload_bytes_read": 59379712,
+        "authentication_bytes_read": 1159200,
+        "pages_verified": 14497,
+        "resident_page_bytes": 59379712
+      },
+      "repeat_range_metrics": {
+        "payload_bytes_read": 0,
+        "authentication_bytes_read": 0,
+        "pages_verified": 0,
+        "resident_page_bytes": 59379712
+      },
+      "first_seconds": 0.24421490007080138,
+      "repeat_seconds": 0.12011308292858303,
+      "counts": {
+        "1035": 79365690,
+        "1036": 75574710
+      }
+    },
+    {
+      "scenario": "merge_ten_typical_then_split",
+      "events": [
+        {
+          "operation": "merge",
+          "parents": [
+            86,
+            341,
+            370,
+            595,
+            620,
+            259,
+            108,
+            263,
+            541,
+            337
+          ],
+          "target": 1134
+        },
+        {
+          "operation": "threshold_split",
+          "parent": 1134,
+          "children": [
+            1135,
+            1136
+          ],
+          "predicate": {
+            "attribute": "amplitudes.npy",
+            "operator": "<",
+            "threshold": -155.63975524902344,
+            "nonfinite": "keep"
+          }
+        }
+      ],
+      "original_units": [
+        86,
+        108,
+        259,
+        263,
+        337,
+        341,
+        370,
+        541,
+        595,
+        620
+      ],
+      "source_rows_read": 0,
+      "original_rows_represented": 44726720,
+      "payload_bytes_read": 77725696,
+      "first_range_metrics": {
+        "payload_bytes_read": 77725696,
+        "authentication_bytes_read": 1219328,
+        "pages_verified": 18976,
+        "resident_page_bytes": 67108864
+      },
+      "repeat_range_metrics": {
+        "payload_bytes_read": 77725696,
+        "authentication_bytes_read": 1211520,
+        "pages_verified": 18976,
+        "resident_page_bytes": 67108864
+      },
+      "first_seconds": 0.5241659739986062,
+      "repeat_seconds": 0.5401255849283189,
+      "counts": {
+        "1135": 15885470,
+        "1136": 28841250
+      }
+    }
+  ],
+  "combined_full_source_scan_seconds": 138.23595696105622,
+  "independent_replay_seconds": 142.96548272110522,
+  "independent_replay_rows": 4181675220,
+  "indexed_equals_full_scan_and_independent_replay": true,
+  "bounded_files_unchanged": true
+}

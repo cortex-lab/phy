@@ -7,7 +7,8 @@
 import logging
 
 import numpy as np
-from phylib.io.array import _spikes_in_clusters, _spikes_per_cluster, _unique
+from phylib.io.array import _spikes_in_clusters, _spikes_per_cluster
+from phylib.io.array import _unique as _unique_dense
 from phylib.utils._types import _as_array, _is_array_like
 from phylib.utils.event import emit
 
@@ -20,6 +21,23 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 # Clustering class
 # ------------------------------------------------------------------------------
+
+
+def _unique(values):
+    """Preserve dense-ID performance without allocating by sparse absolute IDs."""
+    if values is None or len(values) == 0:
+        return np.array([], dtype=np.int64)
+    values = np.asarray(values)
+    if int(values.max()) > max(1024, 4 * len(values)):
+        return np.unique(values[values >= 0]).astype(np.int64)
+    return _unique_dense(values)
+
+
+def _largest_cluster(values):
+    if int(values.max()) > max(1024, 4 * len(values)):
+        ids, counts = np.unique(values, return_counts=True)
+        return int(ids[counts.argmax()])
+    return int(np.bincount(values).argmax())
 
 
 def _extend_spikes(spike_ids, spike_clusters):
@@ -81,7 +99,7 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cl
 def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     old_clusters = _unique(old_spike_clusters)
     new_clusters = _unique(new_spike_clusters)
-    largest_old_cluster = np.bincount(old_spike_clusters).argmax()
+    largest_old_cluster = _largest_cluster(old_spike_clusters)
     descendants = list(set(zip(old_spike_clusters, new_spike_clusters)))
     update_info = UpdateInfo(
         description='assign',
@@ -293,7 +311,9 @@ class Clustering:
     def _do_merge(self, spike_ids, cluster_ids, to):
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
-        largest_old_cluster = np.bincount(self.spike_clusters[spike_ids]).argmax()
+        largest_old_cluster = max(
+            cluster_ids, key=lambda cluster: (len(self._spikes_per_cluster[cluster]), -cluster)
+        )
         up = UpdateInfo(
             description='merge',
             spike_ids=list(spike_ids),

@@ -25,6 +25,35 @@ GUI commands accept:
 --clear-cache     remove and rebuild the dataset .phy cache
 ```
 
+## Long recordings
+
+Prepare bounded evidence, curate it with `template-gui`, then replay supported
+actions into a new full sorting. See the [long-recording guide](long-recordings.md)
+for input requirements, interpretation limits, and the complete workflow.
+
+```bash
+phy prepare-large /data/recording/params.py /data/recording-bounded \
+  --duration 3600000 \
+  --valid-intervals /data/recording/valid-intervals.npy \
+  --max-spikes 2000000 \
+  --max-bytes 536870912 \
+  --window-seconds 30 \
+  --stratum-seconds 3600 \
+  --seed 0 \
+  --bin-seconds 3600 \
+  --batch-size 100000
+
+phy template-gui /data/recording-bounded/params.py
+
+phy apply-curation /data/recording/params.py /data/recording-bounded \
+  /data/recording-curated --batch-size 100000
+```
+
+`--duration` is acquisition duration in seconds. `--valid-intervals` reads an
+integer `.npy` array of `[start, end)` sample pairs. `--max-bytes` caps the
+prepared package size, not process memory. The output directories must be new;
+the original sorting remains the replay parent.
+
 ## Raw trace viewer
 
 ```bash

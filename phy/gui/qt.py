@@ -97,6 +97,7 @@ from PyQt5.QtWidgets import (  # noqa
     QInputDialog,
     QOpenGLWidget,
     QStyle,
+    QProxyStyle,
     QTableView,
     QTableWidget,
     QTableWidgetItem,

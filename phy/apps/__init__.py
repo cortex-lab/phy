@@ -175,6 +175,196 @@ def cli_template_describe(ctx, params_path):
 
 
 # ------------------------------------------------------------------------------
+# Long-recording batch commands
+# ------------------------------------------------------------------------------
+
+
+@phycli.command('prepare-large')
+@click.argument('params-path', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--duration', 'duration_seconds', type=click.FloatRange(min=0, min_open=True))
+@click.option('--valid-intervals', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option('--max-spikes', type=click.IntRange(min=1), default=2000000, show_default=True)
+@click.option('--max-bytes', type=click.IntRange(min=1), default=536870912, show_default=True)
+@click.option('--window-seconds', type=click.FloatRange(min=0, min_open=True), default=30.0)
+@click.option('--stratum-seconds', type=click.FloatRange(min=0, min_open=True), default=3600.0)
+@click.option('--seed', type=click.IntRange(min=0), default=0)
+@click.option('--bin-seconds', type=click.FloatRange(min=0, min_open=True), default=3600.0)
+@click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+@click.option(
+    '--window-policy',
+    type=click.Choice(['auto', 'producer', 'generated']),
+    default='auto',
+    show_default=True,
+    help='Prefer producer waveform windows, require them, or generate new windows.',
+)
+@click.option(
+    '--summary-store',
+    type=click.Path(path_type=Path),
+    help='Build a separate unit-contiguous acceleration store at this new path.',
+)
+@click.option('--summary-store-max-bytes', type=click.IntRange(min=1), default=68719476736)
+def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
+    """Prepare bounded shared-window evidence and complete-sorting summaries.
+
+    VALID_INTERVALS is an optional int64 .npy array of acquisition [start, end) tick pairs.
+    Duration/exposure must be authoritative; it is never inferred from spike silence.
+    """
+    import json
+
+    import numpy as np
+
+    from .large_recording.prepare import prepare_large
+
+    try:
+        intervals = np.load(valid_intervals, allow_pickle=False) if valid_intervals else None
+        output = prepare_large(params_path, output_dir, valid_intervals=intervals, **kwargs)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Prepared bounded evidence: {output}')
+    manifest = json.loads((output / '_phy_curation_manifest.json').read_text(encoding='utf-8'))
+    coverage = manifest['waveform_coverage']
+    click.echo(
+        f'Stored waveforms: {coverage["retained_rows"]:,} retained / '
+        f'{coverage["source_rows"]:,} source; {coverage["dropped_rows"]:,} omitted.'
+    )
+
+
+@phycli.command('build-summary-store')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--source-dir', type=click.Path(exists=True, path_type=Path))
+@click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
+@click.option('--batch-size', type=click.IntRange(min=1), default=1000000)
+@click.option(
+    '--amplitude-index/--rows-only',
+    default=True,
+    show_default=True,
+    help='Also prepare fast amplitude-threshold summaries.',
+)
+def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
+    """Accelerate an existing bounded package without changing its saved curation."""
+    from .large_recording.summary_store import build_summary_store
+
+    last_percent = [-1]
+
+    def progress(phase, done, total):
+        percent = int(100 * done / max(1, total))
+        marker = (phase, percent)
+        if marker != last_percent[0]:
+            click.echo(f'{phase}: {percent}%')
+            last_percent[0] = marker
+
+    accelerate = kwargs.pop('amplitude_index')
+    output = None
+    try:
+        if accelerate:
+            from .large_recording.range_build import preflight_summary_store
+
+            preflight_summary_store(bounded_dir, kwargs['max_bytes'])
+        output, reference = build_summary_store(
+            bounded_dir, output_dir, progress=progress, return_reference=True, **kwargs
+        )
+        if accelerate:
+            _build_amplitude_index(
+                bounded_dir, output / 'amplitude-index', kwargs['max_bytes'], progress, reference
+            )
+    except (ValueError, OSError) as error:
+        message = str(error)
+        if output is not None:
+            message = (
+                f'Row snapshot ready at {output}; amplitude-index preparation failed: '
+                f'{error}. Retry with build-amplitude-index.'
+            )
+        raise click.ClickException(message) from error
+    click.echo(f'Prepared summary snapshot: {output}')
+
+
+@phycli.command('attach-summary-store')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('store-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+def cli_attach_summary_store(bounded_dir, store_dir):
+    """Attach an existing compatible summary snapshot without rebuilding."""
+    from .large_recording.summary_store import attach_summary_store
+
+    try:
+        _, reference = attach_summary_store(bounded_dir, store_dir, return_reference=True)
+        candidate = store_dir / 'amplitude-index'
+        if candidate.is_dir():
+            from .large_recording.range_index import attach_amplitude_index
+
+            attach_amplitude_index(bounded_dir, candidate, expected_reference=reference)
+    except (ValueError, OSError, KeyError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Attached summary snapshot: {store_dir}')
+
+
+def _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress, reference=None):
+    from .large_recording.range_build import build_amplitude_index
+    from .large_recording.range_intervals import RangeUnavailableError
+
+    try:
+        options = {'expected_reference': reference} if reference is not None else {}
+        return build_amplitude_index(
+            bounded_dir, output_dir, max_bytes=max_bytes, progress=progress, **options
+        )
+    except RangeUnavailableError as error:
+        click.echo(f'Using the verified row store: {error}')
+
+
+@phycli.command('build-amplitude-index')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
+def cli_build_amplitude_index(bounded_dir, output_dir, max_bytes):
+    """Add fast amplitude queries to an existing attached summary store."""
+    last = [None]
+
+    def progress(phase, done, total):
+        marker = (phase, int(100 * done / max(1, total)))
+        if marker != last[0]:
+            click.echo(f'{marker[0]}: {marker[1]}%')
+            last[0] = marker
+
+    try:
+        path = _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
+    if path:
+        click.echo(f'Prepared amplitude index: {path}')
+
+
+@phycli.command('attach-amplitude-index')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('index-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+def cli_attach_amplitude_index(bounded_dir, index_dir):
+    """Attach a compatible amplitude index to its original row store."""
+    from .large_recording.range_index import attach_amplitude_index
+
+    try:
+        attach_amplitude_index(bounded_dir, index_dir)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Attached amplitude index: {index_dir}')
+
+
+@phycli.command('apply-curation')
+@click.argument('source-params', type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument('output-dir', type=click.Path(path_type=Path))
+@click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+def cli_apply_curation(source_params, bounded_dir, output_dir, batch_size):
+    """Replay committed bounded curation into a new complete sorting."""
+    from .large_recording.replay import apply_curation
+
+    try:
+        output = apply_curation(source_params, bounded_dir, output_dir, batch_size=batch_size)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Published complete curated sorting: {output}')
+
+
+# ------------------------------------------------------------------------------
 # Kwik GUI
 # ------------------------------------------------------------------------------
 
@@ -224,6 +414,11 @@ def cli_alf_convert(ctx, subdirs, out_dir):
     from phylib.io.merge import Merger
     from phylib.io.model import load_model
 
+    if any((Path(path) / '_phy_curation_manifest.json').exists() for path in subdirs):
+        raise click.ClickException(
+            'Apply bounded curation to the complete sorting before ALF conversion.'
+        )
+
     out_dir = Path(out_dir)
 
     if len(subdirs) >= 2:
@@ -252,6 +447,11 @@ def template_extract_waveforms(
 ):  # pragma: no cover
     """Extract spike waveforms."""
     from phylib.io.model import load_model
+
+    if (Path(params_path).parent / '_phy_curation_manifest.json').exists():
+        raise click.ClickException(
+            'Extract waveforms on the original source and regenerate bounded evidence; bounded package assets are immutable.'
+        )
 
     model = load_model(params_path)
     model.save_spikes_subset_waveforms(

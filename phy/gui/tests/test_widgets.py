@@ -9,11 +9,12 @@ from functools import partial
 
 import numpy as np
 from phylib.utils import connect, unconnect
+from PyQt5 import sip
 from pytest import fixture, mark, raises
 
 from phy.utils.selection import SelectionIntent, SelectionMutation
 
-from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, Qt
+from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, QPoint, Qt
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
@@ -540,6 +541,66 @@ def test_table_scroll(qtbot, table):
     table.scroll_to(1400)
 
 
+def test_table_last_row_is_not_covered_by_horizontal_scrollbar(qtbot):
+    table = Table(
+        columns=['id', 'count', 'rate'],
+        data=[{'id': i, 'count': 1000 + i, 'rate': 5.8} for i in range(640)],
+    )
+    qtbot.addWidget(table)
+    table.show()
+    view = table.table_view
+
+    def last_row_is_readable():
+        bar = view.verticalScrollBar()
+        bar.setValue(bar.maximum())
+        last = view.visualRect(table._proxy.index(table._proxy.rowCount() - 1, 0))
+        viewport = view.viewport().rect()
+        if last.top() < viewport.top() or last.bottom() > viewport.bottom():
+            return False
+        # A Cocoa overlay scrollbar lies *inside* the viewport: containment
+        # alone passes even while it hides the lower half of the final row.
+        horizontal = view.horizontalScrollBar()
+        if horizontal.isVisible():
+            position = view.viewport().mapFromGlobal(horizontal.mapToGlobal(QPoint()))
+            scrollbar_rect = horizontal.rect().translated(position)
+            last.setLeft(viewport.left())
+            last.setRight(viewport.right())
+            return not last.intersects(scrollbar_rect)
+        return True
+
+    for width, height in [(350, 250), (850, 300), (350, 267)]:
+        table.resize(width, height)
+        for column in range(3):
+            view.setColumnWidth(column, 180)
+        for text, order in [('', 'asc'), ('id >= 600', 'desc')]:
+            table.filter(text)
+            table.sort_by('id', order)
+            qtbot.waitUntil(last_row_is_readable)
+        assert view.horizontalScrollBar().isVisible() == (width == 350)
+
+    horizontal = view.horizontalScrollBar()
+    horizontal.setValue(0)
+    qtbot.mouseClick(
+        horizontal, Qt.LeftButton, pos=QPoint(horizontal.width() - 4, horizontal.height() // 2)
+    )
+    assert horizontal.value() > 0
+
+
+def test_table_scrollbar_style_is_destroyed_without_owning_application_style(qtbot, qapp):
+    application_style = qapp.style()
+    table = Table(data=[{'id': 0}])
+    scrollbar_style = table.table_view.horizontalScrollBar().style()
+    assert scrollbar_style is not application_style
+    sip.delete(table)
+    assert sip.isdeleted(scrollbar_style)
+    assert not sip.isdeleted(application_style)
+    # A second table still gets a usable native base style after the first dies.
+    other = Table(data=[{'id': 0}])
+    qtbot.addWidget(other)
+    other.show()
+    assert not other.grab().isNull()
+
+
 def test_table_busy(qtbot, table):
     table.select([1, 2])
     table.set_busy(True)
@@ -983,3 +1044,144 @@ def test_table_interaction_overlay_stays_fixed_while_scrolling(qtbot):
     assert table._interaction_overlay.geometry() == geometry
     assert 'rgba(0, 0, 0, 220)' in table._interaction_overlay.styleSheet()
     table.close()
+
+
+def test_table_debounced_selection_batch_overflow_and_invalidation(table, qtbot):
+    from timeit import default_timer
+
+    table._debounce_events.add('select')
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    table._selection_batch_limit = 3
+    events = []
+    callbacks = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        events.append(payload)
+
+    try:
+        for candidate in (1, 2, 3, 4, 5, 6, 7):
+            callback = callbacks.append if candidate == 7 else None
+            table.select([candidate], marker=candidate, callback=callback)
+        table.debouncer.flush()
+        operations = [
+            mutation
+            for payload in events
+            for mutation in payload['kwargs']['_selection_mutations']
+        ]
+        assert len(events) == 3
+        assert [operation.after_ids for operation in operations] == [
+            (candidate,) for candidate in range(1, 8)
+        ]
+        assert all(
+            first.after_ids == second.before_ids
+            for first, second in zip(operations, operations[1:])
+        )
+        assert events[-1]['kwargs']['marker'] == 7
+        qtbot.wait(1)
+        assert callbacks == [events[-1]]
+
+        table.select([8])
+        table.set_selected_ids([2])
+        table.debouncer.flush()
+        assert len(events) == 3
+        table.select([4])
+        table.debouncer.flush()
+        assert events[-1]['kwargs']['_selection_mutations'][0].before_ids == (2,)
+        table.select([5])
+        table.remove_all_and_add([{'id': 0}, {'id': 1}])
+        table.debouncer.flush()
+        assert events[-1]['selected'] == [4]
+    finally:
+        unconnect(selected)
+
+
+@mark.parametrize('method', ['remove', 'add_remove'])
+def test_table_removal_settles_pending_selection_before_model_change(table, method):
+    from timeit import default_timer
+
+    table._debounce_events.add('select')
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    events = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        events.append((payload['selected'], sender.get_ids()))
+
+    try:
+        table.select([1])
+        table.select([2])
+        if method == 'remove':
+            table.remove([2])
+        else:
+            table.add_remove([], [2])
+        assert len(events) == 1
+        assert events[0][0] == [2]
+        assert 2 in events[0][1]
+        table.debouncer.flush()
+        assert len(events) == 1
+        assert table.get_selected_ids() == []
+    finally:
+        unconnect(selected)
+
+
+def test_table_rebuild_invalidates_pending_selection_generation(table):
+    from timeit import default_timer
+
+    table._debounce_events.add('select')
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    events = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        events.append(payload)
+
+    try:
+        table.select([1])
+        generation = table._selection_generation
+        table._init_table(columns=['id'], data=[{'id': 10}], sort=('id', 'asc'))
+        table.debouncer.flush()
+        assert table._selection_generation > generation
+        assert not events
+        assert not table._pending_selection_mutations
+    finally:
+        unconnect(selected)
+
+
+def test_other_debounced_table_events_do_not_replace_selection_batch(table):
+    from timeit import default_timer
+
+    table._debounce_events.update(('select', 'custom_event'))
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    selections = []
+    other_events = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        selections.append(payload)
+
+    @connect(event='custom_event', sender=table)
+    def custom_event(sender, payload):
+        other_events.append(payload)
+
+    try:
+        table.select([1])
+        table.select_toggle(2)
+        table.eval_js('table.emit("custom_event", 3);')
+        table.eval_js('table.emit("custom_event", 4);')
+        table.debouncer.flush()
+        assert len(selections) == 1
+        assert selections[0]['selected'] == [1, 2]
+        mutations = selections[0]['kwargs']['_selection_mutations']
+        assert [mutation.before_ids for mutation in mutations] == [(), (1,)]
+        assert [mutation.after_ids for mutation in mutations] == [(1,), (1, 2)]
+        assert other_events == [4]
+        assert not table._pending_selection_mutations
+        assert not table.debouncer.has_pending
+    finally:
+        unconnect(selected)
+        unconnect(custom_event)
