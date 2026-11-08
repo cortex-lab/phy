@@ -18,6 +18,10 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Record phy/phylib versions, checkout revisions and UTC timestamps in `phy.log`
+  at startup and in dataset-local `phy_curation_history.jsonl` after successful
+  curation saves. `phy --version` now identifies the phy checkout itself.
+
 - Added a standalone graphics diagnostic with embedded coding-agent instructions,
   selectable probes, synthetic selection tests and screenshots, crash/hang logs,
   and incremental workspaces for a shareable ZIP report. It runs against existing
