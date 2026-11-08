@@ -99,6 +99,10 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Fit the Amplitude View to every finite displayed amplitude of the selected
+  clusters, with padding, instead of clipping the outer percentiles. Background
+  outliers no longer compress selected traces; existing spike budgets still apply.
+
 - Order Trace Image View channels by their physical positions, matching Trace View
   even when the recording stores channels in a different order.
 - Treat a spike gap exactly at the Correlogram View's refractory threshold as
