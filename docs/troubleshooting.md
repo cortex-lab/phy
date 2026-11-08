@@ -97,6 +97,42 @@ images are omitted with reasons while the other logs and results are preserved.
 Reports retain historical failures and distinguish consistently passing alternative
 configurations from a claim that an intermittent failure has been fixed.
 
+### Frozen or blank plots on Chromebook Linux / Wayland
+
+A Chromebook Linux user running phy 2.1.0 reported that selecting another cluster
+updated the tables while plots remained frozen and zoom stopped responding.
+Launching with the matched X11/GLX settings below restored selection updates and
+zoom for that user. This is a tested workaround for that installation; the exact
+cause of the original Wayland freeze has not been established.
+
+Close phy, then run this from the dataset directory in the same environment:
+
+```bash
+QT_QPA_PLATFORM=xcb QT_XCB_GL_INTEGRATION=xcb_glx PYOPENGL_PLATFORM=glx phy template-gui params.py --debug
+```
+
+These settings apply to this launch only. They do not install packages or reset
+dataset or GUI state. Keep the normal launch command on systems where it works.
+If X11 is unavailable or this launch fails, retain the log and use the standalone
+diagnostic rather than changing packages or clearing settings.
+
+Setting only `QT_QPA_PLATFORM=xcb` may leave PyOpenGL using Wayland's EGL binding
+while Qt uses GLX. Repeated `Attempt to retrieve context when no valid context`
+errors accompanied blank plots in the affected user's X11 test. The same error
+was reproduced with deliberately mismatched bindings on another Linux system.
+It is evidence of a context lookup failure, not proof of its cause on every system.
+
+Phy preserves existing backend settings and explicit user overrides. It does not
+switch every Chromebook or Wayland installation automatically: Qt may fall back
+to EGL even when GLX was requested, and the original freeze has not been
+reproduced sufficiently to choose a safe automatic activation rule.
+
+The diagnostic's `--configuration xcb-glx` experiment sets all three variables
+and works with existing releases. The `xcb` experiment remains a Qt-only control.
+Selection screenshots now wait for selection-triggered frames without requesting
+extra redraws; a passing synthetic run still does not verify physical desktop
+presentation, real datasets, or user plugins.
+
 ## Sending your dataset to the main developer
 
 In some cases, the [main phy developer](https://cyrille.rossant.net/) will ask you to send him your dataset in order to identify and fix the problem. You should compress the whole folder, **excluding**:

@@ -17,6 +17,30 @@ original_watch, original_emit = kit.watch_surface, kit.emit
 windows = {}
 fired = False
 
+if control in ('scene-redraw', 'scene-redraw-metrics'):
+    from phy.plot import PlotCanvas
+
+    original_update = PlotCanvas.update
+
+    def scene_emit(event, **fields):
+        global fired
+        original_emit(event, **fields)
+        if event == 'stage' and fields.get('stage') == 'scene-qt-table-click':
+            fired = True
+            original_emit('injected-control', kind=control)
+
+    def update(canvas, *args, **kwargs):
+        if not fired:
+            return original_update(canvas, *args, **kwargs)
+        original_emit('redraw-suppressed', canvas=getattr(canvas, 'diagnostic_label', 'unknown'))
+
+    PlotCanvas.update = update
+    kit.emit = scene_emit
+    args = ['--_probe', 'scene']
+    if control == 'scene-redraw':
+        args += ['--_artifacts', destination]
+    raise SystemExit(kit.main(args))
+
 
 def watch(canvas, label):
     windows[label] = canvas

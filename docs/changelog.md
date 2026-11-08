@@ -18,6 +18,11 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Explain Linux OpenGL context lookup failures once instead of leaving only
+  debug messages. Existing backend selection remains unchanged. Document a
+  verified Chromebook workaround, add a matched `xcb-glx` diagnostic experiment,
+  and check selection redraws without screenshot-triggered updates.
+
 - Record phy/phylib versions, checkout revisions and UTC timestamps in `phy.log`
   at startup and in dataset-local `phy_curation_history.jsonl` after successful
   curation saves. `phy --version` now identifies the phy checkout itself.
