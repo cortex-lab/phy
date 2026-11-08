@@ -156,6 +156,7 @@ class KwikController(WaveformMixin, FeatureMixin, TraceMixin, BaseController):
         # Connect the `save_clustering` event raised by the supervisor when saving
         # to the model's saving functions.
         connect(self.on_save_clustering, sender=supervisor)
+        connect(self._on_curation_saved, event='curation_saved', sender=supervisor)
 
         @connect(sender=supervisor)
         def on_attach_gui(sender):

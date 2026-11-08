@@ -15,7 +15,7 @@ import sys
 from io import StringIO
 
 from phylib.utils import Bunch
-from phylib.utils._misc import _git_version
+from ._provenance import _git_version
 from phylib.utils.event import connect, unconnect, emit
 from .utils.config import load_master_config
 from .utils.plugin import IPlugin, get_plugin, discover_plugins
@@ -28,7 +28,7 @@ from .utils.plugin import IPlugin, get_plugin, discover_plugins
 __author__ = 'Cyrille Rossant'
 __email__ = 'cyrille.rossant at gmail.com'
 __version__ = '2.2.0.dev0'
-__version_git__ = __version__ + _git_version()
+__version_git__ = __version__ + _git_version(__file__)
 
 
 # Set a null handler on the root logger

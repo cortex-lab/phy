@@ -10388,6 +10388,7 @@ Reset the wizard.
 Save the manual clustering back to disk.
 
 This method emits the `save_clustering(spike_clusters, groups, *labels)` event.
+After every save step succeeds, it emits `curation_saved`.
 It is up to the caller to react to this event and save the data to disk.
 
 ---
