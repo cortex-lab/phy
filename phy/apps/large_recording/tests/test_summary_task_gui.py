@@ -170,8 +170,9 @@ def test_reference_read_error_is_recoverable(qtbot, opened, monkeypatch):
     assert actions.widget.hide_button.text() == 'Close'
 
 
+@pytest.mark.parametrize('long_path', [False, True])
 def test_preparation_warning_stays_visible_without_completed_progress(
-    qtbot, opened, tmp_path, monkeypatch
+    qtbot, opened, tmp_path, monkeypatch, long_path
 ):
     from phy.apps.large_recording.summary_tasks import StoreArtifact
 
@@ -181,10 +182,13 @@ def test_preparation_warning_stays_visible_without_completed_progress(
         return StoreArtifact(request.destination, warning='Could not publish reference')
 
     monkeypatch.setattr(summary_task_gui, 'prepare_summary_store', warning)
-    actions.build(tmp_path / 'store')
+    destination = tmp_path / ('long-' + 'x' * 120) / 'store' if long_path else tmp_path / 'store'
+    actions.build(destination)
     qtbot.waitUntil(lambda: not actions.manager.busy)
     assert actions._mode == 'build'
     assert 'needs attention' in actions.widget.label.text()
+    assert str(destination) in actions.widget.label.toolTip()
+    assert str(destination) in actions.widget.log.toPlainText()
     assert 'Could not publish reference' in actions.widget.log.toPlainText()
     assert not actions.widget.isHidden()
     assert actions.widget.bar.isHidden()

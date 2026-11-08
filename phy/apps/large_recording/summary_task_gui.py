@@ -500,7 +500,7 @@ class SummaryStoreActions(QObject):
             artifact = outcome.result
             if artifact.warning:
                 self.widget.notice(
-                    f'Store created at {artifact.path}; finalization needs attention. See Details.'
+                    f'Store created; finalization needs attention. See Details. Path: {artifact.path}'
                 )
                 self.widget.log.appendPlainText(artifact.warning)
                 self._resume()

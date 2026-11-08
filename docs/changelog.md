@@ -197,6 +197,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Keep summary-store finalization warnings visible even when the destination
+  path is long; the full path remains in Details and the tooltip.
+
 - Action prompts and snippets accept negative numbers, scientific notation, and
   comma-separated negative values without confusing their signs with ID ranges.
 - On macOS, horizontal table scrollbars reserve space so the last cluster row
