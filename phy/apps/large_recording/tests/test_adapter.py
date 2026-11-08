@@ -248,6 +248,9 @@ def test_failed_save_leaves_dirty_previous_checkpoint(tmp_path, monkeypatch):
         supervisor = controller.supervisor
         supervisor.merge([0, 1])
         supervisor.save()
+        history = controller.dir_path / 'phy_curation_history.jsonl'
+        saved_history = history.read_text()
+        assert len(saved_history.splitlines()) == 1
         supervisor.label('group', 'noise', [100])
         from phy.apps.large_recording import curation
 
@@ -262,6 +265,7 @@ def test_failed_save_leaves_dirty_previous_checkpoint(tmp_path, monkeypatch):
         with pytest.raises(OSError, match='interrupted'):
             supervisor.save()
         assert supervisor.is_dirty()
+        assert history.read_text() == saved_history
         assert BoundedSession(controller.dir_path).metadata['group'][100] is None
     finally:
         controller.close()
@@ -549,3 +553,43 @@ def test_pending_navigation_settles_exact_native_and_semantic_targets(
     finally:
         gui.close()
         controller.close()
+
+
+def test_bounded_save_history_appends_and_survives_reopening(tmp_path):
+    params, controller = make_controller(tmp_path)
+    bounded = controller.dir_path
+    history = bounded / 'phy_curation_history.jsonl'
+    original_assignments = (bounded / 'spike_clusters.npy').read_bytes()
+    try:
+        assert not history.exists()
+        controller.supervisor.merge([0, 1])
+        controller.supervisor.save()
+        checkpoint = controller.bounded_session.checkpoint_path
+        assert checkpoint.is_dir()
+        assert (
+            json.loads((bounded / '.phy-curation' / 'current.json').read_text())['generation']
+            == checkpoint.name
+        )
+        first = json.loads(history.read_text())
+        assert first['event'] == 'curation_saved'
+        assert first['dataset_path'] == str(bounded.resolve())
+        assert first['software']['phy']['version']
+        assert first['software']['phylib']['version']
+        assert 'Curation session started:' in (bounded / 'phy.log').read_text()
+        controller.supervisor.save()
+        records = [json.loads(line) for line in history.read_text().splitlines()]
+        assert len(records) == 2
+        assert records[0]['session_id'] == records[1]['session_id']
+        assert (bounded / 'spike_clusters.npy').read_bytes() == original_assignments
+        assert not (params.parent / 'phy_curation_history.jsonl').exists()
+    finally:
+        controller.close()
+    reopened = TemplateController(dir_path=bounded, config_dir=tmp_path / 'config', plugins=[])
+    try:
+        reopened.supervisor.save()
+        records = [json.loads(line) for line in history.read_text().splitlines()]
+        assert len(records) == 3
+        assert records[-1]['session_id'] != records[0]['session_id']
+        assert not reopened.supervisor.is_dirty()
+    finally:
+        reopened.close()

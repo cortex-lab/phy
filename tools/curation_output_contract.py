@@ -786,7 +786,11 @@ def compare_file_contract(
             ('replay', right, right_required),
         ):
             names = {p.name for p in path.iterdir()}
-            optional = {'phy.log', 'cluster_info.tsv', '.phy'} if role == 'ordinary' else set()
+            optional = (
+                {'phy.log', 'phy_curation_history.jsonl', 'cluster_info.tsv', '.phy'}
+                if role == 'ordinary'
+                else set()
+            )
             if role == 'ordinary':
                 optional.add('curation_review.json')
                 for name in (

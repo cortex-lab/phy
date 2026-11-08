@@ -527,3 +527,4 @@ class BoundedSupervisor(Supervisor):
             self.merge_propositions.mark_saved()
         self._is_dirty = False
         self._update_save_feedback(saved=True)
+        emit('curation_saved', self)

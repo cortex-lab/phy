@@ -164,6 +164,7 @@ class BoundedTemplateController(TemplateController):
             merge_propositions=propositions,
         )
         self.supervisor._validate_native()
+        connect(self._on_curation_saved, event='curation_saved', sender=self.supervisor)
 
     def _load_merge_propositions(self):
         session = self.bounded_session

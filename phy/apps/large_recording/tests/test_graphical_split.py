@@ -344,3 +344,37 @@ def test_pending_reference_selection_invalidates_old_split_preview(qtbot, tmp_pa
     finally:
         gui.close()
         controller.close()
+
+
+@pytest.mark.parametrize('scope', ['overview', 'window'])
+def test_evidence_amplitude_fits_selected_points_without_expanding_budget(qtbot, tmp_path, scope):
+    params = make_gui_sorting(tmp_path / 'source')
+    clusters = np.load(params.parent / 'spike_clusters.npy')
+    amplitudes = np.full(len(clusters), 1e6, dtype=np.float32)
+    amplitudes[clusters == 0] = [-1000, -1100, -1050, -1450]
+    np.save(params.parent / 'amplitudes.npy', amplitudes)
+    bounded = prepare_large(
+        params, tmp_path / 'bounded', window_seconds=20, stratum_seconds=20, bin_seconds=5
+    )
+    controller = TemplateController(dir_path=bounded, config_dir=tmp_path / 'config', plugins=[])
+    gui = controller.create_gui(default_views=['EvidenceAmplitudeView'], do_prompt_save=False)
+    try:
+        gui.show()
+        controller.supervisor.select([0])
+        controller.supervisor.block()
+        view = gui.get_view('EvidenceAmplitudeView')
+        view.amplitude_scope = scope
+        assert view.data_bounds[1] < -1450
+        assert 0 < view.data_bounds[3] < 1e6
+        selected = next(bunch for bunch in view._displayed_bunchs if bunch.cluster_id == 0)
+        assert selected.amplitudes.min() == -1450
+        controller.n_spikes_amplitudes = 2
+        controller.n_spikes_amplitudes_total = 2
+        view.plot()
+        selected = next(bunch for bunch in view._displayed_bunchs if bunch.cluster_id == 0)
+        assert len(selected.spike_ids) <= 2
+        assert view.data_bounds[1] < selected.amplitudes.min()
+        assert view.data_bounds[3] > selected.amplitudes.max()
+    finally:
+        gui.close()
+        controller.close()

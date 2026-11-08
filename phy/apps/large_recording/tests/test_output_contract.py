@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import tools.compare_curation_modes as comparison
+from phy._provenance import _append_curation_save, _new_session
 from phy.apps.large_recording.curation import BoundedSession
 from phy.apps.large_recording.metadata import SCHEMA_FILE, read_metadata, write_metadata
 from phy.apps.large_recording.prepare import prepare_large
@@ -772,3 +773,20 @@ def test_native_transformed_producer_difference_is_ancestry_bounded(contract_pai
         csv.writer(stream, delimiter='\t').writerows(rows)
     result = _compare(pair)
     assert not result['ok'] and 'unsupported ancestor value' in result['error']
+
+
+@pytest.mark.parametrize('role', ['ordinary', 'replay'])
+def test_gui_provenance_history_is_an_ordinary_auxiliary_file(contract_pair, role):
+    pair = contract_pair
+    directory = pair.ordinary if role == 'ordinary' else pair.right
+    _append_curation_save(directory, _new_session())
+    history = directory / 'phy_curation_history.jsonl'
+    original_history = history.read_bytes()
+    result = _compare(pair)
+    if role == 'ordinary':
+        assert result['ok'], result
+    else:
+        assert not result['ok']
+        assert 'Unexpected replay files' in result['error']
+    assert history.read_bytes() == original_history
+    assert _inventory(pair.source) == pair.original

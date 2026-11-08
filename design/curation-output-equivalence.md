@@ -71,7 +71,7 @@ comparison remains available for complete partition/selected-label comparisons.
 | Saved generation | Pointer, descriptor and all checkpoint file hashes bind the export's journal, metadata, schema, allocator, provenance and reviews to the saved session. Every retained row's full output assignment must equal its saved assignment. |
 | Suggestions/reviews | Suggestion bytes and source-hash bindings survive; inherited decisions match semantically. This action ledger makes no new proposition decisions. Their separate acceptance procedure remains in force. |
 | Native derived whitening inverse | When absent from source but materialized by ordinary Phy, it must equal the inverse of the source whitening matrix, or the channel-count identity when no matrix exists. It is not an arbitrary extra-file exemption. |
-| GUI state/derived summaries | `.phy` caches and logs may differ. Optional generated cluster summaries must have the complete active catalog and agree with their manual labels. Other optional source snapshots are byte-checked. Unknown or missing assets fail. |
+| GUI state/derived summaries | `.phy` caches, logs and GUI `phy_curation_history.jsonl` save records may differ. Optional generated cluster summaries must have the complete active catalog and agree with their manual labels. Other optional source snapshots are byte-checked. Unknown or missing assets fail. |
 
 The checker does not call the bounded assignment projector or event metadata
 interpreter. It uses the source format reader for admission and independently

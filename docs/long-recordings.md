@@ -364,6 +364,19 @@ undo baseline. Each save checks that the checkpoint has not changed since this
 session opened. If another session has saved first, the stale save fails; reopen
 the bounded dataset before continuing to avoid overwriting that generation.
 
+Each successful GUI checkpoint save also appends a record to
+`phy_curation_history.jsonl` beside the bounded package's `params.py`, using the
+same software versions, checkout revisions, session IDs and UTC timestamps as
+ordinary curation (see [curation provenance](quickstart.md#curation-provenance)).
+A failed checkpoint save does not append a successful-save record. This history
+is separate from the immutable checkpoint and leaves the original source alone.
+Direct scripting calls to `BoundedSession.save()` do not create GUI session records.
+
+The Evidence Amplitude View includes the full finite range of the selected
+units' displayed amplitudes, with padding, in both overview and window modes.
+Background outliers do not set that range. Evidence and display budgets still
+apply: spikes absent from the sample are not loaded just to determine the axis.
+
 Lasso, feature, and waveform splits remain unavailable in bounded mode because
 the selected rows do not define how unseen source spikes should be assigned.
 Ordinary datasets retain their standard split tools, including the graphical
