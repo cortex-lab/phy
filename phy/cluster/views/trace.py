@@ -30,6 +30,35 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 
+def _next_short_isi(spike_times, time, refractory_period, sample_rate, block_size=10000):
+    """Return the leading spike time of the next short-ISI pair, wrapping once.
+
+    Spike times must be sorted. Scan in bounded blocks rather than allocating
+    interspike intervals for the full cluster on each navigation action. Compare
+    sample gaps to avoid cancellation errors at the refractory-period boundary.
+    """
+    if spike_times is None or len(spike_times) < 2:
+        return
+    if not np.isfinite(refractory_period) or refractory_period <= 0:
+        return
+    sample_limit = refractory_period * sample_rate
+    nearest_sample = np.rint(sample_limit)
+    # Converting a millisecond threshold to seconds can put an integral sample
+    # boundary a few ulps above the integer (e.g. 1.3 ms at 30 kHz).
+    if np.isclose(sample_limit, nearest_sample, rtol=0, atol=2 * np.spacing(sample_limit)):
+        sample_limit = nearest_sample
+    n_pairs = len(spike_times) - 1
+    start = min(np.searchsorted(spike_times, time, side='right'), n_pairs)
+    for first, stop in ((start, n_pairs), (0, start)):
+        for lo in range(first, stop, block_size):
+            hi = min(lo + block_size, stop)
+            samples = np.rint(spike_times[lo : hi + 1] * sample_rate)
+            intervals = np.diff(samples)
+            matches = np.flatnonzero(intervals < sample_limit)
+            if matches.size:
+                return spike_times[lo + matches[0]]
+
+
 def select_traces(traces, interval, sample_rate=None):
     """Load traces in an interval (in seconds)."""
     start, end = interval
@@ -143,6 +172,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         'go_to': 'alt+t',
         'go_to_next_spike': 'alt+pgdown',
         'go_to_previous_spike': 'alt+pgup',
+        'go_to_next_short_isi': 'shift+alt+pgdown',
         'narrow': 'alt++',
         'select_spike': 'ctrl+click',
         'select_channel_pcA': 'shift+left click',
@@ -172,6 +202,8 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
         self.show_all_spikes = False
 
         self.get_spike_times = spike_times
+        self._short_isi_time = None
+        self._short_isi_period = None
 
         # Sample rate.
         assert sample_rate > 0
@@ -419,6 +451,8 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
     def set_interval(self, interval=None):
         """Display the traces and spikes in a given interval."""
+        if interval is not None:
+            self._short_isi_time = None
         if interval is None:
             interval = self._interval
         interval = self._restrict_interval(interval)
@@ -435,6 +469,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
             self.plot(update_traces=False, update_waveforms=True)
 
     def on_select(self, cluster_ids=None, **kwargs):
+        self._short_isi_time = None
         self.cluster_ids = cluster_ids
         if not cluster_ids:
             return
@@ -473,6 +508,7 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
 
         self.actions.add(self.go_to_next_spike)
         self.actions.add(self.go_to_previous_spike)
+        self.actions.add(self.go_to_next_short_isi)
         self.actions.separator()
 
         self.set_interval()
@@ -591,6 +627,33 @@ class TraceView(ScalingMixin, BaseColorView, ManualClusteringView):
     ):
         """Jump to the previous spike from the first selected cluster."""
         self._jump_to_spike(-1)
+
+    def go_to_next_short_isi(self):
+        """Jump to the next short-ISI pair in the first selected cluster.
+
+        Use the first open CorrelogramView's refractory period. Jump to the first
+        spike of a pair with a strictly shorter interval, wrapping at the end.
+        """
+        correlogram = self.gui.get_view('CorrelogramView') if self.gui is not None else None
+        if correlogram is None:
+            logger.info('Open a CorrelogramView to choose the refractory period.')
+            return
+        period = correlogram.refractory_period
+        # Near the recording edges the display center is clipped. Continue from
+        # the requested spike, not that clipped center, to avoid repeating it.
+        start = self._short_isi_time if self._short_isi_period == period else None
+        spike_times = self.get_spike_times() if self.get_spike_times is not None else None
+        time = _next_short_isi(
+            spike_times, self.time if start is None else start, period, self.sample_rate
+        )
+        if time is None:
+            logger.info(
+                'No spike pair is shorter than the refractory period in the selected cluster.'
+            )
+            return
+        self.go_to(time)
+        self._short_isi_time = time
+        self._short_isi_period = period
 
     def toggle_highlighted_spikes(self, checked):
         """Toggle between showing all spikes or selected spikes."""
@@ -769,6 +832,9 @@ class TraceImageView(TraceView):
         n_samples = traces.shape[1]
         n_ch = self.n_channels
         assert traces.shape == (n_ch, n_samples)
+
+        # Match TraceView's physical channel order before applying the image origin.
+        traces = traces[np.argsort(self.channel_y_ranks)]
 
         if self.origin == 'bottom':
             traces = traces[::-1, ...]

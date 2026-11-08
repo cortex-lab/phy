@@ -13,13 +13,13 @@ from functools import partial
 from pathlib import Path
 
 import numpy as np
-from phylib import _add_log_file
 from phylib.io.array import SpikeSelector, _flatten
 from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils._misc import write_tsv
 from scipy.signal import butter, lfilter
 
+from phy._provenance import _add_log_file, _append_curation_save, _new_session
 from phy.cluster._propositions import (
     MergePropositionCatalog,
     MergePropositionController,
@@ -1185,6 +1185,9 @@ class BaseController:
             handler for handler in phy_logger.handlers if handler not in existing_handlers
         ]
 
+        self._curation_session = {**_new_session(), 'dataset_path': str(self.dir_path)}
+        logger.info('Curation session started: %s', self._curation_session)
+
         # Create or reuse a Model instance (any object)
         self.model = self._create_model(dir_path=dir_path, **kwargs) if model is None else model
         self._model_closed = False
@@ -1352,6 +1355,7 @@ class BaseController:
         # Connect the `save_clustering` event raised by the supervisor when saving
         # to the model's saving functions.
         connect(self.on_save_clustering, sender=supervisor)
+        connect(self._on_curation_saved, event='curation_saved', sender=supervisor)
         if merge_propositions is not None:
             connect(
                 self.on_save_proposition_reviews,
@@ -1537,6 +1541,9 @@ class BaseController:
 
     # Saving methods
     # -------------------------------------------------------------------------
+
+    def _on_curation_saved(self, sender):
+        _append_curation_save(self.dir_path, self._curation_session)
 
     def on_save_clustering(self, sender, spike_clusters, groups, *labels):
         """Save the modified data."""

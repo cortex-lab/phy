@@ -2671,6 +2671,7 @@ class Supervisor:
         """Save the manual clustering back to disk.
 
         This method emits the `save_clustering(spike_clusters, groups, *labels)` event.
+        After every save step succeeds, it emits `curation_saved`.
         It is up to the caller to react to this event and save the data to disk.
 
         """
@@ -2697,6 +2698,7 @@ class Supervisor:
         self._save_spikes_per_cluster()
         self._is_dirty = False
         self._update_save_feedback(saved=True)
+        emit('curation_saved', self)
 
     def block(self):
         """Block until there are no pending actions.

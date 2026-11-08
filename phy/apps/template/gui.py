@@ -10,11 +10,11 @@ from operator import itemgetter
 from pathlib import Path
 
 import numpy as np
-from phylib import _add_log_file
 from phylib.io.model import TemplateModel, get_closest_channels, load_model
 from phylib.io.traces import MtscompEphysReader
 from phylib.utils import Bunch, connect
 
+from phy._provenance import _add_log_file, _software_info
 from phy.cluster.views import ScatterView
 from phy.gui import create_app, run_app
 
@@ -281,18 +281,22 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
     # Create a `phy.log` log file with DEBUG level.
     p = Path(params_path)
     dir_path = p.parent
-    _add_log_file(dir_path / 'phy.log')
-
-    bounded = (dir_path / '_phy_curation_manifest.json').exists()
-    model = None if bounded else load_model(params_path)
-    # Automatically export spike waveforms when using compressed raw ephys.
-    if (
-        model is not None
-        and model.spike_waveforms is None
-        and isinstance(model.traces, MtscompEphysReader)
-    ):
-        # TODO: customizable values below.
-        model.save_spikes_subset_waveforms(max_n_spikes_per_template=500, max_n_channels=16)
+    handler = _add_log_file(dir_path / 'phy.log')
+    try:
+        logger.info('Starting Template GUI: %s', _software_info())
+        bounded = (dir_path / '_phy_curation_manifest.json').exists()
+        model = None if bounded else load_model(params_path)
+        # Automatically export spike waveforms when using compressed raw ephys.
+        if (
+            model is not None
+            and model.spike_waveforms is None
+            and isinstance(model.traces, MtscompEphysReader)
+        ):
+            # TODO: customizable values below.
+            model.save_spikes_subset_waveforms(max_n_spikes_per_template=500, max_n_channels=16)
+    finally:
+        logging.getLogger('phy').removeHandler(handler)
+        handler.close()
 
     create_app()
     controller = TemplateController(model=model, dir_path=dir_path, **kwargs)
