@@ -78,6 +78,14 @@ Start with one Cluster View row and ask a few concrete questions:
   discontinuity?
 - Do the raw traces, when available, agree with the extracted waveforms?
 
+The Amplitude View's default vertical range includes every finite displayed
+amplitude of the selected units, with a small margin. Grey background outliers do
+not set that range. Display budgets still subsample large clusters: a spike absent
+from the sample cannot affect the range or appear in the plot. Changing this range
+does not load all spikes or change which spikes a split selects. Manual zoom is
+still available; plugins can opt into percentile scaling with
+`AmplitudeView.quantile = 0.99`.
+
 No single plot proves that a cluster is a well-isolated neuron. Low spike counts
 also make correlograms noisy. Treat the views as complementary evidence and use a
 curation policy agreed for your experiment.
