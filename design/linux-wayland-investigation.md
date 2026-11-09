@@ -69,6 +69,14 @@ test run passed 94 tests, with ten opt-in graphics tests skipped there and run
 separately. Lint, formatting, published documentation checks and package build
 passed. The unrelated untracked `site/` directory was preserved.
 
+PR validation also exposed two CI prerequisites: EGL imports require explicit
+EGL/Mesa runtime packages, and the native scene checks require exposed surfaces.
+Under CI's tiling manager, parent geometry changes left the embedded GL windows
+unexposed. All ten controls passed on a dedicated unmanaged Xvfb display in the
+same software-rendering environment. CI uses that display for native graphics
+checks, preserving its existing display for other tests. This changes test setup,
+not backend selection or application redraw behavior.
+
 Separate synthetic probes intermittently hit an initial
 `xdg_surface has never been configured` protocol error, or reported an unexposed
 dock. Other attempts passed. These observations are retained as separate startup
