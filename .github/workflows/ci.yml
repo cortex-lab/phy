@@ -30,7 +30,8 @@ jobs:
         # The PyQt5 wheel's xcb platform plugin needs these system libraries.
         sudo apt-get install -y xvfb herbstluftwm \
           libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
-          libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0
+          libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0 \
+          libegl1 libegl-mesa0 libgl1-mesa-dri
         export DISPLAY=:99.0
         Xvfb :99 -screen 0 1400x900x24 -ac +extension GLX +render &
         sleep 3

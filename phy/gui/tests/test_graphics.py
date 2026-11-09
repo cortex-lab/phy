@@ -74,8 +74,9 @@ print(type(platform.PLATFORM).__name__)
         capture_output=True,
         text=True,
         timeout=20,
-        check=True,
+        check=False,
     )
+    assert result.returncode == 0, result.stdout + result.stderr
     assert result.stdout.strip() == expected
 
 
