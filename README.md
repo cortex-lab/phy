@@ -111,6 +111,11 @@ The Trace GUI is still experimental and opens raw electrophysiology recordings d
 phy trace-gui path/to/raw.bin --sample-rate 30000 --dtype int16 --n-channels 384
 ```
 
+For SpikeInterface provenance JSON or saved Zarr recordings, see the
+[source installation instructions](docs/installation.md#read-a-spikeinterface-recording)
+and [dataset requirements](docs/dataset.md#spikeinterface-recordings). This feature
+requires unreleased phylib source; it is not available with phylib 2.7.1.
+
 ## Running phy from Python
 
 You can also launch phy from Python or IPython, which can be useful for debugging or profiling:
