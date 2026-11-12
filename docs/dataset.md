@@ -103,6 +103,27 @@ filter. This selects the recording's output, not the original acquisition data;
 trace displays still perform their normal baseline centering. Standalone Trace
 GUI does not apply the Template GUI's high-pass filter.
 
+### Background navigation prefetch
+
+With phylib source containing [phylib #69](https://github.com/cortex-lab/phylib/pull/69),
+TraceView and TraceImageView offer **Background prefetch** in their view menu.
+It is off by default and is not saved between GUI sessions. Enabling it permits
+worker-thread reads of that recording; the backend must allow access from that
+thread. Readers without the API omit the action; other readers may ignore hints.
+
+Small left/right steps and Alt+wheel navigation prepare one block roughly half a
+second beyond the displayed window. Ordinary waveform extraction, selection
+refreshes, and filter/redraw operations do not generate hints. A jump, direction
+change, or navigation in another view replaces the old lookahead. Disabling,
+hiding, or closing its owning view withdraws the hint without closing the shared
+recording. Closing an inactive view does not cancel another view's lookahead.
+
+Each hint requests only one block, then stops; there is no inactivity timer.
+A running backend call cannot be interrupted. Initial loads and jumps can still
+block while data is computed, and demand can wait for one active prefetch.
+The half-second horizon targets the reader's default block duration; custom
+programmatic block sizes receive best-effort lookahead.
+
 ## Core arrays
 
 These files form the smallest useful Template GUI dataset:

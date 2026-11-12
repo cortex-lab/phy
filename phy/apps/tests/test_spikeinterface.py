@@ -115,8 +115,17 @@ def test_spikeinterface_trace_gui(qtbot, tmp_path, si_dataset, kind):
     gui = create_trace_gui(str(path))
     try:
         assert_array_equal(gui._trace_reader[480:530], si_dataset.recording.get_traces()[480:530])
+        view = gui.views[0]
+        gui.show()
+        qtbot.wait(1)
+        assert not view.background_prefetch
+        view.actions.get('Background prefetch').trigger()
+        view.set_interval((0.1, 0.35))
+        view.go_right()
+        assert gui._trace_prefetch._owner is view
     finally:
         gui.close()
+    assert not gui._trace_prefetch._views
     assert not gui._trace_reader._cache
 
 
@@ -135,3 +144,63 @@ def test_binary_loading_does_not_import_spikeinterface(tmp_path):
         ],
         check=True,
     )
+
+
+@mark.parametrize('view_name', ['create_trace_view', 'create_trace_image_view'])
+def test_spikeinterface_explicit_navigation(qtbot, tmp_path, monkeypatch, si_dataset, view_name):
+    import threading
+
+    model = load_model(si_dataset.params)
+    controller = TemplateController(
+        model=model,
+        dir_path=tmp_path,
+        config_dir=tmp_path / 'config',
+        plugin_dirs=[],
+        clear_state=True,
+        enable_threading=False,
+    )
+    reader = model.traces
+    hints = []
+    prefetch = reader.prefetch
+
+    def hint(sample):
+        hints.append(sample)
+        prefetch(sample)
+
+    monkeypatch.setattr(reader, 'prefetch', hint)
+    view = getattr(controller, view_name)()
+    started, release = threading.Event(), threading.Event()
+    worker = None
+    try:
+        view.set_interval((0.1, 0.35))
+        view.go_right()
+        assert hints == []
+        view.toggle_background_prefetch(True)
+        view.go_right()
+        assert hints == [899]
+        qtbot.waitUntil(lambda: 1 in reader._cache, timeout=5000)
+        controller._get_waveforms(0)
+        assert hints == [899]  # Waveform demand never emits navigation hints.
+        get_traces = reader.recording.get_traces
+
+        def blocked_get_traces(**kwargs):
+            if kwargs['start_frame'] == 2000:
+                started.set()
+                assert release.wait(5)
+            return get_traces(**kwargs)
+
+        monkeypatch.setattr(reader.recording, 'get_traces', blocked_get_traces)
+        view.set_interval((1.5, 1.75))
+        view.go_right()
+        assert started.wait(5)
+        worker = reader._blocks._worker
+        controller.close()
+        assert reader._blocks._closed
+        assert not reader._cache
+    finally:
+        release.set()
+        if worker is not None:
+            worker.join(5)
+            assert not worker.is_alive()
+        view.canvas.close()
+        controller.close()
