@@ -115,6 +115,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Clean up synthetic scene windows before the graphics diagnostic exits, including
+  failed probes, instead of leaving native Qt window destruction to interpreter shutdown.
+
 - Fit the Amplitude View to every finite displayed amplitude of the selected
   clusters, with padding, instead of clipping the outer percentiles. Background
   outliers no longer compress selected traces; existing spike budgets still apply.

@@ -779,6 +779,42 @@ def test_scene_requires_selection_redraw_without_capture_request(
 
 
 @pytest.mark.skipif(
+    os.environ.get('PHY_DIAGNOSTIC_GL_TESTS') != '1'
+    or os.environ.get('QT_QPA_PLATFORM') in ('offscreen', 'minimal'),
+    reason='Opt-in validation against a real graphical session',
+)
+@pytest.mark.parametrize('fail_scene', [False, True])
+def test_scene_destroys_native_windows_before_child_returns(tmp_path, fail_scene):
+    code = f"""import importlib.util
+from PyQt5 import sip
+from PyQt5.QtWidgets import QApplication
+spec = importlib.util.spec_from_file_location('kit', {str(SCRIPT)!r})
+kit = importlib.util.module_from_spec(spec); spec.loader.exec_module(kit)
+canvases = []
+original_watch, original_emit = kit.watch_surface, kit.emit
+def watch(canvas, label):
+    canvases.append(canvas)
+    original_watch(canvas, label)
+def emit(event, **fields):
+    original_emit(event, **fields)
+    if {fail_scene!r} and event == 'stage' and fields.get('stage') == 'scene-qt-table-click':
+        raise RuntimeError('injected scene failure')
+kit.watch_surface, kit.emit = watch, emit
+status = kit.main(['--_probe', 'scene', '--_artifacts', {str(tmp_path)!r}])
+assert status == {1 if fail_scene else 0}
+assert len(canvases) == 2
+assert QApplication.instance() is not None
+assert all(sip.isdeleted(canvas) for canvas in canvases), 'native canvases survived cleanup'
+assert all(sip.isdeleted(canvas.diagnostic_main_window) for canvas in canvases)
+print('native scene windows destroyed before child returns', flush=True)
+"""
+    result, log = diagnostic.run_process([sys.executable, '-c', code], os.environ.copy(), 20)
+    assert result['returncode'] == 0, log[-4000:]
+    assert 'native scene windows destroyed before child returns' in log
+    assert result['details']['status'] == ('FAIL' if fail_scene else 'PASS')
+
+
+@pytest.mark.skipif(
     not sys.platform.startswith('linux')
     or os.environ.get('PHY_DIAGNOSTIC_GL_TESTS') != '1'
     or os.environ.get('QT_QPA_PLATFORM') in ('offscreen', 'minimal'),
