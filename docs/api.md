@@ -10388,6 +10388,7 @@ Reset the wizard.
 Save the manual clustering back to disk.
 
 This method emits the `save_clustering(spike_clusters, groups, *labels)` event.
+After every save step succeeds, it emits `curation_saved`.
 It is up to the caller to react to this event and save the data to disk.
 
 ---
@@ -11031,6 +11032,18 @@ Go to end of the recording.
 
 ---
 
+#### TraceImageView.go_to_next_short_isi
+
+
+**`TraceImageView.go_to_next_short_isi(self)`**
+
+Jump to the next short-ISI pair in the first selected cluster.
+
+Use the first open CorrelogramView's refractory period. Jump to the first
+spike of a pair with a strictly shorter interval, wrapping at the end.
+
+---
+
 #### TraceImageView.go_to_next_spike
 
 
@@ -11544,6 +11557,18 @@ Go to a specific time (in seconds).
 **`TraceView.go_to_end(self)`**
 
 Go to end of the recording.
+
+---
+
+#### TraceView.go_to_next_short_isi
+
+
+**`TraceView.go_to_next_short_isi(self)`**
+
+Jump to the next short-ISI pair in the first selected cluster.
+
+Use the first open CorrelogramView's refractory period. Jump to the first
+spike of a pair with a strictly shorter interval, wrapping at the end.
 
 ---
 

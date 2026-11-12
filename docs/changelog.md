@@ -28,6 +28,26 @@ behavior they verify rather than listed separately.
   preserves every binary part listed in `params.py`, with clear errors for empty
   or unsupported inputs.
 
+- Explain Linux OpenGL context lookup failures once instead of leaving only
+  debug messages. Existing backend selection remains unchanged. Document a
+  verified Chromebook workaround, add a matched `xcb-glx` diagnostic experiment,
+  and check selection redraws without screenshot-triggered updates.
+
+- Record phy/phylib versions, checkout revisions and UTC timestamps in `phy.log`
+  at startup and in dataset-local `phy_curation_history.jsonl` after successful
+  curation saves. `phy --version` now identifies the phy checkout itself.
+
+- Added a standalone graphics diagnostic with embedded coding-agent instructions,
+  selectable probes, synthetic selection tests and screenshots, crash/hang logs,
+  and incremental workspaces for a shareable ZIP report. It runs against existing
+  phy installations without requiring a new release. Frame history, exposure,
+  context, and input traces distinguish rendering anomalies from invalid test
+  conditions; controlled-fault tests validate these classifications.
+
+- Jump to the next short-ISI spike pair in the Trace View with
+  `Shift+Alt+PageDown`, using the first open Correlogram View's refractory period
+  and all spikes from the first selected cluster.
+
 - Right-clicking a correlogram transfers its row cluster between the primary and
   Similarity roles. This also works during Merge mode and proposition review;
   transferring the reference promotes the next staged cluster and retains the old
@@ -95,6 +115,15 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Fit the Amplitude View to every finite displayed amplitude of the selected
+  clusters, with padding, instead of clipping the outer percentiles. Background
+  outliers no longer compress selected traces; existing spike budgets still apply.
+
+- Order Trace Image View channels by their physical positions, matching Trace View
+  even when the recording stores channels in a different order.
+- Treat a spike gap exactly at the Correlogram View's refractory threshold as
+  non-qualifying when navigating short ISIs, even if millisecond-to-sample
+  conversion rounds the threshold slightly upward.
 - Allow narrow dock layouts in Merge mode, hide the non-functional Merge View
   sort indicator, and keep long cluster IDs visible in Correlogram View as the
   view is resized.

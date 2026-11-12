@@ -24,7 +24,7 @@ from phylib.io.mock import (
     artificial_waveforms,
 )
 from phylib.utils import Bunch, connect, emit, reset, unconnect
-from pytest import mark
+from pytest import mark, raises
 from pytestqt.plugin import QtBot
 
 from phy.cluster._propositions import PropositionStatus
@@ -261,6 +261,55 @@ def test_correlogram_transfers_merge_proposition_reference(qtbot, tempdir):
         assert supervisor.selected_similar == []
     finally:
         gui.close()
+        controller.close()
+
+
+@mark.parametrize('failure_stage', ['assignments', 'metadata', 'reviews', 'cache', None])
+def test_curation_history_only_after_complete_save(tempdir, monkeypatch, failure_stage):
+    (tempdir / 'curation.json').write_text(
+        json.dumps(
+            {
+                'format_version': '2',
+                'unit_ids': list(range(MyModel.n_clusters)),
+                'merges': [{'unit_ids': [1, 2]}],
+            }
+        ),
+        encoding='utf8',
+    )
+    controller = _mock_controller(tempdir, MyPropositionController)
+    supervisor = controller.supervisor
+    history = tempdir / 'phy_curation_history.jsonl'
+
+    def fail(*args, **kwargs):
+        raise OSError('save failed')
+
+    def fail_reviews(sender, mapping):
+        fail()
+
+    try:
+        assert not history.exists()
+        supervisor.save()
+        first = history.read_text()
+        if failure_stage == 'assignments':
+            monkeypatch.setattr(controller.model, 'save_spike_clusters', fail)
+        elif failure_stage == 'metadata':
+            monkeypatch.setattr(controller.model, 'save_metadata', fail)
+        elif failure_stage == 'reviews':
+            connect(fail_reviews, event='save_proposition_reviews', sender=supervisor, last=True)
+        elif failure_stage == 'cache':
+            monkeypatch.setattr(supervisor, '_save_spikes_per_cluster', fail)
+        if failure_stage:
+            with raises(OSError, match='save failed'):
+                supervisor.save()
+            assert history.read_text() == first
+        else:
+            supervisor.save()
+            records = [json.loads(line) for line in history.read_text().splitlines()]
+            assert len(records) == 2
+            assert records[0]['session_id'] == records[1]['session_id']
+            assert records[0]['dataset_path'] == str(tempdir.resolve())
+    finally:
+        unconnect(fail_reviews)
         controller.close()
 
 

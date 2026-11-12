@@ -1,0 +1,14 @@
+phy==2.1.0
+phylib==2.7.1
+PyQt5==5.15.11
+PyQt5-Qt5==5.15.19
+PyOpenGL==3.1.10
+numpy==2.5.4
+scipy==1.18.1
+matplotlib==3.11.2
+joblib==1.6.0
+h5py==3.16.0
+qtconsole==5.7.2
+mtscomp==1.0.2
+pillow==13.0.0
+click==8.5.0

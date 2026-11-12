@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 
 import numpy as np
+import pytest
 from phylib.io.mock import artificial_spike_samples
 from phylib.utils import Bunch, connect
 
@@ -289,3 +290,73 @@ def test_amplitude_threshold_rejects_empty_whole_and_invalid_activation(qtbot):
     assert v.split_threshold is None
     assert not v._can_set_split_threshold()
     v.close()
+
+
+@pytest.mark.parametrize(
+    'selected, background, expected',
+    [
+        ([-1100] * 1000 + [-1450], [-1e9, 1e9], (-1522.5, 72.5)),
+        ([10, 2000], [-1e9, 1e9], (-100, 2100)),
+        ([-30, 20], [], (-32.5, 22.5)),
+        ([5, 5], [], (-0.25, 5.25)),
+        ([0, 0], [], (-0.05, 1.05)),
+        ([np.nan, -np.inf, np.inf, -10], [], (-10.5, 0.5)),
+        ([], [-10, 20], (-11.5, 21.5)),
+        ([np.nan], [np.inf], (0, 1)),
+        ([], [], (0, 1)),
+    ],
+)
+def test_amplitude_bounds_include_selected_sample(selected, background, expected):
+    bunches = [
+        Bunch(cluster_id=None, amplitudes=np.asarray(background)),
+        Bunch(cluster_id=139, amplitudes=np.asarray(selected)),
+    ]
+    view = Bunch(duration=180002, quantile=1.0)
+    bounds = AmplitudeView._get_data_bounds(view, bunches)
+    assert bounds[0] == 0
+    assert bounds[2] == view.duration
+    np.testing.assert_allclose([bounds[1], bounds[3]], expected)
+    assert bounds[1] < bounds[3]
+    assert np.isfinite(bounds).all()
+
+
+def test_amplitude_bounds_multiple_selected_and_optional_quantile():
+    bunches = [
+        Bunch(cluster_id=None, amplitudes=np.array([-1e9, 1e9])),
+        Bunch(cluster_id=0, amplitudes=np.array([-20, 5])),
+        Bunch(cluster_id=1, amplitudes=np.array([0, 200])),
+    ]
+    view = Bunch(duration=1, quantile=1.0)
+    assert AmplitudeView._get_data_bounds(view, bunches) == (0, -31, 1, 211)
+    view.quantile = 0.99
+    bounds = AmplitudeView._get_data_bounds(view, bunches)
+    assert -31 < bounds[1] < -20
+    assert 200 < bounds[3] < 211
+
+
+def test_amplitude_plot_fits_sample_without_loading_all(qtbot, gui):
+    requests = []
+
+    def amplitudes(cluster_ids, load_all=False):
+        requests.append(load_all)
+        return [
+            Bunch(
+                amplitudes=np.array([-1100] * 1000 + [-1450]),
+                spike_ids=np.arange(1001),
+                spike_times=np.linspace(0, 180002, 1001),
+            )
+            for cluster_id in cluster_ids
+        ]
+
+    view = AmplitudeView(amplitudes=amplitudes, duration=180002)
+    with qtbot.waitExposed(view.canvas):
+        view.show()
+    view.attach(gui)
+    try:
+        view.on_select(cluster_ids=[139])
+        assert view.data_bounds[1] < -1450
+        assert view.data_bounds[3] > 0
+        assert len(view._displayed_bunchs[-1].spike_ids) == 1001
+        assert requests and not any(requests)
+    finally:
+        _stop_and_close(qtbot, view)

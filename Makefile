@@ -1,4 +1,5 @@
 UV_RUN ?= uv run
+CHECK_PATHS := phy scripts/diagnose_graphics.py scripts/tests
 
 clean-build:
 	rm -fr build/
@@ -26,20 +27,20 @@ install:
 	uv sync --dev
 
 lint:
-	$(UV_RUN) ruff check phy
+	$(UV_RUN) ruff check $(CHECK_PATHS)
 
 format:
-	$(UV_RUN) ruff format phy
+	$(UV_RUN) ruff format $(CHECK_PATHS)
 
 format-check:
-	$(UV_RUN) ruff format --check phy
+	$(UV_RUN) ruff format --check $(CHECK_PATHS)
 
 lint-fix:
-	$(UV_RUN) ruff check --fix phy
+	$(UV_RUN) ruff check --fix $(CHECK_PATHS)
 
 # Test everything except apps
 test: lint format-check
-	$(UV_RUN) pytest -xvv --cov-report= --cov=phy phy --ignore=phy/apps/ --cov-append
+	$(UV_RUN) pytest -xvv --cov-report= --cov=phy phy scripts/tests --ignore=phy/apps/ --cov-append
 	$(UV_RUN) coverage report --omit "*/phy/apps/*,*/phy/plot/gloo/*"
 
 # Test just the apps

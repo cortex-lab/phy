@@ -59,8 +59,9 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
     # Alpha channel of the histogram in the background.
     histogram_alpha = 0.5
 
-    # Quantile used for scaling of the amplitudes (less than 1 to avoid outliers).
-    quantile = 0.99
+    # Include every displayed selected amplitude by default. Plugins can opt into
+    # percentile scaling by setting this below 1 (for example, 0.99).
+    quantile = 1.0
 
     # Size of the histogram, between 0 and 1.
     histogram_scale = 0.25
@@ -166,20 +167,34 @@ class AmplitudeView(RecordingTimeAxisMixin, MarkerSizeMixin, LassoMixin, ManualC
 
     def _get_data_bounds(self, bunchs):
         """Compute the data bounds."""
-        if not bunchs:  # pragma: no cover
+        # Scale to selected clusters, so unrelated background outliers cannot
+        # compress their traces. Work only on the already bounded display sample.
+        selected = [bunch for bunch in (bunchs or ()) if bunch.cluster_id is not None]
+
+        def finite_arrays(bunches):
+            return [
+                values
+                for bunch in bunches
+                if len(values := bunch.amplitudes[np.isfinite(bunch.amplitudes)])
+            ]
+
+        arrays = finite_arrays(selected)
+        if not arrays:
+            arrays = finite_arrays(bunchs or ())
+        if not arrays:
             return (0, 0, self.duration, 1)
-        m = min(
-            np.quantile(bunch.amplitudes, 1 - self.quantile)
-            for bunch in bunchs
-            if len(bunch.amplitudes)
-        )
-        m = min(0, m)  # ensure ymin <= 0
-        M = max(
-            np.quantile(bunch.amplitudes, self.quantile)
-            for bunch in bunchs
-            if len(bunch.amplitudes)
-        )
-        return (0, m, self.duration, M)
+        if self.quantile == 1:
+            m = min(values.min() for values in arrays)
+            M = max(values.max() for values in arrays)
+        else:
+            m = min(np.quantile(values, 1 - self.quantile) for values in arrays)
+            M = max(np.quantile(values, self.quantile) for values in arrays)
+        m, M = min(0, m), max(0, M)
+        # A zero-only sample still needs a nonzero range for transforms/histograms.
+        if m == M:
+            M = m + 1
+        margin = 0.05 * (M - m)
+        return (0, m - margin, self.duration, M + margin)
 
     def _add_histograms(self, bunchs):
         # We do this after get_clusters_data because we need x_max.
