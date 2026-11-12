@@ -30,7 +30,8 @@ jobs:
         # The PyQt5 wheel's xcb platform plugin needs these system libraries.
         sudo apt-get install -y xvfb herbstluftwm \
           libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
-          libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0
+          libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0 \
+          libegl1 libegl-mesa0 libgl1-mesa-dri
         export DISPLAY=:99.0
         Xvfb :99 -screen 0 1400x900x24 -ac +extension GLX +render &
         sleep 3
@@ -66,11 +67,18 @@ jobs:
     - name: Validate graphics diagnostic with real OpenGL (Linux)
       if: runner.os == 'Linux'
       run: |
+        # Keep native child-window geometry stable. The tiling manager on :99
+        # can leave Qt's embedded GL windows unexposed after moving the parent.
+        Xvfb :98 -screen 0 1400x900x24 -ac +extension GLX +render &
+        phy_gl_display_pid=$!
+        trap 'kill "$phy_gl_display_pid" 2>/dev/null || true' EXIT
+        sleep 3
         qt_plugin_path=$(uv run --no-sync python -c 'from PyQt5.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.PluginsPath) + "/platforms/libqxcb.so")')
         ldd "$qt_plugin_path"
-        uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py -k real_gl_controlled_faults
+        uv run --no-sync pytest -o addopts= scripts/tests/test_diagnose_graphics.py \
+          -k 'real_gl_controlled_faults or scene_requires_selection_redraw or xcb_glx_requires_matching'
       env:
-        DISPLAY: ':99.0'
+        DISPLAY: ':98.0'
         QT_QPA_PLATFORM: xcb
         QT_DEBUG_PLUGINS: '1'
         LIBGL_ALWAYS_SOFTWARE: 'true'

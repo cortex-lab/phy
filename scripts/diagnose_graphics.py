@@ -94,7 +94,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA_VERSION = 2
-REVISION = '4'
+REVISION = '5'
 PREFIX = 'PHY_DIAGNOSTIC '
 MAX_LOG_BYTES = 2_000_000
 GRAPHICS_ENV = (
@@ -1296,6 +1296,7 @@ def scene_probe(app, artifact_dir):
         def __init__(self):
             super().__init__()
             self.paint_count = 0
+            self.painted_clusters = []
             self.pending_capture = None
 
         def initializeGL(self):
@@ -1305,8 +1306,11 @@ def scene_probe(app, artifact_dir):
         def paintGL(self):
             super().paintGL()
             self.paint_count += 1
+            self.painted_clusters = list(self.diagnostic_view.cluster_ids)
             if self.pending_capture is not None:
                 path, context = self.pending_capture
+                if list(self.diagnostic_view.cluster_ids) != context['selected_clusters']:
+                    return
                 self.pending_capture = None
                 try:
                     metadata = save_framebuffer(self, path)
@@ -1358,9 +1362,23 @@ def scene_probe(app, artifact_dir):
                 data[i, j] += 20 * np.exp(-(((x + center) / 0.0025) ** 2))
         return data
 
-    def snapshot(views, name):
+    def snapshot(views, name, action=None, selected_clusters=None):
+        # Arm selection captures BEFORE the action. A screenshot must not supply
+        # the redraw request whose absence this experiment is supposed to detect.
+        before_paints = [view.canvas.paint_count for _, view in views]
         if not capture_requested:
-            pump(0.1)
+            if action is not None:
+                action()
+                wait_for(
+                    lambda: all(
+                        view.canvas.paint_count > count
+                        and view.canvas.painted_clusters == selected_clusters
+                        for (_, view), count in zip(views, before_paints)
+                    ),
+                    'selection-triggered scene repaint',
+                )
+            else:
+                pump(0.1)
             return {}
         before_count = len(captures)
         for label, view in views:
@@ -1370,7 +1388,12 @@ def scene_probe(app, artifact_dir):
                 {
                     'stage': name,
                     'view': label,
-                    'selected_clusters': list(view.cluster_ids),
+                    'selected_clusters': (
+                        list(selected_clusters)
+                        if selected_clusters is not None
+                        else list(view.cluster_ids)
+                    ),
+                    'redraw_source': 'selection' if action is not None else 'diagnostic',
                     'expected': (
                         'Four channels of synthetic biphasic waveforms and channel labels'
                         if label == 'waveform'
@@ -1378,7 +1401,10 @@ def scene_probe(app, artifact_dir):
                     ),
                 },
             )
-            view.canvas.update()
+            if action is None:
+                view.canvas.update()
+        if action is not None:
+            action()
         wait_for(
             lambda: len(captures) == before_count + len(views) or capture_errors,
             'scene framebuffer capture',
@@ -1419,6 +1445,7 @@ def scene_probe(app, artifact_dir):
                 view.dock.setMinimumSize(300, 220)
             for label, view in views:
                 view.canvas.diagnostic_label = label
+                view.canvas.diagnostic_view = view
                 view.canvas.diagnostic_dock = view.dock
                 view.canvas.diagnostic_container = view.dock.widget()
                 view.canvas.diagnostic_main_window = gui
@@ -1440,12 +1467,13 @@ def scene_probe(app, artifact_dir):
             connect(on_selection, event='select', sender=supervisor)
             try:
                 emit('stage', stage='scene-supervisor-selection')
-                supervisor.select(0)
+                first_hashes = snapshot(
+                    views, 'selected-0', action=lambda: supervisor.select(0), selected_clusters=[0]
+                )
                 wait_for(
                     lambda: all(list(v.cluster_ids) == [0] for _, v in views),
                     'first selection to reach both views',
                 )
-                first_hashes = snapshot(views, 'selected-0')
 
                 emit('stage', stage='scene-qt-table-click')
                 table = supervisor.cluster_view.table_view
@@ -1455,12 +1483,18 @@ def scene_probe(app, artifact_dir):
                 pump(0.05)
                 rect = table.visualRect(index)
                 require(rect.isValid(), 'Synthetic cluster row has no click rectangle')
-                QTest.mouseClick(table.viewport(), Qt.LeftButton, Qt.NoModifier, rect.center())
+                second_hashes = snapshot(
+                    views,
+                    'clicked-2',
+                    action=lambda: QTest.mouseClick(
+                        table.viewport(), Qt.LeftButton, Qt.NoModifier, rect.center()
+                    ),
+                    selected_clusters=[2],
+                )
                 wait_for(
                     lambda: all(list(v.cluster_ids) == [2] for _, v in views),
                     'Qt row click to reach both views',
                 )
-                second_hashes = snapshot(views, 'clicked-2')
                 require(
                     selection_trace and selection_trace[-1] == [2],
                     'Supervisor did not publish the clicked selection',
@@ -1511,6 +1545,7 @@ def scene_probe(app, artifact_dir):
         'coverage': [
             'installed Supervisor.select and real ClusterView Qt mouse click',
             'installed WaveformView and CorrelogramView selection/data/rendering',
+            'selection-triggered frames without screenshot-requested redraws',
             'programmatic view scaling, window resize and dock hide/show',
             (
                 'synthetic framebuffer and table-widget screenshots'
@@ -1847,6 +1882,11 @@ CONFIGURATIONS = {
     'xcb': {'QT_QPA_PLATFORM': 'xcb'},
     'software': {'LIBGL_ALWAYS_SOFTWARE': 'true'},
     'xcb-software': {'QT_QPA_PLATFORM': 'xcb', 'LIBGL_ALWAYS_SOFTWARE': 'true'},
+    'xcb-glx': {
+        'QT_QPA_PLATFORM': 'xcb',
+        'QT_XCB_GL_INTEGRATION': 'xcb_glx',
+        'PYOPENGL_PLATFORM': 'glx',
+    },
 }
 SCENARIOS = ('all', 'hide-show', 'float-redock', 'replace')
 WORKSPACE_FORMAT = 1
