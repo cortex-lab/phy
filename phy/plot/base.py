@@ -14,6 +14,7 @@ from timeit import default_timer
 import numpy as np
 from phylib.utils import Bunch, connect, emit
 
+from phy._graphics import _warn_context_failure
 from phy.gui.qt import QOpenGLWidget, QOpenGLWindow, Qt, _QOpenGLWindow
 
 from . import gloo
@@ -682,6 +683,7 @@ class BaseCanvas(QOpenGLWindow):
             gl.enable_depth_mask()
         except Exception as e:  # pragma: no cover
             logger.debug('Exception in initializetGL: %s', str(e))
+            _warn_context_failure(e)
             return
 
     def paintGL(self):
@@ -709,6 +711,7 @@ class BaseCanvas(QOpenGLWindow):
         except Exception as e:  # pragma: no cover
             # raise e
             logger.debug('Exception in paintGL: %s', str(e))
+            _warn_context_failure(e)
             return
 
     # Events

@@ -78,6 +78,14 @@ Start with one Cluster View row and ask a few concrete questions:
   discontinuity?
 - Do the raw traces, when available, agree with the extracted waveforms?
 
+The Amplitude View's default vertical range includes every finite displayed
+amplitude of the selected units, with a small margin. Grey background outliers do
+not set that range. Display budgets still subsample large clusters: a spike absent
+from the sample cannot affect the range or appear in the plot. Changing this range
+does not load all spikes or change which spikes a split selects. Manual zoom is
+still available; plugins can opt into percentile scaling with
+`AmplitudeView.quantile = 0.99`.
+
 No single plot proves that a cluster is a well-isolated neuron. Low spike counts
 also make correlograms noisy. Treat the views as complementary evidence and use a
 curation policy agreed for your experiment.
@@ -234,3 +242,27 @@ Python and phy versions, installation method, and whether plugins are enabled.
 - [Customization](customization.md) introduces configuration and plugins.
 - [Troubleshooting](troubleshooting.md) covers common startup, state, and graphics
   problems.
+
+## Curation provenance
+
+The dataset's `phy.log` uses full UTC dates and records the phy and phylib
+versions and available Git revisions at startup. For an editable phy checkout,
+`phy --version` also includes its short commit and a `.dirty` suffix when tracked
+files have local changes. Released installations without a checkout report the
+release version; they do not borrow a revision from the current directory.
+
+Each successful curation save appends one JSON object to
+`phy_curation_history.jsonl` in the dataset directory. Keep this file with your
+curated output and copy the relevant record into downstream export provenance.
+It contains a schema version, session ID, dataset path, session start and save
+UTC timestamps, and `software.phy` / `software.phylib` objects with `version`,
+full `commit`, and `dirty` fields. Git fields are `null` when no source checkout
+can be identified. Software identity is captured when the controller starts;
+restart phy after changing its source or installed packages. `dirty` describes
+tracked changes; it does not archive those changes or untracked files.
+
+A failed save does not append a successful-save record. If curation data saves
+but the history cannot be written, phy reports a provenance warning in the log.
+The history describes saves, not individual edits, and does not make the existing
+multi-file curation save atomic. It also cannot reconstruct the provenance of
+older curations. An existing launcher-generated `phy_sessions.jsonl` is left untouched.
