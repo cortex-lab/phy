@@ -1254,6 +1254,7 @@ def scene_probe(app, artifact_dir):
 
     import numpy as np
     from phylib.utils import Bunch, connect, unconnect
+    from PyQt5 import sip
     from PyQt5.QtCore import Qt
     from PyQt5.QtTest import QTest
 
@@ -1425,6 +1426,17 @@ def scene_probe(app, artifact_dir):
             default_state_path=None,
             size=(1050, 650),
         )
+
+        def destroy_scene():
+            # close() only hides this QWidget. Destroy its native windows while
+            # QApplication is alive, rather than leaving them to SIP's interpreter
+            # shutdown. Register before the surface/context observers so their
+            # callbacks are removed first by run_child's reverse-order cleanup.
+            emit('stage', stage='scene-destroy-synthetic-gui')
+            if not sip.isdeleted(gui):
+                sip.delete(gui)
+
+        app._diagnostic_cleanups.append(destroy_scene)
         supervisor = Supervisor(
             np.repeat(np.arange(3), 6),
             similarity=lambda cluster_id: [],
