@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from .source import close_array
-from .streaming import UnitRows
+from .streaming import UnitRows, bounded_map, check_cancel, worker_count
 
 
 def scalar_attributes(source):
@@ -43,12 +43,22 @@ def summary_size(source, bin_seconds=3600):
     return size, step, bins
 
 
-def build_summaries(source, output_dir, bin_seconds=3600, max_bytes=536870912):
+def build_summaries(
+    source,
+    output_dir,
+    bin_seconds=3600,
+    max_bytes=536870912,
+    workers=1,
+    cancel=None,
+    progress=None,
+):
     """Stream exact full counts, exposure, and finite-value sums/counts.
 
     Exposure is one shared vector. Summing parent-unit counts on merge must
     divide by this vector once. Scalar means are sums/counts, never medians.
     """
+    worker_count(workers)
+    check_cancel(cancel)
     size, step, bins = summary_size(source, bin_seconds)
     if size + 1024 * (1 + 2 * len(scalar_attributes(source))) > max_bytes:
         raise ValueError(
@@ -103,33 +113,80 @@ def build_summaries(source, output_dir, bin_seconds=3600, max_bytes=536870912):
                     np.minimum(edges[offset + 1 : stop + 1], end)
                     - np.maximum(edges[offset:stop], start)
                 ) / source.sample_rate
-        lookup = UnitRows(source.unit_ids)
-        # A local bin range avoids zeroing an entire recording-sized histogram
-        # for each batch. Cap even a batch spanning a very long acquisition gap.
-        tile_bins = max(1, source.batch_size // max(1, len(source.unit_ids)))
-        for batch in source.iter_batches():
-            rows = lookup(batch['spike_clusters.npy'])
-            columns = batch['spike_times.npy'] // step
-            first = 0
-            while first < len(rows):
-                begin = int(columns[first])
-                end = min(bins, begin + tile_bins)
-                last = int(np.searchsorted(columns, end, side='left'))
-                width = end - begin
-                flat = rows[first:last].astype(np.int64) * width + columns[first:last] - begin
-                cells = len(source.unit_ids) * width
-                counts[:, begin:end] += np.bincount(flat, minlength=cells).reshape(-1, width)
+        # Output grids and all simultaneous worker histograms share max_bytes.
+        # Map only compact IDs; a sparse int32 catalog never allocates a huge LUT.
+        available = max_bytes - size
+        lookup = UnitRows(source.unit_ids, max_bytes=min(8 * 1024 * 1024, available // 8))
+        if lookup.table is not None:
+            available -= lookup.table.nbytes
+        per_worker = available // workers
+        fields = 1 + 2 * len(attributes)
+        row_bytes = 128 + 64 * len(attributes)
+        batch_rows = max(1, min(source.batch_size, per_worker // (2 * row_bytes)))
+        tile_bins = min(
+            max(1, batch_rows // max(1, len(source.unit_ids))),
+            per_worker // max(1, 16 * fields * len(source.unit_ids)),
+        )
+        times = source.arrays['spike_times.npy'].reshape(-1)
+        assignments = source.arrays['spike_clusters.npy'].reshape(-1)
+
+        def tasks():
+            for start in range(0, source.n_spikes, batch_rows):
+                stop = min(start + batch_rows, source.n_spikes)
+                first = start
+                while first < stop:
+                    begin = int(times[first] // step)
+                    end = min(bins, begin + tile_bins, int(times[stop - 1] // step) + 1)
+                    last = first + int(
+                        np.searchsorted(times[first:stop], min(end * step, source.num_samples))
+                    )
+                    yield first, last, begin, end
+                    first = last
+
+        def histogram(task):
+            check_cancel(cancel)
+            first, last, begin, end = task
+            rows = lookup(assignments[first:last])
+            columns = times[first:last] // step - begin
+            width = end - begin
+            flat = rows.astype(np.int64) * width + columns
+            cells = len(source.unit_ids) * width
+            histograms = {None: np.bincount(flat, minlength=cells).reshape(-1, width)}
+            for field, values in attributes.items():
+                values = values[first:last]
+                finite = np.isfinite(values)
+                histograms[field, 'sum'] = np.bincount(
+                    flat[finite], weights=values[finite].astype(np.float64), minlength=cells
+                ).reshape(-1, width)
+                histograms[field, 'count'] = np.bincount(flat[finite], minlength=cells).reshape(
+                    -1, width
+                )
+            return last, begin, end, histograms
+
+        if tile_bins:
+            for stop, begin, end, histograms in bounded_map(histogram, tasks(), workers):
+                check_cancel(cancel)
+                counts[:, begin:end] += histograms.pop(None)
+                for key, values in histograms.items():
+                    grids[key][:, begin:end] += values
+                if progress:
+                    progress('building full summaries', stop, source.n_spikes)
+        else:
+            # Extremely tight budgets cannot fit even a unit-by-one-bin
+            # histogram. Preserve the bounded scatter path in that case.
+            for start in range(0, source.n_spikes, batch_rows):
+                check_cancel(cancel)
+                stop = min(start + batch_rows, source.n_spikes)
+                rows = lookup(assignments[start:stop])
+                columns = times[start:stop] // step
+                np.add.at(counts, (rows, columns), 1)
                 for field, values in attributes.items():
-                    values = values[batch['start'] + first : batch['start'] + last]
+                    values = values[start:stop]
                     finite = np.isfinite(values)
-                    for kind, weights in (
-                        ('sum', values[finite].astype(np.float64)),
-                        ('count', None),
-                    ):
-                        grids[field, kind][:, begin:end] += np.bincount(
-                            flat[finite], weights=weights, minlength=cells
-                        ).reshape(-1, width)
-                first = last
+                    np.add.at(grids[field, 'sum'], (rows[finite], columns[finite]), values[finite])
+                    np.add.at(grids[field, 'count'], (rows[finite], columns[finite]), 1)
+                if progress:
+                    progress('building full summaries', stop, source.n_spikes)
         for array in (counts, edges, exposure, *grids.values()):
             array.flush()
         result['estimators'] = {

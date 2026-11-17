@@ -8,13 +8,14 @@ from phy.apps.large_recording.summaries import build_summaries
 from phy.apps.large_recording.tests.test_source import make_sorting
 
 
-def test_exact_counts_exposure_and_additive_measurements(tmp_path):
+@pytest.mark.parametrize('workers', [1, 3])
+def test_exact_counts_exposure_and_additive_measurements(tmp_path, workers):
     params = make_sorting(tmp_path / 'full', columns=True)
     amplitude = np.load(params.parent / 'amplitudes.npy')
     amplitude[1] = np.nan
     np.save(params.parent / 'amplitudes.npy', amplitude[:, None])
     source = Source(params, valid_intervals=[[0, 7], [10, 20]], batch_size=2)
-    files = build_summaries(source, tmp_path / 'summary', bin_seconds=5)
+    files = build_summaries(source, tmp_path / 'summary', bin_seconds=5, workers=workers)
     counts = np.load(tmp_path / 'summary' / files['counts_file'])
     expected = np.zeros((4, 4), dtype=np.int64)
     expected_sum = np.zeros((4, 4))
@@ -82,3 +83,25 @@ def test_sparse_ids_gaps_and_partial_last_bin(tmp_path):
         np.testing.assert_array_equal(
             np.load(tmp_path / 'summary' / files['exposure_file']), [3, 3, 3, 3, 3, 3, 2]
         )
+
+
+def test_summary_tight_budget_and_parallel_outputs_agree(tmp_path):
+    from phy.apps.large_recording.summaries import summary_size
+
+    with Source(make_sorting(tmp_path / 'full'), batch_size=3) as source:
+        size, _, _ = summary_size(source, bin_seconds=5)
+        outputs = []
+        for workers in (1, 3):
+            directory = tmp_path / str(workers)
+            files = build_summaries(
+                source, directory, bin_seconds=5, max_bytes=size + 5120, workers=workers
+            )
+            outputs.append(
+                {
+                    key: np.load(directory / name)
+                    for key, name in files.items()
+                    if key.endswith('_file')
+                }
+            )
+        for name in outputs[0]:
+            np.testing.assert_array_equal(outputs[0][name], outputs[1][name])

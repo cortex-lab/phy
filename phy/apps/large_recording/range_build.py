@@ -7,6 +7,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 
@@ -15,6 +16,7 @@ from .range_files import PAGE_BYTES, authenticate_file
 from .range_intervals import RangeUnavailableError
 from .range_math import add_stats, node_dtype, row_stats
 from .source import hash_json, publish_directory
+from .streaming import bounded_map, worker_count
 from .summary_store import (
     _ANY_REFERENCE,
     SummaryStore,
@@ -69,7 +71,8 @@ class RangeEstimate:
     payload_bytes: int
 
 
-def estimate_range_index(engine, block_rows=128, units=None):
+def estimate_range_index(engine, block_rows=128, units=None, workers=1):
+    worker_count(workers)
     payload, directory, node = layout(engine)
     if type(block_rows) is not int or not 1 <= block_rows <= 65536:
         raise ValueError('block_rows must be an integer between 1 and 65536.')
@@ -92,7 +95,10 @@ def estimate_range_index(engine, block_rows=128, units=None):
     largest_blocks = max(1, (largest + block_rows - 1) // block_rows)
     scratch += 2 * (1 << (largest_blocks - 1).bit_length()) * node.itemsize
     scratch += (max(data, meta, dirs) // PAGE_BYTES + 1) * 32
-    return RangeEstimate(final, final + scratch, data)
+    # Independent units stage their compact files before ordered assembly.
+    unit_output = largest * payload.itemsize + engine.bins * directory.itemsize
+    unit_output += (largest + engine.bins) * (4 * node.itemsize + payload.itemsize)
+    return RangeEstimate(final, final + workers * (scratch + unit_output), data)
 
 
 def preflight_summary_store(package_path, max_bytes):
@@ -301,7 +307,7 @@ def _write_segment(
             entry['minimum'], entry['maximum'] = first, last
             # Unused leaves are known zeros; write in bounded chunks, including Windows.
             remaining = (leaves - blocks) * node.itemsize
-            zero = bytes(min(1048576, remaining))
+            zero = bytes(min(1048576, max(1, memory_bytes // 8), remaining))
             while remaining:
                 _check_cancel(cancel)
                 part = min(remaining, len(zero))
@@ -310,9 +316,10 @@ def _write_segment(
             tree.flush()
             width = leaves // 2
             while width:
-                for first_node in range(width, 2 * width, 8192):
+                node_batch = max(1, min(8192, memory_bytes // (8 * node.itemsize)))
+                for first_node in range(width, 2 * width, node_batch):
                     _check_cancel(cancel)
-                    count = min(8192, 2 * width - first_node)
+                    count = min(node_batch, 2 * width - first_node)
                     tree.seek(2 * first_node * node.itemsize)
                     children = np.frombuffer(tree.read(2 * count * node.itemsize), dtype=node)
                     parents = add_stats(children[::2], children[1::2], fields)
@@ -347,10 +354,15 @@ def build_amplitude_index(
     before_publish=None,
     attach=True,
     expected_reference=_ANY_REFERENCE,
+    workers=1,
 ):
     """Prepare an optional sorted range accelerator from a verified row snapshot."""
     from .live_summaries import LiveSummaryEngine, _check_cancel
 
+    worker_count(workers)
+    # Keep at least 1 MiB per active sorter within the one global allowance.
+    workers = min(workers, max(1, memory_bytes // 1048576))
+    worker_memory = memory_bytes // workers
     package, output = Path(package_path).resolve(), Path(output_dir).resolve()
     if output.exists():
         raise ValueError(f'Amplitude index already exists: {output}.')
@@ -365,7 +377,7 @@ def build_amplitude_index(
     with LiveSummaryEngine(package) as engine, SummaryStore(engine) as store:
         if output == engine.source_dir.resolve() or engine.source_dir.resolve() in output.parents:
             raise ValueError('Amplitude index must be outside the original source.')
-        estimate = estimate_range_index(engine, block_rows, units)
+        estimate = estimate_range_index(engine, block_rows, units, workers=workers)
         row_bytes = sum((store.path / name).stat().st_size for name in ('data.bin', 'index.json'))
         if row_bytes + estimate.final_bytes > max_bytes:
             raise ValueError('Combined row store and amplitude index exceed max_bytes.')
@@ -387,81 +399,145 @@ def build_amplitude_index(
                 (staged / 'segments.bin').open('w+b') as directories,
             ):
                 directories.truncate(len(counts) * engine.bins * directory_dtype.itemsize)
-                for ordinal, unit in enumerate(engine.manifest['unit_ids']):
-                    if unit not in selected:
-                        continue
-                    current, sorter, total = None, None, 0
-                    nonfinite = np.zeros(1, dtype=node)
+                progress_lock = Lock()
 
-                    def finish(current, sorter, total, nonfinite, ordinal):
-                        if current is None:
-                            return
-                        entry = _write_segment(
-                            sorter,
-                            total,
-                            nonfinite[0],
-                            values_file,
-                            meta_file,
-                            engine.fields,
-                            block_rows,
-                            memory_bytes,
-                            directory_dtype,
-                            node,
-                            cancel,
-                        )
-                        directories.seek(
-                            (ordinal * engine.bins + current) * directory_dtype.itemsize
-                        )
-                        directories.write(entry.tobytes())
-
-                    batch_rows = max(
-                        1, min(500000, memory_bytes // (8 * store.dtype.itemsize + 32))
-                    )
-                    for rows in store.batches(unit, batch_rows, cancel):
-                        bin_ids = rows['bin']
-                        if np.any(bin_ids >= engine.bins) or np.any(bin_ids[1:] < bin_ids[:-1]):
-                            raise RangeUnavailableError(
-                                'Row snapshot bins are invalid or unordered.'
-                            )
-                        boundaries = np.r_[0, np.flatnonzero(np.diff(bin_ids)) + 1, len(rows)]
-                        for first, last in zip(boundaries[:-1], boundaries[1:]):
-                            _check_cancel(cancel)
-                            bin_id = int(bin_ids[first])
-                            if current is not None and bin_id < current:
-                                raise RangeUnavailableError('Row snapshot bin order changed.')
-                            if bin_id != current:
-                                finish(current, sorter, total, nonfinite, ordinal)
-                                current, total = bin_id, 0
-                                sorter = _SortedRuns(scratch, payload, memory_bytes, cancel)
-                                nonfinite = np.zeros(1, dtype=node)
-                            chunk = rows[first:last]
-                            finite = np.isfinite(chunk['amplitude'])
-                            total += len(chunk)
-                            if 'depth' in engine.fields and np.any(~finite):
-                                packed = np.empty(np.count_nonzero(~finite), dtype=payload)
-                                for field in engine.fields:
-                                    packed[field] = chunk[field][~finite]
-                                nonfinite = add_stats(
-                                    nonfinite,
-                                    row_stats(packed, engine.fields, node),
-                                    engine.fields,
-                                )
-                            packed = np.empty(np.count_nonzero(finite), dtype=payload)
-                            for field in engine.fields:
-                                packed[field] = chunk[field][finite]
-                            sorter.add(packed)
-                        completed += len(rows)
+                def advance(rows):
+                    nonlocal completed
+                    with progress_lock:
+                        completed += rows
                         if progress:
                             progress('sorting amplitude ranges', completed, total_rows)
-                    finish(current, sorter, total, nonfinite, ordinal)
+
+                def build_unit(item):
+                    ordinal, unit = item
+                    unit_dir = scratch / str(ordinal)
+                    unit_dir.mkdir()
+                    # Each worker owns its authenticated stream and output files.
+                    with (
+                        SummaryStore(engine, path=store.path) as unit_store,
+                        (unit_dir / 'values.bin').open('wb') as values_file,
+                        (unit_dir / 'nodes.bin').open('wb') as meta_file,
+                        (unit_dir / 'segments.bin').open('w+b') as directories,
+                    ):
+                        if unit_store.index != store.index:
+                            raise ValueError('Summary store catalog changed during index build.')
+                        directories.truncate(engine.bins * directory_dtype.itemsize)
+                        current, sorter, total = None, None, 0
+                        nonfinite = np.zeros(1, dtype=node)
+
+                        def finish(current, sorter, total, nonfinite, ordinal):
+                            if current is None:
+                                return
+                            entry = _write_segment(
+                                sorter,
+                                total,
+                                nonfinite[0],
+                                values_file,
+                                meta_file,
+                                engine.fields,
+                                block_rows,
+                                worker_memory,
+                                directory_dtype,
+                                node,
+                                cancel,
+                            )
+                            directories.seek(current * directory_dtype.itemsize)
+                            directories.write(entry.tobytes())
+
+                        batch_rows = max(
+                            1, min(500000, worker_memory // (8 * unit_store.dtype.itemsize + 32))
+                        )
+                        for rows in unit_store.batches(unit, batch_rows, cancel):
+                            bin_ids = rows['bin']
+                            if np.any(bin_ids >= engine.bins) or np.any(
+                                bin_ids[1:] < bin_ids[:-1]
+                            ):
+                                raise RangeUnavailableError(
+                                    'Row snapshot bins are invalid or unordered.'
+                                )
+                            boundaries = np.r_[0, np.flatnonzero(np.diff(bin_ids)) + 1, len(rows)]
+                            for first, last in zip(boundaries[:-1], boundaries[1:]):
+                                _check_cancel(cancel)
+                                bin_id = int(bin_ids[first])
+                                if current is not None and bin_id < current:
+                                    raise RangeUnavailableError('Row snapshot bin order changed.')
+                                if bin_id != current:
+                                    finish(current, sorter, total, nonfinite, ordinal)
+                                    current, total = bin_id, 0
+                                    sorter = _SortedRuns(unit_dir, payload, worker_memory, cancel)
+                                    nonfinite = np.zeros(1, dtype=node)
+                                chunk = rows[first:last]
+                                finite = np.isfinite(chunk['amplitude'])
+                                total += len(chunk)
+                                if 'depth' in engine.fields and np.any(~finite):
+                                    packed = np.empty(np.count_nonzero(~finite), dtype=payload)
+                                    for field in engine.fields:
+                                        packed[field] = chunk[field][~finite]
+                                    nonfinite = add_stats(
+                                        nonfinite,
+                                        row_stats(packed, engine.fields, node),
+                                        engine.fields,
+                                    )
+                                packed = np.empty(np.count_nonzero(finite), dtype=payload)
+                                for field in engine.fields:
+                                    packed[field] = chunk[field][finite]
+                                sorter.add(packed)
+                            advance(len(rows))
+                        finish(current, sorter, total, nonfinite, ordinal)
+                    return ordinal, unit_dir
+
+                items = (
+                    (i, u) for i, u in enumerate(engine.manifest['unit_ids']) if u in selected
+                )
+                for ordinal, unit_dir in bounded_map(build_unit, items, workers):
+                    _check_cancel(cancel)
+                    _align(meta_file)
+                    values_offset, meta_offset = values_file.tell(), meta_file.tell()
+                    for filename, target in (
+                        ('values.bin', values_file),
+                        ('nodes.bin', meta_file),
+                    ):
+                        with (unit_dir / filename).open('rb') as chunk_file:
+                            while raw := chunk_file.read(min(1048576, worker_memory // 4)):
+                                _check_cancel(cancel)
+                                target.write(raw)
+                    # Rebase file offsets in bounded chunks. Empty bins remain zero.
+                    with (unit_dir / 'segments.bin').open('rb') as chunk_file:
+                        directories.seek(ordinal * engine.bins * directory_dtype.itemsize)
+                        chunk_rows = max(1, worker_memory // (8 * directory_dtype.itemsize))
+                        while raw := chunk_file.read(chunk_rows * directory_dtype.itemsize):
+                            entries = np.frombuffer(raw, dtype=directory_dtype).copy()
+                            present = entries['total'] > 0
+                            finite = entries['finite'] > 0
+                            entries['start'][present] += values_offset
+                            entries['keys'][finite] += meta_offset
+                            entries['tree'][finite] += meta_offset
+                            directories.write(entries.tobytes())
+                    shutil.rmtree(unit_dir)
                 for stream_ in (values_file, meta_file, directories):
                     stream_.flush()
                     os.fsync(stream_.fileno())
             scratch.rmdir()
-            files = {
-                name: authenticate_file(staged / f'{name}.bin', cancel, progress)
+            auth_sizes = {
+                name: (staged / f'{name}.bin').stat().st_size
                 for name in ('values', 'nodes', 'segments')
             }
+            auth_done = dict.fromkeys(auth_sizes, 0)
+
+            def authenticate(name):
+                def advance_auth(stage, done, total):
+                    if total and progress:
+                        with progress_lock:
+                            auth_done[name] = done
+                            progress(
+                                'authenticating range index',
+                                sum(auth_done.values()),
+                                sum(auth_sizes.values()),
+                            )
+
+                return name, authenticate_file(staged / f'{name}.bin', cancel, advance_auth)
+
+            files = dict(bounded_map(authenticate, auth_sizes, workers))
             catalog = {
                 'format': FORMAT,
                 'version': VERSION,

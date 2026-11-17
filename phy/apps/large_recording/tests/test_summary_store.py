@@ -12,11 +12,14 @@ from phy.apps.large_recording.summary_store import SummaryStore, _bin_dtype, bui
 from phy.apps.large_recording.tests.test_live_summaries import package
 
 
+@pytest.mark.parametrize('workers', [1, 3])
 @pytest.mark.parametrize('columns,positions', [(False, False), (True, True)])
-def test_store_exact_values_and_package_unchanged(tmp_path, columns, positions):
+def test_store_exact_values_and_package_unchanged(tmp_path, columns, positions, workers):
     source, bounded = package(tmp_path, columns, positions)
     before = {p.name: hash_file(p) for p in bounded.iterdir() if p.is_file()}
-    output = build_summary_store(bounded, tmp_path / 'store', batch_size=2, buffer_bytes=12)
+    output = build_summary_store(
+        bounded, tmp_path / 'store', batch_size=2, buffer_bytes=12, workers=workers
+    )
     with LiveSummaryEngine(bounded) as engine, SummaryStore(engine) as store:
         assert store.dtype['bin'] == np.dtype('uint8')
         assignments = np.load(source / 'spike_clusters.npy').reshape(-1)
@@ -35,7 +38,8 @@ def test_store_exact_values_and_package_unchanged(tmp_path, columns, positions):
     assert not list(tmp_path.glob('.*.building-*'))
 
 
-def test_store_budgets_cancel_and_failure_do_not_publish(tmp_path):
+@pytest.mark.parametrize('workers', [1, 3])
+def test_store_budgets_cancel_and_failure_do_not_publish(tmp_path, workers):
     _, bounded = package(tmp_path)
     output = tmp_path / 'store'
     with pytest.raises(ValueError, match='increase max_bytes'):
@@ -48,7 +52,7 @@ def test_store_budgets_cancel_and_failure_do_not_publish(tmp_path):
             raise CancelledError()
 
     with pytest.raises(CancelledError):
-        build_summary_store(bounded, output, batch_size=2, progress=progress)
+        build_summary_store(bounded, output, batch_size=2, progress=progress, workers=workers)
     assert not output.exists()
     assert not (bounded / '.phy' / 'live-summary-store.json').exists()
     assert not list(tmp_path.glob('.*.building-*'))

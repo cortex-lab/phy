@@ -10,13 +10,14 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from time import sleep
 
 import numpy as np
 
 from .curation import _commit_lock, _fsync_directory, _safe_file
 from .source import hash_json, publish_directory
-from .streaming import UnitRows
+from .streaming import UnitRows, bounded_map, worker_count
 
 VERSION = 1
 REFERENCE = 'live-summary-store.json'
@@ -111,6 +112,7 @@ def build_summary_store(
     attach=True,
     before_publish=None,
     return_reference=False,
+    workers=1,
 ):
     """Build an exact prepared-snapshot asset without modifying saved curation.
 
@@ -121,6 +123,7 @@ def build_summary_store(
     """
     from .live_summaries import LiveSummaryEngine, _check_cancel
 
+    worker_count(workers)
     package_path, output_dir = Path(package_path).resolve(), Path(output_dir).resolve()
     if output_dir == package_path or package_path in output_dir.parents:
         raise ValueError('Summary store must be outside the bounded package.')
@@ -159,6 +162,14 @@ def build_summary_store(
         pending = np.zeros(len(units), dtype=np.int64)
         digests = [hashlib.sha256() for _ in units]
         buffers, buffered = OrderedDict(), 0
+        # Divide the existing buffer allowance between packing work/results and
+        # buffered writes. More workers never multiply the scratch allowance.
+        packing_bytes = max(1, buffer_bytes // 2)
+        buffer_bytes = max(1, buffer_bytes - packing_bytes)
+        batch_size = min(
+            batch_size, max(1, packing_bytes // (workers * (4 * dtype.itemsize + 96)))
+        )
+        read_lock = Lock()
         temporary = Path(
             tempfile.mkdtemp(prefix=f'.{output_dir.name}.building-', dir=output_dir.parent)
         )
@@ -181,25 +192,29 @@ def build_summary_store(
                     array = engine.arrays[name]
                     width = int(np.prod(array.shape[1:]))
                     handle = engine.handles[name]
-                    if axis is not None and array.flags.f_contiguous:
-                        handle.seek(
-                            array.offset + (axis * len(array) + start) * array.dtype.itemsize
-                        )
-                        raw = handle.read((stop - start) * array.dtype.itemsize)
-                        if len(raw) != (stop - start) * array.dtype.itemsize:
-                            raise ValueError('Source truncated during store construction.')
-                        return np.frombuffer(raw, dtype=array.dtype)
-                    handle.seek(array.offset + start * width * array.dtype.itemsize)
-                    size = (stop - start) * width * array.dtype.itemsize
-                    raw = handle.read(size)
+                    column = axis is not None and array.flags.f_contiguous
+                    offset = (
+                        array.offset
+                        + ((axis * len(array) + start) if column else start * width)
+                        * array.dtype.itemsize
+                    )
+                    size = (stop - start) * (1 if column else width) * array.dtype.itemsize
+                    if hasattr(os, 'pread'):
+                        raw = os.pread(handle.fileno(), size, offset)
+                    else:
+                        # Shared authenticated handles must never race seek/read.
+                        with read_lock:
+                            handle.seek(offset)
+                            raw = handle.read(size)
                     if len(raw) != size:
                         raise ValueError('Source truncated during store construction.')
-                    values = np.frombuffer(raw, dtype=array.dtype).reshape(
-                        (stop - start, *array.shape[1:])
-                    )
+                    values = np.frombuffer(raw, dtype=array.dtype)
+                    if column:
+                        return values
+                    values = values.reshape((stop - start, *array.shape[1:]))
                     return values[:, axis] if axis is not None else values
 
-                for start in range(0, count, batch_size):
+                def pack(start):
                     _check_cancel(cancel)
                     stop = min(count, start + batch_size)
                     times = read_rows('spike_times.npy', start, stop).reshape(-1)
@@ -207,6 +222,8 @@ def build_summary_store(
                         raise ValueError('Source spike times outside recording bounds.')
                     assignments = read_rows('spike_clusters.npy', start, stop).reshape(-1)
                     rows = lookup(assignments)
+                    # NumPy uses its native stable integer sort here. A Python
+                    # counting scatter would add a loop over every source spike.
                     order = np.argsort(rows, kind='stable')
                     sorted_rows = rows[order]
                     data = np.empty(stop - start, dtype=dtype)
@@ -217,9 +234,13 @@ def build_summary_store(
                             if name == 'spike_positions.npy'
                             else None
                         )
-                        values = read_rows(name, start, stop, axis=axis)
-                        data[field] = values.reshape(-1)
-                    data = data[order]
+                        data[field] = read_rows(name, start, stop, axis=axis).reshape(-1)
+                    return stop, sorted_rows, data[order]
+
+                for stop, sorted_rows, data in bounded_map(
+                    pack, range(0, count, batch_size), workers
+                ):
+                    _check_cancel(cancel)
                     boundaries = np.r_[0, np.flatnonzero(np.diff(sorted_rows)) + 1, len(data)]
                     for first, last in zip(boundaries[:-1], boundaries[1:]):
                         unit = int(sorted_rows[first])

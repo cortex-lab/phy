@@ -10,12 +10,15 @@ from phy.apps.large_recording.summary_store import build_summary_store
 from phy.apps.large_recording.tests.test_live_summaries import merge, oracle, package, split
 
 
+@pytest.mark.parametrize('workers', [1, 3])
 @pytest.mark.parametrize('block_rows', [1, 2, 3, 128])
 @pytest.mark.parametrize('columns,positions', [(False, False), (True, True)])
-def test_range_queries_match_independent_full_replay(tmp_path, block_rows, columns, positions):
+def test_range_queries_match_independent_full_replay(
+    tmp_path, block_rows, columns, positions, workers
+):
     source, bounded = package(tmp_path, columns, positions)
     build_summary_store(bounded, tmp_path / 'store', batch_size=2)
-    build_amplitude_index(bounded, tmp_path / 'ranges', block_rows=block_rows)
+    build_amplitude_index(bounded, tmp_path / 'ranges', block_rows=block_rows, workers=workers)
     with LiveSummaryEngine(bounded) as engine:
         index = AmplitudeRangeIndex(engine)
         try:
@@ -57,7 +60,7 @@ def test_dtype_boundaries_and_nonfinite_bins_match_replay(tmp_path, dtype):
     np.save(params.parent / 'amplitudes.npy', values)
     bounded = prepare_large(params, tmp_path / 'bounded', bin_seconds=5, batch_size=2)
     build_summary_store(bounded, tmp_path / 'store')
-    build_amplitude_index(bounded, tmp_path / 'ranges', block_rows=2)
+    build_amplitude_index(bounded, tmp_path / 'ranges', block_rows=2, workers=3)
     with LiveSummaryEngine(bounded) as engine:
         index = AmplitudeRangeIndex(engine)
         try:
@@ -263,3 +266,26 @@ def test_tiny_scalar_sort_reserves_permutation_workspace(tmp_path):
     dtype = np.dtype([('amplitude', 'u1')])
     sorter = _SortedRuns(tmp_path, dtype, 1048576, None)
     assert sorter.limit * (4 + 16) <= 1048576
+
+
+def test_parallel_index_bytes_are_deterministic_and_cancel_cleans(tmp_path):
+    from concurrent.futures import CancelledError
+
+    from phy.apps.large_recording.source import hash_file
+
+    _, bounded = package(tmp_path)
+    build_summary_store(bounded, tmp_path / 'store', workers=3)
+    first = build_amplitude_index(bounded, tmp_path / 'serial', workers=1, attach=False)
+    second = build_amplitude_index(bounded, tmp_path / 'parallel', workers=3, attach=False)
+    for name in ('values.bin', 'nodes.bin', 'segments.bin'):
+        assert hash_file(first / name) == hash_file(second / name)
+        assert hash_file(first / (name + '.hashes')) == hash_file(second / (name + '.hashes'))
+
+    def progress(stage, done, total):
+        if stage == 'sorting amplitude ranges':
+            raise CancelledError()
+
+    with pytest.raises(CancelledError):
+        build_amplitude_index(bounded, tmp_path / 'cancelled', workers=3, progress=progress)
+    assert not (tmp_path / 'cancelled').exists()
+    assert not list(tmp_path.glob('.cancelled.building-*'))
