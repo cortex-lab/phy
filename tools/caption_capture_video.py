@@ -23,6 +23,29 @@ _KEY_LABELS = {
     'Esc',
 }
 
+_STAGE_ANNOTATIONS = {
+    '06-later-edits': 'Later: merge {unrelated}, then mark MUA',
+    '07-restored-parents': 'Restore older {merged}: editable parents',
+    '09-parents-remain-live': 'Leave Merge Mode; real parents stay live',
+    '10-new-combination': 'Exclude {excluded}; add candidate {candidate}',
+    '12-reopened': 'Reopened: merge {final}, separate {excluded}, MUA {unrelated}',
+}
+
+_STAGE_ANNOTATION_SECONDS = 2.7
+
+
+def _annotation_text(name, report):
+    template = _STAGE_ANNOTATIONS.get(name)
+    if template is None:
+        return None
+    return template.format(
+        merged=report.get('merged', '?'),
+        unrelated=report.get('unrelated', {}).get('result', '?'),
+        excluded=report.get('excluded_parent', {}).get('live', '?'),
+        candidate=report.get('new_candidate', '?'),
+        final=report.get('final_merged', '?'),
+    )
+
 
 def timestamp(seconds):
     ticks = round(seconds * 100)
@@ -74,6 +97,7 @@ ScaledBorderAndShadow: yes
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Key,DejaVu Sans,23,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
 Style: Card,DejaVu Sans,27,&H00FFFFFF,&H00FFFFFF,&H00000000,&H4017191D,0,0,0,0,100,100,0,0,3,2,0,5,36,36,18,1
+Style: Stage,DejaVu Sans,29,&H00FFFFFF,&H00FFFFFF,&H00000000,&H4017191D,-1,0,0,0,100,100,0,0,1,2,0,5,36,36,18,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -183,8 +207,17 @@ def _review_items(events, duration, fps, target_seconds, checkpoints, reopen_car
             )
         for step in checkpoints:
             step_time = float(step['seconds'])
-            if step_time >= reopen_seconds - 1.1 / fps:
-                continue  # The reopen card or post-reopen source represents this step.
+            if abs(step_time - reopen_seconds) <= 1.1 / fps:
+                continue  # The reload card represents the checkpoint captured at reopen.
+            if step.get('name') in _STAGE_ANNOTATIONS:
+                raw.append(
+                    {
+                        'source_start': max(0.0, step_time - 0.25),
+                        'source_end': min(duration, step_time + _STAGE_ANNOTATION_SECONDS),
+                        'event_indices': [],
+                    }
+                )
+                continue
             raw.append(
                 {
                     'source_start': max(0.0, step_time - 0.3),
@@ -455,6 +488,26 @@ def render(directory, output_name=None, review_cut=False, review_seconds=43.0, o
             f'Dialogue: 2,{card_start},{card_end},Key,,0,0,0,,{{\\an5\\pos({width // 2},{height // 2 + 22})\\fs20\\fad(80,130)\\1c&HFFFFFF&\\1a&H00&}}Reload wait omitted'
         )
 
+        for step in report.get('steps', []):
+            text = _annotation_text(step.get('name'), report)
+            step_time = checkpoint_output_times.get(step.get('name'))
+            if not text or step_time is None:
+                continue
+            start = max(0.0, step_time - 0.12)
+            end = min(review_duration, start + _STAGE_ANNOTATION_SECONDS)
+            stage_start, stage_end = timestamp(start), timestamp(end)
+            panel_width, panel_height = min(820, width - 60), 104
+            x, y = width - panel_width - 24, 82
+            lines.append(
+                f'Dialogue: 5,{stage_start},{stage_end},Stage,,0,0,0,,{{\\an7\\pos({x},{y})\\fad(140,180)\\p1\\bord2\\3c&HCCFF4D&\\1c&H17191D&\\1a&H40&}}{rounded_box(panel_width, panel_height, 12)}'
+            )
+            lines.append(
+                f'Dialogue: 6,{stage_start},{stage_end},Stage,,0,0,0,,{{\\an5\\pos({x + panel_width // 2},{y + 24})\\fs18\\bold1\\fad(140,180)\\1c&HFFFFFF&\\1a&H00&}}REVIEW NOTE'
+            )
+            lines.append(
+                f'Dialogue: 6,{stage_start},{stage_end},Stage,,0,0,0,,{{\\an5\\pos({x + panel_width // 2},{y + 66})\\fs26\\bold1\\fad(140,180)\\1c&HFFFFFF&\\1a&H00&}}{text}'
+            )
+
     ass_path.write_text(_ass_header(width, height) + '\n'.join(lines) + '\n')
     command = [
         'ffmpeg',
@@ -545,6 +598,22 @@ def render(directory, output_name=None, review_cut=False, review_seconds=43.0, o
                     'captured': checkpoint_output_times.get(step.get('name')) is not None,
                 }
                 for step in report.get('steps', [])
+            ],
+            'review_annotations': [
+                {
+                    'checkpoint': step.get('name'),
+                    'text': _annotation_text(step['name'], report),
+                    'output_start_seconds': max(0.0, checkpoint_output_times[step['name']] - 0.12),
+                    'output_end_seconds': min(
+                        review_duration,
+                        max(0.0, checkpoint_output_times[step['name']] - 0.12)
+                        + _STAGE_ANNOTATION_SECONDS,
+                    ),
+                    'label': 'review overlay; not part of application UI',
+                }
+                for step in report.get('steps', [])
+                if step.get('name') in _STAGE_ANNOTATIONS
+                and checkpoint_output_times.get(step.get('name')) is not None
             ],
         }
         timeline_path.write_text(json.dumps(timeline, indent=2) + '\n')

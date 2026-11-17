@@ -550,6 +550,12 @@ def run(args):
         for old_parent, new_parent in restored.items():
             assert supervisor.selection_color_indices[new_parent] == premerge_colors[old_parent]
         assert_unrelated_preserved()
+        for proposal_key in keys:
+            status = supervisor.merge_propositions.catalog.status_for(proposal_key).value
+            assert 'restored' in status or 'superseded' in status, status
+            row_id = propositions._id_by_key[proposal_key]
+            assert propositions._model.row_by_id(row_id)['_catalog_status'] == status
+        assert 'restored' in propositions.dock._status.toolTip()
         report['restored'] = restored
         report['restored_live_units'] = True
         report['parent_colors_preserved'] = True
