@@ -1,6 +1,7 @@
 """Full assignment oracle, revision binding and atomic publication regressions."""
 
 import json
+from contextlib import closing
 
 import numpy as np
 import pytest
@@ -222,3 +223,66 @@ def test_parallel_replay_cancel_cleans_stage(tmp_path):
         )
     assert not (tmp_path / 'cancelled').exists()
     assert not list(tmp_path.glob('.cancelled-*'))
+
+
+def test_parallel_sparse_split_ties_nonfinite_and_metadata(tmp_path):
+    from phy.apps.large_recording.curation import BoundedSession
+    from phy.apps.large_recording.prepare import prepare_large
+    from phy.apps.large_recording.tests.test_source import make_sorting
+
+    params = make_sorting(tmp_path / 'full')
+    assignments = np.load(params.parent / 'spike_clusters.npy')
+    assignments[assignments == 99] = 1000000000
+    np.save(params.parent / 'spike_clusters.npy', assignments)
+    amplitude = np.load(params.parent / 'amplitudes.npy')
+    amplitude[[2, 5, 8]] = [np.nan, 15, 14]
+    np.save(params.parent / 'amplitudes.npy', amplitude)
+    bounded = prepare_large(params, tmp_path / 'bounded', bin_seconds=5)
+    with closing(BoundedSession(bounded)) as session:
+        session.record_split(
+            2,
+            1000000001,
+            1000000002,
+            {
+                'attribute': 'amplitudes.npy',
+                'operator': '<',
+                'threshold': 15,
+                'nonfinite': 'keep',
+            },
+        )
+        session.record_merge([0, 1000000001], 1000000003)
+        session.record_label('group', [1000000000, 1000000003], 'good')
+        session.save()
+        output = apply_curation(params, bounded, tmp_path / 'curated', workers=3, batch_size=6)
+        expected = assignments.astype(np.int64)
+        expected[(assignments == 2) & (amplitude < 15)] = 1000000001
+        expected[(assignments == 2) & ~(amplitude < 15)] = 1000000002
+        expected[np.isin(expected, [0, 1000000001])] = 1000000003
+        np.testing.assert_array_equal(np.load(output / 'spike_clusters.npy'), expected)
+        with Source(output / 'params.py', workers=3) as curated:
+            assert curated.metadata == session.metadata
+    np.testing.assert_array_equal(np.load(params.parent / 'spike_clusters.npy'), assignments)
+
+
+def test_replay_detects_corrupt_clone_and_cleans(tmp_path, monkeypatch):
+    from phy.apps.large_recording import replay
+
+    source, session = make_session(tmp_path)
+    session.save()
+    copy = replay.copy_source_file
+
+    def corrupt(src, dst, reserve_bytes):
+        result = copy(src, dst, reserve_bytes)
+        if src.name == 'amplitudes.npy':
+            values = np.load(dst)
+            values[0] += 1
+            np.save(dst, values)
+        return result
+
+    monkeypatch.setattr(replay, 'copy_source_file', corrupt)
+    original = hash_file(source.path / 'amplitudes.npy')
+    with pytest.raises(ValueError, match='immutable source coordinates'):
+        apply_curation(source.params_path, session.path, tmp_path / 'corrupt', workers=3)
+    assert not (tmp_path / 'corrupt').exists()
+    assert not list(tmp_path.glob('.corrupt-*'))
+    assert hash_file(source.path / 'amplitudes.npy') == original

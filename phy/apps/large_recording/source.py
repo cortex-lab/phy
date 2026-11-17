@@ -503,6 +503,13 @@ class Source:
             )
             if key in self.params
         }
+        array_hashes = hash_files(
+            {name: self.path / name for name in [*immutable, 'spike_clusters.npy']},
+            workers=self.workers,
+            cancel=self.cancel,
+            progress=self.progress,
+        )
+        assignments_hash = array_hashes.pop('spike_clusters.npy')
         self.identity = {
             'format_version': 1,
             'acquisition': acquisition,
@@ -511,12 +518,7 @@ class Source:
                 'num_samples': self.num_samples,
                 'valid_intervals': self.valid_intervals.tolist(),
             },
-            'arrays': hash_files(
-                {name: self.path / name for name in immutable},
-                workers=self.workers,
-                cancel=self.cancel,
-                progress=self.progress,
-            ),
+            'arrays': array_hashes,
         }
         if self.time_base is not None:
             self.identity['time_base']['contract'] = self.time_base.copy()
@@ -538,7 +540,7 @@ class Source:
             )
         self.revision = hash_json(
             {
-                'assignments': hash_file(self.path / 'spike_clusters.npy', cancel=self.cancel),
+                'assignments': assignments_hash,
                 'metadata': self.metadata,
             }
         )

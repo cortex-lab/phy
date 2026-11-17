@@ -119,7 +119,8 @@ def build_summaries(
         lookup = UnitRows(source.unit_ids, max_bytes=min(8 * 1024 * 1024, available // 8))
         if lookup.table is not None:
             available -= lookup.table.nbytes
-        per_worker = available // workers
+        # Reserve one consumer result while the next worker is scheduled.
+        per_worker = available // (workers + 1)
         fields = 1 + 2 * len(attributes)
         row_bytes = 128 + 64 * len(attributes)
         batch_rows = max(1, min(source.batch_size, per_worker // (2 * row_bytes)))

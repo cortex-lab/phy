@@ -362,7 +362,7 @@ def build_amplitude_index(
     worker_count(workers)
     # Keep at least 1 MiB per active sorter within the one global allowance.
     workers = min(workers, max(1, memory_bytes // 1048576))
-    worker_memory = memory_bytes // workers
+    worker_memory = memory_bytes // (workers + 1)
     package, output = Path(package_path).resolve(), Path(output_dir).resolve()
     if output.exists():
         raise ValueError(f'Amplitude index already exists: {output}.')

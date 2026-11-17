@@ -167,7 +167,7 @@ def build_summary_store(
         packing_bytes = max(1, buffer_bytes // 2)
         buffer_bytes = max(1, buffer_bytes - packing_bytes)
         batch_size = min(
-            batch_size, max(1, packing_bytes // (workers * (4 * dtype.itemsize + 96)))
+            batch_size, max(1, packing_bytes // ((workers + 1) * (4 * dtype.itemsize + 96)))
         )
         read_lock = Lock()
         temporary = Path(

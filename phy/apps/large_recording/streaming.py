@@ -25,18 +25,19 @@ def bounded_map(function, items, workers=1):
         yield from map(function, items)
         return
     iterator = iter(items)
+    exhausted = object()
     with ThreadPoolExecutor(max_workers=workers) as pool:
         pending = deque()
         try:
             for _ in range(workers):
-                item = next(iterator, None)
-                if item is None:
+                item = next(iterator, exhausted)
+                if item is exhausted:
                     break
                 pending.append(pool.submit(function, item))
             while pending:
                 yield pending.popleft().result()
-                item = next(iterator, None)
-                if item is not None:
+                item = next(iterator, exhausted)
+                if item is not exhausted:
                     pending.append(pool.submit(function, item))
         finally:
             for future in pending:

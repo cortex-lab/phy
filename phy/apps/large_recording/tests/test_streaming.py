@@ -78,3 +78,56 @@ def test_native_clone_or_copy_is_independent(tmp_path):
     assert source.stat().st_ino != destination.stat().st_ino
     destination.write_bytes(b'changed')
     assert source.read_bytes() == b'original' * 1024
+
+
+def test_reflink_preserves_existing_destination(tmp_path):
+    from phy.apps.large_recording.file_copy import reflink
+
+    source, destination = tmp_path / 'source', tmp_path / 'existing'
+    source.write_bytes(b'original source')
+    destination.write_bytes(b'existing destination')
+    with pytest.raises(FileExistsError):
+        reflink(source, destination)
+    assert source.read_bytes() == b'original source'
+    assert destination.read_bytes() == b'existing destination'
+
+
+def test_hash_rejects_concurrent_file_mutation(tmp_path):
+    from phy.apps.large_recording.source import hash_file
+
+    path = tmp_path / 'mutating'
+    path.write_bytes(b'x' * 1024)
+    changed = False
+
+    def mutate(size):
+        nonlocal changed
+        if not changed:
+            changed = True
+            with path.open('ab') as stream:
+                stream.write(b'changed')
+
+    with pytest.raises(ValueError, match='changed during hashing'):
+        hash_file(path, batch_bytes=512, progress=mutate)
+
+
+def test_reflink_propagates_io_errors_and_cleans_owned_file(tmp_path, monkeypatch):
+    import errno
+    import sys
+
+    if not sys.platform.startswith('linux'):
+        pytest.skip('Linux ioctl-specific failure injection.')
+    import fcntl
+
+    from phy.apps.large_recording.file_copy import reflink
+
+    source, destination = tmp_path / 'source', tmp_path / 'new'
+    source.write_bytes(b'original')
+
+    def fail(*args):
+        raise OSError(errno.ENOSPC, 'injected no space')
+
+    monkeypatch.setattr(fcntl, 'ioctl', fail)
+    with pytest.raises(OSError, match='no space'):
+        reflink(source, destination)
+    assert not destination.exists()
+    assert source.read_bytes() == b'original'
