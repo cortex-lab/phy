@@ -10407,7 +10407,7 @@ Reset the wizard.
 
 **`Supervisor.restore_parents(self, target=None, *, groups=None, colors=None, new_cluster_ids=None)`**
 
-Restore exact immediate parents as real units in the Merge workspace.
+Restore earliest recorded merge components as real units in the Merge workspace.
 
 This is a new curation action; unrelated later edits are preserved.
 Explicit groups and IDs support validated bounded semantic commands.

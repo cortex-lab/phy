@@ -125,10 +125,12 @@ behavior they verify rather than listed separately.
 
 ### Added
 
-- **Restore parents in Merge Mode** restores an older merged unit's exact
-  immediate parents as real clusters without reversing intervening unrelated
-  edits. It preserves nested ancestry across save/reopen, uses fresh IDs with
-  historical parent labels, and supports undo/redo and full-source bounded
+- **Restore parents in Merge Mode** restores an older merged unit's
+  earliest recorded merge components as real clusters without reversing
+  intervening unrelated edits. Nested merge chains restore all components in
+  one action, stopping at real split boundaries; old immediate-restore journals
+  keep their original replay semantics. It preserves nested ancestry across
+  save/reopen, uses fresh IDs with historical parent labels, and supports undo/redo and full-source bounded
   replay. **Exclude current row** keeps a parent out of the pending merge;
   read-only parent inspection remains available separately.
 
@@ -241,6 +243,13 @@ behavior they verify rather than listed separately.
   selection.
 
 ### Fixed
+
+- Table mouse handlers verify the Qt event class before accessing mouse-only
+  methods, preventing exceptions from generic or mismatched event wrappers
+  during context-menu interaction.
+- Accepted SLAY suggestions return to their accepted display state when their
+  complete recorded membership is remerged after parent restoration. Partial
+  reassembly remains historical; additional membership is accepted-modified.
 
 - Keep summary-store finalization warnings visible even when the destination
   path is long; the full path remains in Details and the tooltip.

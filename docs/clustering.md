@@ -229,8 +229,10 @@ You can undo and redo clustering actions (merge, split, move, label) with the **
 ## Restore a merged unit's parents
 
 Select a merged unit and choose **Restore parents in Merge Mode** from its
-Cluster View context menu or the View menu. Phy restores its exact immediate
-parents as real clusters and stages them in the existing Merge workspace. This
+Cluster View context menu or the View menu. Phy restores its earliest recorded merge
+components as real clusters and stages them in the existing Merge workspace.
+For example, merge `1 + 2 → 100`, then `100 + 3 → 101`: restoring `101`
+stages the equivalents of `1`, `2` and `3` in one action. This
 works after intervening curation actions and after saving and reopening the same
 dataset. Later unrelated merges, labels and review decisions are preserved.
 
@@ -238,7 +240,11 @@ Restored clusters receive fresh IDs. The Merge table's parent-origin column
 shows their historical IDs, and their comparison colors are retained where known.
 New memberships start unclassified; the merged unit's quality or custom labels
 are not silently copied to every parent. Historical SLAY decisions remain
-recorded and show that their accepted result was subsequently restored.
+recorded and show that their accepted result was subsequently restored. When
+the complete accepted membership is merged again, the suggestion returns to its
+accepted status. Adding further membership shows accepted-modified; partial
+reassembly remains historical. Previously modified acceptances retain their
+recorded scope and are not silently reinterpreted.
 
 Compare the parents, add further Similarity candidates, and press `G` to merge
 the chosen combination. To leave a parent separate, click its Merge row and
@@ -255,8 +261,12 @@ not automatically reopened.
 
 Exact recorded ancestry is required. Earlier ordinary merges without lineage,
 changed or corrupt partitions, and bounded parents without retained evidence
-are unavailable with an explanation. Nested merges restore one level at a time;
-reachable ancestry is retained so a restored composite parent can be revisited.
+are unavailable with an explanation. Nested merge ancestry is expanded all at
+once, stopping at genuine split boundaries or unknown earlier ancestry. A known
+merge with missing or inconsistent descendants rejects the entire restore before
+changing assignments. Editable restoration is not limited to the read-only
+comparison's 16-parent limit; every restored component appears in Merge View.
+Historical IDs are labels, while fresh live IDs preserve unambiguous history.
 
 Bounded restoration records an exact operation for full-source replay, including
 parents formed by earlier source-amplitude splits. It never substitutes sampled
@@ -264,7 +274,9 @@ spike membership for full-recording membership. Save/reopen within the same
 bounded package retains this history. After full replay and a fresh preparation,
 restored live children remain available, but historical merges from before that
 preparation cannot be restored: the new package has no recoverable parent anchor. Older
-bounded clients cannot read journals containing the new restoration operation.
+bounded clients cannot read journals containing the new recursive restoration
+operation. Existing immediate-parent restoration events keep their original
+meaning on reopen and replay.
 
 ## Inspect a merged unit's parents
 

@@ -24,6 +24,12 @@ _KEY_LABELS = {
 }
 
 _STAGE_ANNOTATIONS = {
+    '02-first-merge': 'First merge: {pair} becomes {first_merged}',
+    '03-nested-merge': 'Second merge: {first_merged} plus {third} becomes {merged}',
+    '04-later-edits': 'Later: merge {unrelated}, then mark MUA',
+    '05-restored-parents': 'One restore: all three original clusters',
+    '08-excluded-parent': 'Exclude restored {excluded}; keep the original pair',
+    '09-exact-remerge': 'Exact pair remerged: SLAY is green again',
     '06-later-edits': 'Later: merge {unrelated}, then mark MUA',
     '07-restored-parents': 'Restore older {merged}: editable parents',
     '09-parents-remain-live': 'Leave Merge Mode; real parents stay live',
@@ -44,6 +50,9 @@ def _annotation_text(name, report):
         excluded=report.get('excluded_parent', {}).get('live', '?'),
         candidate=report.get('new_candidate', '?'),
         final=report.get('final_merged', '?'),
+        pair=', '.join(map(str, report.get('first_parents', []))),
+        first_merged=report.get('first_merged', '?'),
+        third=report.get('nested_merge', {}).get('original_components', ['?'])[-1],
     )
 
 
