@@ -134,6 +134,8 @@ def test_providers_use_exact_spikes_without_changing_controller(tempdir):
 def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir, monkeypatch):
     from phylib.utils.event import _EVENT
 
+    from phy.gui.qt import QLabel, Qt
+
     controller = _mock_controller(tempdir, MyControllerFull)
     gui = controller.create_gui(do_prompt_save=False)
     inspection = controller.parent_inspection
@@ -153,6 +155,7 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
         for _ in range(2):
             callbacks = list(_EVENT._callbacks)
             window = inspection.show(target)
+            qtbot.wait(30)
             assert len(inspection.views) == 4
             assert {type(v) for v in inspection.views} == {
                 WaveformView,
@@ -164,6 +167,25 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
                 assert view.cluster_ids == [0, 1]
                 assert not hasattr(view, 'actions')
                 view.on_mouse_click(Bunch(key='Control', button='Left', pos=(0, 0)))
+            return_action = window.file_actions.get('return_to_merged_unit')
+            return_button = window._toolbar.widgetForAction(return_action)
+            legend = window.findChild(QLabel, 'parent-review-legend')
+            assert window._toolbar.isVisible()
+            assert return_button.isVisible() and return_button.isEnabled()
+            assert return_button.text() == 'Return to merged unit'
+            assert return_button.visibleRegion().contains(return_button.rect().center())
+            assert window.rect().contains(
+                return_button.mapTo(window, return_button.rect().center())
+            )
+            assert legend.isVisible() and legend.wordWrap()
+            assert f'{target} ← 0' in legend.text() and f'{target} ← 1' in legend.text()
+            docks = {type(v): v.dock.geometry() for v in inspection.views}
+            assert docks[CorrelogramView].left() < docks[WaveformView].left()
+            assert docks[CorrelogramView].top() < docks[AmplitudeView].top()
+            assert docks[WaveformView].top() < docks[FeatureView].top()
+            assert docks[AmplitudeView].left() < docks[FeatureView].left()
+            assert docks[CorrelogramView].width() >= docks[WaveformView].width()
+            assert all(rect.width() >= 300 and rect.height() >= 180 for rect in docks.values())
             np.testing.assert_array_equal(supervisor.clustering.spike_clusters, before)
             assert supervisor.get_labels('group') == metadata
             assert supervisor.is_dirty() == dirty
@@ -177,7 +199,9 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
                     pytest.fail('Parent review closure must not pump curation events')
 
                 patcher.setattr('phy.gui.gui._wait', forbidden_wait)
-                window.file_actions.get('return_to_merged_unit').trigger()
+                # A QAction trigger or QTest click on a hidden widget would also
+                # work. Require visible, reachable geometry before real input.
+                qtbot.mouseClick(return_button, Qt.LeftButton)
             assert inspection.window is None
             assert inspection.lineage.path.read_bytes() == saved_lineage
             assert _EVENT._callbacks == callbacks

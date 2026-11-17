@@ -450,7 +450,7 @@ class ParentInspection:
     def show(self, target):
         from phy.cluster.views import AmplitudeView, CorrelogramView, FeatureView, WaveformView
         from phy.gui import GUI
-        from phy.gui.qt import QLabel, QMainWindow
+        from phy.gui.qt import QLabel, QMainWindow, QSizePolicy, Qt
         from phy.utils.color import selected_cluster_color
 
         groups = self.lineage.parents(target)
@@ -509,12 +509,25 @@ class ParentInspection:
         if providers.bounded:
             text += '<br>Window evidence only; no full-recording correlogram rate baseline.'
         caption = QLabel(text)
+        caption.setObjectName('parent-review-legend')
         caption.setWordWrap(True)
-        window._toolbar.addWidget(caption)
+        caption.setMinimumWidth(160)
+        caption.setMaximumWidth(760)
+        caption.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        caption.setStyleSheet('background: #202020; color: white; padding: 4px;')
         window.file_actions.add(
             self.close_review, name='return_to_merged_unit', docstring='Return to merged unit'
         )
-        window._toolbar.addAction(window.file_actions.get('return_to_merged_unit'))
+        return_action = window.file_actions.get('return_to_merged_unit')
+        window._toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        window._toolbar.setMovable(False)
+        window._toolbar.setFloatable(False)
+        # Put the return control first so a long parent legend cannot push it
+        # into the toolbar overflow menu. Generic GUIs start with a hidden bar.
+        window._toolbar.addAction(return_action)
+        window._toolbar.widgetForAction(return_action).setObjectName('parent-review-return')
+        window._toolbar.addWidget(caption)
+        window._toolbar.show()
         ccg = CorrelogramView(
             correlograms=providers.correlograms, sample_rate=self.controller.model.sample_rate
         )
@@ -595,6 +608,24 @@ class ParentInspection:
                 self.views.append(view)
                 if ids:
                     view.on_select(cluster_ids=ids)
+            # Two columns with two rows leave the correlogram matrix usable.
+            # The same arrangement gracefully handles unavailable data views.
+            if len(self.views) > 1:
+                window.splitDockWidget(self.views[0].dock, self.views[1].dock, Qt.Horizontal)
+            if len(self.views) > 2:
+                window.splitDockWidget(self.views[0].dock, self.views[2].dock, Qt.Vertical)
+            if len(self.views) > 3:
+                window.splitDockWidget(self.views[1].dock, self.views[3].dock, Qt.Vertical)
+            if len(self.views) > 1:
+                window.resizeDocks([v.dock for v in self.views[:2]], [610, 460], Qt.Horizontal)
+            if len(self.views) > 2:
+                window.resizeDocks(
+                    [self.views[0].dock, self.views[2].dock], [430, 300], Qt.Vertical
+                )
+            if len(self.views) > 3:
+                window.resizeDocks(
+                    [self.views[1].dock, self.views[3].dock], [430, 300], Qt.Vertical
+                )
             connect(self._on_review_closed, event='closed', sender=window)
             window.show()
             return window
