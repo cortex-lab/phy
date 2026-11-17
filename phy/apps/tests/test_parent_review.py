@@ -131,7 +131,7 @@ def test_providers_use_exact_spikes_without_changing_controller(tempdir):
         controller.close()
 
 
-def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir):
+def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir, monkeypatch):
     from phylib.utils.event import _EVENT
 
     controller = _mock_controller(tempdir, MyControllerFull)
@@ -171,7 +171,13 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
             assert controller._get_waveforms == original
             assert dict(controller.selection) == selection_settings
             assert supervisor.selected == [target]
-            window.file_actions.get('return_to_merged_unit').trigger()
+            with monkeypatch.context() as patcher:
+
+                def forbidden_wait(*args):
+                    pytest.fail('Parent review closure must not pump curation events')
+
+                patcher.setattr('phy.gui.gui._wait', forbidden_wait)
+                window.file_actions.get('return_to_merged_unit').trigger()
             assert inspection.window is None
             assert inspection.lineage.path.read_bytes() == saved_lineage
             assert _EVENT._callbacks == callbacks

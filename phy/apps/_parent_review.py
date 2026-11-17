@@ -12,7 +12,7 @@ from zipfile import BadZipFile
 
 import numpy as np
 from phylib.stats import correlograms
-from phylib.utils import Bunch, connect, unconnect
+from phylib.utils import Bunch, connect, emit, unconnect
 
 logger = logging.getLogger(__name__)
 
@@ -450,7 +450,7 @@ class ParentInspection:
     def show(self, target):
         from phy.cluster.views import AmplitudeView, CorrelogramView, FeatureView, WaveformView
         from phy.gui import GUI
-        from phy.gui.qt import QLabel, Qt
+        from phy.gui.qt import QLabel, QMainWindow
         from phy.utils.color import selected_cluster_color
 
         groups = self.lineage.parents(target)
@@ -461,7 +461,18 @@ class ParentInspection:
         providers = ParentProviders(self.controller, target, groups)
         self.providers = providers
         self._temporary = tempfile.TemporaryDirectory(prefix='phy-parent-review-')
-        window = GUI(
+
+        class ReviewWindow(GUI):
+            def closeEvent(self, event):
+                # Closing from Supervisor.select/cluster must never pump queued
+                # curation events halfway through an action. Review geometry is
+                # ephemeral and needs neither save prompts nor state persistence.
+                QMainWindow.closeEvent(self, event)
+                if event.isAccepted() and not self._closed:
+                    self._closed = True
+                    emit('closed', self)
+
+        window = ReviewWindow(
             name='ParentReview',
             subtitle=f'{target}: parents (read only)',
             config_dir=Path(self._temporary.name),
