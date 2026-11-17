@@ -154,6 +154,9 @@ def prepare_large(
     window_policy='auto',
     summary_store=None,
     summary_store_max_bytes=68719476736,
+    workers=1,
+    cancel=None,
+    progress=None,
 ):
     """Choose complete shared windows, write bounded arrays, and publish atomically.
 
@@ -162,7 +165,15 @@ def prepare_large(
     Candidate windows that exceed either budget are explicitly omitted; spikes
     within accepted windows are never independently thinned.
     """
-    with Source(params_path, duration_seconds, valid_intervals, batch_size) as source:
+    with Source(
+        params_path,
+        duration_seconds,
+        valid_intervals,
+        batch_size,
+        workers=workers,
+        cancel=cancel,
+        progress=progress,
+    ) as source:
         output = _prepare_source(
             source,
             output_dir,
@@ -174,6 +185,9 @@ def prepare_large(
             batch_size,
             bin_seconds,
             window_policy,
+            workers,
+            cancel,
+            progress,
         )
     if summary_store is not None:
         from .summary_store import build_summary_store
@@ -187,6 +201,9 @@ def prepare_large(
                 summary_store,
                 source_dir=source.path,
                 max_bytes=summary_store_max_bytes,
+                workers=workers,
+                cancel=cancel,
+                progress=progress,
                 return_reference=True,
             )
             from .range_build import build_amplitude_index
@@ -198,6 +215,9 @@ def prepare_large(
                     output,
                     Path(summary_store) / 'amplitude-index',
                     max_bytes=summary_store_max_bytes,
+                    workers=workers,
+                    cancel=cancel,
+                    progress=progress,
                     expected_reference=reference,
                 )
         except (ValueError, OSError) as error:
@@ -219,6 +239,9 @@ def _prepare_source(
     batch_size,
     bin_seconds,
     window_policy,
+    workers=1,
+    cancel=None,
+    progress=None,
 ):
     if window_policy not in ('auto', 'producer', 'generated'):
         raise ValueError('window_policy must be auto, producer, or generated.')
@@ -351,38 +374,69 @@ def _prepare_source(
             + (len(bounds) + len(union)) * 256,
         }
         del union
-        for index in _distributed_indices(len(bounds)):
+        for ordinal, index in enumerate(_distributed_indices(len(bounds)), start=1):
+            if cancel is not None:
+                cancel()
             first, last = map(int, bounds[index])
             block = int(np.searchsorted(source.valid_intervals[:, 0], first, side='right') - 1)
             code = int(types[index]) if types is not None else 0
             kind = 'survey' if code == 0 else 'rescue'
             stratum_id = int(strata[index]) if strata is not None else (-1 if code else index)
             accept(first, last, kind, block, stratum_id)
+            if progress is not None:
+                progress('selecting producer windows', ordinal, len(bounds))
     else:
         # Candidate enumeration is scalar and bounded by output-window metadata,
         # rather than constructing recording-length arrays.
+        total_windows = sum(
+            (int(last) - int(first) + stratum - 1) // stratum
+            for first, last in source.valid_intervals
+        )
+        selected_windows = 0
         for segment, (first, last) in enumerate(source.valid_intervals):
             for start in range(int(first), int(last), stratum):
+                if cancel is not None:
+                    cancel()
                 end = min(start + stratum, int(last))
                 length = min(width, end - start)
                 offset = int(rng.integers(0, end - start - length + 1))
                 accept(
                     start + offset, start + offset + length, 'survey', segment, start // stratum
                 )
+                selected_windows += 1
+                if progress is not None:
+                    progress('selecting survey windows', selected_windows, total_windows)
                 if (len(plan) + len(omitted)) * 256 + fixed_bytes > max_bytes:
                     raise ValueError(
                         'Window plan metadata exceeds max_bytes; increase stratum_seconds.'
                     )
+    row_bounds = _row_bounds(times, windows)
+    n_bounded = sum(stop - first for first, stop in row_bounds)
     evidence = set()
-    for first, stop in _row_bounds(times, windows):
+    evidence_rows = 0
+    for first, stop in row_bounds:
         for start in range(first, stop, batch_size):
-            evidence.update(np.unique(assignments[start : min(start + batch_size, stop)]).tolist())
+            if cancel is not None:
+                cancel()
+            end = min(start + batch_size, stop)
+            evidence.update(np.unique(assignments[start:end]).tolist())
+            evidence_rows += end - start
+            if progress is not None:
+                progress('checking bounded rows', evidence_rows, n_bounded)
     missing = set(source.unit_ids.tolist()) - evidence
     for batch in source.iter_batches():
+        if cancel is not None:
+            cancel()
         if window_policy == 'producer':
             break
         if not missing:
             break
+        if progress is not None:
+            progress(
+                'scanning source spikes for rescue',
+                min(batch['stop'], source.n_spikes),
+                source.n_spikes,
+            )
         units, positions = np.unique(batch['spike_clusters.npy'], return_index=True)
         for unit, position in zip(units.tolist(), positions.tolist(), strict=True):
             if unit not in missing:
@@ -437,6 +491,8 @@ def _prepare_source(
         bounded_counts = {int(unit): 0 for unit in source.unit_ids}
         for first, stop in row_bounds:
             for start in range(first, stop, batch_size):
+                if cancel is not None:
+                    cancel()
                 end = min(start + batch_size, stop)
                 length = end - start
                 global_ids[cursor : cursor + length] = np.arange(start, end, dtype=np.int64)
@@ -447,12 +503,18 @@ def _prepare_source(
                 for unit, count in zip(ids.tolist(), counts.tolist(), strict=True):
                     bounded_counts[unit] += count
                 cursor += length
+                if progress is not None:
+                    progress('writing bounded rows', cursor, n_bounded)
         for array in (global_ids, base, *destinations.values()):
             array.flush()
-        for name in source.arrays.keys() & STATIC:
-            shutil.copyfile(source.path / name, temporary / name)
+        _copy_files(
+            ((source.path / name, temporary / name) for name in source.arrays.keys() & STATIC),
+            cancel=cancel,
+            progress=progress,
+            stage='copying static arrays',
+        )
         if source.arrays.keys() >= WAVEFORMS:
-            _copy_waveforms(source, temporary, global_ids, row_bounds)
+            _copy_waveforms(source, temporary, global_ids, row_bounds, cancel, progress)
         waveform_counts = {int(unit): 0 for unit in source.unit_ids}
         waveform_ids_path = temporary / '_phy_spikes_subset.spikes.npy'
         if waveform_ids_path.exists():
@@ -498,7 +560,15 @@ def _prepare_source(
         (temporary / 'params.py').write_text(
             ''.join(f'{key} = {value!r}\n' for key, value in params.items()), encoding='utf-8'
         )
-        summaries = build_summaries(source, temporary, bin_seconds, max_bytes=max_bytes)
+        summaries = build_summaries(
+            source,
+            temporary,
+            bin_seconds,
+            max_bytes=max_bytes,
+            workers=workers,
+            cancel=cancel,
+            progress=progress,
+        )
         final_windows = []
         for start, end in windows:
             contributors = [
@@ -638,7 +708,12 @@ def _prepare_source(
                 if document.name == 'curation_review.json'
                 else document.name
             )
-            shutil.copyfile(document, temporary / name)
+            _copy_files(
+                ((document, temporary / name),),
+                cancel=cancel,
+                progress=progress,
+                stage=f'copying producer document {document.name}',
+            )
             manifest['proposition_documents'][document.name] = {
                 'filename': name,
                 'sha256': producer_hashes[document.name],
@@ -646,7 +721,12 @@ def _prepare_source(
             if hash_file(temporary / name) != producer_hashes[document.name]:
                 raise ValueError('Producer proposition document changed during preparation.')
             if name != document.name:
-                shutil.copyfile(document, temporary / document.name)
+                _copy_files(
+                    ((document, temporary / document.name),),
+                    cancel=cancel,
+                    progress=progress,
+                    stage=f'copying producer document {document.name}',
+                )
         bound_paths = [
             *temporary.glob('*.npy'),
             temporary / 'params.py',
@@ -696,7 +776,25 @@ def _fsync_directory(path):
             os.close(descriptor)
 
 
-def _copy_waveforms(source, output, global_ids, row_bounds):
+def _copy_files(files, cancel=None, progress=None, stage='copying files'):
+    """Copy files in bounded chunks, reporting byte progress and checking cancel."""
+    files = list(files)
+    total = sum(source.stat().st_size for source, _ in files)
+    copied = 0
+    for source, destination in files:
+        with source.open('rb') as src, destination.open('wb') as dst:
+            while block := src.read(1024 * 1024):
+                if cancel is not None:
+                    cancel()
+                dst.write(block)
+                copied += len(block)
+                if progress is not None:
+                    progress(stage, copied, total)
+    if progress is not None and not total:
+        progress(stage, 0, 0)
+
+
+def _copy_waveforms(source, output, global_ids, row_bounds, cancel=None, progress=None):
     """Intersect sparse row IDs with selected spans in bounded working memory."""
     upstream_ids = source.arrays['_phy_spikes_subset.spikes.npy']
     spans = [
@@ -715,6 +813,8 @@ def _copy_waveforms(source, output, global_ids, row_bounds):
         cursor = 0
         for first, stop in spans:
             for start in range(first, stop, source.batch_size):
+                if cancel is not None:
+                    cancel()
                 end = min(start + source.batch_size, stop)
                 length = end - start
                 targets['_phy_spikes_subset.spikes.npy'][cursor : cursor + length] = (
@@ -723,6 +823,8 @@ def _copy_waveforms(source, output, global_ids, row_bounds):
                 for name in waveform_names - {'_phy_spikes_subset.spikes.npy'}:
                     targets[name][cursor : cursor + length] = source.arrays[name][start:end]
                 cursor += length
+                if progress is not None:
+                    progress('retaining waveform spikes', cursor, n)
         for array in targets.values():
             array.flush()
     finally:

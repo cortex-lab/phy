@@ -7,6 +7,7 @@
 
 import logging
 import sys
+from concurrent.futures import CancelledError
 from contextlib import contextmanager
 from pathlib import Path
 from traceback import format_exception
@@ -191,6 +192,7 @@ def cli_template_describe(ctx, params_path):
 @click.option('--seed', type=click.IntRange(min=0), default=0)
 @click.option('--bin-seconds', type=click.FloatRange(min=0, min_open=True), default=3600.0)
 @click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+@click.option('--workers', type=click.IntRange(min=1, max=32), default=1, show_default=True)
 @click.option(
     '--window-policy',
     type=click.Choice(['auto', 'producer', 'generated']),
@@ -215,10 +217,21 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
     import numpy as np
 
     from .large_recording.prepare import prepare_large
+    from .large_recording.progress import ProgressReporter
 
     try:
         intervals = np.load(valid_intervals, allow_pickle=False) if valid_intervals else None
-        output = prepare_large(params_path, output_dir, valid_intervals=intervals, **kwargs)
+        with ProgressReporter() as progress:
+            output = prepare_large(
+                params_path,
+                output_dir,
+                valid_intervals=intervals,
+                cancel=progress.check_cancelled,
+                progress=progress,
+                **kwargs,
+            )
+    except CancelledError as error:
+        raise click.ClickException('Operation cancelled.') from error
     except (ValueError, OSError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f'Prepared bounded evidence: {output}')
@@ -236,6 +249,7 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
 @click.option('--source-dir', type=click.Path(exists=True, path_type=Path))
 @click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
 @click.option('--batch-size', type=click.IntRange(min=1), default=1000000)
+@click.option('--workers', type=click.IntRange(min=1, max=32), default=1, show_default=True)
 @click.option(
     '--amplitude-index/--rows-only',
     default=True,
@@ -244,31 +258,39 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
 )
 def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
     """Accelerate an existing bounded package without changing its saved curation."""
+    from .large_recording.progress import ProgressReporter
     from .large_recording.summary_store import build_summary_store
 
-    last_percent = [-1]
-
-    def progress(phase, done, total):
-        percent = int(100 * done / max(1, total))
-        marker = (phase, percent)
-        if marker != last_percent[0]:
-            click.echo(f'{phase}: {percent}%')
-            last_percent[0] = marker
-
     accelerate = kwargs.pop('amplitude_index')
+    workers = kwargs.pop('workers')
     output = None
     try:
-        if accelerate:
-            from .large_recording.range_build import preflight_summary_store
+        with ProgressReporter() as progress:
+            if accelerate:
+                from .large_recording.range_build import preflight_summary_store
 
-            preflight_summary_store(bounded_dir, kwargs['max_bytes'])
-        output, reference = build_summary_store(
-            bounded_dir, output_dir, progress=progress, return_reference=True, **kwargs
-        )
-        if accelerate:
-            _build_amplitude_index(
-                bounded_dir, output / 'amplitude-index', kwargs['max_bytes'], progress, reference
+                preflight_summary_store(bounded_dir, kwargs['max_bytes'])
+            output, reference = build_summary_store(
+                bounded_dir,
+                output_dir,
+                progress=progress,
+                cancel=progress.check_cancelled,
+                workers=workers,
+                return_reference=True,
+                **kwargs,
             )
+            if accelerate:
+                _build_amplitude_index(
+                    bounded_dir,
+                    output / 'amplitude-index',
+                    kwargs['max_bytes'],
+                    progress,
+                    reference,
+                    workers=workers,
+                    cancel=progress.check_cancelled,
+                )
+    except CancelledError as error:
+        raise click.ClickException('Operation cancelled.') from error
     except (ValueError, OSError) as error:
         message = str(error)
         if output is not None:
@@ -299,35 +321,48 @@ def cli_attach_summary_store(bounded_dir, store_dir):
     click.echo(f'Attached summary snapshot: {store_dir}')
 
 
-def _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress, reference=None):
+def _build_amplitude_index(
+    bounded_dir, output_dir, max_bytes, progress, reference=None, workers=1, cancel=None
+):
     from .large_recording.range_build import build_amplitude_index
     from .large_recording.range_intervals import RangeUnavailableError
 
     try:
         options = {'expected_reference': reference} if reference is not None else {}
         return build_amplitude_index(
-            bounded_dir, output_dir, max_bytes=max_bytes, progress=progress, **options
+            bounded_dir,
+            output_dir,
+            max_bytes=max_bytes,
+            progress=progress,
+            workers=workers,
+            cancel=cancel,
+            **options,
         )
     except RangeUnavailableError as error:
-        click.echo(f'Using the verified row store: {error}')
+        click.echo(f'Using the verified row store: {error}', err=True)
 
 
 @phycli.command('build-amplitude-index')
 @click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument('output-dir', type=click.Path(path_type=Path))
 @click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
-def cli_build_amplitude_index(bounded_dir, output_dir, max_bytes):
+@click.option('--workers', type=click.IntRange(min=1, max=32), default=1, show_default=True)
+def cli_build_amplitude_index(bounded_dir, output_dir, max_bytes, workers):
     """Add fast amplitude queries to an existing attached summary store."""
-    last = [None]
-
-    def progress(phase, done, total):
-        marker = (phase, int(100 * done / max(1, total)))
-        if marker != last[0]:
-            click.echo(f'{marker[0]}: {marker[1]}%')
-            last[0] = marker
+    from .large_recording.progress import ProgressReporter
 
     try:
-        path = _build_amplitude_index(bounded_dir, output_dir, max_bytes, progress)
+        with ProgressReporter() as progress:
+            path = _build_amplitude_index(
+                bounded_dir,
+                output_dir,
+                max_bytes,
+                progress,
+                workers=workers,
+                cancel=progress.check_cancelled,
+            )
+    except CancelledError as error:
+        raise click.ClickException('Operation cancelled.') from error
     except (OSError, ValueError, KeyError, TypeError) as error:
         raise click.ClickException(str(error)) from error
     if path:
@@ -353,12 +388,25 @@ def cli_attach_amplitude_index(bounded_dir, index_dir):
 @click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument('output-dir', type=click.Path(path_type=Path))
 @click.option('--batch-size', type=click.IntRange(min=1), default=100000)
-def cli_apply_curation(source_params, bounded_dir, output_dir, batch_size):
+@click.option('--workers', type=click.IntRange(min=1, max=32), default=1, show_default=True)
+def cli_apply_curation(source_params, bounded_dir, output_dir, batch_size, workers):
     """Replay committed bounded curation into a new complete sorting."""
+    from .large_recording.progress import ProgressReporter
     from .large_recording.replay import apply_curation
 
     try:
-        output = apply_curation(source_params, bounded_dir, output_dir, batch_size=batch_size)
+        with ProgressReporter() as progress:
+            output = apply_curation(
+                source_params,
+                bounded_dir,
+                output_dir,
+                batch_size=batch_size,
+                workers=workers,
+                cancel=progress.check_cancelled,
+                progress=progress,
+            )
+    except CancelledError as error:
+        raise click.ClickException('Operation cancelled.') from error
     except (ValueError, OSError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f'Published complete curated sorting: {output}')
