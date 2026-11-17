@@ -45,6 +45,7 @@ from .qt import (
     QLineEdit,
     QMimeData,
     QModelIndex,
+    QMouseEvent,
     QObject,
     QPainter,
     QPalette,
@@ -978,7 +979,11 @@ class Table(QWidget):
         if obj is self.table_view.viewport() and event.type() == QEvent.Resize:
             if self._interaction_overlay is not None:
                 self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
-        if obj is self.table_view.viewport() and event.type() == QEvent.MouseMove:
+        if (
+            obj is self.table_view.viewport()
+            and event.type() == QEvent.MouseMove
+            and isinstance(event, QMouseEvent)
+        ):
             index = self.table_view.indexAt(event.pos())
             row_id = self._visible_ids()[index.row()] if index.isValid() else None
             self._set_hovered_row(row_id)
@@ -999,6 +1004,9 @@ class Table(QWidget):
         if (
             obj is self.table_view.viewport()
             and event.type() == QEvent.MouseButtonPress
+            # Event type numbers do not guarantee the Python wrapper's API.
+            # Context-menu or generic events must never reach mouse-only calls.
+            and isinstance(event, QMouseEvent)
             and event.button() == Qt.RightButton
         ):
             # Transfer is deliberately bound only to an unmodified secondary click.
