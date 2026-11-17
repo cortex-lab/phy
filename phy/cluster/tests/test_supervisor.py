@@ -2668,3 +2668,117 @@ def test_never_settling_selection_observer_blocks_curation(supervisor):
     finally:
         unconnect(selected)
         view.debouncer.flush()
+
+
+def test_multi_suggestions_compare_union_then_accept_atomically(
+    gui,
+    cluster_ids,
+    cluster_groups,
+    cluster_labels,
+    similarity,
+    tempdir,
+):
+    supervisor = _proposition_supervisor(
+        gui,
+        cluster_ids,
+        cluster_groups,
+        cluster_labels,
+        similarity,
+        tempdir,
+    )
+    first, overlap, _ = supervisor.merge_propositions.catalog.propositions
+    keys = (first.key, overlap.key)
+    _select(supervisor, [11], [10])
+    original = supervisor.clustering.spike_clusters.copy()
+    view = supervisor.merge_propositions_view
+    supervisor._activate_merge_propositions(view, keys)
+    assert supervisor.selected == [30, 20, 10]
+    assert supervisor.selection.state.merge.proposition_ids == keys
+    assert view.selected_keys == keys
+    assert not supervisor.merge_propositions.catalog.reviews
+    np.testing.assert_array_equal(supervisor.clustering.spike_clusters, original)
+    workspace = supervisor.selection.snapshot()
+    supervisor._refresh_propositions()
+    assert view.selected_keys == keys
+    supervisor.reject_merge_proposition()
+    assert supervisor.selection.snapshot() == workspace
+    assert not supervisor.merge_propositions.catalog.reviews
+    merged = supervisor.merge().added[0]
+    for key in keys:
+        review = supervisor.merge_propositions.catalog.reviews[key]
+        assert review.result_unit_id == merged
+        assert review.applied_unit_ids == (30, 20, 10)
+    supervisor.undo()
+    supervisor.block()
+    np.testing.assert_array_equal(supervisor.clustering.spike_clusters, original)
+    assert not supervisor.merge_propositions.catalog.reviews
+    assert supervisor.selection.snapshot() == workspace
+    assert view.selected_keys == keys
+    supervisor.redo()
+    supervisor.block()
+    assert len(supervisor.merge_propositions.catalog.reviews) == 2
+    supervisor._activate_merge_propositions(view, ())
+    assert not supervisor.selection.state.is_merge_mode
+
+
+def test_multi_suggestion_cancel_restores_entry_and_rejects_stale(
+    gui,
+    cluster_ids,
+    cluster_groups,
+    cluster_labels,
+    similarity,
+    tempdir,
+):
+    supervisor = _proposition_supervisor(
+        gui,
+        cluster_ids,
+        cluster_groups,
+        cluster_labels,
+        similarity,
+        tempdir,
+    )
+    _select(supervisor, [11], [10])
+    entry = supervisor.selection.snapshot()
+    first, overlap, _ = supervisor.merge_propositions.catalog.propositions
+    view = supervisor.merge_propositions_view
+    supervisor._activate_merge_propositions(view, (first.key, overlap.key))
+    supervisor._activate_merge_propositions(view, ())
+    assert supervisor.selection.snapshot() == entry
+    assert not supervisor.merge_propositions.catalog.reviews
+    supervisor.merge_propositions.reject(overlap.key)
+    supervisor._activate_merge_propositions(view, (first.key, overlap.key))
+    assert supervisor.selection.snapshot() == entry
+    assert supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.PENDING
+
+
+def test_multi_suggestion_preflight_failure_does_not_change_assignments(
+    monkeypatch,
+    gui,
+    cluster_ids,
+    cluster_groups,
+    cluster_labels,
+    similarity,
+    tempdir,
+):
+    supervisor = _proposition_supervisor(
+        gui,
+        cluster_ids,
+        cluster_groups,
+        cluster_labels,
+        similarity,
+        tempdir,
+    )
+    keys = tuple(p.key for p in supervisor.merge_propositions.catalog.propositions[:2])
+    supervisor._activate_merge_propositions(supervisor.merge_propositions_view, keys)
+    original = supervisor.clustering.spike_clusters.copy()
+    snapshot = supervisor.selection.snapshot()
+
+    def fail(*args):
+        raise ValueError('review preflight failed')
+
+    monkeypatch.setattr(supervisor.merge_propositions, 'prepare_accept_many', fail)
+    with raises(ValueError, match='review preflight failed'):
+        supervisor.merge()
+    np.testing.assert_array_equal(supervisor.clustering.spike_clusters, original)
+    assert supervisor.selection.snapshot() == snapshot
+    assert not supervisor.merge_propositions.catalog.reviews

@@ -13,6 +13,10 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Right-clicking a sampled correlogram now transfers its row cluster between
+  primary and Similarity roles in bounded mode, with the same reference and
+  close/reopen behavior as ordinary correlograms.
+
 - Completed background preparation shows a clear terminal state with a Close
   button. Task details remain available from **File > Show background task**.
 - The curation comparison tool can run from a data directory or another checkout.
@@ -114,6 +118,10 @@ behavior they verify rather than listed separately.
   measurements.
 
 ### Added
+
+- Ctrl-click multiple SLAY merge suggestions to compare their deduplicated units
+  in one Merge workspace. Selection is read-only; an explicit merge records all
+  selected reviews atomically, with undo/redo restoring the combined workspace.
 
 - Added session-only, opt-in background lookahead for TraceView and TraceImageView
   with supporting phylib readers. Explicit scrolling hints share the reader cache

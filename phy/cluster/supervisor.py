@@ -1353,9 +1353,12 @@ class Supervisor:
         state = self.selection.state
         staged = len(state.merge_ids)
         similar = len(state.similar_ids)
+        keys = self._active_merge_proposition_keys()
         source = (
-            f' — PROPOSITION {state.merge.proposition_id}'
-            if state.merge is not None and state.merge.proposition_id
+            f' — {len(keys)} PROPOSITIONS'
+            if len(keys) > 1
+            else f' — PROPOSITION {keys[0]}'
+            if keys
             else ''
         )
         return (
@@ -1370,7 +1373,7 @@ class Supervisor:
         self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
         catalog = self.merge_propositions.catalog
         live_ids = set(catalog.live_unit_ids)
-        active_key = self._active_merge_proposition_key()
+        active_keys = set(self._active_merge_proposition_keys())
         rows = []
         for entry in catalog.entries:
             proposition = entry.proposition
@@ -1378,7 +1381,7 @@ class Supervisor:
             catalog_status = (
                 catalog.status_for(key) if entry.key is not None else PropositionStatus.INVALID
             )
-            status = 'active' if key == active_key else catalog_status.value
+            status = 'active' if key in active_keys else catalog_status.value
             unit_ids = proposition.unit_ids if proposition is not None else ()
             rows.append(
                 {
@@ -1410,6 +1413,10 @@ class Supervisor:
             return state.merge.proposition_id
         return None
 
+    def _active_merge_proposition_keys(self):
+        state = self.selection.state
+        return state.merge.proposition_ids if state.is_merge_mode and state.merge else ()
+
     def _update_proposition_actions(self):
         """Keep proposition shortcuts aligned with the current queue state."""
         if self.select_actions is None:
@@ -1434,11 +1441,13 @@ class Supervisor:
             view is not None
             and current is not None
             and self._active_merge_proposition_key() == current
+            and len(self._active_merge_proposition_keys()) == 1
             and view.can_trigger('reject')
         )
         can_reset = bool(
             view is not None
             and not self.selection.state.is_merge_mode
+            and len(view.selected_keys) == 1
             and view.can_trigger('reset')
         )
         enabled = {
@@ -1453,9 +1462,9 @@ class Supervisor:
     def _refresh_propositions(self):
         if self.merge_propositions_view is not None:
             self.merge_propositions_view.set_propositions(self._proposition_rows())
-            active_key = self._active_merge_proposition_key()
-            if active_key is not None:
-                self.merge_propositions_view.select_key(active_key)
+            active_keys = self._active_merge_proposition_keys()
+            if active_keys:
+                self.merge_propositions_view.select_keys(active_keys)
         self._update_proposition_actions()
 
     def _apply_selection_change(
@@ -1964,6 +1973,11 @@ class Supervisor:
                 sender=self.merge_propositions_view,
             )
             connect(
+                self._activate_merge_propositions,
+                event='activate_merge_propositions',
+                sender=self.merge_propositions_view,
+            )
+            connect(
                 self._review_merge_proposition,
                 event='review_merge_proposition',
                 sender=self.merge_propositions_view,
@@ -2096,6 +2110,7 @@ class Supervisor:
         workflow_context = (
             {'mode': 'merge', 'tables': self._workflow_context()} if merge_mode else None
         )
+        proposition_ids = selection_before.merge.proposition_ids if proposition_id else ()
         prepared_review = None
         review_before = None
         if proposition_id is not None:
@@ -2104,9 +2119,14 @@ class Supervisor:
             # necessarily describe the same unit.
             to = int(self.clustering.new_cluster_id() if to is None else to)
             review_before = self.merge_propositions.snapshot()
-            prepared_review = self.merge_propositions.prepare_accept(
-                proposition_id, cluster_ids, to
-            )
+            if len(proposition_ids) > 1:
+                prepared_review = self.merge_propositions.prepare_accept_many(
+                    proposition_ids, cluster_ids, to
+                )
+            else:
+                prepared_review = self.merge_propositions.prepare_accept(
+                    proposition_id, cluster_ids, to
+                )
         elif to is not None:
             to = int(to)
         # A merge synchronously emits several related table mutations: metadata
@@ -2132,7 +2152,7 @@ class Supervisor:
         if proposition_id is not None:
             self._set_merge_mode_ui(False)
             self._hide_merge_view()
-            self.merge_propositions_view.select_key(proposition_id)
+            self.merge_propositions_view.select_keys(proposition_ids)
         self._global_history.action(
             *controllers,
             description='merge',
@@ -2325,7 +2345,7 @@ class Supervisor:
     def _activate_merge_proposition(self, sender, key):
         """Replace any temporary Merge workspace with the clicked proposition."""
         active_key = self._active_merge_proposition_key()
-        if active_key == key:
+        if self._active_merge_proposition_keys() == (key,):
             self.merge_propositions_view.select_key(key)
             return self.selection.state
         self.merge_propositions_view.select_key(key)
@@ -2352,6 +2372,55 @@ class Supervisor:
         self._set_merge_mode_ui(True)
         self._apply_selection_change(change)
         self.merge_propositions_view.set_active_key(key, previous_key=active_key)
+        self._update_proposition_actions()
+        return change.after
+
+    def _activate_merge_propositions(self, sender, keys):
+        """Compare the stable ordered union; selection never accepts a suggestion."""
+        keys = tuple(dict.fromkeys(keys))
+        if not keys:
+            if self.selection.state.is_merge_mode:
+                self._cancel_merge_mode()
+            self.merge_propositions_view.set_active_keys(())
+            return self.selection.state
+        if len(keys) == 1:
+            return self._activate_merge_proposition(sender, keys[0])
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        catalog = self.merge_propositions.catalog
+        if any(
+            catalog.entry_for(key) is None
+            or catalog.status_for(key) is not PropositionStatus.PENDING
+            for key in keys
+        ):
+            if self.selection.state.is_merge_mode:
+                self._cancel_merge_mode()
+            self._refresh_propositions()
+            self.merge_propositions_view.select_keys(keys)
+            logger.warning('Only pending suggestions with live units can be reviewed together.')
+            return self.selection.state
+        ordered = tuple(
+            dict.fromkeys(
+                unit for key in keys for unit in catalog.entry_for(key).proposition.unit_ids
+            )
+        )
+        self._settle_selection()
+        if self.selection.state.is_merge_mode:
+            change = self.selection.switch_merge_proposition(
+                keys[0],
+                ordered,
+                proposition_ids=keys,
+            )
+        else:
+            change = self.selection.enter_merge_proposition(
+                keys[0],
+                ordered,
+                self._workflow_context(),
+                proposition_ids=keys,
+            )
+        self._show_merge_view()
+        self._set_merge_mode_ui(True)
+        self._apply_selection_change(change)
+        self.merge_propositions_view.set_active_keys(keys)
         self._update_proposition_actions()
         return change.after
 
@@ -2426,6 +2495,11 @@ class Supervisor:
             if callback:
                 callback(self.selection.state)
             return
+        if len(self._active_merge_proposition_keys()) > 1:
+            logger.warning('Select one suggestion to reject it individually.')
+            if callback:
+                callback(self.selection.state)
+            return self.selection.state
         key = self._active_merge_proposition_key()
         if key is not None:
             self._reject_merge_proposition(self.merge_propositions_view, key)
@@ -2465,6 +2539,11 @@ class Supervisor:
                 callback(self.selection.state)
             return
         view = self.merge_propositions_view
+        if self.merge_propositions_view and len(self.merge_propositions_view.selected_keys) > 1:
+            logger.warning('Select one suggestion to reset its review.')
+            if callback:
+                callback(self.selection.state)
+            return self.selection.state
         key = view.current_key if view is not None else None
         if key is not None and view.can_trigger('reset'):
             self._reset_merge_proposition(view, key)

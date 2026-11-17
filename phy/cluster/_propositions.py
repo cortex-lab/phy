@@ -401,6 +401,13 @@ class MergePropositionController:
         """Validate an acceptance without mutating review history."""
         return self._catalog.accept(key, applied_unit_ids, result_unit_id)
 
+    def prepare_accept_many(self, keys, applied_unit_ids, result_unit_id):
+        """Validate all selected reviews before changing spike assignments."""
+        catalog = self._catalog
+        for key in keys:
+            catalog = catalog.accept(key, applied_unit_ids, result_unit_id)
+        return catalog
+
     def commit_prepared(self, before, after):
         """Commit a previously validated acceptance against the same catalog."""
         before = self._require_catalog(before)

@@ -70,6 +70,19 @@ derived from `P12`; this release does not generate derived proposition rows.
 Click a pending row to stage it in Merge View immediately; this atomically
 replaces any manual or proposition workspace already open in the same dock.
 Clicking a completed, stale, or invalid row cancels any active workspace and only highlights that row.
+
+Use **Ctrl+left-click** to add or remove pending suggestions from the selection.
+Their units appear together in one Merge workspace, with shared units included
+once and the first selected suggestion supplying the reference order. Plain
+click selects one suggestion again. Selecting suggestions only changes the
+comparison; it does not modify spike assignments or mark reviews accepted.
+Clearing the selection or cancelling restores the Normal selection from before
+review. Completed or stale suggestions cannot be mixed into a combined review.
+
+Pressing `G` explicitly merges the displayed combined set and records each
+selected suggestion's acceptance in one undoable operation; a changed candidate
+set is marked `accepted_modified`. Unselected suggestions are never accepted
+automatically. Reject and reset shortcuts require a single selected suggestion.
 You can still add, remove, and reorder candidates in a pending review. `Alt+Down`
 and `Alt+Up` replace the current workspace with the next or previous pending
 proposition in the current visible table order, wrapping at either end.
