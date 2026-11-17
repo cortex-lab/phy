@@ -1192,6 +1192,205 @@ def test_ordinary_restoration_preserves_accepted_review_with_derived_status(
         lineage.close()
 
 
+@fixture
+def lineage_supervisor(gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir):
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from phy.apps._parent_review import ParentLineage
+
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    lineage = ParentLineage(
+        SimpleNamespace(
+            dir_path=Path(tempdir),
+            supervisor=supervisor,
+            model=SimpleNamespace(spike_times=np.arange(supervisor.clustering.n_spikes)),
+        )
+    )
+    supervisor.parent_lineage = lineage
+    try:
+        yield supervisor
+    finally:
+        lineage.close()
+
+
+def _accept_first_proposition(supervisor):
+    key = supervisor.merge_propositions.catalog.propositions[0].key
+    supervisor._activate_merge_proposition(supervisor.merge_propositions_view, key)
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    return key, target
+
+
+def test_recursive_restore_reaches_original_components_as_one_undoable_action(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    original = supervisor.clustering.spike_clusters.copy()
+    key, first = _accept_first_proposition(supervisor)
+    _select(supervisor, [first], [10])
+    nested = supervisor.merge().added[0]
+    supervisor.block()
+    _select(supervisor, [0], [2])
+    unrelated = supervisor.merge().added[0]
+    supervisor.block()
+    supervisor.label('group', 'mua', [unrelated])
+    supervisor.block()
+    _select(supervisor, [nested])
+    before = supervisor.clustering.spike_clusters.copy()
+    history_position = supervisor._global_history.current_position
+    review = supervisor.merge_propositions.catalog.reviews[key]
+
+    out = supervisor.restore_parents(nested)
+    supervisor.block()
+
+    assert set(out.parent_restore_origins.values()) == {30, 20, 10}
+    assert len(out.added) == 3
+    assert set(out.added).isdisjoint({30, 20, 10, first, nested})
+    for child, parent in out.parent_restore_origins.items():
+        ae(supervisor.clustering.spikes_per_cluster[child], np.flatnonzero(original == parent))
+        assert supervisor.get_cluster_info(child)['parent_origin'] == f'was {parent}'
+    assert supervisor._global_history.current_position == history_position + 1
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    assert supervisor.merge_propositions.catalog.reviews[key] == review
+    restored = supervisor.clustering.spike_clusters.copy()
+
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, restored)
+    assert supervisor.selected_merge == list(out.parent_restore_origins)
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    supervisor.toggle_merge_mode()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, restored)
+
+
+def test_ordinary_exact_remerge_recovers_green_through_undo_redo_and_repeated_restore(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    historical_review = supervisor.merge_propositions.catalog.review_mapping()
+    for _ in range(2):
+        out = supervisor.restore_parents(target)
+        supervisor.block()
+        assert set(out.parent_restore_origins.values()) == {30, 20}
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        restored = supervisor.clustering.spike_clusters.copy()
+        # Exercise the real G action from the editable workspace.
+        supervisor.action_creator.edit_actions.get('merge').trigger()
+        supervisor.block()
+        target = supervisor.selected_clusters[0]
+        remerged = supervisor.clustering.spike_clusters.copy()
+        assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        assert supervisor.merge_propositions_view._model.row_by_id(0)['status'] == 'accepted'
+        assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+        supervisor.undo()
+        supervisor.block()
+        ae(supervisor.clustering.spike_clusters, restored)
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        supervisor.redo()
+        supervisor.block()
+        ae(supervisor.clustering.spike_clusters, remerged)
+        assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+
+
+def test_partial_remerge_stays_white_then_complete_with_extra_becomes_modified_green(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    historical_review = supervisor.merge_propositions.catalog.review_mapping()
+    out = supervisor.restore_parents(target)
+    supervisor.block()
+    _, excluded = out.parent_restore_origins
+    supervisor.deselect_from_merge([excluded])
+    supervisor.add_to_merge([10])
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    partial = supervisor.selected_clusters[0]
+    assert excluded in supervisor.clustering.cluster_ids
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+
+    _select(supervisor, [partial, excluded])
+    supervisor.toggle_merge_mode()
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_MODIFIED
+    )
+    assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+    supervisor.undo()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    supervisor.redo()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_MODIFIED
+    )
+    assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+
+
+def test_split_membership_revokes_reassembled_acceptance_even_with_origin_aliases(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    out = supervisor.restore_parents(target)
+    supervisor.block()
+    source_child = next(
+        child for child, parent in out.parent_restore_origins.items() if parent == 30
+    )
+    one_spike = supervisor.clustering.spikes_per_cluster[source_child][:1].copy()
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    before_split = supervisor.clustering.spike_clusters.copy()
+    supervisor.split(one_spike)
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before_split)
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    supervisor.redo()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+
+
 def test_merge_proposition_review_cancel_restores_exact_entry(
     gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
 ):
