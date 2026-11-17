@@ -1,14 +1,14 @@
 {
   "comment": "https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782",
-  "asset": "https://github.com/user-attachments/assets/66e293b8-3e2f-4928-9249-a8ad867f16e1",
+  "asset": "https://github.com/user-attachments/assets/92be1237-6174-4269-bd6b-3bb27f6c0511",
   "capture_revision": "6cf2a4dbc2ec38fdab1ee4a39fe189e1341a1716",
   "width": 1920,
   "height": 1200,
   "recording_fps": 30,
   "duration_seconds": 57.9,
   "frames": 1737,
-  "bytes": 4476314,
-  "sha256": "e77d393cceaa8b7e5ae711354d16cbcbb75e4f7ca3b60cdc6e6fdd042deb8200",
+  "bytes": 5088051,
+  "sha256": "03ce05465181cfdbbaa791a269973c5177fa58e541d30c0ed0e354c3898f388b",
   "visible_pointer": true,
   "click_cues": true,
   "in_window_translucent_keycaps": true,
@@ -38,5 +38,24 @@
     "passed": 813,
     "skipped": 6,
     "exit_code": 0
-  }
+  },
+  "supersedes_asset": "https://github.com/user-attachments/assets/66e293b8-3e2f-4928-9249-a8ad867f16e1",
+  "narration": {
+    "language": "English",
+    "approved_complete_sentences": 11,
+    "internal_speech_cuts": 0,
+    "sentence_tempo_changes": 0,
+    "minimum_silence_between_sentences_seconds": 0.48,
+    "approved_audio_verified_before_normalization": true,
+    "codec": "AAC",
+    "peak_db": -2.0,
+    "model": "kyutai/tts-1.6b-en_fr",
+    "voice": "unmute-prod-website/fabieng-enhanced-v2.wav",
+    "synthetic": true
+  },
+  "english_subtitles_burned_in": true,
+  "subtitle_cues": 11,
+  "keyboard_cues_above_subtitles": true,
+  "reproduction_matches_approved_video_bytes": true,
+  "media_only_update": true
 }

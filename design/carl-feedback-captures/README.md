@@ -2,7 +2,7 @@
 
 ## Editable parent restoration — current review
 
-[Play the replacement video on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
+[Play the narrated video on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
 This review demonstrates the workflow that global Undo and the former read-only
 parent view could not provide:
 
@@ -23,8 +23,9 @@ Fresh IDs prevent reuse of retired IDs. New memberships start unclassified rathe
 than inheriting the former merged unit's quality. **Inspect parents (read-only)**
 remains available as the secondary comparison action.
 
-The replacement recording is 1920×1200, 30 fps, about 58 seconds, with a visible
-pointer, gold click rings and translucent keycaps inside the window. Labeled
+The current recording is 1920×1200, 30 fps, about 58 seconds, with English
+narration and burned-in English subtitles. The visible pointer, gold click rings
+and translucent keycaps remain; keyboard cues sit above the subtitles. Labeled
 **REVIEW NOTE** overlays explain the stages; they are video annotations, not UI.
 Interactions retain original speed; idle dwell and the reload wait are omitted,
 with a labeled reload card and a [complete edit timeline](restore-review.timeline.json).
@@ -77,6 +78,44 @@ Recreate the review cut from a fresh recording with:
 uv run --no-sync python tools/caption_capture_video.py NEW_BOUNDED_OUTPUT \
   --review-cut --review-seconds 58
 ```
+
+### Narration and reproduction
+
+The synthetic narration was generated locally using [Kyutai TTS](https://huggingface.co/kyutai/tts-1.6b-en_fr)
+(CC BY 4.0 model weights, developed by Kyutai) and its published
+[voice preset](https://huggingface.co/kyutai/tts-voices/tree/main/unmute-prod-website)
+(CC0 for this voice, per the voice repository). Speech dependencies live in a
+separate environment and do not change Phy's dependencies.
+
+The reviewed recording uses 11 complete approved sentences, with no internal
+speech cuts or tempo changes and at least 0.48 seconds of silence between
+sentences. Each placed sentence was verified sample-for-sample against its
+approved WAV before whole-track loudness normalization. The AAC audio peaks at
+-2.0 dB; the MP4 retains 1,737 video frames at 30 fps and has no full-frame black
+interval of at least 0.2 seconds at the documented detection threshold.
+
+[Subtitles](restore-narration.srt) · [Audio placement](restore-narration-alignment.json) ·
+[Generation parameters and input hashes](restore-narration-generation.json) ·
+[Published artifact verification](restore-review.json).
+
+To reassemble the review from the archived raw capture and approved audio:
+
+```bash
+python design/carl-feedback-captures/render-narrated-review.py \
+  --capture CAPTURE_DIRECTORY \
+  --approved-audio APPROVED_AUDIO_DIRECTORY \
+  --output NEW_OUTPUT_DIRECTORY
+```
+
+The renderer needs FFmpeg, NumPy and soundfile. The capture directory contains
+`walkthrough.mp4`, `review-release-final.ass` and its `.timeline.json`; the approved
+audio directory contains `generation.json`, `01-with-bonjour.wav` and
+`02-sentence.wav` through `11-sentence.wav`. These original WAVs and raw capture
+remain in the local validation archive, rather than adding more media binaries
+to Git. The checked-in generation metadata records their hashes. Regenerating
+speech is a separate audition step and does not guarantee identical audio.
+The renderer refuses to overwrite an existing output directory. Its output was
+checked against the approved publication artifact before upload.
 
 The remaining sections preserve earlier evidence and superseded workflows.
 

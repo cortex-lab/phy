@@ -1,0 +1,127 @@
+{
+  "phrases": [
+    {
+      "sentence": 1,
+      "text": "Bonjour. Here is the revised merge workflow.",
+      "source_file": "01-with-bonjour.wav",
+      "source_sha256": "3a85993e444ac279df46da11dbd204e6bd86c025f7ae77d893f168a35daa948b",
+      "source_start": 0,
+      "source_end": 3.6,
+      "output_start": 0.35,
+      "output_end": 3.95,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 2,
+      "text": "First, compare the clusters.",
+      "source_file": "02-sentence.wav",
+      "source_sha256": "d95aaeaf50cae81f96972e9b36ecc18beaf4b98119c9e3371e2a07eb90960a14",
+      "source_start": 0,
+      "source_end": 2.13,
+      "output_start": 5.45,
+      "output_end": 7.58,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 3,
+      "text": "Hold Control to combine two suggestions, then press G to merge.",
+      "source_file": "03-sentence.wav",
+      "source_sha256": "39dbf558fba30f312d8f507d500219b306e6a12d135d934bdfaf13b4a577a625",
+      "source_start": 0,
+      "source_end": 4.61,
+      "output_start": 11.15,
+      "output_end": 15.760000000000002,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 4,
+      "text": "Now make an unrelated merge, and mark it as multi-unit activity.",
+      "source_file": "04-sentence.wav",
+      "source_sha256": "62feacd70fc45493c22b7d518426eefaa261a96fda2776643bc3873a5e455ff2",
+      "source_start": 0,
+      "source_end": 4.21,
+      "output_start": 20.6,
+      "output_end": 24.810000000000002,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 5,
+      "text": "Return to the older merge.",
+      "source_file": "05-sentence.wav",
+      "source_sha256": "46f12fecc66a7461fb8c017e7a934993e5e370ecffa9846a2ed4a57f3d3c3463",
+      "source_start": 0,
+      "source_end": 2.37,
+      "output_start": 28.2,
+      "output_end": 30.57,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 6,
+      "text": "Restore its parents in Merge Mode.",
+      "source_file": "06-sentence.wav",
+      "source_sha256": "12c5d4e9d98334a4513ac9f23ef24ef76342d2c1fded81b96e013959cc52c752",
+      "source_start": 0,
+      "source_end": 2.45,
+      "output_start": 31.3,
+      "output_end": 33.75,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 7,
+      "text": "Undo and redo affect only this restoration.",
+      "source_file": "07-sentence.wav",
+      "source_sha256": "108838f9419e634cd39f86e69f256fe0a5ee69099bbf67f218f4d99cded7449a",
+      "source_start": 0,
+      "source_end": 3.33,
+      "output_start": 35.4,
+      "output_end": 38.73,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 8,
+      "text": "Leaving Merge Mode keeps these parents alive.",
+      "source_file": "08-sentence.wav",
+      "source_sha256": "b4dcafd1a8a6e31d5d8a8a8b1f991cc30b2d5560781fb66bcce1653e8d816b54",
+      "source_start": 0,
+      "source_end": 2.77,
+      "output_start": 39.7,
+      "output_end": 42.470000000000006,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 9,
+      "text": "Exclude one parent, and add a new candidate with Control-click.",
+      "source_file": "09-sentence.wav",
+      "source_sha256": "01cd4c4bf6533915f6d2d5347e4c239d1b69e823a2e94c0a2cee40bb424343a2",
+      "source_start": 0,
+      "source_end": 3.73,
+      "output_start": 43.6,
+      "output_end": 47.33,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 10,
+      "text": "Merge the new combination and save.",
+      "source_file": "10-sentence.wav",
+      "source_sha256": "3c245c90d99cfb1f8276b2f7425f8c9d303078e0c49c84d3d4537dd49695b8c9",
+      "source_start": 0,
+      "source_end": 3.17,
+      "output_start": 49.45,
+      "output_end": 52.620000000000005,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 11,
+      "text": "Reopening preserves the result, the excluded parent, and the later edits.",
+      "source_file": "11-sentence.wav",
+      "source_sha256": "12cd08208364b8a0c5ace66dd2526697a85ab6bd1264d64cbb93de6a196bd36f",
+      "source_start": 0,
+      "source_end": 4.53,
+      "output_start": 53.1,
+      "output_end": 57.63,
+      "tempo_factor": 1.0
+    }
+  ],
+  "timing": "Full approved sentences only; no internal edits, no tempo changes; minimum0.4s silence between sentences",
+  "publication": "Local preview only; not published"
+}
