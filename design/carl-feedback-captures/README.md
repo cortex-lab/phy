@@ -16,8 +16,12 @@ with `--fps 30`, then run:
 uv run --no-sync python tools/caption_capture_video.py NEW_BOUNDED_OUTPUT
 ```
 
-This produces `review-30fps.mp4` with input labels in a separate footer; the GUI
-picture is not cropped or covered. The older 12fps recordings and their original
+The linked 30fps video used the earlier footer treatment. The current captioner
+places large keycaps in a reserved header above the GUI, with a nearby Ctrl badge
+for modified clicks. Keyboard press/release timestamps are recorded explicitly.
+Use `--output-name review-keycaps-preview.mp4` to render a separate local preview;
+the current PR video is retained until the next parent-layout walkthrough is ready.
+The older 12fps recordings and their original
 validation artifacts below are preserved as historical evidence. The application
 layout and scientific colors in the new recording are the current PR design.
 

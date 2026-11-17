@@ -273,9 +273,11 @@ def run(args):
             show_cursor(idle_cursor)
 
         def key(widget, value, modifiers=Qt.NoModifier, label='Keyboard shortcut'):
-            input_note(label)
+            event = input_note(label)
             QTest.qWait(450)
+            event['key_seconds'] = round(time.monotonic() - started, 3)
             QTest.keyClick(widget, value, modifiers)
+            event['key_released_seconds'] = round(time.monotonic() - started, 3)
             QTest.qWait(450)
 
         def capture(name, title, window=None, **facts):
