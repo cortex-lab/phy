@@ -1,6 +1,86 @@
 # Carl feedback: rendered real-data validation
 
-## Current integrated review
+## Editable parent restoration — current review
+
+[Play the replacement video on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
+This review demonstrates the workflow that global Undo and the former read-only
+parent view could not provide:
+
+1. Merge the combined SLAY suggestions into unit **705**.
+2. Perform two later edits: merge unrelated units into **706**, then mark it **MUA**.
+3. Revisit **705** and choose **Restore parents in Merge Mode**. Its exact immediate
+   parents become real editable units **707–713**, with original IDs in the **Parent**
+   column and preserved colors. The unrelated **706/MUA** edit remains intact.
+4. Undo/redo only the restoration. Leave Merge Mode with **V** to show that these
+   parents remain live, then stage them again.
+5. **Exclude current row** removes **713** from the pending merge; Ctrl-click adds
+   candidate **34**. Press **G** to merge the chosen combination into **714**.
+6. Save/reopen: **714** remains merged, **713** remains independent, and **706** is
+   still MUA. Original SLAY acceptance stays historical, with restored status.
+
+This is a new undoable curation action, not a traversal of earlier Undo entries.
+Fresh IDs prevent reuse of retired IDs. New memberships start unclassified rather
+than inheriting the former merged unit's quality. **Inspect parents (read-only)**
+remains available as the secondary comparison action.
+
+The replacement recording is 1920×1200, 30 fps, about 58 seconds, with a visible
+pointer, gold click rings and translucent keycaps inside the window. Labeled
+**REVIEW NOTE** overlays explain the stages; they are video annotations, not UI.
+Interactions retain original speed; idle dwell and the reload wait are omitted,
+with a labeled reload card and a [complete edit timeline](restore-review.timeline.json).
+It is settled X11 rendering evidence, not a latency or spontaneous-redraw test.
+The context menu uses a native XTest right-click; other inputs use Qt events.
+No window reaches the user's desktop. The uncut recording and logs stay locally.
+
+Both fresh real-data walkthroughs at `6cf2a4db` passed all **12 checkpoints**, exact
+assignment/lineage/color checks, restore Undo/Redo, independent-parent and later-edit
+preservation, save/reopen and unchanged source hashes:
+[ordinary](restore-ordinary-capture.json) · [bounded](restore-bounded-capture.json).
+
+| Checkpoint | Ordinary | Bounded |
+| --- | --- | --- |
+| Later unrelated merge and MUA label | [Open](restore-ordinary-06-later-edits.png) | [Open](restore-bounded-06-later-edits.png) |
+| Real parents in editable Merge Mode | [Open](restore-ordinary-07-restored-parents.png) | [Open](restore-bounded-07-restored-parents.png) |
+| Excluded parent and added candidate | [Open](restore-ordinary-10-new-combination.png) | [Open](restore-bounded-10-new-combination.png) |
+| Revised curation reopened | [Open](restore-ordinary-12-reopened.png) | [Open](restore-bounded-12-reopened.png) |
+
+[Full-source restoration report](restore-pipeline-report.md) at `e13906ac` verifies
+**all 469,725,567 rows in each of two replays** (one/four workers) against an
+independent original-label/raw-amplitude oracle. It exercises a nested merge
+following an amplitude split, later unrelated merge/label, restore Undo/Redo,
+exclusion/addition/remerge, save/reopen and reprepare. All **45 metadata fields**
+(**31,590 cells**) match exactly; original inputs retain their hashes and stats.
+[Exact scenario](restore-pipeline-scenario.json) ·
+[Final checks](restore-pipeline-final-checks.json) ·
+[Artifact provenance](restore-pipeline-artifact-provenance.json).
+The later `2ff1b010` runtime change only refreshes bounded review UI immediately;
+the new GUI captures and application regression cover it.
+
+Restoration persists across Save/reopen in the same dataset/package. It requires
+recorded lineage and refuses a bounded restore if any parent has no retained
+evidence. Historical merge restoration after a fresh preparation is unavailable;
+already restored live children replay/reprepare normally. Arbitrary bounded
+lasso/feature splitting remains outside this change. The converted fixture's
+clock/exposure assumptions remain unverified; this is engineering evidence,
+not a biological merge-quality or acquisition-timing claim.
+
+Local validation uses the separately proposed **PyQt5-sip 12.20.1** shutdown fix
+([PR #1442](https://github.com/cortex-lab/phy/pull/1442)); this feature branch's
+lockfile remains unchanged. The core suite passed **692 tests, 13 skipped**, and
+the final application suite passed **813 tests, 6 skipped**, both with normal
+exit. The application rerun covers the immediate review-status refresh. Lint, format checks,
+published documentation checks and source/wheel builds pass. CI is excluded.
+
+Recreate the review cut from a fresh recording with:
+
+```bash
+uv run --no-sync python tools/caption_capture_video.py NEW_BOUNDED_OUTPUT \
+  --review-cut --review-seconds 58
+```
+
+The remaining sections preserve earlier evidence and superseded workflows.
+
+## Historical read-only review (superseded)
 
 [Play the updated 30 fps video inline on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
 The 42.87-second, 1920×1200 recording uses H.264 at 30 fps (about 3.3 MB).
@@ -166,7 +246,7 @@ uv run --no-sync python tools/verify_feedback_replay.py \
 
 It verified all rows, 700 active units, and child counts 1,691,273 / 1,597,610.
 
-## Local checks and test-process limitation
+## Historical local checks and test-process limitation
 
 The final application target passed **795 tests, 6 skipped**, with exit status zero.
 Both final real GUI recording processes exited normally. All **15 focused parent

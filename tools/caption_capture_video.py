@@ -212,8 +212,8 @@ def _review_items(events, duration, fps, target_seconds, checkpoints, reopen_car
             if step.get('name') in _STAGE_ANNOTATIONS:
                 raw.append(
                     {
-                        'source_start': max(0.0, step_time - 0.25),
-                        'source_end': min(duration, step_time + _STAGE_ANNOTATION_SECONDS),
+                        'source_start': max(0.0, step_time - _STAGE_ANNOTATION_SECONDS + 0.3),
+                        'source_end': min(duration, step_time + 0.3),
                         'event_indices': [],
                     }
                 )
@@ -493,7 +493,7 @@ def render(directory, output_name=None, review_cut=False, review_seconds=43.0, o
             step_time = checkpoint_output_times.get(step.get('name'))
             if not text or step_time is None:
                 continue
-            start = max(0.0, step_time - 0.12)
+            start = max(0.0, step_time - _STAGE_ANNOTATION_SECONDS + 0.3)
             end = min(review_duration, start + _STAGE_ANNOTATION_SECONDS)
             stage_start, stage_end = timestamp(start), timestamp(end)
             panel_width, panel_height = min(820, width - 60), 104
@@ -603,10 +603,18 @@ def render(directory, output_name=None, review_cut=False, review_seconds=43.0, o
                 {
                     'checkpoint': step.get('name'),
                     'text': _annotation_text(step['name'], report),
-                    'output_start_seconds': max(0.0, checkpoint_output_times[step['name']] - 0.12),
+                    'output_start_seconds': max(
+                        0.0,
+                        checkpoint_output_times[step['name']] - _STAGE_ANNOTATION_SECONDS + 0.3,
+                    ),
                     'output_end_seconds': min(
                         review_duration,
-                        max(0.0, checkpoint_output_times[step['name']] - 0.12)
+                        max(
+                            0.0,
+                            checkpoint_output_times[step['name']]
+                            - _STAGE_ANNOTATION_SECONDS
+                            + 0.3,
+                        )
                         + _STAGE_ANNOTATION_SECONDS,
                     ),
                     'label': 'review overlay; not part of application UI',

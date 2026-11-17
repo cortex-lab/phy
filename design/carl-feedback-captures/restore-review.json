@@ -1,0 +1,42 @@
+{
+  "comment": "https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782",
+  "asset": "https://github.com/user-attachments/assets/66e293b8-3e2f-4928-9249-a8ad867f16e1",
+  "capture_revision": "6cf2a4dbc2ec38fdab1ee4a39fe189e1341a1716",
+  "width": 1920,
+  "height": 1200,
+  "recording_fps": 30,
+  "duration_seconds": 57.9,
+  "frames": 1737,
+  "bytes": 4476314,
+  "sha256": "e77d393cceaa8b7e5ae711354d16cbcbb75e4f7ca3b60cdc6e6fdd042deb8200",
+  "visible_pointer": true,
+  "click_cues": true,
+  "in_window_translucent_keycaps": true,
+  "stage_annotations": "Labeled REVIEW NOTE overlays, not application UI",
+  "reload_wait_omitted": true,
+  "retained_interactions_original_speed": true,
+  "checkpoints": 12,
+  "state_checks_passed": true,
+  "source_unchanged": true,
+  "native_XTest_context_click": true,
+  "other_input": "Qt events; settled rendering, not spontaneous repaint or physical routing proof",
+  "blackdetect": {
+    "minimum_duration_seconds": 0.2,
+    "pixel_threshold": 0.02,
+    "picture_threshold": 0.99,
+    "intervals_detected": 0
+  },
+  "inline_player_verified": true,
+  "uploaded_bytes_verified": true,
+  "local_dependency_override": "PyQt5-sip12.20.1, separate PR1442",
+  "core_tests": {
+    "passed": 692,
+    "skipped": 13,
+    "exit_code": 0
+  },
+  "app_tests": {
+    "passed": 813,
+    "skipped": 6,
+    "exit_code": 0
+  }
+}

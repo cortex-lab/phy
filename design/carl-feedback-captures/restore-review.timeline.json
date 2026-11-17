@@ -1,0 +1,712 @@
+{
+  "source": "LOCAL_UNCUT_WALKTHROUGH.mp4",
+  "output": "GITHUB_NATIVE_VIDEO_ATTACHMENT",
+  "source_fps": "30/1",
+  "source_duration_seconds": 72.033333,
+  "output_duration_seconds": 57.9,
+  "review_cut": true,
+  "timeline_note": "Original-speed source frames concatenated; idle dwell and reopen wait omitted. Not a latency benchmark.",
+  "settle_tail_seconds": 0.6499999999999777,
+  "items": [
+    {
+      "kind": "source",
+      "source_start_frame": 0,
+      "source_end_frame": 52,
+      "source_start": 0.0,
+      "source_end": 1.7333333333333334,
+      "event_indices": [
+        0
+      ],
+      "output_start": 0.0,
+      "output_end": 1.7333333333333334
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 60,
+      "source_end_frame": 112,
+      "source_start": 2.0,
+      "source_end": 3.7333333333333334,
+      "event_indices": [
+        1
+      ],
+      "output_start": 1.7333333333333334,
+      "output_end": 3.466666666666667
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 121,
+      "source_end_frame": 173,
+      "source_start": 4.033333333333333,
+      "source_end": 5.766666666666667,
+      "event_indices": [
+        2
+      ],
+      "output_start": 3.466666666666667,
+      "output_end": 5.2
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 204,
+      "source_end_frame": 259,
+      "source_start": 6.8,
+      "source_end": 8.633333333333333,
+      "event_indices": [
+        3
+      ],
+      "output_start": 5.2,
+      "output_end": 7.033333333333333
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 291,
+      "source_end_frame": 352,
+      "source_start": 9.7,
+      "source_end": 11.733333333333333,
+      "event_indices": [
+        4
+      ],
+      "output_start": 7.033333333333333,
+      "output_end": 9.066666666666666
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 373,
+      "source_end_frame": 435,
+      "source_start": 12.433333333333334,
+      "source_end": 14.5,
+      "event_indices": [
+        5
+      ],
+      "output_start": 9.066666666666666,
+      "output_end": 11.133333333333333
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 475,
+      "source_end_frame": 536,
+      "source_start": 15.833333333333334,
+      "source_end": 17.866666666666667,
+      "event_indices": [
+        6
+      ],
+      "output_start": 11.133333333333333,
+      "output_end": 13.166666666666666
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 548,
+      "source_end_frame": 600,
+      "source_start": 18.266666666666666,
+      "source_end": 20.0,
+      "event_indices": [
+        7
+      ],
+      "output_start": 13.166666666666666,
+      "output_end": 14.899999999999999
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 618,
+      "source_end_frame": 683,
+      "source_start": 20.6,
+      "source_end": 22.766666666666666,
+      "event_indices": [
+        8
+      ],
+      "output_start": 14.899999999999999,
+      "output_end": 17.066666666666666
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 714,
+      "source_end_frame": 775,
+      "source_start": 23.8,
+      "source_end": 25.833333333333332,
+      "event_indices": [
+        9
+      ],
+      "output_start": 17.066666666666666,
+      "output_end": 19.1
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 782,
+      "source_end_frame": 834,
+      "source_start": 26.066666666666666,
+      "source_end": 27.8,
+      "event_indices": [
+        10
+      ],
+      "output_start": 19.1,
+      "output_end": 20.833333333333336
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 838,
+      "source_end_frame": 969,
+      "source_start": 27.933333333333334,
+      "source_end": 32.3,
+      "event_indices": [
+        11,
+        12
+      ],
+      "output_start": 20.833333333333336,
+      "output_end": 25.200000000000003
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 974,
+      "source_end_frame": 1115,
+      "source_start": 32.46666666666667,
+      "source_end": 37.166666666666664,
+      "event_indices": [
+        13,
+        14
+      ],
+      "output_start": 25.200000000000003,
+      "output_end": 29.900000000000002
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1122,
+      "source_end_frame": 1210,
+      "source_start": 37.4,
+      "source_end": 40.333333333333336,
+      "event_indices": [
+        15,
+        16
+      ],
+      "output_start": 29.900000000000002,
+      "output_end": 32.833333333333336
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1233,
+      "source_end_frame": 1360,
+      "source_start": 41.1,
+      "source_end": 45.333333333333336,
+      "event_indices": [
+        17
+      ],
+      "output_start": 32.833333333333336,
+      "output_end": 37.06666666666667
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1363,
+      "source_end_frame": 1433,
+      "source_start": 45.43333333333333,
+      "source_end": 47.766666666666666,
+      "event_indices": [
+        18
+      ],
+      "output_start": 37.06666666666667,
+      "output_end": 39.400000000000006
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1464,
+      "source_end_frame": 1565,
+      "source_start": 48.8,
+      "source_end": 52.166666666666664,
+      "event_indices": [
+        19,
+        20
+      ],
+      "output_start": 39.400000000000006,
+      "output_end": 42.76666666666667
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1570,
+      "source_end_frame": 1667,
+      "source_start": 52.333333333333336,
+      "source_end": 55.56666666666667,
+      "event_indices": [
+        21,
+        22
+      ],
+      "output_start": 42.76666666666667,
+      "output_end": 46.00000000000001
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1684,
+      "source_end_frame": 1843,
+      "source_start": 56.13333333333333,
+      "source_end": 61.43333333333333,
+      "event_indices": [
+        23,
+        24
+      ],
+      "output_start": 46.00000000000001,
+      "output_end": 51.300000000000004
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1847,
+      "source_end_frame": 1890,
+      "source_start": 61.56666666666667,
+      "source_end": 63.0,
+      "event_indices": [
+        25
+      ],
+      "output_start": 51.300000000000004,
+      "output_end": 52.733333333333334
+    },
+    {
+      "kind": "reload_card",
+      "source_frame": 1922,
+      "source_time": 64.06666666666666,
+      "duration_frames": 24,
+      "duration": 0.8,
+      "event_indices": [
+        26
+      ],
+      "label": "REOPENING SAVED SESSION \u2014 reload wait omitted",
+      "output_start": 52.733333333333334,
+      "output_end": 53.53333333333333
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 2027,
+      "source_end_frame": 2158,
+      "source_start": 67.56666666666666,
+      "source_end": 71.93333333333334,
+      "event_indices": [
+        27,
+        28,
+        29
+      ],
+      "output_start": 53.53333333333333,
+      "output_end": 57.9
+    }
+  ],
+  "omitted_source_ranges": [
+    {
+      "source_start": 1.7333333333333334,
+      "source_end": 2.0,
+      "duration_seconds": 0.2666666666666666,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 3.7333333333333334,
+      "source_end": 4.033333333333333,
+      "duration_seconds": 0.2999999999999998,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 5.766666666666667,
+      "source_end": 6.8,
+      "duration_seconds": 1.0333333333333332,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 8.633333333333333,
+      "source_end": 9.7,
+      "duration_seconds": 1.0666666666666664,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 11.733333333333333,
+      "source_end": 12.433333333333334,
+      "duration_seconds": 0.7000000000000011,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 14.5,
+      "source_end": 15.833333333333334,
+      "duration_seconds": 1.333333333333334,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 17.866666666666667,
+      "source_end": 18.266666666666666,
+      "duration_seconds": 0.3999999999999986,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 20.0,
+      "source_end": 20.6,
+      "duration_seconds": 0.6000000000000014,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 22.766666666666666,
+      "source_end": 23.8,
+      "duration_seconds": 1.033333333333335,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 25.833333333333332,
+      "source_end": 26.066666666666666,
+      "duration_seconds": 0.23333333333333428,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 27.8,
+      "source_end": 27.933333333333334,
+      "duration_seconds": 0.13333333333333286,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 32.3,
+      "source_end": 32.46666666666667,
+      "duration_seconds": 0.1666666666666714,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 37.166666666666664,
+      "source_end": 37.4,
+      "duration_seconds": 0.23333333333333428,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 40.333333333333336,
+      "source_end": 41.1,
+      "duration_seconds": 0.7666666666666657,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 45.333333333333336,
+      "source_end": 45.43333333333333,
+      "duration_seconds": 0.09999999999999432,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 47.766666666666666,
+      "source_end": 48.8,
+      "duration_seconds": 1.0333333333333314,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 52.166666666666664,
+      "source_end": 52.333333333333336,
+      "duration_seconds": 0.1666666666666714,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 55.56666666666667,
+      "source_end": 56.13333333333333,
+      "duration_seconds": 0.5666666666666629,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 61.43333333333333,
+      "source_end": 61.56666666666667,
+      "duration_seconds": 0.13333333333333997,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 63.0,
+      "source_end": 64.06666666666666,
+      "duration_seconds": 1.0666666666666629,
+      "reason": "reopen wait replaced by reload card"
+    },
+    {
+      "source_start": 64.86666666666666,
+      "source_end": 67.56666666666666,
+      "duration_seconds": 2.700000000000003,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 71.93333333333334,
+      "source_end": 72.033333,
+      "duration_seconds": 0.09999966666666182,
+      "reason": "trailing settled dwell trimmed"
+    }
+  ],
+  "events": [
+    {
+      "index": 0,
+      "label": "Left click: Cluster 40",
+      "source_seconds": 0.212,
+      "output_seconds": 0.212
+    },
+    {
+      "index": 1,
+      "label": "Ctrl + Left click: Cluster 44",
+      "source_seconds": 2.211,
+      "output_seconds": 1.9443333333333332
+    },
+    {
+      "index": 2,
+      "label": "Ctrl + Left click: Cluster 48",
+      "source_seconds": 4.244,
+      "output_seconds": 3.6773333333333333
+    },
+    {
+      "index": 3,
+      "label": "Right click: Transfer correlogram row",
+      "source_seconds": 7.108,
+      "output_seconds": 5.508
+    },
+    {
+      "index": 4,
+      "label": "Left click: P5 \u00b7 40, 44, 48",
+      "source_seconds": 10.213,
+      "output_seconds": 7.546333333333333
+    },
+    {
+      "index": 5,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "source_seconds": 12.945,
+      "output_seconds": 9.578333333333333
+    },
+    {
+      "index": 6,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "source_seconds": 16.344,
+      "output_seconds": 11.644
+    },
+    {
+      "index": 7,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "source_seconds": 18.472,
+      "output_seconds": 13.372000000000002
+    },
+    {
+      "index": 8,
+      "label": "G: merge the combined suggestions",
+      "source_seconds": 20.814,
+      "output_seconds": 15.113999999999997
+    },
+    {
+      "index": 9,
+      "label": "Left click: Cluster 0",
+      "source_seconds": 24.29,
+      "output_seconds": 17.556666666666665
+    },
+    {
+      "index": 10,
+      "label": "Ctrl + Left click: Cluster 1",
+      "source_seconds": 26.261,
+      "output_seconds": 19.294333333333334
+    },
+    {
+      "index": 11,
+      "label": "G: make an unrelated later merge",
+      "source_seconds": 28.123,
+      "output_seconds": 21.023000000000003
+    },
+    {
+      "index": 12,
+      "label": "Alt + M: label the unrelated unit MUA",
+      "source_seconds": 30.31,
+      "output_seconds": 23.21
+    },
+    {
+      "index": 13,
+      "label": "Left click: Cluster 706",
+      "source_seconds": 32.678,
+      "output_seconds": 25.41133333333333
+    },
+    {
+      "index": 14,
+      "label": "Left click: Cluster 705",
+      "source_seconds": 35.64,
+      "output_seconds": 28.373333333333335
+    },
+    {
+      "index": 15,
+      "label": "Right click: older merged unit context menu",
+      "source_seconds": 37.61,
+      "output_seconds": 30.110000000000003
+    },
+    {
+      "index": 16,
+      "label": "Left click: Restore parents in Merge Mode",
+      "source_seconds": 38.791,
+      "output_seconds": 31.291
+    },
+    {
+      "index": 17,
+      "label": "Ctrl + Z: undo only the parent restoration",
+      "source_seconds": 43.518,
+      "output_seconds": 35.251333333333335
+    },
+    {
+      "index": 18,
+      "label": "Ctrl + Shift + Z: redo the parent restoration",
+      "source_seconds": 45.645,
+      "output_seconds": 37.27833333333334
+    },
+    {
+      "index": 19,
+      "label": "V: leave Merge Mode; restored parents stay live",
+      "source_seconds": 49.099,
+      "output_seconds": 39.699000000000005
+    },
+    {
+      "index": 20,
+      "label": "V: stage the real parents again",
+      "source_seconds": 51.188,
+      "output_seconds": 41.78800000000001
+    },
+    {
+      "index": 21,
+      "label": "Left click: Cluster 713",
+      "source_seconds": 52.526,
+      "output_seconds": 42.95933333333334
+    },
+    {
+      "index": 22,
+      "label": "Left click: Exclude current parent from the pending merge",
+      "source_seconds": 54.014,
+      "output_seconds": 44.44733333333334
+    },
+    {
+      "index": 23,
+      "label": "Ctrl + Left click: Cluster 34",
+      "source_seconds": 56.327,
+      "output_seconds": 46.19366666666667
+    },
+    {
+      "index": 24,
+      "label": "G: merge the chosen parents and new candidate",
+      "source_seconds": 59.38,
+      "output_seconds": 49.24666666666668
+    },
+    {
+      "index": 25,
+      "label": "Ctrl + S: save the revised curation",
+      "source_seconds": 61.765,
+      "output_seconds": 51.498333333333335
+    },
+    {
+      "index": 26,
+      "label": "Reopen the saved working copy",
+      "source_seconds": 64.092,
+      "output_seconds": 52.733333333333334
+    },
+    {
+      "index": 27,
+      "label": "View menu: Inspect evidence window",
+      "source_seconds": 67.772,
+      "output_seconds": 53.738666666666674
+    },
+    {
+      "index": 28,
+      "label": "Type evidence window index, then Enter",
+      "source_seconds": 68.573,
+      "output_seconds": 54.53966666666666
+    },
+    {
+      "index": 29,
+      "label": "Enter: inspect evidence window 7",
+      "source_seconds": 69.349,
+      "output_seconds": 55.31566666666667
+    }
+  ],
+  "checkpoints": [
+    {
+      "name": "01-initial",
+      "source_seconds": 7.108,
+      "output_seconds": 5.508,
+      "captured": true
+    },
+    {
+      "name": "02-right-click-transfer",
+      "source_seconds": 10.01,
+      "output_seconds": 7.343333333333334,
+      "captured": true
+    },
+    {
+      "name": "03-single-suggestion",
+      "source_seconds": 12.743,
+      "output_seconds": 9.376333333333333,
+      "captured": true
+    },
+    {
+      "name": "04-control-click-union",
+      "source_seconds": 16.142,
+      "output_seconds": 11.441999999999998,
+      "captured": true
+    },
+    {
+      "name": "05-merged",
+      "source_seconds": 24.087,
+      "output_seconds": 17.353666666666665,
+      "captured": true
+    },
+    {
+      "name": "06-later-edits",
+      "source_seconds": 35.397,
+      "output_seconds": 28.130333333333333,
+      "captured": true
+    },
+    {
+      "name": "07-restored-parents",
+      "source_seconds": 43.514,
+      "output_seconds": 35.24733333333334,
+      "captured": true
+    },
+    {
+      "name": "08-restore-history",
+      "source_seconds": 49.098,
+      "output_seconds": 39.69800000000001,
+      "captured": true
+    },
+    {
+      "name": "09-parents-remain-live",
+      "source_seconds": 51.187,
+      "output_seconds": 41.787000000000006,
+      "captured": true
+    },
+    {
+      "name": "10-new-combination",
+      "source_seconds": 59.377,
+      "output_seconds": 49.24366666666668,
+      "captured": true
+    },
+    {
+      "name": "11-revised-save",
+      "source_seconds": 64.09,
+      "output_seconds": 52.733333333333334,
+      "captured": true
+    },
+    {
+      "name": "12-reopened",
+      "source_seconds": 71.626,
+      "output_seconds": 57.59266666666667,
+      "captured": true
+    }
+  ],
+  "review_annotations": [
+    {
+      "checkpoint": "06-later-edits",
+      "text": "Later: merge 706, then mark MUA",
+      "output_start_seconds": 25.730333333333334,
+      "output_end_seconds": 28.430333333333333,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "07-restored-parents",
+      "text": "Restore older 705: editable parents",
+      "output_start_seconds": 32.84733333333333,
+      "output_end_seconds": 35.547333333333334,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "09-parents-remain-live",
+      "text": "Leave Merge Mode; real parents stay live",
+      "output_start_seconds": 39.387,
+      "output_end_seconds": 42.087,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "10-new-combination",
+      "text": "Exclude 713; add candidate 34",
+      "output_start_seconds": 46.84366666666667,
+      "output_end_seconds": 49.543666666666674,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "12-reopened",
+      "text": "Reopened: merge 714, separate 713, MUA 706",
+      "output_start_seconds": 55.19266666666667,
+      "output_end_seconds": 57.89266666666667,
+      "label": "review overlay; not part of application UI"
+    }
+  ]
+}
