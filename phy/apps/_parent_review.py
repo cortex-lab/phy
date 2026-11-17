@@ -95,7 +95,7 @@ class ParentLineage:
         if up.description == 'restore_parents' and up.history != 'undo':
             self.restorations[int(up.parent_restore_target)] = list(up.parent_restore_origins)
             for child, parent in up.parent_restore_origins.items():
-                self.origins[int(child)] = int(parent)
+                self.origins[int(child)] = self._historical_origin(parent)
                 if parent in self.records:
                     self.records[int(child)] = self.records[parent]
                     self.known_merges.add(int(child))
@@ -290,6 +290,8 @@ class ParentLineage:
                 continue
             reachable.add(target)
             pending.extend(self.records.get(target, {}))
+            if target in self.origins:
+                pending.append(self.origins[target])
         records = {
             target: groups for target, groups in self.records.items() if target in reachable
         }
@@ -336,6 +338,15 @@ class ParentLineage:
         if not np.array_equal(union, expected) or np.any(union[1:] == union[:-1]):
             raise ValueError('Recorded parents do not exactly partition this unit.')
 
+    def _historical_origin(self, unit):
+        visited = set()
+        while unit in self.origins:
+            if unit in visited:
+                raise ValueError('Recorded parent identity aliases contain a cycle.')
+            visited.add(unit)
+            unit = self.origins[unit]
+        return int(unit)
+
     def _recursive_groups(self, target, expected):
         result, visited = {}, set()
         pending = [(target, expected)]
@@ -352,7 +363,7 @@ class ParentLineage:
                     raise ValueError(
                         'Recorded merge ancestry is incomplete; no assignments changed.'
                     )
-                origin = self.origins.get(unit, unit)
+                origin = self._historical_origin(unit)
                 if origin in result:
                     raise ValueError(
                         'Recorded merge ancestry has duplicate historical identities.'

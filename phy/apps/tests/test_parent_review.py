@@ -200,6 +200,37 @@ def test_reassembly_membership_and_historical_anchor_survive_save_reopen(tmp_pat
         reopened.close()
 
 
+def test_recursive_restore_resolves_legacy_alias_chains_after_reopen(tmp_path):
+    controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2])
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    try:
+        target = clustering.merge([0, 1]).added[0]
+        first = clustering.restore_partition(target, lineage.parents(target))
+        target = clustering.merge(first.added).added[0]
+        second = clustering.restore_partition(target, lineage.parents(target))
+        # Represent an existing sidecar created by the old immediate restore path.
+        lineage.origins.update(
+            {int(child): int(parent) for child, parent in zip(second.added, first.added)}
+        )
+        target = clustering.merge([*second.added, 2]).added[0]
+        emit('curation_saved', controller.supervisor)
+        saved = clustering.spike_clusters.copy()
+    finally:
+        lineage.close()
+    reopened = ParentLineage(lineage_controller(tmp_path, saved))
+    try:
+        groups = reopened.parents(target, recursive=True)
+        assert set(groups) == {0, 1, 2}
+        for unit, rows in groups.items():
+            np.testing.assert_array_equal(rows, [unit * 2, unit * 2 + 1])
+        reopened.origins[first.added[0]] = second.added[0]
+        with pytest.raises(ValueError, match='cycle'):
+            reopened.parents(target, recursive=True)
+    finally:
+        reopened.close()
+
+
 def test_lineage_save_reopen_and_stale_assignment_rejection(tmp_path):
     controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2])
     lineage = ParentLineage(controller)
