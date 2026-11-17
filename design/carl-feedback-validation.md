@@ -76,3 +76,26 @@ A representative run on Carl's full dataset is still needed to quantify his
 end-to-end preparation/replay improvement and choose an appropriate worker count.
 None of these changes requires contacting him to implement or verify the local
 regressions.
+
+## Final integrated checks
+
+On the combined implementation (including the cancellation and output-contract
+follow-ups), the standard component targets completed with exit status zero:
+
+- `make test UV_RUN='uv run --no-sync'`: 682 passed, 13 skipped.
+- `make test-apps UV_RUN='uv run --no-sync'`: 788 passed, 6 skipped.
+- Together these cover the `make test-full` test partitions: 1470 passed,
+  19 skipped. Both targets include their required lint/format checks.
+- `make doc-check UV_RUN='uv run --no-sync'` and `uv build` passed.
+- Both checked-in benchmark scripts ran successfully and compared equal
+  serial/parallel outputs. The wheel contains every new runtime module.
+
+Two earlier coverage-enabled core runs completed all assertions and then exited
+with signal 11 during interpreter shutdown. Fault tracing reported no Python
+frame; the kernel log confirmed a native fault. The final standard core run
+exited normally, as did debugger runs with and without coverage and with normal
+address randomization. No native stack identified the cause, so no speculative
+renderer or ownership change was made. A similar unresolved shutdown limitation
+was already recorded in `slay-roundtrip-validation.md` before these changes.
+This remains an intermittent harness/runtime limitation, not a claim that native
+shutdown has been fixed or that the cause is established as harmless.
