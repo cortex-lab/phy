@@ -145,6 +145,19 @@ phy prepare-large /data/recording/params.py /data/recording-bounded \
   --batch-size 100000
 ```
 
+Preparation, summary-store/index construction, and replay print throttled
+per-stage progress to stderr, including processed counts, elapsed time, rate,
+and ETA when a total is known. Ctrl-C cancels the operation; a partially written
+sorting or index is not published. An already completed row snapshot can remain
+available if subsequent index construction is cancelled.
+
+These four CLI commands accept `--workers 1` through `--workers 32` (default
+`1`). For example, add `--workers 4` to try parallel file hashing, summary
+accumulation, row packing, and independent per-unit index construction. Work
+queues are bounded, and configured scratch budgets are shared across workers.
+More workers can help large workloads on fast storage but can slow smaller
+jobs or increase I/O contention; choose using a representative local run.
+
 `--duration` is in seconds and must agree with declared acquisition metadata.
 The `.npy` valid-interval file contains an integer array of shape `[W, 2]` with
 ordered, nonoverlapping coordinate pairs. Without it, legacy acquisition-sample
@@ -622,6 +635,12 @@ Live summary recomputation already provides split-child rates and trends during
 the original session; re-preparation starts a new curation round. Replay
 applies the recorded threshold split to every source spike using its source
 amplitude value.
+
+Replay tries native copy-on-write file clones on supported Linux and macOS
+filesystems, then falls back to ordinary copies when cloning is unsupported.
+Fallback checks free space, and output is verified before publication. These
+are independent files, never hardlinks to the source. Cloning can save copying
+time and space; source hashing and output verification still run.
 
 When the source includes SLAY suggestions in `curation.json`, preparation and
 replay preserve that file exactly, together with saved accept/reject decisions

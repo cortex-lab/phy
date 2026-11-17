@@ -118,6 +118,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.apps.capture_exceptions](#phyappscapture_exceptions)
 * [phy.apps.exceptionHandler](#phyappsexceptionhandler)
 * [phy.apps.BaseController](#phyappsbasecontroller)
+* [phy.apps.CancelledError](#phyappscancellederror)
 * [phy.apps.FeatureMixin](#phyappsfeaturemixin)
 * [phy.apps.Path](#phyappspath)
 * [phy.apps.QtDialogLogger](#phyappsqtdialoglogger)
@@ -12778,6 +12779,12 @@ peak channel.
 * `similarities : list`
     List of tuples `(other_cluster_id, similarity_value)` sorted by decreasing
     similarity value.
+
+---
+
+### phy.apps.CancelledError
+
+The Future was cancelled.
 
 ---
 

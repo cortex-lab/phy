@@ -13,6 +13,12 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Preparation, replay, and summary-store/index CLI commands now report stage
+  progress, rate and ETA, support Ctrl-C cancellation, and offer bounded
+  parallel work with `--workers` (default 1). Summary accumulation uses capped
+  lookup tables and tiled histograms. Replay tries native copy-on-write clones
+  with a space-checked copy fallback, retaining source/output verification.
+
 - Right-clicking a sampled correlogram now transfers its row cluster between
   primary and Similarity roles in bounded mode, with the same reference and
   close/reopen behavior as ordinary correlograms.
@@ -118,6 +124,11 @@ behavior they verify rather than listed separately.
   measurements.
 
 ### Added
+
+- **Show parents** opens an isolated, read-only comparison of a merged unit's
+  exact immediate parents, with consistent colors across available plots.
+  Ordinary merges record durable lineage; bounded merges use the saved journal.
+  Missing historical lineage is reported explicitly.
 
 - Ctrl-click multiple SLAY merge suggestions to compare their deduplicated units
   in one Merge workspace. Selection is read-only; an explicit merge records all

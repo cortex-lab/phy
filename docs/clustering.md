@@ -225,3 +225,26 @@ cluster_id	neurontype
 ## Undo and redo
 
 You can undo and redo clustering actions (merge, split, move, label) with the **Control+Z** and **Control+Y** keyboard shortcuts.
+
+## Inspect a merged unit's parents
+
+Right-click a merged unit in Cluster View and choose **Show parents**. A separate
+read-only window compares its immediate parents in correlogram, waveform,
+amplitude, and feature plots, with consistent colors and a parent legend.
+Available plots depend on the dataset's stored evidence. Use **Return to merged
+unit**, or select another cluster, to close the comparison. Inspection does not
+change assignments, labels, review decisions, or undo history.
+
+Ordinary datasets record exact parent membership for merges made with this
+version, including after splits, and save it in `_phy_merge_parents.npz`.
+Keep that file with the dataset. Earlier merges without recorded lineage cannot
+be reconstructed reliably and have **Show parents** disabled. Bounded datasets
+recover the exact retained parent groups from their saved curation journal,
+without scanning the original recording.
+
+The comparison supports up to 16 immediate parents. It follows the existing
+per-view spike budgets; ordinary correlograms can be sampled. Bounded plots show
+retained-window evidence, with full counts/rates shown separately when known.
+Split-derived full counts may be unavailable. When raw/stored waveforms are
+unavailable, explicitly labeled template traces show up to 100 templates per
+parent. This command inspects parents; it does not undo the merge.
