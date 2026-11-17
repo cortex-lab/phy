@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 from click.testing import CliRunner
-from phylib.utils import connect, unconnect
+from phylib.utils import connect, emit, unconnect
 
 from phy.apps import phycli
 from phy.apps.large_recording.adapter import BoundedTemplateController
@@ -294,6 +294,116 @@ def test_standard_controller_retains_existing_path_and_save_format(qtbot, tmp_pa
         assert not (params.parent / '.phy-curation').exists()
         assert not (params.parent / '_phy_curation_manifest.json').exists()
         assert 100 in np.load(params.parent / 'spike_clusters.npy')
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_sampled_correlogram_transfers_rows_and_disconnects_when_closed(
+    qtbot, tmp_path, monkeypatch
+):
+    _, controller = make_controller(tmp_path)
+    gui = controller.create_gui(default_views=['SampledCorrelogramView'], do_prompt_save=False)
+    qtbot.addWidget(gui)
+    supervisor = controller.supervisor
+    calls = []
+    transfer_cluster = supervisor.transfer_cluster
+
+    def record_transfer(cluster_id, *args, **kwargs):
+        calls.append(cluster_id)
+        return transfer_cluster(cluster_id, *args, **kwargs)
+
+    monkeypatch.setattr(supervisor, 'transfer_cluster', record_transfer)
+    try:
+        supervisor.select([0])
+        supervisor.similarity_view.select([1, 2])
+        supervisor.block()
+        assert supervisor.selection.state.cluster_ids == (0,)
+        assert supervisor.selection.state.similar_ids == (1, 2)
+
+        view = gui.get_view('SampledCorrelogramView')
+        view.dock.close()
+        supervisor.select([0])
+        supervisor.similarity_view.select([1, 2])
+        supervisor.block()
+        emit('request_correlogram_transfer', view, 1, 2)
+        supervisor.block()
+        assert calls == []
+        assert supervisor.selection.state.cluster_ids == (0,)
+        assert supervisor.selection.state.similar_ids == (1, 2)
+
+        reopened_view = gui.create_and_add_view('SampledCorrelogramView')
+        emit('request_correlogram_transfer', reopened_view, 1, 2)
+        supervisor.block()
+        assert calls == [1]
+        assert supervisor.selection.state.cluster_ids == (0, 1)
+        assert supervisor.selection.state.similar_ids == (2,)
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_sampled_correlogram_transfer_preserves_merge_reference(qtbot, tmp_path):
+    _, controller = make_controller(tmp_path)
+    gui = controller.create_gui(default_views=['SampledCorrelogramView'], do_prompt_save=False)
+    qtbot.addWidget(gui)
+    supervisor = controller.supervisor
+    try:
+        supervisor.select([0])
+        supervisor.similarity_view.select([1, 2])
+        supervisor.block()
+        supervisor.toggle_merge_mode()
+        supervisor.block()
+        state = supervisor.selection.state
+        assert state.reference_id == 0
+        assert state.merge_ids == (0, 1, 2)
+
+        view = gui.get_view('SampledCorrelogramView')
+        emit('request_correlogram_transfer', view, 0, 1)
+        supervisor.block()
+        assert supervisor.selection.state.reference_id == 1
+        assert supervisor.selection.state.merge_ids == (1, 2)
+        assert supervisor.selection.state.similar_ids == (0,)
+
+        emit('request_correlogram_transfer', view, 1, 2)
+        supervisor.block()
+        assert supervisor.selection.state.reference_id == 2
+        assert supervisor.selection.state.merge_ids == (2,)
+        assert supervisor.selection.state.similar_ids == (0, 1)
+
+        emit('request_correlogram_transfer', view, 2, 2)
+        supervisor.block()
+        assert supervisor.selection.state.reference_id == 2
+        assert supervisor.selection.state.merge_ids == (2,)
+        assert supervisor.selection.state.similar_ids == (0, 1)
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_ordinary_correlogram_transfer_still_works(qtbot, tmp_path):
+    params = make_gui_sorting(tmp_path / 'ordinary')
+    controller = TemplateController(
+        dir_path=params.parent,
+        config_dir=tmp_path / 'config',
+        plugins=[],
+        enable_threading=False,
+        sample_rate=30000,
+        n_channels_dat=3,
+        dtype='int16',
+    )
+    gui = controller.create_gui(default_views=['CorrelogramView'], do_prompt_save=False)
+    qtbot.addWidget(gui)
+    supervisor = controller.supervisor
+    try:
+        supervisor.select([0])
+        supervisor.similarity_view.select([1, 2])
+        supervisor.block()
+        view = gui.get_view('CorrelogramView')
+        emit('request_correlogram_transfer', view, 1, 2)
+        supervisor.block()
+        assert supervisor.selection.state.cluster_ids == (0, 1)
+        assert supervisor.selection.state.similar_ids == (2,)
     finally:
         gui.close()
         controller.close()

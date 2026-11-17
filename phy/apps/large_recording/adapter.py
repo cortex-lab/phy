@@ -210,9 +210,25 @@ class BoundedTemplateController(TemplateController):
         self.view_creator['EvidenceAmplitudeView'] = self.create_evidence_amplitude_view
         self.view_creator['UnitStabilityView'] = self.create_unit_stability_view
         self.view_creator['SampledISIView'] = lambda: SampledISIView(cluster_stat=self._get_isi)
-        self.view_creator['SampledCorrelogramView'] = lambda: SampledCorrelogramView(
-            correlograms=self._window_correlograms, sample_rate=self.model.sample_rate
+        self.view_creator['SampledCorrelogramView'] = self.create_sampled_correlogram_view
+
+    def create_sampled_correlogram_view(self):
+        """Create a sampled correlogram view with row-cluster transfer."""
+        view = SampledCorrelogramView(
+            correlograms=self._window_correlograms,
+            sample_rate=self.model.sample_rate,
         )
+
+        @connect(sender=view)
+        def on_request_correlogram_transfer(sender, row_cluster_id, column_cluster_id):
+            # The row determines the target for both diagonal and off-diagonal cells.
+            self.supervisor.transfer_cluster(row_cluster_id)
+
+        @connect(sender=view)
+        def on_close_view(view_, gui):
+            unconnect(on_request_correlogram_transfer)
+
+        return view
 
     def _get_waveforms_dict(self):
         functions = super()._get_waveforms_dict()
