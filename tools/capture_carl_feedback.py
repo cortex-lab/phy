@@ -1,8 +1,8 @@
 """Exercise Carl's feedback in the real GUI on a disposable data copy.
 
 Starts its own Xvfb server: no window or recording reaches the desktop. Inputs
-must be disposable copies; curation is deliberately saved. Records real X11
-pixels, Qt input events and state assertions, with a separate per-run config.
+are hashed and copied before opening; curation is saved only in the copy.
+Records real X11 pixels, Qt input events and state assertions with separate config.
 """
 
 import argparse
@@ -16,6 +16,8 @@ from pathlib import Path
 
 
 def run(args):
+    if args.dataset.resolve() in (args.output.resolve(), *args.output.resolve().parents):
+        raise ValueError('The capture output must be outside the immutable input dataset.')
     args.output.mkdir(parents=True, exist_ok=False)
     server_log = (args.output / 'xvfb.log').open('w')
     server = subprocess.Popen(
@@ -56,7 +58,15 @@ def run(args):
         import OpenGL.GL  # Initialize OpenGL before Qt, as in the application entrypoint.
         from phylib.io.model import load_model
         from PyQt5.QtCore import QCoreApplication, QEvent, QPoint, QTimer
-        from PyQt5.QtGui import QContextMenuEvent
+        from PyQt5.QtGui import (
+            QColor,
+            QContextMenuEvent,
+            QCursor,
+            QPainter,
+            QPen,
+            QPixmap,
+            QPolygon,
+        )
         from PyQt5.QtTest import QTest
         from PyQt5.QtWidgets import QInputDialog, QLineEdit, QMenu
 
@@ -91,6 +101,9 @@ def run(args):
             'private_display': display,
             'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
             'steps': [],
+            'input_events': [],
+            'recording_fps': args.fps,
+            'pointer': 'Visible native X11 cursor, eased motion and click ring',
             'label': 'Real earlier Carl dataset; engineering validation',
         }
         bounded = args.mode == 'bounded'
@@ -161,11 +174,11 @@ def run(args):
                 '-video_size',
                 '1920x1200',
                 '-framerate',
-                '12',
+                str(args.fps),
                 '-f',
                 'x11grab',
                 '-draw_mouse',
-                '0',
+                '1',
                 '-i',
                 display + '.0',
                 '-an',
@@ -174,7 +187,7 @@ def run(args):
                 '-preset',
                 'veryfast',
                 '-crf',
-                '24',
+                '20',
                 '-pix_fmt',
                 'yuv420p',
                 '-movflags',
@@ -184,6 +197,72 @@ def run(args):
             stdout=video_log,
             stderr=video_log,
         )
+
+        def cursor_image(clicked=False):
+            pixmap = QPixmap(72, 72)
+            pixmap.fill(Qt.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.Antialiasing)
+            if clicked:
+                painter.setPen(QPen(QColor('#ffcc4d'), 4))
+                painter.drawEllipse(QPoint(28, 28), 22, 22)
+            painter.setPen(QPen(QColor('#101010'), 2))
+            painter.setBrush(QColor('white'))
+            painter.drawPolygon(
+                QPolygon(
+                    [
+                        QPoint(28, 28),
+                        QPoint(28, 53),
+                        QPoint(35, 47),
+                        QPoint(41, 61),
+                        QPoint(48, 58),
+                        QPoint(42, 45),
+                        QPoint(53, 45),
+                    ]
+                )
+            )
+            painter.end()
+            return QCursor(pixmap, 28, 28)
+
+        idle_cursor, clicked_cursor = cursor_image(), cursor_image(True)
+        app.setOverrideCursor(idle_cursor)
+
+        def input_note(label):
+            entry = {'seconds': round(time.monotonic() - started, 3), 'label': label}
+            report['input_events'].append(entry)
+            print(json.dumps({'input': entry}), flush=True)
+
+        def move_pointer(widget, pos):
+            origin = QCursor.pos()
+            target = widget.mapToGlobal(pos)
+            for step in range(1, 25):
+                fraction = step / 24
+                eased = fraction * fraction * (3 - 2 * fraction)
+                QCursor.setPos(
+                    round(origin.x() + (target.x() - origin.x()) * eased),
+                    round(origin.y() + (target.y() - origin.y()) * eased),
+                )
+                QTest.qWait(30)
+            QTest.qWait(250)
+
+        def click(widget, button, modifiers=Qt.NoModifier, pos=None, label=None):
+            pos = pos if pos is not None else widget.rect().center()
+            button_name = 'Right click' if button == Qt.RightButton else 'Left click'
+            prefix = 'Ctrl + ' if modifiers & Qt.ControlModifier else ''
+            input_note(prefix + button_name + (': ' + label if label else ''))
+            move_pointer(widget, pos)
+            app.changeOverrideCursor(clicked_cursor)
+            QTest.mousePress(widget, button, modifiers, pos)
+            QTest.qWait(180)
+            QTest.mouseRelease(widget, button, modifiers, pos)
+            QTest.qWait(350)
+            app.changeOverrideCursor(idle_cursor)
+
+        def key(widget, value, modifiers=Qt.NoModifier, label='Keyboard shortcut'):
+            input_note(label)
+            QTest.qWait(450)
+            QTest.keyClick(widget, value, modifiers)
+            QTest.qWait(450)
 
         def capture(name, title, window=None, **facts):
             target = window or gui
@@ -216,11 +295,14 @@ def run(args):
             assert index.isValid(), unit
             table.table_view.scrollTo(index)
             settle(150)
-            QTest.mouseClick(
+            row = table._row_for_proxy_index(index)
+            label = row.get('proposition') or f'Cluster {unit}'
+            click(
                 table.table_view.viewport(),
                 Qt.LeftButton,
                 modifiers,
                 table.table_view.visualRect(index).center(),
+                label=str(label),
             )
             settle()
 
@@ -279,7 +361,7 @@ def run(args):
         ndc = ccg._display_scale.apply(ndc)[0]
         width, height = ccg.canvas.get_size()
         pos = QPoint(round((ndc[0] + 1) * width / 2), round((1 - ndc[1]) * height / 2))
-        QTest.mouseClick(ccg.canvas, Qt.RightButton, Qt.NoModifier, pos)
+        click(ccg.canvas, Qt.RightButton, Qt.NoModifier, pos, 'Transfer correlogram row')
         settle()
         assert transfer in supervisor.selected_similar, (transfer, supervisor.selected_similar)
         capture(
@@ -311,7 +393,7 @@ def run(args):
         app.setActiveWindow(gui)
         gui.setFocus()
         settle(150)
-        QTest.keyClick(gui, Qt.Key_G)
+        key(gui, Qt.Key_G, label='G: merge the combined suggestions')
         settle()
         assert len(supervisor.selected) == 1, supervisor.selected
         merged = int(supervisor.selected[0])
@@ -341,11 +423,19 @@ def run(args):
             assert isinstance(menu, QMenu)
             action = next(action for action in menu.actions() if action.text() == 'Show parents')
             assert action.isEnabled()
-            QTest.mouseClick(
-                menu, Qt.LeftButton, Qt.NoModifier, menu.actionGeometry(action).center()
+            click(
+                menu,
+                Qt.LeftButton,
+                Qt.NoModifier,
+                menu.actionGeometry(action).center(),
+                'Show parents',
             )
 
-        QTimer.singleShot(1000, choose_context_action)
+        input_note('Right click: merged unit context menu')
+        move_pointer(table.table_view.viewport(), point)
+        app.changeOverrideCursor(clicked_cursor)
+        QTimer.singleShot(400, lambda: app.changeOverrideCursor(idle_cursor))
+        QTimer.singleShot(1200, choose_context_action)
         event = QContextMenuEvent(
             QContextMenuEvent.Mouse, point, table.table_view.viewport().mapToGlobal(point)
         )
@@ -370,7 +460,7 @@ def run(args):
         button = review._toolbar.widgetForAction(review.file_actions.get('return_to_merged_unit'))
         assert button.isVisible() and button.isEnabled()
         assert review.rect().contains(button.mapTo(review, button.rect().center()))
-        QTest.mouseClick(button, Qt.LeftButton)
+        click(button, Qt.LeftButton, label='Return to merged unit')
         settle()
         assert controller.parent_inspection.window is None
         np.testing.assert_array_equal(before_review, supervisor.clustering.spike_clusters)
@@ -380,7 +470,7 @@ def run(args):
         capture('07-return', 'One click returns to the merged unit without editing')
         app.setActiveWindow(gui)
         gui.setFocus()
-        QTest.keyClick(gui, Qt.Key_Z, Qt.ControlModifier)
+        key(gui, Qt.Key_Z, Qt.ControlModifier, 'Ctrl + Z: undo')
         settle()
         np.testing.assert_array_equal(initial, supervisor.clustering.spike_clusters)
         assert supervisor.selection.state.merge.proposition_ids == keys
@@ -389,11 +479,11 @@ def run(args):
             '08-undo', 'Undo restores assignments, both decisions and the comparison workspace'
         )
         app.setActiveWindow(gui)
-        QTest.keyClick(gui, Qt.Key_Z, Qt.ControlModifier | Qt.ShiftModifier)
+        key(gui, Qt.Key_Z, Qt.ControlModifier | Qt.ShiftModifier, 'Ctrl + Shift + Z: redo')
         settle()
         assert supervisor.selected == [merged]
         np.testing.assert_array_equal(expected, supervisor.clustering.spike_clusters)
-        QTest.keyClick(gui, Qt.Key_S, Qt.ControlModifier)
+        key(gui, Qt.Key_S, Qt.ControlModifier, 'Ctrl + S: save')
         settle()
         capture('09-redo-save', 'Redo and Save retain the combined merge')
         if bounded:
@@ -402,6 +492,7 @@ def run(args):
         report['assigned_spikes'] = int(
             np.count_nonzero(initial != supervisor.clustering.spike_clusters)
         )
+        input_note('Reopen the saved working copy')
         gui.close()
         controller.close()
         gui.deleteLater()
@@ -435,11 +526,14 @@ def run(args):
                 assert isinstance(dialog, QInputDialog)
                 edit = dialog.findChild(QLineEdit)
                 assert edit is not None and edit.isVisible()
+                input_note('Type evidence window index, then Enter')
+                move_pointer(edit, edit.rect().center())
                 edit.selectAll()
-                QTest.keyClicks(edit, str(report['evidence_window']))
-                QTest.keyClick(edit, Qt.Key_Return)
+                QTest.keyClicks(edit, str(report['evidence_window']), delay=120)
+                key(edit, Qt.Key_Return, label='Enter: inspect evidence window 7')
 
             QTimer.singleShot(800, choose_evidence_window)
+            input_note('View menu: Inspect evidence window')
             gui.view_actions.get('inspect_evidence_window').trigger()
             settle()
             assert controller.evidence_window_index == report['evidence_window']
@@ -489,4 +583,8 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--mode', required=True, choices=['ordinary', 'bounded'])
-    run(parser.parse_args())
+    parser.add_argument('--fps', type=int, default=30)
+    args = parser.parse_args()
+    if not 1 <= args.fps <= 60:
+        parser.error('--fps must be between 1 and 60.')
+    run(args)
