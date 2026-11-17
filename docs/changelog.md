@@ -128,7 +128,8 @@ behavior they verify rather than listed separately.
 - **Show parents** opens an isolated, read-only comparison of a merged unit's
   exact immediate parents, with consistent colors across available plots.
   Ordinary merges record durable lineage; bounded merges use the saved journal.
-  Missing historical lineage is reported explicitly.
+  Missing historical lineage is reported explicitly. The parent window keeps
+  its return button and wrapped legend visible above a two-column plot layout.
 
 - Ctrl-click multiple SLAY merge suggestions to compare their deduplicated units
   in one Merge workspace. Selection is read-only; an explicit merge records all
