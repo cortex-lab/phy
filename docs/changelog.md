@@ -115,6 +115,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Require PyQt5-sip 12.20.1 or later to avoid native shutdown crashes when
+  Qt cleanup callbacks create or destroy wrapped objects.
+
 - Clean up synthetic scene windows before the graphics diagnostic exits, including
   failed probes, instead of leaving native Qt window destruction to interpreter shutdown.
 
