@@ -14,44 +14,10 @@ import numpy as np
 from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 
-from phy.gui.qt import QLabel, QSize, QSizePolicy, Qt
+from phy.gui.qt import Qt
+from phy.utils.color import colormaps
 
 logger = logging.getLogger(__name__)
-
-
-class _ParentLegend(QLabel):
-    """Size the review header from its real wrapped width, never a tall hint."""
-
-    _preferred_width = 760
-
-    def __init__(self, text):
-        super().__init__(text)
-        self.setObjectName('parent-review-legend')
-        self.setWordWrap(True)
-        self.setMinimumWidth(160)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        self.setStyleSheet('background: #202020; color: white; padding: 4px;')
-        self._fit_height(self._preferred_width)
-
-    def _fit_height(self, width):
-        height = max(self.fontMetrics().height() + 8, self.heightForWidth(max(1, width)))
-        if self.minimumHeight() != height or self.maximumHeight() != height:
-            self.setFixedHeight(height)
-
-    def sizeHint(self):
-        return QSize(self._preferred_width, self.heightForWidth(self._preferred_width))
-
-    def minimumSizeHint(self):
-        return QSize(160, self.minimumHeight())
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._fit_height(event.size().width())
-
-    def setText(self, text):
-        super().setText(text)
-        self._fit_height(self.width() if self.isVisible() else self._preferred_width)
 
 
 def _fingerprint(assignments, model):
@@ -80,27 +46,108 @@ class ParentLineage:
     def __init__(self, controller):
         self.controller = controller
         self.records = {}
+        self.color_records = {}
+        self._pending_colors = None
         self.path = controller.dir_path / '_phy_merge_parents.npz'
         if not hasattr(controller, 'bounded_session'):
             self._load()
+        else:
+            self._load_bounded_colors()
         self.bind()
 
     def bind(self):
         self.close()
-        if not hasattr(self.controller, 'bounded_session'):
-            connect(
-                self._on_cluster, event='cluster', sender=self.controller.supervisor.clustering
-            )
-            connect(self._on_saved, event='curation_saved', sender=self.controller.supervisor)
+        supervisor = self.controller.supervisor
+        connect(self._before_merge, event='before_merge', sender=supervisor)
+        connect(self._on_cluster, event='cluster', sender=supervisor.clustering)
+        connect(self._on_saved, event='curation_saved', sender=supervisor)
 
     def close(self):
-        unconnect(self._on_cluster, self._on_saved)
+        unconnect(self._before_merge, self._on_cluster, self._on_saved)
+
+    def _before_merge(self, sender, parents):
+        # This explicit observer runs before clustering/table callbacks can reset
+        # the source selection. Unselected explicit parents get unused slots.
+        self._pending_colors = None
+        if len(parents) > 16:
+            return  # Display limits must never restrict otherwise valid curation.
+        selected = getattr(sender, 'selection_color_indices', {})
+        colors = {int(p): int(selected[p]) for p in parents if p in selected}
+        used = set(colors.values())
+        for parent in parents:
+            if parent not in colors:
+                slot = next(i for i in range(len(colormaps.default)) if i not in used)
+                colors[int(parent)] = slot
+                used.add(slot)
+        self._pending_colors = colors
 
     def _on_cluster(self, sender, up):
         if up.description == 'merge' and up.history != 'undo' and len(up.deleted) >= 2:
-            # Clustering replaces per-cluster arrays instead of mutating them.
-            # Keep references, avoiding another spike-membership copy per merge.
-            self.records[int(up.added[0])] = dict(up.parent_spike_ids)
+            target = int(up.added[0])
+            if not hasattr(self.controller, 'bounded_session'):
+                # Keep references: Clustering replaces these arrays, never mutates them.
+                self.records[target] = dict(up.parent_spike_ids)
+            if up.history != 'redo':
+                colors = self._pending_colors
+                if colors is not None and set(colors) == set(up.deleted):
+                    self.color_records[target] = colors
+                else:
+                    self.color_records.pop(target, None)
+            self._pending_colors = None
+
+    @staticmethod
+    def _parse_colors(value):
+        if not isinstance(value, dict):
+            raise ValueError('invalid optional parent colors')
+        result = {}
+        for target, groups in value.items():
+            if not isinstance(groups, dict):
+                raise ValueError('invalid optional parent colors')
+            colors = {}
+            for parent, index in groups.items():
+                if type(index) is not int or index < 0:
+                    raise ValueError('invalid optional parent color index')
+                colors[int(parent)] = index
+            if len(set(colors.values())) != len(colors):
+                raise ValueError('duplicate optional parent color indices')
+            result[int(target)] = colors
+        return result
+
+    def _bounded_color_path(self):
+        identity = hashlib.sha256(str(self.controller.dir_path.resolve()).encode()).hexdigest()[
+            :20
+        ]
+        return Path(self.controller.config_dir) / f'parent-colors-{identity}.json'
+
+    def _bounded_binding(self):
+        session = self.controller.bounded_session
+        value = [session.manifest['source'], session.manifest.get('bounded_files'), session.events]
+        return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+    def _load_bounded_colors(self):
+        try:
+            value = json.loads(self._bounded_color_path().read_text())
+            if value['binding'] == self._bounded_binding():
+                self.color_records = self._parse_colors(value['colors'])
+        except (OSError, ValueError, KeyError, TypeError):
+            pass  # Disposable display hints never control journal validity.
+
+    def colors(self, target, groups=None):
+        """Immutable parent→palette slots, persisted where known, stable otherwise.
+
+        Historical merges without optional display hints use numeric parent order.
+        ``groups`` lets a caller reuse an already validated exact partition.
+        """
+        groups = self.parents(target) if groups is None else groups
+        saved = self.color_records.get(int(target), {})
+        colors = {p: saved[p] for p in groups if p in saved}
+        used = set(colors.values())
+        for parent in sorted(groups):
+            if parent not in colors:
+                index = next(i for i in range(len(colormaps.default)) if i not in used)
+                colors[parent] = index
+                used.add(index)
+        return MappingProxyType(colors)
 
     def _load(self):
         if not self.path.exists():
@@ -139,11 +186,35 @@ class ParentLineage:
                         raise ValueError('a merge needs at least two parents')
                     records[target] = groups
                 self.records = records
+                try:
+                    self.color_records = self._parse_colors(json.loads(str(data['color_indices'])))
+                except (OSError, ValueError, KeyError, TypeError, BadZipFile):
+                    self.color_records = {}
         except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
             logger.warning('Merge-parent history unavailable: %s.', error)
             self.records = {}
 
     def _on_saved(self, sender):
+        if hasattr(self.controller, 'bounded_session'):
+            # The journal is already committed; optional cache failures must not
+            # turn a successful curation save into a reported failure.
+            try:
+                path = self._bounded_color_path()
+                path.parent.mkdir(parents=True, exist_ok=True)
+                descriptor, filename = tempfile.mkstemp(prefix='.parent-colors-', dir=path.parent)
+                try:
+                    with os.fdopen(descriptor, 'w') as stream:
+                        json.dump(
+                            {'binding': self._bounded_binding(), 'colors': self.color_records},
+                            stream,
+                        )
+                    os.replace(filename, path)
+                finally:
+                    if os.path.exists(filename):
+                        os.unlink(filename)
+            except (OSError, ValueError, TypeError):
+                logger.debug('Could not save optional parent colors.', exc_info=True)
+            return
         live = self.controller.supervisor.clustering.spikes_per_cluster
         records = {target: groups for target, groups in self.records.items() if target in live}
         arrays = {
@@ -159,6 +230,9 @@ class ParentLineage:
                 )
             ),
             catalog=np.asarray(json.dumps({str(t): sorted(g) for t, g in records.items()})),
+            color_indices=np.asarray(
+                json.dumps({t: self.color_records[t] for t in records if t in self.color_records})
+            ),
         )
         descriptor, filename = tempfile.mkstemp(
             prefix='.phy-parents-', suffix='.npz', dir=self.path.parent
@@ -212,17 +286,21 @@ class ParentLineage:
         if not np.array_equal(union, live[target]) or len(np.unique(union)) != len(union):
             raise ValueError('Recorded parents do not exactly partition this unit.')
         result = {}
-        for parent in sorted(groups):
+        saved = self.color_records.get(target, {})
+        for parent in sorted(groups, key=lambda p: (saved.get(p, len(colormaps.default)), p)):
             ids = np.asarray(groups[parent]).view()
             ids.flags.writeable = False
             result[int(parent)] = ids
         return MappingProxyType(result)
 
-    def full_counts(self, target):
+    def full_counts(self, target, groups=None):
         """Exact counts from saved summaries/whole-unit merges; splits stay unknown."""
         session = getattr(self.controller, 'bounded_session', None)
         if session is None:
-            return {p: len(ids) for p, ids in self.parents(target).items()}
+            return {
+                p: len(ids)
+                for p, ids in (self.parents(target) if groups is None else groups).items()
+            }
         counts = {int(p): int(n) for p, n in zip(session.unit_ids, session.manifest['counts'])}
         for event in session.events:
             if event['operation'] == 'merge':
@@ -463,7 +541,7 @@ class ParentInspection:
 
         self._context_menu = ContextMenu(gui)
         table.table_view.viewport().installEventFilter(self._context_menu)
-        connect(self._on_gui_closed, event='closed', sender=gui)
+        connect(self._on_gui_closed, event='close', sender=gui)
         gui.view_actions.add(
             self.show_selected,
             name='show_parents',
@@ -485,80 +563,48 @@ class ParentInspection:
         return self.show(selected[0])
 
     def show(self, target):
+        try:
+            return self._show(target)
+        except Exception:
+            self.close_review()
+            if hasattr(self, '_temporary'):
+                self._temporary.cleanup()
+                del self._temporary
+            self.providers = None
+            raise
+
+    def _show(self, target):
         from phy.cluster.views import AmplitudeView, CorrelogramView, FeatureView, WaveformView
-        from phy.gui import GUI
-        from phy.gui.qt import QMainWindow
-        from phy.utils.color import selected_cluster_color
+
+        from ._parent_workspace import ParentWorkspace
 
         groups = self.lineage.parents(target)
         self.close_review()
-        if self._gui is not None and self.controller.supervisor.selected != [target]:
+        if self._gui is None:
+            raise ValueError('Attach the main GUI before inspecting parents.')
+        if self.controller.supervisor.selected != [target]:
             self.controller.supervisor.select([target])
             self.controller.supervisor._settle_selection()
         providers = ParentProviders(self.controller, target, groups)
         self.providers = providers
         self._temporary = tempfile.TemporaryDirectory(prefix='phy-parent-review-')
-
-        class ReviewWindow(GUI):
-            def closeEvent(self, event):
-                # Closing from Supervisor.select/cluster must never pump queued
-                # curation events halfway through an action. Review geometry is
-                # ephemeral and needs neither save prompts nor state persistence.
-                QMainWindow.closeEvent(self, event)
-                if event.isAccepted() and not self._closed:
-                    self._closed = True
-                    emit('closed', self)
-
-        window = ReviewWindow(
-            name='ParentReview',
-            subtitle=f'{target}: parents (read only)',
-            config_dir=Path(self._temporary.name),
-            default_state_path=None,
-            size=(1100, 800),
+        colors = self.lineage.colors(target, groups)
+        workspace = ParentWorkspace(
+            self._gui,
+            self.controller.supervisor,
+            target,
+            groups,
+            self.lineage.full_counts(target, groups),
+            colors,
+            providers.bounded,
+            Path(self._temporary.name),
+            self.close_review,
         )
-        self.window = window
-        full_counts = self.lineage.full_counts(target)
-        legend = []
-        for index, parent in enumerate(groups):
-            color = np.asarray(selected_cluster_color(index, 1.0))[:3]
-            rgb = ','.join(str(int(round(c * 255))) for c in color)
-            scope = 'retained spikes' if providers.bounded else 'spikes'
-            full = full_counts.get(parent)
-            detail = ''
-            if providers.bounded:
-                if full is None:
-                    detail = '; full count/rate unavailable'
-                else:
-                    intervals = np.asarray(
-                        self.controller.bounded_session.manifest['valid_intervals']
-                    )
-                    exposure = (
-                        np.sum(intervals[:, 1] - intervals[:, 0])
-                        / self.controller.model.sample_rate
-                    )
-                    rate = f'; {full / exposure:.3g} Hz' if exposure > 0 else ''
-                    detail = f'; {full} full spikes{rate}'
-            legend.append(
-                f'<span style="color:rgb({rgb})">{target} ← {parent} '
-                f'({len(groups[parent])} {scope}{detail})</span>'
-            )
-        text = ' &nbsp; | &nbsp; '.join(legend)
-        if providers.bounded:
-            text += '<br>Window evidence only; no full-recording correlogram rate baseline.'
-        caption = _ParentLegend(text)
-        window.file_actions.add(
-            self.close_review, name='return_to_merged_unit', docstring='Return to merged unit'
-        )
-        return_action = window.file_actions.get('return_to_merged_unit')
-        window._toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
-        window._toolbar.setMovable(False)
-        window._toolbar.setFloatable(False)
-        # Put the return control first so a long parent legend cannot push it
-        # into the toolbar overflow menu. Generic GUIs start with a hidden bar.
-        window._toolbar.addAction(return_action)
-        window._toolbar.widgetForAction(return_action).setObjectName('parent-review-return')
-        window._toolbar.addWidget(caption)
-        window._toolbar.show()
+        self._workspace = workspace
+        self.window = window = workspace.gui
+        self.host_gui = self._gui
+        self.return_button = workspace.return_button
+        self.parent_table = workspace.parent_table
         ccg = CorrelogramView(
             correlograms=providers.correlograms, sample_rate=self.controller.model.sample_rate
         )
@@ -583,9 +629,8 @@ class ParentInspection:
                 )
             )
             if len(waveform_ids) < len(groups):
-                caption.setText(
-                    text
-                    + '<br>Parents without retained waveforms are omitted from the waveform plot.'
+                workspace.scope.setText(
+                    'Parents without retained waveforms are omitted from that plot.'
                 )
         elif getattr(self.controller.model, 'spike_templates', None) is not None:
             specs.append(
@@ -597,9 +642,9 @@ class ParentInspection:
                     [p for p in groups if len(groups[p])],
                 )
             )
-            caption.setText(
-                text
-                + '<br>Raw/stored waveforms unavailable: showing up to 100 template traces per parent.'
+            workspace.scope.setText(
+                workspace.scope.text()
+                + ' Raw/stored waveforms unavailable: showing up to 100 template traces per parent.'
             )
         if getattr(self.controller.model, 'amplitudes', None) is not None:
             specs.append(
@@ -624,7 +669,6 @@ class ParentInspection:
                     [p for p in groups if len(providers.feature_ids(p))],
                 )
             )
-        colors = MappingProxyType({p: index for index, p in enumerate(groups)})
         try:
             for view, ids in specs:
                 # add_view, deliberately not attach: no global selection/split/
@@ -657,23 +701,11 @@ class ParentInspection:
                 window.resizeDocks(
                     [self.views[1].dock, self.views[3].dock], [430, 300], Qt.Vertical
                 )
-            connect(self._on_review_closed, event='closed', sender=window)
-            window.show()
+            workspace.show()
             return window
         except Exception:
             self.close_review()
             raise
-
-    def _on_review_closed(self, sender):
-        from phy.gui.qt import QTimer
-
-        # GUI saves its temporary state after its first closed notification.
-        # Dispose after that save, without touching a subsequently opened review.
-        def dispose():
-            if self.window is sender:
-                self._dispose_review()
-
-        QTimer.singleShot(0, dispose)
 
     def _dispose_review(self):
         for view in self.views:
@@ -693,7 +725,7 @@ class ParentInspection:
             view._closed = True
         self.views = []
         if self.window is not None:
-            unconnect(self.window, self._on_review_closed)
+            unconnect(self.window)
         self.window = None
         self.providers = None
         if hasattr(self, '_temporary'):
@@ -701,10 +733,16 @@ class ParentInspection:
             del self._temporary
 
     def close_review(self):
-        if self.window is not None:
-            with suppress(RuntimeError):
-                self.window.close()
+        if self.window is None or getattr(self, '_closing', False):
+            return
+        self._closing = True
+        try:
+            # Mark the workspace inactive before restoration can flush deferred selections.
+            self._workspace.restore()
             self._dispose_review()
+            self._workspace = None
+        finally:
+            self._closing = False
 
     def _on_gui_closed(self, sender):
         self.close_review()

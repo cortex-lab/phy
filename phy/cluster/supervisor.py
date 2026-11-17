@@ -2129,6 +2129,8 @@ class Supervisor:
                 )
         elif to is not None:
             to = int(to)
+        # Display-only observers must see source colors before cluster callbacks reset selection.
+        emit('before_merge', self, cluster_ids)
         # A merge synchronously emits several related table mutations: metadata
         # inheritance, addition of the merged cluster, and removal of its
         # ancestors. Fit each attached table once after the complete operation

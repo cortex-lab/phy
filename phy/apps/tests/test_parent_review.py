@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from phylib.utils import Bunch, emit
 
-from phy.apps._parent_review import ParentLineage, ParentProviders, _ParentLegend
+from phy.apps._parent_review import ParentLineage, ParentProviders
 from phy.apps.large_recording.tests.test_adapter import make_controller
 from phy.apps.tests.test_base import MyControllerFull, _mock_controller
 from phy.cluster.clustering import Clustering
@@ -134,10 +134,12 @@ def test_providers_use_exact_spikes_without_changing_controller(tempdir):
 def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir, monkeypatch):
     from phylib.utils.event import _EVENT
 
-    from phy.gui.qt import QLabel, Qt
+    from phy.gui.qt import Qt
 
     controller = _mock_controller(tempdir, MyControllerFull)
     gui = controller.create_gui(do_prompt_save=False)
+    gui.resize(1100, 800)
+    gui.show()
     inspection = controller.parent_inspection
     supervisor = controller.supervisor
     try:
@@ -169,25 +171,25 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
                 view.on_mouse_click(Bunch(key='Control', button='Left', pos=(0, 0)))
             return_action = window.file_actions.get('return_to_merged_unit')
             return_button = window._toolbar.widgetForAction(return_action)
-            legend = window.findChild(QLabel, 'parent-review-legend')
             assert window._toolbar.isVisible()
             assert return_button.isVisible() and return_button.isEnabled()
-            assert return_button.text() == 'Return to merged unit'
+            assert return_button.text() == 'Back to merged unit'
             assert return_button.visibleRegion().contains(return_button.rect().center())
             assert window.rect().contains(
                 return_button.mapTo(window, return_button.rect().center())
             )
-            assert legend.isVisible() and legend.wordWrap()
-            assert legend.height() >= legend.heightForWidth(legend.width())
-            assert window._toolbar.height() < min(180, window.height() / 4)
-            assert f'{target} ← 0' in legend.text() and f'{target} ← 1' in legend.text()
+            assert inspection.host_gui is gui
+            assert not window.isWindow()
+            assert inspection.parent_table.rowCount() == 2
+            assert inspection.parent_table.isVisible()
+            assert window._toolbar.height() < min(100, window.height() / 4)
             docks = {type(v): v.dock.geometry() for v in inspection.views}
             assert docks[CorrelogramView].left() < docks[WaveformView].left()
             assert docks[CorrelogramView].top() < docks[AmplitudeView].top()
             assert docks[WaveformView].top() < docks[FeatureView].top()
             assert docks[AmplitudeView].left() < docks[FeatureView].left()
             assert docks[CorrelogramView].width() >= docks[WaveformView].width()
-            assert all(rect.width() >= 300 and rect.height() >= 180 for rect in docks.values())
+            assert all(rect.width() >= 200 and rect.height() >= 150 for rect in docks.values())
             np.testing.assert_array_equal(supervisor.clustering.spike_clusters, before)
             assert supervisor.get_labels('group') == metadata
             assert supervisor.is_dirty() == dirty
@@ -220,44 +222,6 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
         controller.close()
 
 
-@pytest.mark.parametrize('count', [2, 7, 16])
-def test_parent_legend_uses_only_the_height_of_its_wrapped_text(qtbot, count):
-    from phy.gui.qt import QMainWindow, Qt, QToolBar
-
-    text = (
-        ' &nbsp; | &nbsp; '.join(
-            f'<span style="color:rgb(0,150,255)">705 ← {parent} '
-            f'(2057 retained spikes; 612536 full spikes; 1.71 Hz)</span>'
-            for parent in range(count)
-        )
-        + '<br>Window evidence only; no full-recording correlogram rate baseline.'
-    )
-    window = QMainWindow()
-    qtbot.addWidget(window)
-    toolbar = QToolBar(window)
-    window.addToolBar(toolbar)
-    toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
-    action = toolbar.addAction('Return to merged unit')
-    legend = _ParentLegend(text)
-    toolbar.addWidget(legend)
-    window.resize(1880, 1120)
-    window.show()
-    for width in (1880, 1100):
-        window.resize(width, 1120)
-        qtbot.wait(30)
-        assert legend.isVisible()
-        assert legend.width() > width / 2
-        needed = legend.heightForWidth(legend.width())
-        assert needed <= legend.height() <= needed + 8
-        assert toolbar.height() <= legend.height() + 16
-        assert toolbar.height() < window.height() / 3
-        if count == 2:
-            assert toolbar.height() < 180
-        button = toolbar.widgetForAction(action)
-        assert button.isVisible() and button.visibleRegion().contains(button.rect().center())
-        assert all(f'705 ← {parent} ' in legend.text() for parent in range(count))
-
-
 def test_bounded_saved_nested_and_split_parents_use_journal_not_templates(qtbot, tmp_path):
     _, controller = make_controller(tmp_path)
     path = controller.dir_path
@@ -266,6 +230,8 @@ def test_bounded_saved_nested_and_split_parents_use_journal_not_templates(qtbot,
         supervisor = controller.supervisor
         first = supervisor.merge([0, 1]).added[0]
         target = supervisor.merge([first, 2]).added[0]
+        expected_colors = dict(controller.parent_inspection.lineage.colors(target))
+        assert expected_colors == {first: 0, 2: 1}
         before = supervisor.clustering.spike_clusters.copy()
         groups = controller.parent_inspection.lineage.parents(target)
         assert set(groups) == {first, 2}
@@ -280,6 +246,7 @@ def test_bounded_saved_nested_and_split_parents_use_journal_not_templates(qtbot,
     try:
         groups = reopened.parent_inspection.lineage.parents(target)
         assert set(groups) == {first, 2}
+        assert dict(reopened.parent_inspection.lineage.colors(target)) == expected_colors
         assert len(groups[first]) == 7
         assert reopened.parent_inspection.lineage.full_counts(target) == {first: 7, 2: 3}
         provider = ParentProviders(reopened, target, groups)
@@ -328,3 +295,283 @@ def test_bounded_predicate_split_merge_reload_and_read_only_window(qtbot, tmp_pa
     finally:
         gui.close()
         reopened.close()
+
+
+def test_premerge_palette_slots_survive_save_reload_undo_and_redo(tmp_path):
+    # Sparse/high authoritative slots are meaningful: rendering wraps the palette,
+    # but display metadata must retain the exact slot, not silently renumber it.
+    controller = lineage_controller(tmp_path, [9, 15, 10, 13, 9, 15, 10, 13])
+    expected = {9: 0, 15: 300, 10: 2, 13: 3}
+    controller.supervisor.selection_color_indices = expected
+    lineage = ParentLineage(controller)
+    try:
+        emit('before_merge', controller.supervisor, (9, 15, 10, 13))
+        target = controller.supervisor.clustering.merge([9, 15, 10, 13]).added[0]
+        assert dict(lineage.colors(target)) == expected
+        assert list(lineage.parents(target)) == [9, 10, 13, 15]
+        controller.supervisor.clustering.undo()
+        controller.supervisor.clustering.redo()
+        assert dict(lineage.colors(target)) == expected
+        emit('curation_saved', controller.supervisor)
+    finally:
+        lineage.close()
+    reopened = ParentLineage(controller)
+    try:
+        assert dict(reopened.colors(target)) == expected
+        with pytest.raises(TypeError):
+            reopened.colors(target)[9] = 4
+    finally:
+        reopened.close()
+    # Optional corrupt hints must not invalidate the exact scientific partition.
+    path = tmp_path / '_phy_merge_parents.npz'
+    with np.load(path, allow_pickle=False) as data:
+        arrays = dict(data)
+    arrays['color_indices'] = np.asarray('{"1":{"9":-1}}')
+    np.savez(path, **arrays)
+    fallback = ParentLineage(controller)
+    try:
+        assert set(fallback.parents(target)) == set(expected)
+        assert dict(fallback.colors(target)) == {9: 0, 10: 1, 13: 2, 15: 3}
+    finally:
+        fallback.close()
+
+
+def test_color_observer_does_not_limit_large_merges(tmp_path):
+    from phy.utils.color import colormaps
+
+    count = len(colormaps.default) + 1
+    controller = lineage_controller(tmp_path, np.arange(count))
+    lineage = ParentLineage(controller)
+    try:
+        emit('before_merge', controller.supervisor, tuple(range(count)))
+        target = controller.supervisor.clustering.merge(list(range(count))).added[0]
+        assert len(lineage.parents(target)) == count
+        assert target not in lineage.color_records
+    finally:
+        lineage.close()
+
+
+def test_real_unsorted_merge_palette_and_exact_workspace_restoration(qtbot, tempdir, monkeypatch):
+    from phy.gui.qt import QAction, QApplication, QDockWidget, Qt
+
+    controller = _mock_controller(tempdir, MyControllerFull)
+    gui = controller.create_gui(do_prompt_save=False)
+    gui.resize(1100, 800)
+    gui.show()
+    supervisor = controller.supervisor
+    inspection = controller.parent_inspection
+    try:
+        supervisor.select([9, 15, 10, 13])
+        supervisor.block()
+        supervisor.toggle_merge_mode()
+        colors = dict(supervisor.selection_color_indices)
+        assert colors == {9: 0, 15: 1, 10: 2, 13: 3}
+        target = supervisor.merge().added[0]
+        supervisor.select([target])
+        supervisor.block()
+        assert dict(inspection.lineage.colors(target)) == colors
+        supervisor.save()
+        # Preserve deliberate hidden/disabled states, including a custom action.
+        ordinary = gui.list_views(WaveformView)[0]
+        ordinary.dock.hide()
+        custom = QAction('Custom disabled action', gui)
+        custom.setEnabled(False)
+        gui.addAction(custom)
+        supervisor.cluster_view.table_view.setFocus()
+        qtbot.wait(20)
+        state = bytes(gui.saveState())
+        gui.restoreState(gui.saveState())  # Normalize Qt's cached pre-show central size.
+        qtbot.wait(20)
+        state = bytes(gui.saveState())
+        docks = {
+            d: not d.isHidden() for d in gui.findChildren(QDockWidget) if d.parentWidget() is gui
+        }
+        actions = {a: a.isEnabled() for a in gui.findChildren(QAction)}
+        original_focus = QApplication.focusWidget()
+        original_views = tuple(gui.views)
+        assignments = supervisor.clustering.spike_clusters.copy()
+        history = supervisor.clustering._undo_stack._index
+        saved = inspection.lineage.path.read_bytes()
+        inspection.show(target)
+        qtbot.wait(30)
+        assert len(inspection.views) == 4
+        assert tuple(gui.views) == original_views
+        assert [inspection.parent_table.item(i, 1).text() for i in range(4)] == [
+            '9',
+            '15',
+            '10',
+            '13',
+        ]
+        assert inspection.parent_table.isColumnHidden(3)
+        assert all(dict(v._cluster_color_index_by_id) == colors for v in inspection.views)
+        assert all(
+            not action.qaction.isEnabled() for action in supervisor.actions._actions_dict.values()
+        )
+        # Attempts to re-enable actions (for example snippets.mode_off) remain blocked.
+        supervisor.actions.get('merge').setEnabled(True)
+        assert not supervisor.actions.get('merge').isEnabled()
+        for key, modifiers in (
+            (Qt.Key_G, Qt.NoModifier),
+            (Qt.Key_K, Qt.NoModifier),
+            (Qt.Key_Z, Qt.ControlModifier),
+            (Qt.Key_S, Qt.ControlModifier),
+        ):
+            qtbot.keyClick(inspection.return_button, key, modifier=modifiers)
+        assert inspection.window is not None
+        assert supervisor.clustering._undo_stack._index == history
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, assignments)
+        assert inspection.lineage.path.read_bytes() == saved
+        # Esc returns without any generic GUI wait/save path.
+        with monkeypatch.context() as patcher:
+            patcher.setattr('phy.gui.gui._wait', lambda *a: pytest.fail('nested event pumping'))
+            qtbot.keyClick(inspection.return_button, Qt.Key_Escape)
+        assert inspection.window is None
+        assert bytes(gui.saveState()) == state
+        assert all(d.isHidden() != visible for d, visible in docks.items())
+        assert all(a.isEnabled() == enabled for a, enabled in actions.items())
+        assert QApplication.focusWidget() is original_focus
+        # A partial child-GUI constructor must not leak global event callbacks.
+        from phylib.utils.event import _EVENT
+
+        callbacks = list(_EVENT._callbacks)
+        with monkeypatch.context() as patcher:
+
+            def fail_table(*args):
+                raise RuntimeError('injected table construction failure')
+
+            patcher.setattr('phy.apps._parent_workspace.QTableWidget', fail_table)
+            with pytest.raises(RuntimeError, match='injected table'):
+                inspection.show(target)
+        assert inspection.window is None
+        assert _EVENT._callbacks == callbacks
+        assert bytes(gui.saveState()) == state
+        # A provider failure after workspace construction must leave no hidden docks.
+        with monkeypatch.context() as patcher:
+            patcher.setattr(
+                ParentProviders,
+                'waveform_ids',
+                lambda *a: (_ for _ in ()).throw(ValueError('injected provider failure')),
+            )
+            with pytest.raises(ValueError, match='injected provider'):
+                inspection.show(target)
+        assert inspection.window is None
+        assert bytes(gui.saveState()) == state
+        assert all(a.isEnabled() == enabled for a, enabled in actions.items())
+        # Roll back even if activation fails after hiding/adding real host docks.
+        from phy.apps._parent_workspace import ParentWorkspace
+
+        activate = ParentWorkspace._activate
+        with monkeypatch.context() as patcher:
+
+            def fail_after_activation(workspace):
+                activate(workspace)
+                raise RuntimeError('injected activation failure')
+
+            patcher.setattr(ParentWorkspace, '_activate', fail_after_activation)
+            with pytest.raises(RuntimeError, match='injected activation'):
+                inspection.show(target)
+        assert inspection.window is None
+        assert bytes(gui.saveState()) == state
+        assert all(a.isEnabled() == enabled for a, enabled in actions.items())
+        # Main-close geometry is saved only after the temporary workspace is gone.
+        inspection.show(target)
+        seen = []
+        original_save = gui.save_geometry_state
+
+        def save_original_layout():
+            seen.append((inspection.window, bytes(gui.saveState())))
+            original_save()
+
+        monkeypatch.setattr(gui, 'save_geometry_state', save_original_layout)
+        gui.close()
+        assert seen == [(None, state)]
+    finally:
+        inspection.close_review()
+        gui.close()
+        controller.close()
+
+
+@pytest.mark.parametrize('count', [7, 16])
+def test_parent_table_keeps_all_rows_readable_and_scrollable(qtbot, tempdir, count):
+    controller = _mock_controller(tempdir, MyControllerFull)
+    gui = controller.create_gui(do_prompt_save=False)
+    gui.resize(1100, 800)
+    gui.show()
+    try:
+        supervisor = controller.supervisor
+        target = supervisor.merge(list(range(count))).added[0]
+        supervisor.select([target])
+        supervisor.block()
+        inspection = controller.parent_inspection
+        inspection.show(target)
+        qtbot.wait(30)
+        table = inspection.parent_table
+        assert table.rowCount() == count
+        assert inspection.window._toolbar.height() < 100
+        assert table.width() <= 280
+        for row in range(count):
+            item = table.item(row, 1)
+            table.scrollToItem(item)
+            qtbot.wait(1)
+            assert table.visualItemRect(item).intersects(table.viewport().rect())
+            assert table.rowHeight(row) >= table.fontMetrics().height()
+            assert item.text() == str(row)
+        assert all(v.dock.width() >= 200 and v.dock.height() >= 150 for v in inspection.views)
+    finally:
+        controller.parent_inspection.close_review()
+        gui.close()
+        controller.close()
+
+
+def test_bounded_color_hints_are_disposable_and_save_errors_are_isolated(
+    qtbot, tmp_path, monkeypatch
+):
+    import json
+
+    from phy.apps.template.gui import TemplateController
+
+    _, controller = make_controller(tmp_path)
+    path, config = controller.dir_path, controller.config_dir
+    try:
+        supervisor = controller.supervisor
+        first = supervisor.merge([0, 1]).added[0]
+        target = supervisor.merge([first, 2]).added[0]
+        lineage = controller.parent_inspection.lineage
+        expected = {first: 0, 2: 1}
+        assert dict(lineage.colors(target)) == expected
+        supervisor.save()
+        hint = lineage._bounded_color_path()
+        assert hint.is_file() and hint.parent == config
+        value = json.loads(hint.read_text())
+        # Refuse valid colors attached to a different saved semantic history.
+        value['binding'] = 'stale'
+        hint.write_text(json.dumps(value))
+    finally:
+        controller.close()
+    reopened = TemplateController(dir_path=path, config_dir=config, plugins=[])
+    try:
+        lineage = reopened.parent_inspection.lineage
+        assert set(lineage.parents(target)) == {first, 2}
+        assert dict(lineage.colors(target)) == {2: 0, first: 1}
+        # A committed scientific save must succeed even if this optional cache cannot.
+        original_replace = __import__('os').replace
+
+        def fail_optional(source, destination):
+            if destination == lineage._bounded_color_path():
+                raise OSError('injected optional cache write error')
+            return original_replace(source, destination)
+
+        with monkeypatch.context() as patcher:
+            patcher.setattr('phy.apps._parent_review.os.replace', fail_optional)
+            reopened.supervisor.save()
+        assert reopened.bounded_session.checkpoint_path.is_dir()
+        assert set(lineage.parents(target)) == {first, 2}
+        hint.write_text('{broken optional cache')
+    finally:
+        reopened.close()
+    final = TemplateController(dir_path=path, config_dir=config, plugins=[])
+    try:
+        assert set(final.parent_inspection.lineage.parents(target)) == {first, 2}
+        assert dict(final.parent_inspection.lineage.colors(target)) == {2: 0, first: 1}
+    finally:
+        final.close()
