@@ -72,10 +72,11 @@ no template-based guess is substituted. Parent comparison is limited to 16
 immediate parents, and plots obey existing evidence budgets. Bounded parent
 views describe retained windows; full split-parent counts can be unavailable.
 
-A representative run on Carl's full dataset is still needed to quantify his
-end-to-end preparation/replay improvement and choose an appropriate worker count.
-None of these changes requires contacting him to implement or verify the local
-regressions.
+The follow-up [rendered real-data validation](carl-feedback-captures/README.md)
+now covers Carl's earlier 469.7-million-spike fixture, including full replay and
+matched baseline timings. His newer 5.24-billion-spike recording remains
+unavailable locally, so its end-to-end improvement and worker choice still need
+measurement there.
 
 ## Final integrated checks
 
@@ -99,3 +100,14 @@ renderer or ownership change was made. A similar unresolved shutdown limitation
 was already recorded in `slay-roundtrip-validation.md` before these changes.
 This remains an intermittent harness/runtime limitation, not a claim that native
 shutdown has been fixed or that the cause is established as harmless.
+
+
+## Follow-up on real data
+
+See [screenshots, complete recordings, replay and timing reports](carl-feedback-captures/README.md).
+The rendered walkthrough found and fixed hidden parent controls and excessive
+legend height. Application checks now pass 791 tests (6 skipped); the core
+partition passes 682 assertions (13 skipped), but the native shutdown fault
+recurred after that summary in the latest full-target attempt. We do not report
+that invocation as a clean full-suite pass. Both real GUI processes and both
+469,725,567-row replay pipelines exited normally, with unchanged source hashes.

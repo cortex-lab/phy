@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:06,772
+Bounded real-data walkthrough: Real-data cluster comparison before the new workflow
+
+2
+00:00:06,772 --> 00:00:09,846
+Bounded real-data walkthrough: Right-click transfers the correlogram row to Similarity
+
+3
+00:00:09,846 --> 00:00:12,938
+Bounded real-data walkthrough: One SLAY suggestion in the Merge workspace
+
+4
+00:00:12,938 --> 00:00:16,455
+Bounded real-data walkthrough: Ctrl-click combines two suggestions; assignments unchanged
+
+5
+00:00:16,455 --> 00:00:24,383
+Bounded real-data walkthrough: G commits one merge and both suggestion decisions
+
+6
+00:00:24,383 --> 00:00:30,666
+Bounded real-data walkthrough: Exact immediate merge parents — read only
+
+7
+00:00:30,666 --> 00:00:33,494
+Bounded real-data walkthrough: One click returns to the merged unit without editing
+
+8
+00:00:33,494 --> 00:00:37,655
+Bounded real-data walkthrough: Undo restores assignments, both decisions and the comparison workspace
+
+9
+00:00:37,655 --> 00:00:42,776
+Bounded real-data walkthrough: Redo and Save retain the combined merge
+
+10
+00:00:42,776 --> 00:00:53,917
+Bounded real-data walkthrough: Reopened: saved curation verified; evidence window explicitly reselected
