@@ -43,17 +43,20 @@ def _union(parts):
     return flattened[0] if len(flattened) == 1 else {'kind': 'union', 'parts': flattened}
 
 
-def membership_expressions(unit_ids, events):
+def membership_expressions(unit_ids, events, *, restore_sources=None):
     """Resolve journal memberships without retaining labels or allocated IDs.
 
     The caller supplies an already validated semantic journal. Expressions are
     JSON values rooted exclusively in the preparation's original unit IDs.
     """
     active = {int(unit): {'kind': 'source', 'unit': int(unit)} for unit in unit_ids}
-    for event in events:
+    merges = {}
+    for index, event in enumerate(events):
         operation = event['operation']
         if operation == 'merge':
-            active[event['target']] = _union([active.pop(unit) for unit in event['parents']])
+            parts = [active.pop(unit) for unit in event['parents']]
+            merges[index] = parts
+            active[event['target']] = _union(parts)
         elif operation == 'threshold_split':
             parent = active.pop(event['parent'])
             predicate = validate_predicate(event['predicate'])
@@ -64,6 +67,12 @@ def membership_expressions(unit_ids, events):
                     'predicate': predicate,
                     'selected': bool(selected),
                 }
+        elif operation == 'restore_parents':
+            active.pop(event['target'])
+            parts = merges[event['merge_event_index']]
+            active.update(dict(zip(event['children'], parts, strict=True)))
+            if restore_sources is not None:
+                restore_sources[index] = parts
         elif operation not in ('label', 'metadata_policy'):
             raise ValueError('Unsupported membership operation.')
     return active

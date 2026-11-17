@@ -199,7 +199,10 @@ def _apply_curation(
             shape=source.arrays['spike_clusters.npy'].shape,
         )
         flat = assignments.reshape(-1)
-        has_split = any(event['operation'] == 'threshold_split' for event in session.events)
+        has_split = any(
+            event['operation'] in ('threshold_split', 'restore_parents')
+            for event in session.events
+        )
         keys, targets = (
             (None, None) if has_split else _merge_mapping(source.unit_ids, session.events)
         )

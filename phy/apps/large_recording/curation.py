@@ -17,8 +17,10 @@ from .source import _time_base, hash_json
 
 MANIFEST = '_phy_curation_manifest.json'
 BASE_ASSIGNMENTS = '_phy_spike_clusters_base.npy'
+RESTORE_SCRATCH_BYTES = 8 * 1024 * 1024
 BOOLEAN_CAPABILITIES = (
     'merge',
+    'restore_parents',
     'label',
     'split',
     'stored_waveforms',
@@ -147,7 +149,9 @@ def _validate_capabilities(manifest):
         raise ValueError('Unsupported bounded capability declaration.')
     result = {}
     for name in BOOLEAN_CAPABILITIES:
-        value = capabilities.get(name, False)
+        value = capabilities.get(
+            name, capabilities.get('merge', False) if name == 'restore_parents' else False
+        )
         if type(value) is not bool:
             raise ValueError(f'Bounded capability {name!r} must be a boolean.')
         result[name] = value
@@ -238,14 +242,18 @@ def interpret_events(unit_ids, metadata, events):
     if not active or any(i < 0 for i in active):
         raise ValueError('Full source unit catalog must contain nonnegative IDs.')
     allocated = set(active)
+    origins = dict.fromkeys(active)
+    merge_parents = {}
     metadata = normalize_metadata(metadata)
     if not isinstance(events, list):
         raise ValueError('Semantic journal must be an ordered event list.')
     next_id = max(active) + 1
     for event_index, event in enumerate(events):
-        if not isinstance(event, dict) or event.get('version') not in (1, 2):
+        if not isinstance(event, dict) or event.get('version') not in (1, 2, 3):
             raise ValueError('Unsupported semantic journal event version.')
         operation = event.get('operation')
+        if event['version'] == 3 and operation != 'restore_parents':
+            raise ValueError('Version 3 requires a restore-parents event.')
         if operation == 'metadata_policy':
             if (
                 set(event) != {'version', 'operation', 'policy', 'schema'}
@@ -262,7 +270,7 @@ def interpret_events(unit_ids, metadata, events):
                 op = previous['operation']
                 if op == 'merge':
                     derived.add(previous['target'])
-                elif op == 'threshold_split':
+                elif op == 'threshold_split' or op == 'restore_parents':
                     derived.update(previous['children'])
                 elif op == 'label':
                     for unit in previous['ids']:
@@ -293,6 +301,8 @@ def interpret_events(unit_ids, metadata, events):
                 _field_name(field)
             active.difference_update(parents)
             active.add(target)
+            merge_parents[event_index] = [(parent, origins.pop(parent)) for parent in parents]
+            origins[target] = event_index
             allocated.add(target)
             next_id = target + 1
             for values in metadata.values():
@@ -340,10 +350,66 @@ def interpret_events(unit_ids, metadata, events):
                 raise ValueError('Split metadata must refer only to explicit children.')
             active.remove(parent)
             active.update(children)
+            origins.pop(parent)
+            origins.update(dict.fromkeys(children))
             allocated.update(children)
             next_id = max(children) + 1
             for values in metadata.values():
                 values.pop(parent, None)
+            for field, values in resolved.items():
+                metadata.setdefault(field, {}).update(values)
+        elif operation == 'restore_parents':
+            if (
+                set(event)
+                != {
+                    'version',
+                    'operation',
+                    'target',
+                    'children',
+                    'merge_event_index',
+                    'merge_prefix_sha256',
+                    'source_revision',
+                    'metadata',
+                }
+                or event['version'] != 3
+            ):
+                raise ValueError('Malformed restore-parents event.')
+            target = _integer(event['target'], 'Restore target ID')
+            origin = _integer(event['merge_event_index'], 'Merge event index')
+            children = [_integer(i, 'Restored child ID') for i in event['children']]
+            if (
+                target not in active
+                or origins.get(target) != origin
+                or origin not in merge_parents
+            ):
+                raise ValueError('Restore requires an unchanged live recorded merge membership.')
+            if event['merge_prefix_sha256'] != hash_json(events[: origin + 1]):
+                raise ValueError('Restore merge prefix binding is invalid.')
+            if not isinstance(event['source_revision'], str) or not event['source_revision']:
+                raise ValueError('Restore requires a source revision binding.')
+            if len(children) != len(merge_parents[origin]) or len(set(children)) != len(children):
+                raise ValueError('Restore requires one distinct child for every immediate parent.')
+            if any(i in allocated or i < next_id or i > np.iinfo(np.int32).max for i in children):
+                raise ValueError('Restored child ID collision or unsupported namespace.')
+            resolved = normalize_metadata(event['metadata'])
+            expected = {field: dict.fromkeys(children) for field in set(metadata) | {'group'}}
+            if resolved != expected:
+                raise ValueError('Restored membership must clear producer metadata and quality.')
+            active.remove(target)
+            active.update(children)
+            origins.pop(target)
+            origins.update(
+                {
+                    child: parent_origin
+                    for child, (_, parent_origin) in zip(
+                        children, merge_parents[origin], strict=True
+                    )
+                }
+            )
+            allocated.update(children)
+            next_id = max(children) + 1
+            for values in metadata.values():
+                values.pop(target, None)
             for field, values in resolved.items():
                 metadata.setdefault(field, {}).update(values)
         else:
@@ -355,7 +421,30 @@ def project_assignments(assignments, events, attributes=None):
     """Interpret a validated journal against a bounded array or full-source batch."""
     output = np.asarray(assignments, dtype=np.int64).reshape(-1).copy()
     attributes = attributes or {}
-    for event in events:
+    predicate_names = {
+        event['predicate']['attribute']
+        for event in events
+        if event['operation'] == 'threshold_split'
+    }
+    restores = {}
+    if any(event['operation'] == 'restore_parents' for event in events):
+        from .live_summaries import membership_expressions
+
+        # Infer the initial catalog for a source batch, including units absent
+        # from this batch. The validated journal never recycles allocated IDs.
+        initial, allocated = set(map(int, np.unique(output))), set()
+        for event in events:
+            if event['operation'] == 'merge':
+                initial.update(event['parents'])
+                allocated.add(event['target'])
+            elif event['operation'] == 'threshold_split':
+                initial.add(event['parent'])
+                allocated.update(event['children'])
+            elif event['operation'] == 'restore_parents':
+                initial.add(event['target'])
+                allocated.update(event['children'])
+        membership_expressions(initial - allocated, events, restore_sources=restores)
+    for event_index, event in enumerate(events):
         if event['operation'] == 'merge':
             output[np.isin(output, event['parents'])] = event['target']
         elif event['operation'] == 'threshold_split':
@@ -371,7 +460,93 @@ def project_assignments(assignments, events, attributes=None):
             selected[mask] = evaluate_predicate(values[mask], predicate)
             output[mask & ~selected] = event['children'][0]
             output[mask & selected] = event['children'][1]
+        elif event['operation'] == 'restore_parents':
+            rows = np.flatnonzero(output == event['target'])
+            expressions = restores[event_index]
+            size = _restore_batch_size(expressions, len(predicate_names))
+            for start in range(0, len(rows), size):
+                chunk = rows[start : start + size]
+                base = np.asarray(assignments).reshape(-1)[chunk]
+                values = {
+                    name: np.asarray(attributes[name]).reshape(-1)[chunk]
+                    for name in predicate_names
+                    if name in attributes
+                }
+                covered = np.zeros(len(chunk), dtype=bool)
+                memo = {}
+                for child, expression in zip(event['children'], expressions, strict=True):
+                    mask = _membership_mask(expression, base, values, memo)
+                    if np.any(covered & mask):
+                        raise ValueError('Restored source parent memberships overlap.')
+                    output[chunk[mask]] = child
+                    covered |= mask
+                if not covered.all():
+                    raise ValueError('Restored source parents do not partition the target.')
+        elif event['operation'] not in ('label', 'metadata_policy'):
+            raise ValueError('Unsupported semantic projection operation.')
     return output
+
+
+def _restore_batch_size(expressions, attribute_count):
+    """Bound historical mask memoization even for many or deeply nested parents."""
+    pending, seen = list(expressions), set()
+    while pending:
+        expression = pending.pop()
+        identity = id(expression)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        if expression['kind'] == 'union':
+            pending.extend(expression['parts'])
+        elif expression['kind'] == 'split':
+            pending.append(expression['parent'])
+    return max(1, RESTORE_SCRATCH_BYTES // (len(seen) + 8 * attribute_count + 64))
+
+
+def _membership_mask(expression, assignments, attributes, memo):
+    """Evaluate an authenticated historical parent on one bounded batch."""
+    key = id(expression)
+    if key in memo:
+        return memo[key]
+    kind = expression['kind']
+    if kind == 'source':
+        mask = assignments == expression['unit']
+    elif kind == 'union':
+        mask = np.zeros(len(assignments), dtype=bool)
+        for part in expression['parts']:
+            mask |= _membership_mask(part, assignments, attributes, memo)
+    elif kind == 'split':
+        parent = _membership_mask(expression['parent'], assignments, attributes, memo)
+        predicate = expression['predicate']
+        if predicate['attribute'] not in attributes:
+            raise ValueError('Historical parent requires an unavailable full-source attribute.')
+        selected = evaluate_predicate(attributes[predicate['attribute']][parent], predicate)
+        mask = parent.copy()
+        mask[parent] = selected if expression['selected'] else ~selected
+    else:
+        raise ValueError('Unsupported historical membership expression.')
+    memo[key] = mask
+    return mask
+
+
+def merge_origins(unit_ids, events):
+    """Resolve live equivalent-merge origins in an already validated journal."""
+    origins = dict.fromkeys(map(int, unit_ids))
+    parents = {}
+    for index, event in enumerate(events):
+        operation = event['operation']
+        if operation == 'merge':
+            parents[index] = [origins.pop(parent) for parent in event['parents']]
+            origins[event['target']] = index
+        elif operation == 'threshold_split':
+            origins.pop(event['parent'])
+            origins.update(dict.fromkeys(event['children']))
+        elif operation == 'restore_parents':
+            origins.pop(event['target'])
+            origins.update(
+                dict(zip(event['children'], parents[event['merge_event_index']], strict=True))
+            )
+    return origins
 
 
 class BoundedSession:
@@ -683,7 +858,23 @@ class BoundedSession:
                     'operation': 'threshold_split',
                     'replacements': list(event['children']),
                 }
+            elif event['operation'] == 'restore_parents':
+                result[str(event['target'])] = {
+                    'operation': 'restore_parents',
+                    'replacements': list(event['children']),
+                }
         return result
+
+    @property
+    def restored_parent_ids(self):
+        """Display origins for fresh restored identities still in the live catalog."""
+        active, _, _ = interpret_events(self.unit_ids, self.base_metadata, self.events)
+        result = {}
+        for event in self.events:
+            if event['operation'] == 'restore_parents':
+                original = self.events[event['merge_event_index']]['parents']
+                result.update(dict(zip(event['children'], original, strict=True)))
+        return {child: parent for child, parent in result.items() if child in active}
 
     def _validated_state(self, assignments, metadata, events, next_cluster_id):
         self._validate_event_capabilities(events)
@@ -722,7 +913,7 @@ class BoundedSession:
             raise ValueError('Incomplete checkpoint file inventory.')
         events = _read_json(generation / 'journal.json')
         for event in events:
-            if event.get('operation') == 'threshold_split':
+            if event.get('operation') in ('threshold_split', 'restore_parents'):
                 event['metadata'] = normalize_metadata(event['metadata'])
         metadata = _read_json(generation / 'metadata.json')
         assignments = np.load(generation / 'spike_clusters.npy', mmap_mode='r')
@@ -792,6 +983,12 @@ class BoundedSession:
             if mapping is not None and not mapping.closed:
                 mapping.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def restore(self, snapshot):
         assignments, metadata, next_id = self._validated_state(**snapshot)
         self.assignments, self.metadata = assignments, metadata
@@ -832,6 +1029,14 @@ class BoundedSession:
                     if event.get('version') != (2 if policy else 1):
                         raise ValueError('Semantic event version disagrees with metadata policy.')
                     self._require_capability(operation, event.get('predicate'))
+                elif operation == 'restore_parents':
+                    self._require_capability(operation)
+                    if not policy or event.get('version') != 3:
+                        raise ValueError(
+                            'Restore parents requires current metadata policy/version.'
+                        )
+                    if event.get('source_revision') != self.manifest['source']['revision']:
+                        raise ValueError('Restore source revision disagrees with preparation.')
 
     @property
     def metadata_policy(self):
@@ -867,8 +1072,12 @@ class BoundedSession:
         metadata = copy.deepcopy(self.base_metadata)
         for index, event in enumerate(events):
             operation = event['operation']
-            if operation in ('merge', 'threshold_split'):
-                parents = event['parents'] if operation == 'merge' else [event['parent']]
+            if operation in ('merge', 'threshold_split', 'restore_parents'):
+                parents = (
+                    event['parents']
+                    if operation == 'merge'
+                    else [event['target'] if operation == 'restore_parents' else event['parent']]
+                )
                 children = [event['target']] if operation == 'merge' else event['children']
                 result.setdefault('history', []).append(
                     {
@@ -886,14 +1095,26 @@ class BoundedSession:
                             field: {str(unit): values.get(unit) for unit in parents}
                             for field, values in metadata.items()
                         },
-                        'policy': POLICY if event['version'] == 2 else 'legacy_inherited',
+                        **(
+                            {
+                                key: copy.deepcopy(event[key])
+                                for key in (
+                                    'merge_event_index',
+                                    'merge_prefix_sha256',
+                                    'source_revision',
+                                )
+                            }
+                            if operation == 'restore_parents'
+                            else {}
+                        ),
+                        'policy': POLICY if event['version'] >= 2 else 'legacy_inherited',
                     }
                 )
             elif operation == 'label' or operation == 'metadata_policy':
                 result.setdefault('history', []).append(copy.deepcopy(event))
             # Event metadata is already resolved and validated. Scan it once
             # instead of replaying every prefix of a potentially long journal.
-            if operation in ('merge', 'threshold_split'):
+            if operation in ('merge', 'threshold_split', 'restore_parents'):
                 for values in metadata.values():
                     for parent in parents:
                         values.pop(parent, None)
@@ -960,6 +1181,55 @@ class BoundedSession:
 
     def record_merge(self, parents, target, metadata=None):
         return self._append(self.preflight_merge(parents, target, metadata))
+
+    def restore_parent_groups(self, target):
+        """Return every immediate parent, including empty retained evidence.
+
+        Origins are limited to this preparation's journal. Reprepared historical
+        metadata does not constitute a recoverable per-spike membership anchor.
+        """
+        interpret_events(self.unit_ids, self.base_metadata, self.events)
+        target = _integer(target, 'Restore target ID')
+        index = merge_origins(self.unit_ids, self.events).get(target)
+        if index is None:
+            raise ValueError('No recoverable merge origin in this preparation for this live unit.')
+        event = self.events[index]
+        rows = np.flatnonzero(self.assignments == target)
+        before = project_assignments(
+            self.base_assignments[rows],
+            self.events[:index],
+            {name: values[rows] for name, values in self.attributes.items()},
+        )
+        groups = {parent: rows[before == parent] for parent in event['parents']}
+        return index, groups
+
+    def preflight_restore_parents(self, target, children):
+        self._require_capability('restore_parents')
+        if not self.metadata_policy:
+            raise ValueError('Migrate metadata before restoring merge parents.')
+        index, _ = self.restore_parent_groups(target)
+        children = [_integer(child, 'Restored child ID') for child in children]
+        if any(child < self.next_cluster_id for child in children):
+            raise ValueError('Restored children collide with the complete catalog allocator.')
+        event = {
+            'version': 3,
+            'operation': 'restore_parents',
+            'target': int(target),
+            'children': children,
+            'merge_event_index': index,
+            'merge_prefix_sha256': hash_json(self.events[: index + 1]),
+            'source_revision': self.manifest['source']['revision'],
+            'metadata': {
+                field: dict.fromkeys(children) for field in set(self.metadata) | {'group'}
+            },
+        }
+        self._validate_event_capabilities(self.events + [event])
+        interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
+        project_assignments(self.base_assignments, self.events + [event], self.attributes)
+        return event
+
+    def record_restore_parents(self, target, children):
+        return self._append(self.preflight_restore_parents(target, children))
 
     def preflight_label(self, field, ids, value):
         self._require_capability('label')

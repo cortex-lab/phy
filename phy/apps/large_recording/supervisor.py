@@ -68,6 +68,10 @@ class GuardedClustering(Clustering):
         self.policy.require()
         return super().merge(*args, **kwargs)
 
+    def restore_partition(self, *args, **kwargs):
+        self.policy.require()
+        return super().restore_partition(*args, **kwargs)
+
     def assign(self, *args, **kwargs):
         self.policy.require()
         return super().assign(*args, **kwargs)
@@ -169,6 +173,7 @@ class BoundedSupervisor(Supervisor):
         kwargs['cluster_meta_factory'] = meta_factory
         super().__init__(*args, **kwargs)
         self.session_history = SessionHistory(session)
+        self.parent_origins.update(session.restored_parent_ids)
 
     @contextmanager
     def _transaction(self):
@@ -180,6 +185,19 @@ class BoundedSupervisor(Supervisor):
             clustering._cluster_ids.copy(),
         )
         data, fields = deepcopy(self.cluster_meta._data), dict(self.cluster_meta._fields)
+        parent_origins = dict(self.parent_origins)
+        restored_partitions = dict(clustering._restored_partitions)
+        lineage = self.parent_lineage
+        lineage_state = (
+            (
+                dict(lineage.records),
+                dict(lineage.color_records),
+                dict(lineage.origins),
+                dict(lineage.restorations),
+            )
+            if lineage is not None
+            else None
+        )
         histories = [
             clustering._undo_stack,
             self.cluster_meta._undo_stack,
@@ -205,6 +223,12 @@ class BoundedSupervisor(Supervisor):
                 arrays
             )
             self.cluster_meta._data, self.cluster_meta._fields = data, fields
+            self.parent_origins = parent_origins
+            clustering._restored_partitions = restored_partitions
+            if lineage_state is not None:
+                (lineage.records, lineage.color_records, lineage.origins, lineage.restorations) = (
+                    lineage_state
+                )
             for history, (items, index) in zip(histories, history_states):
                 history._history, history._index = items, index
             self.session.restore_journal(journal)
@@ -259,9 +283,10 @@ class BoundedSupervisor(Supervisor):
         if self.gui is not None:
             return super()._select_after_split(*args, **kwargs)
 
-    def _restore_history_context(self, *args, **kwargs):
+    def _restore_history_context(self, selection, workflow_context, direction):
         if self.gui is not None:
-            return super()._restore_history_context(*args, **kwargs)
+            return super()._restore_history_context(selection, workflow_context, direction)
+        self.selection.restore(selection)
 
     def _reset_cluster_view(self, *args, **kwargs):
         if self.gui is not None:
@@ -302,6 +327,7 @@ class BoundedSupervisor(Supervisor):
         self.cluster_meta._data = data
 
     def _refresh_bounded(self):
+        self.parent_origins = self.session.restored_parent_ids
         if self.merge_propositions is not None:
             self.merge_propositions.project_live_ids(
                 self.clustering.cluster_ids, retired_units=self.session.retired_units
@@ -342,6 +368,47 @@ class BoundedSupervisor(Supervisor):
             field: self.cluster_meta.get(field, target) for field in self.cluster_meta.fields
         }
         self.session.record_merge(parents, target, metadata=resolved)
+        self._capture()
+        return out
+
+    @semantic_command
+    def restore_parents(self, target=None, *, groups=None, colors=None, new_cluster_ids=None):
+        """Restore complete semantic parents, then edit their fresh live IDs."""
+        self._require_capability('merge')
+        if target is None:
+            selected = list(self.selected)
+            if len(selected) != 1:
+                raise ValueError('Select one current merged unit to restore its parents.')
+            target = selected[0]
+        target = int(target)
+        _, expected = self.session.restore_parent_groups(target)
+        if groups is not None and (
+            list(groups) != list(expected)
+            or any(not np.array_equal(groups[parent], rows) for parent, rows in expected.items())
+        ):
+            raise ValueError('Restored groups must match the complete semantic parent partition.')
+        if any(not len(rows) for rows in expected.values()):
+            raise ValueError(
+                'A complete source parent has no retained evidence; restoration requires '
+                'evidence for every parent and cannot omit scientific units.'
+            )
+        first = max(self.clustering.new_cluster_id(), self.session.next_cluster_id)
+        children = (
+            list(range(first, first + len(expected)))
+            if new_cluster_ids is None
+            else list(new_cluster_ids)
+        )
+        event = self.session.preflight_restore_parents(target, children)
+        with self.policy.command():
+            out = super().restore_parents(
+                target,
+                groups=expected,
+                colors=colors,
+                new_cluster_ids=children,
+            )
+        if out is None:
+            return None
+        self.session._append(event)
         self._capture()
         return out
 

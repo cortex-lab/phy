@@ -270,16 +270,22 @@ class BoundedTemplateController(TemplateController):
         cached = getattr(self, '_lineage_cache', None)
         if cached is not None and cached[0] is version:
             return cached[1].get(int(cluster_id))
-        units = {int(c): {int(c)} for c in self.bounded_session.unit_ids}
-        for event in self.bounded_session.events:
-            if event['operation'] == 'merge':
-                parents = [units.pop(c) for c in event['parents']]
-                units[event['target']] = (
-                    None if any(p is None for p in parents) else set.union(*parents)
-                )
-            elif event['operation'] == 'threshold_split':
-                units.pop(event['parent'])
-                units.update(dict.fromkeys(event['children']))
+        from .live_summaries import membership_expressions
+
+        def sources(expression):
+            if expression['kind'] == 'source':
+                return {expression['unit']}
+            if expression['kind'] == 'split':
+                return None
+            parts = [sources(part) for part in expression['parts']]
+            return None if any(part is None for part in parts) else set.union(*parts)
+
+        units = {
+            unit: sources(expression)
+            for unit, expression in membership_expressions(
+                self.bounded_session.unit_ids, version
+            ).items()
+        }
         self._lineage_cache = version, units
         return units.get(int(cluster_id))
 

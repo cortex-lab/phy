@@ -651,6 +651,7 @@ def _prepare_source(
             },
             'capabilities': {
                 'merge': True,
+                'restore_parents': True,
                 'label': True,
                 'split': False,
                 'full_attributes': sorted(scalar_attributes(source)),

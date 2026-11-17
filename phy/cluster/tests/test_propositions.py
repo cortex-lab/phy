@@ -68,6 +68,41 @@ def test_retired_unit_validation():
             decode_curation_mapping(_source(), retired_units=retired)
 
 
+def test_restored_accepted_result_preserves_historical_review_without_live_acceptance():
+    catalog = decode_curation_mapping(_source())
+    key = catalog.propositions[0].key
+    catalog = catalog.accept(key, [41, 56], 100)
+    review = catalog.review_mapping()
+    restored = catalog.project_live_ids(
+        [101, 102, 72],
+        retired_units={
+            '41': {'operation': 'merge', 'replacements': [100]},
+            '56': {'operation': 'merge', 'replacements': [100]},
+            '100': {'operation': 'restore_parents', 'replacements': [101, 102]},
+        },
+    )
+    assert restored.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
+    assert 'subsequently restored' in restored.reason_for(key)
+    assert restored.review_mapping() == review
+    assert catalog.status_for(key) is PropositionStatus.ACCEPTED
+    with raises(ValueError, match='accepted_restored'):
+        restored.accept(key, [101, 102], 103)
+
+
+def test_nested_result_retirement_also_marks_acceptance_historical():
+    catalog = decode_curation_mapping(_source())
+    key = catalog.propositions[0].key
+    catalog = catalog.accept(key, [41, 56], 100)
+    projected = catalog.project_live_ids(
+        [103, 104],
+        retired_units={
+            '100': {'operation': 'merge', 'replacements': [102]},
+            '102': {'operation': 'restore_parents', 'replacements': [103, 104]},
+        },
+    )
+    assert projected.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
+
+
 def test_retirement_projection_undo_and_durable_modified_review():
     catalog = decode_curation_mapping(_source())
     key = catalog.propositions[0].key

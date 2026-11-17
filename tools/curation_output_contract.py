@@ -214,13 +214,23 @@ def _event_schema(event, record, arrays):
     keys = {
         'merge': {'version', 'operation', 'parents', 'target', 'metadata'},
         'threshold_split': {'version', 'operation', 'parent', 'children', 'predicate', 'metadata'},
+        'restore_parents': {
+            'version',
+            'operation',
+            'target',
+            'children',
+            'merge_event_index',
+            'merge_prefix_sha256',
+            'source_revision',
+            'metadata',
+        },
         'label': {'version', 'operation', 'field', 'ids', 'value'},
     }
     if (
         operation not in keys
         or set(event) != keys[operation]
         or type(event['version']) is not int
-        or event['version'] != 2
+        or event['version'] != (3 if operation == 'restore_parents' else 2)
     ):
         raise ValueError('Malformed current journal event schema')
     if operation == 'label':
@@ -233,7 +243,8 @@ def _event_schema(event, record, arrays):
     if operation == 'merge':
         valid = all(value is None for value in metadata.values())
     else:
-        _predicate(event['predicate'], arrays)
+        if operation == 'threshold_split':
+            _predicate(event['predicate'], arrays)
         children = {str(u) for u in event['children']}
         valid = all(
             isinstance(values, dict)
@@ -269,7 +280,7 @@ def _history(source, curated, journal, manifest, expected_labels):
     ):
         _event_schema(event, record, source.arrays)
         operation = event['operation']
-        if operation != record['operation'] or event.get('version') != 2:
+        if operation != record['operation']:
             raise ValueError('Journal operation/version disagrees with history')
         if operation == 'merge':
             valid = record['parents'] == event['parents'] and record['children'] == [
@@ -281,13 +292,27 @@ def _history(source, curated, journal, manifest, expected_labels):
                 and record['children'] == event['children']
                 and record['predicate'] == event['predicate']
             )
+        elif operation == 'restore_parents':
+            origin = event['merge_event_index']
+            valid = (
+                type(origin) is int
+                and 0 <= origin < event_index
+                and journal[origin]['operation'] == 'merge'
+                and event['merge_prefix_sha256'] == _json_hash(journal[: origin + 1])
+                and record['parents'] == [event['target']]
+                and record['children'] == event['children']
+                and all(
+                    record[key] == event[key]
+                    for key in ('merge_event_index', 'merge_prefix_sha256', 'source_revision')
+                )
+            )
         elif operation == 'label':
             valid = record == event
         else:
             raise ValueError('Unsupported metadata policy transition in contract')
         if not valid:
             raise ValueError('Journal details disagree with cumulative history')
-        if operation in ('merge', 'threshold_split'):
+        if operation in ('merge', 'threshold_split', 'restore_parents'):
             parent_revision = (
                 manifest['source']['revision'] if manifest is not None else source.revision
             )
@@ -297,7 +322,8 @@ def _history(source, curated, journal, manifest, expected_labels):
                 raise ValueError('Membership provenance has wrong source revision')
     fields = set(source.metadata)
     if any(
-        record['operation'] in ('merge', 'threshold_split') for record in history[len(original) :]
+        record['operation'] in ('merge', 'threshold_split', 'restore_parents')
+        for record in history[len(original) :]
     ):
         fields.add('group')
     fields.update(
@@ -315,6 +341,8 @@ def _history(source, curated, journal, manifest, expected_labels):
         f: {int(u): _cell(v) for u, v in values.items()} for f, values in source.metadata.items()
     }
     active = set(candidates)
+    origins = dict.fromkeys(active)
+    merge_origins = {}
     next_id = source.next_cluster_id
     retired = dict(source.retired_units)
     explicit = {}
@@ -338,7 +366,7 @@ def _history(source, curated, journal, manifest, expected_labels):
                 candidates[unit][field] = {value}
                 explicit.setdefault(unit, {})[field] = value
                 resolved.setdefault(field, {})[unit] = value
-        elif operation in ('merge', 'threshold_split'):
+        elif operation in ('merge', 'threshold_split', 'restore_parents'):
             record_keys = {
                 'operation',
                 'source_revision',
@@ -350,11 +378,15 @@ def _history(source, curated, journal, manifest, expected_labels):
             }
             if operation == 'threshold_split':
                 record_keys.add('predicate')
+            elif operation == 'restore_parents':
+                record_keys.update({'merge_event_index', 'merge_prefix_sha256'})
             if set(record) != record_keys:
                 raise ValueError('Unexpected membership provenance fields')
             parents, children = record['parents'], record['children']
-            if (operation == 'merge' and len(parents) < 2) or (
-                operation == 'threshold_split' and len(parents) != 1
+            if (
+                (operation == 'merge' and len(parents) < 2)
+                or (operation == 'threshold_split' and len(parents) != 1)
+                or (operation == 'restore_parents' and len(parents) != 1)
             ):
                 raise ValueError('Invalid membership parent cardinality')
             if operation == 'threshold_split':
@@ -366,7 +398,9 @@ def _history(source, curated, journal, manifest, expected_labels):
             ):
                 raise ValueError('Unsupported or inactive membership history')
             if (
-                len(children) != (1 if operation == 'merge' else 2)
+                (operation == 'merge' and len(children) != 1)
+                or (operation == 'threshold_split' and len(children) != 2)
+                or (operation == 'restore_parents' and len(children) < 2)
                 or len(set(children)) != len(children)
                 or min(children) < next_id
             ):
@@ -381,6 +415,20 @@ def _history(source, curated, journal, manifest, expected_labels):
             if snapshot != recorded:
                 raise ValueError('Parent metadata provenance disagrees with independent history')
             inherited = {f: set().union(*(candidates[u][f] for u in parents)) for f in fields}
+            key = (record['source_revision'], record['event_index'])
+            if operation == 'merge':
+                merge_origins[key] = [origins.pop(parent) for parent in parents]
+                origins[children[0]] = key
+            elif operation == 'threshold_split':
+                origins.pop(parents[0])
+                origins.update(dict.fromkeys(children))
+            else:
+                reference = (record['source_revision'], record['merge_event_index'])
+                if origins.pop(parents[0]) != reference or reference not in merge_origins:
+                    raise ValueError('Restore does not reference its unchanged live merge origin')
+                if len(children) != len(merge_origins[reference]):
+                    raise ValueError('Restore loses an immediate historical parent')
+                origins.update(dict(zip(children, merge_origins[reference], strict=True)))
             active.difference_update(parents)
             for parent in parents:
                 retired[str(parent)] = {'operation': operation, 'replacements': children}
@@ -390,7 +438,11 @@ def _history(source, curated, journal, manifest, expected_labels):
                     values.pop(parent, None)
             resolved.setdefault('group', {})
             for child in children:
-                candidates[child] = {f: set(v) for f, v in inherited.items()}
+                candidates[child] = (
+                    {f: {''} for f in fields}
+                    if operation == 'restore_parents'
+                    else {f: set(v) for f, v in inherited.items()}
+                )
                 for values in resolved.values():
                     values[child] = ''
                 active.add(child)
@@ -445,14 +497,50 @@ def _assignment_oracle(source, curated, history, chunk_size):
         attributes[name] = values.reshape(-1)
     if len(current) != len(original):
         raise ValueError('Assignment oracle requires complete source rows')
+    references = {
+        (r.get('source_revision'), r['merge_event_index'])
+        for r in membership
+        if r['operation'] == 'restore_parents'
+    }
+    # Retain only referenced pre-merge parent masks, and bound their aggregate
+    # scratch space independently of the number of source spikes or restores.
+    slots = sum(
+        len(r['parents'])
+        for i, r in enumerate(history)
+        if r['operation'] == 'merge'
+        and (r.get('source_revision'), r.get('event_index', i)) in references
+    )
+    chunk_size = min(chunk_size, max(1, (32 * 1024 * 1024) // (slots + 64)))
     for start in range(0, len(original), chunk_size):
         stop = start + chunk_size
         expected = np.array(original[start:stop], dtype=np.int64, copy=True)
-        for record in membership:
+        snapshots = {}
+        for event_index, record in enumerate(history):
+            if record['operation'] == 'label':
+                continue
             parents, children = record['parents'], record['children']
             if record['operation'] == 'merge':
+                key = (record.get('source_revision'), record.get('event_index', event_index))
+                if key in references:
+                    snapshots[key] = [expected == parent for parent in parents]
                 expected[np.isin(expected, parents)] = children[0]
                 continue
+            if record['operation'] == 'restore_parents':
+                key = (record.get('source_revision'), record['merge_event_index'])
+                if key not in snapshots or len(snapshots[key]) != len(children):
+                    raise ValueError('Restore oracle has no complete original parent partition')
+                target = expected == parents[0]
+                covered = np.zeros(len(expected), dtype=bool)
+                for child, mask in zip(children, snapshots[key], strict=True):
+                    if np.any(mask & ~target) or np.any(mask & covered):
+                        raise ValueError('Restore oracle parent partition is no longer intact')
+                    expected[mask] = child
+                    covered |= mask
+                if not np.array_equal(covered, target):
+                    raise ValueError('Restore oracle partition does not cover its target')
+                continue
+            if record['operation'] != 'threshold_split':
+                raise ValueError('Unsupported independent assignment operation')
             parent_rows = np.flatnonzero(expected == parents[0])
             predicate = record['predicate']
             values = attributes[predicate['attribute']][start:stop][parent_rows]

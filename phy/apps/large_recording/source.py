@@ -443,7 +443,7 @@ class Source:
                 or int(unit) > np.iinfo(np.int32).max
                 or not isinstance(record, dict)
                 or set(record) != {'operation', 'replacements'}
-                or record['operation'] not in ('merge', 'threshold_split')
+                or record['operation'] not in ('merge', 'threshold_split', 'restore_parents')
             ):
                 raise ValueError('Invalid lineage retired unit record.')
             replacements = record['replacements']
@@ -455,7 +455,9 @@ class Source:
                     for value in replacements
                 )
                 or len(set(replacements)) != len(replacements)
-                or len(replacements) != (1 if record['operation'] == 'merge' else 2)
+                or (record['operation'] == 'merge' and len(replacements) != 1)
+                or (record['operation'] == 'threshold_split' and len(replacements) != 2)
+                or (record['operation'] == 'restore_parents' and len(replacements) < 2)
                 or int(unit) in replacements
                 or int(unit) in counts
             ):

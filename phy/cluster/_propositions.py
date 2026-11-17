@@ -70,6 +70,7 @@ class PropositionStatus(Enum):
     PENDING = 'pending'
     ACCEPTED = 'accepted'
     ACCEPTED_MODIFIED = 'accepted_modified'
+    ACCEPTED_RESTORED = 'accepted_restored'
     REJECTED = 'rejected'
     INVALID = 'invalid'
     STALE = 'stale'
@@ -217,9 +218,11 @@ class MergePropositionCatalog:
                 )
             value = _mapping(value, name='retired unit')
             operation = value.get('operation')
-            if operation not in {'merge', 'threshold_split'}:
+            if operation not in {'merge', 'threshold_split', 'restore_parents'}:
                 raise ValueError('Unknown retired-unit operation.')
             replacements = _ids(value.get('replacements'), name='replacements', minimum=1)
+            if operation == 'restore_parents' and len(replacements) < 2:
+                raise ValueError('A restored merge must retain every immediate parent.')
             if any(unit < 0 for unit in replacements) or int(key) in replacements:
                 raise ValueError(
                     'Retired-unit replacements must be distinct non-negative new IDs.'
@@ -254,6 +257,8 @@ class MergePropositionCatalog:
         if review is not None:
             if review.decision is ReviewDecision.REJECTED:
                 return PropositionStatus.REJECTED
+            if self._result_was_restored(review.result_unit_id):
+                return PropositionStatus.ACCEPTED_RESTORED
             return (
                 PropositionStatus.ACCEPTED
                 if review.applied_unit_ids == proposition.unit_ids
@@ -263,6 +268,21 @@ class MergePropositionCatalog:
             return PropositionStatus.STALE
         return PropositionStatus.PENDING
 
+    def _result_was_restored(self, result_unit_id):
+        pending, visited = [result_unit_id], set()
+        while pending:
+            unit = pending.pop()
+            if unit in visited:
+                continue
+            visited.add(unit)
+            retirement = self.retired_units.get(str(unit))
+            if retirement is None:
+                continue
+            if retirement['operation'] == 'restore_parents':
+                return True
+            pending.extend(retirement['replacements'])
+        return False
+
     def reason_for(self, key):
         entry = self.entry_for(key)
         if entry is None:
@@ -271,6 +291,12 @@ class MergePropositionCatalog:
             return entry.invalid_reason
         if self.status_for(key) is PropositionStatus.INVALID:
             return 'One or more unit_ids are absent from curation.json unit_ids.'
+        if self.status_for(key) is PropositionStatus.ACCEPTED_RESTORED:
+            review = self.reviews[key]
+            return (
+                f'Historically accepted into {review.result_unit_id}; that result was '
+                'subsequently restored to its parents. The acceptance is no longer live.'
+            )
         if self.status_for(key) is PropositionStatus.STALE:
             missing = tuple(
                 unit_id
@@ -281,7 +307,11 @@ class MergePropositionCatalog:
             for unit_id in missing:
                 retirement = self.retired_units.get(str(unit_id))
                 if retirement is not None:
-                    verb = 'merged' if retirement['operation'] == 'merge' else 'split'
+                    verb = {
+                        'merge': 'merged',
+                        'threshold_split': 'split',
+                        'restore_parents': 'restored to its parents',
+                    }[retirement['operation']]
                     causes.append(f'{unit_id} was {verb}')
             if causes:
                 return f'Source clusters no longer exist: {missing}; ' + '; '.join(causes) + '.'
@@ -335,7 +365,11 @@ class MergePropositionCatalog:
 
     def _require_reviewable(self, key):
         status = self.status_for(key)
-        if status in {PropositionStatus.INVALID, PropositionStatus.STALE}:
+        if status in {
+            PropositionStatus.INVALID,
+            PropositionStatus.STALE,
+            PropositionStatus.ACCEPTED_RESTORED,
+        }:
             raise ValueError(f'Cannot review a {status.value} merge proposition.')
 
     def _with_review(self, key, review):
