@@ -745,9 +745,9 @@ class ParentInspection:
             self._closing = False
 
     def _on_gui_closed(self, sender):
+        # ``close`` is a request: a later save prompt may cancel it. Restore the
+        # workspace before geometry saving, retaining the live host attachment.
         self.close_review()
-        unconnect(self._on_gui_closed)
-        self._gui = None
 
     def close(self):
         self.close_review()

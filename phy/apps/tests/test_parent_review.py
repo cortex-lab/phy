@@ -575,3 +575,44 @@ def test_bounded_color_hints_are_disposable_and_save_errors_are_isolated(
         assert dict(final.parent_inspection.lineage.colors(target)) == {2: 0, first: 1}
     finally:
         final.close()
+
+
+def test_parent_review_can_reopen_after_canceled_dirty_main_close(qtbot, tempdir, monkeypatch):
+    from phy.gui.qt import Qt
+
+    controller = _mock_controller(tempdir, MyControllerFull)
+    gui = controller.create_gui()
+    gui.resize(1100, 800)
+    gui.show()
+    inspection = controller.parent_inspection
+    supervisor = controller.supervisor
+    try:
+        target = supervisor.merge([0, 1]).added[0]
+        supervisor.select([target])
+        supervisor.block()
+        assert supervisor.is_dirty()
+        assignments = supervisor.clustering.spike_clusters.copy()
+        history = supervisor.clustering._undo_stack._index
+        metadata = supervisor.get_labels('group').copy()
+        inspection.show(target)
+        qtbot.wait(20)
+        with monkeypatch.context() as patcher:
+            patcher.setattr('phy.apps.base._prompt_save', lambda: 'cancel')
+            assert not gui.close()
+        assert gui.isVisible() and not gui._closed
+        assert inspection.window is None
+        assert inspection._gui is gui
+        inspection.show_selected()
+        qtbot.wait(20)
+        assert inspection.host_gui is gui
+        assert inspection.return_button.isVisible()
+        qtbot.mouseClick(inspection.return_button, Qt.LeftButton)
+        assert inspection.window is None
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, assignments)
+        assert supervisor.clustering._undo_stack._index == history
+        assert supervisor.get_labels('group') == metadata
+        assert supervisor.is_dirty()
+    finally:
+        inspection.close_review()
+        gui.close()
+        controller.close()
