@@ -702,3 +702,69 @@ def test_bounded_partial_remerge_does_not_reaccept_modified_scope(qtbot, tmp_pat
     finally:
         gui.close()
         controller.close()
+
+
+def test_membership_containment_proves_only_structural_subset_relations():
+    from phy.apps.large_recording.live_summaries import _membership_contains, _union
+
+    source = {'kind': 'source', 'unit': 0}
+    other = {'kind': 'source', 'unit': 1}
+    selected = {'kind': 'split', 'parent': source, 'predicate': _predicate(), 'selected': True}
+    remainder = {**selected, 'selected': False}
+    all_units = _union([source, other])
+    assert _membership_contains(source, selected)
+    assert _membership_contains(all_units, _union([selected, other]))
+    broader_filtered = {**selected, 'parent': all_units}
+    assert _membership_contains(broader_filtered, selected)
+    assert not _membership_contains(selected, source)
+    assert not _membership_contains(remainder, selected)
+    assert not _membership_contains(_union([selected, other]), all_units)
+    changed_predicate = {**selected, 'predicate': {**_predicate(), 'threshold': 5.0}}
+    assert not _membership_contains(changed_predicate, selected)
+
+
+def test_bounded_reassembly_covers_historical_split_scope_after_reunion(qtbot, tmp_path):
+    from phy.apps.large_recording.tests.test_adapter import make_controller
+    from phy.cluster._propositions import PropositionStatus, proposition_key
+
+    _, controller = make_controller(
+        tmp_path,
+        propositions={
+            'format_version': '2',
+            'unit_ids': [0, 1, 2, 99],
+            'merges': [{'unit_ids': [1, 2]}],
+        },
+    )
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor = controller.supervisor
+        supervisor.block()
+        # Historical acceptance contains only the selected part of source unit 0.
+        supervisor.split_source_amplitude(0, 4.0)
+        children = controller.bounded_session.events[-1]['children']
+        remainder, selected = children
+        target = controller.bounded_session.next_cluster_id
+        key = proposition_key([1, 2])
+        supervisor.merge_propositions.accept(key, [selected, 1, 2], target)
+        supervisor.merge([selected, 1, 2], to=target)
+        supervisor.restore_parents(target)
+        supervisor.add_to_merge([remainder])
+        merged = supervisor.merge()
+        assert merged is not None
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_MODIFIED
+        )
+        supervisor.undo()
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        supervisor.redo()
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_MODIFIED
+        )
+    finally:
+        gui.close()
+        controller.close()

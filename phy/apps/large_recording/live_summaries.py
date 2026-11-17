@@ -96,6 +96,38 @@ def membership_expressions(unit_ids, events, *, restore_sources=None, history=No
     return active
 
 
+def _membership_contains(actual, required, memo=None):
+    """Prove scope containment using only canonical membership structure.
+
+    A filtered scope is a subset of its parent, and equal filters preserve
+    containment. Unknown predicate relationships deliberately yield no proof.
+    """
+    memo = {} if memo is None else memo
+    key = (id(actual), id(required))
+    if key in memo:
+        return memo[key]
+    if actual == required:
+        memo[key] = True
+        return True
+    memo[key] = False
+    if required['kind'] == 'union':
+        proof = all(_membership_contains(actual, part, memo) for part in required['parts'])
+    elif required['kind'] == 'split' and _membership_contains(actual, required['parent'], memo):
+        proof = True
+    elif actual['kind'] == 'union':
+        proof = any(_membership_contains(part, required, memo) for part in actual['parts'])
+    elif actual['kind'] == required['kind'] == 'split':
+        proof = (
+            actual['predicate'] == required['predicate']
+            and actual['selected'] == required['selected']
+            and _membership_contains(actual['parent'], required['parent'], memo)
+        )
+    else:
+        proof = False
+    memo[key] = proof
+    return proof
+
+
 def _check_cancel(cancel):
     if cancel is not None and cancel():
         raise CancelledError()

@@ -330,7 +330,7 @@ class BoundedSupervisor(Supervisor):
         """Proof of reassembly from immutable expression scopes, never spike scans."""
         from phy.cluster._propositions import ReviewDecision
 
-        from .live_summaries import membership_expressions
+        from .live_summaries import _membership_contains, membership_expressions
         from .source import hash_json
 
         if self.merge_propositions is None:
@@ -341,12 +341,17 @@ class BoundedSupervisor(Supervisor):
         )
         historical_by_unit = {unit: expression for (_, unit), expression in history.items()}
 
-        def atoms(expression):
-            parts = expression['parts'] if expression['kind'] == 'union' else [expression]
-            return frozenset(hash_json(part) for part in parts)
-
         live = set(self.clustering.cluster_ids)
-        current = {unit: atoms(expression) for unit, expression in active.items() if unit in live}
+        current = {unit: expression for unit, expression in active.items() if unit in live}
+        atom_cache, proof_cache = {}, {}
+
+        def atoms(expression):
+            key = id(expression)
+            if key not in atom_cache:
+                parts = expression['parts'] if expression['kind'] == 'union' else [expression]
+                atom_cache[key] = frozenset(hash_json(part) for part in parts)
+            return atom_cache[key]
+
         result = {}
         catalog = self.merge_propositions.catalog
         for key, review in catalog.reviews.items():
@@ -355,8 +360,13 @@ class BoundedSupervisor(Supervisor):
             expression = historical_by_unit.get(review.result_unit_id)
             if expression is None or not catalog._result_was_restored(review.result_unit_id):
                 continue
-            scope = atoms(expression)
-            matches = [(unit, scope != parts) for unit, parts in current.items() if scope <= parts]
+            expected_atoms = atoms(expression)
+            matches = [
+                (unit, expression != scope)
+                for unit, scope in current.items()
+                if expected_atoms <= atoms(scope)
+                or _membership_contains(scope, expression, proof_cache)
+            ]
             # Distinct live memberships must never both prove the same full scope.
             if len(matches) == 1:
                 unit, modified = matches[0]
