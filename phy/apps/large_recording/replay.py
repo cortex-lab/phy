@@ -15,10 +15,11 @@ from .curation import (
     interpret_events,
     project_assignments,
 )
+from .file_copy import copy_source_file
 from .metadata import complete_schema, write_metadata
 from .parameters import rewrite_replay_params_bytes
 from .source import PER_SPIKE, Source, _has_raw_paths, close_array, hash_file, publish_directory
-from .streaming import UnitRows
+from .streaming import UnitRows, bounded_map, check_cancel, worker_count
 
 
 def _merge_mapping(unit_ids, events):
@@ -40,13 +41,23 @@ def _write_metadata(path, metadata, schema=None):
     return write_metadata(path, metadata, schema or {'version': 1, 'tables': []})
 
 
-def apply_curation(source_params, bounded_dir, output_dir, batch_size=100000):
+def apply_curation(
+    source_params,
+    bounded_dir,
+    output_dir,
+    batch_size=100000,
+    workers=1,
+    cancel=None,
+    progress=None,
+):
     """Validate identity/revision and replay only the last committed generation.
 
     The output is published as one new directory after validation. Full source
     arrays remain file-backed; only one assignment batch and the unit map reside
     in memory. Arbitrary selected-row splits have no journal interpretation.
     """
+    worker_count(workers)
+    check_cancel(cancel)
     session = BoundedSession(bounded_dir)
     source = None
     try:
@@ -58,15 +69,20 @@ def apply_curation(source_params, bounded_dir, output_dir, batch_size=100000):
             duration_seconds=manifest['num_samples'] / manifest['sample_rate'],
             valid_intervals=manifest['valid_intervals'],
             batch_size=batch_size,
+            workers=workers,
+            cancel=cancel,
+            progress=progress,
         )
-        return _apply_curation(source, session, output_dir, batch_size)
+        return _apply_curation(source, session, output_dir, batch_size, workers, cancel, progress)
     finally:
         if source is not None:
             source.close()
         session.close()
 
 
-def _apply_curation(source, session, output_dir, batch_size):
+def _apply_curation(
+    source, session, output_dir, batch_size, workers=1, cancel=None, progress=None
+):
     session.validate_proposition_documents()
     manifest = session.manifest
     if 'metadata_schema' in manifest and source.metadata_schema != manifest['metadata_schema']:
@@ -125,12 +141,9 @@ def _apply_curation(source, session, output_dir, batch_size):
     if output == source.path or source.path in output.parents:
         raise ValueError('Curated output must be outside the immutable source directory.')
     output.parent.mkdir(parents=True, exist_ok=True)
-    estimated_bytes = sum(
-        (source.path / name).stat().st_size
-        for name in source.arrays
-        if name != 'spike_clusters.npy'
-    )
-    estimated_bytes += source.n_spikes * 8 + 1024 * 1024
+    # Unchanged files may clone without allocating their payload. Each fallback
+    # checks its full copy cost while retaining this assignment/header reserve.
+    estimated_bytes = source.n_spikes * 8 + 1024 * 1024
     free = shutil.disk_usage(output.parent).free
     if free < estimated_bytes:
         raise OSError(
@@ -141,9 +154,19 @@ def _apply_curation(source, session, output_dir, batch_size):
     assignments = None
     try:
         # Copy only validated canonical assets, not GUI caches or producer reviews.
+        copied = 0
+        copy_bytes = sum(
+            (source.path / name).stat().st_size
+            for name in source.arrays
+            if name != 'spike_clusters.npy'
+        )
         for name in source.arrays:
+            check_cancel(cancel)
             if name != 'spike_clusters.npy':
-                shutil.copyfile(source.path / name, stage / name)
+                copy_source_file(source.path / name, stage / name, estimated_bytes)
+                copied += (source.path / name).stat().st_size
+                if progress:
+                    progress('copying source files', copied, copy_bytes)
         shutil.copyfile(source.params_path, stage / 'params.py')
         upstream_manifest = source.path / '_phy_spikes_subset.manifest.json'
         if upstream_manifest.exists():
@@ -181,14 +204,22 @@ def _apply_curation(source, session, output_dir, batch_size):
             (None, None) if has_split else _merge_mapping(source.unit_ids, session.events)
         )
         lookup = UnitRows(keys) if keys is not None else None
-        for batch in source.iter_batches():
+
+        def project(batch):
+            check_cancel(cancel)
             values = batch['spike_clusters.npy']
-            if has_split:
-                projected = project_assignments(values, session.events, batch)
-            else:
-                positions = lookup(values)
-                projected = targets[positions]
-            flat[batch['start'] : batch['stop']] = projected
+            projected = (
+                project_assignments(values, session.events, batch)
+                if has_split
+                else targets[lookup(values)]
+            )
+            return batch['start'], batch['stop'], projected
+
+        for start, stop, projected in bounded_map(project, source.iter_batches(), workers):
+            check_cancel(cancel)
+            flat[start:stop] = projected
+            if progress:
+                progress('replaying assignments', stop, source.n_spikes)
         assignments.flush()
         assignments._mmap.close()
         del flat, assignments
@@ -207,21 +238,28 @@ def _apply_curation(source, session, output_dir, batch_size):
             _write_json(stage / 'curation_review.json', review)
             proposition_hashes['curation_review.json'] = hash_file(stage / 'curation_review.json')
         # Re-reading verifies alignment, full catalog and immutable byte digests.
-        curated = Source(stage / 'params.py', batch_size=batch_size)
+        curated = Source(
+            stage / 'params.py',
+            batch_size=batch_size,
+            workers=workers,
+            cancel=cancel,
+            progress=progress,
+        )
         if curated.identity != source.identity or curated.n_spikes != source.n_spikes:
             raise ValueError('Curated output changed immutable source coordinates.')
         if curated.metadata != metadata:
             raise ValueError('Curated output metadata failed exact round-trip validation.')
         actual = curated.arrays['spike_clusters.npy'].reshape(-1)
-        for batch in source.iter_batches():
-            if has_split:
-                expected_batch = project_assignments(
-                    batch['spike_clusters.npy'], session.events, batch
-                )
-            else:
-                expected_batch = targets[lookup(batch['spike_clusters.npy'])]
-            if not np.array_equal(actual[batch['start'] : batch['stop']], expected_batch):
+
+        def verify(batch):
+            start, stop, expected_batch = project(batch)
+            if not np.array_equal(actual[start:stop], expected_batch):
                 raise ValueError('Curated output assignments failed semantic replay verification.')
+            return stop
+
+        for stop in bounded_map(verify, source.iter_batches(), workers):
+            if progress:
+                progress('verifying replay', stop, source.n_spikes)
         _write_json(
             stage / '_phy_curation_lineage.json',
             {
@@ -251,6 +289,7 @@ def _apply_curation(source, session, output_dir, batch_size):
         if output.exists():
             raise FileExistsError(f'Curated output already exists: {output}.')
         session.validate_proposition_documents()
+        check_cancel(cancel)
         publish_directory(stage, output)
         _fsync_directory(output.parent)
     except BaseException:

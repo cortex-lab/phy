@@ -8,10 +8,12 @@ import os
 import runpy
 import sys
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 
 from .metadata import read_metadata
+from .streaming import bounded_map, check_cancel, worker_count
 
 PER_SPIKE = frozenset(
     (
@@ -59,13 +61,47 @@ WINDOW_SIDECARS = frozenset(
 )
 
 
-def hash_file(path, batch_bytes=1024 * 1024):
-    """Hash bytes incrementally, including the array header."""
+def hash_file(path, batch_bytes=1024 * 1024, cancel=None, progress=None):
+    """Hash bytes incrementally, including the array header, with bounded scratch."""
+    if batch_bytes <= 0:
+        raise ValueError('Hash batch_bytes must be positive.')
     digest = hashlib.sha256()
     with Path(path).open('rb') as stream:
+        before = os.fstat(stream.fileno())
         for block in iter(lambda: stream.read(batch_bytes), b''):
+            check_cancel(cancel)
             digest.update(block)
+            if progress:
+                progress(len(block))
+        check_cancel(cancel)
+        after = os.fstat(stream.fileno())
+        current = Path(path).stat()
+        signature = lambda stat: (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
+        if signature(before) != signature(after) or signature(before) != signature(current):
+            raise ValueError(f'File changed during hashing: {path}.')
     return digest.hexdigest()
+
+
+def hash_files(paths, workers=1, cancel=None, progress=None):
+    """Hash independent files in bounded threads; preserve input key order."""
+    worker_count(workers)
+    paths = dict(paths)
+    total = sum(Path(path).stat().st_size for path in paths.values())
+    completed = 0
+    lock = Lock()
+
+    def advance(size):
+        nonlocal completed
+        with lock:
+            completed += size
+            if progress:
+                progress('hashing source files', completed, total)
+
+    def run(item):
+        name, path = item
+        return name, hash_file(path, cancel=cancel, progress=advance)
+
+    return dict(bounded_map(run, paths.items(), workers))
 
 
 def hash_json(value):
@@ -174,9 +210,18 @@ class Source:
     """
 
     def __init__(
-        self, params_path, duration_seconds=None, valid_intervals=None, batch_size=100000
+        self,
+        params_path,
+        duration_seconds=None,
+        valid_intervals=None,
+        batch_size=100000,
+        workers=1,
+        cancel=None,
+        progress=None,
     ):
         self.arrays = {}
+        self.workers = worker_count(workers)
+        self.cancel, self.progress = cancel, progress
         try:
             self._initialize(params_path, duration_seconds, valid_intervals, batch_size)
         except BaseException:
@@ -196,6 +241,7 @@ class Source:
         self.batch_size = int(batch_size)
         if self.batch_size <= 0:
             raise ValueError('batch_size must be positive.')
+        self.batch_size = max(1, self.batch_size // self.workers)
         if 'dtype' in self.params:
             try:
                 raw_dtype = np.dtype(self.params['dtype'])
@@ -357,10 +403,18 @@ class Source:
         self.metadata, self.metadata_schema = read_metadata(self.path)
         self.validate()
         counts = {}
-        for batch in self.iter_batches():
-            ids, values = np.unique(batch['spike_clusters.npy'], return_counts=True)
+
+        def count_batch(batch):
+            check_cancel(self.cancel)
+            return np.unique(batch['spike_clusters.npy'], return_counts=True)
+
+        counted = 0
+        for ids, values in bounded_map(count_batch, self.iter_batches(), self.workers):
             for cluster_id, count in zip(ids.tolist(), values.tolist(), strict=True):
                 counts[cluster_id] = counts.get(cluster_id, 0) + count
+            counted += int(values.sum())
+            if self.progress:
+                self.progress('counting source units', counted, self.n_spikes)
         for values in self.metadata.values():
             for cluster_id in values:
                 counts.setdefault(cluster_id, 0)
@@ -457,7 +511,12 @@ class Source:
                 'num_samples': self.num_samples,
                 'valid_intervals': self.valid_intervals.tolist(),
             },
-            'arrays': {name: hash_file(self.path / name) for name in immutable},
+            'arrays': hash_files(
+                {name: self.path / name for name in immutable},
+                workers=self.workers,
+                cancel=self.cancel,
+                progress=self.progress,
+            ),
         }
         if self.time_base is not None:
             self.identity['time_base']['contract'] = self.time_base.copy()
@@ -477,7 +536,12 @@ class Source:
             raise ValueError(
                 'Waveform reservoir source coordinate fingerprint does not match this sorting.'
             )
-        self.revision = assignment_revision(self.path, self.metadata)
+        self.revision = hash_json(
+            {
+                'assignments': hash_file(self.path / 'spike_clusters.npy', cancel=self.cancel),
+                'metadata': self.metadata,
+            }
+        )
         if lineage:
             if (
                 lineage.get('coordinate_identity') != self.identity
@@ -502,6 +566,7 @@ class Source:
     def iter_batches(self):
         """Yield bounded row slices; vector fields use one-dimensional views."""
         for start in range(0, self.n_spikes, self.batch_size):
+            check_cancel(self.cancel)
             stop = min(start + self.batch_size, self.n_spikes)
             batch = {'start': start, 'stop': stop}
             for name in self.arrays.keys() & PER_SPIKE:
@@ -554,6 +619,8 @@ class Source:
             templates = self.arrays.get('templates.npy')
             if templates is not None and np.any(batch['spike_templates.npy'] >= len(templates)):
                 raise ValueError('spike_templates.npy references an unavailable template.')
+            if self.progress:
+                self.progress('validating source rows', batch['stop'], self.n_spikes)
         waveforms = self.arrays.keys() & WAVEFORMS
         if waveforms and waveforms != WAVEFORMS:
             raise ValueError('Stored waveforms require spikes, channels, and waveforms together.')

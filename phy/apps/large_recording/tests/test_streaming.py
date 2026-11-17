@@ -28,3 +28,53 @@ def test_bounded_ordered_map():
     for workers in (0, 33, 1.5, True):
         with pytest.raises(ValueError, match='workers'):
             list(bounded_map(str, [], workers))
+
+
+def test_parallel_hashes_equal_and_cancel(tmp_path):
+    from concurrent.futures import CancelledError
+
+    from phy.apps.large_recording.source import hash_file, hash_files
+
+    paths = {}
+    for i in range(5):
+        path = tmp_path / str(i)
+        path.write_bytes(bytes([i]) * (1024 * 1024 + i))
+        paths[str(i)] = path
+    serial = {name: hash_file(path) for name, path in paths.items()}
+    progress = []
+    assert hash_files(paths, workers=3, progress=lambda *args: progress.append(args)) == serial
+    assert progress[-1][1:] == (sum(p.stat().st_size for p in paths.values()),) * 2
+    with pytest.raises(CancelledError):
+        hash_files(paths, workers=3, cancel=lambda: True)
+
+
+def test_copy_fallback_space_and_source_immutability(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from phy.apps.large_recording import file_copy
+
+    source = tmp_path / 'source'
+    source.write_bytes(b'original source')
+    destination = tmp_path / 'destination'
+    monkeypatch.setattr(file_copy, 'reflink', lambda *_: False)
+    monkeypatch.setattr(file_copy.shutil, 'disk_usage', lambda *_: SimpleNamespace(free=20))
+    with pytest.raises(OSError, match='Insufficient disk space'):
+        file_copy.copy_source_file(source, destination, reserve_bytes=10)
+    assert not destination.exists()
+    monkeypatch.setattr(file_copy.shutil, 'disk_usage', lambda *_: SimpleNamespace(free=1000))
+    assert file_copy.copy_source_file(source, destination, reserve_bytes=10) is False
+    assert source.stat().st_ino != destination.stat().st_ino
+    destination.write_bytes(b'changed')
+    assert source.read_bytes() == b'original source'
+
+
+def test_native_clone_or_copy_is_independent(tmp_path):
+    from phy.apps.large_recording.file_copy import copy_source_file
+
+    source, destination = tmp_path / 'source', tmp_path / 'clone'
+    source.write_bytes(b'original' * 1024)
+    copy_source_file(source, destination)
+    assert destination.read_bytes() == source.read_bytes()
+    assert source.stat().st_ino != destination.stat().st_ino
+    destination.write_bytes(b'changed')
+    assert source.read_bytes() == b'original' * 1024

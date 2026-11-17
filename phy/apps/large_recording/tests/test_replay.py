@@ -10,7 +10,8 @@ from phy.apps.large_recording.source import Source, hash_file
 from phy.apps.large_recording.tests.test_curation import make_session
 
 
-def test_full_replay_chains_preserve_unseen_units_and_immutable_bytes(tmp_path):
+@pytest.mark.parametrize('workers', [1, 3])
+def test_full_replay_chains_preserve_unseen_units_and_immutable_bytes(tmp_path, workers):
     source, session = make_session(tmp_path)
     original_hashes = {name: hash_file(source.path / name) for name in source.arrays}
     original = source.arrays['spike_clusters.npy'].copy()
@@ -19,7 +20,9 @@ def test_full_replay_chains_preserve_unseen_units_and_immutable_bytes(tmp_path):
     session.record_merge([100, 2], 101, {'group': 'good', 'confidence': None})
     session.record_label('custom', [99, 101], 'verified')
     session.save()
-    output = apply_curation(source.params_path, session.path, tmp_path / 'curated', batch_size=3)
+    output = apply_curation(
+        source.params_path, session.path, tmp_path / 'curated', batch_size=3, workers=workers
+    )
     expected = np.where(np.isin(original, [0, 1, 2]), 101, original)
     assert np.array_equal(np.load(output / 'spike_clusters.npy'), expected)
     assert expected[-1] == 99
@@ -59,7 +62,8 @@ def test_source_revision_and_feature_identity_are_independently_bound(tmp_path):
     assert not (tmp_path / 'wrong_feature').exists()
 
 
-def test_full_threshold_split_matches_scalar_oracle(tmp_path):
+@pytest.mark.parametrize('workers', [1, 3])
+def test_full_threshold_split_matches_scalar_oracle(tmp_path, workers):
     source, session = make_session(tmp_path)
     original = source.arrays['spike_clusters.npy'].copy()
     amplitudes = source.arrays['amplitudes.npy'].copy()
@@ -76,7 +80,9 @@ def test_full_threshold_split_matches_scalar_oracle(tmp_path):
     expected[(original == 2) & (amplitudes < 15)] = 100
     expected[(original == 2) & ~(amplitudes < 15)] = 101
     expected[np.isin(expected, [0, 100])] = 102
-    output = apply_curation(source.params_path, session.path, tmp_path / 'split', batch_size=4)
+    output = apply_curation(
+        source.params_path, session.path, tmp_path / 'split', batch_size=4, workers=workers
+    )
     assert np.array_equal(np.load(output / 'spike_clusters.npy'), expected)
     assert Source(output / 'params.py').metadata == session.metadata
 
@@ -189,3 +195,30 @@ def test_replay_preserves_explicit_clock_metadata_and_timestamp_bytes(tmp_path, 
         assert curated.params['dat_path'] is None
     session.close()
     source.close()
+
+
+def test_parallel_replay_cancel_cleans_stage(tmp_path):
+    from concurrent.futures import CancelledError
+
+    source, session = make_session(tmp_path)
+    session.record_merge([0, 1], 100)
+    session.save()
+    cancelled = False
+
+    def progress(stage, done, total):
+        nonlocal cancelled
+        if stage == 'replaying assignments':
+            cancelled = True
+
+    with pytest.raises(CancelledError):
+        apply_curation(
+            source.params_path,
+            session.path,
+            tmp_path / 'cancelled',
+            batch_size=3,
+            workers=3,
+            cancel=lambda: cancelled,
+            progress=progress,
+        )
+    assert not (tmp_path / 'cancelled').exists()
+    assert not list(tmp_path.glob('.cancelled-*'))
