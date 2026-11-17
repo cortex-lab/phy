@@ -326,12 +326,55 @@ class BoundedSupervisor(Supervisor):
                 data.setdefault(cluster, {})[field] = value
         self.cluster_meta._data = data
 
+    def _reassembled_results(self):
+        """Proof of reassembly from immutable expression scopes, never spike scans."""
+        from phy.cluster._propositions import ReviewDecision
+
+        from .live_summaries import membership_expressions
+        from .source import hash_json
+
+        if self.merge_propositions is None:
+            return {}
+        history = {}
+        active = membership_expressions(
+            self.session.unit_ids, self.session.events, history=history
+        )
+        historical_by_unit = {unit: expression for (_, unit), expression in history.items()}
+
+        def atoms(expression):
+            parts = expression['parts'] if expression['kind'] == 'union' else [expression]
+            return frozenset(hash_json(part) for part in parts)
+
+        live = set(self.clustering.cluster_ids)
+        current = {unit: atoms(expression) for unit, expression in active.items() if unit in live}
+        result = {}
+        catalog = self.merge_propositions.catalog
+        for key, review in catalog.reviews.items():
+            if review.decision is not ReviewDecision.ACCEPTED:
+                continue
+            expression = historical_by_unit.get(review.result_unit_id)
+            if expression is None or not catalog._result_was_restored(review.result_unit_id):
+                continue
+            scope = atoms(expression)
+            matches = [(unit, scope != parts) for unit, parts in current.items() if scope <= parts]
+            # Distinct live memberships must never both prove the same full scope.
+            if len(matches) == 1:
+                unit, modified = matches[0]
+                result[key] = {'result_unit_id': unit, 'modified': modified}
+        return result
+
+    def _project_proposition_state(self):
+        if self.merge_propositions is not None:
+            self.merge_propositions.project_live_ids(
+                self.clustering.cluster_ids,
+                retired_units=self.session.retired_units,
+                reassembled_results=self._reassembled_results(),
+            )
+
     def _refresh_bounded(self):
         self.parent_origins = self.session.restored_parent_ids
         if self.merge_propositions is not None:
-            self.merge_propositions.project_live_ids(
-                self.clustering.cluster_ids, retired_units=self.session.retired_units
-            )
+            self._project_proposition_state()
             self._refresh_propositions()
         if self.gui is not None:
             data = self.cluster_info
@@ -382,7 +425,7 @@ class BoundedSupervisor(Supervisor):
                 raise ValueError('Select one current merged unit to restore its parents.')
             target = selected[0]
         target = int(target)
-        _, expected = self.session.restore_parent_groups(target)
+        _, expected = self.session.restore_parent_groups(target, recursive=True)
         if groups is not None and (
             list(groups) != list(expected)
             or any(not np.array_equal(groups[parent], rows) for parent, rows in expected.items())
@@ -399,7 +442,7 @@ class BoundedSupervisor(Supervisor):
             if new_cluster_ids is None
             else list(new_cluster_ids)
         )
-        event = self.session.preflight_restore_parents(target, children)
+        event = self.session.preflight_restore_parents(target, children, recursive=True)
         with self.policy.command():
             out = super().restore_parents(
                 target,

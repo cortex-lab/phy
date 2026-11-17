@@ -226,11 +226,13 @@ def _event_schema(event, record, arrays):
         },
         'label': {'version', 'operation', 'field', 'ids', 'value'},
     }
+    if operation == 'restore_parents' and event.get('version') == 4:
+        keys[operation].add('parent_references')
     if (
         operation not in keys
         or set(event) != keys[operation]
         or type(event['version']) is not int
-        or event['version'] != (3 if operation == 'restore_parents' else 2)
+        or event['version'] not in ((3, 4) if operation == 'restore_parents' else (2,))
     ):
         raise ValueError('Malformed current journal event schema')
     if operation == 'label':
@@ -301,6 +303,7 @@ def _history(source, curated, journal, manifest, expected_labels):
                 and event['merge_prefix_sha256'] == _json_hash(journal[: origin + 1])
                 and record['parents'] == [event['target']]
                 and record['children'] == event['children']
+                and record.get('parent_references') == event.get('parent_references')
                 and all(
                     record[key] == event[key]
                     for key in ('merge_event_index', 'merge_prefix_sha256', 'source_revision')
@@ -343,6 +346,8 @@ def _history(source, curated, journal, manifest, expected_labels):
     active = set(candidates)
     origins = dict.fromkeys(active)
     merge_origins = {}
+    component_nodes = {unit: (unit, -1, None) for unit in active}
+    merge_components = {}
     next_id = source.next_cluster_id
     retired = dict(source.retired_units)
     explicit = {}
@@ -380,6 +385,8 @@ def _history(source, curated, journal, manifest, expected_labels):
                 record_keys.add('predicate')
             elif operation == 'restore_parents':
                 record_keys.update({'merge_event_index', 'merge_prefix_sha256'})
+                if 'parent_references' in record:
+                    record_keys.add('parent_references')
             if set(record) != record_keys:
                 raise ValueError('Unexpected membership provenance fields')
             parents, children = record['parents'], record['children']
@@ -419,16 +426,58 @@ def _history(source, curated, journal, manifest, expected_labels):
             if operation == 'merge':
                 merge_origins[key] = [origins.pop(parent) for parent in parents]
                 origins[children[0]] = key
+                parts = tuple(component_nodes.pop(parent) for parent in parents)
+                merge_components[key] = parts
+                component_nodes[children[0]] = (children[0], record['event_index'], parts)
             elif operation == 'threshold_split':
                 origins.pop(parents[0])
                 origins.update(dict.fromkeys(children))
+                component_nodes.pop(parents[0])
+                component_nodes.update(
+                    {child: (child, record['event_index'], None) for child in children}
+                )
             else:
                 reference = (record['source_revision'], record['merge_event_index'])
                 if origins.pop(parents[0]) != reference or reference not in merge_origins:
                     raise ValueError('Restore does not reference its unchanged live merge origin')
-                if len(children) != len(merge_origins[reference]):
-                    raise ValueError('Restore loses an immediate historical parent')
-                origins.update(dict(zip(children, merge_origins[reference], strict=True)))
+                parts = merge_components[reference]
+                component_nodes.pop(parents[0])
+                if 'parent_references' in record:
+                    pending = list(reversed(parts))
+                    leaves = []
+                    while pending:
+                        node = pending.pop()
+                        if node[2] is None:
+                            leaves.append(node)
+                        else:
+                            pending.extend(reversed(node[2]))
+                    parts = leaves
+                    refs = record['parent_references']
+                    if refs != [{'unit': node[0], 'event_index': node[1]} for node in parts]:
+                        raise ValueError(
+                            'Recursive references disagree with independent merge ancestry'
+                        )
+                    if not isinstance(refs, list) or len(refs) != len(children):
+                        raise ValueError('Recursive restoration references lose a parent')
+                    if any(
+                        not isinstance(ref, dict)
+                        or set(ref) != {'unit', 'event_index'}
+                        or type(ref['unit']) is not int
+                        or type(ref['event_index']) is not int
+                        or ref['unit'] < 0
+                        or ref['event_index'] < -1
+                        or ref['event_index'] >= record['merge_event_index']
+                        for ref in refs
+                    ):
+                        raise ValueError('Invalid recursive historical reference')
+                    if len({(ref['event_index'], ref['unit']) for ref in refs}) != len(refs):
+                        raise ValueError('Repeated recursive historical reference')
+                    origins.update(dict.fromkeys(children))
+                else:
+                    if len(children) != len(merge_origins[reference]):
+                        raise ValueError('Restore loses an immediate historical parent')
+                    origins.update(dict(zip(children, merge_origins[reference], strict=True)))
+                component_nodes.update(dict(zip(children, parts, strict=True)))
             active.difference_update(parents)
             for parent in parents:
                 retired[str(parent)] = {'operation': operation, 'replacements': children}
@@ -502,6 +551,12 @@ def _assignment_oracle(source, curated, history, chunk_size):
         for r in membership
         if r['operation'] == 'restore_parents'
     }
+    leaf_references = {
+        (r.get('source_revision'), ref['event_index'], ref['unit'])
+        for r in membership
+        if r['operation'] == 'restore_parents'
+        for ref in r.get('parent_references', [])
+    }
     # Retain only referenced pre-merge parent masks, and bound their aggregate
     # scratch space independently of the number of source spikes or restores.
     slots = sum(
@@ -510,12 +565,20 @@ def _assignment_oracle(source, curated, history, chunk_size):
         if r['operation'] == 'merge'
         and (r.get('source_revision'), r.get('event_index', i)) in references
     )
-    chunk_size = min(chunk_size, max(1, (32 * 1024 * 1024) // (slots + 64)))
+    chunk_size = min(chunk_size, max(1, (32 * 1024 * 1024) // (slots + len(leaf_references) + 64)))
     for start in range(0, len(original), chunk_size):
         stop = start + chunk_size
         expected = np.array(original[start:stop], dtype=np.int64, copy=True)
         snapshots = {}
+        leaf_masks = {}
+        last_revision = object()
         for event_index, record in enumerate(history):
+            revision = record.get('source_revision')
+            if revision is not None and revision != last_revision:
+                for rev, created, unit in leaf_references:
+                    if rev == revision and created == -1:
+                        leaf_masks[(rev, created, unit)] = expected == unit
+                last_revision = revision
             if record['operation'] == 'label':
                 continue
             parents, children = record['parents'], record['children']
@@ -527,11 +590,26 @@ def _assignment_oracle(source, curated, history, chunk_size):
                 continue
             if record['operation'] == 'restore_parents':
                 key = (record.get('source_revision'), record['merge_event_index'])
-                if key not in snapshots or len(snapshots[key]) != len(children):
-                    raise ValueError('Restore oracle has no complete original parent partition')
+                if 'parent_references' in record:
+                    masks = []
+                    for ref in record['parent_references']:
+                        reference = (
+                            record.get('source_revision'),
+                            ref['event_index'],
+                            ref['unit'],
+                        )
+                        if reference not in leaf_masks:
+                            raise ValueError('Restore oracle missing historical leaf mask')
+                        masks.append(leaf_masks[reference])
+                else:
+                    if key not in snapshots or len(snapshots[key]) != len(children):
+                        raise ValueError(
+                            'Restore oracle has no complete original parent partition'
+                        )
+                    masks = snapshots[key]
                 target = expected == parents[0]
                 covered = np.zeros(len(expected), dtype=bool)
-                for child, mask in zip(children, snapshots[key], strict=True):
+                for child, mask in zip(children, masks, strict=True):
                     if np.any(mask & ~target) or np.any(mask & covered):
                         raise ValueError('Restore oracle parent partition is no longer intact')
                     expected[mask] = child
@@ -559,6 +637,14 @@ def _assignment_oracle(source, curated, history, chunk_size):
                 selected = values >= threshold
             # Nonfinite values always remain in the first (remainder) child.
             expected[parent_rows] = np.where(finite & selected, children[1], children[0])
+            for child in children:
+                key = (
+                    record.get('source_revision'),
+                    record.get('event_index', event_index),
+                    child,
+                )
+                if key in leaf_references:
+                    leaf_masks[key] = expected == child
         mismatch = np.flatnonzero(expected != current[start:stop])
         if len(mismatch):
             row = start + int(mismatch[0])

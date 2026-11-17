@@ -416,3 +416,289 @@ def test_proposition_row_and_dock_refresh_immediately_after_restore_undo_redo(qt
     finally:
         gui.close()
         controller.close()
+
+
+@pytest.mark.parametrize('workers', [1, 4])
+def test_recursive_restore_flattens_merges_and_stops_at_split_boundaries(tmp_path, workers):
+    params, session = _package(tmp_path)
+    original = np.load(params.parent / 'spike_clusters.npy')
+    amplitudes = np.load(params.parent / 'amplitudes.npy')
+    with session:
+        session.record_threshold_split(0, [100, 101], _predicate())
+        session.record_merge([101, 1], 102)
+        session.record_merge([102, 2], 103)
+        session.record_label('group', [99], 'good')
+        index, groups = session.restore_parent_groups(103, recursive=True)
+        assert index == 2 and list(groups) == [101, 1, 2]
+        assert session.restore_parent_counts(103, recursive=True) == {101: None, 1: 3, 2: 3}
+        event = session.preflight_restore_parents(103, [104, 105, 106], recursive=True)
+        assert event['version'] == 4
+        assert event['parent_references'] == [
+            {'unit': 101, 'event_index': 0},
+            {'unit': 1, 'event_index': -1},
+            {'unit': 2, 'event_index': -1},
+        ]
+        session._append(event)
+        expected = original.astype(np.int64).copy()
+        expected[(original == 0) & (amplitudes >= 4)] = 100
+        expected[(original == 0) & (amplitudes < 4)] = 104
+        expected[original == 1] = 105
+        expected[original == 2] = 106
+        np.testing.assert_array_equal(session.assignments, expected)
+        assert session.restored_parent_ids == {104: 101, 105: 1, 106: 2}
+        assert session.metadata['group'][99] == 'good'
+        session.save()
+        path = session.path
+    with BoundedSession(path) as reopened:
+        np.testing.assert_array_equal(reopened.assignments, expected)
+        reopened.record_merge([104, 105, 106], 107)
+        assert list(reopened.restore_parent_groups(107, recursive=True)[1]) == [101, 1, 2]
+        reopened.record_restore_parents(107, [108, 109, 110], recursive=True)
+        reopened.save()
+    output = apply_curation(params, path, tmp_path / 'curated', batch_size=2, workers=workers)
+    expected[expected == 104] = 108
+    expected[expected == 105] = 109
+    expected[expected == 106] = 110
+    with Source(params) as source, Source(output / 'params.py') as curated:
+        np.testing.assert_array_equal(curated.arrays['spike_clusters.npy'], expected)
+        _assignment_oracle(source, curated, curated.metadata_provenance['history'], 2)
+        _history(
+            source,
+            curated,
+            json.loads((output / '_phy_curation_journal.json').read_text()),
+            json.loads((path / '_phy_curation_manifest.json').read_text()),
+            {99: {'group': 'good'}},
+        )
+
+
+def test_v3_restores_immediate_parents_while_v4_restores_all_recorded_leaves(tmp_path):
+    _, session = _package(tmp_path)
+    with session:
+        session.record_merge([0, 1], 100)
+        session.record_merge([100, 2], 101)
+        legacy = session.preflight_restore_parents(101, [102, 103])
+        assert legacy['version'] == 3 and 'parent_references' not in legacy
+        session._append(legacy)
+        assert session.restored_parent_ids == {102: 100, 103: 2}
+        assert list(session.restore_parent_groups(102, recursive=True)[1]) == [0, 1]
+        session.record_merge([102, 103], 104)
+        recursive = session.preflight_restore_parents(104, [105, 106, 107], recursive=True)
+        before = session.snapshot()
+        broken = deepcopy(recursive)
+        broken['parent_references'][0]['unit'] = 99
+        with pytest.raises(ValueError, match='parent references'):
+            session._append(broken)
+        assert session.events == before['events']
+        np.testing.assert_array_equal(session.assignments, before['assignments'])
+        session._append(recursive)
+        assert session.restored_parent_ids == {105: 0, 106: 1, 107: 2}
+
+
+def test_recursive_native_restore_is_one_undoable_action(tmp_path):
+    from phy.apps.large_recording.tests.test_adapter import make_controller
+
+    _, controller = make_controller(tmp_path)
+    try:
+        supervisor = controller.supervisor
+        supervisor.merge([0, 1], to=100)
+        supervisor.merge([100, 2], to=101)
+        supervisor.label('group', 'mua', [99])
+        before = controller.bounded_session.snapshot()
+        out = supervisor.restore_parents(101)
+        assert out.added == [102, 103, 104]
+        assert supervisor.parent_origins == {102: 0, 103: 1, 104: 2}
+        assert supervisor.selected_merge == out.added
+        assert controller.bounded_session.events[-1]['version'] == 4
+        assert len(controller.bounded_session.events) == len(before['events']) + 1
+        supervisor.undo()
+        assert controller.bounded_session.events == before['events']
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, before['assignments'])
+        assert supervisor.cluster_meta.get('group', 99) == 'mua'
+        supervisor.redo()
+        assert supervisor.selected_merge == out.added
+        assert supervisor.cluster_meta.get('group', 99) == 'mua'
+    finally:
+        controller.close()
+
+
+def test_recursive_restore_over_sixteen_leaves_and_repeated_aliases():
+    from phy.apps.large_recording.source import hash_json
+
+    units = list(range(20))
+    original = np.repeat(units, 2)
+    events = []
+    target = 100
+    events.append(
+        {
+            'version': 2,
+            'operation': 'merge',
+            'parents': [0, 1],
+            'target': target,
+            'metadata': {'group': None},
+        }
+    )
+    for unit in units[2:]:
+        events.append(
+            {
+                'version': 2,
+                'operation': 'merge',
+                'parents': [target, unit],
+                'target': target + 1,
+                'metadata': {'group': None},
+            }
+        )
+        target += 1
+    origin = len(events) - 1
+    children = list(range(target + 1, target + 21))
+    event = {
+        'version': 4,
+        'operation': 'restore_parents',
+        'target': target,
+        'children': children,
+        'merge_event_index': origin,
+        'merge_prefix_sha256': hash_json(events),
+        'source_revision': 'test',
+        'parent_references': [{'unit': unit, 'event_index': -1} for unit in units],
+        'metadata': {'group': dict.fromkeys(children)},
+    }
+    events.append(event)
+    active, _, _ = interpret_events(units, {}, events)
+    assert active == set(children)
+    np.testing.assert_array_equal(project_assignments(original, events), np.repeat(children, 2))
+    broken = deepcopy(events)
+    broken[-1]['parent_references'][0]['unit'] = False
+    with pytest.raises(ValueError, match='parent references'):
+        interpret_events(units, {}, broken)
+    events.append(
+        {
+            'version': 2,
+            'operation': 'merge',
+            'parents': children,
+            'target': 200,
+            'metadata': {'group': None},
+        }
+    )
+    again = deepcopy(event)
+    again.update(
+        target=200,
+        children=list(range(201, 221)),
+        merge_event_index=len(events) - 1,
+        merge_prefix_sha256=hash_json(events),
+        metadata={'group': dict.fromkeys(range(201, 221))},
+    )
+    events.append(again)
+    interpret_events(units, {}, events)
+    np.testing.assert_array_equal(
+        project_assignments(original, events), np.repeat(range(201, 221), 2)
+    )
+
+
+@pytest.mark.parametrize('extra', [False, True])
+def test_bounded_remerge_reassembles_review_scope_with_fresh_ids(qtbot, tmp_path, extra):
+    from phy.apps.large_recording.tests.test_adapter import make_controller
+    from phy.cluster._propositions import PropositionStatus, proposition_key
+
+    _, controller = make_controller(
+        tmp_path,
+        propositions={
+            'format_version': '2',
+            'unit_ids': [0, 1, 2, 99],
+            'merges': [{'unit_ids': [0, 1]}],
+        },
+    )
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor = controller.supervisor
+        supervisor.block()
+        key = proposition_key([0, 1])
+        supervisor.merge_propositions.accept(key, [0, 1], 100)
+        supervisor.merge([0, 1], to=100)
+        original_review = supervisor.merge_propositions.catalog.review_mapping()['reviews']
+        supervisor.restore_parents(100)
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        if extra:
+            supervisor.add_to_merge([2])
+        merged = supervisor.merge(to=104)
+        assert merged is not None
+        expected = PropositionStatus.ACCEPTED_MODIFIED if extra else PropositionStatus.ACCEPTED
+        assert supervisor.merge_propositions.catalog.status_for(key) is expected
+        assert supervisor.merge_propositions.catalog.review_mapping()['reviews'] == original_review
+        supervisor.undo()
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        supervisor.redo()
+        assert supervisor.merge_propositions.catalog.status_for(key) is expected
+        supervisor.save()
+    finally:
+        gui.close()
+        controller.close()
+    from phy.apps.template.gui import TemplateController
+
+    reopened = TemplateController(
+        dir_path=controller.dir_path, config_dir=tmp_path / 'reopened', plugins=[]
+    )
+    try:
+        assert reopened.supervisor.merge_propositions.catalog.status_for(key) is expected
+    finally:
+        reopened.close()
+
+
+def test_recursive_native_restore_rejects_hidden_zero_evidence_leaf(tmp_path):
+    from phy.apps.large_recording.supervisor import BoundedSupervisor
+    from phy.apps.large_recording.tests.test_curation import make_session
+
+    source, session = make_session(tmp_path)
+    try:
+        session.migrate_metadata(source.params_path)
+        session.record_merge([0, 99], 100)
+        session.record_merge([100, 1], 101)
+        assert all(len(rows) for rows in session.restore_parent_groups(101)[1].values())
+        supervisor = BoundedSupervisor(
+            spike_clusters=session.assignments.copy(),
+            session=session,
+            cluster_labels=session.metadata,
+        )
+        before = session.snapshot()
+        with pytest.raises(ValueError, match='no retained evidence'):
+            supervisor.restore_parents(101)
+        assert session.events == before['events']
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, before['assignments'])
+    finally:
+        session.close()
+        source.close()
+
+
+def test_bounded_partial_remerge_does_not_reaccept_modified_scope(qtbot, tmp_path):
+    from phy.apps.large_recording.tests.test_adapter import make_controller
+    from phy.cluster._propositions import PropositionStatus, proposition_key
+
+    _, controller = make_controller(
+        tmp_path,
+        propositions={
+            'format_version': '2',
+            'unit_ids': [0, 1, 2, 99],
+            'merges': [{'unit_ids': [0, 1]}],
+        },
+    )
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor = controller.supervisor
+        supervisor.block()
+        key = proposition_key([0, 1])
+        supervisor.merge_propositions.accept(key, [0, 1, 2], 100)
+        supervisor.merge([0, 1, 2], to=100)
+        restored = supervisor.restore_parents(100)
+        supervisor.deselect_from_merge([restored.added[-1]])
+        assert supervisor.merge(to=105) is not None
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+    finally:
+        gui.close()
+        controller.close()

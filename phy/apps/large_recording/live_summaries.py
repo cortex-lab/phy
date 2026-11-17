@@ -43,7 +43,7 @@ def _union(parts):
     return flattened[0] if len(flattened) == 1 else {'kind': 'union', 'parts': flattened}
 
 
-def membership_expressions(unit_ids, events, *, restore_sources=None):
+def membership_expressions(unit_ids, events, *, restore_sources=None, history=None):
     """Resolve journal memberships without retaining labels or allocated IDs.
 
     The caller supplies an already validated semantic journal. Expressions are
@@ -51,12 +51,14 @@ def membership_expressions(unit_ids, events, *, restore_sources=None):
     """
     active = {int(unit): {'kind': 'source', 'unit': int(unit)} for unit in unit_ids}
     merges = {}
+    historical = {(-1, unit): expression for unit, expression in active.items()}
     for index, event in enumerate(events):
         operation = event['operation']
         if operation == 'merge':
             parts = [active.pop(unit) for unit in event['parents']]
             merges[index] = parts
             active[event['target']] = _union(parts)
+            historical[(index, event['target'])] = active[event['target']]
         elif operation == 'threshold_split':
             parent = active.pop(event['parent'])
             predicate = validate_predicate(event['predicate'])
@@ -67,14 +69,30 @@ def membership_expressions(unit_ids, events, *, restore_sources=None):
                     'predicate': predicate,
                     'selected': bool(selected),
                 }
+                historical[(index, child)] = active[child]
         elif operation == 'restore_parents':
             active.pop(event['target'])
-            parts = merges[event['merge_event_index']]
+            parts = (
+                [
+                    historical[(ref['event_index'], ref['unit'])]
+                    for ref in event['parent_references']
+                ]
+                if event['version'] == 4
+                else merges[event['merge_event_index']]
+            )
             active.update(dict(zip(event['children'], parts, strict=True)))
+            historical.update(
+                {
+                    (index, child): expression
+                    for child, expression in zip(event['children'], parts, strict=True)
+                }
+            )
             if restore_sources is not None:
                 restore_sources[index] = parts
         elif operation not in ('label', 'metadata_policy'):
             raise ValueError('Unsupported membership operation.')
+    if history is not None:
+        history.update(historical)
     return active
 
 
