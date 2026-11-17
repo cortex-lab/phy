@@ -14,7 +14,44 @@ import numpy as np
 from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 
+from phy.gui.qt import QLabel, QSize, QSizePolicy, Qt
+
 logger = logging.getLogger(__name__)
+
+
+class _ParentLegend(QLabel):
+    """Size the review header from its real wrapped width, never a tall hint."""
+
+    _preferred_width = 760
+
+    def __init__(self, text):
+        super().__init__(text)
+        self.setObjectName('parent-review-legend')
+        self.setWordWrap(True)
+        self.setMinimumWidth(160)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.setStyleSheet('background: #202020; color: white; padding: 4px;')
+        self._fit_height(self._preferred_width)
+
+    def _fit_height(self, width):
+        height = max(self.fontMetrics().height() + 8, self.heightForWidth(max(1, width)))
+        if self.minimumHeight() != height or self.maximumHeight() != height:
+            self.setFixedHeight(height)
+
+    def sizeHint(self):
+        return QSize(self._preferred_width, self.heightForWidth(self._preferred_width))
+
+    def minimumSizeHint(self):
+        return QSize(160, self.minimumHeight())
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._fit_height(event.size().width())
+
+    def setText(self, text):
+        super().setText(text)
+        self._fit_height(self.width() if self.isVisible() else self._preferred_width)
 
 
 def _fingerprint(assignments, model):
@@ -450,7 +487,7 @@ class ParentInspection:
     def show(self, target):
         from phy.cluster.views import AmplitudeView, CorrelogramView, FeatureView, WaveformView
         from phy.gui import GUI
-        from phy.gui.qt import QLabel, QMainWindow, QSizePolicy, Qt
+        from phy.gui.qt import QMainWindow
         from phy.utils.color import selected_cluster_color
 
         groups = self.lineage.parents(target)
@@ -508,13 +545,7 @@ class ParentInspection:
         text = ' &nbsp; | &nbsp; '.join(legend)
         if providers.bounded:
             text += '<br>Window evidence only; no full-recording correlogram rate baseline.'
-        caption = QLabel(text)
-        caption.setObjectName('parent-review-legend')
-        caption.setWordWrap(True)
-        caption.setMinimumWidth(160)
-        caption.setMaximumWidth(760)
-        caption.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        caption.setStyleSheet('background: #202020; color: white; padding: 4px;')
+        caption = _ParentLegend(text)
         window.file_actions.add(
             self.close_review, name='return_to_merged_unit', docstring='Return to merged unit'
         )

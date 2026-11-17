@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from phylib.utils import Bunch, emit
 
-from phy.apps._parent_review import ParentLineage, ParentProviders
+from phy.apps._parent_review import ParentLineage, ParentProviders, _ParentLegend
 from phy.apps.large_recording.tests.test_adapter import make_controller
 from phy.apps.tests.test_base import MyControllerFull, _mock_controller
 from phy.cluster.clustering import Clustering
@@ -178,6 +178,8 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
                 return_button.mapTo(window, return_button.rect().center())
             )
             assert legend.isVisible() and legend.wordWrap()
+            assert legend.height() >= legend.heightForWidth(legend.width())
+            assert window._toolbar.height() < min(180, window.height() / 4)
             assert f'{target} ← 0' in legend.text() and f'{target} ← 1' in legend.text()
             docks = {type(v): v.dock.geometry() for v in inspection.views}
             assert docks[CorrelogramView].left() < docks[WaveformView].left()
@@ -216,6 +218,44 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
         inspection.close_review()
         gui.close()
         controller.close()
+
+
+@pytest.mark.parametrize('count', [2, 7, 16])
+def test_parent_legend_uses_only_the_height_of_its_wrapped_text(qtbot, count):
+    from phy.gui.qt import QMainWindow, Qt, QToolBar
+
+    text = (
+        ' &nbsp; | &nbsp; '.join(
+            f'<span style="color:rgb(0,150,255)">705 ← {parent} '
+            f'(2057 retained spikes; 612536 full spikes; 1.71 Hz)</span>'
+            for parent in range(count)
+        )
+        + '<br>Window evidence only; no full-recording correlogram rate baseline.'
+    )
+    window = QMainWindow()
+    qtbot.addWidget(window)
+    toolbar = QToolBar(window)
+    window.addToolBar(toolbar)
+    toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
+    action = toolbar.addAction('Return to merged unit')
+    legend = _ParentLegend(text)
+    toolbar.addWidget(legend)
+    window.resize(1880, 1120)
+    window.show()
+    for width in (1880, 1100):
+        window.resize(width, 1120)
+        qtbot.wait(30)
+        assert legend.isVisible()
+        assert legend.width() > width / 2
+        needed = legend.heightForWidth(legend.width())
+        assert needed <= legend.height() <= needed + 8
+        assert toolbar.height() <= legend.height() + 16
+        assert toolbar.height() < window.height() / 3
+        if count == 2:
+            assert toolbar.height() < 180
+        button = toolbar.widgetForAction(action)
+        assert button.isVisible() and button.visibleRegion().contains(button.rect().center())
+        assert all(f'705 ← {parent} ' in legend.text() for parent in range(count))
 
 
 def test_bounded_saved_nested_and_split_parents_use_journal_not_templates(qtbot, tmp_path):
