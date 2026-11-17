@@ -16,6 +16,7 @@ import numpy as np
 
 from .curation import _commit_lock, _fsync_directory, _safe_file
 from .source import hash_json, publish_directory
+from .streaming import UnitRows
 
 VERSION = 1
 REFERENCE = 'live-summary-store.json'
@@ -153,6 +154,7 @@ def build_summary_store(
             raise ValueError('Invalid source unit counts.')
         offsets = np.zeros(len(units) + 1, dtype=np.int64)
         np.cumsum(counts, out=offsets[1:])
+        lookup = UnitRows(units)
         cursors = offsets[:-1].copy()
         pending = np.zeros(len(units), dtype=np.int64)
         digests = [hashlib.sha256() for _ in units]
@@ -204,9 +206,7 @@ def build_summary_store(
                     if np.any(times < 0) or np.any(times >= engine.manifest['num_samples']):
                         raise ValueError('Source spike times outside recording bounds.')
                     assignments = read_rows('spike_clusters.npy', start, stop).reshape(-1)
-                    rows = np.searchsorted(units, assignments)
-                    if np.any(rows >= len(units)) or np.any(units[rows] != assignments):
-                        raise ValueError('Source unit catalog mismatch.')
+                    rows = lookup(assignments)
                     order = np.argsort(rows, kind='stable')
                     sorted_rows = rows[order]
                     data = np.empty(stop - start, dtype=dtype)

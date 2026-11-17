@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from .source import close_array
+from .streaming import UnitRows
 
 
 def scalar_attributes(source):
@@ -102,15 +103,33 @@ def build_summaries(source, output_dir, bin_seconds=3600, max_bytes=536870912):
                     np.minimum(edges[offset + 1 : stop + 1], end)
                     - np.maximum(edges[offset:stop], start)
                 ) / source.sample_rate
+        lookup = UnitRows(source.unit_ids)
+        # A local bin range avoids zeroing an entire recording-sized histogram
+        # for each batch. Cap even a batch spanning a very long acquisition gap.
+        tile_bins = max(1, source.batch_size // max(1, len(source.unit_ids)))
         for batch in source.iter_batches():
-            rows = np.searchsorted(source.unit_ids, batch['spike_clusters.npy'])
+            rows = lookup(batch['spike_clusters.npy'])
             columns = batch['spike_times.npy'] // step
-            np.add.at(counts, (rows, columns), 1)
-            for field, values in attributes.items():
-                values = values[batch['start'] : batch['stop']]
-                finite = np.isfinite(values)
-                np.add.at(grids[field, 'sum'], (rows[finite], columns[finite]), values[finite])
-                np.add.at(grids[field, 'count'], (rows[finite], columns[finite]), 1)
+            first = 0
+            while first < len(rows):
+                begin = int(columns[first])
+                end = min(bins, begin + tile_bins)
+                last = int(np.searchsorted(columns, end, side='left'))
+                width = end - begin
+                flat = rows[first:last].astype(np.int64) * width + columns[first:last] - begin
+                cells = len(source.unit_ids) * width
+                counts[:, begin:end] += np.bincount(flat, minlength=cells).reshape(-1, width)
+                for field, values in attributes.items():
+                    values = values[batch['start'] + first : batch['start'] + last]
+                    finite = np.isfinite(values)
+                    for kind, weights in (
+                        ('sum', values[finite].astype(np.float64)),
+                        ('count', None),
+                    ):
+                        grids[field, kind][:, begin:end] += np.bincount(
+                            flat[finite], weights=weights, minlength=cells
+                        ).reshape(-1, width)
+                first = last
         for array in (counts, edges, exposure, *grids.values()):
             array.flush()
         result['estimators'] = {

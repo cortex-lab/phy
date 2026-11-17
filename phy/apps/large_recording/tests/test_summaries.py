@@ -65,3 +65,20 @@ def test_position_coordinates_require_declared_depth_axis(tmp_path):
         np.testing.assert_array_equal(
             scalar_attributes(source)['depth'], source.arrays['spike_positions.npy'][:, 1]
         )
+
+
+def test_sparse_ids_gaps_and_partial_last_bin(tmp_path):
+    params = make_sorting(tmp_path / 'full')
+    units = np.load(params.parent / 'spike_clusters.npy')
+    units[units == 2] = 2147483647
+    np.save(params.parent / 'spike_clusters.npy', units)
+    with Source(params, batch_size=2) as source:
+        files = build_summaries(source, tmp_path / 'summary', bin_seconds=3)
+        counts = np.load(tmp_path / 'summary' / files['counts_file'])
+        np.testing.assert_array_equal(counts.sum(axis=1), source.counts)
+        np.testing.assert_array_equal(
+            np.load(tmp_path / 'summary' / files['edges_file']), [0, 3, 6, 9, 12, 15, 18, 20]
+        )
+        np.testing.assert_array_equal(
+            np.load(tmp_path / 'summary' / files['exposure_file']), [3, 3, 3, 3, 3, 3, 2]
+        )

@@ -18,6 +18,7 @@ from .curation import (
 from .metadata import complete_schema, write_metadata
 from .parameters import rewrite_replay_params_bytes
 from .source import PER_SPIKE, Source, _has_raw_paths, close_array, hash_file, publish_directory
+from .streaming import UnitRows
 
 
 def _merge_mapping(unit_ids, events):
@@ -179,12 +180,13 @@ def _apply_curation(source, session, output_dir, batch_size):
         keys, targets = (
             (None, None) if has_split else _merge_mapping(source.unit_ids, session.events)
         )
+        lookup = UnitRows(keys) if keys is not None else None
         for batch in source.iter_batches():
             values = batch['spike_clusters.npy']
             if has_split:
                 projected = project_assignments(values, session.events, batch)
             else:
-                positions = np.searchsorted(keys, values)
+                positions = lookup(values)
                 projected = targets[positions]
             flat[batch['start'] : batch['stop']] = projected
         assignments.flush()
@@ -217,7 +219,7 @@ def _apply_curation(source, session, output_dir, batch_size):
                     batch['spike_clusters.npy'], session.events, batch
                 )
             else:
-                expected_batch = targets[np.searchsorted(keys, batch['spike_clusters.npy'])]
+                expected_batch = targets[lookup(batch['spike_clusters.npy'])]
             if not np.array_equal(actual[batch['start'] : batch['stop']], expected_batch):
                 raise ValueError('Curated output assignments failed semantic replay verification.')
         _write_json(
