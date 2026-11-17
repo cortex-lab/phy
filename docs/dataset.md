@@ -68,6 +68,62 @@ Relative paths are resolved from the dataset directory. Prefer forward slashes,
 raw strings, or `pathlib` paths for Windows paths so that backslashes are not
 interpreted as Python escapes.
 
+## SpikeInterface recordings
+
+With [the phylib source installation](installation.md#read-a-spikeinterface-recording),
+`dat_path` can point to a single-segment recording's provenance JSON:
+
+```python
+dat_path = 'source/recording.json'  # recording.dump_to_json(...)
+n_channels_dat = 384
+sample_rate = 30000.0
+dtype = 'float32'
+offset = 0
+```
+
+A saved `.zarr` recording directory from `recording.save(format='zarr')` is
+another supported input. Sorting analyzers, arbitrary saved directories, multiple
+recordings, and multi-segment recordings are not supported by this reader.
+
+Set the sample rate, channel count, and dtype to match the **output recording**.
+The recording and sorting must use the same sample clock. `channel_map.npy`
+selects column positions in that output; SpikeInterface channel identifiers do
+not automatically remap an existing sorting export.
+
+The JSON path is relative to `params.py`; source paths saved relative to the JSON
+resolve from the JSON's directory. Provenance is not a self-contained export:
+its source data and any dependencies must remain accessible. The reader computes
+preprocessing lazily, without exporting the full recording. Remote source access
+belongs in the recording's provenance; `dat_path` itself is a local path.
+
+Returned samples already include SpikeInterface preprocessing and are unscaled,
+in the recording's dtype. Template GUI adds its existing 150 Hz high-pass filter
+by default. Use **Alt+R** to select `raw` if you do not want that additional
+filter. This selects the recording's output, not the original acquisition data;
+trace displays still perform their normal baseline centering. Standalone Trace
+GUI does not apply the Template GUI's high-pass filter.
+
+### Background navigation prefetch
+
+With phylib source containing [phylib #69](https://github.com/cortex-lab/phylib/pull/69),
+TraceView and TraceImageView offer **Background prefetch** in their view menu.
+It is off by default and is not saved between GUI sessions. Enabling it permits
+worker-thread reads of that recording; the backend must allow access from that
+thread. Readers without the API omit the action; other readers may ignore hints.
+
+Small left/right steps and Alt+wheel navigation prepare one block roughly half a
+second beyond the displayed window. Ordinary waveform extraction, selection
+refreshes, and filter/redraw operations do not generate hints. A jump, direction
+change, or navigation in another view replaces the old lookahead. Disabling,
+hiding, or closing its owning view withdraws the hint without closing the shared
+recording. Closing an inactive view does not cancel another view's lookahead.
+
+Each hint requests only one block, then stops; there is no inactivity timer.
+A running backend call cannot be interrupted. Initial loads and jumps can still
+block while data is computed, and demand can wait for one active prefetch.
+The half-second horizon targets the reader's default block duration; custom
+programmatic block sizes receive best-effort lookahead.
+
 ## Core arrays
 
 These files form the smallest useful Template GUI dataset:

@@ -206,7 +206,12 @@ def test_linux_comparison_preserves_baseline(monkeypatch, tmp_path, workspace_ru
     assert configs['baseline'] == {}
     assert configs['software'] == {'LIBGL_ALWAYS_SOFTWARE': 'true'}
     assert configs['xcb-software'] == {'LIBGL_ALWAYS_SOFTWARE': 'true', 'QT_QPA_PLATFORM': 'xcb'}
-    assert len(workspace_runner) == 4
+    assert configs['xcb-glx'] == {
+        'QT_QPA_PLATFORM': 'xcb',
+        'QT_XCB_GL_INTEGRATION': 'xcb_glx',
+        'PYOPENGL_PLATFORM': 'glx',
+    }
+    assert len(workspace_runner) == 5
 
 
 def test_metrics_control_preserves_requested_coverage(tmp_path, workspace_runner):
@@ -725,6 +730,117 @@ def test_real_gl_controlled_faults(tmp_path, control, mode, expected, classifica
                 hashlib.sha256((tmp_path / event['path']).read_bytes()).hexdigest()
                 == event['sha256']
             )
+
+
+@pytest.mark.skipif(
+    os.environ.get('PHY_DIAGNOSTIC_GL_TESTS') != '1'
+    or os.environ.get('QT_QPA_PLATFORM') in ('offscreen', 'minimal'),
+    reason='Opt-in validation against a real graphical session',
+)
+@pytest.mark.parametrize('suppress_redraw', [False, True])
+@pytest.mark.parametrize('capture_images', [False, True])
+def test_scene_requires_selection_redraw_without_capture_request(
+    tmp_path,
+    suppress_redraw,
+    capture_images,
+):
+    helper = Path(__file__).with_name('_graphics_controls.py')
+    if suppress_redraw:
+        control = 'scene-redraw' if capture_images else 'scene-redraw-metrics'
+        command = [sys.executable, str(helper), str(SCRIPT), control, 'observe', str(tmp_path)]
+    else:
+        command = [sys.executable, str(SCRIPT), '--_probe', 'scene']
+        if capture_images:
+            command += ['--_artifacts', str(tmp_path)]
+    result, log = diagnostic.run_process(command, os.environ.copy(), 20)
+    if suppress_redraw:
+        assert result['status'] == 'FAIL', log[-4000:]
+        assert 'redraw-suppressed' in log
+        stage = (
+            'scene framebuffer capture' if capture_images else 'selection-triggered scene repaint'
+        )
+        assert 'Timed out waiting for ' + stage in result['details']['reason']
+    else:
+        assert result['status'] == 'PASS', log[-4000:]
+        if not capture_images:
+            assert result['details']['selections'] == [[0], [2]]
+            return
+        selections = [
+            e
+            for e in result['events']
+            if e['event'] == 'scene_capture' and e.get('stage') in ('selected-0', 'clicked-2')
+        ]
+        assert len(selections) == 4
+        assert all(e['redraw_source'] == 'selection' for e in selections)
+        for view in ('waveform', 'correlogram'):
+            frames = [e for e in selections if e['view'] == view]
+            assert [e['selected_clusters'] for e in frames] == [[0], [2]]
+            assert frames[0]['sha256'] != frames[1]['sha256']
+
+
+@pytest.mark.skipif(
+    os.environ.get('PHY_DIAGNOSTIC_GL_TESTS') != '1'
+    or os.environ.get('QT_QPA_PLATFORM') in ('offscreen', 'minimal'),
+    reason='Opt-in validation against a real graphical session',
+)
+@pytest.mark.parametrize('fail_scene', [False, True])
+def test_scene_destroys_native_windows_before_child_returns(tmp_path, fail_scene):
+    code = f"""import importlib.util
+from PyQt5 import sip
+from PyQt5.QtWidgets import QApplication
+spec = importlib.util.spec_from_file_location('kit', {str(SCRIPT)!r})
+kit = importlib.util.module_from_spec(spec); spec.loader.exec_module(kit)
+canvases = []
+original_watch, original_emit = kit.watch_surface, kit.emit
+def watch(canvas, label):
+    canvases.append(canvas)
+    original_watch(canvas, label)
+def emit(event, **fields):
+    original_emit(event, **fields)
+    if {fail_scene!r} and event == 'stage' and fields.get('stage') == 'scene-qt-table-click':
+        raise RuntimeError('injected scene failure')
+kit.watch_surface, kit.emit = watch, emit
+status = kit.main(['--_probe', 'scene', '--_artifacts', {str(tmp_path)!r}])
+assert status == {1 if fail_scene else 0}
+assert len(canvases) == 2
+assert QApplication.instance() is not None
+assert all(sip.isdeleted(canvas) for canvas in canvases), 'native canvases survived cleanup'
+assert all(sip.isdeleted(canvas.diagnostic_main_window) for canvas in canvases)
+print('native scene windows destroyed before child returns', flush=True)
+"""
+    result, log = diagnostic.run_process([sys.executable, '-c', code], os.environ.copy(), 20)
+    assert result['returncode'] == 0, log[-4000:]
+    assert 'native scene windows destroyed before child returns' in log
+    assert result['details']['status'] == ('FAIL' if fail_scene else 'PASS')
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith('linux')
+    or os.environ.get('PHY_DIAGNOSTIC_GL_TESTS') != '1'
+    or os.environ.get('QT_QPA_PLATFORM') in ('offscreen', 'minimal'),
+    reason='Opt-in Linux desktop GLX/EGL comparison',
+)
+@pytest.mark.parametrize('binding', ['egl', 'glx'])
+def test_xcb_glx_requires_matching_pyopengl_binding(binding):
+    env = dict(
+        os.environ,
+        QT_QPA_PLATFORM='xcb',
+        QT_XCB_GL_INTEGRATION='xcb_glx',
+        PYOPENGL_PLATFORM=binding,
+    )
+    result, log = diagnostic.run_process(
+        [sys.executable, str(SCRIPT), '--_probe', 'phy'],
+        env,
+        20,
+    )
+    if binding == 'glx':
+        assert result['status'] == 'PASS', log[-4000:]
+    else:
+        assert result['status'] == 'FAIL', log[-4000:]
+        assert 'Attempt to retrieve context when no valid context' in log
+        assert 'candidate workaround' in log
+        frames = [e for e in result['events'] if e['event'] == 'frame']
+        assert frames and frames[0]['surface']['context_valid']
 
 
 def test_capture_encoding_time_is_not_a_quiet_dispatch_interval():

@@ -6,6 +6,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from pathlib import Path
 
 from phylib.io.traces import get_ephys_reader
 from phylib.utils import Bunch, connect
@@ -14,7 +15,7 @@ from phy.apps.template import get_template_params
 from phy.cluster.views.trace import TraceView, select_traces
 from phy.gui import GUI, create_app, run_app
 
-from .._utils import _close_trace_reader
+from .._utils import _close_trace_reader, _TraceNavigationPrefetch
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,8 @@ def create_trace_gui(obj, **kwargs):
     ----------
 
     obj : str or Path
-        Path to the raw data file.
+        Path to raw data or params.py. SpikeInterface provenance JSON and saved Zarr
+        recordings require phylib source with the SpikeInterface extra installed.
     sample_rate : float
         The data sampling rate, in Hz.
     n_channels_dat : int
@@ -45,25 +47,34 @@ def create_trace_gui(obj, **kwargs):
 
     gui_name = 'TraceGUI'
 
-    # Support passing a params.py file.
-    if str(obj).endswith('.py'):
+    # Preserve the input label while resolving all parts of a params.py recording.
+    obj = Path(obj).resolve()
+    source = obj
+    if obj.suffix == '.py':
         params = get_template_params(str(obj))
-        return create_trace_gui(next(iter(params.pop('dat_path'))), **params)
+        source = params.pop('dat_path')
+        kwargs = params
+        if not source:
+            raise ValueError('The params.py file does not specify a raw recording.')
 
     kwargs = {
         k: v
         for k, v in kwargs.items()
         if k in ('sample_rate', 'n_channels_dat', 'dtype', 'offset')
     }
-    traces = get_ephys_reader(obj, **kwargs)
+    traces = get_ephys_reader(source, **kwargs)
+    if traces is None:
+        raise ValueError(f'Cannot open the raw recording specified by {obj}.')
 
     create_app()
-    gui = GUI(name=gui_name, subtitle=obj.resolve(), enable_threading=False)
+    gui = GUI(name=gui_name, subtitle=str(obj), enable_threading=False)
     gui._trace_reader = traces
+    gui._trace_prefetch = prefetch = _TraceNavigationPrefetch(traces)
     gui.set_default_actions()
 
     @connect(sender=gui)
-    def on_close(sender):
+    def on_closed(sender):
+        prefetch.close()
         _close_trace_reader(traces)
 
     def _get_traces(interval):
@@ -78,6 +89,7 @@ def create_trace_gui(obj, **kwargs):
         duration=traces.duration,
         enable_threading=False,
     )
+    prefetch.register(view)
     view.attach(gui)
 
     return gui
