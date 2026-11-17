@@ -125,7 +125,14 @@ behavior they verify rather than listed separately.
 
 ### Added
 
-- **Show parents** opens an isolated, read-only comparison of a merged unit's
+- **Restore parents in Merge Mode** restores an older merged unit's exact
+  immediate parents as real clusters without reversing intervening unrelated
+  edits. It preserves nested ancestry across save/reopen, uses fresh IDs with
+  historical parent labels, and supports undo/redo and full-source bounded
+  replay. **Exclude current row** keeps a parent out of the pending merge;
+  read-only parent inspection remains available separately.
+
+- **Inspect parents (read-only)** opens an isolated comparison of a merged unit's
   exact immediate parents, with consistent colors across available plots.
   Ordinary merges record durable lineage; bounded merges use the saved journal.
   Missing historical lineage is reported explicitly. An integrated dark workspace

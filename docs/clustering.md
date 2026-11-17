@@ -226,9 +226,49 @@ cluster_id	neurontype
 
 You can undo and redo clustering actions (merge, split, move, label) with the **Control+Z** and **Control+Y** keyboard shortcuts.
 
+## Restore a merged unit's parents
+
+Select a merged unit and choose **Restore parents in Merge Mode** from its
+Cluster View context menu or the View menu. Phy restores its exact immediate
+parents as real clusters and stages them in the existing Merge workspace. This
+works after intervening curation actions and after saving and reopening the same
+dataset. Later unrelated merges, labels and review decisions are preserved.
+
+Restored clusters receive fresh IDs. The Merge table's parent-origin column
+shows their historical IDs, and their comparison colors are retained where known.
+New memberships start unclassified; the merged unit's quality or custom labels
+are not silently copied to every parent. Historical SLAY decisions remain
+recorded and show that their accepted result was subsequently restored.
+
+Compare the parents, add further Similarity candidates, and press `G` to merge
+the chosen combination. To leave a parent separate, click its Merge row and
+use **Exclude current row**. Right-click still transfers a row to Similarity and
+leaves it selected; `G` includes selected Similarity rows as well as staged rows.
+The Merge status shows the total that will be merged.
+
+Restoration is one new undoable action. Undo reverses the restoration without
+reversing earlier unrelated work; Redo restores its Merge workspace. Pressing
+`V`, cancelling, or closing Merge View leaves the restored clusters intact and
+returns to Normal mode. Normal-mode splitting and quality/label tools remain
+available there. Saving stores the actual curation; transient Merge staging is
+not automatically reopened.
+
+Exact recorded ancestry is required. Earlier ordinary merges without lineage,
+changed or corrupt partitions, and bounded parents without retained evidence
+are unavailable with an explanation. Nested merges restore one level at a time;
+reachable ancestry is retained so a restored composite parent can be revisited.
+
+Bounded restoration records an exact operation for full-source replay, including
+parents formed by earlier source-amplitude splits. It never substitutes sampled
+spike membership for full-recording membership. Save/reopen within the same
+bounded package retains this history. After full replay and a fresh preparation,
+restored live children remain available, but historical merges from before that
+preparation cannot be restored: the new package has no recoverable parent anchor. Older
+bounded clients cannot read journals containing the new restoration operation.
+
 ## Inspect a merged unit's parents
 
-Right-click a merged unit in Cluster View and choose **Show parents**. A dark,
+Right-click a merged unit in Cluster View and choose **Inspect parents (read-only)**. A dark,
 read-only workspace inside the main window compares its immediate parents.
 A parent table uses white IDs and counts with colored swatches; the same colors
 identify each parent in the correlogram, waveform, amplitude, and feature plots.

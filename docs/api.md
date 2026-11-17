@@ -7271,6 +7271,19 @@ All changes are lost.
 
 ---
 
+#### Clustering.restore_partition
+
+
+**`Clustering.restore_partition(self, target, groups, *, new_cluster_ids=None)`**
+
+Restore an exact whole-unit partition into fresh, undoable clusters.
+
+``groups`` maps historical parent IDs to sorted spike rows. Historical
+IDs identify provenance only; they are never revived as live IDs.
+Validation and assignment touch only this unit's rows.
+
+---
+
 #### Clustering.spikes_in_clusters
 
 
@@ -10386,6 +10399,18 @@ Reset the highlighted review and reopen it when actionable.
 **`Supervisor.reset_wizard(self, callback=None)`**
 
 Reset the wizard.
+
+---
+
+#### Supervisor.restore_parents
+
+
+**`Supervisor.restore_parents(self, target=None, *, groups=None, colors=None, new_cluster_ids=None)`**
+
+Restore exact immediate parents as real units in the Merge workspace.
+
+This is a new curation action; unrelated later edits are preserved.
+Explicit groups and IDs support validated bounded semantic commands.
 
 ---
 
