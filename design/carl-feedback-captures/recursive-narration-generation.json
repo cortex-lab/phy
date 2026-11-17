@@ -1,0 +1,544 @@
+{
+  "model": "kyutai/tts-1.6b-en_fr",
+  "voice": "unmute-prod-website/fabieng-enhanced-v2.wav",
+  "batch_size": 4,
+  "seed": "42+batch_start",
+  "primer": "Bonjour.",
+  "primer_extra_padding_frames": 4,
+  "sample_rate": 24000,
+  "frame_rate": 12.5,
+  "elapsed_seconds": 10.725781819783151,
+  "sentences": [
+    {
+      "number": 1,
+      "text": "We begin by merging two clusters.",
+      "file": "01-sentence.wav",
+      "with_bonjour": "01-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.45,
+      "raw_duration_seconds": 3.12,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "We",
+          11
+        ],
+        [
+          "begin",
+          15
+        ],
+        [
+          "by",
+          18
+        ],
+        [
+          "merging",
+          21
+        ],
+        [
+          "two",
+          25
+        ],
+        [
+          "clusters.",
+          30
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 2,
+      "text": "Next, merge that result with a third cluster.",
+      "file": "02-sentence.wav",
+      "with_bonjour": "02-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 3.33,
+      "raw_duration_seconds": 4.0,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Next,",
+          11
+        ],
+        [
+          "merge",
+          18
+        ],
+        [
+          "that",
+          22
+        ],
+        [
+          "result",
+          27
+        ],
+        [
+          "with",
+          32
+        ],
+        [
+          "a",
+          36
+        ],
+        [
+          "third",
+          39
+        ],
+        [
+          "cluster.",
+          42
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 3,
+      "text": "Then make an unrelated merge, and mark it as multi-unit activity.",
+      "file": "03-sentence.wav",
+      "with_bonjour": "03-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 4.69,
+      "raw_duration_seconds": 5.36,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Then",
+          11
+        ],
+        [
+          "make",
+          16
+        ],
+        [
+          "an",
+          21
+        ],
+        [
+          "unrelated",
+          24
+        ],
+        [
+          "merge,",
+          30
+        ],
+        [
+          "and",
+          39
+        ],
+        [
+          "mark",
+          41
+        ],
+        [
+          "it",
+          44
+        ],
+        [
+          "as",
+          46
+        ],
+        [
+          "multi-unit",
+          49
+        ],
+        [
+          "activity.",
+          58
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 4,
+      "text": "Return to the older, nested merge.",
+      "file": "04-sentence.wav",
+      "with_bonjour": "04-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.69,
+      "raw_duration_seconds": 3.36,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Return",
+          11
+        ],
+        [
+          "to",
+          18
+        ],
+        [
+          "the",
+          21
+        ],
+        [
+          "older,",
+          23
+        ],
+        [
+          "nested",
+          30
+        ],
+        [
+          "merge.",
+          36
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 5,
+      "text": "One restore brings back all three original clusters.",
+      "file": "05-sentence.wav",
+      "with_bonjour": "05-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 3.73,
+      "raw_duration_seconds": 4.4,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "One",
+          11
+        ],
+        [
+          "restore",
+          14
+        ],
+        [
+          "brings",
+          20
+        ],
+        [
+          "back",
+          25
+        ],
+        [
+          "all",
+          30
+        ],
+        [
+          "three",
+          35
+        ],
+        [
+          "original",
+          38
+        ],
+        [
+          "clusters.",
+          46
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 6,
+      "text": "Undo and redo affect the whole restoration.",
+      "file": "06-sentence.wav",
+      "with_bonjour": "06-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.61,
+      "raw_duration_seconds": 3.28,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Undo",
+          11
+        ],
+        [
+          "and",
+          16
+        ],
+        [
+          "redo",
+          18
+        ],
+        [
+          "affect",
+          21
+        ],
+        [
+          "the",
+          27
+        ],
+        [
+          "whole",
+          30
+        ],
+        [
+          "restoration.",
+          32
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 7,
+      "text": "Leaving Merge Mode keeps them separate.",
+      "file": "07-sentence.wav",
+      "with_bonjour": "07-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.61,
+      "raw_duration_seconds": 3.28,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Leaving",
+          11
+        ],
+        [
+          "Merge",
+          16
+        ],
+        [
+          "Mode",
+          21
+        ],
+        [
+          "keeps",
+          24
+        ],
+        [
+          "them",
+          27
+        ],
+        [
+          "separate.",
+          32
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 8,
+      "text": "Exclude the third cluster.",
+      "file": "08-sentence.wav",
+      "with_bonjour": "08-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 1.81,
+      "raw_duration_seconds": 2.48,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Exclude",
+          11
+        ],
+        [
+          "the",
+          18
+        ],
+        [
+          "third",
+          20
+        ],
+        [
+          "cluster.",
+          23
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 9,
+      "text": "Remerge the pair: SLAY turns green again.",
+      "file": "09-sentence.wav",
+      "with_bonjour": "09-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.69,
+      "raw_duration_seconds": 3.36,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Remerge",
+          11
+        ],
+        [
+          "the",
+          16
+        ],
+        [
+          "pair",
+          19
+        ],
+        [
+          "SLAY",
+          21
+        ],
+        [
+          "turns",
+          28
+        ],
+        [
+          "green",
+          31
+        ],
+        [
+          "again.",
+          35
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 8
+    },
+    {
+      "number": 10,
+      "text": "Undo and redo update the status.",
+      "file": "10-sentence.wav",
+      "with_bonjour": "10-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.29,
+      "raw_duration_seconds": 2.96,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Undo",
+          11
+        ],
+        [
+          "and",
+          16
+        ],
+        [
+          "redo",
+          18
+        ],
+        [
+          "update",
+          22
+        ],
+        [
+          "the",
+          27
+        ],
+        [
+          "status.",
+          30
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 8
+    },
+    {
+      "number": 11,
+      "text": "Save and reopen: the result and later edits are preserved.",
+      "file": "11-sentence.wav",
+      "with_bonjour": "11-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 3.01,
+      "raw_duration_seconds": 3.68,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Save",
+          11
+        ],
+        [
+          "and",
+          14
+        ],
+        [
+          "reopen",
+          17
+        ],
+        [
+          "the",
+          21
+        ],
+        [
+          "result",
+          23
+        ],
+        [
+          "and",
+          26
+        ],
+        [
+          "later",
+          29
+        ],
+        [
+          "edits",
+          32
+        ],
+        [
+          "are",
+          35
+        ],
+        [
+          "preserved.",
+          38
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 8
+    }
+  ],
+  "model_revision": "f65439609986c392cb12df63938abcc550c3fb15",
+  "voice_revision": "323332d33f997de8394f24a193e1a76df720e01a",
+  "model_license": "CC-BY-4.0",
+  "voice_license": "CC0",
+  "sentence_audio_sha256": {
+    "01-sentence.wav": "ea91938ac2464bca1590d2303374e025d501e8bd96201ee7572da7f31983af7d",
+    "01-with-bonjour.wav": "271b48d1d659364149206872622b43521de9dd8bd4a0dac3bc3aec7d48d91372",
+    "02-sentence.wav": "5a4fa2495cec77f5981c507e5530009d7d3bd01e81d5290305a2a304f71e8d9c",
+    "02-with-bonjour.wav": "84c1d12148d87a3cca572a3a8f390297dc8a3d20800928f0476156b0a37298b5",
+    "03-sentence.wav": "f391ffcfc4678c0e510e2356ccc14dc28d34f087cda0681822d87c7e7dee662b",
+    "03-with-bonjour.wav": "7e73929a503e046894d1d31f5ca4916a98e7e73a70d112524578bc0803003255",
+    "04-sentence.wav": "423cfe93e6df5af58135c42c1601f59d51de5540c98f844e106aa91765a6e187",
+    "04-with-bonjour.wav": "5906d2ced07737c24cf1c638500df9387b8b4b04804ccd3374811f1fe532025d",
+    "05-sentence.wav": "a15b3739cb3defd8d66ea79c9465e404e55027c6a2dc0ab76f78bef67d6445da",
+    "05-with-bonjour.wav": "8c30a34de824410f3b71f58411f904186619fad3db349f27614a0f569aee7420",
+    "06-sentence.wav": "b19c52957501b4a9def7083429ba82b40af12c029d58a2ee6a243ee4ac63f7e4",
+    "06-with-bonjour.wav": "b9422d4513395ff4fda9c132db4555542d625157e019b61b8484302509277eeb",
+    "07-sentence.wav": "8d63f41785a69c137aa9a03d879f32c95796db966a2d0c3030b6ffa71de4e231",
+    "07-with-bonjour.wav": "424a694f75cb447ed8dd4105ff70b33de74c57f94775e477a95d90d113054c7c",
+    "08-sentence.wav": "d8ffed185ea5704b974a40da5530062ae0845e4fa93ce28456ef8a9b1f9c0bcd",
+    "08-with-bonjour.wav": "a3fdf5b2f8db5d058b9ea975970e870a33ff15f1fee84fc9c0ac98526a883173",
+    "09-sentence.wav": "7be136f7b2c896f4152aca8fe04c41e5526f4f53348ac84e209623eeeba044cf",
+    "09-with-bonjour.wav": "83cc17f53fabe8359a73c3ae932ec3100b5bbe3e7d1182158e9e7024bb6ba4dc",
+    "10-sentence.wav": "a59e891d7275017c62ccce15278c5e3984e1b701981341b41e615475f78c69f3",
+    "10-with-bonjour.wav": "5dea6ec5256ab31b41afcf04268482b87ba1e99658955fed3dbb7913ddb2edd6",
+    "11-sentence.wav": "6ecedefa3243b84ab334667ce97ed337b81b03b0cc546b29f41dbba50c70805f",
+    "11-with-bonjour.wav": "75ef3e113084d2bc3db8bebf1c44188b80ab4f974b39bba8c7fd7e7b354d5038"
+  }
+}

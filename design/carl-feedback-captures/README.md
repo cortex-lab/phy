@@ -1,8 +1,136 @@
 # Carl feedback: rendered real-data validation
 
-## Editable parent restoration — current review
+## Recursive restoration and SLAY reassembly — current review
 
-[Play the narrated video on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
+[Play the narrated 58-second video on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
+The new walkthrough demonstrates Carl's nested-merge request on a copied real dataset:
+
+1. Merge source units **25 + 27 → 705**, then **705 + 22 → 706**.
+2. Make a later unrelated **0 + 1 → 707** merge and label **707 MUA**.
+3. Restore **706** once. All three original components appear together as live
+   units **708, 709, 710**, with **was 25, was 27, was 22** in the Parent column.
+   The intermediate **705** is not a staged component.
+4. Undo/redo reverses the entire restoration, preserving **707/MUA**. Leaving
+   Merge Mode keeps all three restored clusters live.
+5. Exclude **710**, then merge the original pair again into **711**. The SLAY
+   suggestion returns to green. Undo/redo returns it to white/green respectively.
+6. Save/reopen: **711**, separate **710**, later **707/MUA**, the historical review
+   and the green suggestion all remain correct.
+
+Restoration follows recorded merge topology and stops at genuine split boundaries.
+It validates the complete plan before mutation, including every retained evidence
+component in bounded mode. Corrupt known ancestry rejects the entire operation;
+unknown earlier ancestry remains opaque. Fresh IDs preserve unambiguous history;
+the Parent column carries historical identity, including legacy alias chains.
+The normal scrollable Merge workspace supports more than 16 restored components.
+The separate read-only comparison retains its existing immediate-parent behavior.
+
+New bounded restore events use **version 4**, with ordered historical leaf
+references authenticated to the journal prefix and source revision. Existing
+version-3 immediate-parent events keep their original meaning. SLAY reassembly
+uses exact ordinary memberships or conservative bounded membership-expression
+proof, without scanning full-source spikes during interactive refresh. Partial
+reassembly remains historical; extra membership is accepted-modified. Historical
+modified acceptance retains its recorded scope.
+
+Both [ordinary](recursive-ordinary-capture.json) and
+[bounded](recursive-bounded-capture.json) runs at `03377575` passed all **12
+checkpoints**, scientific membership assertions, one-action history checks,
+actual SLAY foreground-color checks, Undo/Redo, Save/reopen and unchanged-source
+hashes. The later split-scope SLAY proof (`857dc3ea`) and legacy ordinary identity
+alias handling (`c57abdaf`) have separate focused regressions; these scenarios
+are not claimed as additional actions in the recording.
+
+| Checkpoint | Ordinary | Bounded |
+| --- | --- | --- |
+| First result merged with a third source unit | [Open](recursive-ordinary-03-nested-merge.png) | [Open](recursive-bounded-03-nested-merge.png) |
+| All three original components restored once | [Open](recursive-ordinary-05-restored-parents.png) | [Open](recursive-bounded-05-restored-parents.png) |
+| Exact pair remerged, SLAY green again | [Open](recursive-ordinary-09-exact-remerge.png) | [Open](recursive-bounded-09-exact-remerge.png) |
+| Reopened result and green suggestion | [Open](recursive-ordinary-12-reopened.png) | [Open](recursive-bounded-12-reopened.png) |
+
+The [new full-source report](recursive-pipeline-report.md) independently checks
+**469,725,567 rows in each of two replays** (one/four workers), including an
+amplitude split followed by two nested merges, one recursive restore, exclusion,
+addition and remerge. All **45 metadata fields / 31,545 cells**, reviews, lineage,
+counts and cumulative provenance survive replay/reprepare. All 140 input files
+retain their hashes and stats. Reprepare remains below 2M rows / 512 MiB.
+[Exact scenario](recursive-pipeline-scenario.json) ·
+[Final checks](recursive-pipeline-final-checks.json) ·
+[Artifact provenance](recursive-pipeline-artifact-provenance.json).
+The scientific run is attributed to `03377575`; subsequent UI-only proof changes
+are explicitly hashed and AST-checked in its report. The converted fixture's
+clock/exposure assumptions remain unverified; this is engineering validation,
+not a claim about biological merge quality or acquisition timing.
+
+### Narrated media and reproduction
+
+The H.264/AAC recording remains 1920×1200 at 30 fps, with 1,738 video frames,
+a visible pointer, click rings, in-window keyboard cues and burned-in English
+subtitles. The keyboard cues sit above the subtitles. Labeled **REVIEW NOTE**
+panels are video annotations, not application UI. Original-speed source clips
+are retained; idle dwell and the reload wait are omitted with an explicit card.
+The [edit timeline](recursive-review.timeline.json) retains every checkpoint.
+This is settled X11 rendering evidence, not a latency or spontaneous-redraw test.
+
+Narration uses the previously reviewed Kyutai voice and sentence-by-sentence
+process. Eleven complete sentences retain their exact PCM samples before volume
+normalization: **no internal speech cuts or tempo changes**, with at least
+**0.51 seconds** of silence between sentences. The audio peak is **−2.0 dB**;
+black detection found no full-frame interval of at least 0.2 seconds at the
+specified threshold. Native context clicks use XTest; other inputs use Qt events.
+No capture window reaches the user's desktop.
+
+[Subtitles](recursive-narration.srt) ·
+[Audio placement](recursive-narration-alignment.json) ·
+[Generation parameters and input hashes](recursive-narration-generation.json) ·
+[Published video verification](recursive-review.json).
+
+Synthetic speech uses [Kyutai TTS](https://huggingface.co/kyutai/tts-1.6b-en_fr)
+(model weights CC BY 4.0, developed by Kyutai) and its published
+[voice preset](https://huggingface.co/kyutai/tts-voices/tree/main/unmute-prod-website)
+(CC0 for this voice, per the voice repository). Dependencies remain in a separate
+environment, without changing Phy's dependencies.
+
+To recreate the current postproduction from the archived capture and sentence WAVs:
+
+```bash
+uv run --no-sync python tools/caption_capture_video.py CAPTURE_DIRECTORY \
+  --review-cut --review-seconds 58 --output-name recursive-review.mp4
+python design/carl-feedback-captures/render-narrated-review.py \
+  --capture CAPTURE_DIRECTORY \
+  --approved-audio SENTENCE_AUDIO_DIRECTORY \
+  --output NEW_OUTPUT_DIRECTORY
+```
+
+The renderer needs FFmpeg, NumPy and soundfile. The capture directory contains
+`walkthrough.mp4`, `recursive-review.ass` and its `.timeline.json`. The audio
+directory contains `generation.json`, `01-with-bonjour.wav`, and
+`02-sentence.wav` through `11-sentence.wav`. Original media and logs remain in the
+local validation archive; generation metadata records the input hashes. Speech
+regeneration is a separate step and does not guarantee identical waveforms.
+The renderer requires a fresh output directory and accepts only complete sentences.
+
+### Local checks
+
+The core target passed **706 tests, 13 skipped**; the final application target
+passed **833 tests, 6 skipped**, both with normal exits. After the legacy alias
+followup, **147 ordinary GUI/lineage tests** passed. The final rollback-cache
+followup passed all **122 Supervisor tests**, including its new failure-path
+regression. Lint,
+formatting and published documentation checks pass.
+Validation uses **PyQt5-sip 12.20.1**, proposed separately in
+[PR #1442](https://github.com/cortex-lab/phy/pull/1442); this feature branch's
+lockfile is unchanged. The Qt event-class guard covers the reported missing
+mouse-method exception, including generic/mismatched wrappers and repeated
+context-menu sequences. It does not establish the cause of every reported
+instability. CI is excluded.
+
+The sections below preserve superseded immediate-parent workflow evidence.
+
+## Historical immediate-parent restoration review
+
+[Earlier narrated immediate-parent video](https://github.com/user-attachments/assets/92be1237-6174-4269-bd6b-3bb27f6c0511).
+This section preserves the previous workflow; recursive restoration is documented above.
 This review demonstrates the workflow that global Undo and the former read-only
 parent view could not provide:
 
@@ -98,24 +226,9 @@ interval of at least 0.2 seconds at the documented detection threshold.
 [Generation parameters and input hashes](restore-narration-generation.json) ·
 [Published artifact verification](restore-review.json).
 
-To reassemble the review from the archived raw capture and approved audio:
-
-```bash
-python design/carl-feedback-captures/render-narrated-review.py \
-  --capture CAPTURE_DIRECTORY \
-  --approved-audio APPROVED_AUDIO_DIRECTORY \
-  --output NEW_OUTPUT_DIRECTORY
-```
-
-The renderer needs FFmpeg, NumPy and soundfile. The capture directory contains
-`walkthrough.mp4`, `review-release-final.ass` and its `.timeline.json`; the approved
-audio directory contains `generation.json`, `01-with-bonjour.wav` and
-`02-sentence.wav` through `11-sentence.wav`. These original WAVs and raw capture
-remain in the local validation archive, rather than adding more media binaries
-to Git. The checked-in generation metadata records their hashes. Regenerating
-speech is a separate audition step and does not guarantee identical audio.
-The renderer refuses to overwrite an existing output directory. Its output was
-checked against the approved publication artifact before upload.
+The earlier immediate-parent renderer and recipe are preserved at
+[commit 1aab04a9](https://github.com/cortex-lab/phy/blob/1aab04a9dea015be28f86254ffa78641f8f40881/design/carl-feedback-captures/render-narrated-review.py).
+The current renderer above follows the new recursive workflow instead.
 
 The remaining sections preserve earlier evidence and superseded workflows.
 

@@ -1,0 +1,44 @@
+1
+00:00:00,370 --> 00:00:03,470
+Bonjour. We begin by merging two clusters.
+
+2
+00:00:10,020 --> 00:00:13,330
+Next, merge that result with a third cluster.
+
+3
+00:00:18,120 --> 00:00:22,790
+Then make an unrelated merge, and mark it as multi-unit
+activity.
+
+4
+00:00:26,120 --> 00:00:28,790
+Return to the older, nested merge.
+
+5
+00:00:29,320 --> 00:00:33,030
+One restore brings back all three original clusters.
+
+6
+00:00:33,620 --> 00:00:36,210
+Undo and redo affect the whole restoration.
+
+7
+00:00:37,020 --> 00:00:39,610
+Leaving Merge Mode keeps them separate.
+
+8
+00:00:40,220 --> 00:00:42,010
+Exclude the third cluster.
+
+9
+00:00:43,620 --> 00:00:46,290
+Remerge the pair: SLAY turns green again.
+
+10
+00:00:47,520 --> 00:00:49,790
+Undo and redo update the status.
+
+11
+00:00:54,120 --> 00:00:57,110
+Save and reopen: the result and later edits are preserved.

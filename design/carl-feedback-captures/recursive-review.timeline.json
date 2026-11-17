@@ -1,0 +1,668 @@
+{
+  "source": "LOCAL_UNCUT_RECURSIVE_WALKTHROUGH.mp4",
+  "output": "GITHUB_NATIVE_VIDEO_ATTACHMENT",
+  "source_fps": "30/1",
+  "source_duration_seconds": 71.566667,
+  "output_duration_seconds": 57.93333333333333,
+  "review_cut": true,
+  "timeline_note": "Original-speed source frames concatenated; idle dwell and reopen wait omitted. Not a latency benchmark.",
+  "settle_tail_seconds": 0.5046666666665908,
+  "items": [
+    {
+      "kind": "source",
+      "source_start_frame": 0,
+      "source_end_frame": 48,
+      "source_start": 0.0,
+      "source_end": 1.6,
+      "event_indices": [
+        0
+      ],
+      "output_start": 0.0,
+      "output_end": 1.6
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 63,
+      "source_end_frame": 111,
+      "source_start": 2.1,
+      "source_end": 3.7,
+      "event_indices": [
+        1
+      ],
+      "output_start": 1.6,
+      "output_end": 3.2
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 147,
+      "source_end_frame": 364,
+      "source_start": 4.9,
+      "source_end": 12.133333333333333,
+      "event_indices": [
+        2,
+        3,
+        4
+      ],
+      "output_start": 3.2,
+      "output_end": 10.433333333333334
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 381,
+      "source_end_frame": 429,
+      "source_start": 12.7,
+      "source_end": 14.3,
+      "event_indices": [
+        5
+      ],
+      "output_start": 10.433333333333334,
+      "output_end": 12.033333333333333
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 439,
+      "source_end_frame": 595,
+      "source_start": 14.633333333333333,
+      "source_end": 19.833333333333332,
+      "event_indices": [
+        6,
+        7
+      ],
+      "output_start": 12.033333333333333,
+      "output_end": 17.233333333333334
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 607,
+      "source_end_frame": 655,
+      "source_start": 20.233333333333334,
+      "source_end": 21.833333333333332,
+      "event_indices": [
+        8
+      ],
+      "output_start": 17.233333333333334,
+      "output_end": 18.833333333333336
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 662,
+      "source_end_frame": 726,
+      "source_start": 22.066666666666666,
+      "source_end": 24.2,
+      "event_indices": [
+        9
+      ],
+      "output_start": 18.833333333333336,
+      "output_end": 20.96666666666667
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 734,
+      "source_end_frame": 804,
+      "source_start": 24.466666666666665,
+      "source_end": 26.8,
+      "event_indices": [
+        10
+      ],
+      "output_start": 20.96666666666667,
+      "output_end": 23.3
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 813,
+      "source_end_frame": 951,
+      "source_start": 27.1,
+      "source_end": 31.7,
+      "event_indices": [
+        11,
+        12
+      ],
+      "output_start": 23.3,
+      "output_end": 27.9
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 964,
+      "source_end_frame": 1047,
+      "source_start": 32.13333333333333,
+      "source_end": 34.9,
+      "event_indices": [
+        13,
+        14
+      ],
+      "output_start": 27.9,
+      "output_end": 30.666666666666664
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1077,
+      "source_end_frame": 1205,
+      "source_start": 35.9,
+      "source_end": 40.166666666666664,
+      "event_indices": [
+        15
+      ],
+      "output_start": 30.666666666666664,
+      "output_end": 34.93333333333333
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1214,
+      "source_end_frame": 1278,
+      "source_start": 40.46666666666667,
+      "source_end": 42.6,
+      "event_indices": [
+        16
+      ],
+      "output_start": 34.93333333333333,
+      "output_end": 37.06666666666666
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1313,
+      "source_end_frame": 1347,
+      "source_start": 43.766666666666666,
+      "source_end": 44.9,
+      "event_indices": [
+        17
+      ],
+      "output_start": 37.06666666666666,
+      "output_end": 38.199999999999996
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1376,
+      "source_end_frame": 1410,
+      "source_start": 45.86666666666667,
+      "source_end": 47.0,
+      "event_indices": [
+        18
+      ],
+      "output_start": 38.199999999999996,
+      "output_end": 39.33333333333333
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1419,
+      "source_end_frame": 1718,
+      "source_start": 47.3,
+      "source_end": 57.266666666666666,
+      "event_indices": [
+        19,
+        20,
+        21,
+        22
+      ],
+      "output_start": 39.33333333333333,
+      "output_end": 49.3
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1729,
+      "source_end_frame": 1792,
+      "source_start": 57.63333333333333,
+      "source_end": 59.733333333333334,
+      "event_indices": [
+        23
+      ],
+      "output_start": 49.3,
+      "output_end": 51.4
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1826,
+      "source_end_frame": 1868,
+      "source_start": 60.86666666666667,
+      "source_end": 62.266666666666666,
+      "event_indices": [
+        24
+      ],
+      "output_start": 51.4,
+      "output_end": 52.8
+    },
+    {
+      "kind": "reload_card",
+      "source_frame": 1905,
+      "source_time": 63.5,
+      "duration_frames": 24,
+      "duration": 0.8,
+      "event_indices": [
+        25
+      ],
+      "label": "REOPENING SAVED SESSION \u2014 reload wait omitted",
+      "output_start": 52.8,
+      "output_end": 53.599999999999994
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 2014,
+      "source_end_frame": 2144,
+      "source_start": 67.13333333333334,
+      "source_end": 71.46666666666667,
+      "event_indices": [
+        26,
+        27,
+        28
+      ],
+      "output_start": 53.599999999999994,
+      "output_end": 57.93333333333333
+    }
+  ],
+  "omitted_source_ranges": [
+    {
+      "source_start": 1.6,
+      "source_end": 2.1,
+      "duration_seconds": 0.5,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 3.7,
+      "source_end": 4.9,
+      "duration_seconds": 1.2000000000000002,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 12.133333333333333,
+      "source_end": 12.7,
+      "duration_seconds": 0.5666666666666664,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 14.3,
+      "source_end": 14.633333333333333,
+      "duration_seconds": 0.33333333333333215,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 19.833333333333332,
+      "source_end": 20.233333333333334,
+      "duration_seconds": 0.40000000000000213,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 21.833333333333332,
+      "source_end": 22.066666666666666,
+      "duration_seconds": 0.23333333333333428,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 24.2,
+      "source_end": 24.466666666666665,
+      "duration_seconds": 0.2666666666666657,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 26.8,
+      "source_end": 27.1,
+      "duration_seconds": 0.3000000000000007,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 31.7,
+      "source_end": 32.13333333333333,
+      "duration_seconds": 0.43333333333333357,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 34.9,
+      "source_end": 35.9,
+      "duration_seconds": 1.0,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 40.166666666666664,
+      "source_end": 40.46666666666667,
+      "duration_seconds": 0.30000000000000426,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 42.6,
+      "source_end": 43.766666666666666,
+      "duration_seconds": 1.1666666666666643,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 44.9,
+      "source_end": 45.86666666666667,
+      "duration_seconds": 0.9666666666666686,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 47.0,
+      "source_end": 47.3,
+      "duration_seconds": 0.29999999999999716,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 57.266666666666666,
+      "source_end": 57.63333333333333,
+      "duration_seconds": 0.36666666666666714,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 59.733333333333334,
+      "source_end": 60.86666666666667,
+      "duration_seconds": 1.1333333333333329,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 62.266666666666666,
+      "source_end": 63.5,
+      "duration_seconds": 1.2333333333333343,
+      "reason": "reopen wait replaced by reload card"
+    },
+    {
+      "source_start": 64.3,
+      "source_end": 67.13333333333334,
+      "duration_seconds": 2.833333333333343,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 71.46666666666667,
+      "source_end": 71.566667,
+      "duration_seconds": 0.10000033333332681,
+      "reason": "trailing settled dwell trimmed"
+    }
+  ],
+  "events": [
+    {
+      "index": 0,
+      "label": "Left click: Cluster 25",
+      "source_seconds": 0.21,
+      "output_seconds": 0.21
+    },
+    {
+      "index": 1,
+      "label": "Ctrl + Left click: Cluster 27",
+      "source_seconds": 2.308,
+      "output_seconds": 1.8079999999999998
+    },
+    {
+      "index": 2,
+      "label": "Left click: P3 \u00b7 25, 27",
+      "source_seconds": 5.408,
+      "output_seconds": 3.708
+    },
+    {
+      "index": 3,
+      "label": "G: merge the first two source clusters",
+      "source_seconds": 7.034,
+      "output_seconds": 5.334
+    },
+    {
+      "index": 4,
+      "label": "Left click: Cluster 705",
+      "source_seconds": 10.742,
+      "output_seconds": 9.042000000000002
+    },
+    {
+      "index": 5,
+      "label": "Ctrl + Left click: Cluster 22",
+      "source_seconds": 12.913,
+      "output_seconds": 10.646333333333335
+    },
+    {
+      "index": 6,
+      "label": "G: merge the first result with one more source cluster",
+      "source_seconds": 14.826,
+      "output_seconds": 12.226
+    },
+    {
+      "index": 7,
+      "label": "Left click: Cluster 0",
+      "source_seconds": 18.438,
+      "output_seconds": 15.838
+    },
+    {
+      "index": 8,
+      "label": "Ctrl + Left click: Cluster 1",
+      "source_seconds": 20.439,
+      "output_seconds": 17.439
+    },
+    {
+      "index": 9,
+      "label": "G: make an unrelated later merge",
+      "source_seconds": 22.264,
+      "output_seconds": 19.03066666666667
+    },
+    {
+      "index": 10,
+      "label": "Alt + M: label the unrelated unit MUA",
+      "source_seconds": 24.662,
+      "output_seconds": 21.162000000000003
+    },
+    {
+      "index": 11,
+      "label": "Left click: Cluster 707",
+      "source_seconds": 27.315,
+      "output_seconds": 23.515
+    },
+    {
+      "index": 12,
+      "label": "Left click: Cluster 706",
+      "source_seconds": 30.304,
+      "output_seconds": 26.503999999999998
+    },
+    {
+      "index": 13,
+      "label": "Right click: older nested merge context menu",
+      "source_seconds": 32.327,
+      "output_seconds": 28.093666666666664
+    },
+    {
+      "index": 14,
+      "label": "Left click: Restore all merge components in Merge Mode",
+      "source_seconds": 33.508,
+      "output_seconds": 29.27466666666667
+    },
+    {
+      "index": 15,
+      "label": "Ctrl + Z: undo the whole recursive restoration",
+      "source_seconds": 38.297,
+      "output_seconds": 33.06366666666666
+    },
+    {
+      "index": 16,
+      "label": "Ctrl + Shift + Z: redo the whole recursive restoration",
+      "source_seconds": 40.655,
+      "output_seconds": 35.12166666666666
+    },
+    {
+      "index": 17,
+      "label": "V: leave Merge Mode; all three restored clusters stay live",
+      "source_seconds": 44.075,
+      "output_seconds": 37.375
+    },
+    {
+      "index": 18,
+      "label": "V: stage the restored components again",
+      "source_seconds": 46.173,
+      "output_seconds": 38.50633333333333
+    },
+    {
+      "index": 19,
+      "label": "Left click: Cluster 710",
+      "source_seconds": 47.515,
+      "output_seconds": 39.54833333333333
+    },
+    {
+      "index": 20,
+      "label": "Left click: Exclude the third source component",
+      "source_seconds": 49.004,
+      "output_seconds": 41.03733333333333
+    },
+    {
+      "index": 21,
+      "label": "G: remerge the exact original SLAY pair",
+      "source_seconds": 51.861,
+      "output_seconds": 43.89433333333333
+    },
+    {
+      "index": 22,
+      "label": "Ctrl + Z: undo the remerge; SLAY becomes white",
+      "source_seconds": 55.35,
+      "output_seconds": 47.38333333333333
+    },
+    {
+      "index": 23,
+      "label": "Ctrl + Shift + Z: redo the remerge; SLAY becomes green",
+      "source_seconds": 57.836,
+      "output_seconds": 49.50266666666666
+    },
+    {
+      "index": 24,
+      "label": "Ctrl + S: save the revised curation",
+      "source_seconds": 61.184,
+      "output_seconds": 51.71733333333333
+    },
+    {
+      "index": 25,
+      "label": "Reopen the saved working copy",
+      "source_seconds": 63.514,
+      "output_seconds": 52.8
+    },
+    {
+      "index": 26,
+      "label": "View menu: Inspect evidence window",
+      "source_seconds": 67.317,
+      "output_seconds": 53.78366666666665
+    },
+    {
+      "index": 27,
+      "label": "Type evidence window index, then Enter",
+      "source_seconds": 68.119,
+      "output_seconds": 54.585666666666654
+    },
+    {
+      "index": 28,
+      "label": "Enter: inspect evidence window 1",
+      "source_seconds": 68.896,
+      "output_seconds": 55.362666666666655
+    }
+  ],
+  "checkpoints": [
+    {
+      "name": "01-initial",
+      "source_seconds": 5.206,
+      "output_seconds": 3.5060000000000002,
+      "captured": true
+    },
+    {
+      "name": "02-first-merge",
+      "source_seconds": 10.539,
+      "output_seconds": 8.838999999999999,
+      "captured": true
+    },
+    {
+      "name": "03-nested-merge",
+      "source_seconds": 18.235,
+      "output_seconds": 15.635,
+      "captured": true
+    },
+    {
+      "name": "04-later-edits",
+      "source_seconds": 30.099,
+      "output_seconds": 26.299,
+      "captured": true
+    },
+    {
+      "name": "05-restored-parents",
+      "source_seconds": 38.295,
+      "output_seconds": 33.06166666666667,
+      "captured": true
+    },
+    {
+      "name": "06-restore-history",
+      "source_seconds": 44.074,
+      "output_seconds": 37.373999999999995,
+      "captured": true
+    },
+    {
+      "name": "07-parents-remain-live",
+      "source_seconds": 46.173,
+      "output_seconds": 38.50633333333333,
+      "captured": true
+    },
+    {
+      "name": "08-excluded-parent",
+      "source_seconds": 51.86,
+      "output_seconds": 43.89333333333333,
+      "captured": true
+    },
+    {
+      "name": "09-exact-remerge",
+      "source_seconds": 55.349,
+      "output_seconds": 47.38233333333333,
+      "captured": true
+    },
+    {
+      "name": "10-remerge-history",
+      "source_seconds": 61.183,
+      "output_seconds": 51.71633333333333,
+      "captured": true
+    },
+    {
+      "name": "11-revised-save",
+      "source_seconds": 63.514,
+      "output_seconds": 52.8,
+      "captured": true
+    },
+    {
+      "name": "12-reopened",
+      "source_seconds": 71.167,
+      "output_seconds": 57.633666666666656,
+      "captured": true
+    }
+  ],
+  "review_annotations": [
+    {
+      "checkpoint": "02-first-merge",
+      "text": "First merge: 25, 27 becomes 705",
+      "output_start_seconds": 6.438999999999998,
+      "output_end_seconds": 9.139,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "03-nested-merge",
+      "text": "Second merge: 705 plus 22 becomes 706",
+      "output_start_seconds": 13.235,
+      "output_end_seconds": 15.934999999999999,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "04-later-edits",
+      "text": "Later: merge 707, then mark MUA",
+      "output_start_seconds": 23.899,
+      "output_end_seconds": 26.599,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "05-restored-parents",
+      "text": "One restore: all three original clusters",
+      "output_start_seconds": 30.66166666666667,
+      "output_end_seconds": 33.36166666666667,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "08-excluded-parent",
+      "text": "Exclude restored 710; keep the original pair",
+      "output_start_seconds": 41.493333333333325,
+      "output_end_seconds": 44.19333333333333,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "09-exact-remerge",
+      "text": "Exact pair remerged: SLAY is green again",
+      "output_start_seconds": 44.98233333333332,
+      "output_end_seconds": 47.682333333333325,
+      "label": "review overlay; not part of application UI"
+    },
+    {
+      "checkpoint": "12-reopened",
+      "text": "Reopened: merge 711, separate 710, MUA 707",
+      "output_start_seconds": 55.23366666666665,
+      "output_end_seconds": 57.93333333333333,
+      "label": "review overlay; not part of application UI"
+    }
+  ]
+}

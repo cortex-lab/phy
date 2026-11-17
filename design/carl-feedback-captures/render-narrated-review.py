@@ -25,55 +25,44 @@ out = args.output.resolve()
 out.mkdir(parents=True, exist_ok=False)
 meta = json.loads((approved / 'generation.json').read_text())
 sr = meta['sample_rate']
-fr = meta['frame_rate']
 # (sentence, first word, end word, video start, video limit); word zero is Bonjour.
 plan = [
-    (1, 0, None, 0.35, 5.2),
-    (2, 1, None, 5.45, 7.7),
-    (3, 1, None, 11.15, 17.2),
-    (4, 1, None, 20.6, 27.9),
-    (5, 1, None, 28.2, 30.9),
-    (6, 1, None, 31.3, 35.1),
-    (7, 1, None, 35.4, 39.3),
-    (8, 1, None, 39.7, 43.05),
-    (9, 1, None, 43.6, 49.15),
-    (10, 1, None, 49.45, 52.7),
-    (11, 1, None, 53.1, 57.8),
+    (1, 0, None, 0.35, 8.9),
+    (2, 1, None, 10.0, 15.7),
+    (3, 1, None, 18.1, 25.9),
+    (4, 1, None, 26.1, 29.1),
+    (5, 1, None, 29.3, 33.4),
+    (6, 1, None, 33.6, 36.8),
+    (7, 1, None, 37.0, 40.0),
+    (8, 1, None, 40.2, 43.3),
+    (9, 1, None, 43.6, 47.2),
+    (10, 1, None, 47.5, 51.7),
+    (11, 1, None, 54.1, 57.8),
 ]
-output = np.zeros(round(57.9 * sr), dtype=np.float32)
+timeline_path = source / 'recursive-review.timeline.json'
+caption_path = source / 'recursive-review.ass'
+timeline = json.loads(timeline_path.read_text())
+video_duration = timeline['output_duration_seconds']
+
+output = np.zeros(round(video_duration * sr), dtype=np.float32)
 cues = []
 alignment = []
 last_end = 0
 for number, first, last, start, limit in plan:
     info = meta['sentences'][number - 1]
-    words = info['transcript']
-    shift = info['decoder_timestamp_shift_seconds']
-    last = len(words) if last is None else last
-    # Read approved audio, not a new synthesis. Preserve Bonjour only once.
+    assert first in (0, 1) and last is None, 'Only complete approved sentences are allowed.'
     keep_intro = number == 1
     path = approved / (info['with_bonjour'] if keep_intro else info['file'])
-    clip_audio, rate = sf.read(path)
-    assert rate == sr
-    cut = 0 if keep_intro else info['primer_cut_seconds']
-    a = 0 if first <= 1 else max(0, words[first][1] / fr - shift - cut - 0.04)
-    b = (
-        len(clip_audio) / sr
-        if last == len(words)
-        else max(a, words[last][1] / fr - shift - cut - 0.04)
-    )
-    clip = clip_audio[round(a * sr) : round(b * sr)].copy()
-    duration = len(clip) / sr
+    clip, rate = sf.read(path)
+    assert rate == sr and clip.ndim == 1
+    a, b = 0, len(clip) / sr
+    duration = b
     assert duration <= limit - start + 1 / sr, (number, duration, limit - start)
     assert start >= last_end, (number, start, last_end)
-    # Full approved sentences only: no internal cuts or fades.
-    if first > 1 or last < len(words):
-        fade = min(round(0.005 * sr), len(clip) // 2)
-        clip[:fade] *= np.linspace(0, 1, fade)
-        clip[-fade:] *= np.linspace(1, 0, fade)
     pos = round(start * sr)
     output[pos : pos + len(clip)] = clip
     last_end = start + duration
-    text = ' '.join(w[0] for w in words[first:last])
+    text = ('Bonjour. ' if keep_intro else '') + info['text']
     cues.append({'start': start + 0.02, 'end': start + duration, 'text': text})
     alignment.append(
         {
@@ -164,7 +153,7 @@ def srt_time(t):
     return f'{h:02}:{m:02}:{s:02},{c:03}'
 
 
-ass = (source / 'review-release-final.ass').read_text()
+ass = caption_path.read_text()
 # Only move the bottom-centred keycaps; nearby pointer Ctrl badges stay put.
 ass = ass.replace(',1060)', ',990)').replace(',1084)', ',1014)')
 style = 'Style: Narration,DejaVu Sans,32,&H00FFFFFF,&H00FFFFFF,&H00101010,&H60101010,0,0,0,0,100,100,0,0,3,2,0,2,80,80,30,1\n'
@@ -180,7 +169,6 @@ for n, cue in enumerate(cues, 1):
     )
 (out / 'preview.ass').write_text(ass)
 (out / 'narration.srt').write_text('\n'.join(srt))
-timeline = json.loads((source / 'review-release-final.timeline.json').read_text())
 items = timeline['items']
 filters = []
 labels = []
@@ -241,7 +229,7 @@ subprocess.run(
         '-b:a',
         '160k',
         '-t',
-        '57.9',
+        str(video_duration),
         '-movflags',
         '+faststart',
         str(out / 'narrated-preview.mp4'),

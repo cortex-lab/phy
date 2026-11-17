@@ -1,0 +1,428 @@
+{
+  "mode": "bounded",
+  "dataset": "FRESH_BOUNDED_ENGINEERING_PACKAGE",
+  "working_copy": "DISPOSABLE_ISOLATED_COPY",
+  "capture_scope": "Settled X11 pixels; native XTest context click and Qt input events; not a spontaneous-redraw test",
+  "revision": "03377575cadc4cfd010d1977b869375e5078d515",
+  "steps": [
+    {
+      "name": "01-initial",
+      "title": "Compare the two source clusters before the first merge",
+      "seconds": 5.206,
+      "selected": [
+        25,
+        27
+      ]
+    },
+    {
+      "name": "02-first-merge",
+      "title": "First merge accepted: the SLAY suggestion is green",
+      "seconds": 10.539,
+      "selected": [
+        705
+      ]
+    },
+    {
+      "name": "03-nested-merge",
+      "title": "Second merge contains the first merge plus a third source cluster",
+      "seconds": 18.235,
+      "selected": [
+        706
+      ],
+      "immediate_parents": [
+        705,
+        22
+      ],
+      "original_components": [
+        25,
+        27,
+        22
+      ]
+    },
+    {
+      "name": "04-later-edits",
+      "title": "A later unrelated merge and MUA label must remain intact",
+      "seconds": 30.099,
+      "selected": [
+        707
+      ]
+    },
+    {
+      "name": "05-restored-parents",
+      "title": "One restoration returns all three original components, not the intermediate merge",
+      "seconds": 38.295,
+      "selected": [
+        708,
+        709,
+        710
+      ],
+      "restored": {
+        "25": 708,
+        "27": 709,
+        "22": 710
+      },
+      "slay_status": "accepted_restored"
+    },
+    {
+      "name": "06-restore-history",
+      "title": "One Undo/Redo reverses the entire recursive restoration",
+      "seconds": 44.074,
+      "selected": [
+        708,
+        709,
+        710
+      ]
+    },
+    {
+      "name": "07-parents-remain-live",
+      "title": "The restored source components remain real live clusters",
+      "seconds": 46.173,
+      "selected": [
+        708,
+        709,
+        710
+      ]
+    },
+    {
+      "name": "08-excluded-parent",
+      "title": "Exclude the third component and keep the original suggested pair",
+      "seconds": 51.86,
+      "selected": [
+        708,
+        709
+      ]
+    },
+    {
+      "name": "09-exact-remerge",
+      "title": "The exact SLAY pair is merged again: its suggestion is green",
+      "seconds": 55.349,
+      "selected": [
+        711
+      ]
+    },
+    {
+      "name": "10-remerge-history",
+      "title": "Undo/Redo keeps the SLAY color synchronized with actual membership",
+      "seconds": 61.183,
+      "selected": [
+        711
+      ]
+    },
+    {
+      "name": "11-revised-save",
+      "title": "Saved: remerged pair, independent third component and later MUA edit",
+      "seconds": 63.514,
+      "selected": [
+        711
+      ]
+    },
+    {
+      "name": "12-reopened",
+      "title": "Reopened: green SLAY pair, independent third component and later edits",
+      "seconds": 71.167,
+      "selected": [
+        711
+      ]
+    }
+  ],
+  "input_events": [
+    {
+      "seconds": 0.21,
+      "label": "Left click: Cluster 25",
+      "point": [
+        28,
+        314
+      ],
+      "click_seconds": 0.847
+    },
+    {
+      "seconds": 2.308,
+      "label": "Ctrl + Left click: Cluster 27",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 2.945
+    },
+    {
+      "seconds": 5.408,
+      "label": "Left click: P3 \u00b7 25, 27",
+      "point": [
+        95,
+        903
+      ],
+      "click_seconds": 6.044
+    },
+    {
+      "seconds": 7.034,
+      "label": "G: merge the first two source clusters",
+      "key_seconds": 7.285,
+      "key_released_seconds": 8.591
+    },
+    {
+      "seconds": 10.742,
+      "label": "Left click: Cluster 705",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 11.375
+    },
+    {
+      "seconds": 12.913,
+      "label": "Ctrl + Left click: Cluster 22",
+      "point": [
+        28,
+        348
+      ],
+      "click_seconds": 13.546
+    },
+    {
+      "seconds": 14.826,
+      "label": "G: merge the first result with one more source cluster",
+      "key_seconds": 15.077,
+      "key_released_seconds": 16.287
+    },
+    {
+      "seconds": 18.438,
+      "label": "Left click: Cluster 0",
+      "point": [
+        28,
+        348
+      ],
+      "click_seconds": 19.067
+    },
+    {
+      "seconds": 20.439,
+      "label": "Ctrl + Left click: Cluster 1",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 21.074
+    },
+    {
+      "seconds": 22.264,
+      "label": "G: make an unrelated later merge",
+      "key_seconds": 22.515,
+      "key_released_seconds": 23.69
+    },
+    {
+      "seconds": 24.662,
+      "label": "Alt + M: label the unrelated unit MUA",
+      "key_seconds": 24.913,
+      "key_released_seconds": 26.303
+    },
+    {
+      "seconds": 27.315,
+      "label": "Left click: Cluster 707",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 27.945
+    },
+    {
+      "seconds": 30.304,
+      "label": "Left click: Cluster 706",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 30.935
+    },
+    {
+      "seconds": 32.327,
+      "label": "Right click: older nested merge context menu"
+    },
+    {
+      "seconds": 33.508,
+      "label": "Left click: Restore all merge components in Merge Mode",
+      "point": [
+        162,
+        191
+      ],
+      "click_seconds": 34.146
+    },
+    {
+      "seconds": 38.297,
+      "label": "Ctrl + Z: undo the whole recursive restoration",
+      "key_seconds": 38.547,
+      "key_released_seconds": 39.655
+    },
+    {
+      "seconds": 40.655,
+      "label": "Ctrl + Shift + Z: redo the whole recursive restoration",
+      "key_seconds": 40.906,
+      "key_released_seconds": 42.112
+    },
+    {
+      "seconds": 44.075,
+      "label": "V: leave Merge Mode; all three restored clusters stay live",
+      "key_seconds": 44.325,
+      "key_released_seconds": 44.409
+    },
+    {
+      "seconds": 46.173,
+      "label": "V: stage the restored components again",
+      "key_seconds": 46.423,
+      "key_released_seconds": 46.512
+    },
+    {
+      "seconds": 47.515,
+      "label": "Left click: Cluster 710",
+      "point": [
+        28,
+        451
+      ],
+      "click_seconds": 48.151
+    },
+    {
+      "seconds": 49.004,
+      "label": "Left click: Exclude the third source component",
+      "point": [
+        347,
+        318
+      ],
+      "click_seconds": 49.641
+    },
+    {
+      "seconds": 51.861,
+      "label": "G: remerge the exact original SLAY pair",
+      "key_seconds": 52.111,
+      "key_released_seconds": 53.378
+    },
+    {
+      "seconds": 55.35,
+      "label": "Ctrl + Z: undo the remerge; SLAY becomes white",
+      "key_seconds": 55.6,
+      "key_released_seconds": 56.769
+    },
+    {
+      "seconds": 57.836,
+      "label": "Ctrl + Shift + Z: redo the remerge; SLAY becomes green",
+      "key_seconds": 58.087,
+      "key_released_seconds": 59.224
+    },
+    {
+      "seconds": 61.184,
+      "label": "Ctrl + S: save the revised curation",
+      "key_seconds": 61.435,
+      "key_released_seconds": 61.764
+    },
+    {
+      "seconds": 63.514,
+      "label": "Reopen the saved working copy"
+    },
+    {
+      "seconds": 67.317,
+      "label": "View menu: Inspect evidence window"
+    },
+    {
+      "seconds": 68.119,
+      "label": "Type evidence window index, then Enter"
+    },
+    {
+      "seconds": 68.896,
+      "label": "Enter: inspect evidence window 1",
+      "key_seconds": 69.147,
+      "key_released_seconds": 69.149
+    }
+  ],
+  "recording_fps": 30,
+  "pointer": "Visible native X11 cursor, eased motion and click ring",
+  "label": "Real earlier Carl dataset; engineering validation",
+  "display_columns": [
+    "group",
+    "full_count",
+    "n_spikes",
+    "ch"
+  ],
+  "workflow": "recursive-restore-and-exact-slay-reassembly",
+  "propositions": [
+    {
+      "key": "merge:bc141c6e345f8137",
+      "unit_ids": [
+        25,
+        27
+      ]
+    }
+  ],
+  "first_parents": [
+    25,
+    27
+  ],
+  "evidence_window": 1,
+  "window_waveforms_by_unit": {
+    "25": 2,
+    "27": 2
+  },
+  "first_merged": 705,
+  "nested_merge": {
+    "immediate_inputs": [
+      705,
+      22
+    ],
+    "original_components": [
+      25,
+      27,
+      22
+    ],
+    "result": 706
+  },
+  "merged": 706,
+  "union": [
+    25,
+    27,
+    22
+  ],
+  "nested_merge_slay_status": "accepted",
+  "unrelated": {
+    "inputs": [
+      0,
+      1
+    ],
+    "result": 707,
+    "group": "mua"
+  },
+  "restored": {
+    "25": 708,
+    "27": 709,
+    "22": 710
+  },
+  "restored_live_units": true,
+  "recursive_restore_exact": true,
+  "one_restore_history_entry": true,
+  "restored_historical_ids_visible": true,
+  "restored_color_indices": {
+    "25": 0,
+    "27": 1,
+    "22": 2
+  },
+  "excluded_parent": {
+    "original": 22,
+    "live": 710
+  },
+  "chosen": [
+    708,
+    709
+  ],
+  "final_merged": 711,
+  "exact_remerge_slay_green": true,
+  "historical_review_preserved": true,
+  "later_edits_preserved": true,
+  "excluded_parent_stays_independent": true,
+  "remerge_undo_redo_status_correct": true,
+  "assigned_spikes": 20220,
+  "reopened_initial_evidence_window": 0,
+  "reopened_selected_evidence_window": 1,
+  "reopen_window_action": "Explicit Inspect evidence window dialog; not automatic restoration",
+  "reopened_parent_colors_preserved": true,
+  "reopened_lineage_correct": true,
+  "reopened_slay_green": true,
+  "historical_review_statuses": {
+    "merge:bc141c6e345f8137": "accepted"
+  },
+  "source_unchanged": true,
+  "success": true
+}

@@ -1,0 +1,76 @@
+{
+  "comment": "https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782",
+  "capture_revision": "03377575cadc4cfd010d1977b869375e5078d515",
+  "workflow": "recursive-restore-and-exact-slay-reassembly",
+  "width": 1920,
+  "height": 1200,
+  "recording_fps": 30,
+  "duration_seconds": 57.933333,
+  "frames": 1738,
+  "bytes": 4461850,
+  "sha256": "41a53e5eb948d465414ab0307bd87da9c507cf413b8bd9c626cdc9f92a06b403",
+  "visible_pointer": true,
+  "click_cues": true,
+  "in_window_translucent_keycaps": true,
+  "stage_annotations": "Labeled REVIEW NOTE overlays, not application UI",
+  "reload_wait_omitted": true,
+  "retained_interactions_original_speed": true,
+  "checkpoints": 12,
+  "both_real_data_state_checks_passed": true,
+  "source_unchanged": true,
+  "native_XTest_context_click": true,
+  "other_input": "Qt events; settled rendering, not spontaneous repaint or physical routing proof",
+  "english_subtitles_burned_in": true,
+  "keyboard_cues_above_subtitles": true,
+  "narration": {
+    "language": "English",
+    "synthetic": true,
+    "complete_sentences": 11,
+    "internal_speech_cuts": 0,
+    "sentence_tempo_changes": 0,
+    "minimum_silence_between_sentences_seconds": 0.51,
+    "sentence_pcm_verified_before_normalization": true,
+    "codec": "AAC",
+    "peak_db": -2.0,
+    "model": "kyutai/tts-1.6b-en_fr",
+    "voice": "unmute-prod-website/fabieng-enhanced-v2.wav"
+  },
+  "reproduction_matches_video_bytes": true,
+  "blackdetect": {
+    "minimum_duration_seconds": 0.2,
+    "pixel_threshold": 0.02,
+    "picture_threshold": 0.99,
+    "intervals_detected": 0
+  },
+  "local_dependency_override": "PyQt5-sip 12.20.1, separate PR1442",
+  "scientific_pipeline_revision": "03377575cadc4cfd010d1977b869375e5078d515",
+  "bounded_ui_proof_revision": "857dc3ea100f05973974e2215b111c9e3bc5ea67",
+  "ordinary_legacy_alias_revision": "c57abdaf5755faf9cb09610659adcd74605998f7",
+  "core_tests": {
+    "passed": 706,
+    "skipped": 13,
+    "exit_code": 0
+  },
+  "final_ordinary_integration_tests": {
+    "passed": 147,
+    "exit_code": 0
+  },
+  "independent_full_source_rows_per_output": 469725567,
+  "independent_full_source_outputs": 2,
+  "all_metadata_fields": 45,
+  "metadata_cells_per_output": 31545,
+  "app_tests": {
+    "passed": 833,
+    "skipped": 6,
+    "exit_code": 0
+  },
+  "final_supervisor_tests": {
+    "passed": 122,
+    "exit_code": 0
+  },
+  "rollback_display_cache_revision": "fece6a32df3aa274d81539c3be73dd51531e0464",
+  "asset": "https://github.com/user-attachments/assets/238920fb-2bda-4189-97aa-816c43c4b8be",
+  "inline_player_verified": true,
+  "uploaded_bytes_verified": true,
+  "uploaded_audio_stream_verified": true
+}
