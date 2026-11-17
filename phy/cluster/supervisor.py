@@ -1435,7 +1435,7 @@ class Supervisor:
         """Project durable propositions and current live-cluster validity for the view."""
         if self.merge_propositions is None:
             return []
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         catalog = self.merge_propositions.catalog
         live_ids = set(catalog.live_unit_ids)
         active_keys = set(self._active_merge_proposition_keys())
@@ -1524,26 +1524,28 @@ class Supervisor:
         for name, value in enabled.items():
             (self.select_actions.enable if value else self.select_actions.disable)(name)
 
-    def _refresh_propositions(self):
-        if (
-            self.merge_propositions is not None
-            and self.parent_lineage is not None
-            and not hasattr(self, 'session')
-        ):
+    def _project_proposition_state(self):
+        if self.merge_propositions is None:
+            return
+        kwargs = {}
+        if self.parent_lineage is not None and not hasattr(self, 'session'):
+            controlled, current = self.parent_lineage.proposition_retirements()
             retired = {
                 unit: value
                 for unit, value in self.merge_propositions.catalog.retired_units.items()
-                if value['operation'] != 'restore_parents'
+                if value['operation'] != 'restore_parents' and unit not in controlled
             }
-            retired.update(
-                {
-                    str(target): {'operation': 'restore_parents', 'replacements': children}
-                    for target, children in self.parent_lineage.restorations.items()
-                }
-            )
-            self.merge_propositions.project_live_ids(
-                self.clustering.cluster_ids, retired_units=retired
-            )
+            retired.update(current)
+            kwargs = {
+                'retired_units': retired,
+                'reassembled_results': self.parent_lineage.reassembled_results(
+                    self.merge_propositions.catalog
+                ),
+            }
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids, **kwargs)
+
+    def _refresh_propositions(self):
+        self._project_proposition_state()
         if self.merge_propositions_view is not None:
             self.merge_propositions_view.set_propositions(self._proposition_rows())
             active_keys = self._active_merge_proposition_keys()
@@ -2278,6 +2280,7 @@ class Supervisor:
                 dict(lineage.color_records),
                 dict(lineage.origins),
                 dict(lineage.restorations),
+                set(lineage.known_merges),
             )
             if lineage is not None
             else None
@@ -2297,9 +2300,13 @@ class Supervisor:
             self.parent_origins = origins
             self._is_dirty = dirty
             if lineage_state is not None:
-                (lineage.records, lineage.color_records, lineage.origins, lineage.restorations) = (
-                    lineage_state
-                )
+                (
+                    lineage.records,
+                    lineage.color_records,
+                    lineage.origins,
+                    lineage.restorations,
+                    lineage.known_merges,
+                ) = lineage_state
             if self.gui is not None:
                 self._reset_cluster_view()
                 self._restore_history_context(
@@ -2309,7 +2316,7 @@ class Supervisor:
             raise
 
     def restore_parents(self, target=None, *, groups=None, colors=None, new_cluster_ids=None):
-        """Restore exact immediate parents as real units in the Merge workspace.
+        """Restore earliest recorded merge components as real units in the Merge workspace.
 
         This is a new curation action; unrelated later edits are preserved.
         Explicit groups and IDs support validated bounded semantic commands.
@@ -2325,7 +2332,7 @@ class Supervisor:
         if groups is None:
             if self.parent_lineage is None:
                 raise ValueError('Merge-parent lineage is unavailable.')
-            groups = self.parent_lineage.parents(target)
+            groups = self.parent_lineage.parents(target, recursive=True)
         if colors is None and self.parent_lineage is not None:
             colors = self.parent_lineage.colors(target, groups)
         with self._parent_restore_transaction(target):
@@ -2543,7 +2550,7 @@ class Supervisor:
             self.merge_propositions_view.select_key(key)
             return self.selection.state
         self.merge_propositions_view.select_key(key)
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         catalog = self.merge_propositions.catalog
         if (
             catalog.entry_for(key) is None
@@ -2579,7 +2586,7 @@ class Supervisor:
             return self.selection.state
         if len(keys) == 1:
             return self._activate_merge_proposition(sender, keys[0])
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         catalog = self.merge_propositions.catalog
         if any(
             catalog.entry_for(key) is None
@@ -2632,7 +2639,7 @@ class Supervisor:
             if self.merge_propositions_view is not None
             else None
         )
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         key = self._pending_proposition_relative_to(current, direction, ordered_keys)
         if key is not None:
             self._activate_merge_proposition(self.merge_propositions_view, key)
@@ -2662,7 +2669,7 @@ class Supervisor:
             if self._active_merge_proposition_key() != key:
                 logger.warning('Only the active merge proposition can be rejected.')
                 return
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         self.merge_propositions.reject(key)
         self._refresh_propositions()
         next_key = self._pending_proposition_relative_to(key, 'next', ordered_keys)
@@ -2705,7 +2712,7 @@ class Supervisor:
         if self.selection.state.is_merge_mode:
             self._cancel_merge_mode()
         before = self.selection.snapshot()
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         try:
             self.merge_propositions.reset(key)
         except ValueError as e:

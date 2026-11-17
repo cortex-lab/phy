@@ -46,10 +46,13 @@ class ParentLineage:
     def __init__(self, controller):
         self.controller = controller
         self.records = {}
+        self.known_merges = set()
         self.color_records = {}
         self.origins = {}
         self.restorations = {}
         self._pending_colors = None
+        self._membership_revision = 0
+        self._reassembly_cache = None
         self.path = controller.dir_path / '_phy_merge_parents.npz'
         if not hasattr(controller, 'bounded_session'):
             self._load()
@@ -84,6 +87,8 @@ class ParentLineage:
         self._pending_colors = colors
 
     def _on_cluster(self, sender, up):
+        self._membership_revision += 1
+        self._reassembly_cache = None
         if up.history == 'undo':
             for target in up.added:
                 self.restorations.pop(int(target), None)
@@ -93,6 +98,7 @@ class ParentLineage:
                 self.origins[int(child)] = int(parent)
                 if parent in self.records:
                     self.records[int(child)] = self.records[parent]
+                    self.known_merges.add(int(child))
                 if parent in self.color_records:
                     self.color_records[int(child)] = self.color_records[parent]
         if up.description == 'merge' and up.history != 'undo' and len(up.deleted) >= 2:
@@ -100,6 +106,7 @@ class ParentLineage:
             if not hasattr(self.controller, 'bounded_session'):
                 # Keep references: Clustering replaces these arrays, never mutates them.
                 self.records[target] = dict(up.parent_spike_ids)
+                self.known_merges.add(target)
             if up.history != 'redo':
                 colors = self._pending_colors
                 if colors is not None and set(colors) == set(up.deleted):
@@ -153,13 +160,22 @@ class ParentLineage:
         """
         groups = self.parents(target) if groups is None else groups
         saved = self.color_records.get(int(target), {})
-        colors = {p: saved[p] for p in groups if p in saved}
-        used = set(colors.values())
-        for parent in sorted(groups):
-            if parent not in colors:
-                index = next(i for i in range(len(groups) + len(used) + 1) if i not in used)
-                colors[parent] = index
-                used.add(index)
+        colors, used = {}, set()
+        for parent in groups:
+            preferred = saved.get(parent)
+            if preferred is None:
+                preferred = next(
+                    (
+                        value[parent]
+                        for value in reversed(list(self.color_records.values()))
+                        if parent in value
+                    ),
+                    None,
+                )
+            if preferred is None or preferred in used:
+                preferred = next(i for i in range(len(groups) + len(used) + 1) if i not in used)
+            colors[parent] = preferred
+            used.add(preferred)
         return MappingProxyType(colors)
 
     def _load(self):
@@ -174,6 +190,14 @@ class ParentLineage:
                 catalog = json.loads(str(data['catalog']))
                 if not isinstance(catalog, dict):
                     raise ValueError('invalid lineage catalog')
+                self.known_merges = {int(target) for target in catalog}
+                if 'known_merges' in data:
+                    known = json.loads(str(data['known_merges']))
+                    if not isinstance(known, list) or any(
+                        type(i) is not int or i < 0 for i in known
+                    ):
+                        raise ValueError('invalid recorded merge index')
+                    self.known_merges.update(known)
                 records = {}
                 for target, parents in catalog.items():
                     target = int(target)
@@ -251,7 +275,15 @@ class ParentLineage:
         live = self.controller.supervisor.clustering.spikes_per_cluster
         # Keep nested ancestry reachable through live merged or restored units.
         # A restored alias shares immutable partitions with its historical unit.
-        reachable, pending = set(), list(live)
+        reachable, pending = set(), [*live, *self.restorations]
+        store = getattr(self.controller.supervisor, 'merge_propositions', None)
+        if store is not None:
+            # Historical accepted results anchor exact reassembly after Save/reopen.
+            pending.extend(
+                review.result_unit_id
+                for review in store.catalog.reviews.values()
+                if review.result_unit_id is not None
+            )
         while pending:
             target = pending.pop()
             if target in reachable:
@@ -274,6 +306,7 @@ class ParentLineage:
                 )
             ),
             catalog=np.asarray(json.dumps({str(t): sorted(g) for t, g in records.items()})),
+            known_merges=np.asarray(json.dumps(sorted(self.known_merges & reachable))),
             origins=np.asarray(
                 json.dumps({t: p for t, p in self.origins.items() if t in reachable})
             ),
@@ -295,24 +328,59 @@ class ParentLineage:
             if os.path.exists(filename):
                 os.unlink(filename)
 
-    def parents(self, target):
+    @staticmethod
+    def _check_partition(groups, expected):
+        if not groups or any(len(ids) == 0 for ids in groups.values()):
+            raise ValueError('Recorded parents contain an empty component.')
+        union = np.sort(np.concatenate(list(groups.values())))
+        if not np.array_equal(union, expected) or np.any(union[1:] == union[:-1]):
+            raise ValueError('Recorded parents do not exactly partition this unit.')
+
+    def _recursive_groups(self, target, expected):
+        result, visited = {}, set()
+        pending = [(target, expected)]
+        while pending:
+            unit, rows = pending.pop()
+            if unit in visited:
+                raise ValueError(
+                    'Recorded merge ancestry repeats a component or contains a cycle.'
+                )
+            visited.add(unit)
+            groups = self.records.get(unit)
+            if groups is None:
+                if unit in self.known_merges:
+                    raise ValueError(
+                        'Recorded merge ancestry is incomplete; no assignments changed.'
+                    )
+                origin = self.origins.get(unit, unit)
+                if origin in result:
+                    raise ValueError(
+                        'Recorded merge ancestry has duplicate historical identities.'
+                    )
+                result[origin] = rows
+                continue
+            self._check_partition(groups, rows)
+            pending.extend(reversed(list(groups.items())))
+        return result
+
+    def parents(self, target, *, recursive=False):
         target = int(target)
         live = self.controller.supervisor.clustering.spikes_per_cluster
         if target not in live:
             raise ValueError('Choose a current merged unit.')
         session = getattr(self.controller, 'bounded_session', None)
         if session is not None:
-            _, groups = session.restore_parent_groups(target)
+            _, groups = session.restore_parent_groups(target, recursive=recursive)
         else:
             groups = self.records.get(target)
             if groups is None:
                 raise ValueError(
                     'Merge parents unavailable: this merge predates recorded lineage.'
                 )
+            if recursive:
+                groups = self._recursive_groups(target, live[target])
         # Check exact partition, including splits, undo/redo and external changes.
-        union = np.sort(np.concatenate(list(groups.values())))
-        if not np.array_equal(union, live[target]) or len(np.unique(union)) != len(union):
-            raise ValueError('Recorded parents do not exactly partition this unit.')
+        self._check_partition(groups, live[target])
         result = {}
         saved = self.color_records.get(target, {})
         for parent in sorted(groups, key=lambda p: (saved.get(p, len(colormaps.default)), p)):
@@ -320,6 +388,70 @@ class ParentLineage:
             ids.flags.writeable = False
             result[int(parent)] = ids
         return MappingProxyType(result)
+
+    def reassembled_results(self, catalog):
+        """Project accepted ordinary memberships without rescanning on selection changes."""
+        reviews = tuple(
+            (key, value.result_unit_id, value.applied_unit_ids)
+            for key, value in catalog.reviews.items()
+            if value.result_unit_id is not None
+        )
+        signature = self._membership_revision, reviews
+        if self._reassembly_cache is not None and self._reassembly_cache[0] == signature:
+            return self._reassembly_cache[1]
+        clustering = self.controller.supervisor.clustering
+        result = {}
+        for key, target, applied in reviews:
+            groups = self.records.get(target)
+            if not groups:
+                continue
+            rows = np.sort(np.concatenate(list(groups.values())))
+            if not len(rows) or np.any(rows[1:] == rows[:-1]):
+                continue
+            try:
+                self._recursive_groups(target, rows)
+            except ValueError:
+                continue  # Broken ancestry is never proof of a live acceptance.
+            units = np.unique(clustering.spike_clusters[rows])
+            if len(units) != 1:
+                continue
+            current = int(units[0])
+            entry = catalog.entry_for(key)
+            if entry is None or entry.proposition is None:
+                continue
+            result[key] = {
+                'result_unit_id': current,
+                'modified': (
+                    applied != entry.proposition.unit_ids
+                    or len(clustering.spikes_per_cluster[current]) != len(rows)
+                ),
+            }
+        self._reassembly_cache = signature, result
+        return result
+
+    def proposition_retirements(self):
+        """Current ordinary merge/restore paths, excluding discarded Undo branches."""
+        live = self.controller.supervisor.clustering.spikes_per_cluster
+        pending, visited, retired = [*live, *self.restorations], set(), {}
+        controlled = {str(unit) for unit in self.known_merges}
+        controlled.update(str(parent) for groups in self.records.values() for parent in groups)
+        while pending:
+            target = pending.pop()
+            if target in visited:
+                continue
+            visited.add(target)
+            for parent in self.records.get(target, {}):
+                if parent not in live:
+                    retired[str(parent)] = {'operation': 'merge', 'replacements': [target]}
+                pending.append(parent)
+        retired.update(
+            {
+                str(target): {'operation': 'restore_parents', 'replacements': children}
+                for target, children in self.restorations.items()
+            }
+        )
+        controlled.update(str(target) for target in self.restorations)
+        return controlled, retired
 
     def full_counts(self, target, groups=None):
         """Exact counts from saved summaries/whole-unit merges; splits stay unknown."""
@@ -329,26 +461,7 @@ class ParentLineage:
                 p: len(ids)
                 for p, ids in (self.parents(target) if groups is None else groups).items()
             }
-        counts = {int(p): int(n) for p, n in zip(session.unit_ids, session.manifest['counts'])}
-        origin, _ = session.restore_parent_groups(target)
-        for index, event in enumerate(session.events):
-            if event['operation'] == 'merge':
-                parents = event['parents']
-                if index == origin:
-                    return {p: counts.get(p) for p in parents}
-                values = [counts.get(p) for p in parents]
-                counts[event['target']] = sum(values) if None not in values else None
-            elif event['operation'] == 'threshold_split':
-                counts.update(dict.fromkeys(event['children']))
-            elif event['operation'] == 'restore_parents':
-                parents = session.events[event['merge_event_index']]['parents']
-                counts.update(
-                    {
-                        child: counts.get(parent)
-                        for child, parent in zip(event['children'], parents)
-                    }
-                )
-        return {}
+        return session.restore_parent_counts(target, recursive=False)
 
 
 class ParentProviders:

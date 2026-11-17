@@ -49,6 +49,157 @@ def test_exact_nested_split_undo_redo_membership(tmp_path):
         lineage.close()
 
 
+def test_recursive_restore_flattens_both_branches_with_one_native_undo(tmp_path):
+    controller = lineage_controller(tmp_path, np.repeat(np.arange(6), 3))
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    try:
+        left = clustering.merge([0, 1]).added[0]
+        right = clustering.merge([2, 3]).added[0]
+        target = clustering.merge([left, right]).added[0]
+        unrelated = clustering.merge([4, 5]).added[0]
+        before = clustering.spike_clusters.copy()
+        groups = lineage.parents(target, recursive=True)
+        assert set(groups) == {0, 1, 2, 3}
+        out = clustering.restore_partition(target, groups)
+        assert min(out.added) > unrelated
+        for child, origin in out.parent_restore_origins.items():
+            np.testing.assert_array_equal(
+                clustering.spikes_per_cluster[child], np.arange(origin * 3, origin * 3 + 3)
+            )
+        restored = clustering.spike_clusters.copy()
+        clustering.undo()
+        np.testing.assert_array_equal(clustering.spike_clusters, before)
+        clustering.redo()
+        np.testing.assert_array_equal(clustering.spike_clusters, restored)
+        assert clustering.spikes_per_cluster[unrelated].tolist() == list(range(12, 18))
+    finally:
+        lineage.close()
+
+
+def test_recursive_restore_stops_at_real_split_and_survives_reopen(tmp_path):
+    controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2])
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    try:
+        merged = clustering.merge([0, 1]).added[0]
+        children = clustering.split([0, 2]).added
+        split_child = next(
+            child for child in children if clustering.spikes_per_cluster[child].tolist() == [0, 2]
+        )
+        target = clustering.merge([split_child, 2]).added[0]
+        groups = lineage.parents(target, recursive=True)
+        assert set(groups) == {split_child, 2}
+        assert merged not in groups
+        emit('curation_saved', controller.supervisor)
+        saved = clustering.spike_clusters.copy()
+    finally:
+        lineage.close()
+    reopened = ParentLineage(lineage_controller(tmp_path, saved))
+    try:
+        actual = reopened.parents(target, recursive=True)
+        assert set(actual) == set(groups)
+        for key in groups:
+            np.testing.assert_array_equal(actual[key], groups[key])
+    finally:
+        reopened.close()
+
+
+@pytest.mark.parametrize('corruption', ['missing', 'overlap', 'cycle', 'duplicate_origin'])
+def test_recursive_restore_rejects_broken_known_ancestry_without_mutation(tmp_path, corruption):
+    controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2])
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    try:
+        first = clustering.merge([0, 1]).added[0]
+        target = clustering.merge([first, 2]).added[0]
+        before = clustering.spike_clusters.copy()
+        if corruption == 'missing':
+            del lineage.records[first]
+        elif corruption == 'overlap':
+            lineage.records[first][1] = np.array([1, 3])
+        elif corruption == 'cycle':
+            lineage.records[first] = {target: np.arange(4)}
+        else:
+            lineage.origins[1] = 0
+        with pytest.raises(ValueError):
+            lineage.parents(target, recursive=True)
+        np.testing.assert_array_equal(clustering.spike_clusters, before)
+        if corruption == 'missing':
+            emit('curation_saved', controller.supervisor)
+            reopened = ParentLineage(lineage_controller(tmp_path, before))
+            try:
+                with pytest.raises(ValueError, match='incomplete'):
+                    reopened.parents(target, recursive=True)
+            finally:
+                reopened.close()
+    finally:
+        lineage.close()
+
+
+def test_recursive_restore_more_than_sixteen_leaves_and_nested_colors(tmp_path):
+    controller = lineage_controller(tmp_path, np.repeat(np.arange(20), 2))
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    try:
+        branches = [clustering.merge([i, i + 1]).added[0] for i in range(0, 20, 2)]
+        target = clustering.merge(branches).added[0]
+        groups = lineage.parents(target, recursive=True)
+        assert set(groups) == set(range(20))
+        colors = lineage.colors(target, groups)
+        assert len(set(colors.values())) == 20
+        result = clustering.restore_partition(target, groups)
+        assert len(result.added) == 20
+        for child, original in result.parent_restore_origins.items():
+            np.testing.assert_array_equal(
+                clustering.spikes_per_cluster[child], np.array([original * 2, original * 2 + 1])
+            )
+    finally:
+        lineage.close()
+
+
+def test_reassembly_membership_and_historical_anchor_survive_save_reopen(tmp_path):
+    from phy.cluster._propositions import decode_curation_mapping
+
+    controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2])
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    catalog = decode_curation_mapping(
+        {'format_version': '2', 'unit_ids': [0, 1, 2], 'merges': [{'unit_ids': [0, 1]}]}
+    )
+    key = catalog.propositions[0].key
+    try:
+        target = clustering.merge([0, 1]).added[0]
+        catalog = catalog.accept(key, [0, 1], target)
+        controller.supervisor.merge_propositions = SimpleNamespace(catalog=catalog)
+        restored = clustering.restore_partition(target, lineage.parents(target, recursive=True))
+        assert lineage.reassembled_results(catalog) == {}
+        current = clustering.merge(restored.added).added[0]
+        assert lineage.reassembled_results(catalog) == {
+            key: {'result_unit_id': current, 'modified': False}
+        }
+        current = clustering.merge([current, 2]).added[0]
+        assert lineage.reassembled_results(catalog)[key] == {
+            'result_unit_id': current,
+            'modified': True,
+        }
+        emit('curation_saved', controller.supervisor)
+        saved = clustering.spike_clusters.copy()
+    finally:
+        lineage.close()
+    reopened = ParentLineage(lineage_controller(tmp_path, saved))
+    try:
+        assert target in reopened.records
+        assert reopened.reassembled_results(catalog)[key] == {
+            'result_unit_id': current,
+            'modified': True,
+        }
+        groups = reopened.parents(current, recursive=True)
+        assert set(groups) == {0, 1, 2}
+    finally:
+        reopened.close()
+
+
 def test_lineage_save_reopen_and_stale_assignment_rejection(tmp_path):
     controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2])
     lineage = ParentLineage(controller)
