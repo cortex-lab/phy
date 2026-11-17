@@ -282,6 +282,9 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Require PyQt5-sip 12.20.1 or later to avoid native shutdown crashes when
+  Qt cleanup callbacks create or destroy wrapped objects.
+
 - Table mouse handlers verify the Qt event class before accessing mouse-only
   methods, preventing exceptions from generic or mismatched event wrappers
   during context-menu interaction.
