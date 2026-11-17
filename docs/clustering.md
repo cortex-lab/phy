@@ -228,12 +228,17 @@ You can undo and redo clustering actions (merge, split, move, label) with the **
 
 ## Inspect a merged unit's parents
 
-Right-click a merged unit in Cluster View and choose **Show parents**. A separate
-read-only window compares its immediate parents in correlogram, waveform,
-amplitude, and feature plots, with consistent colors and a parent legend.
-Available plots depend on the dataset's stored evidence. Use **Return to merged
-unit**, or select another cluster, to close the comparison. Inspection does not
-change assignments, labels, review decisions, or undo history.
+Right-click a merged unit in Cluster View and choose **Show parents**. A dark,
+read-only workspace inside the main window compares its immediate parents.
+A parent table uses white IDs and counts with colored swatches; the same colors
+identify each parent in the correlogram, waveform, amplitude, and feature plots.
+New merges preserve the colors used before merging when that information is
+available. Earlier merges use a consistent fallback palette.
+
+Available plots depend on the dataset's stored evidence. Click **Back**, press
+**Esc**, or select another cluster to restore the curation workspace. Editing
+shortcuts are disabled during inspection. Inspection does not change assignments,
+labels, review decisions, or undo history.
 
 Ordinary datasets record exact parent membership for merges made with this
 version, including after splits, and save it in `_phy_merge_parents.npz`.
@@ -244,7 +249,7 @@ without scanning the original recording.
 
 The comparison supports up to 16 immediate parents. It follows the existing
 per-view spike budgets; ordinary correlograms can be sampled. Bounded plots show
-retained-window evidence, with full counts/rates shown separately when known.
+retained-window evidence, with full counts shown separately when known.
 Split-derived full counts may be unavailable. When raw/stored waveforms are
 unavailable, explicitly labeled template traces show up to 100 templates per
 parent. This command inspects parents; it does not undo the merge.
