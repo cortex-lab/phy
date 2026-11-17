@@ -753,9 +753,6 @@ class GUI(QMainWindow):
             return
         super().closeEvent(e)
         self._closed = True
-        # Unlike `close`, this notification cannot precede a cancelled save prompt.
-        emit('closed', self)
-
         # Save the state to disk when closing the GUI.
         logger.debug('Save the geometry state.')
         try:
