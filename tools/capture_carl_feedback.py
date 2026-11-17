@@ -231,8 +231,18 @@ def run(args):
             entry = {'seconds': round(time.monotonic() - started, 3), 'label': label}
             report['input_events'].append(entry)
             print(json.dumps({'input': entry}), flush=True)
+            return entry
+
+        def show_cursor(cursor):
+            # Application busy-cursor cleanup can remove an earlier override.
+            # Re-establish our recording cursor without changing application code.
+            if app.overrideCursor() is None:
+                app.setOverrideCursor(cursor)
+            else:
+                app.changeOverrideCursor(cursor)
 
         def move_pointer(widget, pos):
+            show_cursor(idle_cursor)
             origin = QCursor.pos()
             target = widget.mapToGlobal(pos)
             for step in range(1, 25):
@@ -249,14 +259,18 @@ def run(args):
             pos = pos if pos is not None else widget.rect().center()
             button_name = 'Right click' if button == Qt.RightButton else 'Left click'
             prefix = 'Ctrl + ' if modifiers & Qt.ControlModifier else ''
-            input_note(prefix + button_name + (': ' + label if label else ''))
+            event = input_note(prefix + button_name + (': ' + label if label else ''))
             move_pointer(widget, pos)
-            app.changeOverrideCursor(clicked_cursor)
+            event['point'] = [QCursor.pos().x(), QCursor.pos().y()]
+            show_cursor(clicked_cursor)
+            QTest.qWait(180)
+            event['click_seconds'] = round(time.monotonic() - started, 3)
             QTest.mousePress(widget, button, modifiers, pos)
             QTest.qWait(180)
             QTest.mouseRelease(widget, button, modifiers, pos)
+            show_cursor(clicked_cursor)
             QTest.qWait(350)
-            app.changeOverrideCursor(idle_cursor)
+            show_cursor(idle_cursor)
 
         def key(widget, value, modifiers=Qt.NoModifier, label='Keyboard shortcut'):
             input_note(label)
@@ -433,8 +447,8 @@ def run(args):
 
         input_note('Right click: merged unit context menu')
         move_pointer(table.table_view.viewport(), point)
-        app.changeOverrideCursor(clicked_cursor)
-        QTimer.singleShot(400, lambda: app.changeOverrideCursor(idle_cursor))
+        show_cursor(clicked_cursor)
+        QTimer.singleShot(400, lambda: show_cursor(idle_cursor))
         QTimer.singleShot(1200, choose_context_action)
         event = QContextMenuEvent(
             QContextMenuEvent.Mouse, point, table.table_view.viewport().mapToGlobal(point)
