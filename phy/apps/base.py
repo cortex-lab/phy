@@ -1245,6 +1245,10 @@ class BaseController:
         # Set up the Selector instance, responsible for selecting the spikes for display.
         self._set_selector()
 
+        from ._parent_review import ParentInspection
+
+        self.parent_inspection = ParentInspection(self)
+
         emit('controller_ready', self)
 
     def close(self, close_model=True):
@@ -1253,6 +1257,7 @@ class BaseController:
         Closing a GUI does not necessarily end a controller's lifetime: callers may
         recreate a GUI around the same model. Resource cleanup is therefore explicit.
         """
+        self.parent_inspection.close()
         self._trace_prefetch.close()
         if close_model and not self._model_closed:
             _close_trace_reader(getattr(self.model, 'traces', None))
@@ -2513,6 +2518,7 @@ class BaseController:
         gui.set_default_actions()
         self.create_misc_actions(gui)
         gui.create_views()
+        self.parent_inspection.attach(gui)
 
         # Bind the `select_more` event to add clusters to the existing selection.
         @connect

@@ -316,6 +316,9 @@ class Clustering:
         )
         up = UpdateInfo(
             description='merge',
+            # Retain the exact pre-merge partition. Arrays are immutable by
+            # convention and removed from the live mapping below, not edited.
+            parent_spike_ids={int(c): self._spikes_per_cluster[c] for c in cluster_ids},
             spike_ids=list(spike_ids),
             added=[to],
             deleted=list(cluster_ids),
