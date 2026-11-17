@@ -3,6 +3,10 @@
 The scenario records user-visible operands and resulting IDs, not production
 membership expressions. Expected assignments use only original labels and raw
 finite amplitude comparisons; no Phy journal/projector is imported.
+
+Optional ``included_originals`` identifies whole source units added through
+nested merges and retained in the final combination. Omitting it preserves the
+original immediate-parent scenario contract.
 """
 
 import argparse
@@ -31,6 +35,9 @@ def verify(source, outputs, scenario, batch_size=1_000_000):
         expected = original.copy()
         expected[family & ~below] = scenario['split_remainder']
         expected[family & below] = scenario['final_merged']
+        expected[np.isin(original, scenario.get('included_originals', []))] = scenario[
+            'final_merged'
+        ]
         expected[original == scenario['excluded_original']] = scenario['excluded_live']
         expected[original == scenario['new_candidate']] = scenario['final_merged']
         expected[np.isin(original, scenario['unrelated_inputs'])] = scenario['unrelated_result']
