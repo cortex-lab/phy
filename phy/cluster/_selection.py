@@ -351,6 +351,40 @@ class CurationSelectionController:
             )
         )
 
+    def enter_parent_restore(self, ordered_ids, color_indices=None, workflow_context=None):
+        """Stage real restored units; leaving Merge keeps these units selected."""
+        self._require_normal_mode()
+        ordered = _as_unique_ids(ordered_ids)
+        if len(ordered) < 2:
+            raise ValueError('Parent restoration requires at least two units.')
+        colors = dict(color_indices or {})
+        used = {0}
+        bindings = {ordered[0]: 0}
+        for unit in ordered[1:]:
+            slot = colors.get(unit)
+            if (
+                not isinstance(slot, Integral)
+                or not 0 <= slot < max(32, 2 * len(ordered))
+                or slot in used
+            ):
+                slot = next(i for i in range(len(ordered) + len(used)) if i not in used)
+            bindings[unit] = int(slot)
+            used.add(int(slot))
+        slots = [None] * (max(used) + 1)
+        for unit, slot in bindings.items():
+            slots[slot] = unit
+        normal = CurationSelectionState(cluster_ids=ordered, color_slots=tuple(slots))
+        merge = MergeSession(ordered[0], ordered, NormalWorkflowSnapshot(normal, workflow_context))
+        return self._apply(
+            CurationSelectionState(
+                mode=WorkflowMode.MERGE,
+                reference_id=ordered[0],
+                presentation_order=ordered,
+                color_slots=tuple(slots),
+                merge=merge,
+            )
+        )
+
     def enter_merge_mode(self, workflow_context=None):
         self._require_normal_mode()
         current = self._state

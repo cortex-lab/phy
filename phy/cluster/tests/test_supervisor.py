@@ -726,6 +726,117 @@ def test_merge_mode_rejects_cluster_mutations(supervisor):
     assert set(supervisor.clustering.cluster_ids) >= {30, 20}
 
 
+def test_restore_parents_preserves_later_edits_and_workspace_history(supervisor, qtbot):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    merged = supervisor.merge().added[0]
+    supervisor.block()
+    _select(supervisor, [10], [11])
+    unrelated = supervisor.merge().added[0]
+    supervisor.block()
+    supervisor.label('group', 'mua', [unrelated])
+    supervisor.block()
+    supervisor.label('group', 'good', [merged])
+    supervisor.block()
+    _select(supervisor, [merged])
+    before = supervisor.clustering.spike_clusters.copy()
+    position = supervisor._global_history.current_position
+    out = supervisor.restore_parents(merged, groups=groups, colors={30: 0, 20: 1})
+    supervisor.block()
+    children = list(out.parent_restore_origins)
+    assert supervisor.selected_merge == children
+    assert supervisor.actions.get('undo').isEnabled()
+    assert supervisor._global_history.current_position == position + 1
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    assert all(supervisor.cluster_meta.get('group', child) is None for child in children)
+    assert supervisor.get_cluster_info(children[0])['parent_origin'] == 'was 30'
+    restored = supervisor.clustering.spike_clusters.copy()
+
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.selected == [merged]
+    assert supervisor.cluster_meta.get('group', merged) == 'good'
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, restored)
+    assert supervisor.selected_merge == children
+    assert all(supervisor.cluster_meta.get('group', child) is None for child in children)
+
+    # The visible exclusion button acts on an actual clicked row. G must not
+    # include that parent through an accidental Similarity selection.
+    view = supervisor.merge_view
+    index = view._proxy_index_for_id(children[1])
+    qtbot.mouseClick(
+        view.table_view.viewport(), Qt.LeftButton, pos=view.table_view.visualRect(index).center()
+    )
+    qtbot.mouseClick(view.dock.get_widget('exclude_merge_row'), Qt.LeftButton)
+    supervisor.block()
+    assert children[1] not in supervisor.selected
+    assert children[1] in supervisor.clustering.cluster_ids
+    supervisor.toggle_merge_mode()
+    supervisor.block()
+    assert supervisor.selected_clusters == children
+    ae(supervisor.clustering.spike_clusters, restored)
+
+    supervisor.toggle_merge_mode()
+    supervisor.deselect_from_merge([children[1]])
+    supervisor.add_to_merge([2])
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    assert children[1] in supervisor.clustering.cluster_ids
+    result = supervisor.selected_clusters[0]
+    ae(
+        supervisor.clustering.spikes_per_cluster[result],
+        np.sort(np.concatenate([groups[30], [4, 5]])),
+    )
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+
+
+def test_restore_workspace_physical_right_click_preserves_transfer_contract(supervisor, qtbot):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    out = supervisor.restore_parents(target, groups=groups)
+    supervisor.block()
+    child = list(out.parent_restore_origins)[1]
+    view = supervisor.merge_view
+    index = view._proxy_index_for_id(child)
+    qtbot.mouseClick(
+        view.table_view.viewport(), Qt.RightButton, pos=view.table_view.visualRect(index).center()
+    )
+    supervisor.block()
+    assert child not in supervisor.selected_merge
+    assert child in supervisor.selected_similar
+    # Transfer deliberately preserves the effective selection; exclusion has
+    # its own explicit button and is tested above.
+    assert child in supervisor.selected
+
+
+def test_restore_parents_rolls_back_observer_failure(supervisor, monkeypatch):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    before = supervisor.clustering.spike_clusters.copy()
+    selection = supervisor.selection.snapshot()
+    history = supervisor._global_history.current_position
+    workflow = supervisor._workflow_context()
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('injected restore presentation failure')
+
+    monkeypatch.setattr(supervisor, '_show_merge_view', fail)
+    with raises(RuntimeError, match='injected'):
+        supervisor.restore_parents(target, groups=groups)
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.selection.state == selection
+    assert supervisor._global_history.current_position == history
+    assert supervisor._workflow_context() == workflow
+
+
 def test_merge_mode_next_navigates_similarity_not_cluster(supervisor):
     _select(supervisor, [30], [20])
     supervisor.toggle_merge_mode()
@@ -983,6 +1094,47 @@ def _proposition_supervisor(
     connect(barrier('similarity_view'), event='ready', sender=supervisor.similarity_view)
     barrier.wait()
     return supervisor
+
+
+def test_ordinary_restoration_preserves_accepted_review_with_derived_status(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from phy.apps._parent_review import ParentLineage
+
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    lineage = ParentLineage(
+        SimpleNamespace(
+            dir_path=Path(tempdir),
+            supervisor=supervisor,
+            model=SimpleNamespace(spike_times=np.arange(supervisor.clustering.n_spikes)),
+        )
+    )
+    supervisor.parent_lineage = lineage
+    try:
+        key = supervisor.merge_propositions.catalog.propositions[0].key
+        supervisor._activate_merge_proposition(supervisor.merge_propositions_view, key)
+        target = supervisor.merge().added[0]
+        supervisor.block()
+        review = supervisor.merge_propositions.catalog.reviews[key]
+        assert review.result_unit_id == target
+        supervisor.restore_parents(target)
+        supervisor.block()
+        assert supervisor.merge_propositions.catalog.reviews[key] == review
+        assert supervisor.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        supervisor.undo()
+        supervisor.block()
+        assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        supervisor.redo()
+        supervisor.block()
+        assert supervisor.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        supervisor.toggle_merge_mode()
+    finally:
+        lineage.close()
 
 
 def test_merge_proposition_review_cancel_restores_exact_entry(

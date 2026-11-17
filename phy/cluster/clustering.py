@@ -160,6 +160,7 @@ class Clustering:
     def __init__(self, spike_clusters, new_cluster_id=None, spikes_per_cluster=None):
         super().__init__()
         self._undo_stack = History(base_item=(None, None, None))
+        self._restored_partitions = {}
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
         self._spikes_per_cluster = {}
@@ -393,6 +394,77 @@ class Clustering:
         emit('cluster', self, up)
         return up
 
+    def restore_partition(self, target, groups, *, new_cluster_ids=None):
+        """Restore an exact whole-unit partition into fresh, undoable clusters.
+
+        ``groups`` maps historical parent IDs to sorted spike rows. Historical
+        IDs identify provenance only; they are never revived as live IDs.
+        Validation and assignment touch only this unit's rows.
+        """
+        target = int(target)
+        if target not in self._spikes_per_cluster:
+            raise ValueError('Choose a current merged unit.')
+        if len(groups) < 2:
+            raise ValueError('Restoration requires at least two recorded parents.')
+        if any(
+            isinstance(parent, (bool, np.bool_))
+            or not isinstance(parent, (int, np.integer))
+            or parent < 0
+            for parent in groups
+        ):
+            raise ValueError('Recorded parent IDs must be nonnegative integers.')
+        parents = tuple(map(int, groups))
+        arrays = []
+        for ids in groups.values():
+            ids = np.asarray(ids)
+            if (
+                ids.ndim != 1
+                or ids.dtype.kind not in 'iu'
+                or not len(ids)
+                or ids[0] < 0
+                or ids[-1] >= self._n_spikes
+                or np.any(ids[1:] <= ids[:-1])
+            ):
+                raise ValueError('Every restored parent needs nonempty sorted exact spike rows.')
+            arrays.append(ids)
+        rows = np.concatenate(arrays)
+        order = np.argsort(rows)
+        rows = rows[order]
+        if not np.array_equal(rows, self._spikes_per_cluster[target]):
+            raise ValueError('Recorded parents do not exactly partition this unit.')
+        if new_cluster_ids is None:
+            children = tuple(range(self.new_cluster_id(), self.new_cluster_id() + len(parents)))
+        else:
+            children = tuple(new_cluster_ids)
+        if (
+            len(children) != len(parents)
+            or any(
+                isinstance(c, (bool, np.bool_)) or not isinstance(c, (int, np.integer))
+                for c in children
+            )
+            or len(set(children)) != len(children)
+            or min(children) < self.new_cluster_id()
+            or max(children) > np.iinfo(np.int32).max
+        ):
+            raise ValueError(
+                'Restored clusters require distinct fresh IDs in the loader namespace.'
+            )
+        children = tuple(map(int, children))
+        labels = np.concatenate(
+            [np.full(len(ids), child, dtype=np.int64) for ids, child in zip(arrays, children)]
+        )[order]
+        up = self._do_assign(rows, labels)
+        origins = dict(zip(children, parents))
+        self._restored_partitions[tuple(sorted(children))] = (target, origins)
+        up.description = 'restore_parents'
+        up.parent_restore_target = target
+        up.parent_restore_origins = origins
+        up.clear_metadata = True
+        undo_state = emit('request_undo_state', self, up)
+        self._undo_stack.add((rows, labels, undo_state))
+        emit('cluster', self, up)
+        return up
+
     def assign(self, spike_ids, spike_clusters_rel=0):
         """Make new spike cluster assignments.
 
@@ -556,6 +628,11 @@ class Clustering:
         # We apply the new assignment.
         up = self._do_assign(spike_ids, cluster_ids)
         up.history = 'redo'
+        restored = self._restored_partitions.get(tuple(sorted(up.added)))
+        if restored is not None:
+            up.description = 'restore_parents'
+            up.parent_restore_target, up.parent_restore_origins = restored
+            up.clear_metadata = True
 
         emit('cluster', self, up)
         return up

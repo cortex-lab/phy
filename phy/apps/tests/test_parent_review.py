@@ -70,6 +70,47 @@ def test_lineage_save_reopen_and_stale_assignment_rejection(tmp_path):
         stale.close()
 
 
+def test_restored_nested_lineage_survives_save_reopen_and_repeated_restore(tmp_path):
+    controller = lineage_controller(tmp_path, [0, 0, 1, 1, 2, 2, 3, 3])
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    first = clustering.merge([0, 1]).added[0]
+    nested = clustering.merge([first, 2]).added[0]
+    emit('curation_saved', controller.supervisor)
+    saved = clustering.spike_clusters.copy()
+    lineage.close()
+
+    controller = lineage_controller(tmp_path, saved)
+    lineage = ParentLineage(controller)
+    clustering = controller.supervisor.clustering
+    restored = clustering.restore_partition(nested, lineage.parents(nested))
+    alias = next(
+        child for child, parent in restored.parent_restore_origins.items() if parent == first
+    )
+    assert set(lineage.parents(alias)) == {0, 1}
+    assert lineage.origins[alias] == first
+    assert lineage.restorations[nested] == list(restored.parent_restore_origins)
+    clustering.undo()
+    assert nested not in lineage.restorations
+    clustering.redo()
+    emit('curation_saved', controller.supervisor)
+    saved = clustering.spike_clusters.copy()
+    lineage.close()
+
+    controller = lineage_controller(tmp_path, saved)
+    lineage = ParentLineage(controller)
+    try:
+        assert lineage.origins[alias] == first
+        assert nested in lineage.restorations
+        groups = lineage.parents(alias)
+        assert groups[0].tolist() == [0, 1]
+        assert groups[1].tolist() == [2, 3]
+        out = controller.supervisor.clustering.restore_partition(alias, groups)
+        assert set(out.parent_restore_origins.values()) == {0, 1}
+    finally:
+        lineage.close()
+
+
 def test_lineage_rejects_membership_that_does_not_partition_live_unit(tmp_path):
     controller = lineage_controller(tmp_path, [0, 0, 1, 1])
     lineage = ParentLineage(controller)
@@ -78,6 +119,30 @@ def test_lineage_rejects_membership_that_does_not_partition_live_unit(tmp_path):
         lineage.records[target][0] = np.array([0])
         with pytest.raises(ValueError, match='partition'):
             lineage.parents(target)
+    finally:
+        lineage.close()
+
+
+def test_restore_more_than_inspection_palette_limit(tmp_path):
+    from phy.cluster._selection import CurationSelectionController
+
+    controller = lineage_controller(tmp_path, np.repeat(np.arange(20), 2))
+    lineage = ParentLineage(controller)
+    try:
+        clustering = controller.supervisor.clustering
+        target = clustering.merge(list(range(20))).added[0]
+        groups = lineage.parents(target)
+        colors = lineage.colors(target, groups)
+        restored = clustering.restore_partition(target, groups)
+        selection = CurationSelectionController()
+        selection.enter_parent_restore(
+            restored.parent_restore_origins,
+            {child: colors[parent] for child, parent in restored.parent_restore_origins.items()},
+        )
+        assert len(selection.state.merge_ids) == 20
+        assert len(set(selection.state.color_indices.values())) == 20
+        for child, parent in restored.parent_restore_origins.items():
+            np.testing.assert_array_equal(clustering.spikes_per_cluster[child], groups[parent])
     finally:
         lineage.close()
 

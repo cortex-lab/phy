@@ -47,6 +47,8 @@ class ParentLineage:
         self.controller = controller
         self.records = {}
         self.color_records = {}
+        self.origins = {}
+        self.restorations = {}
         self._pending_colors = None
         self.path = controller.dir_path / '_phy_merge_parents.npz'
         if not hasattr(controller, 'bounded_session'):
@@ -82,6 +84,17 @@ class ParentLineage:
         self._pending_colors = colors
 
     def _on_cluster(self, sender, up):
+        if up.history == 'undo':
+            for target in up.added:
+                self.restorations.pop(int(target), None)
+        if up.description == 'restore_parents' and up.history != 'undo':
+            self.restorations[int(up.parent_restore_target)] = list(up.parent_restore_origins)
+            for child, parent in up.parent_restore_origins.items():
+                self.origins[int(child)] = int(parent)
+                if parent in self.records:
+                    self.records[int(child)] = self.records[parent]
+                if parent in self.color_records:
+                    self.color_records[int(child)] = self.color_records[parent]
         if up.description == 'merge' and up.history != 'undo' and len(up.deleted) >= 2:
             target = int(up.added[0])
             if not hasattr(self.controller, 'bounded_session'):
@@ -144,7 +157,7 @@ class ParentLineage:
         used = set(colors.values())
         for parent in sorted(groups):
             if parent not in colors:
-                index = next(i for i in range(len(colormaps.default)) if i not in used)
+                index = next(i for i in range(len(groups) + len(used) + 1) if i not in used)
                 colors[parent] = index
                 used.add(index)
         return MappingProxyType(colors)
@@ -186,6 +199,24 @@ class ParentLineage:
                         raise ValueError('a merge needs at least two parents')
                     records[target] = groups
                 self.records = records
+                if 'origins' in data:
+                    origins = json.loads(str(data['origins']))
+                    if not isinstance(origins, dict) or any(
+                        type(value) is not int or value < 0 for value in origins.values()
+                    ):
+                        raise ValueError('invalid restored parent origins')
+                    self.origins = {int(child): parent for child, parent in origins.items()}
+                if 'restorations' in data:
+                    restorations = json.loads(str(data['restorations']))
+                    if not isinstance(restorations, dict) or any(
+                        not isinstance(children, list)
+                        or len(children) < 2
+                        or len(set(children)) != len(children)
+                        or any(type(c) is not int or c < 0 for c in children)
+                        for children in restorations.values()
+                    ):
+                        raise ValueError('invalid restored merge history')
+                    self.restorations = {int(t): children for t, children in restorations.items()}
                 try:
                     self.color_records = self._parse_colors(json.loads(str(data['color_indices'])))
                 except (OSError, ValueError, KeyError, TypeError, BadZipFile):
@@ -193,6 +224,8 @@ class ParentLineage:
         except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
             logger.warning('Merge-parent history unavailable: %s.', error)
             self.records = {}
+            self.origins = {}
+            self.restorations = {}
 
     def _on_saved(self, sender):
         if hasattr(self.controller, 'bounded_session'):
@@ -216,7 +249,18 @@ class ParentLineage:
                 logger.debug('Could not save optional parent colors.', exc_info=True)
             return
         live = self.controller.supervisor.clustering.spikes_per_cluster
-        records = {target: groups for target, groups in self.records.items() if target in live}
+        # Keep nested ancestry reachable through live merged or restored units.
+        # A restored alias shares immutable partitions with its historical unit.
+        reachable, pending = set(), list(live)
+        while pending:
+            target = pending.pop()
+            if target in reachable:
+                continue
+            reachable.add(target)
+            pending.extend(self.records.get(target, {}))
+        records = {
+            target: groups for target, groups in self.records.items() if target in reachable
+        }
         arrays = {
             f'g_{target}_{parent}': ids
             for target, groups in records.items()
@@ -230,6 +274,10 @@ class ParentLineage:
                 )
             ),
             catalog=np.asarray(json.dumps({str(t): sorted(g) for t, g in records.items()})),
+            origins=np.asarray(
+                json.dumps({t: p for t, p in self.origins.items() if t in reachable})
+            ),
+            restorations=np.asarray(json.dumps(self.restorations)),
             color_indices=np.asarray(
                 json.dumps({t: self.color_records[t] for t in records if t in self.color_records})
             ),
@@ -254,27 +302,7 @@ class ParentLineage:
             raise ValueError('Choose a current merged unit.')
         session = getattr(self.controller, 'bounded_session', None)
         if session is not None:
-            from .large_recording.curation import project_assignments
-
-            for index in range(len(session.events) - 1, -1, -1):
-                event = session.events[index]
-                if event['operation'] == 'merge' and event['target'] == target:
-                    ids = np.asarray(live[target])
-                    prefix = session.events[:index]
-                    attributes = {
-                        e['predicate']['attribute']
-                        for e in prefix
-                        if e['operation'] == 'threshold_split'
-                    }
-                    before = project_assignments(
-                        session.base_assignments[ids],
-                        prefix,
-                        {name: session.attributes[name][ids] for name in attributes},
-                    )
-                    groups = {parent: ids[before == parent] for parent in event['parents']}
-                    break
-            else:
-                raise ValueError('No recorded merge parents for this unit.')
+            _, groups = session.restore_parent_groups(target)
         else:
             groups = self.records.get(target)
             if groups is None:
@@ -302,15 +330,24 @@ class ParentLineage:
                 for p, ids in (self.parents(target) if groups is None else groups).items()
             }
         counts = {int(p): int(n) for p, n in zip(session.unit_ids, session.manifest['counts'])}
-        for event in session.events:
+        origin, _ = session.restore_parent_groups(target)
+        for index, event in enumerate(session.events):
             if event['operation'] == 'merge':
                 parents = event['parents']
-                if event['target'] == target:
+                if index == origin:
                     return {p: counts.get(p) for p in parents}
                 values = [counts.get(p) for p in parents]
                 counts[event['target']] = sum(values) if None not in values else None
             elif event['operation'] == 'threshold_split':
                 counts.update(dict.fromkeys(event['children']))
+            elif event['operation'] == 'restore_parents':
+                parents = session.events[event['merge_event_index']]['parents']
+                counts.update(
+                    {
+                        child: counts.get(parent)
+                        for child, parent in zip(event['children'], parents)
+                    }
+                )
         return {}
 
 
@@ -489,6 +526,8 @@ class ParentInspection:
     def __init__(self, controller):
         self.controller = controller
         self.lineage = ParentLineage(controller)
+        controller.supervisor.parent_lineage = self.lineage
+        controller.supervisor.parent_origins.update(self.lineage.origins)
         self.window = None
         self.views = []
         self._gui = None
@@ -505,6 +544,7 @@ class ParentInspection:
         from phy.gui.qt import QEvent, QMenu, QObject
 
         self.lineage.bind()
+        self.controller.supervisor._refresh_propositions()
         unconnect(self._on_selection, self._on_mutation)
         connect(self._on_selection, event='select', sender=self.controller.supervisor)
         connect(self._on_mutation, event='cluster', sender=self.controller.supervisor)
@@ -522,9 +562,15 @@ class ParentInspection:
                 target = int(row['id'])
                 menu = QMenu(table.table_view)
                 menu.setToolTipsVisible(True)
-                action = menu.addAction('Show parents')
+                restore = menu.addAction('Restore parents in Merge Mode')
+                action = menu.addAction('Inspect parents (read-only)')
                 try:
                     groups = inspection.lineage.parents(target)
+                    if any(not len(ids) for ids in groups.values()):
+                        restore.setEnabled(False)
+                        restore.setToolTip(
+                            'Every parent needs retained evidence before restoration.'
+                        )
                     if len(groups) > 16:
                         raise ValueError(
                             'Parent comparison supports at most 16 immediate parents.'
@@ -532,6 +578,10 @@ class ParentInspection:
                 except ValueError as error:
                     action.setEnabled(False)
                     action.setToolTip(str(error))
+                    if 'groups' not in locals():
+                        restore.setEnabled(False)
+                        restore.setToolTip(str(error))
+                restore.triggered.connect(lambda checked=False: inspection.restore_parents(target))
                 action.triggered.connect(lambda checked=False: inspection._try_show(target))
                 try:
                     menu.exec_(event.globalPos())
@@ -545,8 +595,23 @@ class ParentInspection:
         gui.view_actions.add(
             self.show_selected,
             name='show_parents',
-            docstring='Inspect exact immediate merge parents without editing.',
+            docstring='Inspect parents (read-only).',
         )
+        gui.view_actions.add(
+            self.restore_parents,
+            name='restore_parents',
+            docstring='Restore parents in Merge Mode.',
+        )
+
+    def restore_parents(self, target=None):
+        """Restore recorded parents through the native Supervisor command."""
+        self.close_review()
+        try:
+            return self.controller.supervisor.restore_parents(target)
+        except ValueError as error:
+            logger.warning('Cannot restore merge parents: %s', error)
+            if self._gui is not None:
+                self._gui.statusBar().showMessage(str(error), 10000)
 
     def _try_show(self, target):
         try:
