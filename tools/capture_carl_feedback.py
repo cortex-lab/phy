@@ -134,7 +134,7 @@ def run(args):
         gui.setWindowTitle('Carl feedback — ' + args.mode + ' real-data walkthrough')
         gui.show()
 
-        def settle(ms=1000):
+        def settle(ms=500):
             supervisor.block()
             app.processEvents()
             QTest.qWait(ms)
@@ -245,15 +245,15 @@ def run(args):
             show_cursor(idle_cursor)
             origin = QCursor.pos()
             target = widget.mapToGlobal(pos)
-            for step in range(1, 25):
-                fraction = step / 24
+            for step in range(1, 17):
+                fraction = step / 16
                 eased = fraction * fraction * (3 - 2 * fraction)
                 QCursor.setPos(
                     round(origin.x() + (target.x() - origin.x()) * eased),
                     round(origin.y() + (target.y() - origin.y()) * eased),
                 )
-                QTest.qWait(30)
-            QTest.qWait(250)
+                QTest.qWait(25)
+            QTest.qWait(120)
 
         def click(widget, button, modifiers=Qt.NoModifier, pos=None, label=None):
             pos = pos if pos is not None else widget.rect().center()
@@ -263,22 +263,22 @@ def run(args):
             move_pointer(widget, pos)
             event['point'] = [QCursor.pos().x(), QCursor.pos().y()]
             show_cursor(clicked_cursor)
-            QTest.qWait(180)
+            QTest.qWait(100)
             event['click_seconds'] = round(time.monotonic() - started, 3)
             QTest.mousePress(widget, button, modifiers, pos)
-            QTest.qWait(180)
+            QTest.qWait(100)
             QTest.mouseRelease(widget, button, modifiers, pos)
             show_cursor(clicked_cursor)
-            QTest.qWait(350)
+            QTest.qWait(200)
             show_cursor(idle_cursor)
 
         def key(widget, value, modifiers=Qt.NoModifier, label='Keyboard shortcut'):
             event = input_note(label)
-            QTest.qWait(450)
+            QTest.qWait(250)
             event['key_seconds'] = round(time.monotonic() - started, 3)
             QTest.keyClick(widget, value, modifiers)
             event['key_released_seconds'] = round(time.monotonic() - started, 3)
-            QTest.qWait(450)
+            QTest.qWait(250)
 
         def capture(name, title, window=None, **facts):
             target = window or gui
@@ -286,7 +286,7 @@ def run(args):
                 gui.resize(1920, 1200)
                 gui.move(0, 0)
             gui.statusBar().showMessage(title)
-            settle(1400)
+            settle(800)
             frame = target.frameGeometry()
             pixmap = (
                 app.primaryScreen()
@@ -409,6 +409,8 @@ def run(args):
         app.setActiveWindow(gui)
         gui.setFocus()
         settle(150)
+        premerge_colors = {unit: supervisor.selection_color_indices[unit] for unit in union}
+        report['premerge_colors'] = {str(k): int(v) for k, v in premerge_colors.items()}
         key(gui, Qt.Key_G, label='G: merge the combined suggestions')
         settle()
         assert len(supervisor.selected) == 1, supervisor.selected
@@ -423,6 +425,12 @@ def run(args):
         capture('05-merged', 'G commits one merge and both suggestion decisions', merged=merged)
 
         # Snapshot before opening, including history/metadata/dirty state.
+        before_layout = bytes(gui.saveState())
+        before_views = gui.views
+        before_actions = {
+            name: action.qaction.isEnabled()
+            for name, action in supervisor.actions._actions_dict.items()
+        }
         before_review = supervisor.clustering.spike_clusters.copy()
         before_metadata = deepcopy(supervisor.cluster_meta._data)
         before_dirty = supervisor.is_dirty()
@@ -451,7 +459,7 @@ def run(args):
         move_pointer(table.table_view.viewport(), point)
         show_cursor(clicked_cursor)
         QTimer.singleShot(400, lambda: show_cursor(idle_cursor))
-        QTimer.singleShot(1200, choose_context_action)
+        QTimer.singleShot(650, choose_context_action)
         event = QContextMenuEvent(
             QContextMenuEvent.Mouse, point, table.table_view.viewport().mapToGlobal(point)
         )
@@ -459,26 +467,41 @@ def run(args):
         settle()
         review = controller.parent_inspection.window
         assert review is not None
-        review.resize(1880, 1120)
-        review.move(20, 20)
         settle()
         np.testing.assert_array_equal(before_review, supervisor.clustering.spike_clusters)
         np.testing.assert_equal(supervisor.cluster_meta._data, before_metadata)
         assert supervisor.is_dirty() == before_dirty
         assert supervisor._global_history.current_position == before_history
-        assert review._toolbar.isVisible()
+        inspection = controller.parent_inspection
+        assert inspection.host_gui is gui
+        assert review.isVisible()
+        assert len(inspection.views) == 4
+        for view in inspection.views:
+            assert dict(view._cluster_color_index_by_id) == premerge_colors
+        report['parent_colors_preserved'] = True
+        assert gui.views == before_views
+        assert all(
+            not action.qaction.isEnabled() for action in supervisor.actions._actions_dict.values()
+        )
         capture(
             '06-show-parents',
             'Exact immediate merge parents — read only',
-            window=review,
+            window=gui,
             parents=list(map(int, controller.parent_inspection.providers.ids)),
         )
-        button = review._toolbar.widgetForAction(review.file_actions.get('return_to_merged_unit'))
+        button = inspection.return_button
         assert button.isVisible() and button.isEnabled()
         assert review.rect().contains(button.mapTo(review, button.rect().center()))
-        click(button, Qt.LeftButton, label='Return to merged unit')
+        click(button, Qt.LeftButton, label='Back to merged unit')
         settle()
         assert controller.parent_inspection.window is None
+        assert bytes(gui.saveState()) == before_layout
+        assert gui.views == before_views
+        assert {
+            name: action.qaction.isEnabled()
+            for name, action in supervisor.actions._actions_dict.items()
+        } == before_actions
+        report['parent_workspace_restored'] = True
         np.testing.assert_array_equal(before_review, supervisor.clustering.spike_clusters)
         np.testing.assert_equal(supervisor.cluster_meta._data, before_metadata)
         assert supervisor.is_dirty() == before_dirty
@@ -563,6 +586,8 @@ def run(args):
         )
         np.testing.assert_array_equal(expected, supervisor.clustering.spike_clusters)
         assert set(controller.parent_inspection.lineage.parents(merged)) == set(union)
+        assert dict(controller.parent_inspection.lineage.colors(merged)) == premerge_colors
+        report['reopened_parent_colors_preserved'] = True
         capture(
             '10-reopened',
             'Reopened: saved curation verified; evidence window explicitly reselected'
