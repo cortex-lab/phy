@@ -58,7 +58,7 @@ def run(args):
         from PyQt5.QtCore import QCoreApplication, QEvent, QPoint, QTimer
         from PyQt5.QtGui import QContextMenuEvent
         from PyQt5.QtTest import QTest
-        from PyQt5.QtWidgets import QMenu
+        from PyQt5.QtWidgets import QInputDialog, QLineEdit, QMenu
 
         from phy.apps.large_recording.file_copy import copy_source_file
         from phy.apps.large_recording.source import hash_file
@@ -427,6 +427,26 @@ def run(args):
         gui.show()
         supervisor.select([merged])
         settle()
+        if bounded:
+            report['reopened_initial_evidence_window'] = controller.evidence_window_index
+
+            def choose_evidence_window():
+                dialog = app.activeModalWidget()
+                assert isinstance(dialog, QInputDialog)
+                edit = dialog.findChild(QLineEdit)
+                assert edit is not None and edit.isVisible()
+                edit.selectAll()
+                QTest.keyClicks(edit, str(report['evidence_window']))
+                QTest.keyClick(edit, Qt.Key_Return)
+
+            QTimer.singleShot(800, choose_evidence_window)
+            gui.view_actions.get('inspect_evidence_window').trigger()
+            settle()
+            assert controller.evidence_window_index == report['evidence_window']
+            report['reopened_selected_evidence_window'] = controller.evidence_window_index
+            report['reopen_window_action'] = (
+                'Explicit Inspect evidence window dialog; not automatic restoration'
+            )
         assert all(
             supervisor.merge_propositions.catalog.reviews[key].result_unit_id == merged
             for key in keys
@@ -435,7 +455,9 @@ def run(args):
         assert set(controller.parent_inspection.lineage.parents(merged)) == set(union)
         capture(
             '10-reopened',
-            'Reopened: saved assignments, review decisions and parent history verified',
+            'Reopened: saved curation verified; evidence window explicitly reselected'
+            if bounded
+            else 'Reopened: saved assignments, review decisions and parent history verified',
         )
         assert {p.name: hash_file(p) for p in files} == source_hashes
         report['source_unchanged'] = True
