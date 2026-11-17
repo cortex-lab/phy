@@ -441,7 +441,12 @@ class MergeView(Table):
 
     def __init__(self, *args, data=None, columns=(), **kwargs):
         super().__init__(*args, title='MERGE MODE', debounce_events=(), **kwargs)
-        columns = ['id'] + [column for column in columns if column != 'id']
+        columns = (
+            ['id']
+            + (['parent_origin'] if 'parent_origin' in columns else [])
+            + [column for column in columns if column not in ('id', 'parent_origin')]
+        )
+        self._column_labels = {'parent_origin': 'Parent'}
         self._init_table(
             columns=columns,
             value_names=columns + [{'data': ['group']}],
@@ -803,6 +808,7 @@ class Supervisor:
         self.context = context
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
         self.actions = None  # will be set when attaching the GUI
+        self.select_actions = None
         self.gui = None
         self.merge_view = None
         self.merge_propositions_view = None
@@ -870,12 +876,44 @@ class Supervisor:
         connect(self._log_action_meta, event='cluster', sender=self.cluster_meta)
 
         # Raise supervisor.cluster
+        @connect(event='request_undo_state', sender=self.clustering)
+        def on_request_cluster_metadata(sender, up):
+            # Clustering has updated assignments, but metadata inheritance has
+            # not run yet. Retain only the affected units, including explicit
+            # default values that inheritance must not overwrite during undo.
+            return {
+                '_phy_cluster_metadata_before': {
+                    int(unit): {
+                        field: deepcopy(self.cluster_meta.get(field, unit))
+                        for field in self.cluster_meta.fields
+                    }
+                    for unit in up.deleted
+                }
+            }
+
         @connect(sender=self.clustering)
         def on_cluster(sender, up):
             # NOTE: update the cluster meta of new clusters, depending on the values of the
             # ancestor clusters. In case of a conflict between the values of the old clusters,
             # the largest cluster wins and its value is set to its descendants.
-            if up.get('clear_metadata'):
+            before = None
+            if up.history == 'undo':
+                before = next(
+                    (
+                        state['_phy_cluster_metadata_before']
+                        for state in up.undo_state or ()
+                        if isinstance(state, dict) and '_phy_cluster_metadata_before' in state
+                    ),
+                    None,
+                )
+            if before is not None:
+                for unit in up.added:
+                    if unit in before:
+                        for field, default in self.cluster_meta._fields.items():
+                            self.cluster_meta.set(
+                                field, [unit], before[unit].get(field, default), add_to_stack=False
+                            )
+            elif up.get('clear_metadata'):
                 for field in self.cluster_meta.fields:
                     self.cluster_meta.set(field, up.added, None, add_to_stack=False)
             elif up.added:
@@ -1094,7 +1132,16 @@ class Supervisor:
         state = state or self.selection.state
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
         self.merge_view = MergeView(self.gui, data=data, columns=self.columns + ['parent_origin'])
-        self.merge_view.set_column_order(self._table_column_orders.get('merge', ()))
+        saved_order = self._table_column_orders.get('merge', ())
+        order = [
+            column
+            for column in saved_order or self.merge_view.columns
+            if column != 'parent_origin'
+        ]
+        if 'id' not in order:
+            order.insert(0, 'id')
+        order.insert(order.index('id') + 1, 'parent_origin')
+        self.merge_view.set_column_order(order)
         self.merge_view._reference_id = state.reference_id
         self.merge_view.configure_cluster_drag_drop(
             'merge', accepted_roles=('merge', 'similarity'), drag_selected_rows=False

@@ -528,6 +528,7 @@ class ParentInspection:
         self.lineage = ParentLineage(controller)
         controller.supervisor.parent_lineage = self.lineage
         controller.supervisor.parent_origins.update(self.lineage.origins)
+        controller.supervisor._refresh_propositions()
         self.window = None
         self.views = []
         self._gui = None

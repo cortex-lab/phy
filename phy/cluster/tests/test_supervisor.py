@@ -750,6 +750,10 @@ def test_restore_parents_preserves_later_edits_and_workspace_history(supervisor,
     assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
     assert all(supervisor.cluster_meta.get('group', child) is None for child in children)
     assert supervisor.get_cluster_info(children[0])['parent_origin'] == 'was 30'
+    assert supervisor.merge_view.column_order()[:2] == ['id', 'parent_origin']
+    parent_column = supervisor.merge_view.columns.index('parent_origin')
+    assert supervisor.merge_view._model.headerData(parent_column, Qt.Horizontal) == 'Parent'
+    assert supervisor.cluster_view._model.headerData(0, Qt.Horizontal) == 'id'
     restored = supervisor.clustering.spike_clusters.copy()
 
     supervisor.undo()
@@ -813,6 +817,35 @@ def test_restore_workspace_physical_right_click_preserves_transfer_contract(supe
     # Transfer deliberately preserves the effective selection; exclusion has
     # its own explicit button and is tested above.
     assert child in supervisor.selected
+
+
+@mark.parametrize('restored_quality', [None, 'mua'])
+def test_remerge_restored_parent_undo_preserves_exact_metadata(supervisor, restored_quality):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    out = supervisor.restore_parents(target, groups=groups)
+    supervisor.block()
+    first, excluded = out.parent_restore_origins
+    supervisor.toggle_merge_mode()
+    if restored_quality is not None:
+        supervisor.label('group', restored_quality, [first])
+        supervisor.block()
+    assert supervisor.cluster_meta.get('group', 1) == 'good'
+    _select(supervisor, [first], [1])
+    supervisor.toggle_merge_mode()
+    supervisor.merge()
+    supervisor.block()
+    supervisor.undo()
+    supervisor.block()
+    assert supervisor.cluster_meta.get('group', first) == restored_quality
+    assert supervisor.cluster_meta.get('group', excluded) is None
+    assert supervisor.cluster_meta.get('group', 1) == 'good'
+    assert first in supervisor.selected_merge
+    supervisor.redo()
+    supervisor.block()
+    assert excluded in supervisor.clustering.cluster_ids
 
 
 def test_restore_parents_rolls_back_observer_failure(supervisor, monkeypatch):
@@ -1102,7 +1135,7 @@ def test_ordinary_restoration_preserves_accepted_review_with_derived_status(
     from pathlib import Path
     from types import SimpleNamespace
 
-    from phy.apps._parent_review import ParentLineage
+    from phy.apps._parent_review import ParentInspection, ParentLineage
 
     supervisor = _proposition_supervisor(
         gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
@@ -1126,6 +1159,28 @@ def test_ordinary_restoration_preserves_accepted_review_with_derived_status(
         supervisor.block()
         assert supervisor.merge_propositions.catalog.reviews[key] == review
         assert supervisor.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        emit('curation_saved', supervisor)
+        reopened = Supervisor(
+            supervisor.clustering.spike_clusters.copy(),
+            merge_propositions=MergePropositionController(supervisor.merge_propositions.catalog),
+        )
+        # Producer/review loading does not supply ordinary retirement projection;
+        # the saved parent sidecar must establish it before GUI attachment.
+        reopened.merge_propositions.project_live_ids(
+            reopened.clustering.cluster_ids, retired_units={}
+        )
+        assert reopened.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        inspection = ParentInspection(
+            SimpleNamespace(
+                dir_path=Path(tempdir),
+                supervisor=reopened,
+                model=SimpleNamespace(spike_times=np.arange(reopened.clustering.n_spikes)),
+            )
+        )
+        try:
+            assert reopened.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        finally:
+            inspection.close()
         supervisor.undo()
         supervisor.block()
         assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED

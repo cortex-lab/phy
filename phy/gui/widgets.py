@@ -377,7 +377,8 @@ class _TableModel(QAbstractTableModel):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal and 0 <= section < len(self._table.columns):
-            return self._table.columns[section]
+            column = self._table.columns[section]
+            return getattr(self._table, '_column_labels', {}).get(column, column)
         return section + 1
 
     def data(self, index, role=Qt.DisplayRole):
