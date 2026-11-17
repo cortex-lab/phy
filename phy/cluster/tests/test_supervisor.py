@@ -1314,6 +1314,47 @@ def test_ordinary_exact_remerge_recovers_green_through_undo_redo_and_repeated_re
         assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
 
 
+def test_failed_restore_discards_temporary_reassembly_cache(lineage_supervisor, monkeypatch):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    supervisor.restore_parents(target)
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    target = supervisor.selected_clusters[0]
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    assignments = supervisor.clustering.spike_clusters.copy()
+    selection = supervisor.selection.snapshot()
+    history = supervisor._global_history.current_position
+    reviews = supervisor.merge_propositions.catalog.review_mapping()
+    restore = supervisor._restore_parent_partition
+
+    def fail_after_refresh(*args, **kwargs):
+        restore(*args, **kwargs)
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        assert supervisor.parent_lineage._reassembly_cache[1] == {}
+        raise RuntimeError('injected failure after restoration refresh')
+
+    monkeypatch.setattr(supervisor, '_restore_parent_partition', fail_after_refresh)
+    with raises(RuntimeError, match='after restoration refresh'):
+        supervisor.restore_parents(target)
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, assignments)
+    assert supervisor.selection.state == selection
+    assert supervisor._global_history.current_position == history
+    assert supervisor.merge_propositions.catalog.review_mapping() == reviews
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    row_id = supervisor.merge_propositions_view._id_by_key[key]
+    row = supervisor.merge_propositions_view._model.row_by_id(row_id)
+    assert row['status'] == 'accepted'
+    assert (
+        supervisor.merge_propositions_view._foreground_color(row, 'proposition').name()
+        == '#86d16d'
+    )
+
+
 def test_partial_remerge_stays_white_then_complete_with_extra_becomes_modified_green(
     lineage_supervisor,
 ):

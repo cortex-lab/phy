@@ -2307,6 +2307,9 @@ class Supervisor:
                     lineage.restorations,
                     lineage.known_merges,
                 ) = lineage_state
+                # A refresh may have cached the temporary restored memberships
+                # before the failure. Recompute against the rolled-back state.
+                lineage._reassembly_cache = None
             if self.gui is not None:
                 self._reset_cluster_view()
                 self._restore_history_context(
