@@ -365,3 +365,54 @@ def test_accepted_review_becomes_historical_across_reopen_replay_and_reprepare(t
         output / 'params.py', tmp_path / 'second', window_seconds=20, stratum_seconds=20
     )
     check(second, tmp_path / 'reprepared')
+
+
+def test_proposition_row_and_dock_refresh_immediately_after_restore_undo_redo(qtbot, tmp_path):
+    from phy.apps.large_recording.tests.test_adapter import make_controller
+    from phy.cluster._propositions import proposition_key
+
+    _, controller = make_controller(
+        tmp_path,
+        propositions={
+            'format_version': '2',
+            'unit_ids': [0, 1, 2, 99],
+            'merges': [{'unit_ids': [0, 1]}],
+        },
+    )
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor = controller.supervisor
+        supervisor.block()
+        key = proposition_key([0, 1])
+        supervisor.merge_propositions.accept(key, [0, 1, 2], 100)
+        supervisor.merge([0, 1, 2], to=100)
+        supervisor.block()
+        view = supervisor.merge_propositions_view
+        view.select_key(key)
+        reviews = supervisor.merge_propositions.catalog.review_mapping()['reviews']
+
+        def check(status):
+            selection = supervisor.selection.snapshot()
+            row = view._model.row_by_id(view._id_by_key[key])
+            assert row['status'] == status
+            assert row['_catalog_status'] == status
+            assert status in view.dock.status
+            assert supervisor.merge_propositions.catalog.status_for(key).value == status
+            assert supervisor.merge_propositions.catalog.review_mapping()['reviews'] == reviews
+            assert supervisor.selection.snapshot() == selection
+
+        check('accepted_modified')
+        restored = supervisor.restore_parents(100)
+        check('accepted_restored')
+        assert 'subsequently restored' in view._model.row_by_id(view._id_by_key[key])['reason']
+        assert supervisor.selected_merge == restored.added
+        assert not supervisor.selection.state.merge.proposition_ids
+        supervisor.undo()
+        check('accepted_modified')
+        supervisor.redo()
+        check('accepted_restored')
+        assert supervisor.selected_merge == restored.added
+        assert not supervisor.selection.state.merge.proposition_ids
+    finally:
+        gui.close()
+        controller.close()

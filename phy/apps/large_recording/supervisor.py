@@ -332,6 +332,7 @@ class BoundedSupervisor(Supervisor):
             self.merge_propositions.project_live_ids(
                 self.clustering.cluster_ids, retired_units=self.session.retired_units
             )
+            self._refresh_propositions()
         if self.gui is not None:
             data = self.cluster_info
             self.cluster_view.change(data)
