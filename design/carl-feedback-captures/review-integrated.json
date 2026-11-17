@@ -1,0 +1,28 @@
+{
+  "comment": "https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782",
+  "capture_revision": "3d8b492e3e88417d40347916cdf65a1ab8a53229",
+  "width": 1920,
+  "height": 1200,
+  "recording_fps": 30,
+  "duration_seconds": 42.866667,
+  "frames": 1286,
+  "bytes": 3298072,
+  "sha256": "4695414e3baa436426d192a2595641f1079fa0434634c7104691ffd16343501f",
+  "visible_pointer": true,
+  "click_cues": true,
+  "in_window_translucent_keycaps": true,
+  "reload_wait_omitted": true,
+  "retained_interactions_original_speed": true,
+  "checkpoints": 10,
+  "state_checks_passed": true,
+  "source_unchanged": true,
+  "blackdetect": {
+    "minimum_duration_seconds": 0.2,
+    "pixel_threshold": 0.02,
+    "picture_threshold": 0.99,
+    "intervals_detected": 0
+  },
+  "asset": "https://github.com/user-attachments/assets/9e840a5e-c2e8-433f-a040-93b3394f75b9",
+  "inline_player_verified": true,
+  "uploaded_bytes_verified": true
+}

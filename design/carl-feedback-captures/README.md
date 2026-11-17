@@ -1,33 +1,48 @@
 # Carl feedback: rendered real-data validation
 
-## Updated review recording
+## Current integrated review
 
-[Play the newer 30 fps video inline on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
-It is a fresh 75-second recording with a visible native cursor, eased pointer
-motion, gold click cues and a readable input-event footer below the GUI.
-All ten state checkpoints and unchanged-source hash checks passed again.
-The complete recording is 1920×1272, H.264 at 30 fps, about 4.3 MB. It is hosted
-as a native GitHub attachment; no additional video binary is stored in Git.
+[Play the updated 30 fps video inline on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
+The 42.87-second, 1920×1200 recording uses H.264 at 30 fps (about 3.3 MB).
+The review cut shows the integrated dark parent workspace, white IDs/counts beside
+color swatches, and Back/Esc navigation. New merges preserve their pre-merge colors;
+older merges without optional display hints use a deterministic fallback palette.
+The recording uses a visible pointer, gold click rings, translucent keycaps over
+the lower part of the window, and a nearby Ctrl badge for modified clicks.
 
-The recorder now defaults to 30 fps. Run `tools/capture_carl_feedback.py` as below
-with `--fps 30`, then run:
+The review cut removes idle settling intervals and replaces the blank reload wait
+with a labeled **Reload wait omitted** card. Retained interactions play at their
+original speed. Its [timeline](integrated-review.timeline.json) records the edits
+and maps all ten checkpoints; it is not a latency benchmark. The original uncut
+recording and complete logs remain in the separate local validation workspace.
+The native GitHub attachment avoids storing another video binary in Git.
+
+Both fresh real-data runs at `3d8b492e` passed assignment, metadata, dirty-state,
+undo-history, exact dock-state/action restoration, color preservation, save/reopen
+and unchanged-source checks. The ordinary union `[9,15,10,13]` deliberately tests
+color continuity across a parent order that differs from numeric ID order.
+[Ordinary report](ordinary-integrated-capture.json) ·
+[Bounded report](bounded-integrated-capture.json).
+
+| Current parent workspace | Screenshot |
+| --- | --- |
+| Ordinary, four parents | [Open](ordinary-integrated-parents.png) |
+| Bounded, seven parents | [Open](bounded-integrated-parents.png) |
+
+The recorder defaults to 30 fps and uses an isolated Xvfb display. After recording
+as described below, create the review cut with:
 
 ```bash
-uv run --no-sync python tools/caption_capture_video.py NEW_BOUNDED_OUTPUT
+uv run --no-sync python tools/caption_capture_video.py NEW_BOUNDED_OUTPUT \
+  --review-cut --review-seconds 43
 ```
 
-The linked 30fps video used the earlier footer treatment. The current captioner
-places large keycaps in a reserved header above the GUI, with a nearby Ctrl badge
-for modified clicks. Keyboard press/release timestamps are recorded explicitly.
-Use `--output-name review-keycaps-preview.mp4` to render a separate local preview;
-the current PR video is retained until the next parent-layout walkthrough is ready.
-The older 12fps recordings and their original
-validation artifacts below are preserved as historical evidence. The application
-layout and scientific colors in the new recording are the current PR design.
+The older recordings and screenshots below are preserved as historical evidence;
+their detached parent window and footer treatment have been superseded.
 
-
-These are actual Qt/OpenGL screenshots and uncut virtual-display recordings,
-not generated UI mockups. The ordinary run used Carl's earlier Sway sorting
+The artifacts use actual Qt/OpenGL screenshots and virtual-display recordings,
+not generated UI mockups. The earlier videos below are uncut; the current PR
+review video is explicitly edited as described above. The ordinary run used Carl's earlier Sway sorting
 (4,143,311 spikes, 614 original units, 181,947 stored waveforms). The bounded run
 used a fresh package from the converted AIND engineering fixture (469,725,567
 source spikes, 705 original units, 93 suggestions), retaining 1,486,361 evidence
@@ -151,15 +166,19 @@ uv run --no-sync python tools/verify_feedback_replay.py \
 
 It verified all rows, 700 active units, and child counts 1,691,273 / 1,597,610.
 
-## Test-process limitation
+## Local checks and test-process limitation
 
-The updated application target passed **791 tests, 6 skipped**, with exit status
-zero; both final real GUI recording processes also exited normally. The core
-partition passed **682 assertions, 13 skipped**, then the previously documented
-intermittent native interpreter-shutdown fault recurred (exit139, no Python frame).
-Thus the latest `make test-full` invocation did **not** complete cleanly.
-CI is excluded from this assessment at the maintainer's request; these results
-are local Linux validation. Prior
-standard and debugger core runs have exited normally; the cause remains
-unlocalized. The current evidence supports further beta testing, not a claim
-that native shutdown or final release readiness is established.
+The final application target passed **795 tests, 6 skipped**, with exit status zero.
+Both final real GUI recording processes exited normally. All **15 focused parent
+regressions** pass, including a canceled dirty-close prompt, blocked editing keys,
+Back/Esc, exact layout/action/focus restoration, failure cleanup, saved color hints,
+and historical fallback. Lint, formatting, documentation generation/checks and
+source/wheel builds pass; the wheel includes the new workspace module.
+
+The core partition passed **682 tests, 13 skipped**, then the previously documented
+intermittent native interpreter-shutdown fault recurred (exit 139, no Python frame).
+Thus `make test-full` did **not** complete cleanly; the application target was run
+separately. CI is excluded at the maintainer's request. Prior standard and debugger
+core runs have exited normally; the cause remains unlocalized. This supports
+further beta testing, not a claim that native shutdown is fixed or release
+readiness is established.
