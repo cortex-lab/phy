@@ -5,8 +5,10 @@ import json
 import logging
 import os
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 from types import MappingProxyType
+from zipfile import BadZipFile
 
 import numpy as np
 from phylib.stats import correlograms
@@ -67,7 +69,7 @@ class ParentLineage:
         if not self.path.exists():
             return
         try:
-            with np.load(self.path, allow_pickle=False) as data:
+            with self.path.open('rb') as stream, np.load(stream, allow_pickle=False) as data:
                 if int(data['version']) != 1 or str(data['fingerprint']) != _fingerprint(
                     self.controller.supervisor.clustering.spike_clusters, self.controller.model
                 ):
@@ -100,7 +102,7 @@ class ParentLineage:
                         raise ValueError('a merge needs at least two parents')
                     records[target] = groups
                 self.records = records
-        except (OSError, ValueError, KeyError, TypeError) as error:
+        except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
             logger.warning('Merge-parent history unavailable: %s.', error)
             self.records = {}
 
@@ -270,7 +272,7 @@ class ParentProviders:
         per_parent = getattr(self.controller, 'n_spikes_waveforms', 100)
         total = getattr(self.controller, 'n_spikes_waveforms_total', None)
         ids = self.sampled(parent, per_parent, total)
-        if self.model.spike_waveforms is not None:
+        if getattr(self.model, 'spike_waveforms', None) is not None:
             ids = np.intersect1d(self.groups[parent], self.model.spike_waveforms.spike_ids)
             count = min(per_parent, total // len(self.ids)) if total is not None else per_parent
             ids = _sample_spikes_evenly(ids, count)
@@ -513,7 +515,7 @@ class ParentInspection:
         specs = [(ccg, providers.ids)]
         waveform_ids = [p for p in groups if len(providers.waveform_ids(p))]
         if waveform_ids and (
-            self.controller.model.spike_waveforms is not None
+            getattr(self.controller.model, 'spike_waveforms', None) is not None
             or getattr(self.controller.model, 'traces', None) is not None
         ):
             specs.append(
@@ -525,6 +527,11 @@ class ParentInspection:
                     waveform_ids,
                 )
             )
+            if len(waveform_ids) < len(groups):
+                caption.setText(
+                    text
+                    + '<br>Parents without retained waveforms are omitted from the waveform plot.'
+                )
         elif getattr(self.controller.model, 'spike_templates', None) is not None:
             specs.append(
                 (
@@ -539,7 +546,7 @@ class ParentInspection:
                 text
                 + '<br>Raw/stored waveforms unavailable: showing up to 100 template traces per parent.'
             )
-        if self.controller.model.amplitudes is not None:
+        if getattr(self.controller.model, 'amplitudes', None) is not None:
             specs.append(
                 (
                     AmplitudeView(
@@ -551,8 +558,8 @@ class ParentInspection:
                 )
             )
         if (
-            self.controller.model.features is not None
-            or self.controller.model.spike_waveforms is not None
+            getattr(self.controller.model, 'features', None) is not None
+            or getattr(self.controller.model, 'spike_waveforms', None) is not None
         ):
             specs.append(
                 (
@@ -569,6 +576,11 @@ class ParentInspection:
                 # channel callbacks and no actions capable of reaching curation.
                 window.add_view(view, position='right')
                 view._cluster_color_index_by_id = colors
+                # Canvas click handlers normally publish channel/time/transfer
+                # events that ordinary views elsewhere in the application may
+                # consume. Keep these display-only views local, including when
+                # the user modifier-clicks; PanZoom remains independently active.
+                view.on_mouse_click = lambda event: None
                 self.views.append(view)
                 if ids:
                     view.on_select(cluster_ids=ids)
@@ -603,7 +615,8 @@ class ParentInspection:
             # None is a meaningful sender in phylib's registry. Passing it
             # would disconnect unrelated application-wide callbacks.
             unconnect(*(obj for obj in owned if obj is not None))
-            view.canvas.close()
+            with suppress(RuntimeError):  # Qt may already have destroyed the owning window.
+                view.canvas.close()
             view._closed = True
         self.views = []
         if self.window is not None:
@@ -616,7 +629,8 @@ class ParentInspection:
 
     def close_review(self):
         if self.window is not None:
-            self.window.close()
+            with suppress(RuntimeError):
+                self.window.close()
             self._dispose_review()
 
     def _on_gui_closed(self, sender):
@@ -627,8 +641,10 @@ class ParentInspection:
     def close(self):
         self.close_review()
         if self._gui is not None and hasattr(self, '_context_menu'):
-            self.controller.supervisor.cluster_view.table_view.viewport().removeEventFilter(
-                self._context_menu
-            )
+            with suppress(RuntimeError):
+                self.controller.supervisor.cluster_view.table_view.viewport().removeEventFilter(
+                    self._context_menu
+                )
+        self._gui = None
         self.lineage.close()
         unconnect(self._on_selection, self._on_mutation, self._on_gui_closed)

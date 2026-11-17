@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from phylib.utils import emit
+from phylib.utils import Bunch, emit
 
 from phy.apps._parent_review import ParentLineage, ParentProviders
 from phy.apps.large_recording.tests.test_adapter import make_controller
@@ -82,6 +82,28 @@ def test_lineage_rejects_membership_that_does_not_partition_live_unit(tmp_path):
         lineage.close()
 
 
+def test_lineage_rejects_changed_source_rows_and_corrupt_archives(tmp_path):
+    controller = lineage_controller(tmp_path, [0, 0, 1, 1])
+    lineage = ParentLineage(controller)
+    target = controller.supervisor.clustering.merge([0, 1]).added[0]
+    emit('curation_saved', controller.supervisor)
+    lineage.close()
+    controller.model.spike_times[[0, 1]] = controller.model.spike_times[[1, 0]]
+    changed = ParentLineage(controller)
+    try:
+        with pytest.raises(ValueError, match='unavailable'):
+            changed.parents(target)
+    finally:
+        changed.close()
+    (tmp_path / '_phy_merge_parents.npz').write_bytes(b'PK\x03\x04broken')
+    corrupt = ParentLineage(controller)
+    try:
+        with pytest.raises(ValueError, match='unavailable'):
+            corrupt.parents(target)
+    finally:
+        corrupt.close()
+
+
 def test_providers_use_exact_spikes_without_changing_controller(tempdir):
     controller = _mock_controller(tempdir, MyControllerFull)
     try:
@@ -127,6 +149,7 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
         dirty = supervisor.is_dirty()
         history = supervisor.clustering._undo_stack._index
         original = controller._get_waveforms
+        selection_settings = dict(controller.selection)
         for _ in range(2):
             callbacks = list(_EVENT._callbacks)
             window = inspection.show(target)
@@ -140,11 +163,13 @@ def test_review_is_read_only_and_closes_on_selection_and_mutation(qtbot, tempdir
             for view in inspection.views:
                 assert view.cluster_ids == [0, 1]
                 assert not hasattr(view, 'actions')
+                view.on_mouse_click(Bunch(key='Control', button='Left', pos=(0, 0)))
             np.testing.assert_array_equal(supervisor.clustering.spike_clusters, before)
             assert supervisor.get_labels('group') == metadata
             assert supervisor.is_dirty() == dirty
             assert supervisor.clustering._undo_stack._index == history
             assert controller._get_waveforms == original
+            assert dict(controller.selection) == selection_settings
             assert supervisor.selected == [target]
             window.file_actions.get('return_to_merged_unit').trigger()
             assert inspection.window is None
