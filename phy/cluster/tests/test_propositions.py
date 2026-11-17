@@ -103,6 +103,155 @@ def test_nested_result_retirement_also_marks_acceptance_historical():
     assert projected.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
 
 
+def _restored_catalog(*, modified=False):
+    catalog = decode_curation_mapping(_source())
+    key = catalog.propositions[0].key
+    applied = [41, 56, 72] if modified else [41, 56]
+    catalog = catalog.accept(key, applied, 100)
+    retired = {
+        '41': {'operation': 'merge', 'replacements': [100]},
+        '56': {'operation': 'merge', 'replacements': [100]},
+        '100': {'operation': 'restore_parents', 'replacements': [101, 102]},
+        '101': {'operation': 'merge', 'replacements': [103]},
+        '102': {'operation': 'merge', 'replacements': [103]},
+    }
+    return catalog.project_live_ids([103, 72], retired_units=retired), key
+
+
+def test_proven_complete_reassembly_recovers_acceptance_without_retargeting_review():
+    restored, key = _restored_catalog()
+    historical_review = restored.review_mapping()
+    # Retirement convergence alone is insufficient evidence: a restore can
+    # distribute different historical memberships among its replacement IDs.
+    assert restored.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
+    proof = {key: {'result_unit_id': np.int64(103), 'modified': False}}
+    reassembled = restored.project_live_ids([103, 72], reassembled_results=proof)
+    assert reassembled.status_for(key) is PropositionStatus.ACCEPTED
+    assert reassembled.reason_for(key) is None
+    assert reassembled.review_mapping() == historical_review
+    assert reassembled.reviews[key].result_unit_id == 100
+    assert reassembled.reviews[key].applied_unit_ids == (41, 56)
+    assert encode_curation_mapping(reassembled) == _source()
+    proof[key]['modified'] = True
+    assert reassembled.status_for(key) is PropositionStatus.ACCEPTED
+    assert type(reassembled.reassembled_results[key]['result_unit_id']) is int
+    with raises(TypeError):
+        reassembled.reassembled_results[key]['modified'] = True
+
+
+def test_complete_reassembly_with_extra_membership_is_modified_acceptance():
+    restored, key = _restored_catalog()
+    reassembled = restored.project_live_ids(
+        [103, 72],
+        reassembled_results={key: {'result_unit_id': 103, 'modified': True}},
+    )
+    assert reassembled.status_for(key) is PropositionStatus.ACCEPTED_MODIFIED
+    assert reassembled.review_mapping() == restored.review_mapping()
+    # Reconstructing an historically modified accepted scope does not convert
+    # that curator decision into an exact acceptance of the original proposal.
+    restored, key = _restored_catalog(modified=True)
+    reassembled = restored.project_live_ids(
+        [103, 72],
+        reassembled_results={key: {'result_unit_id': 103, 'modified': False}},
+    )
+    assert reassembled.status_for(key) is PropositionStatus.ACCEPTED_MODIFIED
+    assert reassembled.reviews[key].applied_unit_ids == (41, 56, 72)
+
+
+def test_reassembly_projection_clears_after_partial_split_or_another_restore():
+    restored, key = _restored_catalog()
+    reassembled = restored.project_live_ids(
+        [103, 72],
+        reassembled_results={key: {'result_unit_id': 103, 'modified': False}},
+    )
+    # Even a still-live target may have lost part of its accepted membership.
+    # Every caller must prove complete coverage again on each projection.
+    assert (
+        reassembled.project_live_ids([103, 72]).status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    retired = dict(reassembled.retired_units)
+    retired['103'] = {'operation': 'restore_parents', 'replacements': [104, 105]}
+    separated = reassembled.project_live_ids([104, 105, 72], retired_units=retired)
+    assert separated.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
+    retired['104'] = {'operation': 'merge', 'replacements': [106]}
+    retired['105'] = {'operation': 'merge', 'replacements': [106]}
+    repeated = separated.project_live_ids(
+        [106, 72],
+        retired_units=retired,
+        reassembled_results={key: {'result_unit_id': 106, 'modified': False}},
+    )
+    assert repeated.status_for(key) is PropositionStatus.ACCEPTED
+    assert repeated.review_mapping() == restored.review_mapping()
+
+
+def test_reassembly_is_derived_not_saved_or_a_dirty_review_transition():
+    restored, key = _restored_catalog()
+    controller = MergePropositionController(restored)
+    controller.project_live_ids(
+        [103, 72],
+        reassembled_results={key: {'result_unit_id': 103, 'modified': False}},
+    )
+    assert controller.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    assert not controller.is_dirty()
+    snapshot = controller.snapshot()
+    controller.project_live_ids([101, 102, 72])
+    assert controller.catalog.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
+    controller.restore(snapshot)
+    assert controller.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    source, reviews = decode_review_mapping(controller.catalog.review_mapping())
+    loaded = decode_curation_mapping(encode_curation_mapping(controller.catalog))._replace(
+        reviews=reviews
+    )
+    assert loaded.reviews[key].result_unit_id == 100
+    assert not loaded.reassembled_results
+    loaded = loaded.project_live_ids([103, 72], retired_units=controller.catalog.retired_units)
+    assert loaded.status_for(key) is PropositionStatus.ACCEPTED_RESTORED
+    assert 'reassembled_results' not in source
+
+
+def test_reassembly_projection_requires_a_known_accepted_review_and_live_result():
+    restored, key = _restored_catalog()
+    for value in (
+        [],
+        {'result_unit_id': 999, 'modified': False},
+        {'result_unit_id': True, 'modified': False},
+        {'result_unit_id': 103, 'modified': 0},
+        {'result_unit_id': 103},
+        {'result_unit_id': 103, 'modified': False, 'unknown': 1},
+    ):
+        with raises(ValueError):
+            restored.project_live_ids([103, 72], reassembled_results={key: value})
+    for catalog in (
+        decode_curation_mapping(_source()),
+        decode_curation_mapping(_source()).reject(key),
+    ):
+        with raises(ValueError, match='accepted review'):
+            catalog.project_live_ids(
+                [103, 72],
+                reassembled_results={key: {'result_unit_id': 103, 'modified': False}},
+            )
+    with raises(ValueError, match='accepted review'):
+        restored.project_live_ids(
+            [103, 72],
+            reassembled_results={'merge:unknown': {'result_unit_id': 103, 'modified': False}},
+        )
+
+
+def test_explicit_review_change_drops_old_derived_reassembly():
+    restored, key = _restored_catalog()
+    reassembled = restored.project_live_ids(
+        [103, 72],
+        reassembled_results={key: {'result_unit_id': 103, 'modified': False}},
+    )
+    rejected = reassembled.reject(key)
+    assert rejected.status_for(key) is PropositionStatus.REJECTED
+    assert not rejected.reassembled_results
+    accepted_again = reassembled.accept(key, [103, 72], 104)
+    assert accepted_again.reviews[key].result_unit_id == 104
+    assert not accepted_again.reassembled_results
+
+
 def test_retirement_projection_undo_and_durable_modified_review():
     catalog = decode_curation_mapping(_source())
     key = catalog.propositions[0].key
