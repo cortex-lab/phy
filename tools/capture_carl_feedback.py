@@ -6,6 +6,8 @@ Records real X11 pixels, Qt input events and state assertions with separate conf
 """
 
 import argparse
+import ctypes
+import ctypes.util
 import json
 import os
 import shutil
@@ -60,7 +62,6 @@ def run(args):
         from PyQt5.QtCore import QCoreApplication, QEvent, QPoint, QTimer
         from PyQt5.QtGui import (
             QColor,
-            QContextMenuEvent,
             QCursor,
             QPainter,
             QPen,
@@ -97,7 +98,10 @@ def run(args):
             'mode': args.mode,
             'dataset': str(source_dataset),
             'working_copy': str(args.dataset),
-            'capture_scope': 'Settled real X11 pixels; Qt input events; not a spontaneous-redraw test',
+            'capture_scope': (
+                'Settled X11 pixels; native XTest context click and Qt input events; '
+                'not a spontaneous-redraw test'
+            ),
             'private_display': display,
             'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
             'steps': [],
@@ -115,6 +119,11 @@ def run(args):
             enable_threading=False,
         )
         bounded = args.mode == 'bounded'
+        display_columns = ['id', 'group', 'n_spikes', 'ch']
+        if bounded:
+            display_columns.insert(2, 'full_count')
+        controller.supervisor.columns = display_columns
+        report['display_columns'] = display_columns
         names = [
             'SampledCorrelogramView' if bounded else 'CorrelogramView',
             'WaveformView',
@@ -272,6 +281,34 @@ def run(args):
             QTest.qWait(200)
             show_cursor(idle_cursor)
 
+        def native_context_click():
+            # Route the context-menu gesture through X11/XTest into Qt's xcb
+            # platform plugin, rather than manufacturing a ContextMenu event.
+            assert os.environ['DISPLAY'] == display
+            x11 = ctypes.CDLL(ctypes.util.find_library('X11'))
+            xtst = ctypes.CDLL(ctypes.util.find_library('Xtst'))
+            x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
+            x11.XOpenDisplay.restype = ctypes.c_void_p
+            x11.XFlush.argtypes = [ctypes.c_void_p]
+            x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
+            xtst.XTestFakeButtonEvent.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_uint,
+                ctypes.c_int,
+                ctypes.c_ulong,
+            ]
+            xtst.XTestFakeButtonEvent.restype = ctypes.c_int
+            connection = x11.XOpenDisplay(display.encode())
+            if not connection:
+                raise RuntimeError('Cannot open the private X11 display for context click.')
+            try:
+                for pressed in (1, 0):
+                    if not xtst.XTestFakeButtonEvent(connection, 3, pressed, 0):
+                        raise RuntimeError('XTest context-menu button event failed.')
+                x11.XFlush(connection)
+            finally:
+                x11.XCloseDisplay(connection)
+
         def key(widget, value, modifiers=Qt.NoModifier, label='Keyboard shortcut'):
             event = input_note(label)
             QTest.qWait(250)
@@ -424,113 +461,215 @@ def run(args):
         )
         capture('05-merged', 'G commits one merge and both suggestion decisions', merged=merged)
 
-        # Snapshot before opening, including history/metadata/dirty state.
-        before_layout = bytes(gui.saveState())
-        before_views = gui.views
-        before_actions = {
-            name: action.qaction.isEnabled()
-            for name, action in supervisor.actions._actions_dict.items()
-        }
-        before_review = supervisor.clustering.spike_clusters.copy()
-        before_metadata = deepcopy(supervisor.cluster_meta._data)
-        before_dirty = supervisor.is_dirty()
-        before_history = deepcopy(supervisor._global_history.current_position)
-        # Open the actual Cluster View context menu and click Show parents.
+        # Make two genuine later curation actions, so restoring M cannot be
+        # confused with undoing the latest merge. These survive every next step.
+        unrelated_inputs = [
+            int(unit)
+            for unit in supervisor.clustering.cluster_ids
+            if int(unit) not in set(union) | {merged}
+        ][:2]
+        assert len(unrelated_inputs) == 2
+        click_row(supervisor.cluster_view, unrelated_inputs[0])
+        click_row(supervisor.cluster_view, unrelated_inputs[1], Qt.ControlModifier)
+        key(gui, Qt.Key_G, label='G: make an unrelated later merge')
+        settle()
+        unrelated = int(supervisor.selected[0])
+        key(gui, Qt.Key_M, Qt.AltModifier, 'Alt + M: label the unrelated unit MUA')
+        settle()
+        assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+        after_later = supervisor.clustering.spike_clusters.copy()
+        before_restore_history = supervisor._global_history.current_position
+        unrelated_rows = np.flatnonzero(np.isin(initial, unrelated_inputs))
+        assert np.all(after_later[unrelated_rows] == unrelated)
+        report['unrelated'] = {'inputs': unrelated_inputs, 'result': unrelated, 'group': 'mua'}
+        click_row(supervisor.cluster_view, unrelated)
+        capture(
+            '06-later-edits', 'A later merge and its MUA label must survive parent restoration'
+        )
+
+        def assert_unrelated_preserved():
+            np.testing.assert_array_equal(
+                supervisor.clustering.spike_clusters[unrelated_rows],
+                after_later[unrelated_rows],
+            )
+            assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+
+        original_groups = controller.parent_inspection.lineage.parents(merged)
+        click_row(supervisor.cluster_view, merged)
         table = supervisor.cluster_view
         index = table._proxy_index_for_id(merged)
         table.table_view.scrollTo(index)
         settle(150)
         point = table.table_view.visualRect(index).center()
 
-        def choose_context_action():
-            menu = app.activePopupWidget()
-            assert isinstance(menu, QMenu)
-            action = next(action for action in menu.actions() if action.text() == 'Show parents')
-            assert action.isEnabled()
-            click(
-                menu,
-                Qt.LeftButton,
-                Qt.NoModifier,
-                menu.actionGeometry(action).center(),
-                'Show parents',
-            )
+        restore_menu_errors = []
 
-        input_note('Right click: merged unit context menu')
+        def choose_restore_action():
+            try:
+                menu = app.activePopupWidget()
+                assert isinstance(menu, QMenu)
+                action = next(
+                    action
+                    for action in menu.actions()
+                    if action.text() == 'Restore parents in Merge Mode'
+                )
+                assert action.isEnabled()
+                click(
+                    menu,
+                    Qt.LeftButton,
+                    Qt.NoModifier,
+                    menu.actionGeometry(action).center(),
+                    'Restore parents in Merge Mode',
+                )
+            except Exception as error:
+                restore_menu_errors.append(error)
+                menu = app.activePopupWidget()
+                if menu is not None:
+                    menu.close()
+
+        input_note('Right click: older merged unit context menu')
         move_pointer(table.table_view.viewport(), point)
-        show_cursor(clicked_cursor)
-        QTimer.singleShot(400, lambda: show_cursor(idle_cursor))
-        QTimer.singleShot(650, choose_context_action)
-        event = QContextMenuEvent(
-            QContextMenuEvent.Mouse, point, table.table_view.viewport().mapToGlobal(point)
-        )
-        QApplication.postEvent(table.table_view.viewport(), event)
-        settle()
-        review = controller.parent_inspection.window
-        assert review is not None
-        settle()
-        np.testing.assert_array_equal(before_review, supervisor.clustering.spike_clusters)
-        np.testing.assert_equal(supervisor.cluster_meta._data, before_metadata)
-        assert supervisor.is_dirty() == before_dirty
-        assert supervisor._global_history.current_position == before_history
-        inspection = controller.parent_inspection
-        assert inspection.host_gui is gui
-        assert review.isVisible()
-        assert len(inspection.views) == 4
-        for view in inspection.views:
-            assert dict(view._cluster_color_index_by_id) == premerge_colors
+        QTimer.singleShot(650, choose_restore_action)
+        native_context_click()
+        settle(1000)
+        if restore_menu_errors:
+            raise restore_menu_errors[0]
+        assert controller.parent_inspection.window is None  # Actual curation workspace.
+        assert supervisor.selection.state.is_merge_mode
+        restored = {}
+        for old_parent, rows in original_groups.items():
+            values = np.unique(supervisor.clustering.spike_clusters[rows])
+            assert len(values) == 1
+            restored[int(old_parent)] = int(values[0])
+        assert len(set(restored.values())) == len(restored)
+        assert merged not in supervisor.clustering.cluster_ids
+        assert set(restored.values()) <= set(supervisor.clustering.cluster_ids)
+        assert set(supervisor.selection.state.merge.ordered_ids) == set(restored.values())
+        assert supervisor._global_history.current_position == before_restore_history + 1
+        assert supervisor.is_dirty()
+        for old_parent, new_parent in restored.items():
+            assert supervisor.selection_color_indices[new_parent] == premerge_colors[old_parent]
+        assert_unrelated_preserved()
+        report['restored'] = restored
+        report['restored_live_units'] = True
         report['parent_colors_preserved'] = True
-        assert gui.views == before_views
-        assert all(
-            not action.qaction.isEnabled() for action in supervisor.actions._actions_dict.values()
-        )
         capture(
-            '06-show-parents',
-            'Exact immediate merge parents — read only',
-            window=gui,
-            parents=list(map(int, controller.parent_inspection.providers.ids)),
+            '07-restored-parents',
+            'Restore the older merge: real parent clusters in editable Merge Mode',
+            restored=restored,
+            later_edits_preserved=True,
         )
-        button = inspection.return_button
-        assert button.isVisible() and button.isEnabled()
-        assert review.rect().contains(button.mapTo(review, button.rect().center()))
-        click(button, Qt.LeftButton, label='Back to merged unit')
+
+        restored_assignments = supervisor.clustering.spike_clusters.copy()
+        key(gui, Qt.Key_Z, Qt.ControlModifier, 'Ctrl + Z: undo only the parent restoration')
         settle()
-        assert controller.parent_inspection.window is None
-        assert bytes(gui.saveState()) == before_layout
-        assert gui.views == before_views
-        assert {
-            name: action.qaction.isEnabled()
-            for name, action in supervisor.actions._actions_dict.items()
-        } == before_actions
-        report['parent_workspace_restored'] = True
-        np.testing.assert_array_equal(before_review, supervisor.clustering.spike_clusters)
-        np.testing.assert_equal(supervisor.cluster_meta._data, before_metadata)
-        assert supervisor.is_dirty() == before_dirty
-        assert supervisor._global_history.current_position == before_history
-        capture('07-return', 'One click returns to the merged unit without editing')
-        app.setActiveWindow(gui)
-        gui.setFocus()
-        key(gui, Qt.Key_Z, Qt.ControlModifier, 'Ctrl + Z: undo')
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, after_later)
+        assert_unrelated_preserved()
+        key(
+            gui,
+            Qt.Key_Z,
+            Qt.ControlModifier | Qt.ShiftModifier,
+            'Ctrl + Shift + Z: redo the parent restoration',
+        )
         settle()
-        np.testing.assert_array_equal(initial, supervisor.clustering.spike_clusters)
-        assert supervisor.selection.state.merge.proposition_ids == keys
-        assert dict(supervisor.merge_propositions.catalog.reviews) == initial_reviews
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, restored_assignments)
+        assert supervisor.selection.state.is_merge_mode
+        assert_unrelated_preserved()
+        capture('08-restore-history', 'Undo/redo restoration preserves the later merge and label')
+
+        key(gui, Qt.Key_V, label='V: leave Merge Mode; restored parents stay live')
+        settle()
+        assert not supervisor.selection.state.is_merge_mode
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, restored_assignments)
+        assert set(restored.values()) <= set(supervisor.clustering.cluster_ids)
+        assert_unrelated_preserved()
         capture(
-            '08-undo', 'Undo restores assignments, both decisions and the comparison workspace'
+            '09-parents-remain-live',
+            'Leaving Merge Mode keeps the restored units available for normal curation',
         )
-        app.setActiveWindow(gui)
-        key(gui, Qt.Key_Z, Qt.ControlModifier | Qt.ShiftModifier, 'Ctrl + Shift + Z: redo')
+        key(gui, Qt.Key_V, label='V: stage the real parents again')
         settle()
-        assert supervisor.selected == [merged]
-        np.testing.assert_array_equal(expected, supervisor.clustering.spike_clusters)
-        key(gui, Qt.Key_S, Qt.ControlModifier, 'Ctrl + S: save')
+        assert supervisor.selection.state.is_merge_mode
+
+        excluded_original = list(restored)[-1]
+        excluded = restored[excluded_original]
+        click_row(supervisor.merge_view, excluded)
+        exclude_button = supervisor.merge_view.dock.get_widget('exclude_merge_row')
+        assert exclude_button is not None and exclude_button.isVisible()
+        assert exclude_button.isEnabled()
+        click(exclude_button, Qt.LeftButton, label='Exclude current parent from the pending merge')
         settle()
-        capture('09-redo-save', 'Redo and Save retain the combined merge')
+        assert excluded not in supervisor.selected
+        assert excluded in supervisor.clustering.cluster_ids
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, restored_assignments)
+        report['excluded_parent'] = {'original': excluded_original, 'live': excluded}
+
+        candidates = [
+            int(unit)
+            for unit in supervisor.similarity_view.get_ids()
+            if int(unit) not in set(restored.values()) | {unrelated}
+        ]
+        assert candidates
+        candidate = candidates[0]
+        click_row(supervisor.similarity_view, candidate, Qt.ControlModifier)
+        chosen = list(supervisor.selection.state.merge.ordered_ids) + [candidate]
+        assert set(supervisor.selected) == set(chosen)
+        assert excluded not in chosen
+        assert_unrelated_preserved()
+        capture(
+            '10-new-combination',
+            'Exclude one restored parent and add a new candidate before merging',
+            excluded=excluded,
+            candidate=candidate,
+            chosen=chosen,
+        )
+        before_remerge = supervisor.clustering.spike_clusters.copy()
+        final_parent_groups = {
+            int(unit): supervisor.clustering.spikes_per_cluster[int(unit)].copy()
+            for unit in chosen
+        }
+        final_parent_colors = {
+            int(unit): supervisor.selection_color_indices[int(unit)] for unit in chosen
+        }
+        key(gui, Qt.Key_G, label='G: merge the chosen parents and new candidate')
+        settle()
+        final_merged = int(supervisor.selected[0])
+        expected = before_remerge.copy()
+        expected[np.isin(before_remerge, chosen)] = final_merged
+        np.testing.assert_array_equal(supervisor.clustering.spike_clusters, expected)
+        assert np.all(
+            supervisor.clustering.spike_clusters[original_groups[excluded_original]] == excluded
+        )
+        assert_unrelated_preserved()
+        report['new_candidate'] = candidate
+        report['final_merged'] = final_merged
+        report['chosen'] = chosen
+        report['later_edits_preserved'] = True
+        report['excluded_parent_stays_independent'] = True
+        for proposal_key in keys:
+            assert (
+                supervisor.merge_propositions.catalog.reviews[proposal_key].result_unit_id
+                == merged
+            )
+            status = supervisor.merge_propositions.catalog.status_for(proposal_key).value
+            assert 'restored' in status or 'superseded' in status, status
+        report['historical_review_statuses'] = {
+            proposal_key: supervisor.merge_propositions.catalog.status_for(proposal_key).value
+            for proposal_key in keys
+        }
         if bounded:
-            assert len(controller.bounded_session.events) == len(initial_events) + 1
-        report['merged'] = merged
-        report['assigned_spikes'] = int(
-            np.count_nonzero(initial != supervisor.clustering.spike_clusters)
+            assert len(controller.bounded_session.events) == len(initial_events) + 5
+        key(gui, Qt.Key_S, Qt.ControlModifier, 'Ctrl + S: save the revised curation')
+        settle()
+        capture(
+            '11-revised-save',
+            'Saved: new merge, excluded parent and unrelated MUA unit are all retained',
+            final_merged=final_merged,
+            excluded=excluded,
+            unrelated=unrelated,
         )
+        report['merged'] = merged
+        report['assigned_spikes'] = int(np.count_nonzero(initial != expected))
         input_note('Reopen the saved working copy')
         gui.close()
         controller.close()
@@ -546,6 +685,7 @@ def run(args):
             plugins=[],
             enable_threading=False,
         )
+        controller.supervisor.columns = display_columns
         gui = controller.create_gui(
             default_views=names, view_count=dict.fromkeys(names, 1), do_prompt_save=False
         )
@@ -555,7 +695,7 @@ def run(args):
         gui.resize(1920, 1200)
         gui.move(0, 0)
         gui.show()
-        supervisor.select([merged])
+        supervisor.select([final_merged])
         settle()
         if bounded:
             report['reopened_initial_evidence_window'] = controller.evidence_window_index
@@ -580,19 +720,27 @@ def run(args):
             report['reopen_window_action'] = (
                 'Explicit Inspect evidence window dialog; not automatic restoration'
             )
-        assert all(
-            supervisor.merge_propositions.catalog.reviews[key].result_unit_id == merged
-            for key in keys
-        )
         np.testing.assert_array_equal(expected, supervisor.clustering.spike_clusters)
-        assert set(controller.parent_inspection.lineage.parents(merged)) == set(union)
-        assert dict(controller.parent_inspection.lineage.colors(merged)) == premerge_colors
+        assert_unrelated_preserved()
+        groups = controller.parent_inspection.lineage.parents(final_merged)
+        assert set(groups) == set(chosen)
+        for parent in chosen:
+            np.testing.assert_array_equal(groups[parent], final_parent_groups[parent])
+        assert (
+            dict(controller.parent_inspection.lineage.colors(final_merged)) == final_parent_colors
+        )
+        for proposal_key in keys:
+            assert (
+                supervisor.merge_propositions.catalog.reviews[proposal_key].result_unit_id
+                == merged
+            )
+            status = supervisor.merge_propositions.catalog.status_for(proposal_key).value
+            assert 'restored' in status or 'superseded' in status, status
         report['reopened_parent_colors_preserved'] = True
+        report['reopened_lineage_correct'] = True
         capture(
-            '10-reopened',
-            'Reopened: saved curation verified; evidence window explicitly reselected'
-            if bounded
-            else 'Reopened: saved assignments, review decisions and parent history verified',
+            '12-reopened',
+            'Reopened: revised merge, excluded parent, unrelated edits and lineage verified',
         )
         assert {p.name: hash_file(p) for p in files} == source_hashes
         report['source_unchanged'] = True

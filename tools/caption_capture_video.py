@@ -10,6 +10,19 @@ import json
 import subprocess
 from pathlib import Path
 
+_KEY_LABELS = {
+    'G',
+    'V',
+    'Backspace',
+    'Alt + G',
+    'Alt + M',
+    'Ctrl + Z',
+    'Ctrl + Shift + Z',
+    'Ctrl + S',
+    'Enter',
+    'Esc',
+}
+
 
 def timestamp(seconds):
     ticks = round(seconds * 100)
@@ -34,14 +47,7 @@ def _key_names(label):
     if 'click' in lowered:
         keys = ['RIGHT CLICK' if label.startswith('Right click') else 'LEFT CLICK']
         return ['CTRL'] * label.startswith('Ctrl + ') + keys
-    if ':' in label and label.split(':', 1)[0] in (
-        'G',
-        'Ctrl + Z',
-        'Ctrl + Shift + Z',
-        'Ctrl + S',
-        'Enter',
-        'Esc',
-    ):
+    if ':' in label and label.split(':', 1)[0] in _KEY_LABELS:
         return [part.upper() for part in label.split(':', 1)[0].split(' + ')]
     return []
 
@@ -51,14 +57,7 @@ def _press_release(event):
     if 'click' in label.lower():
         pressed = float(event.get('click_seconds', float(event['seconds']) + 0.9))
         return pressed, pressed + 0.25
-    if ':' in label and label.split(':', 1)[0] in (
-        'G',
-        'Ctrl + Z',
-        'Ctrl + Shift + Z',
-        'Ctrl + S',
-        'Enter',
-        'Esc',
-    ):
+    if ':' in label and label.split(':', 1)[0] in _KEY_LABELS:
         pressed = float(event.get('key_seconds', float(event['seconds']) + 0.45))
         return pressed, float(event.get('key_released_seconds', pressed + 0.1))
     return None
@@ -86,6 +85,10 @@ def _keycap_lines(keys, start, end, width, height, y):
         return []
     cap_widths = {
         'CTRL': 82,
+        'ALT': 72,
+        'BACKSPACE': 160,
+        'V': 52,
+        'M': 52,
         'SHIFT': 90,
         'LEFT CLICK': 148,
         'RIGHT CLICK': 166,
@@ -387,8 +390,8 @@ def render(directory, output_name=None, review_cut=False, review_seconds=43.0, o
     fps_num, fps_den = map(int, video['r_frame_rate'].split('/'))
     fps = fps_num / fps_den
     events = report['input_events']
-    if review_cut and not 40.0 <= review_seconds <= 45.0:
-        raise ValueError('--review-seconds must be between 40 and 45 seconds.')
+    if review_cut and not 20.0 <= review_seconds <= 120.0:
+        raise ValueError('--review-seconds must be between 20 and 120 seconds.')
 
     items = None
     event_output_times = {i: float(event['seconds']) for i, event in enumerate(events)}
