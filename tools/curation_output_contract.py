@@ -792,7 +792,7 @@ def compare_file_contract(
                 else set()
             )
             if role == 'ordinary':
-                optional.add('curation_review.json')
+                optional.update({'curation_review.json', '_phy_merge_parents.npz'})
                 for name in (
                     '_phy_cluster_metadata.json',
                     '_phy_cluster_metadata_schema.json',

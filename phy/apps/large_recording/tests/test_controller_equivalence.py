@@ -388,6 +388,9 @@ def test_same_controller_actions_match_full_replay(qtbot, tmp_path, capsys, wind
         )
         assert report['ok'], report.get('error', report)
         assert report['file_contract']['ok'], report
+        inventory = report['file_contract']['inventories']
+        assert '_phy_merge_parents.npz' in inventory['ordinary']['state_artifacts']
+        assert '_phy_merge_parents.npz' not in inventory['replay']['state_artifacts']
         for difference in report['permitted_membership_policy_differences']:
             if difference['field'] in ('group', 'notes'):
                 assert round_index == 3, difference

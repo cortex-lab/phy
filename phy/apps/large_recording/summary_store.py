@@ -306,6 +306,7 @@ def build_summary_store(
                         package_path,
                         output_dir,
                         expected_reference=initial_reference,
+                        check_cancel=lambda: _check_cancel(cancel),
                         return_reference=True,
                     )
             except (OSError, ValueError) as error:

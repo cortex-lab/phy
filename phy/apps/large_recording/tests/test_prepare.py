@@ -226,3 +226,25 @@ def test_prepare_protects_loader_and_preserves_producer_documents(tmp_path):
     for name in ('curation.json', 'curation_review.json'):
         assert (output / name).read_bytes() == (params.parent / name).read_bytes()
         assert name not in manifest['excluded_files']
+
+
+def test_cancel_after_final_validation_prevents_publication(tmp_path, monkeypatch):
+    from concurrent.futures import CancelledError
+
+    from phy.apps.large_recording.curation import BoundedSession
+
+    params = make_sorting(tmp_path / 'source')
+    original_close = BoundedSession.close
+    stopped = False
+
+    def close_and_cancel(session):
+        nonlocal stopped
+        original_close(session)
+        stopped = True
+
+    monkeypatch.setattr(BoundedSession, 'close', close_and_cancel)
+    output = tmp_path / 'cancelled'
+    with pytest.raises(CancelledError):
+        prepare_large(params, output, window_seconds=3, stratum_seconds=20, cancel=lambda: stopped)
+    assert not output.exists()
+    assert not list(tmp_path.glob('.cancelled-*'))

@@ -20,6 +20,7 @@ from .source import (
     hash_json,
     publish_directory,
 )
+from .streaming import check_cancel
 from .summaries import build_summaries, scalar_attributes, summary_size
 
 
@@ -375,8 +376,7 @@ def _prepare_source(
         }
         del union
         for ordinal, index in enumerate(_distributed_indices(len(bounds)), start=1):
-            if cancel is not None:
-                cancel()
+            check_cancel(cancel)
             first, last = map(int, bounds[index])
             block = int(np.searchsorted(source.valid_intervals[:, 0], first, side='right') - 1)
             code = int(types[index]) if types is not None else 0
@@ -395,8 +395,7 @@ def _prepare_source(
         selected_windows = 0
         for segment, (first, last) in enumerate(source.valid_intervals):
             for start in range(int(first), int(last), stratum):
-                if cancel is not None:
-                    cancel()
+                check_cancel(cancel)
                 end = min(start + stratum, int(last))
                 length = min(width, end - start)
                 offset = int(rng.integers(0, end - start - length + 1))
@@ -416,8 +415,7 @@ def _prepare_source(
     evidence_rows = 0
     for first, stop in row_bounds:
         for start in range(first, stop, batch_size):
-            if cancel is not None:
-                cancel()
+            check_cancel(cancel)
             end = min(start + batch_size, stop)
             evidence.update(np.unique(assignments[start:end]).tolist())
             evidence_rows += end - start
@@ -425,8 +423,7 @@ def _prepare_source(
                 progress('checking bounded rows', evidence_rows, n_bounded)
     missing = set(source.unit_ids.tolist()) - evidence
     for batch in source.iter_batches():
-        if cancel is not None:
-            cancel()
+        check_cancel(cancel)
         if window_policy == 'producer':
             break
         if not missing:
@@ -491,8 +488,7 @@ def _prepare_source(
         bounded_counts = {int(unit): 0 for unit in source.unit_ids}
         for first, stop in row_bounds:
             for start in range(first, stop, batch_size):
-                if cancel is not None:
-                    cancel()
+                check_cancel(cancel)
                 end = min(start + batch_size, stop)
                 length = end - start
                 global_ids[cursor : cursor + length] = np.arange(start, end, dtype=np.int64)
@@ -757,6 +753,7 @@ def _prepare_source(
 
         checked = BoundedSession(temporary)
         checked.close()
+        check_cancel(cancel)
         publish_directory(temporary, output_dir)
         _fsync_directory(output_dir.parent)
     except BaseException:
@@ -784,8 +781,7 @@ def _copy_files(files, cancel=None, progress=None, stage='copying files'):
     for source, destination in files:
         with source.open('rb') as src, destination.open('wb') as dst:
             while block := src.read(1024 * 1024):
-                if cancel is not None:
-                    cancel()
+                check_cancel(cancel)
                 dst.write(block)
                 copied += len(block)
                 if progress is not None:
@@ -813,8 +809,7 @@ def _copy_waveforms(source, output, global_ids, row_bounds, cancel=None, progres
         cursor = 0
         for first, stop in spans:
             for start in range(first, stop, source.batch_size):
-                if cancel is not None:
-                    cancel()
+                check_cancel(cancel)
                 end = min(start + source.batch_size, stop)
                 length = end - start
                 targets['_phy_spikes_subset.spikes.npy'][cursor : cursor + length] = (

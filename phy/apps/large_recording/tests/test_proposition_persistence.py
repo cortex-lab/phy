@@ -176,16 +176,28 @@ def test_copy_race_rejects_producer_mutation_without_publication(tmp_path, monke
     session = BoundedSession(bounded)
     session.save()
     session.close()
-    module = preparation if operation == 'prepare' else replay
-    original_copy = module.shutil.copyfile
+    if operation == 'prepare':
+        original_copy = preparation._copy_files
 
-    def mutate_copy(source, destination, *args, **kwargs):
-        result = original_copy(source, destination, *args, **kwargs)
-        if Path(destination).name == 'curation.json':
-            Path(destination).write_text('{}')
-        return result
+        def mutate_files(files, *args, **kwargs):
+            files = list(files)
+            result = original_copy(files, *args, **kwargs)
+            for _, destination in files:
+                if Path(destination).name == 'curation.json':
+                    Path(destination).write_text('{}')
+            return result
 
-    monkeypatch.setattr(module.shutil, 'copyfile', mutate_copy)
+        monkeypatch.setattr(preparation, '_copy_files', mutate_files)
+    else:
+        original_copy = replay.shutil.copyfile
+
+        def mutate_copy(source, destination, *args, **kwargs):
+            result = original_copy(source, destination, *args, **kwargs)
+            if Path(destination).name == 'curation.json':
+                Path(destination).write_text('{}')
+            return result
+
+        monkeypatch.setattr(replay.shutil, 'copyfile', mutate_copy)
     output = tmp_path / 'bad'
     with pytest.raises(ValueError, match='changed'):
         if operation == 'prepare':

@@ -563,7 +563,12 @@ def build_amplitude_index(
                 if attach:
                     from .range_index import attach_amplitude_index
 
-                    attach_amplitude_index(package, output, expected_reference=initial_reference)
+                    attach_amplitude_index(
+                        package,
+                        output,
+                        expected_reference=initial_reference,
+                        check_cancel=lambda: _check_cancel(cancel),
+                    )
             except (ValueError, OSError) as error:
                 raise SummaryStorePublishedError(output, str(error)) from error
             return output
