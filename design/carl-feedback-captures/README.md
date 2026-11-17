@@ -1,5 +1,27 @@
 # Carl feedback: rendered real-data validation
 
+## Updated review recording
+
+[Play the newer 30 fps video inline on PR #1428](https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782).
+It is a fresh 75-second recording with a visible native cursor, eased pointer
+motion, gold click cues and a readable input-event footer below the GUI.
+All ten state checkpoints and unchanged-source hash checks passed again.
+The complete recording is 1920×1272, H.264 at 30 fps, about 4.3 MB. It is hosted
+as a native GitHub attachment; no additional video binary is stored in Git.
+
+The recorder now defaults to 30 fps. Run `tools/capture_carl_feedback.py` as below
+with `--fps 30`, then run:
+
+```bash
+uv run --no-sync python tools/caption_capture_video.py NEW_BOUNDED_OUTPUT
+```
+
+This produces `review-30fps.mp4` with input labels in a separate footer; the GUI
+picture is not cropped or covered. The older 12fps recordings and their original
+validation artifacts below are preserved as historical evidence. The application
+layout and scientific colors in the new recording are the current PR design.
+
+
 These are actual Qt/OpenGL screenshots and uncut virtual-display recordings,
 not generated UI mockups. The ordinary run used Carl's earlier Sway sorting
 (4,143,311 spikes, 614 original units, 181,947 stored waveforms). The bounded run

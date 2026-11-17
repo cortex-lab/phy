@@ -1,0 +1,19 @@
+{
+  "comment": "https://github.com/cortex-lab/phy/pull/1428#issuecomment-6946254782",
+  "asset": "https://github.com/user-attachments/assets/c7df489b-6cee-46cb-a841-6dfe23641bc9",
+  "capture_revision": "b17a3c291d5cefbc10e3096b2bd2e2e0c143cdfb",
+  "recording_fps": 30,
+  "width": 1920,
+  "height": 1272,
+  "frames": 2261,
+  "duration_seconds": 75.366667,
+  "bytes": 4293315,
+  "sha256": "f60b2cf8f3bb3c1087ddaf26a25115eea0c0a15043a90bb82db222a906424ddb",
+  "visible_pointer": true,
+  "click_cues": true,
+  "input_event_footer": true,
+  "checkpoints": 10,
+  "state_checks_passed": true,
+  "source_unchanged": true,
+  "gh_version": "2.104.0"
+}
