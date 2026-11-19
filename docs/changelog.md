@@ -13,6 +13,23 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Bounded curation applies new journal events to current state instead of replaying
+  every earlier merge after each edit. Metadata-only actions preserve assignments
+  and membership caches. Cached undo/redo uses affected rows within a 64 MiB
+  history budget; evicted changes fall back to validated replay. Saves and loads
+  retain full independent journal validation.
+- Mixed split/restore exports compile merge runs once for writing, while retaining
+  the sequential interpreter for independent output verification.
+- Sampled correlograms show a thin chance line calculated from the same retained
+  observation windows. It is the mean off-center expected pair count, without
+  extrapolating full-recording firing rates or central-bin conventions.
+- Moving the final eligible primary unit to good clears obsolete Similarity
+  candidates. Batch navigation no longer queues a mutation against an old primary
+  context. Parent colors now save with the default configuration directory.
+- `Ctrl+Shift+Space` selects up to the preceding N eligible Similarity candidates
+  in current table order. Any Merge row, including the blue reference, can be
+  dragged to another row without changing the reference identity or color.
+
 - Preparation, replay, and summary-store/index CLI commands now report stage
   progress, rate and ETA, support Ctrl-C cancellation, and offer bounded
   parallel work with `--workers` (default 1). Summary accumulation uses capped

@@ -10445,6 +10445,15 @@ Select N eligible similar clusters, advancing after the current selection.
 
 ---
 
+#### Supervisor.select_previous_similar
+
+
+**`Supervisor.select_previous_similar(self, callback=None)`**
+
+Select the preceding batch of eligible similar clusters in visible order.
+
+---
+
 #### Supervisor.set_skip_masked_clusters
 
 

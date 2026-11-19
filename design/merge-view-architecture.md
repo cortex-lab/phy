@@ -216,10 +216,11 @@ class MergeSession:
     proposition_id: str | None = None
 ```
 
-`ordered_ids[0]` is always `reference_id`. The reference cannot be reordered
-within Merge View, but transferring it to Similarity promotes the next staged
-ID. Reordering later candidates changes `ordered_ids` but not
-`presentation_order`.
+`reference_id` belongs to `ordered_ids` but need not occupy its first position.
+All staged rows can be reordered; Merge presentation follows that row order,
+while reference identity and palette bindings remain stable. Transferring the
+reference to Similarity promotes the first remaining staged ID. Removing another
+row retains the existing reference.
 
 The entry snapshot contains the user state required by the workflow contract,
 not arbitrary application state. It includes selections, reference,

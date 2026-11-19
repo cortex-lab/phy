@@ -22,6 +22,7 @@ def _get_shortcuts(cls):
     # in the reference; the platform note explains the implementation detail.
     if cls is ActionCreator:
         shortcuts['select_first_similar'] = 'ctrl+space'
+        shortcuts['select_previous_similar'] = 'ctrl+shift+space'
     with captured_output() as (stdout, stderr):
         print(cls.__name__)
         print('-' * len(cls.__name__))

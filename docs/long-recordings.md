@@ -304,10 +304,14 @@ recording-time range. Unit Stability keeps the full-recording time context
 visible while individual windows are inspected.
 
 The Sampled ISI view excludes intervals crossing retained-window boundaries.
-The Sampled Correlogram view shows raw pair counts from retained windows; it
-does not apply a full-recording rate baseline. Both views are explicitly labeled
-as sampled evidence. Its central bin counts unordered within-unit pairs and
-combines both temporal orientations for cross-unit pairs whose absolute delay
+The Sampled Correlogram view shows raw pair counts from retained windows and a
+thin horizontal chance line computed from those same windows. Conditional on
+each unit's window count, the line averages the expected off-center bin counts
+for independent uniform sample times, including finite-window exposure. It does
+not use full-recording counts or duration. Both views are explicitly labeled as
+sampled evidence. The line is not an exact lag-dependent null curve or a
+confidence limit, and its expectation does not describe the folded central bin.
+The central bin counts unordered within-unit pairs and combines both temporal orientations for cross-unit pairs whose absolute delay
 is less than one bin, so tied sample times do not depend on source row order.
 For exact pair counts, each unit may have at most 46,340 spikes in an evidence
 window; the view reports an error for a larger per-unit window. Prepare shorter
@@ -389,6 +393,21 @@ The Evidence Amplitude View includes the full finite range of the selected
 units' displayed amplitudes, with padding, in both overview and window modes.
 Background outliers do not set that range. Evidence and display budgets still
 apply: spikes absent from the sample are not loaded just to determine the axis.
+
+New curation events update current semantic state and affected evidence rows.
+Metadata labels do not replay earlier assignments or invalidate unchanged
+membership summaries. Undo/redo retains inverse patches within a 64 MiB cache;
+large or evicted changes use the full validated journal as a fallback. Each
+save/load still verifies assignments and metadata against the complete journal.
+A long journal can therefore still affect checkpoint validation time, while
+ordinary editing avoids the earlier spike-count times journal-length cost.
+
+`Ctrl+Space` selects the next configured N eligible Similarity candidates;
+`Ctrl+Shift+Space` selects up to N rows before the first selected eligible row.
+Filtering and sorting define the order. With no eligible selection, backward
+navigation starts at the end; batches do not wrap across an endpoint. In Merge
+mode, dragging the blue row changes its position while preserving its reference
+identity, color and Similarity calculation.
 
 Lasso, feature, and waveform splits remain unavailable in bounded mode because
 the selected rows do not define how unseen source spikes should be assigned.

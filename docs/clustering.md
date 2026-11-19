@@ -20,12 +20,13 @@ selection. Cluster View is dimmed and read-only while the workspace is active, b
 scrollable; its overlay reminds you that `V` returns to the normal workflow.
 
 Every row in Merge View is part of the pending merge. Continue exploring Similarity View, where
-sorting, filtering, `Control+Space`, and multi-selection remain available. The Merge View status
+sorting, filtering, `Control+Space`, `Control+Shift+Space`, and multi-selection remain available. The Merge View status
 shows the number of staged clusters, selected similar clusters, and the total that `G` will merge.
 
 Move candidates between the two views with right-click or drag-and-drop. Drag within
-Merge View to reorder candidates. The first blue reference cannot be reordered, but it can be
-transferred when another staged row remains. The next row then becomes the blue reference and
+Merge View to reorder any staged row, including the blue reference. Reordering preserves the
+reference identity and color. The reference can be transferred when another staged row remains.
+The first remaining staged row then becomes the blue reference and
 the old reference remains selected in Similarity. The final staged row cannot be transferred, and
 the selection order shown by scientific views is always the Merge View order followed by selected
 Similarity View rows in visible table order. Transfers, table sorting, and Merge reordering redraw

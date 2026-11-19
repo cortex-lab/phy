@@ -63,11 +63,12 @@ projection and never infer colors from presentation order.
    color-slot bindings are unique.
 2. `set(presentation_order) == set(effective_ids)`.
 3. Every effective ID has exactly one color-slot binding.
-4. If a reference exists, it belongs to the active primary role and occupies
-   index zero in both `presentation_order` and `color_slots`.
+4. If a reference exists, it belongs to the active primary role and owns color
+   slot zero. In Normal mode it also occupies presentation index zero; in Merge
+   mode its row position is independent.
 5. Normal mode has no Merge session and its reference belongs to `cluster_ids`.
-6. Merge mode has no Cluster role selection, and the reference is the first
-   Merge member.
+6. Merge mode has no Cluster role selection, and the reference is a staged Merge
+   member whose identity is independent of row position.
 7. In Merge mode, `presentation_order` begins with the exact Merge View order;
    its tail contains exactly the selected Similarity IDs.
 8. A non-empty Similarity selection requires a reference.
