@@ -873,5 +873,239 @@
       "skipped": 19,
       "doc_check_exit_code": 0
     }
+  },
+  "sampled_pair_exclusion": {
+    "kernel_sha256": "69933b4fb76be0b2b942f7c55c3e95a3f639a9d1996723eb617257f9717ae3d4",
+    "numpy_version": "2.4.3",
+    "sample_rows": 7298318,
+    "windows": 175,
+    "sample_clock_dtype": "int64",
+    "sample_rate": 30000.0,
+    "bin_ms": 0.5,
+    "window_ms": 50.0,
+    "selected_ids": [
+      40,
+      44,
+      48
+    ],
+    "selected_retained_counts": {
+      "40": 9642,
+      "44": 3400,
+      "48": 5563
+    },
+    "fixed_readonly_mmap_arrays_for_all_calls": true,
+    "repeats": 3,
+    "profiling_enabled": false,
+    "inputs_unchanged": true,
+    "memory": {
+      "rss_before_calls_bytes": 280952832,
+      "rss_after_calls_bytes": 340586496,
+      "process_peak_rss_bytes": 353185792,
+      "mapped_fixture_array_bytes": 116775888,
+      "rss_note": "Process RSS includes shared read-only mmap pages and imports. Peak is a process high-water mark, not an allocation profile or a per-case peak."
+    },
+    "cases": [
+      {
+        "exclusion_ms": 0.3,
+        "exclude_auto": false,
+        "exclude_cross": false,
+        "seconds": [
+          0.0377472504042089,
+          0.036931389942765236,
+          0.03846447775140405
+        ],
+        "median_seconds": 0.0377472504042089,
+        "histogram_total": 20605,
+        "histogram_sha256": "849f9139bc1e6789f69a5f90ab1570224910b339a4a8f269571c93eac1ccb778",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340426752,
+          340549632,
+          340561920
+        ],
+        "median_ratio_to_both_disabled": 1.0
+      },
+      {
+        "exclusion_ms": 0.3,
+        "exclude_auto": false,
+        "exclude_cross": true,
+        "seconds": [
+          0.03517023427411914,
+          0.03351428406313062,
+          0.03464335668832064
+        ],
+        "median_seconds": 0.03464335668832064,
+        "histogram_total": 20589,
+        "histogram_sha256": "14b58701c310f3ead61a34aee2460950f7ef2ed3796f441f7de1bd66f1b1582c",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340553728,
+          340561920,
+          340549632
+        ],
+        "median_ratio_to_both_disabled": 0.91777166064678
+      },
+      {
+        "exclusion_ms": 0.3,
+        "exclude_auto": true,
+        "exclude_cross": false,
+        "seconds": [
+          0.03363155713304877,
+          0.032709193881601095,
+          0.0340843559242785
+        ],
+        "median_seconds": 0.03363155713304877,
+        "histogram_total": 20604,
+        "histogram_sha256": "86be5836d3d3d7e73e1b3a6f0d09123c441a9651cd00a114156a9825242a80fa",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340557824,
+          340566016,
+          340557824
+        ],
+        "median_ratio_to_both_disabled": 0.8909670710558241
+      },
+      {
+        "exclusion_ms": 0.3,
+        "exclude_auto": true,
+        "exclude_cross": true,
+        "seconds": [
+          0.03261388512328267,
+          0.03150375233963132,
+          0.032571813091635704
+        ],
+        "median_seconds": 0.032571813091635704,
+        "histogram_total": 20588,
+        "histogram_sha256": "599f828c4342ab4ab92c845bf26bdfa8641ee377bebcdc6c8ccd00edbebf33e2",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340566016,
+          340553728,
+          340566016
+        ],
+        "median_ratio_to_both_disabled": 0.8628923363383277
+      },
+      {
+        "exclusion_ms": 2.0,
+        "exclude_auto": false,
+        "exclude_cross": false,
+        "seconds": [
+          0.03660568408668041,
+          0.036235762760043144,
+          0.03585618082433939
+        ],
+        "median_seconds": 0.036235762760043144,
+        "histogram_total": 20605,
+        "histogram_sha256": "849f9139bc1e6789f69a5f90ab1570224910b339a4a8f269571c93eac1ccb778",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340553728,
+          340570112,
+          340561920
+        ],
+        "median_ratio_to_both_disabled": 1.0
+      },
+      {
+        "exclusion_ms": 2.0,
+        "exclude_auto": false,
+        "exclude_cross": true,
+        "seconds": [
+          0.035132244694978,
+          0.03413944412022829,
+          0.033686691895127296
+        ],
+        "median_seconds": 0.03413944412022829,
+        "histogram_total": 20557,
+        "histogram_sha256": "1d2c4afa8218b528c48b38244e19830e155602227de3e4bf4b1ba11725feb5d0",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340570112,
+          340574208,
+          340582400
+        ],
+        "median_ratio_to_both_disabled": 0.9421477987452096
+      },
+      {
+        "exclusion_ms": 2.0,
+        "exclude_auto": true,
+        "exclude_cross": false,
+        "seconds": [
+          0.033492091577500105,
+          0.03398209111765027,
+          0.03417128883302212
+        ],
+        "median_seconds": 0.03398209111765027,
+        "histogram_total": 20572,
+        "histogram_sha256": "a962da4241f6a4ec7cb2dc4e36f28307040c57f777618673a45591ad82423604",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340570112,
+          340574208,
+          340570112
+        ],
+        "median_ratio_to_both_disabled": 0.9378053207457805
+      },
+      {
+        "exclusion_ms": 2.0,
+        "exclude_auto": true,
+        "exclude_cross": true,
+        "seconds": [
+          0.03198580024763942,
+          0.030888855922967196,
+          0.03169637219980359
+        ],
+        "median_seconds": 0.03169637219980359,
+        "histogram_total": 20524,
+        "histogram_sha256": "56cf74c31f80878feeb08addd496c96d0d4c4f394e84cd733229b6743587418b",
+        "histogram_shape": [
+          3,
+          3,
+          101
+        ],
+        "histogram_dtype": "int64",
+        "rss_after_each_repeat_bytes": [
+          340574208,
+          340570112,
+          340574208
+        ],
+        "median_ratio_to_both_disabled": 0.8747262313670654
+      }
+    ],
+    "runtime_commit": "d1018a63"
   }
 }

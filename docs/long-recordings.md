@@ -317,6 +317,31 @@ For exact pair counts, each unit may have at most 46,340 spikes in an evidence
 window; the view reports an error for a larger per-unit window. Prepare shorter
 windows if this limit is reached.
 
+#### Excluding near-zero pairs
+
+In **Sampled Correlogram View**, use **Set exclusion zone** to set the half-width
+around zero lag in milliseconds (default **0.3 ms**, meaning ±0.3 ms). Enable
+**Toggle auto exclusion** with `D` for autocorrelograms and **Toggle cross
+exclusion** with `Shift+D` for cross-correlograms. Both start off. The shortcuts
+apply while the first Sampled Correlogram View has focus; the menu controls work
+in every instance. The width and switches are saved with the dataset's GUI state.
+The view status reports which exclusions are active.
+
+Exclusion applies to individual spike-pair delays **before binning**. For example,
+with 0.5 ms bins and a ±0.3 ms zone, a 0.1 ms pair is excluded while a 0.4 ms pair
+in the same bin remains counted. Boundaries are inclusive on the recording's
+sample clock; at 30 kHz, ±0.3 ms excludes delays up to nine samples. Setting the
+width to zero excludes exact-time pairs when enabled. Auto and cross switches
+operate independently, and no pair is formed across separate observation windows.
+
+The same retained spikes are used before and after toggling. These controls
+change only displayed pair contributions and the corresponding window-local
+chance calculation. They do not delete duplicate events, change spike times or
+assignments, or create curation-history entries. Pairs outside the zone remain
+unchanged, including longer-lag pairs involving a near-coincident spike. An
+artificially suppressed near-zero count is not evidence of a clean refractory
+period; turn exclusion off to inspect the original counts.
+
 The Evidence Amplitude view opens in a sampled **overview**: its horizontal
 axis uses the original recording clock and displays retained evidence windows
 together. Use the view menu's **Toggle amplitude scope** action to switch between

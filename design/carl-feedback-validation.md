@@ -215,3 +215,39 @@ The previous remote CI run at `8c232422` failed after successful pytest summarie
 on four matrix jobs (Unix exit 139; Windows exit 1). These are recorded separately
 from assertion failures. Local normal exits do not establish that this existing
 remote runtime problem is fixed; the separate dependency-fix PR is unchanged.
+
+
+### Sampled near-zero pair exclusion (PR1428 only)
+
+The follow-up implements pair exclusion in Sampled Correlogram View only. It
+filters raw integer-sample delays before histogram binning, independently for
+auto and cross pairs, with inclusive boundaries and a default half-width of
+0.3 ms. Both switches start off. No spike is removed from the retained trains;
+all longer-lag pair contributions remain eligible. Window boundaries and the
+existing central-bin conventions are preserved. The conditional-uniform chance
+line uses the same pair-specific exclusion when evaluating off-center exposure.
+
+Independent all-pairs and exhaustive discrete-clock oracles cover all four
+switch combinations, partial bins, sample boundaries, ties, sparse/reversed IDs,
+late clocks and observation gaps. View regressions cover legacy providers,
+keyboard scope/customization, unchanged input arrays and curation history,
+GUI-state restoration, and live merge/split/undo membership changes. Actual
+canvas-click keyboard tests also pass under Xvfb/xcb with software OpenGL. The
+visible status prefix retains active flags/width when the dock truncates text.
+
+On the same 7,298,318-row fixture (175 windows), fixed selected units 40/44/48
+contain 18,605 retained spikes. Three unprofiled repeats with 0.5 ms bins and a
+50 ms correlogram window produced the following medians on this machine:
+
+| Half-width | Disabled | Cross only | Auto only | Both |
+| --- | ---: | ---: | ---: | ---: |
+| 0.3 ms | 37.75 ms | 34.64 ms | 33.63 ms | 32.57 ms |
+| 2 ms | 36.24 ms | 34.14 ms | 33.98 ms | 31.70 ms |
+
+These are warm-mapping provider timings, not complete GUI/presentation timings
+or a general speedup claim. All calls reuse the same read-only integer arrays;
+input hashes are unchanged. Peak process RSS was 337 MiB, including mapped
+pages and imports, rather than a per-case allocation measurement. The compact
+benchmark JSON records the exact statistics module SHA256 and case results;
+that module is committed in `d1018a63`. Existing ordinary Correlogram View,
+source assignments, replay and master remain unchanged by this feature.

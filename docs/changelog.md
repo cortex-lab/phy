@@ -13,6 +13,11 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Sampled Correlogram View can exclude near-zero spike pairs before binning,
+  independently for auto- (`D`) and cross-correlograms (`Shift+D`). The exclusion
+  half-width defaults to 0.3 ms with both switches off. This changes displayed
+  pair counts and their chance reference; spike times, assignments and curation
+  history remain unchanged.
 - Bounded curation applies new journal events to current state instead of replaying
   every earlier merge after each edit. Metadata-only actions preserve assignments
   and membership caches. Cached undo/redo uses affected rows within a 64 MiB
