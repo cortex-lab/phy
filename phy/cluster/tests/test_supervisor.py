@@ -2196,6 +2196,78 @@ def test_select_first_similar_settles_pending_mutations_in_merge_mode(qtbot, sup
     assert set(supervisor.selected_merge).isdisjoint(supervisor.selected_similar)
 
 
+@mark.parametrize('filtered', [False, True])
+@mark.parametrize('which', ['best', 'all'])
+def test_batch_selection_after_moving_last_primary_is_empty(supervisor, filtered, which):
+    supervisor.cluster_view.sort_by('id', 'asc')
+    last = supervisor.cluster_view.get_navigable_ids()[-1]
+    _select(supervisor, [last])
+    if filtered:
+        supervisor.cluster_view.filter(f'id == {last} and group != "good"')
+    assert supervisor.similarity_view.get_navigable_ids()
+    if which == 'all':
+        supervisor.similarity_view.select(supervisor.similarity_view.get_navigable_ids()[:1])
+        supervisor.block()
+
+    getattr(supervisor.actions, f'move_{which}_to_good')()
+    supervisor.block()
+
+    assert supervisor.selection.state.reference_id is None
+    assert supervisor.similarity_view.get_ids() == []
+    supervisor.select_actions.select_first_similar()
+    supervisor.block()
+    assert supervisor.selected == []
+    assert supervisor.similarity_view.get_selected_ids() == []
+    assert not supervisor.task_logger._processing
+
+
+@mark.parametrize('context', ['reference', 'clear', 'filter', 'model', 'merge_mode', 'close'])
+def test_batch_selection_has_no_deferred_context_mutation(supervisor, monkeypatch, context):
+    _select(supervisor, [30])
+    view = supervisor.similarity_view
+    expected = view.get_navigable_ids()[: supervisor.n_similar_clusters_to_select]
+    scheduled, completed = [], []
+
+    def schedule(callback, *args):
+        if callback is not None:
+            scheduled.append((callback, args))
+
+    monkeypatch.setattr(view, '_schedule_callback', schedule)
+    supervisor.select_first_similar(callback=completed.append)
+    view.debouncer.flush()
+    # Only completion is deferred. No callback may create a selection from old rows.
+    assert supervisor.selected_similar == expected
+    assert not completed
+    assert len(scheduled) == 1
+    if context == 'reference':
+        supervisor.select([20])
+        supervisor.cluster_view.debouncer.flush()
+    elif context == 'clear':
+        supervisor.select([])
+        supervisor.cluster_view.debouncer.flush()
+    elif context == 'filter':
+        view.filter('id < 2')
+    elif context == 'model':
+        supervisor.actions.merge()
+    elif context == 'merge_mode':
+        supervisor.toggle_merge_mode()
+    else:
+        supervisor.gui.close()
+    settled = supervisor.selection.snapshot()
+    for callback, args in scheduled:
+        callback(*args)
+    assert supervisor.selection.state == settled
+    assert len(completed) == 1
+
+
+def test_similarity_reset_without_primary_clears_candidates(supervisor):
+    _select(supervisor, [30], [20])
+    view = supervisor.similarity_view
+    view.reset(())
+    assert view.get_ids() == []
+    assert view.get_selected_ids() == []
+
+
 def test_filter_release_restores_space_shortcut(qtbot, supervisor, gui):
     _select(supervisor, [30], [2])
     similarity_view = supervisor.similarity_view

@@ -416,6 +416,7 @@ class SimilarityView(ClusterView):
     def reset(self, cluster_ids, reference_id=None):
         """Recreate the view for an explicit reference and Cluster-role exclusions."""
         if not len(cluster_ids):
+            self.remove_all_and_add([], fit_columns=False)
             return
         reference_id = cluster_ids[-1] if reference_id is None else reference_id
         if reference_id not in cluster_ids:
@@ -1561,7 +1562,7 @@ class Supervisor:
             change = self._set_table_presentation_order(change)
         state = change.after
         cluster_payload = self.cluster_view.set_selected_ids(state.cluster_ids)
-        if refresh_similarity and state.reference_id is not None:
+        if refresh_similarity or state.reference_id is None:
             self.similarity_view.reset(state.merge_ids, reference_id=state.reference_id)
         similar_payload = self.similarity_view.set_selected_ids(state.similar_ids)
         self._update_selection_colors()
@@ -1768,10 +1769,11 @@ class Supervisor:
             next_similar = self.similarity_view.selection_after_navigation()
         else:
             next_clusters = self.cluster_view.selection_after_navigation()
+            next_similar = ()
             if next_clusters:
                 reference_id = next_clusters[0]
                 self.similarity_view.reset(next_clusters, reference_id=reference_id)
-            next_similar = self.similarity_view.selection_after_navigation()
+                next_similar = self.similarity_view.selection_after_navigation()
 
         change = self.selection.set_normal_selection(next_clusters, next_similar)
         self._apply_selection_change(change)
@@ -1869,6 +1871,8 @@ class Supervisor:
         similar_ids = self.similarity_view.get_selected_ids()
         if tuple(cluster_ids) != self.selection.state.cluster_ids:
             self.selection.set_cluster_selection(cluster_ids)
+        if self.selection.state.reference_id is None:
+            self.similarity_view.reset(())
         if (
             self.selection.state.reference_id is not None
             and tuple(similar_ids) != self.selection.state.similar_ids
@@ -1890,8 +1894,8 @@ class Supervisor:
         if output is not None or name not in ('next', 'previous'):
             return
         if sender == self.cluster_view:
-            self.selection.set_cluster_selection(())
-            self.selection.clear_similarity_selection()
+            change = self.selection.set_normal_selection(())
+            self._apply_selection_change(change)
         elif sender == self.similarity_view:
             self.selection.clear_similarity_selection()
 
@@ -2838,24 +2842,22 @@ class Supervisor:
 
     def select_first_similar(self, n=None, callback=None):
         """Select N eligible similar clusters, advancing after the current selection."""
+        self._settle_selection()
         select_from_start = n is not None
         if n is not None:
             self.n_similar_clusters_to_select = self._validate_n_similar_clusters_to_select(n)
         n = self.n_similar_clusters_to_select
 
-        def select(cluster_ids):
-            # Batch selection is scheduled on the next Qt turn. Settle an earlier
-            # row click or batch first so this mutation's before_ids matches the
-            # authoritative controller state, including under rapid repetition.
-            self.similarity_view.debouncer.flush()
-            start = 0
-            if not select_from_start:
-                selected = self.similarity_view.get_selected_ids()
-                if selected and selected[-1] in cluster_ids:
-                    start = cluster_ids.index(selected[-1]) + 1
-            self.similarity_view.select(cluster_ids[start : start + n], callback=callback)
-
-        self.similarity_view.get_navigable_ids(callback=select)
+        # Native tables expose current IDs synchronously. Create the mutation in
+        # this turn: a deferred candidate-list callback can otherwise outlive its
+        # reference, model, workflow, or widgets. Only completion stays asynchronous.
+        cluster_ids = self.similarity_view.get_navigable_ids()
+        start = 0
+        if not select_from_start:
+            selected = self.similarity_view.get_selected_ids()
+            if selected and selected[-1] in cluster_ids:
+                start = cluster_ids.index(selected[-1]) + 1
+        self.similarity_view.select(cluster_ids[start : start + n], callback=callback)
 
     def set_skip_masked_clusters(self, skip_masked, callback=None):
         """Set whether automatic navigation and selection skip noise and MUA clusters."""
