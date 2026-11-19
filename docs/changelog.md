@@ -162,6 +162,10 @@ behavior they verify rather than listed separately.
 - Ctrl-click multiple SLAY merge suggestions to compare their deduplicated units
   in one Merge workspace. Selection is read-only; an explicit merge records all
   selected reviews atomically, with undo/redo restoring the combined workspace.
+- Select the preceding Similarity View batch with `Control+Shift+Space`, using
+  the same saved batch size as `Control+Space`.
+- Drag the blue reference row anywhere in Merge View while preserving its
+  reference identity and color. Scientific views follow the reordered rows.
 
 - Added session-only, opt-in background lookahead for TraceView and TraceImageView
   with supporting phylib readers. Explicit scrolling hints share the reader cache
@@ -275,6 +279,11 @@ behavior they verify rather than listed separately.
   comma-separated negative values without confusing their signs with ID ranges.
 - On macOS, horizontal table scrollbars reserve space so the last cluster row
   remains fully visible when scrolling to the bottom.
+- Settle pending table selections before curation actions and discard obsolete
+  candidate updates after reference changes. Moving the final selected cluster
+  to a quality group clears Similarity View before subsequent batch selection.
+- Keep correlogram chance baselines visible when they exceed histogram counts.
+
 - Clean up synthetic scene windows before the graphics diagnostic exits, including
   failed probes, instead of leaving native Qt window destruction to interpreter shutdown.
 

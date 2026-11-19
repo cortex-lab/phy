@@ -96,6 +96,7 @@ Useful first-session keys include:
 | --- | --- |
 | Show shortcuts and commands | `H` |
 | Select the next similarity candidate | `Space` |
+| Select the next / preceding similarity batch | `Ctrl+Space` / `Ctrl+Shift+Space` |
 | Return to only the Cluster View selection | `Backspace` |
 | Enter or cancel Merge mode | `V` |
 | Merge selected clusters | `G` |

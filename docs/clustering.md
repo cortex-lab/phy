@@ -20,8 +20,8 @@ selection. Cluster View is dimmed and read-only while the workspace is active, b
 scrollable; its overlay reminds you that `V` returns to the normal workflow.
 
 Every row in Merge View is part of the pending merge. Continue exploring Similarity View, where
-sorting, filtering, `Control+Space`, `Control+Shift+Space`, and multi-selection remain available. The Merge View status
-shows the number of staged clusters, selected similar clusters, and the total that `G` will merge.
+sorting, filtering, `Control+Space`, `Control+Shift+Space`, and multi-selection remain available.
+The Merge View status shows the number of staged clusters, selected similar clusters, and the total that `G` will merge.
 
 Move candidates between the two views with right-click or drag-and-drop. Drag within
 Merge View to reorder any staged row, including the blue reference. Reordering preserves the
@@ -146,11 +146,18 @@ Control-deselecting and reselecting a row restores its reserved color. Backspace
 clears those Normal-mode candidate reservations, so the next candidate starts
 red again. Merge-mode colors remain fixed for the entire Merge session.
 
-Press `Control+Space` to select the first 15 eligible clusters currently shown in the similarity view while preserving the cluster view selection. Repeat it to select the next batch. This uses the current similarity view sorting and filtering. To choose a different number, use **Select > Select N Similar**; the chosen number becomes the shortcut's new default and is remembered across sessions.
+Press `Control+Space` to select the first 15 eligible clusters currently shown in Similarity View
+while preserving the Cluster View selection. Repeat it to select the next batch.
+`Control+Shift+Space` selects the preceding batch; with no eligible candidate selected, it starts
+from the final batch. Both shortcuts use the current sorting, filtering, and saved batch size.
+To choose a different number, use **Select > Select N Similar**; the preference is remembered
+across sessions. When no primary reference remains, Similarity View and batch selection are empty.
 
 Wizard navigation skips clusters labeled `noise` or `mua` by default. To include them when moving through either table or when selecting N similar clusters, uncheck **Select > Skip Noise and MUA**. This preference is remembered across sessions. Direct selection with the mouse, a cluster ID, or a snippet can always select these clusters. Code that creates a `Supervisor` can choose the initial behavior with `skip_masked_clusters=False`; saved GUI state takes precedence when present.
 
-On macOS, this shortcut uses the Control key, not Command. If `Control+Space` is assigned to switching input sources in macOS System Settings, disable or remap that system shortcut so that phy can receive it.
+On macOS, both batch shortcuts use the physical Control key. If `Control+Space` is assigned to
+switching input sources in macOS System Settings, disable or remap that system shortcut so that
+phy can receive it.
 
 In Normal mode, scientific views follow the selected Cluster and Similarity rows in their visible
 table order, with the blue Similarity reference first. Sorting or filtering either table updates
