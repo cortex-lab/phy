@@ -10,6 +10,18 @@ from phy.apps.large_recording.tests.test_adapter import make_controller
 def test_label_undo_redo_keep_scientific_artists_and_refresh_only_changed_rows(
     qtbot, tmp_path, monkeypatch
 ):
+    from phy.apps.large_recording.adapter import BoundedTemplateController
+
+    builtin_calls = []
+    channel_label = BoundedTemplateController.get_best_channel_label
+
+    def measured_channel_label(self, cluster):
+        builtin_calls.append(cluster)
+        return channel_label(self, cluster)
+
+    monkeypatch.setattr(
+        BoundedTemplateController, 'get_best_channel_label', measured_channel_label
+    )
     _, controller = make_controller(tmp_path)
     supervisor = controller.supervisor
     metrics = []
@@ -65,13 +77,15 @@ def test_label_undo_redo_keep_scientific_artists_and_refresh_only_changed_rows(
             )
         ):
             metrics.clear()
+            builtin_calls.clear()
             action()
             supervisor.block()
             assert supervisor.cluster_view._model.row_by_id(0)['group'] == group
             assert supervisor.cluster_view._model.row_by_id(0)['quality_metric'] == group
             assert supervisor.selection.snapshot() == selected
             if index == 0:
-                assert set(metrics) == {0}
+                assert set(metrics) == set(supervisor.clustering.cluster_ids)
+                assert set(builtin_calls) == {0}
                 assert set(patches[-1]) == {'id', 'quality_metric'}
             assert view.get_data(0) is data
             assert (
@@ -196,5 +210,85 @@ def test_native_membership_failure_still_refreshes_unchanged_revision(
     finally:
         if 'reject' in locals():
             unconnect(reject)
+        gui.close()
+        controller.close()
+
+
+def test_array_metric_label_undo_redo_compares_without_ambiguous_truth(qtbot, tmp_path):
+    _, controller = make_controller(tmp_path)
+    supervisor = controller.supervisor
+    supervisor.cluster_metrics['array_metric'] = lambda cluster: np.array(
+        [cluster, len(supervisor.session.events), np.nan]
+    )
+    supervisor.columns.append('array_metric')
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor.select([0])
+        supervisor.block()
+        for action, group, events in (
+            (lambda: supervisor.label('group', 'mua', [0]), 'mua', 1),
+            (supervisor.undo, 'good', 0),
+            (supervisor.redo, 'mua', 1),
+        ):
+            action()
+            supervisor.block()
+            row = supervisor.cluster_view._model.row_by_id(0)
+            assert row['group'] == group
+            np.testing.assert_array_equal(row['array_metric'], [0, events, np.nan])
+            other = supervisor.cluster_view._model.row_by_id(2)
+            np.testing.assert_array_equal(other['array_metric'], [2, events, np.nan])
+    finally:
+        gui.close()
+        controller.close()
+
+
+@pytest.mark.parametrize(
+    'previous, current, expected',
+    [
+        (np.array([1, np.nan]), np.array([1, np.nan]), True),
+        (np.array(['a', 'b']), np.array(['a', 'b']), True),
+        (np.array(['a', 'b']), np.array(['a', 'c']), False),
+        (np.array([1, 2]), np.array([1]), False),
+        ('good', 'good', True),
+        ('good', 'mua', False),
+    ],
+)
+def test_table_metric_value_equality(previous, current, expected):
+    from phy.apps.large_recording.supervisor import _table_values_equal
+
+    assert _table_values_equal(previous, current) is expected
+
+
+@pytest.mark.parametrize('name', ['good_count', 'ch'])
+def test_cross_row_metric_and_replaced_builtin_refresh_every_live_row(qtbot, tmp_path, name):
+    _, controller = make_controller(tmp_path)
+    supervisor = controller.supervisor
+    calls = []
+
+    def count_good(cluster):
+        calls.append(cluster)
+        return sum(
+            supervisor.cluster_meta.get('group', unit) == 'good'
+            for unit in supervisor.clustering.cluster_ids
+        )
+
+    supervisor.cluster_metrics[name] = count_good
+    if name not in supervisor.columns:
+        supervisor.columns.append(name)
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        assert supervisor.cluster_view._model.row_by_id(2)[name] == 2
+        for action, expected in (
+            (lambda: supervisor.label('group', 'mua', [0]), 1),
+            (supervisor.undo, 2),
+            (supervisor.redo, 1),
+        ):
+            calls.clear()
+            action()
+            supervisor.block()
+            assert set(calls) == set(supervisor.clustering.cluster_ids)
+            for unit in supervisor.clustering.cluster_ids:
+                assert supervisor.cluster_view._model.row_by_id(unit)[name] == expected
+    finally:
         gui.close()
         controller.close()

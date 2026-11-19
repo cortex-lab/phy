@@ -159,6 +159,7 @@ class BoundedTemplateController(TemplateController):
             spike_clusters=self.model.spike_clusters.copy(),
             cluster_groups=self.model.metadata.get('group', {}),
             cluster_metrics=self.cluster_metrics,
+            metadata_independent_metrics=self._metadata_independent_metrics,
             cluster_labels=self.model.metadata,
             similarity=self.similarity_functions[self.similarity],
             session=session,
@@ -196,6 +197,9 @@ class BoundedTemplateController(TemplateController):
         self.cluster_metrics['evidence'] = lambda c: (
             self.get_summary_status(c) if self.get_full_count(c) is None else 'sampled windows'
         )
+        # Snapshot actual providers before plugins attach. Replacing even a
+        # built-in metric name later invalidates its membership-only guarantee.
+        self._metadata_independent_metrics = dict(self.cluster_metrics)
 
     def _set_view_creator(self):
         super()._set_view_creator()

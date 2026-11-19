@@ -11,9 +11,26 @@ from phylib.utils import emit
 from phy.cluster._history import History
 from phy.cluster._utils import ClusterMeta
 from phy.cluster.clustering import Clustering, _concatenate_spike_clusters
-from phy.cluster.supervisor import Supervisor
+from phy.cluster.supervisor import Supervisor, _is_group_masked
 
 from .curation import evaluate_predicate, interpret_events
+
+
+def _table_values_equal(previous, current):
+    """Compare display values without assuming a scalar metric result."""
+    if isinstance(previous, np.ndarray) or isinstance(current, np.ndarray):
+        for equal_nan in (True, False):
+            try:
+                return bool(np.array_equal(previous, current, equal_nan=equal_nan))
+            except (TypeError, ValueError):
+                # Object/string arrays do not necessarily support isnan. If a
+                # nested object also has ambiguous equality, refresh its value.
+                continue
+        return False
+    try:
+        return bool(previous == current)
+    except (TypeError, ValueError):
+        return False
 
 
 class MutationPolicy:
@@ -170,8 +187,9 @@ def semantic_command(method):
 class BoundedSupervisor(Supervisor):
     """Native UI/history operations paired with a validated semantic journal."""
 
-    def __init__(self, *args, session, **kwargs):
+    def __init__(self, *args, session, metadata_independent_metrics=None, **kwargs):
         self.session = session
+        self._metadata_independent_metrics = dict(metadata_independent_metrics or {})
         self._bounded_table_revision = session.membership_revision
         self._bounded_table_metadata = session.metadata
         self._bounded_metadata_ids = set()
@@ -200,6 +218,7 @@ class BoundedSupervisor(Supervisor):
         kwargs['clustering_factory'] = clustering_factory
         kwargs['cluster_meta_factory'] = meta_factory
         super().__init__(*args, **kwargs)
+        self._metadata_independent_metrics['n_spikes'] = self.cluster_metrics['n_spikes']
         self.session_history = SessionHistory(session)
         self.clustering._bounded_transition = self._native_undo_transition
         self.parent_origins.update(session.restored_parent_ids)
@@ -477,6 +496,39 @@ class BoundedSupervisor(Supervisor):
             )
         return sorted(changed & set(self.clustering.cluster_ids))
 
+    def _metadata_refresh_rows(self):
+        changed = set(self._metadata_refresh_ids())
+        custom = {
+            name: provider
+            for name, provider in self.cluster_metrics.items()
+            if self._metadata_independent_metrics.get(name) is not provider
+        }
+        authoritative = {
+            'n_spikes',
+            'fr',
+            'full_count',
+            'evidence_count',
+            'waveform_count',
+            'evidence',
+        }
+        rows = []
+        for cluster in self.clustering.cluster_ids:
+            if cluster in changed:
+                rows.append(self.get_cluster_info(cluster))
+            elif custom:
+                row = {'id': cluster}
+                for name, provider in custom.items():
+                    value = provider(cluster)
+                    # Match get_cluster_info's producer-metadata precedence and
+                    # authoritative bounded count/rate/masking fields exactly.
+                    if name in self.cluster_meta.fields and name not in authoritative:
+                        value = self.cluster_meta.get(name, cluster)
+                    if name == 'is_masked':
+                        value = _is_group_masked(self.cluster_meta.get('group', cluster))
+                    row[name] = value
+                rows.append(row)
+        return rows
+
     def _refresh_bounded(self):
         self.parent_origins = self.session.restored_parent_ids
         if self.merge_propositions is not None:
@@ -484,11 +536,7 @@ class BoundedSupervisor(Supervisor):
             self._refresh_propositions()
         if self.gui is not None:
             metadata_only = self._bounded_table_revision is self.session.membership_revision
-            data = (
-                [self.get_cluster_info(cluster) for cluster in self._metadata_refresh_ids()]
-                if metadata_only
-                else self.cluster_info
-            )
+            data = self._metadata_refresh_rows() if metadata_only else self.cluster_info
             for view in (self.cluster_view, self.similarity_view, self.merge_view):
                 if view is None:
                     continue
@@ -501,7 +549,7 @@ class BoundedSupervisor(Supervisor):
                         patch = {
                             key: value
                             for key, value in row.items()
-                            if key not in previous or previous[key] != value
+                            if key not in previous or not _table_values_equal(previous[key], value)
                         }
                         if patch:
                             patches.append({'id': row['id'], **patch})
