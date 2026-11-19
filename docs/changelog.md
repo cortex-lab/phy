@@ -18,6 +18,11 @@ behavior they verify rather than listed separately.
 
 ### Added
 
+- Select the preceding Similarity View batch with `Control+Shift+Space`, using
+  the same saved batch size as `Control+Space`.
+- Drag the blue reference row anywhere in Merge View while preserving its
+  reference identity and color. Scientific views follow the reordered rows.
+
 - Added session-only, opt-in background lookahead for TraceView and TraceImageView
   with supporting phylib readers. Explicit scrolling hints share the reader cache
   without enabling speculation during waveform reads. Added an accepted `closed`
@@ -114,6 +119,11 @@ behavior they verify rather than listed separately.
   selection.
 
 ### Fixed
+
+- Settle pending table selections before curation actions and discard obsolete
+  candidate updates after reference changes. Moving the final selected cluster
+  to a quality group clears Similarity View before subsequent batch selection.
+- Keep correlogram chance baselines visible when they exceed histogram counts.
 
 - Clean up synthetic scene windows before the graphics diagnostic exits, including
   failed probes, instead of leaving native Qt window destruction to interpreter shutdown.

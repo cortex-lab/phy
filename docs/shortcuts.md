@@ -41,6 +41,7 @@ Keyboard shortcuts
 - reset                                    ctrl+alt+space
 - reset_merge_proposition                  alt+shift+backspace
 - select_first_similar                     ctrl+space
+- select_previous_similar                  ctrl+shift+space
 - split                                    k
 - toggle_merge_mode                        v
 - undo                                     ctrl+z
