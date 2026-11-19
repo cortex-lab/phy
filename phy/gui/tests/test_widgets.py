@@ -983,3 +983,144 @@ def test_table_interaction_overlay_stays_fixed_while_scrolling(qtbot):
     assert table._interaction_overlay.geometry() == geometry
     assert 'rgba(0, 0, 0, 220)' in table._interaction_overlay.styleSheet()
     table.close()
+
+
+def test_table_debounced_selection_batch_overflow_and_invalidation(table, qtbot):
+    from timeit import default_timer
+
+    table._debounce_events.add('select')
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    table._selection_batch_limit = 3
+    events = []
+    callbacks = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        events.append(payload)
+
+    try:
+        for candidate in (1, 2, 3, 4, 5, 6, 7):
+            callback = callbacks.append if candidate == 7 else None
+            table.select([candidate], marker=candidate, callback=callback)
+        table.debouncer.flush()
+        operations = [
+            mutation
+            for payload in events
+            for mutation in payload['kwargs']['_selection_mutations']
+        ]
+        assert len(events) == 3
+        assert [operation.after_ids for operation in operations] == [
+            (candidate,) for candidate in range(1, 8)
+        ]
+        assert all(
+            first.after_ids == second.before_ids
+            for first, second in zip(operations, operations[1:])
+        )
+        assert events[-1]['kwargs']['marker'] == 7
+        qtbot.wait(1)
+        assert callbacks == [events[-1]]
+
+        table.select([8])
+        table.set_selected_ids([2])
+        table.debouncer.flush()
+        assert len(events) == 3
+        table.select([4])
+        table.debouncer.flush()
+        assert events[-1]['kwargs']['_selection_mutations'][0].before_ids == (2,)
+        table.select([5])
+        table.remove_all_and_add([{'id': 0}, {'id': 1}])
+        table.debouncer.flush()
+        assert events[-1]['selected'] == [4]
+    finally:
+        unconnect(selected)
+
+
+@mark.parametrize('method', ['remove', 'add_remove'])
+def test_table_removal_settles_pending_selection_before_model_change(table, method):
+    from timeit import default_timer
+
+    table._debounce_events.add('select')
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    events = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        events.append((payload['selected'], sender.get_ids()))
+
+    try:
+        table.select([1])
+        table.select([2])
+        if method == 'remove':
+            table.remove([2])
+        else:
+            table.add_remove([], [2])
+        assert len(events) == 1
+        assert events[0][0] == [2]
+        assert 2 in events[0][1]
+        table.debouncer.flush()
+        assert len(events) == 1
+        assert table.get_selected_ids() == []
+    finally:
+        unconnect(selected)
+
+
+def test_table_rebuild_invalidates_pending_selection_generation(table):
+    from timeit import default_timer
+
+    table._debounce_events.add('select')
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    events = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        events.append(payload)
+
+    try:
+        table.select([1])
+        generation = table._selection_generation
+        table._init_table(columns=['id'], data=[{'id': 10}], sort=('id', 'asc'))
+        table.debouncer.flush()
+        assert table._selection_generation > generation
+        assert not events
+        assert not table._pending_selection_mutations
+    finally:
+        unconnect(selected)
+
+
+def test_other_debounced_table_events_do_not_replace_selection_batch(table):
+    from timeit import default_timer
+
+    table._debounce_events.update(('select', 'custom_event'))
+    table.debouncer.delay = 60_000
+    table.debouncer._last_submission_time = default_timer()
+    selections = []
+    other_events = []
+
+    @connect(event='select', sender=table)
+    def selected(sender, payload):
+        selections.append(payload)
+
+    @connect(event='custom_event', sender=table)
+    def custom_event(sender, payload):
+        other_events.append(payload)
+
+    try:
+        table.select([1])
+        table.select_toggle(2)
+        table.eval_js('table.emit("custom_event", 3);')
+        table.eval_js('table.emit("custom_event", 4);')
+        table.debouncer.flush()
+        assert len(selections) == 1
+        assert selections[0]['selected'] == [1, 2]
+        mutations = selections[0]['kwargs']['_selection_mutations']
+        assert [mutation.before_ids for mutation in mutations] == [(), (1,)]
+        assert [mutation.after_ids for mutation in mutations] == [(1,), (1, 2)]
+        assert other_events == [4]
+        assert not table._pending_selection_mutations
+        assert not table.debouncer.has_pending
+    finally:
+        unconnect(selected)
+        unconnect(custom_event)

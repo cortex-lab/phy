@@ -1208,6 +1208,7 @@ class Supervisor:
         next_cluster = obj['next']
         kwargs = dict(obj.get('kwargs', {}))
         mutation = kwargs.pop('_selection_mutation', None)
+        kwargs.pop('_selection_mutations', None)
         if mutation is not None:
             cluster_ids = list(mutation.after_ids)
         logger.debug('Clusters selected: %s (%s)', cluster_ids, next_cluster)
@@ -1240,16 +1241,16 @@ class Supervisor:
         next_similar = obj['next']
         kwargs = dict(obj.get('kwargs', {}))
         mutation = kwargs.pop('_selection_mutation', None)
+        mutations = kwargs.pop('_selection_mutations', None)
         if mutation is None:
             intent = SelectionIntent.CLEAR if not similar else SelectionIntent.REPLACE
             mutation = SelectionMutation.create(intent, self.selection.state.similar_ids, similar)
         else:
             similar = list(mutation.after_ids)
         logger.debug('Similar clusters selected: %s (%s)', similar, next_similar)
-        presentation_order = self._presentation_order_from_tables(
-            self.selection.state, similar_ids=similar
+        self.selection.apply_similarity_mutations(
+            mutations or (mutation,), self._presentation_order_from_tables
         )
-        self.selection.apply_similarity_mutation(mutation, presentation_order)
         self._update_selection_colors()
         self._project_merge_view()
         self.task_logger.log(self.similarity_view, 'select', similar, output=obj)
@@ -1678,6 +1679,27 @@ class Supervisor:
         elif sender is self.similarity_view:
             self.transfer_to_primary((cluster_id,))
 
+    def _settle_selection(self):
+        """Deliver table selections before capturing action targets or history."""
+        if getattr(self, '_settling_selection', False):
+            raise RuntimeError('Cannot mutate curation while selection observers are running.')
+        self._settling_selection = True
+        try:
+            views = tuple(
+                view
+                for name in ('cluster_view', 'similarity_view')
+                if (view := getattr(self, name, None)) is not None
+            )
+            for _ in range(32):
+                # Primary selection resets invalidate old candidate operations first.
+                for view in views:
+                    view.debouncer.flush()
+                if not any(view.debouncer.has_pending for view in views):
+                    return
+            raise RuntimeError('Selection observers did not settle before the curation action.')
+        finally:
+            self._settling_selection = False
+
     def _on_action(self, sender, name, *args):
         """Called when an action is triggered: enqueue and process the task."""
         assert sender == self.action_creator
@@ -1714,6 +1736,8 @@ class Supervisor:
             except Exception:
                 logger.warning('The GUI is busy, could not execute `%s`.', name)
                 return
+        if name in ('merge', 'split', 'label', 'move', 'undo', 'redo', 'save'):
+            self._settle_selection()
         # Enqueue the requested action.
         self.task_logger.enqueue(self, name, *args)
         # Perform the action (which calls self.<name>(...)).
@@ -2039,6 +2063,7 @@ class Supervisor:
 
     def merge(self, cluster_ids=None, to=None):
         """Merge the selected clusters."""
+        self._settle_selection()
         merge_mode = self.selection.state.is_merge_mode
         task_logger_processing = bool(
             getattr(getattr(self, 'task_logger', None), '_processing', False)
@@ -2116,6 +2141,7 @@ class Supervisor:
 
     def split(self, spike_ids=None, spike_clusters_rel=0):
         """Make a new cluster out of the specified spikes."""
+        self._settle_selection()
         if self.selection.state.is_merge_mode:
             logger.warning('Split is unavailable in Merge mode.')
             return
@@ -2156,6 +2182,7 @@ class Supervisor:
 
     def label(self, name, value, cluster_ids=None):
         """Assign a label to some clusters."""
+        self._settle_selection()
         if self.selection.state.is_merge_mode:
             logger.warning('Cluster metadata changes are unavailable in Merge mode.')
             return
@@ -2181,6 +2208,7 @@ class Supervisor:
 
     def move(self, group, which):
         """Assign a cluster group to some clusters."""
+        self._settle_selection()
         if which == 'all':
             which = self.selected
         elif which == 'best':
@@ -2244,8 +2272,7 @@ class Supervisor:
             if callback:
                 callback(self.selection.state)
             return self.selection.state
-        self.cluster_view.debouncer.flush()
-        self.similarity_view.debouncer.flush()
+        self._settle_selection()
         if not self.selection.state.cluster_ids:
             logger.warning('Select at least one Cluster View row before entering Merge mode.')
             return
@@ -2305,8 +2332,7 @@ class Supervisor:
             self.merge_propositions_view.select_key(key)
             return
         proposition = catalog.entry_for(key).proposition
-        self.cluster_view.debouncer.flush()
-        self.similarity_view.debouncer.flush()
+        self._settle_selection()
         if self.selection.state.is_merge_mode:
             change = self.selection.switch_merge_proposition(key, proposition.unit_ids)
         else:
@@ -2439,6 +2465,7 @@ class Supervisor:
 
     def add_to_merge(self, cluster_ids, insertion=None, callback=None):
         """Transfer candidate IDs into the Merge workspace."""
+        self._settle_selection()
         cluster_ids = tuple(cluster_ids)
         candidates = set(self.similarity_view.get_ids())
         if not set(cluster_ids) <= candidates:
@@ -2450,6 +2477,7 @@ class Supervisor:
 
     def transfer_to_primary(self, cluster_ids, callback=None):
         """Transfer visible IDs into Cluster selection or the active Merge workspace."""
+        self._settle_selection()
         if isinstance(cluster_ids, Integral):
             cluster_ids = (int(cluster_ids),)
         try:
@@ -2462,6 +2490,7 @@ class Supervisor:
 
     def transfer_to_similarity(self, cluster_ids, callback=None):
         """Transfer IDs from the current primary role into Similarity."""
+        self._settle_selection()
         if isinstance(cluster_ids, Integral):
             cluster_ids = (int(cluster_ids),)
         try:
@@ -2474,6 +2503,7 @@ class Supervisor:
 
     def transfer_cluster(self, cluster_id, callback=None):
         """Transfer one effective cluster according to its current role."""
+        self._settle_selection()
         state = self.selection.state
         if cluster_id in state.merge_ids:
             return self.transfer_to_similarity((cluster_id,), callback=callback)
@@ -2483,6 +2513,7 @@ class Supervisor:
 
     def remove_from_merge(self, cluster_ids, callback=None):
         """Transfer staged candidates back to Similarity View."""
+        self._settle_selection()
         if isinstance(cluster_ids, Integral):
             cluster_ids = (int(cluster_ids),)
         try:
@@ -2495,6 +2526,7 @@ class Supervisor:
 
     def deselect_from_merge(self, cluster_ids, callback=None):
         """Remove staged clusters entirely from the active Merge selection."""
+        self._settle_selection()
         if isinstance(cluster_ids, Integral):
             cluster_ids = (int(cluster_ids),)
         try:
@@ -2507,6 +2539,7 @@ class Supervisor:
 
     def reorder_merge(self, cluster_ids, insertion, callback=None):
         """Reorder staged candidates and their scientific presentation order."""
+        self._settle_selection()
         change = self.selection.reorder_merge(cluster_ids, insertion)
         self._apply_selection_change(change, callback=callback)
         return change.after
@@ -2588,6 +2621,7 @@ class Supervisor:
 
     def undo(self):
         """Undo the last action."""
+        self._settle_selection()
         if self.selection.state.is_merge_mode and self._active_merge_proposition_key() is None:
             logger.warning('Undo is unavailable while a Merge workspace is active.')
             return
@@ -2613,6 +2647,7 @@ class Supervisor:
 
     def redo(self):
         """Undo the last undone action."""
+        self._settle_selection()
         if self.selection.state.is_merge_mode:
             index = self._global_history.current_position + 1
             history = self._global_history._history
@@ -2631,6 +2666,7 @@ class Supervisor:
         It is up to the caller to react to this event and save the data to disk.
 
         """
+        self._settle_selection()
         spike_clusters = self.clustering.spike_clusters
         groups = {
             c: self.cluster_meta.get('group', c) or 'unsorted' for c in self.clustering.cluster_ids

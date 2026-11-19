@@ -305,6 +305,23 @@ class CurationSelectionController:
             )
         )
 
+    def apply_similarity_mutations(self, mutations, presentation_order=None):
+        """Atomically reduce an ordered batch, preserving each operation's semantics.
+
+        ``presentation_order`` may be a pure, read-only function computing an
+        order for each intermediate state.
+        No authoritative state changes until every mutation has validated.
+        """
+        staged = CurationSelectionController(self._state)
+        for mutation in mutations:
+            order = (
+                presentation_order(staged.state, mutation.after_ids)
+                if callable(presentation_order)
+                else presentation_order
+            )
+            staged.apply_similarity_mutation(mutation, order)
+        return self._apply(staged.state)
+
     def clear_similarity_selection(self):
         current = self._state
         return self.apply_similarity_mutation(

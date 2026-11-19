@@ -13,7 +13,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from phylib.utils import Bunch, connect, emit, unconnect
 from phylib.utils.event import _EVENT
-from pytest import fixture, raises
+from pytest import fixture, mark, raises
 
 from phy.gui import GUI
 from phy.gui.actions import _get_shortcut_string
@@ -2513,3 +2513,158 @@ def test_supervisor_wizard_primary_navigation_clears_similar(supervisor):
     supervisor.block()
     assert supervisor.selected_clusters == [30]
     assert supervisor.selected_similar == []
+
+
+@mark.parametrize('merge_mode', [False, True])
+def test_debounced_similarity_batch_matches_sequential_reduction(supervisor, merge_mode):
+    from phy.cluster._selection import CurationSelectionController
+
+    _select(supervisor, [30])
+    if merge_mode:
+        supervisor.toggle_merge_mode()
+    view = supervisor.similarity_view
+    view.select([1, 11, 20])
+    supervisor.block()
+    view.sort_by('id', 'asc')
+    initial = supervisor.selection.state
+    events = []
+
+    @connect(event='select', sender=supervisor)
+    def selected(sender, cluster_ids, **kwargs):
+        events.append((cluster_ids, kwargs))
+
+    try:
+        view.debouncer.delay = 60_000
+        view.debouncer._last_submission_time = default_timer()
+        view.select_toggle(11)
+        view.next()
+        view.select_until(20)
+        view.select_toggle(1)
+        payload = next(iter(view.debouncer.pending_functions.values()))[1][0]
+        operations = payload['kwargs']['_selection_mutations']
+        expected = CurationSelectionController(initial)
+        expected.apply_similarity_mutations(operations, supervisor._presentation_order_from_tables)
+        view.debouncer.flush()
+        assert supervisor.selection.state == expected.state
+        assert len(events) == 1
+        assert events[0][1] == {}
+        assert tuple(view._selected_ids) == supervisor.selection.state.similar_ids
+    finally:
+        unconnect(selected)
+
+
+def test_pending_similarity_batch_retains_hidden_ids_and_reference_reset(supervisor):
+    _select(supervisor, [30], [1, 11, 20])
+    view = supervisor.similarity_view
+    view.filter('id != 11')
+    view.debouncer.delay = 60_000
+    view.debouncer._last_submission_time = default_timer()
+    view.select_toggle(1)
+    view.select_toggle(20)
+    view.debouncer.flush()
+    assert supervisor.selection.state.similar_ids == (11,)
+    assert view.get_selected_ids() == []
+
+    view.select_toggle(1)
+    view.select_toggle(20)
+    supervisor.cluster_view.select([10])
+    supervisor.cluster_view.debouncer.flush()
+    view.debouncer.flush()
+    assert supervisor.selection.state.cluster_ids == (10,)
+    assert supervisor.selection.state.similar_ids == ()
+    assert view._pending_selection_mutations == []
+
+
+def test_rapid_next_actions_keep_ordered_selection_chain(qtbot, supervisor):
+    _select(supervisor, [30], [1])
+    view = supervisor.similarity_view
+    view.sort_by('id', 'asc')
+    view.debouncer.delay = 60_000
+    view.debouncer._last_submission_time = default_timer()
+    for _ in range(3):
+        supervisor.select_actions.next()
+        qtbot.wait(1)
+    assert view.debouncer.has_pending
+    assert supervisor.selected_similar == [1]
+    view.debouncer.flush()
+    assert supervisor.selected_similar == view.get_selected_ids()
+    assert not supervisor.task_logger._processing
+
+
+def test_settle_selection_drains_observer_generated_operations(supervisor):
+    _select(supervisor, [30], [1])
+    view = supervisor.similarity_view
+    view.debouncer.delay = 60_000
+    view.debouncer._last_submission_time = default_timer()
+    view.select([11])
+    calls = []
+
+    @connect(event='select', sender=supervisor)
+    def selected(sender, cluster_ids):
+        calls.append(cluster_ids)
+        if len(calls) == 1:
+            view.select([20])
+
+    try:
+        supervisor._settle_selection()
+        assert supervisor.selected_similar == [20]
+        assert not view.debouncer.has_pending
+        assert calls == [[30, 11], [30, 20]]
+    finally:
+        unconnect(selected)
+
+
+def test_settle_selection_rejects_reentrant_curation(supervisor):
+    _select(supervisor, [30], [1])
+    view = supervisor.similarity_view
+    view.debouncer.delay = 60_000
+    view.debouncer._last_submission_time = default_timer()
+    view.select([11])
+    assignments = supervisor.clustering.spike_clusters.copy()
+
+    @connect(event='select', sender=supervisor)
+    def selected(sender, cluster_ids):
+        supervisor.merge()
+
+    try:
+        with raises(RuntimeError, match='selection observers'):
+            supervisor._settle_selection()
+        ae(supervisor.clustering.spike_clusters, assignments)
+        assert not supervisor._settling_selection
+    finally:
+        unconnect(selected)
+
+
+def test_role_transfer_settles_other_pending_similarity_members(supervisor):
+    _select(supervisor, [30], [1])
+    view = supervisor.similarity_view
+    view.debouncer.delay = 60_000
+    view.debouncer._last_submission_time = default_timer()
+    view.select_toggle(11)
+    supervisor.transfer_cluster(1)
+    assert supervisor.selection.state.cluster_ids == (30, 1)
+    assert supervisor.selection.state.similar_ids == (11,)
+    view.debouncer.flush()
+    assert supervisor.selection.state.similar_ids == (11,)
+
+
+def test_never_settling_selection_observer_blocks_curation(supervisor):
+    _select(supervisor, [30], [1])
+    view = supervisor.similarity_view
+    view.debouncer.delay = 60_000
+    view.debouncer._last_submission_time = default_timer()
+    view.select([11])
+    assignments = supervisor.clustering.spike_clusters.copy()
+
+    @connect(event='select', sender=supervisor)
+    def selected(sender, cluster_ids):
+        view.select([1] if supervisor.selected_similar == [11] else [11])
+
+    try:
+        with raises(RuntimeError, match='did not settle'):
+            supervisor.merge()
+        ae(supervisor.clustering.spike_clusters, assignments)
+        assert not supervisor._settling_selection
+    finally:
+        unconnect(selected)
+        view.debouncer.flush()
