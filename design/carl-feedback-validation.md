@@ -251,3 +251,11 @@ pages and imports, rather than a per-case allocation measurement. The compact
 benchmark JSON records the exact statistics module SHA256 and case results;
 that module is committed in `d1018a63`. Existing ordinary Correlogram View,
 source assignments, replay and master remain unchanged by this feature.
+
+
+The integrated exclusion runtime at `d1018a63` passed `make test-full` with a
+normal process exit: **739 common + 972 application tests passed**, 19 skipped.
+The target includes lint and formatting checks. Strict `make doc-check` and
+`uv build` passed. The eight UI/provider tests present during the real
+Xvfb/xcb run passed; the additional live-membership oracle test also passes in
+the full suite. Master remains at `306667e4`; this follow-up is PR1428 only.

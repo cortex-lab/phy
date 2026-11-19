@@ -1106,6 +1106,17 @@
         "median_ratio_to_both_disabled": 0.8747262313670654
       }
     ],
-    "runtime_commit": "d1018a63"
+    "runtime_commit": "d1018a63",
+    "validation": {
+      "runtime_commit": "d1018a63",
+      "test_full_exit_code": 0,
+      "common_passed": 739,
+      "apps_passed": 972,
+      "skipped": 19,
+      "doc_check_exit_code": 0,
+      "build_exit_code": 0,
+      "real_xcb_ui_tests_passed": 8,
+      "master_unchanged": "306667e4"
+    }
   }
 }
