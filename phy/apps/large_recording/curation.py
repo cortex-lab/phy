@@ -1062,7 +1062,11 @@ class BoundedSession:
         events = self.events + [event]
         self._validate_event_capabilities(events)
         _, metadata, next_id = interpret_events(self.unit_ids, self.base_metadata, events)
-        assignments = project_assignments(self.base_assignments, events, self.attributes)
+        assignments = (
+            self.assignments
+            if event['operation'] in ('label', 'metadata_policy')
+            else project_assignments(self.base_assignments, events, self.attributes)
+        )
         self.assignments, self.metadata, self.events = assignments, metadata, events
         self.next_cluster_id = max(self.next_cluster_id, next_id)
         return copy.deepcopy(event)

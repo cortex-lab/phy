@@ -481,13 +481,11 @@ class BoundedSupervisor(Supervisor):
         ids = list(self.selected if cluster_ids is None else np.atleast_1d(cluster_ids))
         if not ids or self.selection.state.is_merge_mode:
             return
-        # Preflight against a copy before touching native metadata.
-        before = self.session.snapshot()
-        self.session.record_label(name, ids, value)
-        self.session.restore(before)
+        # Validate intent without mutating either semantic or native state.
+        event = self.session.preflight_label(name, ids, value)
         with self.policy.command():
             super().label(name, value, cluster_ids=ids)
-        self.session.record_label(name, ids, value)
+        self.session._append(event)
         self._capture()
 
     def _graphical_split_views(self):
@@ -588,16 +586,12 @@ class BoundedSupervisor(Supervisor):
             }
             for field in self.cluster_meta.fields
         }
-        before = self.session.snapshot()
-        self.session.record_threshold_split(
-            int(cluster_id), [remainder_id, selected_id], predicate, metadata=metadata
+        event = self.session.preflight_split(
+            int(cluster_id), selected_id, remainder_id, predicate, metadata=metadata
         )
-        self.session.restore(before)
         with self.policy.command():
             out = Supervisor.split(self, selected)
-        self.session.record_threshold_split(
-            int(cluster_id), [remainder_id, selected_id], predicate, metadata=metadata
-        )
+        self.session._append(event)
         self._capture()
         return out
 
