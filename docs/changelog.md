@@ -16,7 +16,7 @@ behavior they verify rather than listed separately.
 - Bounded curation applies new journal events to current state instead of replaying
   every earlier merge after each edit. Metadata-only actions preserve assignments
   and membership caches. Cached undo/redo uses affected rows within a 64 MiB
-  history budget; evicted changes fall back to validated replay. Saves and loads
+  inverse-patch cache; evicted changes fall back to validated replay. Saves and loads
   retain full independent journal validation. Metadata edits refresh affected table
   rows and preserve unchanged stability plots; custom metrics remain refreshed.
 - Mixed split/restore exports compile merge runs once for writing, while retaining

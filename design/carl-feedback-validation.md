@@ -196,3 +196,22 @@ Incremental native edits, bounded inverse-history retention and compiled export
 writing retain full validation on Save/load and an independent sequential
 interpreter for export verification. Cache misses replay validated history;
 the new fast path does not remove those fallback and integrity checks.
+
+
+### Final local gates
+
+On the integrated runtime (`c2d541f0`, followed by documentation/results only),
+`make test-full UV_RUN='uv run --no-sync'` exited normally with **739 common and
+893 application tests passed**, 19 skipped in total. It includes lint and
+formatting checks. `make doc-check` and `uv build` passed, and the wheel contains
+all new runtime modules. The locked environment uses PyQt5-sip 12.17.0.
+
+The independently scoped shared `master` changes at `306667e4` passed their own
+full suite (**673 common + 168 application tests**, 19 skipped), documentation,
+lint and formatting checks with normal exits. The PR1428 branch incorporates
+those shared changes without merging PR1428 into master.
+
+The previous remote CI run at `8c232422` failed after successful pytest summaries
+on four matrix jobs (Unix exit 139; Windows exit 1). These are recorded separately
+from assertion failures. Local normal exits do not establish that this existing
+remote runtime problem is fixed; the separate dependency-fix PR is unchanged.

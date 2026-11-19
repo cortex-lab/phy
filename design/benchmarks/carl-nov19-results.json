@@ -854,5 +854,24 @@
     "total_wall_seconds": 98.61504838196561,
     "total_cpu_seconds": 95.651780955,
     "peak_rss_bytes": 28648398848
+  },
+  "local_gates": {
+    "runtime_revision": "c2d541f0",
+    "shared_master_revision": "306667e4",
+    "pr1428": {
+      "test_full_exit_code": 0,
+      "common_passed": 739,
+      "apps_passed": 893,
+      "skipped": 19,
+      "doc_check_exit_code": 0,
+      "build_exit_code": 0
+    },
+    "master": {
+      "test_full_exit_code": 0,
+      "common_passed": 673,
+      "apps_passed": 168,
+      "skipped": 19,
+      "doc_check_exit_code": 0
+    }
   }
 }
