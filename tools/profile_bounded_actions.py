@@ -57,6 +57,8 @@ def _journal(units, events, merges):
 
 
 def run(args):
+    if args.spikes > 50_000_000 or args.units > 10_000:
+        raise ValueError('Synthetic profiling is capped at 50M rows and 10,000 units.')
     if args.spikes < args.units or args.units < 3 or args.repeats < 1:
         raise ValueError('Require spikes >= units >= 3 and repeats >= 1.')
     if not 0 <= args.merges < args.units - 1:
@@ -73,6 +75,7 @@ def run(args):
         window_seconds=3_600_000,
         stratum_seconds=3_600_000,
         max_spikes=args.spikes,
+        max_bytes=max(512 * 1024 * 1024, args.spikes * 64),
         bin_seconds=1800,
         batch_size=args.batch_size,
     )
