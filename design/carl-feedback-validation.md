@@ -111,3 +111,88 @@ partition passes 682 assertions (13 skipped), but the native shutdown fault
 recurred after that summary in the latest full-target attempt. We do not report
 that invocation as a clean full-suite pass. Both real GUI processes and both
 469,725,567-row replay pipelines exited normally, with unchanged source hashes.
+
+
+## November 19: growing-journal curation follow-up
+
+Carl and Andrew's logs contained two recoverable Python exceptions: an absent
+optional parent-color configuration directory, and stale Similarity selection
+after the final primary reference disappeared. Focused regressions cover both,
+plus backward batch selection and reordering the blue reference independently
+of its identity and color.
+
+The performance PDF described 20,216,806 evidence spikes and 213 journal events
+on a newer 6.75-billion-spike source. That exact checkpoint/source was unavailable.
+The following engineering measurements use disposable fixtures on this Linux
+machine, Python 3.12.13, NumPy 2.4.3 and phylib 2.7.1. OS caches were uncontrolled.
+Raw profiles and user attachments remain outside Git; compact measurements and
+revision attribution are in [the result JSON](benchmarks/carl-nov19-results.json).
+
+### Isolated metadata actions
+
+The synthetic fixture retains 20,216,806 rows across 859 source units. A fixed
+100-merge prefix holds the live catalogue constant; labels extend the journal
+to 100, 213 and 1,000 events. Three unprofiled label actions per case give:
+
+| Initial events | Before median | After median | Full projections per label |
+| --- | ---: | ---: | --- |
+| 100 | 29.745 s | 0.802 ms | 3 → 0 |
+| 213 | 29.717 s | 0.809 ms | 3 → 0 |
+| 1,000 | 29.500 s | 0.855 ms | 3 → 0 |
+
+These timings isolate supervisor actions without GUI tables/views. They show
+that repeated assignment projection caused the dominant cost; they do not prove
+all work is independent of journal/catalogue size. Event-reference and metadata
+bookkeeping still scale with their respective small collections. Each measured
+case also compares final assignments against the sequential reference projector.
+Whole-process peak RSS, including fixture construction, was 4.00 GB before and
+3.96 GB after; this is not an action-specific memory measurement.
+
+### GUI actions
+
+A guarded copy of the existing real-source bounded fixture retains 7,298,318
+rows from 469,725,567 source spikes. Both runs seed 213 events including the
+same 100 merges, use Evidence Amplitude and Unit Stability views, and measure
+two unprofiled samples under private Xvfb/software Mesa. Both controller
+threading settings are recorded. Readiness means the supervisor/view queues
+plus one Qt timer turn, rather than physical frame presentation.
+
+| Action | Before median | Final optimized median |
+| --- | ---: | ---: |
+| Move to good and next selection | 16.523 s | 0.794 s |
+| Label | 15.844 s | 0.194 s |
+| Merge | 7.912 s | 2.687 s |
+| Undo | 7.966 s | 2.857 s |
+
+Every GUI worker exited normally and all input package hashes were unchanged.
+The final follow-up refreshes affected metadata rows and preserves unchanged
+stability artists. Its focused tests retain filters, sorting, selection, custom
+metrics and plugin events; membership edits and asynchronous summaries redraw.
+Unknown or replaced metric providers refresh across all live units because their
+values can depend on other clusters. Only unchanged built-in provider identities
+use the narrower metadata refresh. Array-valued metrics retain table support.
+Merge/undo still include metric refresh and selected-unit plot reconstruction.
+
+Reproduce on a synced checkout with new output directories:
+
+```bash
+uv run --no-sync python tools/profile_bounded_actions.py --help
+uv run --no-sync python tools/profile_bounded_gui.py --help
+```
+
+### Full-source correctness
+
+Replay of the previously validated saved checkpoint on runtime code at
+`22eed44f` completed in 52.99 seconds with one worker; complete validation took
+98.62 seconds. This is a single warm-cache run, not a baseline speed comparison.
+All **469,725,567 assignments** matched both earlier one-/four-worker outputs;
+all 52 compared metadata/JSON files, lineage and rewritten parameters matched.
+A separate original-label/raw-amplitude oracle also passed, including split
+counts 1,691,273 and 1,597,610, with 700 final active units. All 156 named input
+files retained their hashes and identity statistics. Runtime module hashes were
+unchanged during the run. Peak process RSS was 26.68 GiB including mapped pages.
+
+Incremental native edits, bounded inverse-history retention and compiled export
+writing retain full validation on Save/load and an independent sequential
+interpreter for export verification. Cache misses replay validated history;
+the new fast path does not remove those fallback and integrity checks.
