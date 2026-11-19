@@ -145,19 +145,24 @@ class CorrelogramView(ScalingMixin, ManualClusteringView):
     def _on_canvas_resize(self, sender, width, height):
         self._update_display_scale(width, height)
 
-    def get_clusters_data(self, load_all=None):
+    def _get_correlograms_data(self):
+        """Return pair counts and an optional baseline in the same count units."""
         ccg = self.correlograms(self.cluster_ids, self.bin_size, self.window_size)
         fr = self.firing_rate(self.cluster_ids, self.bin_size) if self.firing_rate else None
+        return ccg, fr
+
+    def get_clusters_data(self, load_all=None):
+        ccg, fr = self._get_correlograms_data()
         assert ccg.ndim == 3
         n_bins = ccg.shape[2]
         bunchs = []
-        m = ccg.max()
+        m = max(ccg.max(), fr.max() if fr is not None else 0)
         for i, j in self._iter_subplots(len(self.cluster_ids)):
             b = Bunch()
             b.correlogram = ccg[i, j, :]
             if not self.uniform_normalization:
                 # Normalization row per row.
-                m = ccg[i, j, :].max()
+                m = max(ccg[i, j, :].max(), fr[i, j] if fr is not None else 0)
             b.firing_rate = fr[i, j] if fr is not None else None
             b.data_bounds = (0, 0, n_bins, m)
             b.pair_index = i, j

@@ -1,6 +1,7 @@
 """Manifest-gated template controller for bounded recording evidence."""
 
 from copy import deepcopy
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -215,7 +216,7 @@ class BoundedTemplateController(TemplateController):
     def create_sampled_correlogram_view(self):
         """Create a sampled correlogram view with row-cluster transfer."""
         view = SampledCorrelogramView(
-            correlograms=self._window_correlograms,
+            correlograms=partial(self._window_correlograms, return_baseline=True),
             sample_rate=self.model.sample_rate,
         )
 
@@ -338,7 +339,7 @@ class BoundedTemplateController(TemplateController):
         samples = self.model.spike_samples[ids]
         return Bunch(data=window_isi(samples, self.evidence_windows, self.model.sample_rate))
 
-    def _window_correlograms(self, cluster_ids, bin_size, window_size):
+    def _window_correlograms(self, cluster_ids, bin_size, window_size, return_baseline=False):
         return window_correlograms(
             self.model.spike_samples,
             self.supervisor.clustering.spike_clusters,
@@ -347,6 +348,7 @@ class BoundedTemplateController(TemplateController):
             self.model.sample_rate,
             bin_size,
             window_size,
+            return_baseline=return_baseline,
         )
 
     def create_unit_stability_view(self):

@@ -122,3 +122,23 @@ def test_correlogram_label_gutter_tracks_id_width_and_canvas_size():
     assert long_id[0] < wide[0]
     assert narrow[1] == wide[1] == long_id[1]
     v.canvas.close()
+
+
+def test_correlogram_bounds_include_chance_line_with_empty_histogram(qtbot):
+    baseline = np.array([[2.0, 4.0], [4.0, 6.0]])
+    view = CorrelogramView(
+        correlograms=lambda *args: np.zeros((2, 2, 5)),
+        firing_rate=lambda *args: baseline,
+        sample_rate=1000,
+    )
+    view.cluster_ids = [0, 1]
+    try:
+        bunches = view.get_clusters_data()
+        np.testing.assert_array_equal([b.data_bounds[3] for b in bunches], baseline.ravel())
+        view.uniform_normalization = True
+        assert all(b.data_bounds[3] == 6 for b in view.get_clusters_data())
+        view.plot()
+        # One chance line plus two refractory markers in every subplot.
+        assert view.line_visual._acc.pos.shape == (12, 4)
+    finally:
+        view.canvas.close()

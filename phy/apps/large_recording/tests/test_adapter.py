@@ -703,3 +703,36 @@ def test_bounded_save_history_appends_and_survives_reopening(tmp_path):
         assert not reopened.supervisor.is_dirty()
     finally:
         reopened.close()
+
+
+def test_sampled_correlogram_chance_line_tracks_live_window_counts(qtbot, tmp_path):
+    _, controller = make_controller(tmp_path)
+    view = controller.create_sampled_correlogram_view()
+    try:
+        view.cluster_ids = [0, 1]
+        before = view.get_clusters_data()
+        assert before[0].firing_rate > 0
+        assert before[1].firing_rate > 0
+        expected_hist, expected_baseline = controller._window_correlograms(
+            [0, 1], view.bin_size, view.window_size, return_baseline=True
+        )
+        for bunch in before:
+            i, j = bunch.pair_index
+            np.testing.assert_array_equal(bunch.correlogram, expected_hist[i, j])
+            assert bunch.firing_rate == expected_baseline[i, j]
+            assert bunch.data_bounds[3] >= bunch.firing_rate
+        # A live edit changes both providers together; no full-recording rate cache.
+        update = controller.supervisor.merge([0, 1])
+        view.cluster_ids = update.added
+        after = view.get_clusters_data()[0]
+        assert after.firing_rate > before[0].firing_rate
+        assert after.firing_rate > before[3].firing_rate
+        controller.supervisor.undo()
+        view.cluster_ids = [0, 1]
+        np.testing.assert_array_equal(
+            [b.firing_rate for b in view.get_clusters_data()],
+            [b.firing_rate for b in before],
+        )
+    finally:
+        view.canvas.close()
+        controller.close()

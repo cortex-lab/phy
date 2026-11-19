@@ -11,7 +11,17 @@ class SampledISIView(ISIView):
 
 
 class SampledCorrelogramView(CorrelogramView):
-    ex_status = 'Selected windows only; raw pair counts, no full-recording rate baseline.'
+    """Window-local pair counts with a conditional-uniform off-center chance line.
+
+    The correlograms provider returns ``(counts, chance)`` computed from the same
+    retained windows. The line is the mean off-center null expectation; the
+    folded central bin has a different width/count convention.
+    """
+
+    ex_status = 'Selected windows only; chance line is the mean off-center window-local null.'
+
+    def _get_correlograms_data(self):
+        return self.correlograms(self.cluster_ids, self.bin_size, self.window_size)
 
 
 class EvidenceAmplitudeView(AmplitudeView):
