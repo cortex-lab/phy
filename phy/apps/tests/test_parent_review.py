@@ -770,6 +770,40 @@ def test_parent_table_keeps_all_rows_readable_and_scrollable(qtbot, tempdir, cou
         controller.close()
 
 
+def test_bounded_parent_colors_use_default_config_and_survive_reopen(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from phy.apps.template.gui import TemplateController
+
+    _, prepared = make_controller(tmp_path)
+    path = prepared.dir_path
+    prepared.close()
+    monkeypatch.setattr(Path, 'home', classmethod(lambda cls: tmp_path))
+    controller = TemplateController(dir_path=path, plugins=[])
+    try:
+        assert controller.config_dir is None
+        target = controller.supervisor.merge([2, 0]).added[0]
+        lineage = controller.parent_inspection.lineage
+        expected = dict(lineage.colors(target))
+        hint = lineage._bounded_color_path()
+        assert hint.parent == tmp_path / '.phy'
+        controller.supervisor.save()
+        assert hint.is_file()
+    finally:
+        controller.close()
+    reopened = TemplateController(dir_path=path, plugins=[])
+    try:
+        np.testing.assert_array_equal(
+            reopened.supervisor.clustering.spike_clusters,
+            reopened.bounded_session.assignments,
+        )
+        assert set(reopened.parent_inspection.lineage.parents(target)) == {2, 0}
+        assert dict(reopened.parent_inspection.lineage.colors(target)) == expected
+        assert not reopened.supervisor.is_dirty()
+    finally:
+        reopened.close()
+
+
 def test_bounded_color_hints_are_disposable_and_save_errors_are_isolated(
     qtbot, tmp_path, monkeypatch
 ):

@@ -15,6 +15,7 @@ from phylib.stats import correlograms
 from phylib.utils import Bunch, connect, emit, unconnect
 
 from phy.gui.qt import Qt
+from phy.utils import phy_config_dir
 from phy.utils.color import colormaps
 
 logger = logging.getLogger(__name__)
@@ -137,7 +138,8 @@ class ParentLineage:
         identity = hashlib.sha256(str(self.controller.dir_path.resolve()).encode()).hexdigest()[
             :20
         ]
-        return Path(self.controller.config_dir) / f'parent-colors-{identity}.json'
+        config_dir = self.controller.config_dir or phy_config_dir()
+        return Path(config_dir) / f'parent-colors-{identity}.json'
 
     def _bounded_binding(self):
         session = self.controller.bounded_session
