@@ -7,6 +7,7 @@ import os
 import shutil
 import uuid
 import warnings
+from collections import OrderedDict
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from .source import _time_base, hash_json
 MANIFEST = '_phy_curation_manifest.json'
 BASE_ASSIGNMENTS = '_phy_spike_clusters_base.npy'
 RESTORE_SCRATCH_BYTES = 8 * 1024 * 1024
+HISTORY_CACHE_BYTES = 64 * 1024 * 1024
 BOOLEAN_CAPABILITIES = (
     'merge',
     'restore_parents',
@@ -872,6 +874,25 @@ class BoundedSession:
                 stacklevel=2,
             )
 
+        self._reset_runtime()
+
+    def _reset_runtime(self):
+        from phylib.io.array import _spikes_per_cluster
+
+        from .runtime import SemanticState
+
+        self._runtime = SemanticState.from_session(self)
+        self._assignment_groups = _spikes_per_cluster(self.assignments)
+        for rows in self._assignment_groups.values():
+            rows.flags.writeable = False
+        self._transitions = OrderedDict()
+        self._transition_bytes = 0
+        self.history_cache_bytes = getattr(self, 'history_cache_bytes', HISTORY_CACHE_BYTES)
+        self._prepared = None
+        self._catalog_cache = None
+        self.last_transition = None
+        self.last_changed_groups = {}
+
     def validate_proposition_documents(self):
         """Keep producer input and its inherited ledger bound to preparation."""
         for name, item in self.proposition_documents.items():
@@ -907,6 +928,8 @@ class BoundedSession:
         """Cumulative retirement history, without retargeting source suggestions."""
         result = copy.deepcopy(self.manifest.get('retired_units', {}))
         # Events have already passed the complete-unit journal validator.
+        if hasattr(self, '_runtime'):
+            return copy.deepcopy(self._catalog_projection()[0])
         interpret_events(self.unit_ids, self.base_metadata, self.events)
         for event in self.events:
             if event['operation'] == 'merge':
@@ -927,6 +950,8 @@ class BoundedSession:
     @property
     def restored_parent_ids(self):
         """Display origins for fresh restored identities still in the live catalog."""
+        if hasattr(self, '_runtime'):
+            return dict(self._catalog_projection()[1])
         active, _, _ = interpret_events(self.unit_ids, self.base_metadata, self.events)
         result = {}
         for event in self.events:
@@ -938,6 +963,39 @@ class BoundedSession:
                 )
                 result.update(dict(zip(event['children'], original, strict=True)))
         return {child: parent for child, parent in result.items() if child in active}
+
+    def _catalog_projection(self):
+        key = self._runtime.membership_key
+        if self._catalog_cache is not None and self._catalog_cache[0] is key:
+            return self._catalog_cache[1:]
+        retired = copy.deepcopy(self.manifest.get('retired_units', {}))
+        origins = {}
+        for event in self.events:
+            operation = event['operation']
+            parents = (
+                event['parents']
+                if operation == 'merge'
+                else [event['parent']]
+                if operation == 'threshold_split'
+                else [event['target']]
+                if operation == 'restore_parents'
+                else []
+            )
+            children = [event['target']] if operation == 'merge' else event.get('children', [])
+            for parent in parents:
+                retired[str(parent)] = {'operation': operation, 'replacements': list(children)}
+            if operation == 'restore_parents':
+                original = (
+                    [ref['unit'] for ref in event['parent_references']]
+                    if event['version'] == 4
+                    else self.events[event['merge_event_index']]['parents']
+                )
+                origins.update(dict(zip(children, original, strict=True)))
+        origins = {
+            child: parent for child, parent in origins.items() if child in self._runtime.active
+        }
+        self._catalog_cache = (key, retired, origins)
+        return retired, origins
 
     def _validated_state(self, assignments, metadata, events, next_cluster_id):
         self._validate_event_capabilities(events)
@@ -1028,16 +1086,55 @@ class BoundedSession:
         return {'events': tuple(self.events), 'next_cluster_id': self.next_cluster_id}
 
     def restore_journal(self, state):
-        """Restore an active history prefix while preserving allocator high-water."""
+        """Apply cached inverse/forward patches; validate unknown prefixes in full."""
         events = list(state['events'])
+        next_id = _integer(state['next_cluster_id'], 'Next cluster ID')
+        common = 0
+        for previous, following in zip(self.events, events):
+            if previous is not following:
+                break
+            common += 1
+        steps = [(event, False) for event in reversed(self.events[common:])]
+        steps += [(event, True) for event in events[common:]]
+        transitions, semantic = [], self._runtime
+        for event, forward in steps:
+            transition = self._transitions.get(id(event))
+            if transition is None or transition.event is not event:
+                break
+            expected = transition.before if forward else transition.after
+            if semantic is not expected:
+                break
+            semantic = transition.after if forward else transition.before
+            transitions.append((transition, forward))
+        else:
+            if next_id < max(semantic.next_id, self.base_next_cluster_id):
+                raise ValueError('History allocator collides with semantic journal IDs.')
+            changed = set()
+            for transition, forward in transitions:
+                self._apply_transition(transition, forward)
+                changed.update(transition.old_groups)
+                changed.update(transition.new_groups)
+            self.last_changed_groups = {
+                cluster: self._assignment_groups[cluster]
+                for cluster in changed
+                if cluster in self._assignment_groups
+            }
+            self.events = events
+            self.next_cluster_id = max(self.next_cluster_id, next_id)
+            self._prepared = None
+            self.last_transition = None
+            return
+        # Eviction, deserialized history, and arbitrary externally supplied states
+        # retain the independent replay path. Nothing is mutated until it succeeds.
         self._validate_event_capabilities(events)
         _, metadata, minimum = interpret_events(self.unit_ids, self.base_metadata, events)
-        next_id = _integer(state['next_cluster_id'], 'Next cluster ID')
         if next_id < max(minimum, self.base_next_cluster_id):
             raise ValueError('History allocator collides with semantic journal IDs.')
         assignments = project_assignments(self.base_assignments, events, self.attributes)
         self.assignments, self.metadata, self.events = assignments, metadata, events
         self.next_cluster_id = max(self.next_cluster_id, next_id)
+        self._reset_runtime()
+        self.last_changed_groups = self._assignment_groups
 
     def close(self):
         """Release file-backed bounded readers independently of the GUI model."""
@@ -1057,19 +1154,117 @@ class BoundedSession:
         self.assignments, self.metadata = assignments, metadata
         self.events = copy.deepcopy(snapshot['events'])
         self.next_cluster_id = next_id
+        self._reset_runtime()
+
+    @property
+    def membership_revision(self):
+        """Opaque identity shared by metadata-only transitions and their undo."""
+        return self._runtime.membership_key
+
+    def _prepare_event(self, event):
+        from .runtime import Transition
+
+        prepared = self._prepared
+        if (
+            prepared is not None
+            and prepared.before is self._runtime
+            and prepared.allocator == self.next_cluster_id
+            and prepared.event == event
+        ):
+            return prepared
+        # Own a detached event before retaining its immutable dictionaries in
+        # expression/lineage nodes; caller mutation must never change committed state.
+        event = copy.deepcopy(event)
+        semantic = self._runtime.advance(
+            self, event, len(self.events), self.events, allocator=self.next_cluster_id
+        )
+        operation = event['operation']
+        parents = (
+            event['parents']
+            if operation == 'merge'
+            else [event['parent']]
+            if operation == 'threshold_split'
+            else [event['target']]
+            if operation == 'restore_parents'
+            else []
+        )
+        empty = np.empty(0, dtype=np.int64)
+        old = {parent: self._assignment_groups.get(parent, empty) for parent in parents}
+        new = {}
+        if operation == 'merge':
+            rows = np.concatenate(list(old.values()))
+            rows.sort()
+            new[event['target']] = rows
+        elif operation == 'threshold_split':
+            rows = old[event['parent']]
+            predicate = event['predicate']
+            values = self.attributes.get(predicate['attribute'])
+            if values is None:
+                raise ValueError('Full-source threshold attribute is unavailable.')
+            selected = evaluate_predicate(np.asarray(values).reshape(-1)[rows], predicate)
+            new = dict(zip(event['children'], (rows[~selected], rows[selected]), strict=True))
+        elif operation == 'restore_parents':
+            _, parts = self._runtime.restore_nodes(event['target'], event['version'] == 4)
+            expressions = [part.expression for part in parts]
+            rows = old[event['target']]
+            gathered = [[] for _ in parts]
+            size = _restore_batch_size(expressions, len(self.attributes))
+            for start in range(0, len(rows), size):
+                chunk = rows[start : start + size]
+                base = self.base_assignments[chunk]
+                values = {
+                    name: np.asarray(attribute).reshape(-1)[chunk]
+                    for name, attribute in self.attributes.items()
+                }
+                covered, memo = np.zeros(len(chunk), dtype=bool), {}
+                for i, expression in enumerate(expressions):
+                    mask = _membership_mask(expression, base, values, memo)
+                    if np.any(covered & mask):
+                        raise ValueError('Restored source parent memberships overlap.')
+                    covered |= mask
+                    gathered[i].append(chunk[mask])
+                if not covered.all():
+                    raise ValueError('Restored source parents do not partition the target.')
+            new = {
+                child: np.concatenate(parts) if parts else empty
+                for child, parts in zip(event['children'], gathered, strict=True)
+            }
+        for rows in new.values():
+            rows.flags.writeable = False
+        prepared = Transition(event, self._runtime, semantic, old, new, self.next_cluster_id)
+        self._prepared = prepared
+        return prepared
+
+    def _apply_transition(self, transition, forward=True):
+        old, new = (
+            (transition.old_groups, transition.new_groups)
+            if forward
+            else (transition.new_groups, transition.old_groups)
+        )
+        for cluster, rows in new.items():
+            self.assignments[rows] = cluster
+        for cluster in old:
+            self._assignment_groups.pop(cluster, None)
+        self._assignment_groups.update(
+            {cluster: rows for cluster, rows in new.items() if len(rows)}
+        )
+        self._runtime = transition.after if forward else transition.before
+        self.metadata = self._runtime.metadata
 
     def _append(self, event):
-        events = self.events + [event]
-        self._validate_event_capabilities(events)
-        _, metadata, next_id = interpret_events(self.unit_ids, self.base_metadata, events)
-        assignments = (
-            self.assignments
-            if event['operation'] in ('label', 'metadata_policy')
-            else project_assignments(self.base_assignments, events, self.attributes)
-        )
-        self.assignments, self.metadata, self.events = assignments, metadata, events
-        self.next_cluster_id = max(self.next_cluster_id, next_id)
-        return copy.deepcopy(event)
+        transition = self._prepare_event(event)
+        self._apply_transition(transition)
+        self.events = self.events + [transition.event]
+        self.next_cluster_id = max(self.next_cluster_id, transition.after.next_id)
+        self._transitions[id(transition.event)] = transition
+        self._transition_bytes += transition.nbytes
+        while self._transitions and self._transition_bytes > self.history_cache_bytes:
+            _, discarded = self._transitions.popitem(last=False)
+            self._transition_bytes -= discarded.nbytes
+        self._prepared = None
+        self.last_transition = transition
+        self.last_changed_groups = transition.new_groups
+        return copy.deepcopy(transition.event)
 
     def _require_capability(self, operation, predicate=None):
         if operation == 'threshold_split':
@@ -1107,7 +1302,11 @@ class BoundedSession:
 
     @property
     def metadata_policy(self):
-        return self._metadata_policy(self.events)
+        return (
+            self._runtime.policy
+            if hasattr(self, '_runtime')
+            else self._metadata_policy(self.events)
+        )
 
     def _metadata_policy(self, events):
         return (
@@ -1121,6 +1320,8 @@ class BoundedSession:
 
     @property
     def effective_metadata_schema(self):
+        if hasattr(self, '_runtime'):
+            return complete_schema(self._runtime.schema, self.metadata)
         return self._metadata_schema(self.events, self.metadata)
 
     def _metadata_schema(self, events, metadata):
@@ -1248,7 +1449,7 @@ class BoundedSession:
         }
         if event['target'] < self.next_cluster_id:
             raise ValueError('Merge target is below the complete catalog allocator.')
-        interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
+        self._prepare_event(event)
         return event
 
     def record_merge(self, parents, target, metadata=None):
@@ -1256,27 +1457,22 @@ class BoundedSession:
 
     def restore_parent_plan(self, target, *, recursive=True):
         """Return authenticated historical parent references and exact expressions."""
-        from .live_summaries import membership_expressions
-
-        interpret_events(self.unit_ids, self.base_metadata, self.events)
         target = _integer(target, 'Restore target ID')
-        active, merges = _merge_lineage(self.unit_ids, self.events)
-        node = active.get(target)
-        if node is None or node[2] is None:
-            raise ValueError('No recoverable merge origin in this preparation for this live unit.')
-        index = node[1]
-        historical = {}
-        membership_expressions(self.unit_ids, self.events[: index + 1], history=historical)
+        index, nodes = self._runtime.restore_nodes(target, recursive)
         if recursive:
-            refs = _parent_references(_flatten_parent_nodes(merges[index]))
+            refs = [{'unit': node.unit, 'event_index': node.index} for node in nodes]
         else:
+            # Legacy immediate aliases use their then-live IDs in this public API.
+            from .live_summaries import membership_expressions
+
+            historical = {}
+            membership_expressions(self.unit_ids, self.events[: index + 1], history=historical)
             created = {unit: event_index for event_index, unit in historical}
             refs = [
                 {'unit': parent, 'event_index': created[parent]}
                 for parent in self.events[index]['parents']
             ]
-        expressions = [historical[(ref['event_index'], ref['unit'])] for ref in refs]
-        return index, refs, expressions
+        return index, refs, [node.expression for node in nodes]
 
     def restore_parent_groups(self, target, *, recursive=False):
         """Resolve all parents, including leaves with no retained evidence.
@@ -1286,7 +1482,7 @@ class BoundedSession:
         remain indivisible historical components.
         """
         index, refs, expressions = self.restore_parent_plan(target, recursive=recursive)
-        rows = np.flatnonzero(self.assignments == target)
+        rows = self._assignment_groups.get(target, np.empty(0, dtype=np.int64))
         parents = [ref['unit'] for ref in refs]
         if len(set(parents)) != len(parents):
             raise ValueError('Repeated historical parent identity in restoration.')
@@ -1316,37 +1512,8 @@ class BoundedSession:
     def restore_parent_counts(self, target, *, recursive=False):
         """Known full-source historical counts; split scopes stay explicitly unknown."""
         _, refs, _ = self.restore_parent_plan(target, recursive=recursive)
-        active = {
-            int(unit): int(count) for unit, count in zip(self.unit_ids, self.manifest['counts'])
-        }
-        history = {(-1, unit): count for unit, count in active.items()}
-        merges = {}
-        for index, event in enumerate(self.events):
-            operation = event['operation']
-            if operation == 'merge':
-                values = [active.pop(parent) for parent in event['parents']]
-                merges[index] = values
-                active[event['target']] = sum(values) if None not in values else None
-                history[(index, event['target'])] = active[event['target']]
-            elif operation == 'threshold_split':
-                active.pop(event['parent'])
-                for child in event['children']:
-                    active[child] = history[(index, child)] = None
-            elif operation == 'restore_parents':
-                active.pop(event['target'])
-                values = (
-                    [history[(r['event_index'], r['unit'])] for r in event['parent_references']]
-                    if event['version'] == 4
-                    else merges[event['merge_event_index']]
-                )
-                active.update(dict(zip(event['children'], values, strict=True)))
-                history.update(
-                    {
-                        (index, child): value
-                        for child, value in zip(event['children'], values, strict=True)
-                    }
-                )
-        return {r['unit']: history[(r['event_index'], r['unit'])] for r in refs}
+        _, nodes = self._runtime.restore_nodes(target, recursive)
+        return {ref['unit']: node.count for ref, node in zip(refs, nodes, strict=True)}
 
     def preflight_restore_parents(self, target, children, *, recursive=False):
         self._require_capability('restore_parents')
@@ -1370,9 +1537,7 @@ class BoundedSession:
         }
         if recursive:
             event['parent_references'] = references
-        self._validate_event_capabilities(self.events + [event])
-        interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
-        project_assignments(self.base_assignments, self.events + [event], self.attributes)
+        self._prepare_event(event)
         return event
 
     def record_restore_parents(self, target, children, *, recursive=False):
@@ -1388,7 +1553,7 @@ class BoundedSession:
             'ids': [int(i) for i in ids],
             'value': copy.deepcopy(value),
         }
-        interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
+        self._prepare_event(event)
         return event
 
     def record_label(self, field, ids, value):
@@ -1432,8 +1597,7 @@ class BoundedSession:
                 else normalize_metadata(metadata or {})
             ),
         }
-        interpret_events(self.unit_ids, self.base_metadata, self.events + [event])
-        project_assignments(self.base_assignments, self.events + [event], self.attributes)
+        self._prepare_event(event)
         return event
 
     def record_split(self, parent, selected_id, remainder_id, predicate, metadata=None):
