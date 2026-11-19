@@ -10,7 +10,7 @@ from phylib.utils import emit
 
 from phy.cluster._history import History
 from phy.cluster._utils import ClusterMeta
-from phy.cluster.clustering import Clustering
+from phy.cluster.clustering import Clustering, _concatenate_spike_clusters
 from phy.cluster.supervisor import Supervisor
 
 from .curation import evaluate_predicate, interpret_events
@@ -46,7 +46,7 @@ class GuardedClustering(Clustering):
     @property
     def spike_clusters(self):
         result = self._spike_clusters.view()
-        result.flags.writeable = bool(self.policy.depth)
+        result.flags.writeable = bool(getattr(self, '_internal_merge_write', False))
         return result
 
     @property
@@ -63,6 +63,15 @@ class GuardedClustering(Clustering):
         super()._update_cluster_ids(*args, **kwargs)
         for ids in self._spikes_per_cluster.values():
             ids.flags.writeable = False
+
+    def _do_merge(self, *args, **kwargs):
+        # The native primitive writes through its public property. Restrict that
+        # permission to the primitive itself, before any observer is called.
+        self._internal_merge_write = True
+        try:
+            return super()._do_merge(*args, **kwargs)
+        finally:
+            self._internal_merge_write = False
 
     def merge(self, *args, **kwargs):
         self.policy.require()
@@ -82,7 +91,23 @@ class GuardedClustering(Clustering):
 
     def undo(self):
         self.policy.require()
-        return super().undo()
+        transition = getattr(self, '_bounded_transition', lambda: None)()
+        if transition is None:
+            return super().undo()
+        item = self._undo_stack.back()
+        if item is None:
+            return None
+        _, _, undo_state = item
+        pairs = [
+            (rows, np.full(len(rows), unit, dtype=np.int64))
+            for unit, rows in transition.old_groups.items()
+            if len(rows)
+        ]
+        spike_ids, clusters = _concatenate_spike_clusters(*pairs)
+        up = self._do_assign(spike_ids, clusters)
+        up.history, up.undo_state = 'undo', undo_state
+        emit('cluster', self, up)
+        return up
 
     def redo(self):
         self.policy.require()
@@ -173,14 +198,32 @@ class BoundedSupervisor(Supervisor):
         kwargs['cluster_meta_factory'] = meta_factory
         super().__init__(*args, **kwargs)
         self.session_history = SessionHistory(session)
+        self.clustering._bounded_transition = self._native_undo_transition
         self.parent_origins.update(session.restored_parent_ids)
+        self._proposition_projection_key = None
+        self._validate_native(metadata=False, full=True)
+        # Native construction already made the same immutable row index.
+        self.session._assignment_groups = dict(self.clustering.spikes_per_cluster)
+
+    def _native_undo_transition(self):
+        events = self.session.events
+        if not events:
+            return None
+        transition = self.session._transitions.get(id(events[-1]))
+        if (
+            transition is None
+            or transition.after is not self.session._runtime
+            or not transition.old_groups
+        ):
+            return None
+        return transition
 
     @contextmanager
     def _transaction(self):
         """Roll native and semantic state back if an observer or command fails."""
         clustering = self.clustering
         arrays = (
-            clustering._spike_clusters.copy(),
+            clustering._spike_clusters,
             dict(clustering._spikes_per_cluster),
             clustering._cluster_ids.copy(),
         )
@@ -222,6 +265,10 @@ class BoundedSupervisor(Supervisor):
             clustering._spike_clusters, clustering._spikes_per_cluster, clustering._cluster_ids = (
                 arrays
             )
+            # The old per-unit row arrays are immutable. Reconstruct on failure
+            # instead of copying the complete assignment vector on every command.
+            for cluster, rows in arrays[1].items():
+                clustering._spike_clusters[rows] = cluster
             self.cluster_meta._data, self.cluster_meta._fields = data, fields
             self.parent_origins = parent_origins
             clustering._restored_partitions = restored_partitions
@@ -295,13 +342,29 @@ class BoundedSupervisor(Supervisor):
     def _workflow_context(self):
         return super()._workflow_context() if self.gui is not None else {}
 
-    def _validate_native(self, metadata=True):
-        if not np.array_equal(self.clustering.spike_clusters, self.session.assignments):
+    def _validate_native(self, metadata=True, full=False):
+        # Local patches and the maintained nonempty catalog prove a normal
+        # transition without scanning unrelated spike assignments. Save retains
+        # the complete independent semantic projection and array comparison.
+        if full or getattr(self, 'full_validation', False):
+            valid = np.array_equal(self.clustering.spike_clusters, self.session.assignments)
+        else:
+            groups = self.session._assignment_groups
+            native = self.clustering.spikes_per_cluster
+            valid = set(native) == set(groups)
+            if valid:
+                for cluster, rows in self.session.last_changed_groups.items():
+                    if not len(rows):
+                        continue
+                    if not np.array_equal(native.get(cluster), rows) or not np.all(
+                        self.clustering.spike_clusters[rows] == cluster
+                    ):
+                        valid = False
+                        break
+        if not valid:
             raise ValueError('Native assignments disagree with the bounded semantic command.')
         if metadata:
-            active, expected, _ = interpret_events(
-                self.session.unit_ids, self.session.base_metadata, self.session.events
-            )
+            active, expected = self.session._runtime.active, self.session.metadata
             for field in set(self.cluster_meta.fields) | set(expected):
                 for cluster in active:
                     actual = (
@@ -375,11 +438,20 @@ class BoundedSupervisor(Supervisor):
 
     def _project_proposition_state(self):
         if self.merge_propositions is not None:
+            key = (
+                self.merge_propositions,
+                self.session.membership_revision,
+                tuple(map(int, self.clustering.cluster_ids)),
+                tuple(self.merge_propositions.catalog.reviews.items()),
+            )
+            if key == getattr(self, '_proposition_projection_key', None):
+                return
             self.merge_propositions.project_live_ids(
                 self.clustering.cluster_ids,
                 retired_units=self.session.retired_units,
                 reassembled_results=self._reassembled_results(),
             )
+            self._proposition_projection_key = key
 
     def _refresh_bounded(self):
         self.parent_origins = self.session.restored_parent_ids
@@ -620,7 +692,7 @@ class BoundedSupervisor(Supervisor):
 
     def save(self):
         self._settle_selection()
-        self._validate_native()
+        self._validate_native(full=True)
         self.session.validate_proposition_documents()
         documents = None
         if self.merge_propositions is not None:

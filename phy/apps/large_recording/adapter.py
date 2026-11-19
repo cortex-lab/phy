@@ -267,7 +267,7 @@ class BoundedTemplateController(TemplateController):
         return view
 
     def _source_units(self, cluster_id):
-        version = self.bounded_session.events
+        version = self.bounded_session.membership_revision
         cached = getattr(self, '_lineage_cache', None)
         if cached is not None and cached[0] is version:
             return cached[1].get(int(cluster_id))
@@ -284,7 +284,7 @@ class BoundedTemplateController(TemplateController):
         units = {
             unit: sources(expression)
             for unit, expression in membership_expressions(
-                self.bounded_session.unit_ids, version
+                self.bounded_session.unit_ids, self.bounded_session.events
             ).items()
         }
         self._lineage_cache = version, units
@@ -311,11 +311,14 @@ class BoundedTemplateController(TemplateController):
             return 0
         if (
             not hasattr(self, '_waveform_membership_cache')
-            or self._waveform_membership_cache[0] is not self.bounded_session.events
+            or self._waveform_membership_cache[0] is not self.bounded_session.membership_revision
         ):
             labels = self.supervisor.clustering.spike_clusters[stored.spike_ids]
             ids, counts = np.unique(labels, return_counts=True)
-            self._waveform_membership_cache = self.bounded_session.events, dict(zip(ids, counts))
+            self._waveform_membership_cache = (
+                self.bounded_session.membership_revision,
+                dict(zip(ids, counts)),
+            )
         return int(self._waveform_membership_cache[1].get(cluster_id, 0))
 
     def get_mean_firing_rate(self, cluster_id):

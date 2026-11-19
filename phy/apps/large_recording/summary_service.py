@@ -142,12 +142,13 @@ class LiveSummaryService(QObject):
         self._announced_expressions = self._expressions
 
     def _refresh(self):
-        if self._closed or self._events is self._session.events:
+        revision = getattr(self._session, 'membership_revision', self._session.events)
+        if self._closed or self._events is revision:
             return False
         expressions = membership_expressions(self._session.unit_ids, self._session.events)
         changed = expressions != self._expressions
         self._expressions = expressions
-        self._events = self._session.events
+        self._events = revision
         if changed:
             self._pending = dict(expressions)
             totals = {}

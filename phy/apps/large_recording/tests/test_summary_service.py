@@ -409,3 +409,24 @@ def test_progress_for_undone_memberships_is_ignored(qtbot, controlled_service):
     # Teardown releases the pending original request; do not start a new one.
     f.service.suspend()
     job.release.set()
+
+
+def test_membership_revision_skips_label_and_label_undo_expression_scan(
+    controlled_service, monkeypatch
+):
+    f = controlled_service
+    f.session.membership_revision = object()
+    f.service._refresh()
+    old = f.session.events
+
+    def forbid(*args, **kwargs):
+        pytest.fail('A label rebuilt summary membership expressions.')
+
+    monkeypatch.setattr(summary_service, 'membership_expressions', forbid)
+    f.session._events = old + [{'operation': 'label'}]
+    assert not f.service._refresh()
+    f.session._events = old
+    assert not f.service._refresh()
+    f.session.membership_revision = object()
+    monkeypatch.setattr(summary_service, 'membership_expressions', lambda *args: {1: 'branch'})
+    assert f.service._refresh()
