@@ -560,6 +560,60 @@ def test_supervisor_merge_candidate_interactions_follow_visible_role_order(super
     unconnect(on_select)
 
 
+def test_merge_reference_drag_preserves_identity_palette_and_candidate_context(supervisor):
+    _select(supervisor, [30], [20, 11])
+    entry = supervisor.selection.snapshot()
+    supervisor.toggle_merge_mode()
+    view = supervisor.merge_view
+    similarity = supervisor.similarity_view
+    colors = dict(supervisor.selection_color_indices)
+    candidates = similarity.get_ids()
+    rows = similarity._model._rows
+    assert view._drag_ids_for_index(view._proxy_index_for_id(30)) == (30,)
+
+    view.emit_cluster_drop(view, (30,), 3)
+
+    assert supervisor.selected_merge == [20, 11, 30]
+    assert supervisor.selected == [20, 11, 30]
+    assert supervisor.selection.state.reference_id == 30
+    assert dict(supervisor.selection_color_indices) == colors
+    assert similarity.get_ids() == candidates
+    assert similarity._model._rows is rows
+    candidate = similarity.get_navigable_ids()[0]
+    view.emit_cluster_drop(similarity, (candidate,), 0)
+    assert supervisor.selected_merge == [candidate, 20, 11, 30]
+    assert supervisor.selection.state.reference_id == 30
+    assert supervisor.selection_color_indices[30] == 0
+    supervisor.remove_from_merge(20)
+    assert supervisor.selection.state.reference_id == 30
+    supervisor.deselect_from_merge((11,))
+    assert supervisor.selection.state.reference_id == 30
+    supervisor.toggle_merge_mode()
+    assert supervisor.selection.state is entry
+
+
+def test_moved_blue_reference_merge_undo_restores_row_order_and_palette(supervisor):
+    _select(supervisor, [30], [20, 11])
+    before = supervisor.clustering.spike_clusters.copy()
+    supervisor.toggle_merge_mode()
+    supervisor.merge_view.emit_cluster_drop(supervisor.merge_view, (30,), 3)
+    staged = supervisor.selection.snapshot()
+    assert staged.merge_ids == (20, 11, 30)
+    supervisor.actions.merge()
+    supervisor.block()
+    merged = supervisor.clustering.spike_clusters.copy()
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.selection.state == staged
+    assert supervisor.merge_view.get_ids() == [20, 11, 30]
+    assert supervisor.selection_color_indices[30] == 0
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, merged)
+    assert not supervisor.selection.state.is_merge_mode
+
+
 def test_merge_backspace_removes_similarity_tail_without_recoloring_merge(supervisor):
     _select(supervisor, [10, 30], [20])
     supervisor.toggle_merge_mode()
@@ -1108,6 +1162,46 @@ def test_clicking_nonactionable_proposition_cancels_active_workspace(
         supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.REJECTED
     )
     assert third.key in view.actionable_keys()
+
+
+def test_reordered_blue_proposition_accept_undo_redo_and_reset(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    first = supervisor.merge_propositions.catalog.propositions[0]
+    supervisor._activate_merge_proposition(supervisor.merge_propositions_view, first.key)
+    original = supervisor.selection.snapshot()
+    reference = original.reference_id
+    view = supervisor.merge_view
+    view.emit_cluster_drop(view, (reference,), len(original.merge_ids))
+    moved = supervisor.selection.snapshot()
+    assert moved.merge_ids == original.merge_ids[1:] + (reference,)
+    assert moved.reference_id == reference
+    assert moved.color_slots == original.color_slots
+
+    supervisor.actions.merge()
+    supervisor.block()
+    assignments = supervisor.clustering.spike_clusters.copy()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(first.key)
+        is PropositionStatus.ACCEPTED_MODIFIED
+    )
+    supervisor.undo()
+    supervisor.block()
+    assert supervisor.selection.state == moved
+    assert supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.PENDING
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, assignments)
+    supervisor.undo()
+    supervisor.block()
+    supervisor._reset_merge_proposition(supervisor.merge_propositions_view, first.key)
+    supervisor.block()
+    assert supervisor.selection.state.merge_ids == original.merge_ids
+    assert supervisor.selection.state.reference_id == reference
+    assert supervisor.selection.state.color_slots == original.color_slots
 
 
 def test_merge_proposition_accept_returns_to_cluster_then_navigates_explicitly(
@@ -1775,10 +1869,15 @@ def test_batch_selection_after_moving_last_primary_is_empty(supervisor, filtered
 
 
 @mark.parametrize('context', ['reference', 'clear', 'filter', 'model', 'merge_mode', 'close'])
-def test_batch_selection_has_no_deferred_context_mutation(supervisor, monkeypatch, context):
+@mark.parametrize('backwards', [False, True])
+def test_batch_selection_has_no_deferred_context_mutation(
+    supervisor, monkeypatch, context, backwards
+):
     _select(supervisor, [30])
     view = supervisor.similarity_view
-    expected = view.get_navigable_ids()[: supervisor.n_similar_clusters_to_select]
+    eligible = view.get_navigable_ids()
+    n = supervisor.n_similar_clusters_to_select
+    expected = eligible[-n:] if backwards else eligible[:n]
     scheduled, completed = [], []
 
     def schedule(callback, *args):
@@ -1786,7 +1885,10 @@ def test_batch_selection_has_no_deferred_context_mutation(supervisor, monkeypatc
             scheduled.append((callback, args))
 
     monkeypatch.setattr(view, '_schedule_callback', schedule)
-    supervisor.select_first_similar(callback=completed.append)
+    select_batch = (
+        supervisor.select_previous_similar if backwards else supervisor.select_first_similar
+    )
+    select_batch(callback=completed.append)
     view.debouncer.flush()
     # Only completion is deferred. No callback may create a selection from old rows.
     assert supervisor.selected_similar == expected
@@ -1819,6 +1921,57 @@ def test_similarity_reset_without_primary_clears_candidates(supervisor):
     view.reset(())
     assert view.get_ids() == []
     assert view.get_selected_ids() == []
+
+
+@mark.parametrize('merge_mode', [False, True])
+def test_reverse_batch_shortcut_and_rapid_direction_changes(qtbot, supervisor, gui, merge_mode):
+    _select(supervisor, [30])
+    if merge_mode:
+        supervisor.toggle_merge_mode()
+    view = supervisor.similarity_view
+    view.sort_by('id', 'asc')
+    supervisor.n_similar_clusters_to_select = 2
+    eligible = view.get_navigable_ids()
+    assert len(eligible) >= 4
+    modifier = Qt.MetaModifier if sys.platform == 'darwin' else Qt.ControlModifier
+    qtbot.keyClick(gui, Qt.Key_Space, modifier | Qt.ShiftModifier)
+    supervisor.block()
+    assert supervisor.selected_similar == eligible[-2:]
+    # Multiple directions before a Qt turn must still reduce in input order.
+    supervisor.select_actions.select_previous_similar()
+    supervisor.select_actions.select_first_similar()
+    supervisor.select_actions.select_previous_similar()
+    supervisor.block()
+    assert supervisor.selected_similar == eligible[-4:-2]
+    assert supervisor.n_similar_clusters_to_select == 2
+    assert tuple(view._selected_ids) == supervisor.selection.state.similar_ids
+    assert not supervisor.task_logger._processing
+
+
+def test_reverse_batch_obeys_visible_order_masks_and_clipped_start(supervisor):
+    _select(supervisor, [30])
+    view = supervisor.similarity_view
+    view.sort_by('id', 'asc')
+    view.filter('id != 11')
+    supervisor.n_similar_clusters_to_select = 2
+    eligible = view.get_navigable_ids()
+    # A directly selected masked row is not an eligible batch anchor.
+    view.select([10])
+    supervisor.select_previous_similar()
+    supervisor.block()
+    assert supervisor.selected_similar == eligible[-2:]
+    # Anchor at the first row in visible order, irrespective of selection order.
+    view.select([eligible[-1], eligible[1]])
+    supervisor.select_previous_similar()
+    supervisor.block()
+    assert supervisor.selected_similar == eligible[:1]
+    supervisor.select_previous_similar()
+    supervisor.block()
+    assert supervisor.selected_similar == []
+    view.filter('id > 1000')
+    supervisor.select_previous_similar()
+    supervisor.block()
+    assert supervisor.selected_similar == []
 
 
 def test_filter_release_restores_space_shortcut(qtbot, supervisor, gui):

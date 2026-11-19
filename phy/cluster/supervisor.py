@@ -504,6 +504,9 @@ class ActionCreator:
         'previous': 'shift+space',
         # Qt maps Meta to the physical Control key on macOS.
         'select_first_similar': 'meta+space' if sys.platform == 'darwin' else 'ctrl+space',
+        'select_previous_similar': (
+            'meta+shift+space' if sys.platform == 'darwin' else 'ctrl+shift+space'
+        ),
         'unselect_similar': 'backspace',
         'toggle_merge_mode': 'v',
         'next_best': 'down',
@@ -612,6 +615,7 @@ class ActionCreator:
         # Selection.
         self.add(w, 'select', prompt=True, n_args=1)
         self.add(w, 'select_first_similar')
+        self.add(w, 'select_previous_similar')
         self.add(
             w,
             'select_n_similar',
@@ -1514,6 +1518,7 @@ class Supervisor:
             allowed = {
                 'toggle_merge_mode',
                 'select_first_similar',
+                'select_previous_similar',
                 'select_n_similar',
                 'unselect_similar',
                 'next',
@@ -1548,19 +1553,16 @@ class Supervisor:
         cluster_ids = payload['cluster_ids']
         insertion = payload['insertion']
         if sender is self.merge_view and source is self.similarity_view:
-            insertion = min(max(1, insertion), len(self.selection.state.merge_ids))
+            insertion = min(max(0, insertion), len(self.selection.state.merge_ids))
             self.add_to_merge(cluster_ids, insertion=insertion)
         elif sender is self.similarity_view and source is self.merge_view:
             self.remove_from_merge(cluster_ids)
         elif sender is self.merge_view and source is self.merge_view:
-            if self.selection.state.reference_id in cluster_ids:
-                logger.warning('The merge reference cannot be reordered.')
-                return
             current = self.selection.state.merge_ids
             removed_before = sum(
                 current.index(cluster_id) < insertion for cluster_id in cluster_ids
             )
-            adjusted = max(1, insertion - removed_before)
+            adjusted = min(len(current) - len(cluster_ids), max(0, insertion - removed_before))
             self.reorder_merge(cluster_ids, adjusted)
 
     def _cancel_merge_mode(self, close_view=True):
@@ -2545,11 +2547,18 @@ class Supervisor:
         """Reorder staged candidates and their scientific presentation order."""
         self._settle_selection()
         change = self.selection.reorder_merge(cluster_ids, insertion)
-        self._apply_selection_change(change, callback=callback)
+        self._apply_selection_change(change, callback=callback, refresh_similarity=False)
         return change.after
 
     def select_first_similar(self, n=None, callback=None):
         """Select N eligible similar clusters, advancing after the current selection."""
+        self._select_similar_batch(n=n, callback=callback)
+
+    def select_previous_similar(self, callback=None):
+        """Select the preceding batch of eligible similar clusters in visible order."""
+        self._select_similar_batch(backwards=True, callback=callback)
+
+    def _select_similar_batch(self, n=None, *, backwards=False, callback=None):
         self._settle_selection()
         select_from_start = n is not None
         if n is not None:
@@ -2560,9 +2569,17 @@ class Supervisor:
         # this turn: a deferred candidate-list callback can otherwise outlive its
         # reference, model, workflow, or widgets. Only completion stays asynchronous.
         cluster_ids = self.similarity_view.get_navigable_ids()
+        selected = self.similarity_view.get_selected_ids()
+        if backwards:
+            selected = set(selected)
+            end = next(
+                (index for index, cluster_id in enumerate(cluster_ids) if cluster_id in selected),
+                len(cluster_ids),
+            )
+            self.similarity_view.select(cluster_ids[max(0, end - n) : end], callback=callback)
+            return
         start = 0
         if not select_from_start:
-            selected = self.similarity_view.get_selected_ids()
             if selected and selected[-1] in cluster_ids:
                 start = cluster_ids.index(selected[-1]) + 1
         self.similarity_view.select(cluster_ids[start : start + n], callback=callback)
