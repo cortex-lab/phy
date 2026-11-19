@@ -20,8 +20,114 @@ class SampledCorrelogramView(CorrelogramView):
 
     ex_status = 'Selected windows only; chance line is the mean off-center window-local null.'
 
+    default_shortcuts = {
+        **CorrelogramView.default_shortcuts,
+        'toggle_auto_exclusion': 'd',
+        'toggle_cross_exclusion': 'shift+d',
+    }
+
+    def __init__(self, *args, exclusion_correlograms=None, **kwargs):
+        # An explicit provider preserves the original three-argument plugin API.
+        self.exclusion_correlograms = exclusion_correlograms
+        self.exclusion_ms = 0.3
+        self.exclude_auto = False
+        self.exclude_cross = False
+        super().__init__(*args, **kwargs)
+        attrs = ('exclusion_ms', 'exclude_auto', 'exclude_cross')
+        self.state_attrs += attrs
+        self.local_state_attrs += attrs
+
+    @property
+    def exclusion_ms(self):
+        return self._exclusion_ms
+
+    @exclusion_ms.setter
+    def exclusion_ms(self, value):
+        value = float(value)
+        if not np.isfinite(value) or value < 0:
+            raise ValueError('Exclusion half-width must be finite and nonnegative.')
+        self._exclusion_ms = value
+
+    @property
+    def status(self):
+        status = super().status
+        if self.exclusion_correlograms is not None:
+            enabled = [
+                name
+                for name, value in (('auto', self.exclude_auto), ('cross', self.exclude_cross))
+                if value
+            ]
+            if enabled:
+                # Dock status text is elided in the middle. Keep every active
+                # switch and the width in the visible prefix.
+                status = f'EXCL {"+".join(enabled)} ±{self.exclusion_ms:g} ms | {status}'
+        return status
+
     def _get_correlograms_data(self):
+        if self.exclusion_correlograms is not None:
+            return self.exclusion_correlograms(
+                self.cluster_ids,
+                self.bin_size,
+                self.window_size,
+                exclusion_ms=self.exclusion_ms,
+                exclude_auto=self.exclude_auto,
+                exclude_cross=self.exclude_cross,
+            )
         return self.correlograms(self.cluster_ids, self.bin_size, self.window_size)
+
+    def _update_exclusion(self):
+        if hasattr(self, 'actions'):
+            for name, checked in (
+                ('toggle_auto_exclusion', self.exclude_auto),
+                ('toggle_cross_exclusion', self.exclude_cross),
+            ):
+                action = self.actions.get(name)
+                if action is not None:
+                    action.setChecked(checked)
+        self.update_status()
+        if self.cluster_ids:
+            self.plot()
+
+    def set_exclusion_zone(self, value):
+        """Set the near-zero pair exclusion half-width in milliseconds.
+
+        Zero excludes exact-time pairs when the corresponding switch is enabled.
+        Only displayed pair counts change; spike trains and assignments are retained.
+        """
+        self.exclusion_ms = value
+        self._update_exclusion()
+
+    def toggle_auto_exclusion(self, checked):
+        """Exclude near-zero pairs from sampled autocorrelograms."""
+        self.exclude_auto = bool(checked)
+        self._update_exclusion()
+
+    def toggle_cross_exclusion(self, checked):
+        """Exclude near-zero pairs from sampled cross-correlograms."""
+        self.exclude_cross = bool(checked)
+        self._update_exclusion()
+
+    def attach(self, gui):
+        super().attach(gui)
+        if self.exclusion_correlograms is None:
+            return
+        self.actions.separator()
+        self.actions.add(
+            self.set_exclusion_zone,
+            prompt=True,
+            prompt_default=lambda: self.exclusion_ms,
+        )
+        self.actions.add(self.toggle_auto_exclusion, checkable=True, checked=self.exclude_auto)
+        self.actions.add(self.toggle_cross_exclusion, checkable=True, checked=self.exclude_cross)
+        # Other view shortcuts are window-wide. Scope these two to this dock so
+        # typing in a table/filter cannot silently change the displayed counts.
+        self.dock._widget.setFocusPolicy(Qt.StrongFocus)
+        for name in ('toggle_auto_exclusion', 'toggle_cross_exclusion'):
+            action = self.actions.get(name)
+            gui.removeAction(action)
+            self.dock.addAction(action)
+            action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
+        self.update_status()
 
 
 class EvidenceAmplitudeView(AmplitudeView):

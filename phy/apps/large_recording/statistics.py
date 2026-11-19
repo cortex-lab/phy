@@ -107,8 +107,7 @@ def _excluded_positive_correlograms(
     shift = 1
     while active[:-shift].any():
         delays = ticks[shift:] - ticks[:-shift]
-        bins = delays // bin_samples
-        active[:-shift][bins > n_positive_bins] = False
+        active[:-shift][delays >= (n_positive_bins + 1) * bin_samples] = False
         keep = active[:-shift].copy()
         if exclude_auto and exclude_cross:
             keep &= delays > exclusion_samples
@@ -117,7 +116,8 @@ def _excluded_positive_correlograms(
             eligible = same if exclude_auto else ~same
             keep &= ~eligible | (delays > exclusion_samples)
         indices = np.ravel_multi_index(
-            (labels[:-shift][keep], labels[shift:][keep], bins[keep]), result.shape
+            (labels[:-shift][keep], labels[shift:][keep], delays[keep] // bin_samples),
+            result.shape,
         )
         increments = np.bincount(indices)
         result.ravel()[: len(increments)] += increments

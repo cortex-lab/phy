@@ -221,6 +221,7 @@ class BoundedTemplateController(TemplateController):
         """Create a sampled correlogram view with row-cluster transfer."""
         view = SampledCorrelogramView(
             correlograms=partial(self._window_correlograms, return_baseline=True),
+            exclusion_correlograms=partial(self._window_correlograms, return_baseline=True),
             sample_rate=self.model.sample_rate,
         )
 
@@ -346,7 +347,17 @@ class BoundedTemplateController(TemplateController):
         samples = self.model.spike_samples[ids]
         return Bunch(data=window_isi(samples, self.evidence_windows, self.model.sample_rate))
 
-    def _window_correlograms(self, cluster_ids, bin_size, window_size, return_baseline=False):
+    def _window_correlograms(
+        self,
+        cluster_ids,
+        bin_size,
+        window_size,
+        return_baseline=False,
+        *,
+        exclusion_ms=0.3,
+        exclude_auto=False,
+        exclude_cross=False,
+    ):
         return window_correlograms(
             self.model.spike_samples,
             self.supervisor.clustering.spike_clusters,
@@ -356,6 +367,9 @@ class BoundedTemplateController(TemplateController):
             bin_size,
             window_size,
             return_baseline=return_baseline,
+            exclusion_ms=exclusion_ms,
+            exclude_auto=exclude_auto,
+            exclude_cross=exclude_cross,
         )
 
     def create_unit_stability_view(self):
