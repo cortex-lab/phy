@@ -17,6 +17,7 @@ nav:
   - How-to and customization:
       - Configuration and state: configuration.md
       - Performance and spike sampling: performance.md
+      - Curating long recordings: long-recordings.md
       - Change keyboard shortcuts: keyboard_customization.md
       - Plugin introduction: customization.md
       - Plugin examples: plugins.md

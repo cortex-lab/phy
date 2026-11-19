@@ -1,0 +1,22 @@
+{
+  "ordinary": {
+    "video_packets_unchanged": true,
+    "packet_digest": "MD5=02d6c216e2593fbc425833e1db82bd79",
+    "width": 1920,
+    "height": 1200,
+    "frames": 613,
+    "fps": "12/1",
+    "duration_seconds": 51.083333,
+    "soft_subtitles": true
+  },
+  "bounded": {
+    "video_packets_unchanged": true,
+    "packet_digest": "MD5=b2a9ca06d5df80be702c712badc94bf6",
+    "width": 1920,
+    "height": 1200,
+    "frames": 647,
+    "fps": "12/1",
+    "duration_seconds": 53.917,
+    "soft_subtitles": true
+  }
+}

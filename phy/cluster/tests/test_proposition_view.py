@@ -86,3 +86,60 @@ def test_merge_propositions_active_row_changes_in_place(qtbot):
     assert view._model.row_by_id(1)['status'] == 'active'
     assert view._model.row_by_id(1)['_catalog_status'] == 'rejected'
     view.close()
+
+
+def test_control_click_retains_suggestions_and_stable_keys(qtbot):
+    view = MergePropositionsView(
+        data=[
+            {'key': 'a', 'unit_ids': (1, 2)},
+            {'key': 'b', 'unit_ids': (2, 3)},
+            {'key': 'c', 'unit_ids': (4, 5)},
+        ]
+    )
+    _wait_until_table_ready(qtbot, view)
+    view.show()
+    single, multiple = [], []
+
+    @connect(event='activate_merge_proposition', sender=view)
+    def activated(sender, key):
+        single.append(key)
+
+    @connect(event='activate_merge_propositions', sender=view)
+    def compared(sender, keys):
+        multiple.append(keys)
+
+    def click(key, modifiers=Qt.NoModifier):
+        index = view._proxy_index_for_id(view._id_by_key[key])
+        qtbot.mouseClick(
+            view.table_view.viewport(),
+            Qt.LeftButton,
+            modifier=modifiers,
+            pos=view.table_view.visualRect(index).center(),
+        )
+
+    try:
+        click('a')
+        click('b', Qt.ControlModifier)
+        assert view.selected_keys == ('a', 'b')
+        assert single == ['a']
+        assert multiple == [('a', 'b')]
+        view.set_propositions(
+            [
+                {'key': 'c', 'unit_ids': (4, 5)},
+                {'key': 'b', 'unit_ids': (2, 3)},
+                {'key': 'a', 'unit_ids': (1, 2)},
+            ]
+        )
+        assert view.selected_keys == ('a', 'b')
+        assert view.get_selected_ids() == [2, 1]
+        click('a', Qt.ControlModifier)
+        assert view.selected_keys == ('b',)
+        click('b', Qt.ControlModifier)
+        assert view.selected_keys == ()
+        assert multiple[-1] == ()
+        click('c')
+        assert view.selected_keys == ('c',)
+        assert single[-1] == 'c'
+    finally:
+        unconnect(activated, compared)
+        view.close()

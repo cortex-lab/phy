@@ -567,6 +567,7 @@ class GUI(QMainWindow):
     ------
 
     close(gui)
+    closed(gui)  # Emitted only after closure is accepted.
     show(gui)
     close_view(view, gui)
 
@@ -752,7 +753,6 @@ class GUI(QMainWindow):
             return
         super().closeEvent(e)
         self._closed = True
-
         # Save the state to disk when closing the GUI.
         logger.debug('Save the geometry state.')
         try:

@@ -1,0 +1,369 @@
+"""Task publication boundaries, bounded delivery, ETA and cancellation."""
+
+from dataclasses import dataclass
+from threading import Event, get_ident
+
+import pytest
+
+from phy.gui.tasks import BackgroundTaskManager, StageETA, TaskProgress, TaskSpec, heavy_io
+
+
+@dataclass(frozen=True)
+class Request:
+    value: int
+
+
+def test_latest_progress_is_bounded_and_delivery_is_on_gui(qtbot):
+    owner = get_ident()
+    release, reported = Event(), Event()
+    manager = BackgroundTaskManager()
+    changes, outcomes = [], []
+    manager.progress.connect(lambda p: changes.append((get_ident(), p)))
+    manager.finished.connect(lambda o: outcomes.append((get_ident(), o)))
+
+    def worker(request, context):
+        assert get_ident() != owner
+        for n in range(20000):
+            context.report(TaskProgress('Counting', n, 20000, 'items'))
+        reported.set()
+        assert release.wait(5)
+        return request.value
+
+    manager.submit(TaskSpec('count', 'Count', worker, Request(7)))
+    assert reported.wait(5)  # GUI deliberately stalled while worker reports.
+    assert len(manager._mailbox) == 1
+    assert not changes
+    release.set()
+    qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0][0] == owner
+    assert outcomes[0][1].result == 7
+    assert changes[-1][1].done == 19999
+    assert all(thread == owner for thread, _ in changes)
+
+
+def test_duplicate_task_and_precommit_cancel(qtbot):
+    manager, other = BackgroundTaskManager(), BackgroundTaskManager()
+    started, release = Event(), Event()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+
+    def worker(request, context):
+        started.set()
+        assert release.wait(5)
+        context.check_cancel()
+        return None
+
+    spec = TaskSpec('duplicate', 'Duplicate', worker, Request(1))
+    manager.submit(spec)
+    assert started.wait(5)
+    with pytest.raises(ValueError, match='already'):
+        other.submit(spec)
+    manager.cancel()
+    release.set()
+    qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0].state == 'cancelled'
+
+
+def test_cancel_after_commit_preserves_success_and_detach_suppresses_callbacks(qtbot):
+    committed, release = Event(), Event()
+    manager = BackgroundTaskManager()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+
+    def worker(request, context):
+        context.commit()
+        committed.set()
+        assert release.wait(5)
+        context.check_cancel()  # A published artifact cannot become cancellation.
+        return 'published'
+
+    manager.submit(TaskSpec('commit', 'Commit', worker, Request(1)))
+    assert committed.wait(5)
+    manager.cancel()
+    release.set()
+    qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0].state == 'succeeded'
+    assert outcomes[0].result == 'published'
+    # Detached owners receive no completion and never block shutdown.
+    committed.clear()
+    release.clear()
+    outcomes.clear()
+    manager.submit(TaskSpec('detach', 'Detach', worker, Request(1)))
+    assert committed.wait(5)
+    manager.detach()
+    release.set()
+    qtbot.waitUntil(lambda: not manager.busy)
+    assert not outcomes
+
+
+def test_heavy_io_is_shared_and_waiting_task_can_cancel(qtbot):
+    manager = BackgroundTaskManager()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+    entered = Event()
+
+    def worker(request, context):
+        entered.set()
+
+    with heavy_io(lambda: None):
+        manager.submit(TaskSpec('io', 'IO', worker, Request(1)))
+        manager.cancel()
+        qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0].state == 'cancelled'
+    assert not entered.is_set()
+
+
+def test_errors_and_mutable_requests(qtbot):
+    manager = BackgroundTaskManager()
+    with pytest.raises(TypeError, match='immutable'):
+        manager.submit(TaskSpec('mutable', 'Mutable', lambda r, c: None, {}))
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+
+    def worker(request, context):
+        raise OSError('disk full')
+
+    manager.submit(TaskSpec('error', 'Error', worker, Request(1)))
+    qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0].state == 'failed'
+    assert outcomes[0].error == 'disk full'
+
+
+def test_eta_resets_per_stage_and_uses_injected_clock():
+    now = [0.0]
+    eta = StageETA(clock=lambda: now[0])
+    assert eta.update(TaskProgress('Validate', 0, 100, 'bytes')) is None
+    now[0] = 1
+    assert eta.update(TaskProgress('Validate', 10, 100, 'bytes')) is None
+    now[0] = 3
+    assert eta.update(TaskProgress('Validate', 30, 100, 'bytes')) == 7
+    now[0] = 4
+    assert eta.update(TaskProgress('Build', 5, 100, 'rows')) is None
+    now[0] = 7
+    assert eta.update(TaskProgress('Build', 20, 100, 'rows')) == 16
+    assert eta.update(TaskProgress('Finalize')) is None
+
+
+def test_worker_base_exception_and_startup_failure_are_terminal(qtbot, monkeypatch):
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+
+    def exit_worker(request, context):
+        raise SystemExit('worker exit')
+
+    manager.submit(TaskSpec('exit', 'Exit', exit_worker, Request(1)))
+    qtbot.waitUntil(lambda: len(outcomes) == 1)
+    assert outcomes[0].state == 'failed'
+    assert not manager.busy
+
+    def fail_start(self):
+        raise RuntimeError('no thread available')
+
+    monkeypatch.setattr(tasks.Thread, 'start', fail_start)
+    manager.submit(TaskSpec('startup', 'Startup', exit_worker, Request(1)))
+    qtbot.waitUntil(lambda: len(outcomes) == 2)
+    assert outcomes[-1].state == 'failed'
+    assert not manager.busy
+    assert 'startup' not in tasks._ACTIVE
+    assert manager.task_id not in tasks._MANAGERS
+
+
+def test_detached_manager_lives_until_gui_terminal_delivery(qtbot):
+    import gc
+    import weakref
+
+    from phy.gui import tasks
+
+    started, release = Event(), Event()
+    manager = BackgroundTaskManager()
+
+    def worker(request, context):
+        started.set()
+        assert release.wait(5)
+        context.check_cancel()
+
+    task_id = manager.submit(TaskSpec('lifetime', 'Lifetime', worker, Request(1)))
+    assert started.wait(5)
+    reference = weakref.ref(manager)
+    manager.detach()
+    del manager
+    gc.collect()
+    assert reference() is not None
+    release.set()
+    qtbot.waitUntil(lambda: task_id not in tasks._MANAGERS)
+    gc.collect()
+    assert task_id not in tasks._MANAGERS
+
+
+def test_cancel_wins_before_commit_and_progress_types_are_checked(qtbot):
+    started, release = Event(), Event()
+    manager = BackgroundTaskManager()
+    outcomes = []
+    manager.finished.connect(outcomes.append)
+    published = []
+
+    def worker(request, context):
+        with pytest.raises(ValueError):
+            context.report(TaskProgress('Bad', -1, 100))
+        with pytest.raises(TypeError):
+            context.report(TaskProgress('Bad', message=[]))
+        started.set()
+        assert release.wait(5)
+        context.commit()
+        published.append(True)
+
+    manager.submit(TaskSpec('cancel-boundary', 'Cancel boundary', worker, Request(1)))
+    assert started.wait(5)
+    manager.cancel()
+    release.set()
+    qtbot.waitUntil(lambda: bool(outcomes))
+    assert outcomes[0].state == 'cancelled'
+    assert not published
+
+
+def test_eta_stalls_contribute_to_next_rate_sample():
+    now = [0.0]
+    eta = StageETA(clock=lambda: now[0])
+    eta.update(TaskProgress('Scan', 0, 100))
+    now[0] = 1
+    eta.update(TaskProgress('Scan', 10, 100))
+    now[0] = 10
+    eta.update(TaskProgress('Scan', 10, 100))
+    now[0] = 19
+    eta.update(TaskProgress('Scan', 10, 100))
+    now[0] = 20
+    remaining = eta.update(TaskProgress('Scan', 20, 100))
+    assert remaining > 8  # The 19-second stall must lower the 10 units/s rate.
+
+
+def test_finished_callback_can_chain_task_without_losing_terminal_poll(qtbot):
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    outcomes, ids = [], []
+
+    def finished(outcome):
+        outcomes.append(outcome)
+        if len(outcomes) == 1:
+            ids.append(manager.submit(TaskSpec('chain-2', 'Second', lambda r, c: 2, None)))
+
+    manager.finished.connect(finished)
+    ids.append(manager.submit(TaskSpec('chain-1', 'First', lambda r, c: 1, None)))
+    qtbot.waitUntil(lambda: len(outcomes) == 2)
+    assert [o.result for o in outcomes] == [1, 2]
+    assert not manager.busy
+    assert all(task not in tasks._MANAGERS for task in ids)
+    assert not manager._timer.isActive()
+
+
+@pytest.mark.parametrize('delete_when', ['pending', 'running', 'succeeded'])
+def test_state_observer_can_delete_manager_without_late_qt_access(qtbot, delete_when):
+    from PyQt5 import sip
+
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    started, release = Event(), Event()
+
+    def worker(request, context):
+        context.report(TaskProgress('Working', 1, 2))
+        started.set()
+        assert release.wait(3)
+        context.check_cancel()
+        return 1
+
+    def state_changed(state):
+        if state == delete_when:
+            sip.delete(manager)
+
+    manager.state_changed.connect(state_changed)
+    task = manager.submit(TaskSpec('delete-state-' + delete_when, 'Delete observer', worker, None))
+    record = manager._lifetime.record
+    if delete_when == 'running':
+        assert started.wait(3)
+        qtbot.waitUntil(lambda: sip.isdeleted(manager))
+    release.set()
+    qtbot.waitUntil(lambda: task not in tasks._MANAGERS)
+    qtbot.waitUntil(lambda: manager.spec.key not in tasks._ACTIVE)
+    assert sip.isdeleted(manager)
+    assert manager._lifetime.dead
+    assert record.context.cancelled.is_set()
+
+
+def test_terminal_registry_released_even_if_state_presentation_fails(qtbot, monkeypatch):
+    from phy.gui import tasks
+
+    manager = BackgroundTaskManager()
+    manager.task_id = 'raising-terminal'
+    tasks._MANAGERS[manager.task_id] = manager
+
+    def fail(state):
+        raise RuntimeError('observer failed')
+
+    monkeypatch.setattr(manager, '_set_state', fail)
+    with pytest.raises(RuntimeError, match='observer failed'):
+        manager._terminal(tasks.TaskOutcome(manager.task_id, 'succeeded'))
+    assert manager.task_id not in tasks._MANAGERS
+
+
+@pytest.mark.parametrize('committing', [False, True])
+def test_deleted_manager_worker_finishes_without_qt_ownership_in_subprocess(tmp_path, committing):
+    import subprocess
+    import sys
+
+    script = r"""
+import gc
+import threading
+import time
+import weakref
+from PyQt5 import sip
+from phy.gui.qt import create_app
+from phy.gui.tasks import BackgroundTaskManager, TaskSpec, _ACTIVE, _MANAGERS
+app = create_app()
+errors=[]
+threading.excepthook = lambda arg: errors.append(str(arg.exc_value))
+started, release=threading.Event(), threading.Event()
+committing = COMMITTING
+
+def worker(request, context):
+    if committing:
+        context.commit()
+    started.set()
+    assert release.wait(3)
+    context.check_cancel()
+    return 123
+
+manager=BackgroundTaskManager()
+task=manager.submit(TaskSpec('destroy-worker', 'Destroy worker', worker, None, heavy=False))
+assert started.wait(3)
+record=manager._lifetime.record
+reference=weakref.ref(manager)
+sip.delete(manager)
+manager.detach()
+assert task not in _MANAGERS
+assert record.context.cancelled.is_set()
+del manager
+gc.collect()
+assert reference() is None, 'worker retains the deleted Qt manager'
+release.set()
+end=time.monotonic()+3
+while record.outcome is None and time.monotonic()<end:
+    app.processEvents()
+    time.sleep(.005)
+assert record.outcome is not None
+assert record.outcome.state == ('succeeded' if committing else 'cancelled')
+assert 'destroy-worker' not in _ACTIVE
+assert task not in _MANAGERS
+assert not errors, errors
+print('deleted manager worker completed safely')
+""".replace('COMMITTING', repr(committing))
+    result = subprocess.run(
+        [sys.executable, '-c', script], capture_output=True, text=True, timeout=15
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'completed safely' in result.stdout
+    assert 'RuntimeError' not in result.stderr
+    assert 'Timers cannot' not in result.stderr

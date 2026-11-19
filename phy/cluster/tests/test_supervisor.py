@@ -780,6 +780,150 @@ def test_merge_mode_rejects_cluster_mutations(supervisor):
     assert set(supervisor.clustering.cluster_ids) >= {30, 20}
 
 
+def test_restore_parents_preserves_later_edits_and_workspace_history(supervisor, qtbot):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    merged = supervisor.merge().added[0]
+    supervisor.block()
+    _select(supervisor, [10], [11])
+    unrelated = supervisor.merge().added[0]
+    supervisor.block()
+    supervisor.label('group', 'mua', [unrelated])
+    supervisor.block()
+    supervisor.label('group', 'good', [merged])
+    supervisor.block()
+    _select(supervisor, [merged])
+    before = supervisor.clustering.spike_clusters.copy()
+    position = supervisor._global_history.current_position
+    out = supervisor.restore_parents(merged, groups=groups, colors={30: 0, 20: 1})
+    supervisor.block()
+    children = list(out.parent_restore_origins)
+    assert supervisor.selected_merge == children
+    assert supervisor.actions.get('undo').isEnabled()
+    assert supervisor._global_history.current_position == position + 1
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    assert all(supervisor.cluster_meta.get('group', child) is None for child in children)
+    assert supervisor.get_cluster_info(children[0])['parent_origin'] == 'was 30'
+    assert supervisor.merge_view.column_order()[:2] == ['id', 'parent_origin']
+    parent_column = supervisor.merge_view.columns.index('parent_origin')
+    assert supervisor.merge_view._model.headerData(parent_column, Qt.Horizontal) == 'Parent'
+    assert supervisor.cluster_view._model.headerData(0, Qt.Horizontal) == 'id'
+    restored = supervisor.clustering.spike_clusters.copy()
+
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.selected == [merged]
+    assert supervisor.cluster_meta.get('group', merged) == 'good'
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, restored)
+    assert supervisor.selected_merge == children
+    assert all(supervisor.cluster_meta.get('group', child) is None for child in children)
+
+    # The visible exclusion button acts on an actual clicked row. G must not
+    # include that parent through an accidental Similarity selection.
+    view = supervisor.merge_view
+    index = view._proxy_index_for_id(children[1])
+    qtbot.mouseClick(
+        view.table_view.viewport(), Qt.LeftButton, pos=view.table_view.visualRect(index).center()
+    )
+    qtbot.mouseClick(view.dock.get_widget('exclude_merge_row'), Qt.LeftButton)
+    supervisor.block()
+    assert children[1] not in supervisor.selected
+    assert children[1] in supervisor.clustering.cluster_ids
+    supervisor.toggle_merge_mode()
+    supervisor.block()
+    assert supervisor.selected_clusters == children
+    ae(supervisor.clustering.spike_clusters, restored)
+
+    supervisor.toggle_merge_mode()
+    supervisor.deselect_from_merge([children[1]])
+    supervisor.add_to_merge([2])
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    assert children[1] in supervisor.clustering.cluster_ids
+    result = supervisor.selected_clusters[0]
+    ae(
+        supervisor.clustering.spikes_per_cluster[result],
+        np.sort(np.concatenate([groups[30], [4, 5]])),
+    )
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+
+
+def test_restore_workspace_physical_right_click_preserves_transfer_contract(supervisor, qtbot):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    out = supervisor.restore_parents(target, groups=groups)
+    supervisor.block()
+    child = list(out.parent_restore_origins)[1]
+    view = supervisor.merge_view
+    index = view._proxy_index_for_id(child)
+    qtbot.mouseClick(
+        view.table_view.viewport(), Qt.RightButton, pos=view.table_view.visualRect(index).center()
+    )
+    supervisor.block()
+    assert child not in supervisor.selected_merge
+    assert child in supervisor.selected_similar
+    # Transfer deliberately preserves the effective selection; exclusion has
+    # its own explicit button and is tested above.
+    assert child in supervisor.selected
+
+
+@mark.parametrize('restored_quality', [None, 'mua'])
+def test_remerge_restored_parent_undo_preserves_exact_metadata(supervisor, restored_quality):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    out = supervisor.restore_parents(target, groups=groups)
+    supervisor.block()
+    first, excluded = out.parent_restore_origins
+    supervisor.toggle_merge_mode()
+    if restored_quality is not None:
+        supervisor.label('group', restored_quality, [first])
+        supervisor.block()
+    assert supervisor.cluster_meta.get('group', 1) == 'good'
+    _select(supervisor, [first], [1])
+    supervisor.toggle_merge_mode()
+    supervisor.merge()
+    supervisor.block()
+    supervisor.undo()
+    supervisor.block()
+    assert supervisor.cluster_meta.get('group', first) == restored_quality
+    assert supervisor.cluster_meta.get('group', excluded) is None
+    assert supervisor.cluster_meta.get('group', 1) == 'good'
+    assert first in supervisor.selected_merge
+    supervisor.redo()
+    supervisor.block()
+    assert excluded in supervisor.clustering.cluster_ids
+
+
+def test_restore_parents_rolls_back_observer_failure(supervisor, monkeypatch):
+    _select(supervisor, [30], [20])
+    groups = {p: supervisor.clustering.spikes_per_cluster[p].copy() for p in (30, 20)}
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    before = supervisor.clustering.spike_clusters.copy()
+    selection = supervisor.selection.snapshot()
+    history = supervisor._global_history.current_position
+    workflow = supervisor._workflow_context()
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('injected restore presentation failure')
+
+    monkeypatch.setattr(supervisor, '_show_merge_view', fail)
+    with raises(RuntimeError, match='injected'):
+        supervisor.restore_parents(target, groups=groups)
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.selection.state == selection
+    assert supervisor._global_history.current_position == history
+    assert supervisor._workflow_context() == workflow
+
+
 def test_merge_mode_next_navigates_similarity_not_cluster(supervisor):
     _select(supervisor, [30], [20])
     supervisor.toggle_merge_mode()
@@ -1037,6 +1181,309 @@ def _proposition_supervisor(
     connect(barrier('similarity_view'), event='ready', sender=supervisor.similarity_view)
     barrier.wait()
     return supervisor
+
+
+def test_ordinary_restoration_preserves_accepted_review_with_derived_status(
+    gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+):
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from phy.apps._parent_review import ParentInspection, ParentLineage
+
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    lineage = ParentLineage(
+        SimpleNamespace(
+            dir_path=Path(tempdir),
+            supervisor=supervisor,
+            model=SimpleNamespace(spike_times=np.arange(supervisor.clustering.n_spikes)),
+        )
+    )
+    supervisor.parent_lineage = lineage
+    try:
+        key = supervisor.merge_propositions.catalog.propositions[0].key
+        supervisor._activate_merge_proposition(supervisor.merge_propositions_view, key)
+        target = supervisor.merge().added[0]
+        supervisor.block()
+        review = supervisor.merge_propositions.catalog.reviews[key]
+        assert review.result_unit_id == target
+        supervisor.restore_parents(target)
+        supervisor.block()
+        assert supervisor.merge_propositions.catalog.reviews[key] == review
+        assert supervisor.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        emit('curation_saved', supervisor)
+        reopened = Supervisor(
+            supervisor.clustering.spike_clusters.copy(),
+            merge_propositions=MergePropositionController(supervisor.merge_propositions.catalog),
+        )
+        # Producer/review loading does not supply ordinary retirement projection;
+        # the saved parent sidecar must establish it before GUI attachment.
+        reopened.merge_propositions.project_live_ids(
+            reopened.clustering.cluster_ids, retired_units={}
+        )
+        assert reopened.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        inspection = ParentInspection(
+            SimpleNamespace(
+                dir_path=Path(tempdir),
+                supervisor=reopened,
+                model=SimpleNamespace(spike_times=np.arange(reopened.clustering.n_spikes)),
+            )
+        )
+        try:
+            assert reopened.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        finally:
+            inspection.close()
+        supervisor.undo()
+        supervisor.block()
+        assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        supervisor.redo()
+        supervisor.block()
+        assert supervisor.merge_propositions.catalog.status_for(key).value == 'accepted_restored'
+        supervisor.toggle_merge_mode()
+    finally:
+        lineage.close()
+
+
+@fixture
+def lineage_supervisor(gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir):
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from phy.apps._parent_review import ParentLineage
+
+    supervisor = _proposition_supervisor(
+        gui, cluster_ids, cluster_groups, cluster_labels, similarity, tempdir
+    )
+    lineage = ParentLineage(
+        SimpleNamespace(
+            dir_path=Path(tempdir),
+            supervisor=supervisor,
+            model=SimpleNamespace(spike_times=np.arange(supervisor.clustering.n_spikes)),
+        )
+    )
+    supervisor.parent_lineage = lineage
+    try:
+        yield supervisor
+    finally:
+        lineage.close()
+
+
+def _accept_first_proposition(supervisor):
+    key = supervisor.merge_propositions.catalog.propositions[0].key
+    supervisor._activate_merge_proposition(supervisor.merge_propositions_view, key)
+    target = supervisor.merge().added[0]
+    supervisor.block()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    return key, target
+
+
+def test_recursive_restore_reaches_original_components_as_one_undoable_action(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    original = supervisor.clustering.spike_clusters.copy()
+    key, first = _accept_first_proposition(supervisor)
+    _select(supervisor, [first], [10])
+    nested = supervisor.merge().added[0]
+    supervisor.block()
+    _select(supervisor, [0], [2])
+    unrelated = supervisor.merge().added[0]
+    supervisor.block()
+    supervisor.label('group', 'mua', [unrelated])
+    supervisor.block()
+    _select(supervisor, [nested])
+    before = supervisor.clustering.spike_clusters.copy()
+    history_position = supervisor._global_history.current_position
+    review = supervisor.merge_propositions.catalog.reviews[key]
+
+    out = supervisor.restore_parents(nested)
+    supervisor.block()
+
+    assert set(out.parent_restore_origins.values()) == {30, 20, 10}
+    assert len(out.added) == 3
+    assert set(out.added).isdisjoint({30, 20, 10, first, nested})
+    for child, parent in out.parent_restore_origins.items():
+        ae(supervisor.clustering.spikes_per_cluster[child], np.flatnonzero(original == parent))
+        assert supervisor.get_cluster_info(child)['parent_origin'] == f'was {parent}'
+    assert supervisor._global_history.current_position == history_position + 1
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    assert supervisor.merge_propositions.catalog.reviews[key] == review
+    restored = supervisor.clustering.spike_clusters.copy()
+
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before)
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    supervisor.redo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, restored)
+    assert supervisor.selected_merge == list(out.parent_restore_origins)
+    assert supervisor.cluster_meta.get('group', unrelated) == 'mua'
+    supervisor.toggle_merge_mode()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, restored)
+
+
+def test_ordinary_exact_remerge_recovers_green_through_undo_redo_and_repeated_restore(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    historical_review = supervisor.merge_propositions.catalog.review_mapping()
+    for _ in range(2):
+        out = supervisor.restore_parents(target)
+        supervisor.block()
+        assert set(out.parent_restore_origins.values()) == {30, 20}
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        restored = supervisor.clustering.spike_clusters.copy()
+        # Exercise the real G action from the editable workspace.
+        supervisor.action_creator.edit_actions.get('merge').trigger()
+        supervisor.block()
+        target = supervisor.selected_clusters[0]
+        remerged = supervisor.clustering.spike_clusters.copy()
+        assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        assert supervisor.merge_propositions_view._model.row_by_id(0)['status'] == 'accepted'
+        assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+        supervisor.undo()
+        supervisor.block()
+        ae(supervisor.clustering.spike_clusters, restored)
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        supervisor.redo()
+        supervisor.block()
+        ae(supervisor.clustering.spike_clusters, remerged)
+        assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+        assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+
+
+def test_failed_restore_discards_temporary_reassembly_cache(lineage_supervisor, monkeypatch):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    supervisor.restore_parents(target)
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    target = supervisor.selected_clusters[0]
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    assignments = supervisor.clustering.spike_clusters.copy()
+    selection = supervisor.selection.snapshot()
+    history = supervisor._global_history.current_position
+    reviews = supervisor.merge_propositions.catalog.review_mapping()
+    restore = supervisor._restore_parent_partition
+
+    def fail_after_refresh(*args, **kwargs):
+        restore(*args, **kwargs)
+        assert (
+            supervisor.merge_propositions.catalog.status_for(key)
+            is PropositionStatus.ACCEPTED_RESTORED
+        )
+        assert supervisor.parent_lineage._reassembly_cache[1] == {}
+        raise RuntimeError('injected failure after restoration refresh')
+
+    monkeypatch.setattr(supervisor, '_restore_parent_partition', fail_after_refresh)
+    with raises(RuntimeError, match='after restoration refresh'):
+        supervisor.restore_parents(target)
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, assignments)
+    assert supervisor.selection.state == selection
+    assert supervisor._global_history.current_position == history
+    assert supervisor.merge_propositions.catalog.review_mapping() == reviews
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    row_id = supervisor.merge_propositions_view._id_by_key[key]
+    row = supervisor.merge_propositions_view._model.row_by_id(row_id)
+    assert row['status'] == 'accepted'
+    assert (
+        supervisor.merge_propositions_view._foreground_color(row, 'proposition').name()
+        == '#86d16d'
+    )
+
+
+def test_partial_remerge_stays_white_then_complete_with_extra_becomes_modified_green(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    historical_review = supervisor.merge_propositions.catalog.review_mapping()
+    out = supervisor.restore_parents(target)
+    supervisor.block()
+    _, excluded = out.parent_restore_origins
+    supervisor.deselect_from_merge([excluded])
+    supervisor.add_to_merge([10])
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    partial = supervisor.selected_clusters[0]
+    assert excluded in supervisor.clustering.cluster_ids
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+
+    _select(supervisor, [partial, excluded])
+    supervisor.toggle_merge_mode()
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_MODIFIED
+    )
+    assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+    supervisor.undo()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    supervisor.redo()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_MODIFIED
+    )
+    assert supervisor.merge_propositions.catalog.review_mapping() == historical_review
+
+
+def test_split_membership_revokes_reassembled_acceptance_even_with_origin_aliases(
+    lineage_supervisor,
+):
+    supervisor = lineage_supervisor
+    key, target = _accept_first_proposition(supervisor)
+    out = supervisor.restore_parents(target)
+    supervisor.block()
+    source_child = next(
+        child for child, parent in out.parent_restore_origins.items() if parent == 30
+    )
+    one_spike = supervisor.clustering.spikes_per_cluster[source_child][:1].copy()
+    supervisor.action_creator.edit_actions.get('merge').trigger()
+    supervisor.block()
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    before_split = supervisor.clustering.spike_clusters.copy()
+    supervisor.split(one_spike)
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
+    supervisor.undo()
+    supervisor.block()
+    ae(supervisor.clustering.spike_clusters, before_split)
+    assert supervisor.merge_propositions.catalog.status_for(key) is PropositionStatus.ACCEPTED
+    supervisor.redo()
+    supervisor.block()
+    assert (
+        supervisor.merge_propositions.catalog.status_for(key)
+        is PropositionStatus.ACCEPTED_RESTORED
+    )
 
 
 def test_merge_proposition_review_cancel_restores_exact_entry(
@@ -2893,3 +3340,117 @@ def test_never_settling_selection_observer_blocks_curation(supervisor):
     finally:
         unconnect(selected)
         view.debouncer.flush()
+
+
+def test_multi_suggestions_compare_union_then_accept_atomically(
+    gui,
+    cluster_ids,
+    cluster_groups,
+    cluster_labels,
+    similarity,
+    tempdir,
+):
+    supervisor = _proposition_supervisor(
+        gui,
+        cluster_ids,
+        cluster_groups,
+        cluster_labels,
+        similarity,
+        tempdir,
+    )
+    first, overlap, _ = supervisor.merge_propositions.catalog.propositions
+    keys = (first.key, overlap.key)
+    _select(supervisor, [11], [10])
+    original = supervisor.clustering.spike_clusters.copy()
+    view = supervisor.merge_propositions_view
+    supervisor._activate_merge_propositions(view, keys)
+    assert supervisor.selected == [30, 20, 10]
+    assert supervisor.selection.state.merge.proposition_ids == keys
+    assert view.selected_keys == keys
+    assert not supervisor.merge_propositions.catalog.reviews
+    np.testing.assert_array_equal(supervisor.clustering.spike_clusters, original)
+    workspace = supervisor.selection.snapshot()
+    supervisor._refresh_propositions()
+    assert view.selected_keys == keys
+    supervisor.reject_merge_proposition()
+    assert supervisor.selection.snapshot() == workspace
+    assert not supervisor.merge_propositions.catalog.reviews
+    merged = supervisor.merge().added[0]
+    for key in keys:
+        review = supervisor.merge_propositions.catalog.reviews[key]
+        assert review.result_unit_id == merged
+        assert review.applied_unit_ids == (30, 20, 10)
+    supervisor.undo()
+    supervisor.block()
+    np.testing.assert_array_equal(supervisor.clustering.spike_clusters, original)
+    assert not supervisor.merge_propositions.catalog.reviews
+    assert supervisor.selection.snapshot() == workspace
+    assert view.selected_keys == keys
+    supervisor.redo()
+    supervisor.block()
+    assert len(supervisor.merge_propositions.catalog.reviews) == 2
+    supervisor._activate_merge_propositions(view, ())
+    assert not supervisor.selection.state.is_merge_mode
+
+
+def test_multi_suggestion_cancel_restores_entry_and_rejects_stale(
+    gui,
+    cluster_ids,
+    cluster_groups,
+    cluster_labels,
+    similarity,
+    tempdir,
+):
+    supervisor = _proposition_supervisor(
+        gui,
+        cluster_ids,
+        cluster_groups,
+        cluster_labels,
+        similarity,
+        tempdir,
+    )
+    _select(supervisor, [11], [10])
+    entry = supervisor.selection.snapshot()
+    first, overlap, _ = supervisor.merge_propositions.catalog.propositions
+    view = supervisor.merge_propositions_view
+    supervisor._activate_merge_propositions(view, (first.key, overlap.key))
+    supervisor._activate_merge_propositions(view, ())
+    assert supervisor.selection.snapshot() == entry
+    assert not supervisor.merge_propositions.catalog.reviews
+    supervisor.merge_propositions.reject(overlap.key)
+    supervisor._activate_merge_propositions(view, (first.key, overlap.key))
+    assert supervisor.selection.snapshot() == entry
+    assert supervisor.merge_propositions.catalog.status_for(first.key) is PropositionStatus.PENDING
+
+
+def test_multi_suggestion_preflight_failure_does_not_change_assignments(
+    monkeypatch,
+    gui,
+    cluster_ids,
+    cluster_groups,
+    cluster_labels,
+    similarity,
+    tempdir,
+):
+    supervisor = _proposition_supervisor(
+        gui,
+        cluster_ids,
+        cluster_groups,
+        cluster_labels,
+        similarity,
+        tempdir,
+    )
+    keys = tuple(p.key for p in supervisor.merge_propositions.catalog.propositions[:2])
+    supervisor._activate_merge_propositions(supervisor.merge_propositions_view, keys)
+    original = supervisor.clustering.spike_clusters.copy()
+    snapshot = supervisor.selection.snapshot()
+
+    def fail(*args):
+        raise ValueError('review preflight failed')
+
+    monkeypatch.setattr(supervisor.merge_propositions, 'prepare_accept_many', fail)
+    with raises(ValueError, match='review preflight failed'):
+        supervisor.merge()
+    np.testing.assert_array_equal(supervisor.clustering.spike_clusters, original)
+    assert supervisor.selection.snapshot() == snapshot
+    assert not supervisor.merge_propositions.catalog.reviews

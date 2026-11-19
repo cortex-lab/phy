@@ -39,9 +39,11 @@ def _parse_arg(s):
 
 def _parse_list(s):
     """Parse a comma-separated list of values (strings or numbers)."""
-    # Range: 'x-y'
-    if '-' in s:
-        m, M = map(_parse_arg, s.split('-'))
+    # Only nonnegative integer endpoints form a range: a minus sign can also
+    # belong to a scalar, an exponent, a list item, or a string.
+    match = re.fullmatch(r'(\+?\d+)-(\+?\d+)', s)
+    if match:
+        m, M = map(int, match.groups())
         return list(range(m, M + 1))
     # List of ids: 'x,y,z'
     elif ',' in s:

@@ -1,0 +1,149 @@
+{
+  "aliases": {
+    "a": 40,
+    "b": 44,
+    "c": 48,
+    "d": 49,
+    "extra": 24
+  },
+  "fields": [
+    "group",
+    "notes"
+  ],
+  "actions": [
+    {
+      "op": "merge",
+      "parents": [
+        "a",
+        "b",
+        "c"
+      ],
+      "as": "merged"
+    },
+    {
+      "op": "undo"
+    },
+    {
+      "op": "redo"
+    },
+    {
+      "op": "split",
+      "parent": "merged",
+      "threshold": -424.0037077454673,
+      "selected": "low",
+      "remainder": "rest"
+    },
+    {
+      "op": "undo"
+    },
+    {
+      "op": "redo"
+    },
+    {
+      "op": "merge",
+      "parents": [
+        "low",
+        "extra"
+      ],
+      "as": "final"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "final"
+      ],
+      "field": "group",
+      "value": "good"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "final"
+      ],
+      "field": "notes",
+      "value": "reviewed merged low side"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "rest"
+      ],
+      "field": "group",
+      "value": "mua"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "rest"
+      ],
+      "field": "notes",
+      "value": "reviewed threshold remainder"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "d"
+      ],
+      "field": "group",
+      "value": "mua"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "d"
+      ],
+      "field": "notes",
+      "value": "reviewed unchanged source unit"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "rest"
+      ],
+      "field": "group",
+      "value": "noise"
+    },
+    {
+      "op": "undo"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "rest"
+      ],
+      "field": "group",
+      "value": "good"
+    },
+    {
+      "op": "label",
+      "ids": [
+        "rest"
+      ],
+      "field": "group",
+      "value": "mua"
+    },
+    {
+      "op": "save"
+    },
+    {
+      "op": "reopen"
+    },
+    {
+      "op": "save"
+    }
+  ],
+  "expected_labels": {
+    "final": {
+      "group": "good",
+      "notes": "reviewed merged low side"
+    },
+    "rest": {
+      "group": "mua",
+      "notes": "reviewed threshold remainder"
+    },
+    "d": {
+      "group": "mua",
+      "notes": "reviewed unchanged source unit"
+    }
+  }
+}

@@ -118,6 +118,7 @@ phy: interactive visualization and manual spike sorting of large-scale ephys dat
 * [phy.apps.capture_exceptions](#phyappscapture_exceptions)
 * [phy.apps.exceptionHandler](#phyappsexceptionhandler)
 * [phy.apps.BaseController](#phyappsbasecontroller)
+* [phy.apps.CancelledError](#phyappscancellederror)
 * [phy.apps.FeatureMixin](#phyappsfeaturemixin)
 * [phy.apps.Path](#phyappspath)
 * [phy.apps.QtDialogLogger](#phyappsqtdialoglogger)
@@ -1167,6 +1168,7 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
 **Events**
 
 close(gui)
+closed(gui)  # Emitted only after closure is accepted.
 show(gui)
 close_view(view, gui)
 
@@ -7269,6 +7271,19 @@ All changes are lost.
 
 ---
 
+#### Clustering.restore_partition
+
+
+**`Clustering.restore_partition(self, target, groups, *, new_cluster_ids=None)`**
+
+Restore an exact whole-unit partition into fresh, undoable clusters.
+
+``groups`` maps historical parent IDs to sorted spike rows. Historical
+IDs identify provenance only; they are never revived as live IDs.
+Validation and assignment touch only this unit's rows.
+
+---
+
 #### Clustering.spikes_in_clusters
 
 
@@ -10117,6 +10132,13 @@ Component that brings manual clustering facilities to a GUI:
     Whether automatic navigation and similar-cluster selection skip noise and MUA
     clusters. The default is True.
 
+* `clustering_factory : callable, optional`
+    Construct the clustering model. Defaults to Clustering; bounded curation
+    supplies a guarded implementation with the same constructor interface.
+
+* `cluster_meta_factory : callable, optional`
+    Construct metadata from groups and labels. Defaults to create_cluster_meta.
+
 **Events**
 
 When this component is attached to a GUI, the following events are emitted:
@@ -10377,6 +10399,18 @@ Reset the highlighted review and reopen it when actionable.
 **`Supervisor.reset_wizard(self, callback=None)`**
 
 Reset the wizard.
+
+---
+
+#### Supervisor.restore_parents
+
+
+**`Supervisor.restore_parents(self, target=None, *, groups=None, colors=None, new_cluster_ids=None)`**
+
+Restore earliest recorded merge components as real units in the Merge workspace.
+
+This is a new curation action; unrelated later edits are preserved.
+Explicit groups and IDs support validated bounded semantic commands.
 
 ---
 
@@ -12782,6 +12816,12 @@ peak channel.
 
 ---
 
+### phy.apps.CancelledError
+
+The Future was cancelled.
+
+---
+
 ### phy.apps.FeatureMixin
 
 
@@ -13246,6 +13286,15 @@ Create a trace image view.
 **`TemplateController.create_trace_view(self)`**
 
 Create a trace view.
+
+---
+
+#### TemplateController.create_unit_stability_view
+
+
+**`TemplateController.create_unit_stability_view(self)`**
+
+Optionally inspect selected-unit activity over the loaded recording.
 
 ---
 

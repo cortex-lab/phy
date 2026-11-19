@@ -1,0 +1,348 @@
+{
+  "source": "walkthrough.mp4 (uncut validation recording retained locally)",
+  "output": "native GitHub attachment; see review-integrated.json",
+  "source_fps": "30/1",
+  "source_duration_seconds": 51.233333,
+  "output_duration_seconds": 42.86666666666666,
+  "review_cut": true,
+  "timeline_note": "Original-speed source frames concatenated; idle dwell and reopen wait omitted. Not a latency benchmark.",
+  "settle_tail_seconds": 1.558999999999998,
+  "items": [
+    {
+      "kind": "source",
+      "source_start_frame": 0,
+      "source_end_frame": 210,
+      "source_start": 0.0,
+      "source_end": 7.0,
+      "event_indices": [
+        0,
+        1,
+        2
+      ],
+      "output_start": 0.0,
+      "output_end": 7.0
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 214,
+      "source_end_frame": 296,
+      "source_start": 7.133333333333334,
+      "source_end": 9.866666666666667,
+      "event_indices": [
+        3
+      ],
+      "output_start": 7.0,
+      "output_end": 9.733333333333334
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 303,
+      "source_end_frame": 475,
+      "source_start": 10.1,
+      "source_end": 15.833333333333334,
+      "event_indices": [
+        4,
+        5
+      ],
+      "output_start": 9.733333333333334,
+      "output_end": 15.466666666666669
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 487,
+      "source_end_frame": 848,
+      "source_start": 16.233333333333334,
+      "source_end": 28.266666666666666,
+      "event_indices": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "output_start": 15.466666666666669,
+      "output_end": 27.5
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 887,
+      "source_end_frame": 1063,
+      "source_start": 29.566666666666666,
+      "source_end": 35.43333333333333,
+      "event_indices": [
+        11,
+        12
+      ],
+      "output_start": 27.5,
+      "output_end": 33.36666666666667
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1067,
+      "source_end_frame": 1200,
+      "source_start": 35.56666666666667,
+      "source_end": 40.0,
+      "event_indices": [
+        13,
+        14
+      ],
+      "output_start": 33.36666666666667,
+      "output_end": 37.8
+    },
+    {
+      "kind": "reload_card",
+      "source_frame": 1205,
+      "source_time": 40.166666666666664,
+      "duration_frames": 24,
+      "duration": 0.8,
+      "event_indices": [
+        15
+      ],
+      "label": "REOPENING SAVED SESSION \u2014 reload wait omitted",
+      "output_start": 37.8,
+      "output_end": 38.599999999999994
+    },
+    {
+      "kind": "source",
+      "source_start_frame": 1405,
+      "source_end_frame": 1533,
+      "source_start": 46.833333333333336,
+      "source_end": 51.1,
+      "event_indices": [
+        16,
+        17,
+        18
+      ],
+      "output_start": 38.599999999999994,
+      "output_end": 42.86666666666666
+    }
+  ],
+  "omitted_source_ranges": [
+    {
+      "source_start": 7.0,
+      "source_end": 7.133333333333334,
+      "duration_seconds": 0.13333333333333375,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 9.866666666666667,
+      "source_end": 10.1,
+      "duration_seconds": 0.2333333333333325,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 15.833333333333334,
+      "source_end": 16.233333333333334,
+      "duration_seconds": 0.40000000000000036,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 28.266666666666666,
+      "source_end": 29.566666666666666,
+      "duration_seconds": 1.3000000000000007,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 35.43333333333333,
+      "source_end": 35.56666666666667,
+      "duration_seconds": 0.13333333333333997,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 40.0,
+      "source_end": 40.166666666666664,
+      "duration_seconds": 0.1666666666666643,
+      "reason": "reopen wait replaced by reload card"
+    },
+    {
+      "source_start": 40.96666666666666,
+      "source_end": 46.833333333333336,
+      "duration_seconds": 5.866666666666674,
+      "reason": "idle or settled dwell trimmed"
+    },
+    {
+      "source_start": 51.1,
+      "source_end": 51.233333,
+      "duration_seconds": 0.13333300000000037,
+      "reason": "trailing settled dwell trimmed"
+    }
+  ],
+  "events": [
+    {
+      "index": 0,
+      "label": "Left click: Cluster 40",
+      "source_seconds": 0.215,
+      "output_seconds": 0.215
+    },
+    {
+      "index": 1,
+      "label": "Ctrl + Left click: Cluster 44",
+      "source_seconds": 2.516,
+      "output_seconds": 2.516
+    },
+    {
+      "index": 2,
+      "label": "Ctrl + Left click: Cluster 48",
+      "source_seconds": 4.566,
+      "output_seconds": 4.566
+    },
+    {
+      "index": 3,
+      "label": "Right click: Transfer correlogram row",
+      "source_seconds": 7.429,
+      "output_seconds": 7.2956666666666665
+    },
+    {
+      "index": 4,
+      "label": "Left click: P5 \u00b7 40, 44, 48",
+      "source_seconds": 10.612,
+      "output_seconds": 10.245333333333335
+    },
+    {
+      "index": 5,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "source_seconds": 13.386,
+      "output_seconds": 13.019333333333334
+    },
+    {
+      "index": 6,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "source_seconds": 16.72,
+      "output_seconds": 15.953333333333333
+    },
+    {
+      "index": 7,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "source_seconds": 18.845,
+      "output_seconds": 18.078333333333333
+    },
+    {
+      "index": 8,
+      "label": "G: merge the combined suggestions",
+      "source_seconds": 21.233,
+      "output_seconds": 20.466333333333335
+    },
+    {
+      "index": 9,
+      "label": "Right click: merged unit context menu",
+      "source_seconds": 24.623,
+      "output_seconds": 23.856333333333335
+    },
+    {
+      "index": 10,
+      "label": "Left click: Show parents",
+      "source_seconds": 25.81,
+      "output_seconds": 25.043333333333333
+    },
+    {
+      "index": 11,
+      "label": "Left click: Back to merged unit",
+      "source_seconds": 29.853,
+      "output_seconds": 27.786333333333335
+    },
+    {
+      "index": 12,
+      "label": "Ctrl + Z: undo",
+      "source_seconds": 32.523,
+      "output_seconds": 30.456333333333337
+    },
+    {
+      "index": 13,
+      "label": "Ctrl + Shift + Z: redo",
+      "source_seconds": 35.877,
+      "output_seconds": 33.677
+    },
+    {
+      "index": 14,
+      "label": "Ctrl + S: save",
+      "source_seconds": 37.91,
+      "output_seconds": 35.709999999999994
+    },
+    {
+      "index": 15,
+      "label": "Reopen the saved working copy",
+      "source_seconds": 40.187,
+      "output_seconds": 37.8
+    },
+    {
+      "index": 16,
+      "label": "View menu: Inspect evidence window",
+      "source_seconds": 47.035,
+      "output_seconds": 38.801666666666655
+    },
+    {
+      "index": 17,
+      "label": "Type evidence window index, then Enter",
+      "source_seconds": 47.837,
+      "output_seconds": 39.60366666666666
+    },
+    {
+      "index": 18,
+      "label": "Enter: inspect evidence window 7",
+      "source_seconds": 48.607,
+      "output_seconds": 40.37366666666666
+    }
+  ],
+  "checkpoints": [
+    {
+      "name": "01-initial",
+      "source_seconds": 7.429,
+      "output_seconds": 7.2956666666666665,
+      "captured": true
+    },
+    {
+      "name": "02-right-click-transfer",
+      "source_seconds": 10.41,
+      "output_seconds": 10.043333333333335,
+      "captured": true
+    },
+    {
+      "name": "03-single-suggestion",
+      "source_seconds": 13.184,
+      "output_seconds": 12.817333333333334,
+      "captured": true
+    },
+    {
+      "name": "04-control-click-union",
+      "source_seconds": 16.519,
+      "output_seconds": 15.752333333333333,
+      "captured": true
+    },
+    {
+      "name": "05-merged",
+      "source_seconds": 24.41,
+      "output_seconds": 23.643333333333334,
+      "captured": true
+    },
+    {
+      "name": "06-show-parents",
+      "source_seconds": 29.853,
+      "output_seconds": 27.786333333333335,
+      "captured": true
+    },
+    {
+      "name": "07-return",
+      "source_seconds": 32.523,
+      "output_seconds": 30.456333333333337,
+      "captured": true
+    },
+    {
+      "name": "08-undo",
+      "source_seconds": 35.877,
+      "output_seconds": 33.677,
+      "captured": true
+    },
+    {
+      "name": "09-redo-save",
+      "source_seconds": 40.185,
+      "output_seconds": 37.8,
+      "captured": true
+    },
+    {
+      "name": "10-reopened",
+      "source_seconds": 50.804,
+      "output_seconds": 42.57066666666666,
+      "captured": true
+    }
+  ]
+}

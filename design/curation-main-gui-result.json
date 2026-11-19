@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "method": "exact all-row two-way ID mapping",
+  "revision": "c79666c672ab045e356b31f0764efc2cd0e4bdb4",
+  "rows": 469725567,
+  "assignment_dtypes": [
+    "int32",
+    "int64"
+  ],
+  "partition_mismatch_rows": 0,
+  "examples": [],
+  "input_hashes": {
+    "left": {
+      "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c",
+      "spike_clusters.npy": "3cbef5e08dc915ddd57aac9c214370a34282d264695f53959c184d6f8f2b7148"
+    },
+    "right": {
+      "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c",
+      "spike_clusters.npy": "b0223191c2cd29d2167b975175d22428bfe444175e19dc68e67aa9a82aea5168"
+    }
+  },
+  "unmapped_label_ids": {
+    "left": {
+      "group": [],
+      "notes": []
+    },
+    "right": {
+      "group": [],
+      "notes": []
+    }
+  },
+  "manual_label_mismatches": [],
+  "compared_fields": [
+    "group",
+    "notes"
+  ],
+  "scope": "complete curation assignments and requested manual labels; baseline GUI rendering errors retained",
+  "main_revision": "ad64e9138a6556f4785a359c3ee1258864d60f1d",
+  "bounded_runtime_revision": "06637b24aeca9b0984d7928d459187df46406444",
+  "reviewed_pr_head": "c79666c672ab045e356b31f0764efc2cd0e4bdb4",
+  "mapped_units": 703,
+  "gui_rendering_error_free": false,
+  "baseline_feature_errors": {
+    "acceptance": 7,
+    "reopen": 5
+  },
+  "actual_restored_view_count": {
+    "AmplitudeView": 1,
+    "ClusterScatterView": 1,
+    "ClusterView": 1,
+    "CorrelogramView": 1,
+    "FeatureView": 1,
+    "FiringRateView": 1,
+    "ISIView": 1,
+    "MergePropositionsView": 1,
+    "ProbeView": 1,
+    "SimilarityView": 1,
+    "WaveformView": 1
+  },
+  "raw_source_parent_scan": {
+    "units": [
+      40,
+      44,
+      48
+    ],
+    "rows": 1156852,
+    "nonfinite": 0,
+    "equal_to_threshold": 0,
+    "independently_verified": true
+  },
+  "source_integrity": {
+    "ok": true,
+    "raw_files_verified": 67,
+    "immutable_main_working_files": 19
+  }
+}

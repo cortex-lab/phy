@@ -320,7 +320,9 @@ class CorrelogramLimitPlugin(IPlugin):
                 view.max_n_clusters = 30
 ```
 
-The horizontal line shows the baseline firing rate. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
+The horizontal line shows the expected chance-level pair count. In bounded mode
+it is calculated from the retained observation windows and represents the mean
+off-center expectation; it does not extrapolate the full recording. Vertical lines show the refractory period, which defaults to 2 ms. You can change it with the view menu or with the `:cr` snippet.
 
 The parameter `controller.n_spikes_correlograms` (100,000 by default) bounds
 the number of spikes per selected cluster. The default

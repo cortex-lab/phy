@@ -1,0 +1,19 @@
+{
+  "all_metadata_field_names_unit_keys_values_and_json_types_exact": true,
+  "assignment_outputs_are_not_source_hardlinks": true,
+  "independent_oracle_script_mtime_precedes_run": true,
+  "independent_oracle_script_sha256": "2745c6d1f03141463c002b36fe8c9e19b9b7533b6a124a56e5518195ce6d99cb",
+  "metadata_cells_per_output": 31590,
+  "metadata_fields": 45,
+  "replay_assignment_payload_sha256_identical": {
+    "replayed-1": "78879ca3b65a5402035830e5e551a5f360744993af69307dead454d7b3de476d",
+    "replayed-4": "78879ca3b65a5402035830e5e551a5f360744993af69307dead454d7b3de476d"
+  },
+  "reprepared_byte_budget": 536870912,
+  "reprepared_bytes": 534554605,
+  "reprepared_cumulative_metadata_provenance_exact": true,
+  "reprepared_spike_budget": 2000000,
+  "seconds": 5.523916601203382,
+  "source_timestamps_subset_manifest_and_propositions_bytes_preserved": true,
+  "validation_harness_sha256": "8242e6210810e81ac55a14b6d07ae55c57c06316c8d05a7d5bf21e1e1b33a019"
+}

@@ -26,6 +26,28 @@ from ..clustering import (
 # ------------------------------------------------------------------------------
 
 
+def test_sparse_absolute_cluster_ids_do_not_allocate_dense_histograms(monkeypatch):
+    original = np.bincount
+
+    def bounded_bincount(values, *args, **kwargs):
+        assert not len(values) or np.max(values) < 1024
+        return original(values, *args, **kwargs)
+
+    monkeypatch.setattr(np, 'bincount', bounded_bincount)
+    high = 2_000_000_000
+    clustering = Clustering(np.array([0, 1, 1, high], dtype=np.int64))
+    first = clustering.merge([0, 1])
+    assert first.largest_old_cluster == 1
+    assert first.added == [high + 1]
+    second = clustering.merge([high, high + 1])
+    assert second.largest_old_cluster == high + 1
+    clustering.undo()
+    ae(clustering.spike_clusters, [high + 1, high + 1, high + 1, high])
+    clustering.split([0])
+    clustering.undo()
+    ae(clustering.spike_clusters, [high + 1, high + 1, high + 1, high])
+
+
 def test_extend_spikes_simple():
     spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
     spike_ids = np.array([2, 4, 0])
@@ -38,6 +60,48 @@ def test_extend_spikes_simple():
     # originally-specified spikes.
     extended = _extend_spikes(spike_ids, spike_clusters)
     ae(extended, [1, 5, 6])
+
+
+def test_restore_partition_is_local_fresh_and_undoable(monkeypatch):
+    clustering = Clustering(np.array([0, 0, 1, 1, 2, 2, 3, 3]))
+    merged = clustering.merge([0, 1]).added[0]
+    unrelated = clustering.merge([2, 3]).added[0]
+    before = clustering.spike_clusters.copy()
+
+    def no_global_scan(*args, **kwargs):
+        raise AssertionError('Restoration scanned unrelated spike assignments.')
+
+    monkeypatch.setattr('phy.cluster.clustering._extend_spikes', no_global_scan)
+    out = clustering.restore_partition(merged, {0: np.array([0, 1]), 1: np.array([2, 3])})
+    assert out.description == 'restore_parents'
+    assert list(out.parent_restore_origins.values()) == [0, 1]
+    assert min(out.added) > unrelated
+    ae(clustering.spike_clusters[4:], before[4:])
+    restored = clustering.spike_clusters.copy()
+    clustering.undo()
+    ae(clustering.spike_clusters, before)
+    redone = clustering.redo()
+    assert redone.clear_metadata
+    assert redone.parent_restore_origins == out.parent_restore_origins
+    ae(clustering.spike_clusters, restored)
+
+
+def test_restore_partition_rejects_inexact_or_colliding_groups():
+    clustering = Clustering(np.array([4, 4, 4, 4, 8]))
+    before = clustering.spike_clusters.copy()
+    for groups in (
+        {0: np.array([0, 1]), 1: np.array([1, 3])},
+        {0: np.array([0, 1]), 1: np.array([2])},
+        {0: np.array([], dtype=np.int64), 1: np.array([0, 1, 2, 3])},
+    ):
+        with raises(ValueError):
+            clustering.restore_partition(4, groups)
+        ae(clustering.spike_clusters, before)
+    with raises(ValueError, match='fresh IDs'):
+        clustering.restore_partition(
+            4, {0: np.array([0, 1]), 1: np.array([2, 3])}, new_cluster_ids=[0, 1]
+        )
+    ae(clustering.spike_clusters, before)
 
 
 def test_extend_spikes():

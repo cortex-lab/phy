@@ -9,11 +9,24 @@ from functools import partial
 
 import numpy as np
 from phylib.utils import connect, unconnect
+from PyQt5 import sip
+from PyQt5.QtGui import QContextMenuEvent
 from pytest import fixture, mark, raises
 
 from phy.utils.selection import SelectionIntent, SelectionMutation
 
-from ..qt import QApplication, QEvent, QHeaderView, QMimeData, QMouseEvent, Qt
+from ..qt import (
+    QApplication,
+    QEvent,
+    QHeaderView,
+    QMenu,
+    QMimeData,
+    QMouseEvent,
+    QObject,
+    QPoint,
+    Qt,
+    QTimer,
+)
 from ..widgets import Barrier, IPythonView, KeyValueWidget, Table, ViewSettingsDialog
 from . import show_and_wait
 from .test_qt import _block
@@ -507,6 +520,74 @@ def test_table_row_plain_right_click(qtbot, table):
     unconnect(on_row_right_click)
 
 
+@mark.parametrize('event_type', [QEvent.MouseButtonPress, QEvent.MouseMove])
+def test_table_mouse_type_without_mouse_api_is_ignored(table, event_type):
+    # A type number alone does not establish the methods on a Python event wrapper.
+    event = QEvent(event_type)
+    table.select([1, 2])
+    table._set_hovered_row(3)
+
+    assert not table.eventFilter(table.table_view.viewport(), event)
+    assert table.get_selected_ids() == [1, 2]
+    assert table._hovered_row_id == 3
+
+
+def test_table_context_wrapper_reporting_mouse_type_is_ignored(table):
+    class UnexpectedContextEvent(QContextMenuEvent):
+        def type(self):
+            return QEvent.MouseButtonPress
+
+    # Model the mismatch seen in the reported traceback, without asserting how
+    # that mismatch arose in the original Qt event dispatch.
+    event = UnexpectedContextEvent(QContextMenuEvent.Mouse, QPoint(1, 1))
+    assert not isinstance(event, QMouseEvent)
+    assert not table.eventFilter(table.table_view.viewport(), event)
+
+
+def test_table_right_click_after_repeated_context_menus(qtbot, table):
+    viewport = table.table_view.viewport()
+    clicked, menus = [], []
+
+    @connect(event='row_right_click', sender=table)
+    def on_row_right_click(sender, row_id):
+        clicked.append(row_id)
+
+    class ContextMenuFilter(QObject):
+        def eventFilter(self, obj, event):
+            if event.type() != QEvent.ContextMenu:
+                return False
+            menu = QMenu(table)
+            menu.addAction('Inspect row')
+            menus.append(table.get_selected_ids())
+            QTimer.singleShot(0, menu.close)
+            menu.exec_(event.globalPos())
+            menu.deleteLater()
+            return True
+
+    context_filter = ContextMenuFilter(table)
+    # The Table filter runs first, so context-menu events must pass through it
+    # before the popup handler enters its nested event loop.
+    viewport.removeEventFilter(table)
+    viewport.installEventFilter(context_filter)
+    viewport.installEventFilter(table)
+    table.select([1, 2])
+    pos = table.table_view.visualRect(table._proxy_index_for_id(4)).center()
+    try:
+        for _ in range(3):
+            qtbot.mouseClick(viewport, Qt.RightButton, pos=pos)
+            event = QContextMenuEvent(QContextMenuEvent.Mouse, pos, viewport.mapToGlobal(pos))
+            QApplication.sendEvent(viewport, event)
+            qtbot.wait(1)
+        assert clicked == [4, 4, 4]
+        assert menus == [[1, 2]] * 3
+        assert table.get_selected_ids() == [1, 2]
+        qtbot.mouseMove(viewport, pos)
+        assert table._hovered_row_id == 4
+    finally:
+        viewport.removeEventFilter(context_filter)
+        unconnect(on_row_right_click)
+
+
 def test_table_exact_id_lookup_reveals_and_selects_hidden_row(qtbot, table):
     table.filter('id < 2')
     table.filter_edit.setText('4')
@@ -538,6 +619,66 @@ def test_table_scroll(qtbot, table):
     table.add([{'id': 1000 + i, 'count': i} for i in range(1000)])
     qtbot.wait(50)
     table.scroll_to(1400)
+
+
+def test_table_last_row_is_not_covered_by_horizontal_scrollbar(qtbot):
+    table = Table(
+        columns=['id', 'count', 'rate'],
+        data=[{'id': i, 'count': 1000 + i, 'rate': 5.8} for i in range(640)],
+    )
+    qtbot.addWidget(table)
+    table.show()
+    view = table.table_view
+
+    def last_row_is_readable():
+        bar = view.verticalScrollBar()
+        bar.setValue(bar.maximum())
+        last = view.visualRect(table._proxy.index(table._proxy.rowCount() - 1, 0))
+        viewport = view.viewport().rect()
+        if last.top() < viewport.top() or last.bottom() > viewport.bottom():
+            return False
+        # A Cocoa overlay scrollbar lies *inside* the viewport: containment
+        # alone passes even while it hides the lower half of the final row.
+        horizontal = view.horizontalScrollBar()
+        if horizontal.isVisible():
+            position = view.viewport().mapFromGlobal(horizontal.mapToGlobal(QPoint()))
+            scrollbar_rect = horizontal.rect().translated(position)
+            last.setLeft(viewport.left())
+            last.setRight(viewport.right())
+            return not last.intersects(scrollbar_rect)
+        return True
+
+    for width, height in [(350, 250), (850, 300), (350, 267)]:
+        table.resize(width, height)
+        for column in range(3):
+            view.setColumnWidth(column, 180)
+        for text, order in [('', 'asc'), ('id >= 600', 'desc')]:
+            table.filter(text)
+            table.sort_by('id', order)
+            qtbot.waitUntil(last_row_is_readable)
+        assert view.horizontalScrollBar().isVisible() == (width == 350)
+
+    horizontal = view.horizontalScrollBar()
+    horizontal.setValue(0)
+    qtbot.mouseClick(
+        horizontal, Qt.LeftButton, pos=QPoint(horizontal.width() - 4, horizontal.height() // 2)
+    )
+    assert horizontal.value() > 0
+
+
+def test_table_scrollbar_style_is_destroyed_without_owning_application_style(qtbot, qapp):
+    application_style = qapp.style()
+    table = Table(data=[{'id': 0}])
+    scrollbar_style = table.table_view.horizontalScrollBar().style()
+    assert scrollbar_style is not application_style
+    sip.delete(table)
+    assert sip.isdeleted(scrollbar_style)
+    assert not sip.isdeleted(application_style)
+    # A second table still gets a usable native base style after the first dies.
+    other = Table(data=[{'id': 0}])
+    qtbot.addWidget(other)
+    other.show()
+    assert not other.grab().isNull()
 
 
 def test_table_busy(qtbot, table):

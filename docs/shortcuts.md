@@ -266,6 +266,21 @@ Keyboard shortcuts
 Snippets
 - change_n_spikes_waveforms                :wn
 
+SampledCorrelogramView
+----------------------
+
+Keyboard shortcuts
+- change_bin_size                          alt+wheel
+- change_window_size                       ctrl+wheel
+- toggle_auto_exclusion                    d
+- toggle_cross_exclusion                   shift+d
+- transfer_cluster                         right click
+
+Snippets
+- set_bin                                  :cb
+- set_refractory_period                    :cr
+- set_window                               :cw
+
 
 ```
 

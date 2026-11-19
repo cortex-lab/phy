@@ -1,0 +1,184 @@
+{
+  "mode": "bounded",
+  "dataset": "Carl converted AIND bounded engineering fixture",
+  "capture_scope": "Settled real X11 pixels; Qt input events; not a spontaneous-redraw test",
+  "private_display": ":1",
+  "revision": "ce01911985a7360b105e444380a875dcd4d0d014",
+  "steps": [
+    {
+      "name": "01-initial",
+      "title": "Real-data cluster comparison before the new workflow",
+      "seconds": 6.772,
+      "selected": [
+        40,
+        48,
+        44
+      ]
+    },
+    {
+      "name": "02-right-click-transfer",
+      "title": "Right-click transfers the correlogram row to Similarity",
+      "seconds": 9.846,
+      "selected": [
+        40,
+        44,
+        48
+      ],
+      "transferred": 48
+    },
+    {
+      "name": "03-single-suggestion",
+      "title": "One SLAY suggestion in the Merge workspace",
+      "seconds": 12.938,
+      "selected": [
+        40,
+        44,
+        48
+      ]
+    },
+    {
+      "name": "04-control-click-union",
+      "title": "Ctrl-click combines two suggestions; assignments unchanged",
+      "seconds": 16.455,
+      "selected": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ],
+      "selected_keys": [
+        "merge:f27398ae0f9960b6",
+        "merge:3097c4197d91ff70"
+      ],
+      "union": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "05-merged",
+      "title": "G commits one merge and both suggestion decisions",
+      "seconds": 24.383,
+      "selected": [
+        705
+      ],
+      "merged": 705
+    },
+    {
+      "name": "06-show-parents",
+      "title": "Exact immediate merge parents \u2014 read only",
+      "seconds": 30.666,
+      "selected": [
+        705
+      ],
+      "parents": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "07-return",
+      "title": "One click returns to the merged unit without editing",
+      "seconds": 33.494,
+      "selected": [
+        705
+      ]
+    },
+    {
+      "name": "08-undo",
+      "title": "Undo restores assignments, both decisions and the comparison workspace",
+      "seconds": 37.655,
+      "selected": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "09-redo-save",
+      "title": "Redo and Save retain the combined merge",
+      "seconds": 42.776,
+      "selected": [
+        705
+      ]
+    },
+    {
+      "name": "10-reopened",
+      "title": "Reopened: saved curation verified; evidence window explicitly reselected",
+      "seconds": 53.36,
+      "selected": [
+        705
+      ]
+    }
+  ],
+  "label": "Real earlier Carl dataset; engineering validation",
+  "propositions": [
+    {
+      "key": "merge:f27398ae0f9960b6",
+      "unit_ids": [
+        40,
+        44,
+        48
+      ]
+    },
+    {
+      "key": "merge:3097c4197d91ff70",
+      "unit_ids": [
+        49,
+        50,
+        51,
+        53
+      ]
+    }
+  ],
+  "union": [
+    40,
+    44,
+    48,
+    49,
+    50,
+    51,
+    53
+  ],
+  "evidence_window": 7,
+  "window_waveforms_by_unit": {
+    "40": 1,
+    "44": 2,
+    "48": 2,
+    "49": 2,
+    "50": 2,
+    "51": 1,
+    "53": 2
+  },
+  "merged": 705,
+  "assigned_spikes": 10681,
+  "reopened_initial_evidence_window": 0,
+  "reopened_selected_evidence_window": 7,
+  "reopen_window_action": "Explicit Inspect evidence window dialog; not automatic restoration",
+  "source_unchanged": true,
+  "success": true,
+  "published_screenshots": [
+    "bounded-02-right-click-transfer.png",
+    "bounded-04-control-click-union.png",
+    "bounded-06-show-parents.png",
+    "bounded-08-undo.png",
+    "bounded-10-reopened.png"
+  ]
+}

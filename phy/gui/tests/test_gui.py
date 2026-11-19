@@ -76,6 +76,58 @@ def test_opengl_view():
 # ------------------------------------------------------------------------------
 
 
+def test_closed_notification_follows_accepted_close(qtbot, tmp_path):
+    gui = GUI(config_dir=tmp_path)
+    qtbot.addWidget(gui)
+    closed = []
+
+    @connect(event='close', sender=gui)
+    def reject(sender):
+        return False
+
+    @connect(event='closed', sender=gui)
+    def accepted(sender):
+        assert sender._closed
+        closed.append(sender)
+
+    try:
+        gui.show()
+        assert not gui.close()
+        assert not gui._closed and not closed
+        unconnect(reject)
+        assert gui.close()
+        assert closed == [gui]
+        gui.close()
+        assert closed == [gui]
+    finally:
+        unconnect(reject, accepted)
+
+
+def test_closed_notification_survives_geometry_save_failure(qtbot, tmp_path, monkeypatch):
+    from PyQt5.QtGui import QCloseEvent
+
+    gui = GUI(config_dir=tmp_path)
+    qtbot.addWidget(gui)
+    closed = []
+
+    @connect(event='closed', sender=gui)
+    def accepted(sender):
+        closed.append(sender)
+
+    def fail():
+        raise OSError('cannot save geometry')
+
+    monkeypatch.setattr(gui, 'save_geometry_state', fail)
+    try:
+        with raises(OSError, match='cannot save geometry'):
+            gui.closeEvent(QCloseEvent())
+        assert gui._closed and closed == [gui]
+        gui.closeEvent(QCloseEvent())
+        assert closed == [gui]
+    finally:
+        unconnect(accepted)
+
+
 def test_gui_noapp(tempdir):
     if not QApplication.instance():
         with raises(RuntimeError):  # pragma: no cover

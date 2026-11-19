@@ -1245,6 +1245,10 @@ class BaseController:
         # Set up the Selector instance, responsible for selecting the spikes for display.
         self._set_selector()
 
+        from ._parent_review import ParentInspection
+
+        self.parent_inspection = ParentInspection(self)
+
         emit('controller_ready', self)
 
     def close(self, close_model=True):
@@ -1253,6 +1257,7 @@ class BaseController:
         Closing a GUI does not necessarily end a controller's lifetime: callers may
         recreate a GUI around the same model. Resource cleanup is therefore explicit.
         """
+        self.parent_inspection.close()
         self._trace_prefetch.close()
         if close_model and not self._model_closed:
             _close_trace_reader(getattr(self.model, 'traces', None))
@@ -2460,7 +2465,11 @@ class BaseController:
             subtitle=str(self.dir_path),
             config_dir=self.config_dir,
             local_path=self.cache_dir / 'state.json',
-            default_state_path=Path(inspect.getfile(self.__class__)).parent / 'static/state.json',
+            default_state_path=getattr(
+                self,
+                'default_state_path',
+                Path(inspect.getfile(self.__class__)).parent / 'static/state.json',
+            ),
             view_creator=self.view_creator,
             default_views=default_views,
             enable_threading=self._enable_threading,
@@ -2509,6 +2518,7 @@ class BaseController:
         gui.set_default_actions()
         self.create_misc_actions(gui)
         gui.create_views()
+        self.parent_inspection.attach(gui)
 
         # Bind the `select_more` event to add clusters to the existing selection.
         @connect
@@ -2540,6 +2550,8 @@ class BaseController:
         handler = StatusBarHandler(gui)
         handler.setLevel(logging.INFO)
         logging.getLogger('phy').addHandler(handler)
+        # Embedders may destroy the GUI without sending an accepted close.
+        gui.destroyed.connect(lambda: logging.getLogger('phy').removeHandler(handler))
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)  # noqa

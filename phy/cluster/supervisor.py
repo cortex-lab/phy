@@ -8,7 +8,8 @@
 import inspect
 import logging
 import sys
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
 from numbers import Integral
@@ -441,7 +442,12 @@ class MergeView(Table):
 
     def __init__(self, *args, data=None, columns=(), **kwargs):
         super().__init__(*args, title='MERGE MODE', debounce_events=(), **kwargs)
-        columns = ['id'] + [column for column in columns if column != 'id']
+        columns = (
+            ['id']
+            + (['parent_origin'] if 'parent_origin' in columns else [])
+            + [column for column in columns if column not in ('id', 'parent_origin')]
+        )
+        self._column_labels = {'parent_origin': 'Parent'}
         self._init_table(
             columns=columns,
             value_names=columns + [{'data': ['group']}],
@@ -760,6 +766,11 @@ class Supervisor:
     skip_masked_clusters : bool
         Whether automatic navigation and similar-cluster selection skip noise and MUA
         clusters. The default is True.
+    clustering_factory : callable, optional
+        Construct the clustering model. Defaults to Clustering; bounded curation
+        supplies a guarded implementation with the same constructor interface.
+    cluster_meta_factory : callable, optional
+        Construct metadata from groups and labels. Defaults to create_cluster_meta.
 
     Events
     ------
@@ -795,11 +806,14 @@ class Supervisor:
         n_similar_clusters_to_select=None,
         skip_masked_clusters=True,
         merge_propositions=None,
+        clustering_factory=None,
+        cluster_meta_factory=None,
     ):
         super().__init__()
         self.context = context
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
         self.actions = None  # will be set when attaching the GUI
+        self.select_actions = None
         self.gui = None
         self.merge_view = None
         self.merge_propositions_view = None
@@ -809,6 +823,8 @@ class Supervisor:
         self._table_column_orders = {}
         self._suspend_presentation_order_sync = False
         self._is_dirty = None
+        self.parent_lineage = None
+        self.parent_origins = {}
         self._sort = sort  # Initial sort requested in the constructor
         # This is populated alongside the existing TaskLogger-derived selection during the
         # migration to an explicit authoritative curation-selection model.
@@ -838,7 +854,7 @@ class Supervisor:
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
         spc = context.load('spikes_per_cluster') if context else None
-        self.clustering = Clustering(
+        self.clustering = (clustering_factory or Clustering)(
             spike_clusters, spikes_per_cluster=spc, new_cluster_id=new_cluster_id
         )
 
@@ -846,7 +862,9 @@ class Supervisor:
         self._save_spikes_per_cluster()
 
         # Create the ClusterMeta instance.
-        self.cluster_meta = create_cluster_meta(cluster_groups or {}, self.cluster_labels)
+        self.cluster_meta = (cluster_meta_factory or create_cluster_meta)(
+            cluster_groups or {}, self.cluster_labels
+        )
 
         # Create the GlobalHistory instance.
         self._global_history = GlobalHistory(
@@ -863,12 +881,47 @@ class Supervisor:
         connect(self._log_action_meta, event='cluster', sender=self.cluster_meta)
 
         # Raise supervisor.cluster
+        @connect(event='request_undo_state', sender=self.clustering)
+        def on_request_cluster_metadata(sender, up):
+            # Clustering has updated assignments, but metadata inheritance has
+            # not run yet. Retain only the affected units, including explicit
+            # default values that inheritance must not overwrite during undo.
+            return {
+                '_phy_cluster_metadata_before': {
+                    int(unit): {
+                        field: deepcopy(self.cluster_meta.get(field, unit))
+                        for field in self.cluster_meta.fields
+                    }
+                    for unit in up.deleted
+                }
+            }
+
         @connect(sender=self.clustering)
         def on_cluster(sender, up):
             # NOTE: update the cluster meta of new clusters, depending on the values of the
             # ancestor clusters. In case of a conflict between the values of the old clusters,
             # the largest cluster wins and its value is set to its descendants.
-            if up.added:
+            before = None
+            if up.history == 'undo':
+                before = next(
+                    (
+                        state['_phy_cluster_metadata_before']
+                        for state in up.undo_state or ()
+                        if isinstance(state, dict) and '_phy_cluster_metadata_before' in state
+                    ),
+                    None,
+                )
+            if before is not None:
+                for unit in up.added:
+                    if unit in before:
+                        for field, default in self.cluster_meta._fields.items():
+                            self.cluster_meta.set(
+                                field, [unit], before[unit].get(field, default), add_to_stack=False
+                            )
+            elif up.get('clear_metadata'):
+                for field in self.cluster_meta.fields:
+                    self.cluster_meta.set(field, up.added, None, add_to_stack=False)
+            elif up.added:
                 self.cluster_meta.set_from_descendants(
                     up.descendants, largest_old_cluster=up.largest_old_cluster
                 )
@@ -1018,6 +1071,8 @@ class Supervisor:
     def get_cluster_info(self, cluster_id, exclude=()):
         """Return the data associated to a given cluster."""
         out = {'id': cluster_id}
+        if cluster_id in self.parent_origins:
+            out['parent_origin'] = f'was {self.parent_origins[cluster_id]}'
         # Cluster metrics.
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
@@ -1081,8 +1136,17 @@ class Supervisor:
             return self.merge_view
         state = state or self.selection.state
         data = [self.get_cluster_info(cluster_id) for cluster_id in state.merge_ids]
-        self.merge_view = MergeView(self.gui, data=data, columns=self.columns)
-        self.merge_view.set_column_order(self._table_column_orders.get('merge', ()))
+        self.merge_view = MergeView(self.gui, data=data, columns=self.columns + ['parent_origin'])
+        saved_order = self._table_column_orders.get('merge', ())
+        order = [
+            column
+            for column in saved_order or self.merge_view.columns
+            if column != 'parent_origin'
+        ]
+        if 'id' not in order:
+            order.insert(0, 'id')
+        order.insert(order.index('id') + 1, 'parent_origin')
+        self.merge_view.set_column_order(order)
         self.merge_view._reference_id = state.reference_id
         self.merge_view.configure_cluster_drag_drop(
             'merge', accepted_roles=('merge', 'similarity'), drag_selected_rows=False
@@ -1104,7 +1168,17 @@ class Supervisor:
             text='Cancel Merge Mode',
             callback=lambda checked: self.toggle_merge_mode(),
         )
+        self.merge_view.dock.add_button(
+            name='exclude_merge_row',
+            text='Exclude current row',
+            callback=lambda checked: self._exclude_current_merge_row(),
+        )
         return self.merge_view
+
+    def _exclude_current_merge_row(self):
+        row = self.merge_view._row_for_proxy_index(self.merge_view.table_view.currentIndex())
+        if row is not None:
+            self.deselect_from_merge((int(row['id']),))
 
     def _show_merge_view(self, state=None):
         """Reveal the persistent Merge View for the active workspace."""
@@ -1349,9 +1423,12 @@ class Supervisor:
         state = self.selection.state
         staged = len(state.merge_ids)
         similar = len(state.similar_ids)
+        keys = self._active_merge_proposition_keys()
         source = (
-            f' — PROPOSITION {state.merge.proposition_id}'
-            if state.merge is not None and state.merge.proposition_id
+            f' — {len(keys)} PROPOSITIONS'
+            if len(keys) > 1
+            else f' — PROPOSITION {keys[0]}'
+            if keys
             else ''
         )
         return (
@@ -1363,10 +1440,10 @@ class Supervisor:
         """Project durable propositions and current live-cluster validity for the view."""
         if self.merge_propositions is None:
             return []
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         catalog = self.merge_propositions.catalog
         live_ids = set(catalog.live_unit_ids)
-        active_key = self._active_merge_proposition_key()
+        active_keys = set(self._active_merge_proposition_keys())
         rows = []
         for entry in catalog.entries:
             proposition = entry.proposition
@@ -1374,7 +1451,7 @@ class Supervisor:
             catalog_status = (
                 catalog.status_for(key) if entry.key is not None else PropositionStatus.INVALID
             )
-            status = 'active' if key == active_key else catalog_status.value
+            status = 'active' if key in active_keys else catalog_status.value
             unit_ids = proposition.unit_ids if proposition is not None else ()
             rows.append(
                 {
@@ -1406,6 +1483,10 @@ class Supervisor:
             return state.merge.proposition_id
         return None
 
+    def _active_merge_proposition_keys(self):
+        state = self.selection.state
+        return state.merge.proposition_ids if state.is_merge_mode and state.merge else ()
+
     def _update_proposition_actions(self):
         """Keep proposition shortcuts aligned with the current queue state."""
         if self.select_actions is None:
@@ -1430,11 +1511,13 @@ class Supervisor:
             view is not None
             and current is not None
             and self._active_merge_proposition_key() == current
+            and len(self._active_merge_proposition_keys()) == 1
             and view.can_trigger('reject')
         )
         can_reset = bool(
             view is not None
             and not self.selection.state.is_merge_mode
+            and len(view.selected_keys) == 1
             and view.can_trigger('reset')
         )
         enabled = {
@@ -1446,12 +1529,33 @@ class Supervisor:
         for name, value in enabled.items():
             (self.select_actions.enable if value else self.select_actions.disable)(name)
 
+    def _project_proposition_state(self):
+        if self.merge_propositions is None:
+            return
+        kwargs = {}
+        if self.parent_lineage is not None and not hasattr(self, 'session'):
+            controlled, current = self.parent_lineage.proposition_retirements()
+            retired = {
+                unit: value
+                for unit, value in self.merge_propositions.catalog.retired_units.items()
+                if value['operation'] != 'restore_parents' and unit not in controlled
+            }
+            retired.update(current)
+            kwargs = {
+                'retired_units': retired,
+                'reassembled_results': self.parent_lineage.reassembled_results(
+                    self.merge_propositions.catalog
+                ),
+            }
+        self.merge_propositions.project_live_ids(self.clustering.cluster_ids, **kwargs)
+
     def _refresh_propositions(self):
+        self._project_proposition_state()
         if self.merge_propositions_view is not None:
             self.merge_propositions_view.set_propositions(self._proposition_rows())
-            active_key = self._active_merge_proposition_key()
-            if active_key is not None:
-                self.merge_propositions_view.select_key(active_key)
+            active_keys = self._active_merge_proposition_keys()
+            if active_keys:
+                self.merge_propositions_view.select_keys(active_keys)
         self._update_proposition_actions()
 
     def _apply_selection_change(
@@ -1499,8 +1603,8 @@ class Supervisor:
             if active:
                 can_undo_proposition = (
                     self._active_merge_proposition_key() is not None
-                    and self._global_history.current_position > 0
-                )
+                    or self._can_undo_parent_restore()
+                ) and self._global_history.current_position > 0
                 index = self._global_history.current_position + 1
                 history = self._global_history._history
                 can_redo_merge = index < len(history) and self._is_merge_history_context(
@@ -1722,7 +1826,9 @@ class Supervisor:
             'previous_best',
             'undo',
         }
-        if name == 'undo' and self._active_merge_proposition_key() is not None:
+        if name == 'undo' and (
+            self._active_merge_proposition_key() is not None or self._can_undo_parent_restore()
+        ):
             blocked_in_merge.remove('undo')
         if self.selection.state.is_merge_mode and name in blocked_in_merge:
             logger.warning('Action `%s` is unavailable in Merge mode.', name)
@@ -1961,6 +2067,11 @@ class Supervisor:
                 sender=self.merge_propositions_view,
             )
             connect(
+                self._activate_merge_propositions,
+                event='activate_merge_propositions',
+                sender=self.merge_propositions_view,
+            )
+            connect(
                 self._review_merge_proposition,
                 event='review_merge_proposition',
                 sender=self.merge_propositions_view,
@@ -2093,6 +2204,7 @@ class Supervisor:
         workflow_context = (
             {'mode': 'merge', 'tables': self._workflow_context()} if merge_mode else None
         )
+        proposition_ids = selection_before.merge.proposition_ids if proposition_id else ()
         prepared_review = None
         review_before = None
         if proposition_id is not None:
@@ -2101,11 +2213,18 @@ class Supervisor:
             # necessarily describe the same unit.
             to = int(self.clustering.new_cluster_id() if to is None else to)
             review_before = self.merge_propositions.snapshot()
-            prepared_review = self.merge_propositions.prepare_accept(
-                proposition_id, cluster_ids, to
-            )
+            if len(proposition_ids) > 1:
+                prepared_review = self.merge_propositions.prepare_accept_many(
+                    proposition_ids, cluster_ids, to
+                )
+            else:
+                prepared_review = self.merge_propositions.prepare_accept(
+                    proposition_id, cluster_ids, to
+                )
         elif to is not None:
             to = int(to)
+        # Display-only observers must see source colors before cluster callbacks reset selection.
+        emit('before_merge', self, cluster_ids)
         # A merge synchronously emits several related table mutations: metadata
         # inheritance, addition of the merged cluster, and removal of its
         # ancestors. Fit each attached table once after the complete operation
@@ -2129,7 +2248,7 @@ class Supervisor:
         if proposition_id is not None:
             self._set_merge_mode_ui(False)
             self._hide_merge_view()
-            self.merge_propositions_view.select_key(proposition_id)
+            self.merge_propositions_view.select_keys(proposition_ids)
         self._global_history.action(
             *controllers,
             description='merge',
@@ -2142,6 +2261,120 @@ class Supervisor:
             },
         )
         if self.selection.state.is_merge_mode:
+            self._set_merge_mode_ui(True)
+        return out
+
+    @contextmanager
+    def _parent_restore_transaction(self, target):
+        """Roll back a failed restore without copying the recording's assignment vector."""
+        clustering = self.clustering
+        rows = clustering.spikes_per_cluster.get(target)
+        if rows is None:
+            raise ValueError('Choose a current merged unit.')
+        spc, cluster_ids = dict(clustering._spikes_per_cluster), clustering._cluster_ids.copy()
+        restored = dict(clustering._restored_partitions)
+        metadata = deepcopy(self.cluster_meta._data)
+        histories = (clustering._undo_stack, self._global_history)
+        history_states = [(list(h._history), h._index) for h in histories]
+        selection, dirty = self.selection.snapshot(), self._is_dirty
+        workflow = self._workflow_context() if self.gui is not None else None
+        origins = dict(self.parent_origins)
+        lineage = self.parent_lineage
+        lineage_state = (
+            (
+                dict(lineage.records),
+                dict(lineage.color_records),
+                dict(lineage.origins),
+                dict(lineage.restorations),
+                set(lineage.known_merges),
+            )
+            if lineage is not None
+            else None
+        )
+        try:
+            yield
+        except Exception:
+            # Guarded bounded clustering permits writes while its outer semantic
+            # transaction holds the mutation policy.
+            clustering._spike_clusters[rows] = target
+            clustering._spikes_per_cluster, clustering._cluster_ids = spc, cluster_ids
+            clustering._restored_partitions = restored
+            self.cluster_meta._data = metadata
+            for history, (items, index) in zip(histories, history_states):
+                history._history, history._index = items, index
+            self.selection.restore(selection)
+            self.parent_origins = origins
+            self._is_dirty = dirty
+            if lineage_state is not None:
+                (
+                    lineage.records,
+                    lineage.color_records,
+                    lineage.origins,
+                    lineage.restorations,
+                    lineage.known_merges,
+                ) = lineage_state
+                # A refresh may have cached the temporary restored memberships
+                # before the failure. Recompute against the rolled-back state.
+                lineage._reassembly_cache = None
+            if self.gui is not None:
+                self._reset_cluster_view()
+                self._restore_history_context(
+                    selection, {'mode': 'post_merge', 'tables': workflow}, 'undo'
+                )
+                self._update_save_feedback()
+            raise
+
+    def restore_parents(self, target=None, *, groups=None, colors=None, new_cluster_ids=None):
+        """Restore earliest recorded merge components as real units in the Merge workspace.
+
+        This is a new curation action; unrelated later edits are preserved.
+        Explicit groups and IDs support validated bounded semantic commands.
+        """
+        self._settle_selection()
+        if self.selection.state.is_merge_mode:
+            raise ValueError('Leave Merge mode before restoring another unit.')
+        if target is None:
+            if len(self.selected) != 1:
+                raise ValueError('Select one merged unit to restore its parents.')
+            target = self.selected[0]
+        target = int(target)
+        if groups is None:
+            if self.parent_lineage is None:
+                raise ValueError('Merge-parent lineage is unavailable.')
+            groups = self.parent_lineage.parents(target, recursive=True)
+        if colors is None and self.parent_lineage is not None:
+            colors = self.parent_lineage.colors(target, groups)
+        with self._parent_restore_transaction(target):
+            return self._restore_parent_partition(target, groups, colors, new_cluster_ids)
+
+    def _restore_parent_partition(self, target, groups, colors, new_cluster_ids):
+        selection_before = self.selection.snapshot()
+        workflow_before = self._workflow_context() if self.gui is not None else {}
+        out = self.clustering.restore_partition(target, groups, new_cluster_ids=new_cluster_ids)
+        self.parent_origins.update(out.parent_restore_origins)
+        ordered = tuple(out.parent_restore_origins)
+        bindings = {
+            child: colors[parent]
+            for child, parent in out.parent_restore_origins.items()
+            if colors is not None and parent in colors
+        }
+        change = self.selection.enter_parent_restore(ordered, bindings, workflow_before)
+        if self.gui is not None:
+            self._show_merge_view(change.after)
+            self._set_merge_mode_ui(True)
+            self._apply_selection_change(change, refresh_similarity=True)
+        self._global_history.action(
+            self.clustering,
+            description='restore_parents',
+            selection_before=selection_before,
+            selection_after=self.selection.snapshot(),
+            workflow_context={'mode': 'post_merge', 'tables': workflow_before},
+            workflow_context_after={'mode': 'merge', 'tables': workflow_before},
+        )
+        self._refresh_propositions()
+        self._is_dirty = True
+        self._update_save_feedback()
+        if self.gui is not None:
             self._set_merge_mode_ui(True)
         return out
 
@@ -2322,11 +2555,11 @@ class Supervisor:
     def _activate_merge_proposition(self, sender, key):
         """Replace any temporary Merge workspace with the clicked proposition."""
         active_key = self._active_merge_proposition_key()
-        if active_key == key:
+        if self._active_merge_proposition_keys() == (key,):
             self.merge_propositions_view.select_key(key)
             return self.selection.state
         self.merge_propositions_view.select_key(key)
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         catalog = self.merge_propositions.catalog
         if (
             catalog.entry_for(key) is None
@@ -2352,6 +2585,55 @@ class Supervisor:
         self._update_proposition_actions()
         return change.after
 
+    def _activate_merge_propositions(self, sender, keys):
+        """Compare the stable ordered union; selection never accepts a suggestion."""
+        keys = tuple(dict.fromkeys(keys))
+        if not keys:
+            if self.selection.state.is_merge_mode:
+                self._cancel_merge_mode()
+            self.merge_propositions_view.set_active_keys(())
+            return self.selection.state
+        if len(keys) == 1:
+            return self._activate_merge_proposition(sender, keys[0])
+        self._project_proposition_state()
+        catalog = self.merge_propositions.catalog
+        if any(
+            catalog.entry_for(key) is None
+            or catalog.status_for(key) is not PropositionStatus.PENDING
+            for key in keys
+        ):
+            if self.selection.state.is_merge_mode:
+                self._cancel_merge_mode()
+            self._refresh_propositions()
+            self.merge_propositions_view.select_keys(keys)
+            logger.warning('Only pending suggestions with live units can be reviewed together.')
+            return self.selection.state
+        ordered = tuple(
+            dict.fromkeys(
+                unit for key in keys for unit in catalog.entry_for(key).proposition.unit_ids
+            )
+        )
+        self._settle_selection()
+        if self.selection.state.is_merge_mode:
+            change = self.selection.switch_merge_proposition(
+                keys[0],
+                ordered,
+                proposition_ids=keys,
+            )
+        else:
+            change = self.selection.enter_merge_proposition(
+                keys[0],
+                ordered,
+                self._workflow_context(),
+                proposition_ids=keys,
+            )
+        self._show_merge_view()
+        self._set_merge_mode_ui(True)
+        self._apply_selection_change(change)
+        self.merge_propositions_view.set_active_keys(keys)
+        self._update_proposition_actions()
+        return change.after
+
     def _review_merge_proposition(self, sender, key):
         """Compatibility alias for explicit programmatic review requests."""
         return self._activate_merge_proposition(sender, key)
@@ -2366,7 +2648,7 @@ class Supervisor:
             if self.merge_propositions_view is not None
             else None
         )
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         key = self._pending_proposition_relative_to(current, direction, ordered_keys)
         if key is not None:
             self._activate_merge_proposition(self.merge_propositions_view, key)
@@ -2396,7 +2678,7 @@ class Supervisor:
             if self._active_merge_proposition_key() != key:
                 logger.warning('Only the active merge proposition can be rejected.')
                 return
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         self.merge_propositions.reject(key)
         self._refresh_propositions()
         next_key = self._pending_proposition_relative_to(key, 'next', ordered_keys)
@@ -2423,6 +2705,11 @@ class Supervisor:
             if callback:
                 callback(self.selection.state)
             return
+        if len(self._active_merge_proposition_keys()) > 1:
+            logger.warning('Select one suggestion to reject it individually.')
+            if callback:
+                callback(self.selection.state)
+            return self.selection.state
         key = self._active_merge_proposition_key()
         if key is not None:
             self._reject_merge_proposition(self.merge_propositions_view, key)
@@ -2434,7 +2721,7 @@ class Supervisor:
         if self.selection.state.is_merge_mode:
             self._cancel_merge_mode()
         before = self.selection.snapshot()
-        self.merge_propositions.project_live_ids(self.clustering.cluster_ids)
+        self._project_proposition_state()
         try:
             self.merge_propositions.reset(key)
         except ValueError as e:
@@ -2462,6 +2749,11 @@ class Supervisor:
                 callback(self.selection.state)
             return
         view = self.merge_propositions_view
+        if self.merge_propositions_view and len(self.merge_propositions_view.selected_keys) > 1:
+            logger.warning('Select one suggestion to reset its review.')
+            if callback:
+                callback(self.selection.state)
+            return self.selection.state
         key = view.current_key if view is not None else None
         if key is not None and view.can_trigger('reset'):
             self._reset_merge_proposition(view, key)
@@ -2638,10 +2930,20 @@ class Supervisor:
         if saved:
             self.gui.status_message = 'Curation changes saved.'
 
+    def _can_undo_parent_restore(self):
+        return (
+            self._global_history.current_position > 0
+            and self._global_history.current_item.description == 'restore_parents'
+        )
+
     def undo(self):
         """Undo the last action."""
         self._settle_selection()
-        if self.selection.state.is_merge_mode and self._active_merge_proposition_key() is None:
+        if (
+            self.selection.state.is_merge_mode
+            and self._active_merge_proposition_key() is None
+            and not self._can_undo_parent_restore()
+        ):
             logger.warning('Undo is unavailable while a Merge workspace is active.')
             return
         # Selection-only exploration does not create history entries. Preserve the exact

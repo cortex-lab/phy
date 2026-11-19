@@ -1,0 +1,328 @@
+{
+  "mode": "bounded",
+  "dataset": "Carl converted AIND bounded engineering fixture",
+  "capture_scope": "Settled real X11 pixels; Qt input events; not a spontaneous-redraw test",
+  "revision": "3d8b492e3e88417d40347916cdf65a1ab8a53229",
+  "steps": [
+    {
+      "name": "01-initial",
+      "title": "Real-data cluster comparison before the new workflow",
+      "seconds": 7.429,
+      "selected": [
+        40,
+        48,
+        44
+      ]
+    },
+    {
+      "name": "02-right-click-transfer",
+      "title": "Right-click transfers the correlogram row to Similarity",
+      "seconds": 10.41,
+      "selected": [
+        40,
+        44,
+        48
+      ],
+      "transferred": 48
+    },
+    {
+      "name": "03-single-suggestion",
+      "title": "One SLAY suggestion in the Merge workspace",
+      "seconds": 13.184,
+      "selected": [
+        40,
+        44,
+        48
+      ]
+    },
+    {
+      "name": "04-control-click-union",
+      "title": "Ctrl-click combines two suggestions; assignments unchanged",
+      "seconds": 16.519,
+      "selected": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ],
+      "selected_keys": [
+        "merge:f27398ae0f9960b6",
+        "merge:3097c4197d91ff70"
+      ],
+      "union": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "05-merged",
+      "title": "G commits one merge and both suggestion decisions",
+      "seconds": 24.41,
+      "selected": [
+        705
+      ],
+      "merged": 705
+    },
+    {
+      "name": "06-show-parents",
+      "title": "Exact immediate merge parents \u2014 read only",
+      "seconds": 29.853,
+      "selected": [
+        705
+      ],
+      "parents": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "07-return",
+      "title": "One click returns to the merged unit without editing",
+      "seconds": 32.523,
+      "selected": [
+        705
+      ]
+    },
+    {
+      "name": "08-undo",
+      "title": "Undo restores assignments, both decisions and the comparison workspace",
+      "seconds": 35.877,
+      "selected": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "09-redo-save",
+      "title": "Redo and Save retain the combined merge",
+      "seconds": 40.185,
+      "selected": [
+        705
+      ]
+    },
+    {
+      "name": "10-reopened",
+      "title": "Reopened: saved curation verified; evidence window explicitly reselected",
+      "seconds": 50.804,
+      "selected": [
+        705
+      ]
+    }
+  ],
+  "input_events": [
+    {
+      "seconds": 0.215,
+      "label": "Left click: Cluster 40",
+      "point": [
+        28,
+        314
+      ],
+      "click_seconds": 0.847
+    },
+    {
+      "seconds": 2.516,
+      "label": "Ctrl + Left click: Cluster 44",
+      "point": [
+        28,
+        314
+      ],
+      "click_seconds": 3.145
+    },
+    {
+      "seconds": 4.566,
+      "label": "Ctrl + Left click: Cluster 48",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 5.2
+    },
+    {
+      "seconds": 7.429,
+      "label": "Right click: Transfer correlogram row",
+      "point": [
+        550,
+        206
+      ],
+      "click_seconds": 8.068
+    },
+    {
+      "seconds": 10.612,
+      "label": "Left click: P5 \u00b7 40, 44, 48",
+      "point": [
+        95,
+        971
+      ],
+      "click_seconds": 11.247
+    },
+    {
+      "seconds": 13.386,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "point": [
+        95,
+        1103
+      ],
+      "click_seconds": 14.02
+    },
+    {
+      "seconds": 16.72,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "point": [
+        95,
+        1103
+      ],
+      "click_seconds": 17.354
+    },
+    {
+      "seconds": 18.845,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "point": [
+        95,
+        1103
+      ],
+      "click_seconds": 19.475
+    },
+    {
+      "seconds": 21.233,
+      "label": "G: merge the combined suggestions",
+      "key_seconds": 21.484,
+      "key_released_seconds": 22.462
+    },
+    {
+      "seconds": 24.623,
+      "label": "Right click: merged unit context menu"
+    },
+    {
+      "seconds": 25.81,
+      "label": "Left click: Show parents",
+      "point": [
+        103,
+        191
+      ],
+      "click_seconds": 26.444
+    },
+    {
+      "seconds": 29.853,
+      "label": "Left click: Back to merged unit",
+      "point": [
+        313,
+        103
+      ],
+      "click_seconds": 30.488
+    },
+    {
+      "seconds": 32.523,
+      "label": "Ctrl + Z: undo",
+      "key_seconds": 32.773,
+      "key_released_seconds": 33.886
+    },
+    {
+      "seconds": 35.877,
+      "label": "Ctrl + Shift + Z: redo",
+      "key_seconds": 36.128,
+      "key_released_seconds": 36.935
+    },
+    {
+      "seconds": 37.91,
+      "label": "Ctrl + S: save",
+      "key_seconds": 38.161,
+      "key_released_seconds": 38.439
+    },
+    {
+      "seconds": 40.187,
+      "label": "Reopen the saved working copy"
+    },
+    {
+      "seconds": 47.035,
+      "label": "View menu: Inspect evidence window"
+    },
+    {
+      "seconds": 47.837,
+      "label": "Type evidence window index, then Enter"
+    },
+    {
+      "seconds": 48.607,
+      "label": "Enter: inspect evidence window 7",
+      "key_seconds": 48.858,
+      "key_released_seconds": 48.859
+    }
+  ],
+  "recording_fps": 30,
+  "pointer": "Visible native X11 cursor, eased motion and click ring",
+  "label": "Real earlier Carl dataset; engineering validation",
+  "propositions": [
+    {
+      "key": "merge:f27398ae0f9960b6",
+      "unit_ids": [
+        40,
+        44,
+        48
+      ]
+    },
+    {
+      "key": "merge:3097c4197d91ff70",
+      "unit_ids": [
+        49,
+        50,
+        51,
+        53
+      ]
+    }
+  ],
+  "union": [
+    40,
+    44,
+    48,
+    49,
+    50,
+    51,
+    53
+  ],
+  "evidence_window": 7,
+  "window_waveforms_by_unit": {
+    "40": 1,
+    "44": 2,
+    "48": 2,
+    "49": 2,
+    "50": 2,
+    "51": 1,
+    "53": 2
+  },
+  "premerge_colors": {
+    "40": 0,
+    "44": 1,
+    "48": 2,
+    "49": 3,
+    "50": 4,
+    "51": 5,
+    "53": 6
+  },
+  "parent_colors_preserved": true,
+  "parent_workspace_restored": true,
+  "merged": 705,
+  "assigned_spikes": 10681,
+  "reopened_initial_evidence_window": 0,
+  "reopened_selected_evidence_window": 7,
+  "reopen_window_action": "Explicit Inspect evidence window dialog; not automatic restoration",
+  "reopened_parent_colors_preserved": true,
+  "source_unchanged": true,
+  "success": true
+}

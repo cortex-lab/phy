@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:05,596
+Ordinary real-data walkthrough: Real-data cluster comparison before the new workflow
+
+2
+00:00:05,596 --> 00:00:08,237
+Ordinary real-data walkthrough: Right-click transfers the correlogram row to Similarity
+
+3
+00:00:08,237 --> 00:00:11,101
+Ordinary real-data walkthrough: One SLAY suggestion in the Merge workspace
+
+4
+00:00:11,101 --> 00:00:15,178
+Ordinary real-data walkthrough: Ctrl-click combines two suggestions; assignments unchanged
+
+5
+00:00:15,178 --> 00:00:22,491
+Ordinary real-data walkthrough: G commits one merge and both suggestion decisions
+
+6
+00:00:22,491 --> 00:00:28,997
+Ordinary real-data walkthrough: Exact immediate merge parents — read only
+
+7
+00:00:28,997 --> 00:00:31,821
+Ordinary real-data walkthrough: One click returns to the merged unit without editing
+
+8
+00:00:31,821 --> 00:00:35,291
+Ordinary real-data walkthrough: Undo restores assignments, both decisions and the comparison workspace
+
+9
+00:00:35,291 --> 00:00:39,802
+Ordinary real-data walkthrough: Redo and Save retain the combined merge
+
+10
+00:00:39,802 --> 00:00:51,083
+Ordinary real-data walkthrough: Reopened: saved assignments, review decisions and parent history verified

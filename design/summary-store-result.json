@@ -1,0 +1,47 @@
+{
+  "revision": "9e4ac0049ff6915f3990f8339c4e3fd4749c150f",
+  "dataset": "Earlier converted 112.859-hour engineering dataset; not 1000-hour acceptance",
+  "source_spikes": 469725567,
+  "unit": 49,
+  "threshold": -341.797119140625,
+  "timings_seconds": {
+    "indexed": 0.017951954854652286,
+    "indexed_repeat": 0.016828396124765277,
+    "full_scan": 6.47001982992515,
+    "full_scan_repeat": 2.1761009390465915
+  },
+  "phases": {
+    "indexed": [
+      [
+        "reading prepared unit summaries",
+        639754,
+        639754
+      ]
+    ],
+    "full_scan": [
+      [
+        "validating source",
+        9394511724,
+        9394511724
+      ],
+      [
+        "scanning full source",
+        469725567,
+        469725567
+      ]
+    ]
+  },
+  "counts": {
+    "808": 346764,
+    "809": 292990
+  },
+  "indexed_equals_full_scan": true,
+  "independent_replay_verified_rows": 469725567,
+  "bounded_files_unchanged": true,
+  "cache_conditions": "Uncontrolled OS cache; source hashing warms the full scan; index built before measurement.",
+  "build": {
+    "seconds": 47.388859510887414,
+    "peak_rss_bytes": 335151104,
+    "store_bytes": 2348718604
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "all_metadata_field_names_unit_keys_values_and_json_types_exact": true,
+  "assignment_journal_replay_runtime_sha256_unchanged_since_launch": true,
+  "assignment_outputs_are_not_source_hardlinks": true,
+  "code_head_at_launch": "03377575cadc4cfd010d1977b869375e5078d515",
+  "frozen_oracle_sha256_unchanged_since_launch": true,
+  "independent_oracle_script_mtime_precedes_run": true,
+  "independent_oracle_script_sha256": "edb3ec3f5c2c58fee8260d00b34049367a5644358cde1bda5543cfeadb6333a8",
+  "metadata_cells_per_output": 31545,
+  "metadata_fields": 45,
+  "replay_assignment_payload_sha256_identical": {
+    "replayed-1": "9096b13b5ec2d7c02d7be9d3edbfae29f12cf599ad8c66564c1065745287f8f1",
+    "replayed-4": "9096b13b5ec2d7c02d7be9d3edbfae29f12cf599ad8c66564c1065745287f8f1"
+  },
+  "reprepared_byte_budget": 536870912,
+  "reprepared_bytes": 534551613,
+  "reprepared_cumulative_metadata_provenance_exact": true,
+  "reprepared_spike_budget": 2000000,
+  "seconds": 5.5383116328157485,
+  "source_timestamps_subset_manifest_and_propositions_bytes_preserved": true,
+  "ui_difference_scope": "Bounded SLAY review membership-containment helper and its UI caller only; existing assignment/journal/replay and membership_expressions code unchanged; later narrow UI regressions cover this followup separately",
+  "ui_only_differences_ast_verified_against_launch_commit": true,
+  "ui_only_runtime_differences_after_launch": {
+    "phy/apps/large_recording/live_summaries.py": {
+      "sha256_after_validation": "68f612c0aef9a14d2ea55f07b424f752951e26b37502acd905f09a5da00eeb0a",
+      "sha256_at_launch": "d61c8b15ee8d3511a59ba8ffdedb1345c2e64eda650b2eefe71a14aae7e33e98"
+    },
+    "phy/apps/large_recording/supervisor.py": {
+      "sha256_after_validation": "36f219ccffb70871d78e90970a7db7caae6cb6902440dcb11655c905e370d82b",
+      "sha256_at_launch": "7ff505998b3a34117090a8b420b59088dc8b160ad9d1f6541087d8137d32be51"
+    }
+  },
+  "validation_harness_sha256": "0263b75a8be46fc9b08b5b3d28c64876b39f8264032689782dd5d40170b9d3b1"
+}

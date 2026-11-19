@@ -1,0 +1,24 @@
+{
+  "excluded_live": 711,
+  "excluded_original": 49,
+  "final_merged": 712,
+  "initial_merge": 705,
+  "initial_parents": [
+    40,
+    44,
+    48
+  ],
+  "new_candidate": 50,
+  "nonfinite": "keep",
+  "operator": "<",
+  "restored_merge_target": 708,
+  "selected_restored_live": 710,
+  "split_remainder": 707,
+  "split_selected": 706,
+  "threshold": -424.19464111328125,
+  "unrelated_inputs": [
+    0,
+    1
+  ],
+  "unrelated_result": 709
+}

@@ -1,0 +1,507 @@
+{
+  "mode": "bounded",
+  "dataset": "FRESH_BOUNDED_ENGINEERING_PACKAGE",
+  "working_copy": "DISPOSABLE_ISOLATED_COPY",
+  "capture_scope": "Settled X11 pixels; native XTest context click and Qt input events; not a spontaneous-redraw test",
+  "revision": "6cf2a4dbc2ec38fdab1ee4a39fe189e1341a1716",
+  "steps": [
+    {
+      "name": "01-initial",
+      "title": "Real-data cluster comparison before the new workflow",
+      "seconds": 7.108,
+      "selected": [
+        40,
+        48,
+        44
+      ]
+    },
+    {
+      "name": "02-right-click-transfer",
+      "title": "Right-click transfers the correlogram row to Similarity",
+      "seconds": 10.01,
+      "selected": [
+        40,
+        44,
+        48
+      ],
+      "transferred": 48
+    },
+    {
+      "name": "03-single-suggestion",
+      "title": "One SLAY suggestion in the Merge workspace",
+      "seconds": 12.743,
+      "selected": [
+        40,
+        44,
+        48
+      ]
+    },
+    {
+      "name": "04-control-click-union",
+      "title": "Ctrl-click combines two suggestions; assignments unchanged",
+      "seconds": 16.142,
+      "selected": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ],
+      "selected_keys": [
+        "merge:f27398ae0f9960b6",
+        "merge:3097c4197d91ff70"
+      ],
+      "union": [
+        40,
+        44,
+        48,
+        49,
+        50,
+        51,
+        53
+      ]
+    },
+    {
+      "name": "05-merged",
+      "title": "G commits one merge and both suggestion decisions",
+      "seconds": 24.087,
+      "selected": [
+        705
+      ],
+      "merged": 705
+    },
+    {
+      "name": "06-later-edits",
+      "title": "A later merge and its MUA label must survive parent restoration",
+      "seconds": 35.397,
+      "selected": [
+        706
+      ]
+    },
+    {
+      "name": "07-restored-parents",
+      "title": "Restore the older merge: real parent clusters in editable Merge Mode",
+      "seconds": 43.514,
+      "selected": [
+        707,
+        708,
+        709,
+        710,
+        711,
+        712,
+        713
+      ],
+      "restored": {
+        "40": 707,
+        "44": 708,
+        "48": 709,
+        "49": 710,
+        "50": 711,
+        "51": 712,
+        "53": 713
+      },
+      "later_edits_preserved": true
+    },
+    {
+      "name": "08-restore-history",
+      "title": "Undo/redo restoration preserves the later merge and label",
+      "seconds": 49.098,
+      "selected": [
+        707,
+        708,
+        709,
+        710,
+        711,
+        712,
+        713
+      ]
+    },
+    {
+      "name": "09-parents-remain-live",
+      "title": "Leaving Merge Mode keeps the restored units available for normal curation",
+      "seconds": 51.187,
+      "selected": [
+        707,
+        708,
+        709,
+        710,
+        711,
+        712,
+        713
+      ]
+    },
+    {
+      "name": "10-new-combination",
+      "title": "Exclude one restored parent and add a new candidate before merging",
+      "seconds": 59.377,
+      "selected": [
+        707,
+        708,
+        709,
+        710,
+        711,
+        712,
+        34
+      ],
+      "excluded": 713,
+      "candidate": 34,
+      "chosen": [
+        707,
+        708,
+        709,
+        710,
+        711,
+        712,
+        34
+      ]
+    },
+    {
+      "name": "11-revised-save",
+      "title": "Saved: new merge, excluded parent and unrelated MUA unit are all retained",
+      "seconds": 64.09,
+      "selected": [
+        714
+      ],
+      "final_merged": 714,
+      "excluded": 713,
+      "unrelated": 706
+    },
+    {
+      "name": "12-reopened",
+      "title": "Reopened: revised merge, excluded parent, unrelated edits and lineage verified",
+      "seconds": 71.626,
+      "selected": [
+        714
+      ]
+    }
+  ],
+  "input_events": [
+    {
+      "seconds": 0.212,
+      "label": "Left click: Cluster 40",
+      "point": [
+        28,
+        314
+      ],
+      "click_seconds": 0.85
+    },
+    {
+      "seconds": 2.211,
+      "label": "Ctrl + Left click: Cluster 44",
+      "point": [
+        28,
+        314
+      ],
+      "click_seconds": 2.839
+    },
+    {
+      "seconds": 4.244,
+      "label": "Ctrl + Left click: Cluster 48",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 4.878
+    },
+    {
+      "seconds": 7.108,
+      "label": "Right click: Transfer correlogram row",
+      "point": [
+        550,
+        206
+      ],
+      "click_seconds": 7.743
+    },
+    {
+      "seconds": 10.213,
+      "label": "Left click: P5 \u00b7 40, 44, 48",
+      "point": [
+        95,
+        971
+      ],
+      "click_seconds": 10.844
+    },
+    {
+      "seconds": 12.945,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "point": [
+        95,
+        1103
+      ],
+      "click_seconds": 13.584
+    },
+    {
+      "seconds": 16.344,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "point": [
+        95,
+        1103
+      ],
+      "click_seconds": 16.974
+    },
+    {
+      "seconds": 18.472,
+      "label": "Ctrl + Left click: P7 \u00b7 49, 50, 51, 53",
+      "point": [
+        95,
+        1103
+      ],
+      "click_seconds": 19.101
+    },
+    {
+      "seconds": 20.814,
+      "label": "G: merge the combined suggestions",
+      "key_seconds": 21.064,
+      "key_released_seconds": 22.103
+    },
+    {
+      "seconds": 24.29,
+      "label": "Left click: Cluster 0",
+      "point": [
+        28,
+        348
+      ],
+      "click_seconds": 24.926
+    },
+    {
+      "seconds": 26.261,
+      "label": "Ctrl + Left click: Cluster 1",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 26.902
+    },
+    {
+      "seconds": 28.123,
+      "label": "G: make an unrelated later merge",
+      "key_seconds": 28.373,
+      "key_released_seconds": 29.357
+    },
+    {
+      "seconds": 30.31,
+      "label": "Alt + M: label the unrelated unit MUA",
+      "key_seconds": 30.561,
+      "key_released_seconds": 31.666
+    },
+    {
+      "seconds": 32.678,
+      "label": "Left click: Cluster 706",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 33.312
+    },
+    {
+      "seconds": 35.64,
+      "label": "Left click: Cluster 705",
+      "point": [
+        28,
+        178
+      ],
+      "click_seconds": 36.268
+    },
+    {
+      "seconds": 37.61,
+      "label": "Right click: older merged unit context menu"
+    },
+    {
+      "seconds": 38.791,
+      "label": "Left click: Restore parents in Merge Mode",
+      "point": [
+        162,
+        191
+      ],
+      "click_seconds": 39.425
+    },
+    {
+      "seconds": 43.518,
+      "label": "Ctrl + Z: undo only the parent restoration",
+      "key_seconds": 43.768,
+      "key_released_seconds": 44.675
+    },
+    {
+      "seconds": 45.645,
+      "label": "Ctrl + Shift + Z: redo the parent restoration",
+      "key_seconds": 45.895,
+      "key_released_seconds": 47.113
+    },
+    {
+      "seconds": 49.099,
+      "label": "V: leave Merge Mode; restored parents stay live",
+      "key_seconds": 49.349,
+      "key_released_seconds": 49.427
+    },
+    {
+      "seconds": 51.188,
+      "label": "V: stage the real parents again",
+      "key_seconds": 51.439,
+      "key_released_seconds": 51.522
+    },
+    {
+      "seconds": 52.526,
+      "label": "Left click: Cluster 713",
+      "point": [
+        28,
+        579
+      ],
+      "click_seconds": 53.161
+    },
+    {
+      "seconds": 54.014,
+      "label": "Left click: Exclude current parent from the pending merge",
+      "point": [
+        347,
+        318
+      ],
+      "click_seconds": 54.652
+    },
+    {
+      "seconds": 56.327,
+      "label": "Ctrl + Left click: Cluster 34",
+      "point": [
+        28,
+        745
+      ],
+      "click_seconds": 56.963
+    },
+    {
+      "seconds": 59.38,
+      "label": "G: merge the chosen parents and new candidate",
+      "key_seconds": 59.63,
+      "key_released_seconds": 60.768
+    },
+    {
+      "seconds": 61.765,
+      "label": "Ctrl + S: save the revised curation",
+      "key_seconds": 62.015,
+      "key_released_seconds": 62.347
+    },
+    {
+      "seconds": 64.092,
+      "label": "Reopen the saved working copy"
+    },
+    {
+      "seconds": 67.772,
+      "label": "View menu: Inspect evidence window"
+    },
+    {
+      "seconds": 68.573,
+      "label": "Type evidence window index, then Enter"
+    },
+    {
+      "seconds": 69.349,
+      "label": "Enter: inspect evidence window 7",
+      "key_seconds": 69.6,
+      "key_released_seconds": 69.601
+    }
+  ],
+  "recording_fps": 30,
+  "pointer": "Visible native X11 cursor, eased motion and click ring",
+  "label": "Real earlier Carl dataset; engineering validation",
+  "display_columns": [
+    "group",
+    "full_count",
+    "n_spikes",
+    "ch"
+  ],
+  "propositions": [
+    {
+      "key": "merge:f27398ae0f9960b6",
+      "unit_ids": [
+        40,
+        44,
+        48
+      ]
+    },
+    {
+      "key": "merge:3097c4197d91ff70",
+      "unit_ids": [
+        49,
+        50,
+        51,
+        53
+      ]
+    }
+  ],
+  "union": [
+    40,
+    44,
+    48,
+    49,
+    50,
+    51,
+    53
+  ],
+  "evidence_window": 7,
+  "window_waveforms_by_unit": {
+    "40": 1,
+    "44": 2,
+    "48": 2,
+    "49": 2,
+    "50": 2,
+    "51": 1,
+    "53": 2
+  },
+  "premerge_colors": {
+    "40": 0,
+    "44": 1,
+    "48": 2,
+    "49": 3,
+    "50": 4,
+    "51": 5,
+    "53": 6
+  },
+  "unrelated": {
+    "inputs": [
+      0,
+      1
+    ],
+    "result": 706,
+    "group": "mua"
+  },
+  "restored": {
+    "40": 707,
+    "44": 708,
+    "48": 709,
+    "49": 710,
+    "50": 711,
+    "51": 712,
+    "53": 713
+  },
+  "restored_live_units": true,
+  "parent_colors_preserved": true,
+  "excluded_parent": {
+    "original": 53,
+    "live": 713
+  },
+  "new_candidate": 34,
+  "final_merged": 714,
+  "chosen": [
+    707,
+    708,
+    709,
+    710,
+    711,
+    712,
+    34
+  ],
+  "later_edits_preserved": true,
+  "excluded_parent_stays_independent": true,
+  "historical_review_statuses": {
+    "merge:f27398ae0f9960b6": "accepted_restored",
+    "merge:3097c4197d91ff70": "accepted_restored"
+  },
+  "merged": 705,
+  "assigned_spikes": 17467,
+  "reopened_initial_evidence_window": 0,
+  "reopened_selected_evidence_window": 7,
+  "reopen_window_action": "Explicit Inspect evidence window dialog; not automatic restoration",
+  "reopened_parent_colors_preserved": true,
+  "reopened_lineage_correct": true,
+  "source_unchanged": true,
+  "success": true
+}
