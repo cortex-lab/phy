@@ -9,7 +9,6 @@ import cProfile
 import json
 import os
 import platform
-import resource
 import subprocess
 import sys
 from pathlib import Path
@@ -24,7 +23,7 @@ if str(ROOT) not in sys.path:
 from phy.apps.large_recording import curation
 from phy.apps.large_recording.prepare import prepare_large
 from phy.apps.large_recording.supervisor import BoundedSupervisor
-from tools.benchmark_long_recording import _make_source
+from tools.benchmark_long_recording import _make_source, _peak_rss_bytes
 
 
 def _journal(units, events, merges):
@@ -123,8 +122,9 @@ def run(args):
                     curation.project_assignments = measured_projection
                     wall, cpu = perf_counter(), process_time()
                     try:
+                        current = supervisor.cluster_meta.get('group', args.units - 1)
                         supervisor.label(
-                            'group', 'good' if repeat % 2 else 'mua', [args.units - 1]
+                            'group', 'mua' if current == 'good' else 'good', [args.units - 1]
                         )
                     finally:
                         curation.project_assignments = original
@@ -137,7 +137,13 @@ def run(args):
                     )
                 if args.profile:
                     profile = cProfile.Profile()
-                    profile.runcall(supervisor.label, 'group', 'good', [args.units - 1])
+                    current = supervisor.cluster_meta.get('group', args.units - 1)
+                    profile.runcall(
+                        supervisor.label,
+                        'group',
+                        'mua' if current == 'good' else 'good',
+                        [args.units - 1],
+                    )
                     profile.dump_stats(args.output / f'label-{length}.prof')
                 actual = session.assignments
                 expected = original(session.base_assignments, session.events, session.attributes)
@@ -153,9 +159,7 @@ def run(args):
                 del supervisor
     finally:
         curation.project_assignments = original
-        report['peak_rss_bytes'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (
-            1 if sys.platform == 'darwin' else 1024
-        )
+        report['peak_rss_bytes'], report['rss_method'] = _peak_rss_bytes()
         (args.output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
     return report
 

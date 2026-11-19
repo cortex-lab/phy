@@ -78,3 +78,20 @@ def test_failed_display_still_reports_unchanged_source(tmp_path, monkeypatch):
     assert report['omitted_local_cache_files'] == 1
     assert not (args.output / 'working-package' / '.phy').exists()
     assert (args.output / 'working-package' / '_phy_curation_manifest.json').read_text() == '{}'
+
+
+def test_seed_clears_every_membership_metadata_field(tmp_path):
+    from phy.apps.large_recording.curation import BoundedSession
+    from phy.apps.large_recording.prepare import prepare_large
+    from phy.apps.large_recording.tests.test_adapter import make_gui_sorting
+
+    params = make_gui_sorting(tmp_path / 'source')
+    (params.parent / 'cluster_snr.tsv').write_text(
+        'cluster_id\tsnr\n0\t10\n1\t20\n2\t30\n99\t40\n'
+    )
+    bounded = prepare_large(params, tmp_path / 'bounded', window_seconds=20, stratum_seconds=20)
+    profiler._seed(bounded, 3, 1)
+    with BoundedSession(bounded) as session:
+        target = session.events[0]['target']
+        assert session.metadata['snr'][target] is None
+        assert len(session.events) == 3

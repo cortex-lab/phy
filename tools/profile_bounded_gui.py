@@ -16,7 +16,6 @@ import importlib.metadata
 import json
 import os
 import platform
-import resource
 import select
 import subprocess
 import sys
@@ -93,7 +92,7 @@ def _seed(package, events, merges):
                         'operation': 'merge',
                         'parents': [target, ids[index + 1]],
                         'target': allocator,
-                        'metadata': {'group': None},
+                        'metadata': dict.fromkeys(set(session.metadata) | {'group'}),
                     }
                 )
                 target, allocator = allocator, allocator + 1
@@ -165,7 +164,8 @@ def _worker(args):
             raise RuntimeError('A requested default scientific view is missing.')
         report['gui_setup_seconds'] = time.perf_counter() - setup
         report['views'] = names
-        report['threading'] = not args.no_threading
+        report['threading'] = controller._enable_threading
+        report['requested_threading'] = not args.no_threading
         report['ready_definition'] = 'supervisor.block + processEvents + zero-delay Qt timer'
         report['versions'] = {
             name: importlib.metadata.version(name)
@@ -282,9 +282,9 @@ def _worker(args):
             report['status'] = 'failed'
         report['worker_wall_seconds'] = time.perf_counter() - wall
         report['worker_cpu_seconds'] = time.process_time() - cpu
-        report['peak_rss_bytes'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (
-            1 if sys.platform == 'darwin' else 1024
-        )
+        from tools.benchmark_long_recording import _peak_rss_bytes
+
+        report['peak_rss_bytes'], report['rss_method'] = _peak_rss_bytes()
         (output / 'worker-result.json').write_text(json.dumps(report, indent=2) + '\n')
         if cleanup_errors:
             raise RuntimeError('GUI cleanup failed; see worker-result.json.')
@@ -457,12 +457,10 @@ def run(args):
             report['source_hash_error'] = traceback.format_exc()
         report['total_wall_seconds'] = time.perf_counter() - started
         report['parent_cpu_seconds'] = time.process_time() - cpu
-        children = resource.getrusage(resource.RUSAGE_CHILDREN)
-        report['child_cpu_seconds'] = children.ru_utime + children.ru_stime
+        children = os.times()
+        report['child_cpu_seconds'] = children.children_user + children.children_system
         report['total_cpu_seconds'] = report['parent_cpu_seconds'] + report['child_cpu_seconds']
-        report['peak_child_rss_bytes'] = children.ru_maxrss * (
-            1 if sys.platform == 'darwin' else 1024
-        )
+        report['peak_child_rss_bytes'] = report.get('worker', {}).get('peak_rss_bytes')
         if not report['source_unchanged']:
             report['status'] = 'failed'
         (output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
