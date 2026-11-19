@@ -215,8 +215,8 @@ def test_snapshot_restore_and_noop_change_classification():
 
 def test_merge_session_validates_reference_and_state_roles():
     snapshot = NormalWorkflowSnapshot(CurationSelectionState(cluster_ids=(1,)))
-    with raises(ValueError, match='first staged'):
-        MergeSession(1, (2, 1), snapshot)
+    with raises(ValueError, match='staged cluster'):
+        MergeSession(1, (2, 3), snapshot)
     merge = MergeSession(1, (1, 2), snapshot)
     with raises(ValueError, match='Cluster selection'):
         CurationSelectionState(
@@ -232,6 +232,13 @@ def test_merge_session_validates_reference_and_state_roles():
             reference_id=1,
             merge=merge,
         )
+    moved = CurationSelectionState(
+        mode=WorkflowMode.MERGE,
+        merge=MergeSession(1, (2, 1), snapshot),
+    )
+    assert moved.presentation_order == (2, 1)
+    assert moved.reference_id == 1
+    assert moved.color_slots == (1, 2)
 
 
 def test_enter_and_cancel_merge_mode_restore_exact_entry_selection():
@@ -417,10 +424,55 @@ def test_merge_candidate_guards_reference_and_duplicate_membership():
         controller.remove_from_merge((2,))
     controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1, 2)))
     controller.enter_merge_mode()
-    with raises(ValueError, match='reference'):
-        controller.reorder_merge((1,), 1)
+    change = controller.reorder_merge((1,), 1)
+    assert change.after.merge_ids == (2, 1)
+    assert change.after.reference_id == 1
     with raises(ValueError, match='merge session'):
         controller.remove_from_merge((9,))
+
+
+def test_merge_row_order_is_independent_of_reference_and_palette():
+    entry = CurationSelectionState(cluster_ids=(1,), similar_ids=(2,))
+    controller = CurationSelectionController(entry)
+    controller.enter_merge_proposition('p', (1, 2, 3))
+    slots = controller.state.color_slots
+
+    change = controller.reorder_merge((1,), 2)
+    assert change.after.merge_ids == (2, 3, 1)
+    assert change.after.presentation_order == (2, 3, 1)
+    assert change.after.reference_id == 1
+    assert change.after.color_slots == slots
+    assert not change.reference_changed
+    assert not change.colors_changed
+    _mutate_similarity(controller, (4,))
+    assert controller.state.presentation_order == (2, 3, 1, 4)
+    controller.add_to_merge((4,), insertion=0)
+    assert controller.state.merge_ids == (4, 2, 3, 1)
+    controller.remove_from_merge((2,))
+    controller.deselect_from_merge((3,))
+    assert controller.state.merge_ids == (4, 1)
+    assert controller.state.reference_id == 1
+    assert controller.state.color_indices[1] == 0
+    assert controller.state.merge.proposition_id == 'p'
+    controller.remove_from_merge((1,))
+    assert controller.state.reference_id == 4
+    assert controller.state.color_indices[4] == 0
+    assert controller.state.merge_ids == (4,)
+    assert controller.cancel_merge_mode().after is entry
+
+
+def test_deselect_moved_reference_promotes_first_remaining_row():
+    controller = CurationSelectionController(CurationSelectionState(cluster_ids=(1, 2, 3)))
+    controller.enter_merge_mode()
+    controller.reorder_merge((1,), 2)
+    controller.deselect_from_merge((1,))
+    assert controller.state.merge_ids == (2, 3)
+    assert controller.state.reference_id == 2
+    assert controller.state.color_indices[2] == 0
+    with raises(ValueError, match='insertion'):
+        controller.reorder_merge((2,), -1)
+    with raises(ValueError, match='insertion'):
+        controller.add_to_merge((4,), insertion=3)
 
 
 def test_normal_role_transfers_accept_unselected_rows_and_promote_reference():

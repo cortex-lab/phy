@@ -59,8 +59,8 @@ class MergeSession:
     def __post_init__(self):
         ordered = _as_unique_ids(self.ordered_ids)
         reference = _as_id(self.reference_id)
-        if not ordered or ordered[0] != reference:
-            raise ValueError('The merge reference must be the first staged cluster.')
+        if reference not in ordered:
+            raise ValueError('The merge reference must belong to the staged clusters.')
         if self.proposition_id is not None and not self.proposition_id:
             raise ValueError('The merge proposition ID cannot be empty.')
         keys = tuple(self.proposition_ids) or (
@@ -119,7 +119,9 @@ class CurationSelectionState:
             effective = _ordered_union(merge.ordered_ids, similar)
             primary = merge.ordered_ids
         default_order = _ordered_union(
-            (reference,) if reference is not None else (), primary, similar
+            (reference,) if reference is not None and self.mode is WorkflowMode.NORMAL else (),
+            primary,
+            similar,
         )
         presentation = (
             default_order
@@ -130,7 +132,12 @@ class CurationSelectionState:
             raise ValueError('Presentation order must contain exactly the effective IDs.')
         if similar and reference is None:
             raise ValueError('Similarity selection requires a reference ID.')
-        if presentation and reference is not None and presentation[0] != reference:
+        if (
+            self.mode is WorkflowMode.NORMAL
+            and presentation
+            and reference is not None
+            and presentation[0] != reference
+        ):
             raise ValueError('The reference ID must occupy the first presentation slot.')
         if self.mode is WorkflowMode.MERGE:
             if presentation[: len(primary)] != primary:
@@ -138,7 +145,7 @@ class CurationSelectionState:
             if set(presentation[len(primary) :]) != set(similar):
                 raise ValueError('Merge presentation tail must contain the Similarity selection.')
         slots = (
-            presentation
+            _ordered_union((reference,) if reference is not None else (), presentation)
             if self.color_slots is None
             else tuple(
                 None if cluster_id is None else _as_id(cluster_id)
@@ -471,8 +478,8 @@ class CurationSelectionController:
             return self._apply(current)
         ids = list(current.merge_ids)
         insertion = len(ids) if insertion is None else insertion
-        if not 1 <= insertion <= len(ids):
-            raise ValueError('Merge insertion must follow the fixed reference.')
+        if not 0 <= insertion <= len(ids):
+            raise ValueError('Merge insertion must be within the staged rows.')
         ids[insertion:insertion] = new
         merge = MergeSession(
             current.reference_id,
@@ -502,7 +509,7 @@ class CurationSelectionController:
         merge_ids = tuple(i for i in current.merge_ids if i not in removed)
         if not merge_ids:
             raise ValueError('The last staged merge cluster cannot be transferred.')
-        reference = merge_ids[0]
+        reference = current.reference_id if current.reference_id in merge_ids else merge_ids[0]
         merge = MergeSession(
             reference,
             merge_ids,
@@ -586,7 +593,7 @@ class CurationSelectionController:
         )
         if not merge_ids:
             raise ValueError('The last staged merge cluster cannot be deselected.')
-        reference = merge_ids[0]
+        reference = current.reference_id if current.reference_id in merge_ids else merge_ids[0]
         merge = MergeSession(
             reference,
             merge_ids,
@@ -609,13 +616,11 @@ class CurationSelectionController:
         self._require_merge_mode()
         current = self._state
         moving = _as_unique_ids(cluster_ids)
-        if current.reference_id in moving:
-            raise ValueError('The merge reference cannot be reordered.')
         if not set(moving) <= set(current.merge_ids):
             raise ValueError('Reordered IDs must belong to the merge session.')
         remain = [i for i in current.merge_ids if i not in moving]
-        if not 1 <= insertion <= len(remain):
-            raise ValueError('Merge insertion must follow the fixed reference.')
+        if not 0 <= insertion <= len(remain):
+            raise ValueError('Merge insertion must be within the staged rows.')
         remain[insertion:insertion] = moving
         merge = MergeSession(
             current.reference_id,

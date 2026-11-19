@@ -48,3 +48,50 @@ def test_good_then_batch_at_end_saves_reopens_and_replays(qtbot, tmp_path):
         assert (params.parent / 'spike_clusters.npy').read_bytes() == source_bytes
     finally:
         reopened.close()
+
+
+def test_reordered_blue_proposition_preserves_colors_history_and_saved_membership(qtbot, tmp_path):
+    propositions = {
+        'format_version': '2',
+        'unit_ids': [0, 1, 2, 99],
+        'merges': [{'unit_ids': [0, 2]}],
+    }
+    params, controller = make_controller(tmp_path, propositions=propositions)
+    path = controller.dir_path
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    try:
+        supervisor = controller.supervisor
+        key = supervisor.merge_propositions.catalog.propositions[0].key
+        supervisor._activate_merge_proposition(supervisor.merge_propositions_view, key)
+        view = supervisor.merge_view
+        view.emit_cluster_drop(view, (0,), 2)
+        staged = supervisor.selection.snapshot()
+        assert staged.merge_ids == (2, 0)
+        assert staged.reference_id == 0
+        assert dict(staged.color_indices) == {0: 0, 2: 1}
+        supervisor.actions.merge()
+        supervisor.block()
+        target = supervisor.selected_clusters[0]
+        expected = supervisor.clustering.spike_clusters.copy()
+        supervisor.undo()
+        supervisor.block()
+        assert supervisor.selection.state == staged
+        supervisor.redo()
+        supervisor.block()
+        supervisor.save()
+        assert dict(controller.parent_inspection.lineage.colors(target)) == {0: 0, 2: 1}
+    finally:
+        gui.close()
+        controller.close()
+    reopened = TemplateController(dir_path=path, config_dir=tmp_path / 'config', plugins=[])
+    try:
+        np.testing.assert_array_equal(reopened.bounded_session.assignments, expected)
+        assert dict(reopened.parent_inspection.lineage.colors(target)) == {0: 0, 2: 1}
+        assert set(reopened.parent_inspection.lineage.parents(target)) == {0, 2}
+        replay = apply_curation(params, path, tmp_path / 'replay', batch_size=2)
+        np.testing.assert_array_equal(np.load(replay / 'spike_clusters.npy'), expected)
+        review = reopened.supervisor.merge_propositions.catalog.reviews[key]
+        assert review.result_unit_id == target
+        assert set(review.applied_unit_ids) == {0, 2}
+    finally:
+        reopened.close()
