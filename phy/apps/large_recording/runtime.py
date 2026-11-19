@@ -26,6 +26,9 @@ class Node:
     expression: dict
     count: object
 
+    def __post_init__(self):
+        object.__setattr__(self, 'expression', freeze(self.expression))
+
     def lineage(self):
         return (
             self.unit,
@@ -231,7 +234,7 @@ class SemanticState:
         return metadata, max(children) + 1
 
 
-@dataclass
+@dataclass(frozen=True)
 class Transition:
     event: dict
     before: SemanticState
@@ -239,6 +242,10 @@ class Transition:
     old_groups: dict
     new_groups: dict
     allocator: int
+
+    def __post_init__(self):
+        object.__setattr__(self, 'old_groups', freeze(self.old_groups))
+        object.__setattr__(self, 'new_groups', freeze(self.new_groups))
 
     @property
     def nbytes(self):

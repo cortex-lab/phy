@@ -1182,6 +1182,8 @@ class BoundedSession:
             return prepared
         # Own a detached event before retaining its immutable dictionaries in
         # expression/lineage nodes; caller mutation must never change committed state.
+        # Reject cyclic/non-JSON payloads before recursively freezing records.
+        _json_bytes(event)
         event = freeze(copy.deepcopy(event))
         semantic = self._runtime.advance(
             self, event, len(self.events), self.events, allocator=self.next_cluster_id

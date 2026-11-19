@@ -248,3 +248,16 @@ def test_history_budget_accounts_for_nested_metadata(tmp_path):
     finally:
         session.close()
         source.close()
+
+
+def test_cyclic_label_payload_is_rejected_before_freezing(tmp_path):
+    source, session = make_session(tmp_path)
+    try:
+        cyclic = []
+        cyclic.append(cyclic)
+        with pytest.raises(ValueError, match='Circular reference'):
+            session.record_label('notes', [0], cyclic)
+        assert not session.events
+    finally:
+        session.close()
+        source.close()

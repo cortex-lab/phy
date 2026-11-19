@@ -430,3 +430,9 @@ def test_membership_revision_skips_label_and_label_undo_expression_scan(
     f.session.membership_revision = object()
     monkeypatch.setattr(summary_service, 'membership_expressions', lambda *args: {1: 'branch'})
     assert f.service._refresh()
+
+
+def test_closed_summary_refresh_does_not_access_detached_session(controlled_service):
+    service = controlled_service.service
+    service.close()
+    assert not service._refresh()
