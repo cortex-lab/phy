@@ -18,6 +18,7 @@ from .curation import (
 from .file_copy import copy_source_file
 from .metadata import complete_schema, write_metadata
 from .parameters import rewrite_replay_params_bytes
+from .replay_program import AssignmentProgram
 from .source import PER_SPIKE, Source, _has_raw_paths, close_array, hash_file, publish_directory
 from .streaming import UnitRows, bounded_map, check_cancel, worker_count
 
@@ -207,15 +208,12 @@ def _apply_curation(
             (None, None) if has_split else _merge_mapping(source.unit_ids, session.events)
         )
         lookup = UnitRows(keys) if keys is not None else None
+        program = AssignmentProgram(source.unit_ids, session.events) if has_split else None
 
         def project(batch):
             check_cancel(cancel)
             values = batch['spike_clusters.npy']
-            projected = (
-                project_assignments(values, session.events, batch)
-                if has_split
-                else targets[lookup(values)]
-            )
+            projected = program.project(values, batch) if has_split else targets[lookup(values)]
             return batch['start'], batch['stop'], projected
 
         for start, stop, projected in bounded_map(project, source.iter_batches(), workers):
@@ -255,7 +253,16 @@ def _apply_curation(
         actual = curated.arrays['spike_clusters.npy'].reshape(-1)
 
         def verify(batch):
-            start, stop, expected_batch = project(batch)
+            check_cancel(cancel)
+            start, stop = batch['start'], batch['stop']
+            # Keep the sequential reference independent of the compiled writer.
+            # This validation is intentionally not replaced by a second call to
+            # the new compiler. Merge-only journals retain their existing fast map.
+            expected_batch = (
+                project_assignments(batch['spike_clusters.npy'], session.events, batch)
+                if has_split
+                else targets[lookup(batch['spike_clusters.npy'])]
+            )
             if not np.array_equal(actual[start:stop], expected_batch):
                 raise ValueError('Curated output assignments failed semantic replay verification.')
             return stop
