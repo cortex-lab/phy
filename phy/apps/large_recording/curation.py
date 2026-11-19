@@ -892,7 +892,6 @@ class BoundedSession:
         self.history_cache_bytes = getattr(self, 'history_cache_bytes', HISTORY_CACHE_BYTES)
         self._prepared = None
         self._catalog_cache = None
-        self.last_transition = None
         self.last_changed_groups = {}
 
     def validate_proposition_documents(self):
@@ -1129,7 +1128,6 @@ class BoundedSession:
             self._events = freeze(events)
             self.next_cluster_id = max(self.next_cluster_id, next_id)
             self._prepared = None
-            self.last_transition = None
             return
         # Eviction, deserialized history, and arbitrary externally supplied states
         # retain the independent replay path. Nothing is mutated until it succeeds.
@@ -1272,7 +1270,6 @@ class BoundedSession:
             _, discarded = self._transitions.popitem(last=False)
             self._transition_bytes -= discarded.nbytes
         self._prepared = None
-        self.last_transition = transition
         self.last_changed_groups = transition.new_groups
         return thaw(transition.event)
 

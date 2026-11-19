@@ -261,3 +261,26 @@ def test_cyclic_label_payload_is_rejected_before_freezing(tmp_path):
     finally:
         session.close()
         source.close()
+
+
+@pytest.mark.parametrize('budget', [0, 1])
+def test_evicted_transition_releases_previous_row_arrays(tmp_path, budget):
+    import gc
+    import weakref
+
+    source, session = make_session(tmp_path)
+    try:
+        session.history_cache_bytes = budget
+        old_rows = weakref.ref(session._assignment_groups[0])
+        event = session.preflight_merge([0, 1], 100)
+        transition = weakref.ref(session._prepared)
+        session._append(event)
+        gc.collect()
+        assert not session._transitions
+        assert session._transition_bytes == 0
+        assert transition() is None
+        assert old_rows() is None
+        assert not hasattr(session, 'last_transition')
+    finally:
+        session.close()
+        source.close()
