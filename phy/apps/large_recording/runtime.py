@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from ._immutable import freeze, retained_bytes, thaw
 from .curation import (
     POLICY,
     _integer,
@@ -58,6 +59,11 @@ class SemanticState:
     schema: dict
     membership_key: object
 
+    def __post_init__(self):
+        object.__setattr__(self, 'active', freeze(self.active))
+        object.__setattr__(self, 'metadata', freeze(self.metadata))
+        object.__setattr__(self, 'schema', freeze(self.schema))
+
     @classmethod
     def initial(cls, session):
         nodes = {
@@ -93,6 +99,14 @@ class SemanticState:
         from .live_summaries import _union
 
         operation = event.get('operation')
+        if operation not in (
+            'metadata_policy',
+            'merge',
+            'label',
+            'threshold_split',
+            'restore_parents',
+        ):
+            raise ValueError(f'Unsupported semantic operation: {operation!r}.')
         if operation == 'metadata_policy':
             # Migration is exceptional and must retain historical explicit-label intent.
             session._validate_event_capabilities([*prefix, event])
@@ -209,7 +223,7 @@ class SemanticState:
         expected = {field: dict.fromkeys(children) for field in set(self.metadata) | {'group'}}
         if resolved != expected:
             raise ValueError('Restored membership must clear producer metadata and quality.')
-        metadata = copy.deepcopy(self.metadata)
+        metadata = thaw(self.metadata)
         for values in metadata.values():
             values.pop(target, None)
         for field, values in resolved.items():
@@ -228,10 +242,26 @@ class Transition:
 
     @property
     def nbytes(self):
-        # Count retained row arrays conservatively, including shared buffers.
+        # Charge the full changed-node graph conservatively. Labels retain the
+        # same membership map, so their accounting never traverses lineage.
+        changed = set(self.old_groups) | set(self.new_groups)
+        nodes = [
+            state.active[unit]
+            for state in (self.before, self.after)
+            for unit in changed
+            if unit in state.active
+        ]
         return (
             4096
             + 256 * len(self.before.active)
+            + retained_bytes(
+                self.event,
+                self.before.metadata,
+                self.after.metadata,
+                self.before.schema,
+                self.after.schema,
+                *nodes,
+            )
             + sum(
                 rows.nbytes
                 for groups in (self.old_groups, self.new_groups)

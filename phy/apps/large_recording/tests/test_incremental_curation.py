@@ -160,3 +160,91 @@ def test_metadata_only_journal_has_constant_interpretation_scope(tmp_path, monke
     finally:
         session.close()
         source.close()
+
+
+def test_shared_journal_records_are_immutable_and_snapshots_detached(tmp_path):
+    source, session = make_session(tmp_path)
+    try:
+        session.record_merge([0, 1], 100)
+        state = session.journal_state()
+        with pytest.raises(TypeError, match='read-only'):
+            state['events'][0]['parents'][0] = 123456
+        with pytest.raises(TypeError, match='read-only'):
+            session.events.append({'operation': 'bad'})
+        with pytest.raises(AttributeError):
+            session.events = []
+        snapshot = session.snapshot()
+        snapshot['events'][0]['parents'][0] = 123456
+        with pytest.raises(ValueError, match='inactive'):
+            session.restore(snapshot)
+        assert session.events[0]['parents'] == [0, 1]
+        session.restore_journal(state)
+        assert session.metadata == session._runtime.metadata
+    finally:
+        session.close()
+        source.close()
+
+
+def test_restore_plan_expressions_are_detached_from_runtime(tmp_path):
+    from phy.apps.large_recording.tests.test_restore_parents import _package
+
+    _, session = _package(tmp_path)
+    try:
+        session.record_merge([0, 1], 100)
+        expressions = session.restore_parent_plan(100)[2]
+        expressions[0]['unit'] = 123456
+        assert session.restore_parent_plan(100)[2][0]['unit'] == 0
+        session.record_restore_parents(100, [101, 102], recursive=True)
+        assert set(session.assignments) == {2, 99, 101, 102}
+    finally:
+        session.close()
+
+
+def test_save_preserves_cached_prefix_and_explicit_snapshot_rebuilds_runtime(
+    tmp_path, monkeypatch
+):
+    from phy.apps.large_recording import curation
+
+    source, session = make_session(tmp_path)
+    original = curation.project_assignments
+    try:
+        baseline = session.snapshot()
+        before = session.journal_state()
+        session.record_merge([0, 1], 100)
+        after = session.journal_state()
+        event = session.events[-1]
+        session.save()
+        assert session.events[-1] is event
+
+        def forbid(*args, **kwargs):
+            pytest.fail('Saving discarded cached incremental history.')
+
+        monkeypatch.setattr(curation, 'project_assignments', forbid)
+        session.restore_journal(before)
+        session.restore_journal(after)
+        monkeypatch.setattr(curation, 'project_assignments', original)
+        session.save(**baseline)
+        assert set(session._runtime.active) == set(session.unit_ids)
+        assert not session.events
+        session.record_label('group', [0], 'mua')
+        session.record_merge([0, 2], 100)
+        expected = original(session.base_assignments, session.events, session.attributes)
+        np.testing.assert_array_equal(session.assignments, expected)
+    finally:
+        session.close()
+        source.close()
+
+
+def test_history_budget_accounts_for_nested_metadata(tmp_path):
+    source, session = make_session(tmp_path)
+    try:
+        session.history_cache_bytes = 64 * 1024
+        session.record_label('notes', [0], {'values': [0] * 100000})
+        for _ in range(3):
+            session.record_label('group', [0], 'good')
+        assert not session._transitions
+        assert session._transition_bytes == 0
+        assert session.metadata['notes'][0]['values'] == [0] * 100000
+    finally:
+        session.close()
+        source.close()

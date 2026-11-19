@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ._immutable import freeze, thaw
 from .metadata import POLICY, complete_schema, validate_schema
 from .source import _time_base, hash_json
 
@@ -819,7 +820,7 @@ class BoundedSession:
                 )
         self.assignments = np.asarray(self.base_assignments, dtype=np.int64).copy()
         self.metadata = copy.deepcopy(self.base_metadata)
-        self.events = []
+        self._events = freeze([])
         self.extra_documents = {}
         if 'proposition_documents' not in manifest and any(
             (self.path / name).exists() for name in ('curation.json', 'curation_review.json')
@@ -882,6 +883,7 @@ class BoundedSession:
         from .runtime import SemanticState
 
         self._runtime = SemanticState.from_session(self)
+        self.metadata = self._runtime.metadata
         self._assignment_groups = _spikes_per_cluster(self.assignments)
         for rows in self._assignment_groups.values():
             rows.flags.writeable = False
@@ -1042,7 +1044,7 @@ class BoundedSession:
             assignments, metadata, events, descriptor['next_cluster_id']
         )
         self.assignments, self.metadata = values, metadata
-        self.events = events
+        self._events = freeze(events)
         if 'metadata_policy' in descriptor and (
             descriptor['metadata_policy'] != self.metadata_policy
             or descriptor.get('metadata_schema') != self.effective_metadata_schema
@@ -1069,11 +1071,16 @@ class BoundedSession:
         }
         self.validate_proposition_documents()
 
+    @property
+    def events(self):
+        """Immutable JSON-compatible journal records, safe to share in history."""
+        return self._events
+
     def snapshot(self):
         return {
             'assignments': self.assignments.copy(),
-            'metadata': copy.deepcopy(self.metadata),
-            'events': copy.deepcopy(self.events),
+            'metadata': thaw(self.metadata),
+            'events': thaw(self.events),
             'next_cluster_id': self.next_cluster_id,
         }
 
@@ -1119,7 +1126,7 @@ class BoundedSession:
                 for cluster in changed
                 if cluster in self._assignment_groups
             }
-            self.events = events
+            self._events = freeze(events)
             self.next_cluster_id = max(self.next_cluster_id, next_id)
             self._prepared = None
             self.last_transition = None
@@ -1131,7 +1138,8 @@ class BoundedSession:
         if next_id < max(minimum, self.base_next_cluster_id):
             raise ValueError('History allocator collides with semantic journal IDs.')
         assignments = project_assignments(self.base_assignments, events, self.attributes)
-        self.assignments, self.metadata, self.events = assignments, metadata, events
+        self.assignments, self.metadata = assignments, metadata
+        self._events = freeze(events)
         self.next_cluster_id = max(self.next_cluster_id, next_id)
         self._reset_runtime()
         self.last_changed_groups = self._assignment_groups
@@ -1152,7 +1160,7 @@ class BoundedSession:
     def restore(self, snapshot):
         assignments, metadata, next_id = self._validated_state(**snapshot)
         self.assignments, self.metadata = assignments, metadata
-        self.events = copy.deepcopy(snapshot['events'])
+        self._events = freeze(snapshot['events'])
         self.next_cluster_id = next_id
         self._reset_runtime()
 
@@ -1174,7 +1182,7 @@ class BoundedSession:
             return prepared
         # Own a detached event before retaining its immutable dictionaries in
         # expression/lineage nodes; caller mutation must never change committed state.
-        event = copy.deepcopy(event)
+        event = freeze(copy.deepcopy(event))
         semantic = self._runtime.advance(
             self, event, len(self.events), self.events, allocator=self.next_cluster_id
         )
@@ -1254,7 +1262,7 @@ class BoundedSession:
     def _append(self, event):
         transition = self._prepare_event(event)
         self._apply_transition(transition)
-        self.events = self.events + [transition.event]
+        self._events = freeze(self.events + [transition.event])
         self.next_cluster_id = max(self.next_cluster_id, transition.after.next_id)
         self._transitions[id(transition.event)] = transition
         self._transition_bytes += transition.nbytes
@@ -1264,7 +1272,7 @@ class BoundedSession:
         self._prepared = None
         self.last_transition = transition
         self.last_changed_groups = transition.new_groups
-        return copy.deepcopy(transition.event)
+        return thaw(transition.event)
 
     def _require_capability(self, operation, predicate=None):
         if operation == 'threshold_split':
@@ -1472,7 +1480,7 @@ class BoundedSession:
                 {'unit': parent, 'event_index': created[parent]}
                 for parent in self.events[index]['parents']
             ]
-        return index, refs, [node.expression for node in nodes]
+        return index, refs, thaw([node.expression for node in nodes])
 
     def restore_parent_groups(self, target, *, recursive=False):
         """Resolve all parents, including leaves with no retained evidence.
@@ -1695,8 +1703,13 @@ class BoundedSession:
             shutil.rmtree(stage, ignore_errors=True)
             pointer_tmp.unlink(missing_ok=True)
             raise
-        self.assignments, self.metadata, self.events = values, metadata, copy.deepcopy(events)
+        same_prefix = events is self.events
+        self.assignments = values
+        self.metadata = self._runtime.metadata if same_prefix else metadata
         self.next_cluster_id, self.checkpoint_path = next_id, final
+        if not same_prefix:
+            self._events = freeze(events)
+            self._reset_runtime()
         self.extra_documents = documents
         self._expected_pointer = pointer
         return final
