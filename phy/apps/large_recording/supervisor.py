@@ -172,6 +172,9 @@ class BoundedSupervisor(Supervisor):
 
     def __init__(self, *args, session, **kwargs):
         self.session = session
+        self._bounded_table_revision = session.membership_revision
+        self._bounded_table_metadata = session.metadata
+        self._bounded_metadata_ids = set()
         self.policy = MutationPolicy()
         self.select_actions = None
         self.cluster_view = None
@@ -453,17 +456,61 @@ class BoundedSupervisor(Supervisor):
             )
             self._proposition_projection_key = key
 
+    def _cluster_metadata_changed(self, field, cluster_ids):
+        # Native metadata notifications still update filters, sorting, masking,
+        # selection, and plugin listeners synchronously. Retain their row scope
+        # for the final semantic refresh, including label undo/redo.
+        cluster_ids = list(cluster_ids)
+        self._bounded_metadata_ids.update(cluster_ids)
+        if self.gui is not None:
+            return super()._cluster_metadata_changed(field, cluster_ids)
+
+    def _metadata_refresh_ids(self):
+        changed = set(self._bounded_metadata_ids)
+        previous, current = self._bounded_table_metadata, self.session.metadata
+        for field in set(previous) | set(current):
+            before, after = previous.get(field, {}), current.get(field, {})
+            changed.update(
+                cluster
+                for cluster in set(before) | set(after)
+                if before.get(cluster) != after.get(cluster)
+            )
+        return sorted(changed & set(self.clustering.cluster_ids))
+
     def _refresh_bounded(self):
         self.parent_origins = self.session.restored_parent_ids
         if self.merge_propositions is not None:
             self._project_proposition_state()
             self._refresh_propositions()
         if self.gui is not None:
-            data = self.cluster_info
-            self.cluster_view.change(data)
-            self.similarity_view.change(data)
-            if self.merge_view is not None:
-                self.merge_view.change(data)
+            metadata_only = self._bounded_table_revision is self.session.membership_revision
+            data = (
+                [self.get_cluster_info(cluster) for cluster in self._metadata_refresh_ids()]
+                if metadata_only
+                else self.cluster_info
+            )
+            for view in (self.cluster_view, self.similarity_view, self.merge_view):
+                if view is None:
+                    continue
+                if metadata_only:
+                    patches = []
+                    for row in data:
+                        previous = view.get(row['id'])
+                        if previous is None:
+                            continue
+                        patch = {
+                            key: value
+                            for key, value in row.items()
+                            if key not in previous or previous[key] != value
+                        }
+                        if patch:
+                            patches.append({'id': row['id'], **patch})
+                    view.change(patches)
+                else:
+                    view.change(data)
+        self._bounded_table_revision = self.session.membership_revision
+        self._bounded_table_metadata = self.session.metadata
+        self._bounded_metadata_ids.clear()
         emit('bounded_state_changed', self)
 
     def _capture(self):

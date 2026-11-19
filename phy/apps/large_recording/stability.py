@@ -40,6 +40,10 @@ class UnitStabilityView(ManualClusteringView):
         self._selected_summaries = OrderedDict()
         self._common_data = None
         self._attaching = False
+        self._bounded_membership_dirty = False
+        self._bounded_revision = getattr(
+            getattr(controller, 'bounded_session', None), 'membership_revision', None
+        )
         self._footer = self.canvas.figure.text(0.12, 0.025, '', fontsize=8)
 
     def _array(self, name):
@@ -594,12 +598,27 @@ class UnitStabilityView(ManualClusteringView):
 
         @connect(event='bounded_state_changed', sender=self.controller.supervisor)
         def on_state(sender):
+            session = getattr(self.controller, 'bounded_session', None)
+            revision = getattr(session, 'membership_revision', None)
+            if (
+                revision is not None
+                and revision is self._bounded_revision
+                and not self._bounded_membership_dirty
+            ):
+                return
+            self._bounded_revision = revision
+            self._bounded_membership_dirty = False
             self._invalidate()
             if not self._closed:
                 self.plot()
 
         @connect(event='cluster', sender=self.controller.supervisor)
         def on_cluster(sender, up):
+            if up.description.startswith('metadata_'):
+                return
+            # Native notifications precede semantic commit. A later exception
+            # may restore the old token; its rollback still needs a refresh.
+            self._bounded_membership_dirty = True
             self._invalidate()
             # Supervisor selection callbacks may precede this listener. Refresh
             # ordinary data after invalidation even if the selected IDs stayed put.
