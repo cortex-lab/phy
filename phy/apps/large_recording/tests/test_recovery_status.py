@@ -209,6 +209,38 @@ def test_no_checkpoint_is_explicit_and_preferences_restore(status):
         restored.dispose()
 
 
+def test_recovery_warnings_and_startup_failures_are_visible(status):
+    widget, controller, _, _ = status
+    controller.recovery.update(warning='Another session saved; reopen before checkpointing.')
+    assert 'Draft needs attention' in widget.label.text()
+    assert 'Another session saved' in widget.label.toolTip()
+    controller.recovery.update(warning=None, startup_error='Recovery discovery failed: disk error')
+    assert 'Protection failed' in widget.label.text()
+    assert 'disk error' in widget.label.toolTip()
+
+
+def test_undo_to_checkpoint_restarts_reminder_at_the_next_edit(status):
+    widget, controller, clock, _ = status
+    _edit(controller, clock)
+    clock.advance(901)
+    widget._tick()
+    assert widget.save_button.property('checkpointReminder')
+    # Undo may return to the saved state without changing the checkpoint stamp.
+    controller.supervisor.dirty = False
+    controller.recovery.update(current_revision=2)
+    assert not widget.save_button.property('checkpointReminder')
+    clock.advance(5000)
+    controller.supervisor.dirty = True
+    controller.recovery.update(current_revision=3)
+    assert not widget.save_button.property('checkpointReminder')
+    clock.advance(899)
+    widget._tick()
+    assert not widget.save_button.property('checkpointReminder')
+    clock.advance(2)
+    widget._tick()
+    assert widget.save_button.property('checkpointReminder')
+
+
 def test_cancelled_close_keeps_status_active_and_disposal_disconnects(status):
     widget, controller, clock, gui = status
 

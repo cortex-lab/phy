@@ -143,6 +143,7 @@ class CheckpointStatus(QWidget):
                     'Protecting draft…',
                     'Protection failed',
                     'Draft protection ready',
+                    'Draft needs attention',
                     'Draft protection off',
                     'Checkpoint failed',
                 )
@@ -212,8 +213,10 @@ class CheckpointStatus(QWidget):
         state = status.get('state')
         if not enabled or state in ('disabled', 'closed'):
             protection = 'Draft protection off'
-        elif state == 'error' or status.get('error'):
+        elif state == 'error' or status.get('error') or status.get('startup_error'):
             protection = 'Protection failed'
+        elif status.get('warning'):
+            protection = 'Draft needs attention'
         elif state == 'protected' and revision == status.get('protected_revision'):
             protection = 'Draft protected ✓'
         elif state in ('pending', 'saving') or revision != status.get('protected_revision'):
@@ -237,7 +240,12 @@ class CheckpointStatus(QWidget):
             except (OverflowError, OSError, ValueError):
                 stamp = str(protected_at)
             tooltip += f' Last confirmed draft protection: {stamp}.'
-        error = self._checkpoint_error or status.get('error')
+        error = (
+            self._checkpoint_error
+            or status.get('error')
+            or status.get('startup_error')
+            or status.get('warning')
+        )
         if error:
             tooltip += f' {str(error)[:2048]}'
         self.label.setToolTip(tooltip)

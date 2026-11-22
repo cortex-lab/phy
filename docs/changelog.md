@@ -13,6 +13,14 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Bounded curation protects unsaved semantic edits in background recovery drafts,
+  separate from validated manual checkpoints. A fixed status-bar indicator shows
+  confirmed protection and checkpoint age; a passive Save checkpoint reminder
+  highlights after 15 minutes of unsaved work, with interval, snooze and disable
+  controls. Disabling reminders leaves draft protection active.
+- Sampled correlogram axis labels identify active pending SLAY suggestions with
+  matching colors and a compact legend. Overlapping suggestions retain their
+  membership tooltips; trace colors keep their existing meaning.
 - Sampled Correlogram View can exclude near-zero spike pairs before binning,
   independently for auto- (`D`) and cross-correlograms (`Shift+D`). The exclusion
   half-width defaults to 0.3 ms with both switches off. This changes displayed

@@ -259,3 +259,37 @@ The target includes lint and formatting checks. Strict `make doc-check` and
 `uv build` passed. The eight UI/provider tests present during the real
 Xvfb/xcb run passed; the additional live-membership oracle test also passes in
 the full suite. Master remains at `306667e4`; this follow-up is PR1428 only.
+
+
+### November 22 requests: recovery, annotations and RP investigation
+
+The three PDFs downloaded on MBA were fetched read-only and retained with
+SHA256 provenance under `phy-data/carl/feedback-2026-11-22`. The deduplication
+request matches the existing sampled pair-exclusion feature. SLAY's requested
+axis-label grouping is implemented separately from trace color semantics.
+
+The RP investigation is an external prototype, not a shipped estimator. Its
+12 tests establish aligned uint32 sample-offset encoding, authenticated paired
+chunks, independent iterator cursors, 64-bit absolute clocks, and rejection of
+inconsistent metadata. A five-million-row synthetic warm-cache trial added
+20 MB of offsets to 30 MB of base records. It built in 0.153 seconds and read,
+authenticated, decoded and oracle-compared in 0.088 seconds. These timings do
+not measure deduplication, RP estimation, cold storage, or Carl's 6.75-billion-
+spike recording. The real fixture's base record is five bytes rather than the
+synthetic fixture's six; neither existing store was rewritten.
+
+Two small counterexamples demonstrate unresolved producer conventions. With
+spikes at samples 995 and 1005 and window [0,1000), attributing a pair to its
+earlier bin counts a violation that a both-endpoints-inside rule excludes.
+With spikes at 996 and 1004, amplitudes 1 and 2, and exclusion radius 9,
+global amplitude-greedy deduplication leaves no spike inside that window,
+whereas window-local deduplication retains one. Merged-parent violation counts
+are also nonadditive. A display-only pair mask cannot implement this metric.
+
+The next RP gate is the exact `phytastic` repository and commit used for the
+figures, or its `export.py` and `rp_windows.py`, together with SpikeInterface
+and DARTsort versions. Scoped local/MBA and connected-source searches did not
+locate these files; no request was sent. The proposed next step is an independent
+small-data oracle against that producer before implementing an optional exact-
+time sidecar, full-train deduplication and a background RP panel. Existing raw
+rate/count summaries must retain their definitions.

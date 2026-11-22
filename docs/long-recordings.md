@@ -317,6 +317,12 @@ For exact pair counts, each unit may have at most 46,340 spikes in an evidence
 window; the view reports an error for a larger per-unit window. Prepare shorter
 windows if this limit is reached.
 
+When pending SLAY suggestions are active, sampled correlogram axis IDs use the
+suggestions' colors. The legend identifies current pending groups; an asterisk
+marks IDs belonging to overlapping groups, with full membership in the tooltip.
+These annotations update without recomputing the correlograms. Waveform and
+correlogram trace colors retain their existing meaning.
+
 #### Excluding near-zero pairs
 
 In **Sampled Correlogram View**, use **Set exclusion zone** to set the half-width
@@ -413,6 +419,29 @@ ordinary curation (see [curation provenance](quickstart.md#curation-provenance))
 A failed checkpoint save does not append a successful-save record. This history
 is separate from the immutable checkpoint and leaves the original source alone.
 Direct scripting calls to `BoundedSession.save()` do not create GUI session records.
+
+### Recovery drafts and checkpoint reminders
+
+The bounded GUI protects unsaved curation in background recovery drafts. Drafts
+contain semantic edits and review decisions, rather than a fresh copy of every
+spike assignment. They live in local application data, separately from the
+dataset's validated checkpoint. `apply-curation` uses the checkpoint saved with
+**Save** or `Ctrl+S`; it does not consume recovery drafts.
+
+The bottom-right status area shows whether the latest working revision has
+confirmed draft protection, whether protection is pending, or whether an error
+needs attention. A protected draft is a local recovery aid, not a replacement
+for backing up the dataset and its saved checkpoints. If Phy finds a compatible
+unfinished draft on reopening, it offers recovery without replacing the saved
+checkpoint. Recovered work remains unsaved until you save a checkpoint.
+
+After 15 minutes of unsaved work, **Save checkpoint** gains a steady amber
+background once input pauses. The reminder stays outside the plots, never
+takes focus, and never opens a dialog or starts a checkpoint save automatically.
+Its adjacent options menu offers 5-, 15- and 30-minute intervals, **Remind me
+later**, reminder disabling, and retrying draft protection. Turning reminders
+off leaves background protection active. Saving remains an explicit action
+when you reach a useful checkpoint.
 
 The Evidence Amplitude View includes the full finite range of the selected
 units' displayed amplitudes, with padding, in both overview and window modes.
