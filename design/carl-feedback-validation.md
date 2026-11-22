@@ -345,3 +345,19 @@ rerun under native xcb after that refinement and passed; lint, formatting and
 the package build passed again. Strict `make doc-check` passed for the published
 documentation. The wheel includes all recovery and proposition-annotation
 modules. Master remains `306667e4`; these changes target the existing PR1428.
+
+The first remote run on `3ea319eb` reproduced the known native shutdown failure:
+Ubuntu 3.11/3.12 passed all 1,760 tests and then exited 139; Windows 3.11 passed
+all 1,750 platform-eligible tests and then exited 1. No assertion failures were
+observed. Codespell, documentation, integration and the other six matrix jobs
+passed. This run is explicitly not a clean CI result.
+
+A feature-free QtCore subprocess experiment with SIP 12.17.0 crashed at all
+three wrapper counts (256, 1,024 and 4,096), with no Phy imports or curation
+data. The already-prepared dependency fix from `a8cf001d` was therefore carried
+onto PR1428 as a separate follow-up: require `PyQt5-sip>=12.20.1,<13` and update
+only that locked runtime. This does not merge PR1442 or change master. All three
+shutdown regression cases pass on 12.20.1; lint, formatting, strict docs and
+package build pass again. The final gate uses the exact combined CI pytest
+command and requires a normal process exit, rather than suppressing shutdown or
+splitting the test process to avoid the native failure.
