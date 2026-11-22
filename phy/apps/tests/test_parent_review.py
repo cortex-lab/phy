@@ -877,12 +877,14 @@ def test_parent_review_can_reopen_after_canceled_dirty_main_close(qtbot, tempdir
         metadata = supervisor.get_labels('group').copy()
         inspection.show(target)
         qtbot.wait(20)
+        review_window = inspection.window
         with monkeypatch.context() as patcher:
             patcher.setattr('phy.apps.base._prompt_save', lambda: 'cancel')
             assert not gui.close()
         assert gui.isVisible() and not gui._closed
-        assert inspection.window is None
+        assert inspection.window is review_window
         assert inspection._gui is gui
+        inspection.close_review()
         inspection.show_selected()
         qtbot.wait(20)
         assert inspection.host_gui is gui
@@ -895,5 +897,7 @@ def test_parent_review_can_reopen_after_canceled_dirty_main_close(qtbot, tempdir
         assert supervisor.is_dirty()
     finally:
         inspection.close_review()
-        gui.close()
+        with monkeypatch.context() as patcher:
+            patcher.setattr('phy.apps.base._prompt_save', lambda: 'close')
+            gui.close()
         controller.close()

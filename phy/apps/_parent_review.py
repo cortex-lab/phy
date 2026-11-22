@@ -718,7 +718,7 @@ class ParentInspection:
 
         self._context_menu = ContextMenu(gui)
         table.table_view.viewport().installEventFilter(self._context_menu)
-        connect(self._on_gui_closed, event='close', sender=gui)
+        connect(self._on_gui_closed, event='close_accepted', sender=gui)
         gui.view_actions.add(
             self.show_selected,
             name='show_parents',
@@ -937,8 +937,7 @@ class ParentInspection:
             self._closing = False
 
     def _on_gui_closed(self, sender):
-        # ``close`` is a request: a later save prompt may cancel it. Restore the
-        # workspace before geometry saving, retaining the live host attachment.
+        # Restore the workspace before geometry saving, after close vetoes.
         self.close_review()
 
     def close(self):

@@ -209,9 +209,6 @@ class ParentWorkspace(QObject):
     def eventFilter(self, obj, event):
         if not self.active:
             return False
-        if obj is self.host and event.type() == QEvent.Close:
-            self.on_back()  # Before GUI.closeEvent can save the temporary dock state.
-            return False
         if event.type() not in (QEvent.KeyPress, QEvent.ShortcutOverride):
             return False
         current = obj

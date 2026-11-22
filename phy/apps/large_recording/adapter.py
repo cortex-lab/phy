@@ -682,6 +682,7 @@ class BoundedTemplateController(TemplateController):
         from phy.gui.gui import _prompt_save
 
         from .recovery_gui import wait_operation
+        from .recovery_status import attach_checkpoint_status
         from .summary_service import LiveSummaryService
 
         do_prompt_save = kwargs.get('do_prompt_save', True)
@@ -718,6 +719,7 @@ class BoundedTemplateController(TemplateController):
             unconnect(recovery_close, recovery_closed)
 
         self.recovery.start()
+        attach_checkpoint_status(self, gui)
         gui.setWindowTitle(
             f'phy — Bounded evidence ({self.model.n_spikes:,} / '
             f'{self.bounded_session.manifest["num_spikes"]:,} spikes)'

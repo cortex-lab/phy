@@ -1168,6 +1168,7 @@ A Qt main window containing docking widgets. This class derives from `QMainWindo
 **Events**
 
 close(gui)
+close_accepted(gui)  # Capture state after all vetoes, before state.save().
 closed(gui)  # Emitted only after closure is accepted.
 show(gui)
 close_view(view, gui)

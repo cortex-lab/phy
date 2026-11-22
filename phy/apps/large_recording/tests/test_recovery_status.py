@@ -274,3 +274,35 @@ def test_cancelled_close_keeps_status_active_and_disposal_disconnects(status):
     last = widget.label.text()
     controller.recovery.update(state='error', error='Late worker result')
     assert widget.label.text() == last
+
+
+def test_real_recovery_dirty_undo_clean_dirty_restarts_reminder(qtbot, tmp_path):
+    from phy.apps.large_recording.tests.test_adapter import make_controller
+
+    _, controller = make_controller(tmp_path)
+    gui = controller.create_gui(default_views=[], do_prompt_save=False, offer_recovery=False)
+    widget = gui._checkpoint_status
+    clock = Clock()
+    widget._timer.stop()
+    widget._clock, widget._wall_clock = clock.monotonic, clock.time
+    widget._last_input = clock.value
+    supervisor = controller.supervisor
+    try:
+        assert not supervisor.is_dirty()
+        supervisor.label('group', 'mua', [0])
+        assert supervisor.is_dirty()
+        clock.advance(901)
+        widget._tick()
+        assert widget.save_button.property('checkpointReminder')
+        supervisor.undo()
+        assert not supervisor.is_dirty()
+        assert not widget.save_button.property('checkpointReminder')
+        clock.advance(5000)
+        supervisor.label('group', 'good', [0])
+        assert not widget.save_button.property('checkpointReminder')
+        clock.advance(901)
+        widget._tick()
+        assert widget.save_button.property('checkpointReminder')
+    finally:
+        gui.close()
+        controller.close()
