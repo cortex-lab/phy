@@ -43,6 +43,12 @@ class BoundedTemplateController(TemplateController):
             raise ValueError(
                 'Open bounded packages from their directory, without a supplied model.'
             )
+        self._recovery_enabled = kwargs.pop('recovery_enabled', True)
+        self._recovery_root = kwargs.pop('recovery_root', None)
+        if self._recovery_root is None and kwargs.get('config_dir') is not None:
+            # Explicit controller configurations keep their recovery data local
+            # to that configuration; the normal default is persistent app data.
+            self._recovery_root = Path(kwargs['config_dir']) / 'recovery'
         self.bounded_session = BoundedSession(dir_path)
         self.evidence_window_index = 0
         kwargs['enable_threading'] = False
@@ -74,6 +80,9 @@ class BoundedTemplateController(TemplateController):
         return
 
     def close(self, close_model=True):
+        recovery = getattr(self, 'recovery', None)
+        if recovery is not None:
+            recovery.close()
         actions = getattr(self, '_summary_store_actions', None)
         if actions is not None:
             actions.close()
@@ -167,6 +176,12 @@ class BoundedTemplateController(TemplateController):
         )
         self.supervisor._validate_native()
         connect(self._on_curation_saved, event='curation_saved', sender=self.supervisor)
+        from .recovery_gui import RecoveryCoordinator
+
+        self.recovery = RecoveryCoordinator(
+            self, root=self._recovery_root, enabled=self._recovery_enabled
+        )
+        self.supervisor.recovery = self.recovery
 
     def _load_merge_propositions(self):
         session = self.bounded_session
@@ -664,11 +679,45 @@ class BoundedTemplateController(TemplateController):
                 view.update_status()
 
     def create_gui(self, *args, **kwargs):
+        from phy.gui.gui import _prompt_save
+
+        from .recovery_gui import wait_operation
         from .summary_service import LiveSummaryService
 
+        do_prompt_save = kwargs.get('do_prompt_save', True)
+        offer_recovery = kwargs.pop('offer_recovery', do_prompt_save)
+        if offer_recovery:
+            self.recovery.offer_startup()
+        # Only bounded mode supplies this close handler; ordinary saving and
+        # prompts remain untouched. Cancellation must leave protection running.
+        kwargs['do_prompt_save'] = False
         if getattr(self, '_live_summaries', None) is None:
             self._live_summaries = LiveSummaryService(self.bounded_session)
         gui = super().create_gui(*args, **kwargs)
+
+        @connect(event='close', sender=gui)
+        def recovery_close(sender):
+            if do_prompt_save and self.supervisor.is_dirty():
+                choice = _prompt_save()
+                if choice == 'cancel':
+                    return False
+                try:
+                    if choice == 'save':
+                        self.supervisor.save()
+                        if self.supervisor.is_dirty():
+                            return False
+                    else:
+                        wait_operation(self.recovery.discard(), 'Discarding recovery draft…', gui)
+                except Exception:
+                    # Status contains the error; preserve the GUI and live work.
+                    return False
+
+        @connect(event='closed', sender=gui)
+        def recovery_closed(sender):
+            self.recovery.suspend()
+            unconnect(recovery_close, recovery_closed)
+
+        self.recovery.start()
         gui.setWindowTitle(
             f'phy — Bounded evidence ({self.model.n_spikes:,} / '
             f'{self.bounded_session.manifest["num_spikes"]:,} spikes)'

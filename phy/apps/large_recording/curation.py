@@ -1622,6 +1622,7 @@ class BoundedSession:
     ):
         """Validate, flush a generation, then atomically replace its commit pointer."""
         self.validate_proposition_documents()
+        live_prefix = self.events if events is None else None
         assignments = self.assignments if assignments is None else assignments
         metadata = self.metadata if metadata is None else metadata
         events = self.events if events is None else events
@@ -1658,9 +1659,13 @@ class BoundedSession:
                     'Bounded curation checkpoint changed in another session; '
                     'reopen the dataset before saving to avoid losing its changes.'
                 )
-            return self._save_generation(generations, values, metadata, events, next_id, documents)
+            return self._save_generation(
+                generations, values, metadata, events, next_id, documents, live_prefix=live_prefix
+            )
 
-    def _save_generation(self, generations, values, metadata, events, next_id, documents):
+    def _save_generation(
+        self, generations, values, metadata, events, next_id, documents, live_prefix=None
+    ):
         root = generations.parent
         identifier = uuid.uuid4().hex
         stage = generations / f'.{identifier}.tmp'
@@ -1702,13 +1707,18 @@ class BoundedSession:
             shutil.rmtree(stage, ignore_errors=True)
             pointer_tmp.unlink(missing_ok=True)
             raise
+        newer_edit = live_prefix is not None and self.events is not live_prefix
         same_prefix = events is self.events
-        self.assignments = values
-        self.metadata = self._runtime.metadata if same_prefix else metadata
-        self.next_cluster_id, self.checkpoint_path = next_id, final
-        if not same_prefix:
-            self._events = freeze(events)
-            self._reset_runtime()
+        if not newer_edit:
+            self.assignments = values
+            self.metadata = self._runtime.metadata if same_prefix else metadata
+            self.next_cluster_id = next_id
+            if not same_prefix:
+                self._events = freeze(events)
+                self._reset_runtime()
+        else:
+            self.next_cluster_id = max(self.next_cluster_id, next_id)
+        self.checkpoint_path = final
         self.extra_documents = documents
         self._expected_pointer = pointer
         return final

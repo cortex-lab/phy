@@ -220,6 +220,7 @@ class BoundedSupervisor(Supervisor):
         super().__init__(*args, **kwargs)
         self._metadata_independent_metrics['n_spikes'] = self.cluster_metrics['n_spikes']
         self.session_history = SessionHistory(session)
+        self._saved_data_events = tuple(session.events)
         self.clustering._bounded_transition = self._native_undo_transition
         self.parent_origins.update(session.restored_parent_ids)
         self._proposition_projection_key = None
@@ -240,8 +241,34 @@ class BoundedSupervisor(Supervisor):
             return None
         return transition
 
+    def recovery_token(self):
+        reviews = (
+            tuple(self.merge_propositions.catalog.reviews.items())
+            if self.merge_propositions is not None
+            else self.session.extra_documents.get('curation_review.json')
+        )
+        return (
+            tuple(self.session.events),
+            max(self.session.next_cluster_id, self.clustering.new_cluster_id()),
+            reviews,
+        )
+
     @contextmanager
     def _transaction(self):
+        self._recovery_depth = getattr(self, '_recovery_depth', 0) + 1
+        try:
+            with self._transaction_state():
+                yield
+        finally:
+            self._recovery_depth -= 1
+            recovery = getattr(self, 'recovery', None)
+            if self._recovery_depth == 0 and recovery is not None:
+                # Failed commands may consume allocator IDs, but their provisional
+                # assignments/reviews have already been rolled back at this point.
+                recovery.observe()
+
+    @contextmanager
+    def _transaction_state(self):
         """Roll native and semantic state back if an observer or command fails."""
         clustering = self.clustering
         arrays = (
@@ -567,7 +594,7 @@ class BoundedSupervisor(Supervisor):
         self._validate_native()
         self.session_history.capture()
         self._global_history.add_to_current_action(self.session_history)
-        self._is_dirty = True
+        self._is_dirty = tuple(self.session.events) != self._saved_data_events
         self._update_save_feedback()
         self._synchronize_metadata()
         self._refresh_bounded()
@@ -763,6 +790,67 @@ class BoundedSupervisor(Supervisor):
         return out
 
     @semantic_command
+    def _reject_merge_proposition(self, sender, key):
+        return super()._reject_merge_proposition(sender, key)
+
+    @semantic_command
+    def _reset_merge_proposition(self, sender, key):
+        return super()._reset_merge_proposition(sender, key)
+
+    def adopt_recovery(self, recovered):
+        """Adopt a fully prepared draft before attaching GUI views; new undo baseline."""
+        from phy.cluster._history import CurationHistoryEntry
+        from phy.cluster._propositions import decode_review_mapping
+        from phy.cluster._selection import CurationSelectionController
+
+        if self.gui is not None and not self.gui._closed:
+            raise RuntimeError('Restore a recovery draft before creating curation views.')
+        if (
+            recovered.assignments is not recovered._certified_assignments
+            or recovered._recovery_clustering._spike_clusters is not recovered._certified_native
+        ):
+            raise ValueError('Recovered assignment certification changed before adoption.')
+        session = self.session
+        for name in (
+            'assignments',
+            'metadata',
+            '_events',
+            'next_cluster_id',
+            'extra_documents',
+            '_runtime',
+            '_assignment_groups',
+            '_transitions',
+            '_transition_bytes',
+            '_prepared',
+            '_catalog_cache',
+            'last_changed_groups',
+        ):
+            setattr(session, name, getattr(recovered, name))
+        native = recovered._recovery_clustering
+        for name, value in vars(native).items():
+            if name != 'policy':
+                setattr(self.clustering, name, value)
+        self.clustering._bounded_transition = self._native_undo_transition
+        self.cluster_meta._undo_stack.clear()
+        self._synchronize_metadata()
+        self._global_history.clear(CurationHistoryEntry())
+        self.selection = CurationSelectionController()
+        self.session_history = SessionHistory(session)
+        if self.merge_propositions is not None:
+            _, reviews = decode_review_mapping(session.extra_documents['curation_review.json'])
+            catalog = self.merge_propositions.catalog._replace(reviews=reviews)
+            self.merge_propositions.restore(catalog)
+            self.merge_propositions._history.clear(catalog)
+        self.parent_origins = session.restored_parent_ids
+        self._proposition_projection_key = None
+        self._project_proposition_state()
+        self._bounded_table_revision = session.membership_revision
+        self._bounded_table_metadata = session.metadata
+        self._bounded_metadata_ids.clear()
+        self._is_dirty = True
+        self._validate_native()
+
+    @semantic_command
     def undo(self):
         with self.policy.command():
             super().undo()
@@ -780,13 +868,29 @@ class BoundedSupervisor(Supervisor):
         self.session.next_cluster_id = max(
             self.session.next_cluster_id, self.clustering.new_cluster_id()
         )
-        self._is_dirty = True
+        self._is_dirty = tuple(self.session.events) != self._saved_data_events
         self._update_save_feedback()
         self._synchronize_metadata()
         self._refresh_bounded()
 
     def save(self):
+        recovery = getattr(self, 'recovery', None)
+        token = recovery.checkpoint_token() if recovery is not None else None
+        try:
+            self._save_checkpoint()
+        except Exception as error:
+            if recovery is not None:
+                recovery.checkpoint_failed(error)
+            raise
+        if recovery is not None:
+            recovery.checkpoint_saved(token)
+
+    def _save_checkpoint(self):
         self._settle_selection()
+        saved_state = self.recovery_token()
+        saved_catalog = (
+            self.merge_propositions.catalog if self.merge_propositions is not None else None
+        )
         self._validate_native(full=True)
         self.session.validate_proposition_documents()
         documents = None
@@ -805,8 +909,11 @@ class BoundedSupervisor(Supervisor):
             next_cluster_id=max(self.session.next_cluster_id, self.clustering.new_cluster_id()),
             extra_documents=documents,
         )
-        if self.merge_propositions is not None:
-            self.merge_propositions.mark_saved()
-        self._is_dirty = False
-        self._update_save_feedback(saved=True)
+        if saved_catalog is not None:
+            self.merge_propositions._saved_reviews = self.merge_propositions._review_fingerprint(
+                saved_catalog
+            )
+        self._saved_data_events = saved_state[0]
+        self._is_dirty = tuple(self.session.events) != self._saved_data_events
+        self._update_save_feedback(saved=not self.is_dirty())
         emit('curation_saved', self)
