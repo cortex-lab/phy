@@ -249,3 +249,99 @@ def test_private_permissions_and_new_ancestor_directory_sync(tmp_path, monkeypat
         store.close()
         session.close()
         source.close()
+
+
+def test_retirement_prunes_only_verified_old_heads_and_locks_foreign_owner(tmp_path):
+    source, session = make_session(tmp_path)
+    store = RecoveryStore(session, tmp_path / 'recovery')
+    other = RecoveryStore(session, tmp_path / 'recovery')
+    try:
+        store.write(payload(session, store, 1))
+        store.write(payload(session, store, 3))
+        with pytest.raises(OSError):
+            other.retire(1, branch=store.branch)
+        assert not (store.branch / 'retired.json').exists()
+        store.retire(1)
+        heads = list(store.branch.glob('head-*.json'))
+        assert len(heads) == 1
+        assert json.loads(heads[0].read_text())['payload']['revision'] == 3
+        # Unknown bytes must never be garbage-collected, even after retirement.
+        (store.branch / 'head-0.json').write_text('{unknown')
+        store.retire(3)
+        assert (store.branch / 'head-0.json').read_text() == '{unknown'
+        assert not (store.branch / 'head-1.json').exists()
+    finally:
+        store.close()
+        other.close()
+        session.close()
+        source.close()
+
+
+def test_exit_after_retirement_before_pruning_cannot_resurrect_draft(tmp_path):
+    source, session = make_session(tmp_path)
+    store = RecoveryStore(session, tmp_path / 'recovery')
+    store.write(payload(session, store, 1))
+    branch = store.branch
+    store.close()
+    script = """
+import os, sys
+from phy.apps.large_recording.recovery import RecoveryStore
+from phy.apps.large_recording.curation import BoundedSession
+session = BoundedSession(sys.argv[1])
+store = RecoveryStore(session, sys.argv[2], session_id=sys.argv[3])
+store._prune_retired = lambda *args: os._exit(93)
+store.retire(1)
+"""
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                '-c',
+                script,
+                str(session.path),
+                str(tmp_path / 'recovery'),
+                store.session_id,
+            ],
+            timeout=30,
+            capture_output=True,
+        )
+        assert result.returncode == 93
+        assert list(branch.glob('head-*.json'))
+        reader = RecoveryStore(session, tmp_path / 'recovery')
+        try:
+            assert not reader.candidates(None)[0]
+        finally:
+            reader.close()
+    finally:
+        session.close()
+        source.close()
+
+
+@pytest.mark.parametrize('created', [None, {}, 1e100])
+def test_malformed_header_does_not_hide_other_valid_heads(tmp_path, created):
+    source, session = make_session(tmp_path)
+    store = RecoveryStore(session, tmp_path / 'recovery')
+    try:
+        store.write(payload(session, store, 1))
+        store.write(payload(session, store, 3))
+        newest = next(
+            path
+            for path in store.branch.glob('head-*.json')
+            if json.loads(path.read_text())['payload']['revision'] == 3
+        )
+        wrapper = json.loads(newest.read_text())
+        wrapper['payload']['created_at'] = created
+        wrapper['sha256'] = recovery._digest(wrapper['payload'])
+        newest.write_text(json.dumps(wrapper))
+        store.close()
+        reader = RecoveryStore(session, tmp_path / 'recovery')
+        try:
+            drafts, warnings = reader.candidates(None)
+            assert drafts[0]['payload']['revision'] == 1
+            assert warnings
+        finally:
+            reader.close()
+    finally:
+        store.close()
+        session.close()
+        source.close()

@@ -3,10 +3,12 @@
 import copy
 import json
 import logging
+import math
 import os
 import sys
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -140,8 +142,10 @@ def _retired_through(branch):
     return _integer(record['through_revision'], 'Retired recovery revision')
 
 
-def _verified_heads(branch, bindings, with_slots=False):
+def _verified_heads(branch, bindings, with_slots=False, include_retired=False):
     retired = _retired_through(branch)
+    if include_retired:
+        retired = -1
     valid, errors = [], []
     for name in ('head-0.json', 'head-1.json'):
         try:
@@ -154,11 +158,22 @@ def _verified_heads(branch, bindings, with_slots=False):
             if payload['bindings'] != bindings or payload['session_id'] != branch.name:
                 raise ValueError('Recovery draft belongs to another preparation/session.')
             revision = _integer(payload['revision'], 'Recovery revision')
+            created = payload['created_at']
+            if (
+                type(created) not in (int, float)
+                or not math.isfinite(created)
+                or not isinstance(payload['events'], list)
+                or payload.get('reviews') is not None
+                and not isinstance(payload['reviews'], dict)
+            ):
+                raise ValueError('Recovery draft header is malformed.')
+            datetime.fromtimestamp(created).astimezone()  # Validate displayable timestamps here.
+            _integer(payload['next_cluster_id'], 'Recovery allocator')
             if revision > retired:
                 valid.append((payload, name) if with_slots else payload)
         except FileNotFoundError:
             continue
-        except (ValueError, TypeError, KeyError, OSError) as error:
+        except (ValueError, TypeError, KeyError, OSError, OverflowError, RecursionError) as error:
             errors.append(str(error))
     return sorted(
         valid, key=lambda item: (item[0] if with_slots else item)['revision'], reverse=True
@@ -227,18 +242,45 @@ class RecoveryStore:
         branch = Path(branch or self.branch)
         if branch.parent != self.directory or branch.is_symlink():
             raise ValueError('Recovery branch must belong to this preparation.')
-        previous = _retired_through(branch)
-        _atomic_json(
-            branch,
-            'retired.json',
-            {
-                'format': FORMAT,
-                'version': VERSION,
-                'through_revision': max(previous, _integer(through_revision, 'Recovery revision')),
-                'reason': reason,
-                'retired_at': time.time(),
-            },
-        )
+        owner = None
+        if branch != self.branch:
+            owner = OwnerLock(_safe_file(branch, 'owner.lock'))
+        try:
+            previous = _retired_through(branch)
+            through = max(previous, _integer(through_revision, 'Recovery revision'))
+            _atomic_json(
+                branch,
+                'retired.json',
+                {
+                    'format': FORMAT,
+                    'version': VERSION,
+                    'through_revision': through,
+                    'reason': reason,
+                    'retired_at': time.time(),
+                },
+            )
+            # Retirement is already durable. Cleanup is deliberately narrower:
+            # never remove newer, corrupt, unbound, or unknown head contents.
+            warning = None
+            try:
+                self._prune_retired(branch, through)
+            except OSError as error:
+                warning = f'Recovery draft retired, but storage cleanup failed: {error}'
+                logger.warning(warning)
+            return {'warning': warning}
+        finally:
+            if owner is not None:
+                owner.close()
+
+    def _prune_retired(self, branch, through):
+        heads, _ = _verified_heads(branch, self.bindings, with_slots=True, include_retired=True)
+        removed = False
+        for payload, name in heads:
+            if payload['revision'] <= through:
+                _safe_file(branch, name).unlink()
+                removed = True
+        if removed:
+            _fsync_directory(branch)
 
     def candidates(self, base_pointer):
         candidates, warnings = [], []
