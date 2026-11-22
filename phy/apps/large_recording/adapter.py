@@ -219,9 +219,23 @@ class BoundedTemplateController(TemplateController):
 
     def create_sampled_correlogram_view(self):
         """Create a sampled correlogram view with row-cluster transfer."""
+
+        def proposition_context():
+            supervisor = self.supervisor
+            # Rendering must not project/mutate the catalog: table model signals
+            # can arrive between a merge's prepared and committed review states.
+            controller = supervisor.merge_propositions
+            table = supervisor.merge_propositions_view
+            return (
+                controller.catalog if controller is not None else None,
+                supervisor._active_merge_proposition_keys(),
+                table.visible_keys() if table is not None else None,
+            )
+
         view = SampledCorrelogramView(
             correlograms=partial(self._window_correlograms, return_baseline=True),
             exclusion_correlograms=partial(self._window_correlograms, return_baseline=True),
+            proposition_context=proposition_context,
             sample_rate=self.model.sample_rate,
         )
 
@@ -230,9 +244,52 @@ class BoundedTemplateController(TemplateController):
             # The row determines the target for both diagonal and off-diagonal cells.
             self.supervisor.transfer_cluster(row_cluster_id)
 
+        @connect(event='merge_propositions_changed', sender=self.supervisor)
+        def on_propositions_changed(sender):
+            view.refresh_proposition_labels()
+
+        table_signals = []
+
+        def on_proposition_table_changed(*args):
+            view.refresh_proposition_labels()
+
+        @connect(sender=view)
+        def on_view_attached(view_, gui):
+            connect(on_gui_closed, event='closed', sender=gui)
+            table = self.supervisor.merge_propositions_view
+            if table is not None:
+                # Qt model signals cover clearing a filter as well as applying
+                # it; Table's table_filter event only covers nonempty filters.
+                table_signals.extend(
+                    (
+                        table._proxy.rowsInserted,
+                        table._proxy.rowsRemoved,
+                        table._proxy.modelReset,
+                        table._proxy.layoutChanged,
+                    )
+                )
+                for signal in table_signals:
+                    signal.connect(on_proposition_table_changed)
+
+        def cleanup():
+            for signal in table_signals:
+                signal.disconnect(on_proposition_table_changed)
+            table_signals.clear()
+            unconnect(
+                on_request_correlogram_transfer,
+                on_propositions_changed,
+                on_proposition_table_changed,
+                on_view_attached,
+                on_close_view,
+                on_gui_closed,
+            )
+
+        def on_gui_closed(sender):
+            cleanup()
+
         @connect(sender=view)
         def on_close_view(view_, gui):
-            unconnect(on_request_correlogram_transfer)
+            cleanup()
 
         return view
 

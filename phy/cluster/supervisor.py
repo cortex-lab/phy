@@ -1557,6 +1557,9 @@ class Supervisor:
             if active_keys:
                 self.merge_propositions_view.select_keys(active_keys)
         self._update_proposition_actions()
+        # Annotation subscribers must also see review-only changes, even when
+        # selected cluster IDs (and therefore scientific view data) stay fixed.
+        emit('merge_propositions_changed', self)
 
     def _apply_selection_change(
         self, change, callback=None, refresh_similarity=True, publish=True, sync_presentation=True
