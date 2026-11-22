@@ -874,6 +874,8 @@ class BoundedSupervisor(Supervisor):
         self._refresh_bounded()
 
     def save(self):
+        if getattr(self, '_recovery_depth', 0):
+            raise RuntimeError('Cannot save curation before the current action has settled.')
         recovery = getattr(self, 'recovery', None)
         token = recovery.checkpoint_token() if recovery is not None else None
         try:

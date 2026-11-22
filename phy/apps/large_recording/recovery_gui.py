@@ -296,11 +296,18 @@ class RecoveryCoordinator(QObject):
                         self._schedule()
                     self._announce()
                     return
+                if result.get('checkpoint_conflict'):
+                    self._error = (
+                        'Another session saved a different checkpoint. This recovery draft '
+                        'was retained separately; automatic rebasing is unavailable.'
+                    )
+                    self._error_revision = revision
+                    self._state = 'error'
+                    self._announce()
+                    return
                 self._protected_revision = max(self._protected_revision, revision)
                 self._last_protected_at = result['protected_at']
                 self._warning = result.get('warning')
-                if result.get('checkpoint_conflict'):
-                    self._warning = 'Another session saved; this recovery branch remains separate.'
                 if self._error_revision is None or revision >= self._error_revision:
                     self._error = None
                     self._error_revision = None
@@ -346,9 +353,21 @@ class RecoveryCoordinator(QObject):
         revision = token[0]
         self._checkpoint_revision = max(self._checkpoint_revision, revision)
         self._last_checkpoint_at = time.time()
-        self._ensure_writer().submit(
-            'checkpoint', revision, lambda store: store.retire(revision, reason='checkpointed')
-        )
+        restored = self._restored_from
+
+        def retire_checkpoint(store):
+            results = [store.retire(revision, reason='checkpointed')]
+            if restored is not None:
+                results.append(
+                    store.retire(
+                        restored['payload']['revision'], 'checkpointed', restored['branch']
+                    )
+                )
+            return {
+                'warning': '; '.join(r['warning'] for r in results if r.get('warning')) or None
+            }
+
+        self._ensure_writer().submit('checkpoint', revision, retire_checkpoint)
         if self.supervisor.recovery_token() == token[1]:
             self._protected_revision = self._current_revision
             self._last_protected_at = self._last_checkpoint_at

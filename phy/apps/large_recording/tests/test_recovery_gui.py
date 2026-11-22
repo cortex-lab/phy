@@ -71,6 +71,8 @@ def test_failed_observer_never_protects_provisional_merge(qtbot, tmp_path):
     @connect(event='bounded_state_changed', sender=supervisor)
     def reject(sender):
         assert coordinator.request_flush() is None
+        with pytest.raises(RuntimeError, match='current action has settled'):
+            supervisor.save()
         raise RuntimeError('observer rolls back')
 
     try:
@@ -451,3 +453,71 @@ def test_post_pointer_fsync_failure_reports_uncertain_save(qtbot, tmp_path, monk
         assert supervisor.session._expected_pointer is None
     finally:
         controller.close()
+
+
+def test_other_writer_checkpoint_conflict_never_claims_restorable_protection(qtbot, tmp_path):
+    from phy.apps.template.gui import TemplateController
+
+    _, controller = make_controller(tmp_path)
+    other = TemplateController(
+        dir_path=controller.dir_path, config_dir=tmp_path / 'other-config', plugins=[]
+    )
+    coordinator = other.recovery
+    coordinator.start()
+    try:
+        other.supervisor.label('group', 'mua', [0])
+        controller.supervisor.save()
+        future = coordinator.request_flush()
+        qtbot.waitUntil(future.done)
+        qtbot.waitUntil(lambda: coordinator.status['state'] == 'error')
+        assert coordinator.status['protected_revision'] == 0
+        assert coordinator.status['last_protected_at'] is None
+        assert 'Another session saved' in coordinator.status['error']
+        assert latest(coordinator)['events'][-1]['value'] == 'mua'
+        assert other.bounded_session._expected_pointer is None
+    finally:
+        other.close()
+        controller.close()
+
+
+@pytest.mark.parametrize('newer_foreign_head', [False, True])
+def test_confirmed_save_retires_recovered_source_without_pruning_newer_foreign_head(
+    qtbot, tmp_path, newer_foreign_head
+):
+    from phy.apps.template.gui import TemplateController
+
+    _, original = make_controller(tmp_path)
+    root = tmp_path / 'recovery'
+    original.recovery.root = root
+    original.recovery.start()
+    original.supervisor.label('group', 'mua', [0])
+    future = original.recovery.request_flush()
+    qtbot.waitUntil(future.done)
+    protected(qtbot, original.recovery)
+    branch = root / original.recovery.bindings['manifest_sha256'] / original.recovery.session_id
+    path = original.dir_path
+    original.close()
+    qtbot.waitUntil(lambda: not original.recovery._writer.thread.is_alive())
+    restored = TemplateController(
+        dir_path=path, config_dir=tmp_path / 'restored-config', recovery_root=root, plugins=[]
+    )
+    try:
+        with mock_dialogs('restore'):
+            restored.recovery.offer_startup()
+        if newer_foreign_head:
+            source = recovery.RecoveryStore(restored.bounded_session, root, session_id=branch.name)
+            try:
+                newer = dict(restored.recovery._restored_from['payload'], revision=3)
+                source.write(newer)
+            finally:
+                source.close()
+        restored.supervisor.save()
+        qtbot.waitUntil(lambda: (branch / 'retired.json').exists())
+        qtbot.waitUntil(lambda: len(list(branch.glob('head-*.json'))) == int(newer_foreign_head))
+        if newer_foreign_head:
+            head = next(branch.glob('head-*.json'))
+            assert json.loads(head.read_text())['payload']['revision'] == 3
+        assert restored.recovery.status['state'] == 'protected'
+        assert not restored.supervisor.is_dirty()
+    finally:
+        restored.close()
