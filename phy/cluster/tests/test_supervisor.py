@@ -1582,8 +1582,10 @@ def test_merge_proposition_navigation_shortcuts_and_text_focus(
     assert supervisor.merge_view.dock is merge_dock
     assert supervisor.selection.state.merge.proposition_id == first.key
 
-    supervisor.merge_propositions_view.filter_edit.setFocus()
-    qtbot.wait(1)
+    gui.activateWindow()
+    field = supervisor.merge_propositions_view.filter_edit
+    field.setFocus()
+    qtbot.waitUntil(field.hasFocus)
     supervisor.next_merge_proposition()
     assert supervisor.selection.state.merge.proposition_id == first.key
     assert third.key in supervisor.merge_propositions_view.actionable_keys()

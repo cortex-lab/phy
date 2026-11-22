@@ -293,3 +293,39 @@ locate these files; no request was sent. The proposed next step is an independen
 small-data oracle against that producer before implementing an optional exact-
 time sidecar, full-train deduplication and a background RP panel. Existing raw
 rate/count summaries must retain their definitions.
+
+Draft protection captures immutable active-journal/catalog references only after
+the outer curation transaction settles. A single worker writes coalesced
+snapshots; two independently verified heads rotate by successful writes rather
+than revision parity. Private files/directories, durable ancestor creation,
+live-owner locks, checksum fallback, canonical-pointer conflicts, allocator
+high-water marks, and explicit discard/retirement have focused regressions.
+Checkpoint publication remains separate. Recovered work starts a new undo
+baseline and stays dirty; saving retires the recovered source draft without
+deleting a newer foreign head. Failed or uncertain Save outcomes do not invent
+a successful protection acknowledgement.
+
+The close-path review found that existing callbacks disconnected the workspace
+before a later save prompt could veto closure. GUI state capture now runs in
+`close_accepted`, after every veto and before geometry persistence; resource
+cleanup runs in `closed`. Regression tests preserve Merge mode, staged selection,
+parent inspection, controller selection hooks and logging after cancellation.
+
+Native Xvfb/xcb screenshots on a new 12-spike synthetic fixture cover neutral
+and amber states at 1100×700 and 1600×900. Actual checkpoint/draft acknowledgements
+were used; only the reminder widget's clock advanced by 902 seconds. The fixed
+status area was 520×26 pixels and its Save button 171×26 in all four captures.
+The indicator remained outside the plots and the colored SLAY axes were visible.
+Artifacts and exact code hashes are in
+`phy-data/carl/recovery-visual-review-2026-11-22/final-002`.
+
+An external 5 ms Qt heartbeat probe measured two consecutive worker writes per
+case, including previous-head verification. At 10,000 valid label events, writes
+took 28.4/41.0 ms with maximum observed UI gaps of 15.4 ms. At 100,000 events,
+writes took 173.5/318.7 ms with maximum gaps of 76.5/75.8 ms; none exceeded
+100 ms. This is a small warm-cache experiment, not a latency guarantee. Python
+JSON encoding can briefly hold the GIL even on a worker; protection avoids
+spike-array scans/copies on the GUI thread but is not strictly pause-free for
+arbitrarily large journals. The probe script, raw gaps and code hashes are in
+`phy-data/carl/recovery-validation-2026-11-22/heartbeat_probe.json`. No original
+Carl data was read or modified by either recovery experiment.
