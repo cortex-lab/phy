@@ -272,10 +272,26 @@ class MergePropositionCatalog:
         entry = self.entry_for(key)
         if entry is None:
             raise KeyError(key)
+        return self._status_for_entry(entry)
+
+    def pending_entries(self):
+        """Iterate current pending entries without repeated catalog or live-ID scans."""
+        source_ids, live_ids = set(self.source_unit_ids), set(self.live_unit_ids)
+        for entry in self.entries:
+            if entry.key is not None and entry.key not in self.reviews:
+                if (
+                    self._status_for_entry(entry, source_ids, live_ids)
+                    is PropositionStatus.PENDING
+                ):
+                    yield entry
+
+    def _status_for_entry(self, entry, source_ids=None, live_ids=None):
+        key = entry.key
         if entry.invalid_reason is not None:
             return PropositionStatus.INVALID
         proposition = entry.proposition
-        if not set(proposition.unit_ids) <= set(self.source_unit_ids):
+        source_ids = set(self.source_unit_ids) if source_ids is None else source_ids
+        if not set(proposition.unit_ids) <= source_ids:
             return PropositionStatus.INVALID
         review = self.reviews.get(key)
         if review is not None:
@@ -295,7 +311,8 @@ class MergePropositionCatalog:
                 if review.applied_unit_ids == proposition.unit_ids
                 else PropositionStatus.ACCEPTED_MODIFIED
             )
-        if not set(proposition.unit_ids) <= set(self.live_unit_ids):
+        live_ids = set(self.live_unit_ids) if live_ids is None else live_ids
+        if not set(proposition.unit_ids) <= live_ids:
             return PropositionStatus.STALE
         return PropositionStatus.PENDING
 
