@@ -9,6 +9,8 @@ import time
 import uuid
 from pathlib import Path
 
+import numpy as np
+
 from ._immutable import freeze
 from .curation import (
     BoundedSession,
@@ -58,7 +60,11 @@ class OwnerLock:
     """A live process owns a branch; PID files and timestamps are not locks."""
 
     def __init__(self, path):
-        self.stream = Path(path).open('a+b')  # noqa: SIM115 -- held for the branch lifetime
+        flags = os.O_CREAT | os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0)
+        descriptor = os.open(path, flags, 0o600)
+        self.stream = os.fdopen(descriptor, 'r+b')
+        if os.name != 'nt':
+            os.fchmod(descriptor, 0o600)
         try:
             if os.name == 'nt':
                 import msvcrt
@@ -92,10 +98,31 @@ class OwnerLock:
         self.stream.close()
 
 
+def _private_directory(path):
+    """Create private ancestors and persist every newly created directory entry."""
+    path = Path(path)
+    missing, parent = [], path
+    while not parent.exists():
+        missing.append(parent)
+        parent = parent.parent
+    for directory in reversed(missing):
+        directory.mkdir(mode=0o700, exist_ok=True)
+        _fsync_directory(directory)
+        _fsync_directory(directory.parent)
+    if path.is_symlink() or not path.is_dir():
+        raise ValueError('Recovery storage must be a real directory.')
+    if os.name != 'nt' and path.stat().st_mode & 0o077:
+        # A supplied root may be a shared directory such as /tmp. Never chmod
+        # caller-owned ancestors or turn them into private application storage.
+        raise ValueError('Recovery storage must be a private directory (0700).')
+
+
 def _atomic_json(directory, name, value):
     target = _safe_file(directory, name)
     temporary = _safe_file(directory, f'.{uuid.uuid4().hex}.tmp')
     try:
+        descriptor = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        os.close(descriptor)
         _write_json(temporary, value)
         os.replace(temporary, target)
         _fsync_directory(directory)
@@ -113,7 +140,7 @@ def _retired_through(branch):
     return _integer(record['through_revision'], 'Retired recovery revision')
 
 
-def _verified_heads(branch, bindings):
+def _verified_heads(branch, bindings, with_slots=False):
     retired = _retired_through(branch)
     valid, errors = [], []
     for name in ('head-0.json', 'head-1.json'):
@@ -128,12 +155,14 @@ def _verified_heads(branch, bindings):
                 raise ValueError('Recovery draft belongs to another preparation/session.')
             revision = _integer(payload['revision'], 'Recovery revision')
             if revision > retired:
-                valid.append(payload)
+                valid.append((payload, name) if with_slots else payload)
         except FileNotFoundError:
             continue
         except (ValueError, TypeError, KeyError, OSError) as error:
             errors.append(str(error))
-    return sorted(valid, key=lambda item: item['revision'], reverse=True), errors
+    return sorted(
+        valid, key=lambda item: (item[0] if with_slots else item)['revision'], reverse=True
+    ), errors
 
 
 class RecoveryStore:
@@ -142,11 +171,13 @@ class RecoveryStore:
     def __init__(self, session, root=None, session_id=None, soft_budget=SOFT_BUDGET):
         self.bindings = recovery_bindings(session)
         self.dataset_path = Path(session.path)
-        self.directory = Path(root or default_recovery_root()) / self.bindings['manifest_sha256']
-        self.directory.mkdir(parents=True, exist_ok=True)
+        root = Path(root or default_recovery_root())
+        _private_directory(root)
+        self.directory = root / self.bindings['manifest_sha256']
+        _private_directory(self.directory)
         self.session_id = session_id or uuid.uuid4().hex
         self.branch = _safe_file(self.directory, self.session_id)
-        self.branch.mkdir(exist_ok=True)
+        _private_directory(self.branch)
         self.owner = OwnerLock(_safe_file(self.branch, 'owner.lock'))
         self.soft_budget = soft_budget
         try:
@@ -162,9 +193,13 @@ class RecoveryStore:
         revision = _integer(payload['revision'], 'Recovery revision')
         if revision <= _retired_through(self.branch):
             return {'retired': True}
+        heads, _ = _verified_heads(self.branch, self.bindings, with_slots=True)
+        # Coalescing skips revision numbers: parity would overwrite the only
+        # previous head for revisions 1,3. Rotate by the latest verified slot.
+        slot = 1 if heads and heads[0][1] == 'head-0.json' else 0
         _atomic_json(
             self.branch,
-            f'head-{revision % 2}.json',
+            f'head-{slot}.json',
             {'sha256': _digest(payload), 'payload': payload},
         )
         # This is a soft budget: never delete the only unresolved draft to meet it.
@@ -184,6 +219,9 @@ class RecoveryStore:
         except (OSError, ValueError):
             conflict = True
         return {'retired': False, 'warning': warning, 'checkpoint_conflict': conflict}
+
+    def probe(self):
+        _atomic_json(self.branch, 'health.json', {'format': FORMAT, 'checked_at': time.time()})
 
     def retire(self, through_revision, reason='discarded', branch=None):
         branch = Path(branch or self.branch)
@@ -288,4 +326,8 @@ def build_recovered_state(session, payload):
         spikes_per_cluster=recovered._assignment_groups,
         policy=MutationPolicy(),
     )
+    if not np.array_equal(recovered._recovery_clustering.spike_clusters, recovered.assignments):
+        raise ValueError('Recovered native assignments disagree with semantic projection.')
+    recovered._certified_assignments = recovered.assignments
+    recovered._certified_native = recovered._recovery_clustering._spike_clusters
     return recovered

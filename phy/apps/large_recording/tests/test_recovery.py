@@ -47,7 +47,11 @@ def test_two_heads_fallback_retirement_and_active_owner(tmp_path):
         first.write(payload(session, first, 2))
         assert not reader.candidates(None)[0]  # Live owner is never offered.
         first.close()
-        (first.branch / 'head-0.json').write_text('{partial')
+        newest = max(
+            first.branch.glob('head-*.json'),
+            key=lambda p: json.loads(p.read_text())['payload']['revision'],
+        )
+        newest.write_text('{partial')
         drafts, warnings = reader.candidates(None)
         assert warnings and len(drafts) == 1
         assert drafts[0]['payload']['revision'] == 1
@@ -185,9 +189,63 @@ def test_other_checkpoint_never_rebases_or_deletes_a_draft(tmp_path):
         try:
             drafts, warnings = reader.candidates(session._expected_pointer)
             assert not drafts and warnings
-            assert (store.branch / 'head-1.json').exists()
+            assert list(store.branch.glob('head-*.json'))
         finally:
             reader.close()
     finally:
+        session.close()
+        source.close()
+
+
+def test_skipped_revisions_preserve_two_independent_heads(tmp_path):
+    source, session = make_session(tmp_path)
+    store = RecoveryStore(session, tmp_path / 'recovery')
+    try:
+        session.record_label('group', [0], 'mua')
+        store.write(payload(session, store, 1))
+        session.record_label('group', [0], 'good')
+        store.write(payload(session, store, 3))
+        heads = list(store.branch.glob('head-*.json'))
+        assert len(heads) == 2
+        assert {json.loads(path.read_text())['payload']['revision'] for path in heads} == {1, 3}
+        newest = max(heads, key=lambda p: json.loads(p.read_text())['payload']['revision'])
+        newest.write_text('{torn')
+        store.close()
+        reader = RecoveryStore(session, tmp_path / 'recovery')
+        try:
+            drafts, _ = reader.candidates(None)
+            assert drafts[0]['payload']['revision'] == 1
+        finally:
+            reader.close()
+    finally:
+        store.close()
+        session.close()
+        source.close()
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX mode bits')
+def test_private_permissions_and_new_ancestor_directory_sync(tmp_path, monkeypatch):
+    source, session = make_session(tmp_path)
+    root = tmp_path / 'new-parent' / 'app' / 'recovery'
+    synced = []
+    original = recovery._fsync_directory
+
+    def sync(path):
+        synced.append(path)
+        original(path)
+
+    monkeypatch.setattr(recovery, '_fsync_directory', sync)
+    store = RecoveryStore(session, root)
+    try:
+        store.write(payload(session, store, 1))
+        store.retire(0)
+        for path in (root, store.directory, store.branch):
+            assert path.stat().st_mode & 0o777 == 0o700
+        for name in ('owner.lock', 'head-0.json', 'retired.json'):
+            assert (store.branch / name).stat().st_mode & 0o777 == 0o600
+        assert tmp_path in synced
+        assert root.parent in synced
+    finally:
+        store.close()
         session.close()
         source.close()
