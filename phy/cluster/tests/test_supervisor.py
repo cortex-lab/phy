@@ -1887,6 +1887,32 @@ def test_supervisor_close_releases_owned_event_callbacks(
     )
 
 
+def test_cancelled_close_preserves_merge_workspace_and_callbacks(supervisor):
+    _select(supervisor, [30], [20])
+    supervisor.toggle_merge_mode()
+    gui, merge_view = supervisor.gui, supervisor.merge_view
+    selection = supervisor.selection.state
+
+    @connect(event='close', sender=gui)
+    def cancel(sender):
+        return False
+
+    try:
+        gui.close()
+        assert not gui._closed
+        assert supervisor.gui is gui
+        assert supervisor.merge_view is merge_view
+        assert supervisor.selection.state == selection
+        assert supervisor._merge_close_callback is not None
+        supervisor.toggle_merge_mode()
+        supervisor.label('group', 'good', [30])
+        assert supervisor._is_dirty
+        supervisor.undo()
+        assert supervisor.cluster_meta.get('group', 30) != 'good'
+    finally:
+        unconnect(cancel)
+
+
 def test_saving_gui_state_cancels_transient_merge_selection(supervisor):
     _select(supervisor, [30], [20])
     entry = supervisor.selection.snapshot()

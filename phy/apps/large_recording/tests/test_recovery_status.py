@@ -219,6 +219,20 @@ def test_recovery_warnings_and_startup_failures_are_visible(status):
     assert 'disk error' in widget.label.toolTip()
 
 
+def test_fresh_session_is_ready_until_durability_is_acknowledged(status):
+    widget, controller, _, _ = status
+    controller.recovery.update(
+        state='ready',
+        current_revision=0,
+        protected_revision=0,
+        last_protected_at=None,
+        last_checkpoint_at=None,
+    )
+    assert 'Draft protection ready' in widget.label.text()
+    assert 'No checkpoint yet' in widget.label.text()
+    assert not widget.save_button.property('checkpointReminder')
+
+
 def test_undo_to_checkpoint_restarts_reminder_at_the_next_edit(status):
     widget, controller, clock, _ = status
     _edit(controller, clock)

@@ -13,6 +13,9 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Cancelling a close/save prompt preserves the live merge workspace, selection
+  callbacks, status reporting and draft protection. GUI state collection and
+  resource cleanup now wait until closure is accepted.
 - Bounded curation protects unsaved semantic edits in background recovery drafts,
   separate from validated manual checkpoints. A fixed status-bar indicator shows
   confirmed protection and checkpoint age; a passive Save checkpoint reminder

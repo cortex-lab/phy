@@ -2532,9 +2532,6 @@ class BaseController:
         # Prompt save.
         @connect(sender=gui)
         def on_close(sender):
-            unconnect(on_view_attached, self)
-            unconnect(on_select_more, self)
-            unconnect(on_request_select, self)
             # Show save prompt if an action was done.
             do_prompt_save = kwargs.get('do_prompt_save', True)
             if do_prompt_save and self.supervisor.is_dirty():  # pragma: no cover
@@ -2575,8 +2572,15 @@ class BaseController:
             gui.state['GUI_VERSION'] = self.gui_version
             self.context.save_memcache()
 
-            # Remove the status bar handler when closing the GUI.
+        @connect(event='closed', sender=gui)
+        def on_closed(sender):
+            # Close callbacks may veto an attempt. Keep live selection hooks
+            # and logging until the GUI has actually accepted closure.
+            unconnect(on_view_attached, self)
+            unconnect(on_select_more, self)
+            unconnect(on_request_select, self)
             logging.getLogger('phy').removeHandler(handler)
+            unconnect(on_closed)
 
         try:
             emit('gui_ready', self, gui)

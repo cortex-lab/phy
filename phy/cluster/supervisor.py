@@ -2037,7 +2037,7 @@ class Supervisor:
             supervisor=self,
         )
 
-        connect(self._save_gui_state, event='close', sender=gui)
+        connect(self._save_gui_state, event='close_accepted', sender=gui)
 
         @connect(event='close_view')
         def on_close_view(view, sender):
@@ -2114,7 +2114,7 @@ class Supervisor:
             self._busy[sender] = is_busy
             self._set_busy(any(self._busy.values()))
 
-        @connect(sender=gui)
+        @connect(event='closed', sender=gui)
         def on_close(e):
             # The event registry holds strong references to senders and callbacks.
             # Release every object owned by this attachment before Qt destroys its
