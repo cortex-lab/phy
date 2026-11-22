@@ -215,8 +215,15 @@ def test_recovery_warnings_and_startup_failures_are_visible(status):
     assert 'Draft needs attention' in widget.label.text()
     assert 'Another session saved' in widget.label.toolTip()
     controller.recovery.update(warning=None, startup_error='Recovery discovery failed: disk error')
-    assert 'Protection failed' in widget.label.text()
+    assert 'Draft needs attention' in widget.label.text()
     assert 'disk error' in widget.label.toolTip()
+    assert controller.recovery.status['state'] == 'protected'
+    assert (
+        controller.recovery.status['current_revision']
+        == controller.recovery.status['protected_revision']
+    )
+    controller.recovery.update(state='error', error='Recovery could not be restored: disk error')
+    assert 'Protection failed' in widget.label.text()
 
 
 def test_fresh_session_is_ready_until_durability_is_acknowledged(status):

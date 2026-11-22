@@ -213,9 +213,9 @@ class CheckpointStatus(QWidget):
         state = status.get('state')
         if not enabled or state in ('disabled', 'closed'):
             protection = 'Draft protection off'
-        elif state == 'error' or status.get('error') or status.get('startup_error'):
+        elif state == 'error' or status.get('error'):
             protection = 'Protection failed'
-        elif status.get('warning'):
+        elif status.get('warning') or status.get('startup_error'):
             protection = 'Draft needs attention'
         elif state == 'protected' and revision == status.get('protected_revision'):
             protection = 'Draft protected ✓'

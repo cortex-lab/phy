@@ -329,3 +329,19 @@ spike-array scans/copies on the GUI thread but is not strictly pause-free for
 arbitrarily large journals. The probe script, raw gaps and code hashes are in
 `phy-data/carl/recovery-validation-2026-11-22/heartbeat_probe.json`. No original
 Carl data was read or modified by either recovery experiment.
+
+The integrated changes passed `make test-full UV_RUN='uv run --no-sync'` with
+the CI-matching Qt offscreen backend under Xvfb: **744 common + 1,016 application
+tests passed**, 19 skipped, with normal process exits. This includes lint and
+formatting. Two earlier full-native probes without a window manager encountered
+shortcut/focus assumptions; they are not recorded as successful full-native
+runs. The proposition text-focus assertion now explicitly waits for focus.
+Native recovery, close-cancellation and screenshot checks passed separately.
+
+A final indicator-only refinement distinguishes retained startup warnings from
+actual protection failures: a warning shows “Draft needs attention” while a
+genuine error shows “Protection failed.” All nine reminder/status tests were
+rerun under native xcb after that refinement and passed; lint, formatting and
+the package build passed again. Strict `make doc-check` passed for the published
+documentation. The wheel includes all recovery and proposition-annotation
+modules. Master remains `306667e4`; these changes target the existing PR1428.
