@@ -12,6 +12,7 @@ import zipfile
 from concurrent.futures import CancelledError
 from contextlib import suppress
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 
@@ -20,6 +21,29 @@ from .metadata import read_metadata
 from .source import close_array, hash_json
 
 VERSION = 2
+_reader_lock = Lock()
+_reader_pool = {}
+
+
+def acquire_source_engine(package_path, source_dir=None, factory=None):
+    """Lease a worker-owned reader shared by serialized heavy-I/O services."""
+    factory = factory or LiveSummaryEngine
+    key = (str(Path(package_path).resolve()), str(source_dir), factory)
+    with _reader_lock:
+        if key not in _reader_pool:
+            _reader_pool[key] = [factory(package_path, source_dir=source_dir), 0]
+        record = _reader_pool[key]
+        record[1] += 1
+        return key, record[0]
+
+
+def release_source_engine(key):
+    with _reader_lock:
+        record = _reader_pool[key]
+        record[1] -= 1
+        if not record[1]:
+            record[0].close()
+            del _reader_pool[key]
 
 
 def _union(parts):
@@ -405,9 +429,14 @@ class LiveSummaryEngine:
             raise ValueError('Source metadata changed during live summary.')
 
     def _open(self, names, cancel, progress=None):
+        validated = set(self.arrays)
         try:
+            _check_cancel(cancel)
             self._unchanged()
             metadata_before = self._metadata_state()
+            # Bind metadata before cancellation can retain an authenticated
+            # assignment file from an otherwise incomplete multi-file open.
+            self.metadata_signature = metadata_before
             new_names = names - self.arrays.keys()
             total_bytes = sum((self.source_dir / n).stat().st_size for n in new_names)
             hashed_bytes = 0
@@ -460,10 +489,19 @@ class LiveSummaryEngine:
                     if revision != self.manifest['source']['revision']:
                         raise ValueError('Source assignment revision mismatch.')
                 self._unchanged()
+                validated.add(name)
             if metadata_before != self._metadata_state():
                 raise ValueError('Source metadata changed during validation.')
             self.metadata_signature = metadata_before
             self._unchanged()
+        except CancelledError:
+            # Request cancellation does not revoke previously authenticated files.
+            for name in set(self.handles) - validated:
+                close_array(self.arrays.pop(name, None))
+                self.handles.pop(name).close()
+                self.signatures.pop(name, None)
+                self.path_signatures.pop(name, None)
+            raise
         except BaseException:
             self.close()
             raise
@@ -733,6 +771,8 @@ class LiveSummaryEngine:
                 results[unit] = _freeze(summary)
                 self._publish(self.key(missing[unit]), summary)
             return results
+        except CancelledError:
+            raise
         except BaseException:
             self.close()
             raise

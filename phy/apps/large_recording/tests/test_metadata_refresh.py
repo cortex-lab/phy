@@ -140,6 +140,7 @@ def test_metadata_refresh_preserves_table_filter_sort_and_selection(qtbot, tmp_p
 def test_membership_undo_and_new_summary_still_refresh_stability(qtbot, tmp_path, monkeypatch):
     _, controller = make_controller(tmp_path)
     gui = controller.create_gui(default_views=['UnitStabilityView'], do_prompt_save=False)
+    gui.show()
     supervisor = controller.supervisor
     try:
         supervisor.select([0])
@@ -170,6 +171,32 @@ def test_membership_undo_and_new_summary_still_refresh_stability(qtbot, tmp_path
         emit('bounded_summary_changed', supervisor)
         assert calls
         assert view.get_data(0) is not current
+    finally:
+        gui.close()
+        controller.close()
+
+
+def test_hidden_stability_invalidates_then_reveals_current_membership(qtbot, tmp_path):
+    _, controller = make_controller(tmp_path)
+    gui = controller.create_gui(default_views=['UnitStabilityView'], do_prompt_save=False)
+    supervisor = controller.supervisor
+    view = gui.get_view('UnitStabilityView')
+    try:
+        view._dock_visible = False
+        view.on_select([0])
+        old = view.get_data(0)
+        supervisor.merge([0, 1], to=100)
+        supervisor.block()
+        assert view.cluster_ids == tuple(supervisor.selected) == (100,)
+        emit('bounded_summary_changed', supervisor)
+        assert not view._selected_summaries
+        assert view._pending_selection is not None
+        assert not view._rp.results and view._rp._worker is None
+        view._dock_visible = True
+        view._flush_pending_selection()
+        assert view.get_data(100) is not old
+        assert int(view.get_data(100).counts.sum()) == 7
+        assert view.cluster_ids == (100,)
     finally:
         gui.close()
         controller.close()

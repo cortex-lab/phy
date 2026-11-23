@@ -68,6 +68,68 @@ def test_exact_overlays_and_shared_exposure(summary_view, selected):
     ) == (3 in selected)
 
 
+def test_refractory_only_uses_recording_axis_and_freeze_cancels(summary_view):
+    from threading import Event
+
+    view = summary_view
+    view.show_firing_rate = view.show_amplitude = view.show_depth = False
+    view.name = 'UnitStabilityView'
+    view.on_select([1])
+    ax = list(view.canvas.iter_ax())[3]
+    np.testing.assert_allclose(ax.get_xlim(), [0, 25 / 3600])
+    view._rp._token = ('running',)
+    pending = view._rp._running = Event()
+    view.toggle_auto_update(False)
+    assert pending.is_set()
+    before = view._rp_lines[1].get_ydata().copy()
+    view._rp.results = {
+        1: {'status': 'ready', 'window_centres_h': np.array([0]), 'contamination': np.array([0.2])}
+    }
+    view._rp.changed.emit()
+    np.testing.assert_array_equal(view._rp_lines[1].get_ydata(), before)
+    view.toggle_auto_update(True)
+    assert view.auto_update
+
+
+def test_refractory_only_notes_are_persistent_and_never_stale(summary_view):
+    view = summary_view
+    view.show_firing_rate = view.show_amplitude = view.show_depth = False
+    view.on_select([])
+    ax = list(view.canvas.iter_ax())[3]
+    assert len(ax.texts) == 1
+    for selected in ([1], [], [2], [1], [1]):
+        view.on_select(selected)
+        assert len(ax.texts) == 1
+        if selected:
+            assert not any('Select a unit' in t.get_text() for t in ax.texts)
+    assert '6 h windows' in ax.get_title()
+
+
+def test_refractory_blit_reuses_artists_and_recaptures_after_resize(summary_view):
+    view = summary_view
+    view.on_select([1])
+    axes = list(view.canvas.iter_ax())
+    other_lines = tuple(axes[0].lines)
+    rp_line = view._rp_lines[1]
+    view._rp.results = {
+        1: {'status': 'ready', 'window_centres_h': np.array([0]), 'contamination': np.array([0.2])}
+    }
+    view._rp.message = ''
+    view._update_refractory()
+    assert view._rp_lines[1] is rp_line
+    assert tuple(axes[0].lines) == other_lines
+    np.testing.assert_array_equal(rp_line.get_ydata(), [20])
+    previous = view._rp_background
+    view.canvas.figure.set_size_inches(9, 6)
+    view.canvas.canvas.draw()
+    if view._rp_blit:
+        assert view._rp_background is not None and view._rp_background is not previous
+    view._rp.results[1]['contamination'] = np.array([0.3])
+    view._update_refractory()
+    assert view._rp_lines[1] is rp_line
+    np.testing.assert_array_equal(rp_line.get_ydata(), [30])
+
+
 def test_weighted_merged_trends_and_pending_do_not_hide_valid_units(summary_view):
     view = summary_view
     merged = view.get_data(4)
@@ -107,7 +169,7 @@ def test_lazy_metrics_selected_cache_and_all_toggle_layouts(summary_view, monkey
     axes = list(view.canvas.iter_ax())
     callback_counts = {k: len(v) for k, v in view.canvas.canvas.callbacks.callbacks.items()}
     for _ in range(2):
-        for combination in product((False, True), repeat=3):
+        for combination in product((False, True), repeat=4):
             for metric, enabled in zip(view._metrics, combination):
                 getattr(view, f'toggle_{metric}')(enabled)
             assert tuple(view.state[f'show_{metric}'] for metric in view._metrics) == combination
@@ -456,7 +518,7 @@ def test_display_rebin_exact_merged_primitives(
     np.testing.assert_allclose(data.rates, expected_rates, equal_nan=True)
     view.on_select([4])
     axes = list(view.canvas.iter_ax())
-    for ax in axes:
+    for ax in axes[:3]:
         np.testing.assert_allclose(
             ax.lines[0].get_xdata(), (data.edges[:-1] + data.edges[1:]) / 7200
         )

@@ -11,6 +11,8 @@ from phy.gui.qt import screenshot, screenshot_default_path
 from phy.plot.plot import PlotCanvasMpl
 from phy.utils.color import selected_cluster_color
 
+from .refractory_service import RefractoryService
+
 
 class UnitStabilityView(ManualClusteringView):
     """Compare exact rates and available source trends for selected units."""
@@ -18,6 +20,7 @@ class UnitStabilityView(ManualClusteringView):
     plot_canvas_class = PlotCanvasMpl
     # Apply the display limit locally, retaining the full presentation selection.
     max_n_clusters = 0
+    defer_hidden_updates = True
     display_limit = 32
     rate_line_width = 0.6
     display_bin_seconds = 0.0
@@ -26,13 +29,23 @@ class UnitStabilityView(ManualClusteringView):
     _min_rate_coverage = 0.001
     _default_position = 'right'
     ex_status = 'Full-duration evidence; sampling cannot establish chronic unit identity.'
-    _metrics = ('firing_rate', 'amplitude', 'depth')
+    _metrics = ('firing_rate', 'amplitude', 'depth', 'refractory')
 
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.canvas.subplots(3, 1, sharex=True)
+        self.canvas.subplots(4, 1, sharex=True)
         self.show_firing_rate = self.show_amplitude = self.show_depth = True
+        self.show_refractory = True
+        self._rp = RefractoryService(controller)
+        self._rp.changed.connect(self._update_refractory)
+        self._rp_lines = {}
+        self._rp_note = None
+        self._rp_background = None
+        self._rp_blit = self.canvas.canvas.supports_blit
+        self._rp_draw_connection = self.canvas.canvas.mpl_connect(
+            'draw_event', self._capture_refractory_background
+        )
         self.state_attrs += tuple(f'show_{metric}' for metric in self._metrics)
         self.state_attrs += ('display_limit', 'rate_line_width')
         self.local_state_attrs += ('display_bin_seconds',)
@@ -93,7 +106,7 @@ class UnitStabilityView(ManualClusteringView):
         Counts share the manifest's exposure. Trend sums are combined with their
         finite-value counts, never averaged as equally weighted unit means.
         """
-        metrics = self._metrics if metrics is None else metrics
+        metrics = [m for m in (self._metrics if metrics is None else metrics) if m != 'refractory']
         common = self._common()
         data = self._selected_summaries.get(cluster_id)
         controller = self.controller
@@ -338,9 +351,11 @@ class UnitStabilityView(ManualClusteringView):
         )
 
     def _layout_axes(self, visible):
+        self._rp_background = None
         axes = list(self.canvas.iter_ax())
         for metric, ax in zip(self._metrics, axes):
-            ax.clear()
+            if metric != 'refractory':
+                ax.clear()
             ax.set_visible(metric in visible)
         for index, metric in enumerate(visible):
             ax = axes[self._metrics.index(metric)]
@@ -378,19 +393,20 @@ class UnitStabilityView(ManualClusteringView):
             self._footer.set_text(common.footer)
             first_ax = axes[self._metrics.index(visible[0])]
             notes = []
-            unavailable = {metric: [] for metric in visible}
+            evidence = [m for m in visible if m != 'refractory']
+            unavailable = {metric: [] for metric in evidence}
             low_rate_coverage = None
             rate_plotted = False
             if not self.cluster_ids:
                 notes.append('Select a unit to inspect full-duration evidence.')
             for index, cluster_id in enumerate(self.displayed_ids):
-                data = self.get_display_data(cluster_id, visible)
+                data = self.get_display_data(cluster_id, evidence)
                 if data.pending:
                     notes.append(f'Unit {cluster_id}: {data.provenance}')
                     continue
                 color = selected_cluster_color(self.cluster_color_index(cluster_id, index))
                 x = (data.edges[:-1] + data.edges[1:]) / 7200
-                for metric in visible:
+                for metric in evidence:
                     ax = axes[self._metrics.index(metric)]
                     values = data.rates if metric == 'firing_rate' else data.trends.get(metric)
                     rate_markers = {}
@@ -456,7 +472,7 @@ class UnitStabilityView(ManualClusteringView):
                         fontsize=8,
                     )
             labels = ('Rate (Hz)', 'Mean amplitude\n(source units)', 'Mean depth\n(source units)')
-            for metric in visible:
+            for metric in evidence:
                 ax = axes[self._metrics.index(metric)]
                 ax.set_axis_on()
                 ax.set_ylabel(labels[self._metrics.index(metric)])
@@ -483,8 +499,9 @@ class UnitStabilityView(ManualClusteringView):
                 if getattr(self.controller, 'bounded_session', None) is not None
                 else 'Loaded recording; continuous acquisition assumed.'
             )
-            first_ax.set_title(provenance, fontsize=9)
-            if notes:
+            if visible[0] != 'refractory':
+                first_ax.set_title(provenance, fontsize=9)
+            if notes and visible[0] != 'refractory':
                 first_ax.text(
                     0.02,
                     0.96,
@@ -494,7 +511,135 @@ class UnitStabilityView(ManualClusteringView):
                     fontsize=8,
                 )
         self.update_status()
+        self._rp.request(
+            self.displayed_ids,
+            enabled=self.show_refractory and self._dock_visible and self.auto_update,
+        )
+        if self.show_refractory:
+            axes[3].set_xlim(*self._refractory_xlim())
+        self._update_refractory(draw=False)
         self.canvas.update()
+
+    def _refractory_xlim(self):
+        common = self._common()
+        fs = getattr(self.controller.model, 'sample_rate', None)
+        if fs is None or not np.isfinite(fs) or fs <= 0:
+            return common.edges[0] / 3600, common.edges[-1] / 3600
+        session = getattr(self.controller, 'bounded_session', None)
+        num_samples = (
+            getattr(session, 'manifest', {}).get('num_samples') if session is not None else None
+        )
+        if num_samples is None:
+            num_samples = round(common.edges[-1] * fs)
+        bin_samples = max(1, round(1800 * fs))
+        n_bins = (num_samples + bin_samples - 1) // bin_samples
+        return common.edges[0] / 3600, max(common.edges[-1] / 3600, n_bins // 2)
+
+    def _update_refractory(self, draw=True):
+        """Update persistent RP artists without rebuilding tables or other axes."""
+        if (
+            self._closed
+            or not self.show_refractory
+            or not self._dock_visible
+            or not self.auto_update
+        ):
+            return
+        ax = list(self.canvas.iter_ax())[3]
+        if self._rp_note is None:
+            ax.axhline(10, color='0.65', linestyle='--', linewidth=0.8)
+            ax.set_ylabel('RP contamination (%)')
+            ax.set_ylim(0, 100)
+            ax.set_title('≤1 ms; 0.3 ms diagnostic dedup; 6 h windows every 1 h', fontsize=8)
+            self._rp_note = ax.text(
+                0.02,
+                0.96,
+                '',
+                transform=ax.transAxes,
+                va='top',
+                fontsize=8,
+                animated=self._rp_blit,
+                clip_on=True,
+            )
+            common = self._common()
+            previous = 0
+            for start, end in common.intervals:
+                if start > previous:
+                    ax.axvspan(previous / 3600, start / 3600, color='gray', alpha=0.4)
+                previous = end
+            if previous < common.edges[-1]:
+                ax.axvspan(previous / 3600, common.edges[-1] / 3600, color='gray', alpha=0.4)
+            if self._refractory_xlim()[1] > common.edges[-1] / 3600:
+                ax.axvspan(
+                    common.edges[-1] / 3600, self._refractory_xlim()[1], color='gray', alpha=0.4
+                )
+        selected = set(self.displayed_ids)
+        for unit in list(self._rp_lines):
+            if unit not in selected:
+                self._rp_lines.pop(unit).remove()
+        for index, unit in enumerate(self.displayed_ids):
+            if unit not in self._rp_lines:
+                (self._rp_lines[unit],) = ax.plot(
+                    [], [], label=str(unit), linewidth=1.2, animated=self._rp_blit
+                )
+            line = self._rp_lines[unit]
+            line.set_color(selected_cluster_color(self.cluster_color_index(unit, index)))
+            data = self._rp.results.get(unit)
+            if data is not None and data.get('status') == 'unavailable':
+                data = None
+            line.set_data(
+                data['window_centres_h'] if data is not None else [],
+                data['contamination'] * 100 if data is not None else [],
+            )
+        note = self._rp.message
+        ready = [r for r in self._rp.results.values() if r.get('status') != 'unavailable']
+        if ready:
+            right = max(self._refractory_xlim()[1], max(r['window_centres_h'][-1] for r in ready))
+            limits = (self._common().edges[0] / 3600, right)
+            if ax.get_xlim() != limits:
+                ax.set_xlim(*limits)
+                self._rp_background = None
+            finite_min = min(
+                (
+                    float(np.nanmin(r['contamination']))
+                    for r in ready
+                    if np.isfinite(r['contamination']).any()
+                ),
+                default=0,
+            )
+            limits = (min(0, 100 * finite_min), 100)
+            if ax.get_ylim() != limits:
+                ax.set_ylim(*limits)
+                self._rp_background = None
+        failures = [
+            f'Unit {u}: {r["message"]}'
+            for u, r in self._rp.results.items()
+            if r.get('status') == 'unavailable'
+        ]
+        if failures:
+            note = 'RP unavailable. ' + '; '.join(failures[:3])
+        elif ready and all(not np.isfinite(r['contamination']).any() for r in ready):
+            note = 'RP unavailable in windows with fewer than 1,000 post-dedup spikes.'
+        self._rp_note.set_text(note)
+        if draw:
+            if self._rp_background is not None:
+                self._draw_refractory_artists()
+            else:
+                self.canvas.canvas.draw_idle()
+
+    def _capture_refractory_background(self, event):
+        if self._rp_blit and not self._closed and self.show_refractory and self._dock_visible:
+            ax = list(self.canvas.iter_ax())[3]
+            self._rp_background = self.canvas.canvas.copy_from_bbox(ax.bbox)
+            self._draw_refractory_artists()
+
+    def _draw_refractory_artists(self):
+        ax = list(self.canvas.iter_ax())[3]
+        self.canvas.canvas.restore_region(self._rp_background)
+        for line in self._rp_lines.values():
+            ax.draw_artist(line)
+        if self._rp_note is not None:
+            ax.draw_artist(self._rp_note)
+        self.canvas.canvas.blit(ax.bbox)
 
     def on_select(self, cluster_ids=None, **kwargs):
         if self._attaching:
@@ -530,7 +675,9 @@ class UnitStabilityView(ManualClusteringView):
             self._pending_selection = None
             self.on_select([], **kwargs)
             return
-        return super().on_select_threaded(sender, cluster_ids, gui=gui, **kwargs)
+        result = super().on_select_threaded(sender, cluster_ids, gui=gui, **kwargs)
+        self.cluster_ids = tuple(self.cluster_ids)
+        return result
 
     def _toggle_metric(self, metric, checked):
         setattr(self, f'show_{metric}', bool(checked))
@@ -551,10 +698,31 @@ class UnitStabilityView(ManualClusteringView):
         """Show depth."""
         self._toggle_metric('depth', checked)
 
+    def toggle_refractory(self, checked):
+        """Show refractory-period contamination."""
+        self._toggle_metric('refractory', checked)
+
+    def toggle_auto_update(self, checked):
+        """Freeze pending RP work along with the other selected-unit evidence."""
+        super().toggle_auto_update(checked)
+        if not checked:
+            self._rp.request((), enabled=False)
+        elif not self._closed:
+            supervisor = getattr(self.controller, 'supervisor', None)
+            if supervisor is not None:
+                ids = list(supervisor.selected)
+                self._update_cluster_color_indices(supervisor, ids)
+                self.on_select(ids)
+            else:
+                self.plot()
+
     def _invalidate(self):
         self._selected_summaries.clear()
 
     def _release_cache(self):
+        self._rp.close()
+        self.canvas.canvas.mpl_disconnect(self._rp_draw_connection)
+        self._rp_background = None
         self._summary_arrays.clear()
         self._selected_summaries.clear()
         self._common_data = None
@@ -571,6 +739,17 @@ class UnitStabilityView(ManualClusteringView):
             super().attach(gui)
         finally:
             self._attaching = False
+
+        def on_rp_visibility(visible):
+            if not visible:
+                self._rp.request((), enabled=False)
+            elif not self._closed:
+                self._rp.request(
+                    self.displayed_ids, enabled=self.show_refractory and self.auto_update
+                )
+                self._update_refractory()
+
+        self.dock.visibilityChanged.connect(on_rp_visibility)
         for metric in self._metrics:
             self.actions.add(
                 getattr(self, f'toggle_{metric}'),

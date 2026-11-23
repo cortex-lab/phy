@@ -13,6 +13,10 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Unit Stability adds live refractory-period contamination for visible selected
+  units, recomputed from original ticks and raw amplitudes after supported edits.
+  Its diagnostic deduplication never changes sorting assignments or exports;
+  missing evidence and background work have independent panel status.
 - Cancelling a close/save prompt preserves the live merge workspace, selection
   callbacks, status reporting and draft protection. GUI state collection and
   resource cleanup now wait until closure is accepted.

@@ -1,4 +1,6 @@
 local_tests
+.context/
+.venv/
 contrib
 data
 doc

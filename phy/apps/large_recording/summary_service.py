@@ -12,7 +12,13 @@ from time import monotonic
 from phy.gui.qt import QObject, Qt, QTimer, pyqtSignal, pyqtSlot
 from phy.gui.tasks import heavy_io
 
-from .live_summaries import LiveSummaryEngine, _check_cancel, membership_expressions
+from .live_summaries import (
+    LiveSummaryEngine,
+    _check_cancel,
+    acquire_source_engine,
+    membership_expressions,
+    release_source_engine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +51,7 @@ class _SummaryWorker:
 
     def _run(self):
         engine = None
+        lease = None
         try:
             while True:
                 job = self.jobs.get()
@@ -55,8 +62,6 @@ class _SummaryWorker:
                 try:
                     if self.stopped.is_set() or cancel.is_set():
                         raise CancelledError()
-                    if engine is None:
-                        engine = LiveSummaryEngine(self.package_path, source_dir=self.source_path)
                     last_progress = [0.0]
 
                     def progress(phase, done, total, last_progress=last_progress, cancel=cancel):
@@ -71,6 +76,10 @@ class _SummaryWorker:
                     with heavy_io(
                         check_cancel, waiting=lambda: progress('waiting for recording I/O', 0, 0)
                     ):
+                        if engine is None:
+                            lease, engine = acquire_source_engine(
+                                self.package_path, self.source_path, factory=LiveSummaryEngine
+                            )
                         started = monotonic()
                         try:
                             results = engine.resolve(
@@ -83,21 +92,17 @@ class _SummaryWorker:
                                 len(expressions),
                                 monotonic() - started,
                             )
-                            if self.stopped.is_set():
-                                engine.close()
                 except Exception as exc:
                     error = exc
                 if self.stopped.is_set():
                     # Terminal delivery means all source handles are released;
                     # a resumed GUI may now create the next worker safely.
-                    if engine is not None:
-                        engine.close()
                     self.delivery.finished.emit((expressions, results, error, cancel))
                     return
                 self.delivery.finished.emit((expressions, results, error, cancel))
         finally:
-            if engine is not None:
-                engine.close()
+            if lease is not None:
+                release_source_engine(lease)
 
 
 class LiveSummaryService(QObject):

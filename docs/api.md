@@ -7208,6 +7208,18 @@ is logically much simpler, and faster to execute.
 
 ---
 
+#### Clustering.membership_snapshot
+
+
+**`Clustering.membership_snapshot(self, cluster_ids)`**
+
+Read-only views of current per-unit original row IDs.
+
+Supported clustering operations replace these arrays, including undo;
+retained snapshots therefore remain valid after subsequent edits.
+
+---
+
 #### Clustering.merge
 
 

@@ -63,6 +63,47 @@ QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
   uv run python tools/capture_long_recording_views.py
 ```
 
+### Refractory-period contamination
+
+Unit Stability's fourth panel estimates contamination for the current selected
+units. It uses original integer ticks and raw source amplitudes, including spikes
+outside the sampled evidence windows. After a merge, source-amplitude split,
+parent restoration, Undo/Redo or reopening, it follows the current membership.
+Removing a merge candidate affects the selection used by the subsequent merge.
+Diagnostic duplicate removal changes neither sorting assignments nor exports.
+
+The fixed calculation matches the [phytastic reference](https://github.com/goatsofnaxos/phytastic/tree/992b2588729a5f1e4f16bd745f8cf5db6b1866a3/reference/rp-contamination):
+remove spikes within 0.3 ms by descending absolute source amplitude (earlier
+spikes win ties), then count every later pair with 0.3 ms < interval ≤ 1 ms.
+Pairs belong to the earlier spike's bin. Deduplication uses complete chained
+components across input boundaries. Signed amplitudes remain the input to
+source-amplitude membership splits. Nonfinite or missing scores are unavailable.
+
+The scientific grid is always 30-minute bins, with centered six-hour windows
+every hour and a dashed 10% guide. Display-bin controls do not change it. Periods
+use Python sample rounding; the final padded bin can add a center beyond the
+recording end. Exposure comes from declared recording duration and valid
+intervals; gaps reduce recorded time without resetting spike-pair counting.
+Ordinary datasets need authoritative `num_samples` and compatible clock/exposure
+metadata; the last spike does not establish recording duration.
+
+Windows with fewer than 1,000 spikes after deduplication have no estimate. Low
+violation counts are uncertain, adjacent windows overlap, and changing unit
+activity within a window affects interpretation. A value of 100% is estimator
+saturation, not certainty that every spike is a contaminant. The panel makes no
+automatic clean/contaminated classification.
+
+Only displayed selected units request work while the panel is enabled and
+visible. Pending, unavailable or failed RP work leaves the other evidence panels
+usable. Original source files must remain available and unchanged. Full content
+authentication and scanning run in a background worker and may take seconds or
+longer for large recordings. A bounded 256 MiB in-memory original-unit tick cache
+accelerates repeated merges and splits; larger or evicted memberships use the
+verified full-source fallback. Completed curves have a separate bounded cache.
+Caches are disposable and are rebuilt after reopening the view. Computation
+reports unavailable if an exact unresolved duplicate component exceeds its
+memory budget; no approximate curve is substituted.
+
 ### Comparing clusters on a real recording
 
 These actual Qt captures use the same converted AIND test export, selected

@@ -1167,6 +1167,14 @@ class BoundedSession:
         """Opaque identity shared by metadata-only transitions and their undo."""
         return self._runtime.membership_key
 
+    def membership_snapshot(self, unit_ids):
+        """Return authoritative immutable expressions without replaying the journal."""
+        return {
+            int(unit): self._runtime.active[int(unit)].expression
+            for unit in unit_ids
+            if int(unit) in self._runtime.active
+        }
+
     def _prepare_event(self, event):
         from .runtime import Transition
 

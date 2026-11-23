@@ -263,7 +263,7 @@ def test_reunited_children_restore_prepared_membership():
 
 
 @pytest.mark.parametrize('phase', ['hash', 'scan'])
-def test_mid_job_cancellation_releases_pinned_readers(tmp_path, phase):
+def test_mid_job_cancellation_retains_only_authenticated_readers(tmp_path, phase):
     source, bounded = package(tmp_path)
     expressions = membership_expressions([0, 1, 2, 99], [split(1, [100, 101])])
     with LiveSummaryEngine(bounded, batch_size=1) as engine:
@@ -275,7 +275,11 @@ def test_mid_job_cancellation_releases_pinned_readers(tmp_path, phase):
 
         with pytest.raises(CancelledError):
             engine.resolve(expressions, cancel)
-        assert not engine.arrays and not engine.handles
+        if phase == 'hash':
+            assert not engine.arrays and not engine.handles
+        else:
+            assert engine.arrays and engine.handles
+            assert not any(handle.closed for handle in engine.handles.values())
         assert not list(engine.cache_dir.glob('*.npz'))
 
 

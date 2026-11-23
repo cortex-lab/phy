@@ -196,6 +196,20 @@ class Clustering:
         """A dictionary {cluster_id: spike_ids}."""
         return self._spikes_per_cluster
 
+    def membership_snapshot(self, cluster_ids):
+        """Read-only views of current per-unit original row IDs.
+
+        Supported clustering operations replace these arrays, including undo;
+        retained snapshots therefore remain valid after subsequent edits.
+        """
+        result = {}
+        for cluster_id in cluster_ids:
+            if cluster_id in self._spikes_per_cluster:
+                rows = self._spikes_per_cluster[cluster_id].view()
+                rows.flags.writeable = False
+                result[cluster_id] = rows
+        return result
+
     @property
     def cluster_ids(self):
         """Ordered list of ids of all non-empty clusters."""
