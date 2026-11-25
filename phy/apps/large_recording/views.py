@@ -5,7 +5,7 @@ from phylib.utils import connect, unconnect
 
 from phy.cluster._proposition_annotations import project_proposition_labels
 from phy.cluster.views import AmplitudeView, CorrelogramView, ISIView
-from phy.gui.qt import QLabel, Qt
+from phy.gui.qt import QApplication, QKeySequence, QLabel, Qt, QWidget
 
 
 class SampledISIView(ISIView):
@@ -46,6 +46,26 @@ class SampledCorrelogramView(CorrelogramView):
         attrs = ('exclusion_ms', 'exclude_auto', 'exclude_cross')
         self.state_attrs += attrs
         self.local_state_attrs += attrs
+
+    def on_key_press(self, e):
+        # Native window focus may leave QWidget focus in a different dock, so
+        # Qt cannot activate WidgetWithChildrenShortcut actions. Handle only
+        # keys delivered to this focused native canvas; Qt-consumed shortcuts
+        # never reach this callback.
+        if (
+            isinstance(self.canvas, QWidget)
+            or QApplication.focusWindow() != self.canvas
+            or not hasattr(self, 'actions')
+            or e.key is None
+        ):
+            return
+        modifiers = ['Ctrl' if name == 'Control' else name for name in e.modifiers]
+        sequence = QKeySequence('+'.join([*modifiers, e.key]))
+        for name in ('toggle_auto_exclusion', 'toggle_cross_exclusion'):
+            action = self.actions.get(name)
+            if action is not None and action.isEnabled() and sequence in action.shortcuts():
+                action.trigger()
+                return
 
     def _refresh_proposition_annotations(self):
         catalog, active_keys, visible_keys = (

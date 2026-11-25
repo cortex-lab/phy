@@ -13,6 +13,9 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Fix sampled correlogram `D` and `Shift+D` exclusion shortcuts when native
+  OpenGL canvas focus leaves widget focus in another dock.
+
 - Optional original-unit RP summaries and exact timestamp summary stores accelerate
   refractory-period diagnostics, including offline merges and amplitude splits
   against the verified prepared snapshot. Existing stores and authenticated source

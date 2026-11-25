@@ -10,7 +10,7 @@ from phy.apps.large_recording.views import SampledCorrelogramView
 from phy.apps.template.gui import TemplateController
 from phy.cluster.views import CorrelogramView
 from phy.gui import GUI
-from phy.gui.qt import QLineEdit, QPoint, Qt, QWidget
+from phy.gui.qt import QApplication, QLineEdit, QPoint, Qt, QWidget
 
 
 def _provider(ids, bin_size, window_size, **kwargs):
@@ -113,6 +113,56 @@ def _make_close_spike_controller(tmp_path):
     return params, TemplateController(
         dir_path=output, config_dir=tmp_path / 'config', plugins=[], enable_threading=False
     )
+
+
+@pytest.mark.parametrize('auto_key', [Qt.Key_D, Qt.Key_X])
+def test_exclusion_keys_in_full_bounded_gui_change_counts_without_curation(
+    qtbot, tmp_path, auto_key
+):
+    _, controller = _make_close_spike_controller(tmp_path)
+    gui = controller.create_gui(do_prompt_save=False)
+    qtbot.addWidget(gui)
+    view = gui.get_view('SampledCorrelogramView')
+    if auto_key == Qt.Key_X:
+        view.actions.get('toggle_auto_exclusion').setShortcut('X')
+    assignments = controller.bounded_session.assignments.copy()
+    try:
+        with qtbot.waitExposed(gui):
+            gui.show()
+        gui.activateWindow()
+        qtbot.waitUntil(gui.isActiveWindow)
+        controller.supervisor.select([0, 1, 2])
+        controller.supervisor.block()
+        view.set_exclusion_zone(2)
+        original, _ = view._get_correlograms_data()
+        view.dock.raise_()
+        qtbot.mouseClick(view.canvas, Qt.LeftButton, pos=QPoint(20, 20))
+        qtbot.waitUntil(
+            view.canvas.hasFocus if isinstance(view.canvas, QWidget) else view.canvas.isActive
+        )
+        if not isinstance(view.canvas, QWidget):
+            view.canvas.requestActivate()
+            qtbot.waitUntil(lambda: QApplication.focusWindow() == view.canvas)
+        qtbot.keyClick(view.canvas, auto_key)
+        qtbot.waitUntil(lambda: view.exclude_auto)
+        auto, _ = view._get_correlograms_data()
+        assert auto[0, 0].sum() < original[0, 0].sum()
+        np.testing.assert_array_equal(auto[0, 1], original[0, 1])
+        qtbot.keyClick(view.canvas, Qt.Key_D, modifier=Qt.ShiftModifier)
+        qtbot.waitUntil(lambda: view.exclude_cross)
+        both, _ = view._get_correlograms_data()
+        assert both[0, 1].sum() < original[0, 1].sum()
+        np.testing.assert_array_equal(both[0, 0], auto[0, 0])
+        qtbot.keyClick(view.canvas, auto_key)
+        qtbot.keyClick(view.canvas, Qt.Key_D, modifier=Qt.ShiftModifier)
+        qtbot.waitUntil(lambda: not view.exclude_auto and not view.exclude_cross)
+        np.testing.assert_array_equal(view._get_correlograms_data()[0], original)
+        np.testing.assert_array_equal(controller.bounded_session.assignments, assignments)
+        assert not controller.bounded_session.events
+        assert not controller.supervisor.is_dirty()
+    finally:
+        gui.close()
+        controller.close()
 
 
 def test_view_exclusion_preserves_data_history_and_settings_across_reopen(qtbot, tmp_path):
