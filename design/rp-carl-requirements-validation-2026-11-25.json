@@ -1,0 +1,332 @@
+{
+  "ground_truth": {
+    "path": "/home/cyrille/T\u00e9l\u00e9chargements/Speeding_up_the_RP_panel_on_long_recordings.pdf",
+    "sha256": "494f10008867355bdf78830b98d42f5dfddcfbef095d5415a52942a03008b234",
+    "title": "Speeding up the RP panel on long recordings",
+    "author": "Carl",
+    "date": "2026-11-24"
+  },
+  "requirements": [
+    {
+      "page": 2,
+      "request": "Optional prepare-large original-unit deduplicated counts and violations on 30-minute scientific bins",
+      "implementation": [
+        "phy/apps/large_recording/refractory_store.py:build_refractory_summaries",
+        "phy/apps/large_recording/prepare.py:prepare_large",
+        "phy/apps/__init__.py:--rp-summaries"
+      ],
+      "assessment": "Implemented; authenticated per-original grids, complete duplicate components across batches, recorded exposure retained."
+    },
+    {
+      "page": 2,
+      "request": "Exact timestamps alongside amplitudes; read only parents for merges and amplitude splits",
+      "implementation": [
+        "phy/apps/large_recording/summary_store.py:_layout",
+        "phy/apps/large_recording/refractory_store.py:_chronological",
+        "phy/apps/large_recording/refractory_store.py:resolve_prepared"
+      ],
+      "assessment": "Implemented; offsets relative to native store bins reconstruct exact integer ticks; dtype adapts to bin width and preserves amplitude precision. Storage differs from illustrative +4-byte layout when a narrower exact offset suffices."
+    },
+    {
+      "page": 2,
+      "request": "Optional features, source fallback for old packages, bounded folder plus store usable without phy/",
+      "implementation": [
+        "phy/apps/large_recording/refractory_engine.py:resolve",
+        "phy/apps/large_recording/tests/test_refractory_store.py"
+      ],
+      "assessment": "Implemented for originals, unions and supported amplitude predicates; unsupported histories retain source fallback. Offline evidence is explicitly tied to prepared snapshot."
+    }
+  ],
+  "acceptance_limits": [
+    "This document asks to avoid whole-source scans; it does not specify a 10x speed target. The user separately requested at least 10x.",
+    "Real export is 469725567 spikes across 705 roots and 99.436744 recorded hours / 112.859144 elapsed hours, not Carl's 1000-hour shanks.",
+    "No general 10x novel-merge speedup has been established. Compare source steady-state scans separately from first-use source authentication.",
+    "OS page-cache state uncontrolled; tests and artifact construction may run concurrently with measurements, so timings are indicative rather than isolated hardware benchmarks.",
+    "No custom binary extension or new project dependency introduced; no publication."
+  ],
+  "real_export": {
+    "source": "/home/cyrille/GIT/IBL/phy-data/carl/aind-b1b0782a-b3ea-4f34-81d7-b3c6e36452b3/phy/experiment1_AmplifierData_recording1_group0",
+    "original_preparation": "/home/cyrille/GIT/IBL/phy-data/carl/feedback-validation-2026-11-17/pipeline/prepared-1",
+    "spikes": 469725567,
+    "units": 705,
+    "selected_units": [
+      550,
+      575
+    ],
+    "selected_counts": [
+      6049498,
+      5464447
+    ],
+    "elapsed_hours": 112.85914361111112,
+    "recorded_hours": 99.43674400925926,
+    "store_build_seconds": 73.53931737299717,
+    "store_bytes": 4227624543
+  },
+  "measurements": {
+    "source": {
+      "mode": "source",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 14.725798075000057,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "8b9357fd0d36f7f0c7a7e8c3b12467830d4af5ae802c69110a873f963b28da8e",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.0012057490093866363,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "8b9357fd0d36f7f0c7a7e8c3b12467830d4af5ae802c69110a873f963b28da8e",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 2.16931946000841,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0012005879980279133,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 2.021045839996077,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "4f9d6ed178cfa3be4a1adcca49efee7cd4570e1f89d5ead6d075370203f3cba4",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.0012057290005031973,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "4f9d6ed178cfa3be4a1adcca49efee7cd4570e1f89d5ead6d075370203f3cba4",
+          "status": "ready"
+        }
+      ],
+      "seconds": 18.97732564699254,
+      "peak_rss_bytes": 9623576576,
+      "source_hash_bytes": 9394511724
+    },
+    "timestamps": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 0.26277301499794703,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 54445482,
+          "fingerprint": "8b9357fd0d36f7f0c7a7e8c3b12467830d4af5ae802c69110a873f963b28da8e",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.0037837540003238246,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "8b9357fd0d36f7f0c7a7e8c3b12467830d4af5ae802c69110a873f963b28da8e",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 0.7879041740088724,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 103625505,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0036645429936470464,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 0.3684799030015711,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 103625505,
+          "fingerprint": "4f9d6ed178cfa3be4a1adcca49efee7cd4570e1f89d5ead6d075370203f3cba4",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.003778084006626159,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "4f9d6ed178cfa3be4a1adcca49efee7cd4570e1f89d5ead6d075370203f3cba4",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.1450003259815276e-05,
+      "cancelled_request_seconds": 0.013284906002809294,
+      "seconds": 1.4565428919886472,
+      "peak_rss_bytes": 245682176,
+      "source_hash_bytes": 0
+    },
+    "source-first-merge": {
+      "mode": "source",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 9.13593974300602,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0012156870070612058,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        }
+      ],
+      "seconds": 9.194043210998643,
+      "peak_rss_bytes": 9622986752,
+      "source_hash_bytes": 9394511724
+    },
+    "timestamps-first-merge": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 0.8239759889984271,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 103625505,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.004266465999535285,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "32039d613fcbae29fb76e29b6f24d5238835be70a3d24d1f91d72ed04f1f6729",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.370499714743346e-05,
+      "cancelled_request_seconds": 0.014001378003740683,
+      "seconds": 0.8548901670001214,
+      "peak_rss_bytes": 243359744,
+      "source_hash_bytes": 0
+    },
+    "build-counters": {
+      "mode": "build-counters",
+      "os_cache": "uncontrolled",
+      "queries": [],
+      "seconds": 166.29372705299465,
+      "peak_rss_bytes": 9583378432,
+      "source_hash_bytes": 9394511724,
+      "artifact_bytes": 3039426
+    },
+    "counters": {
+      "mode": "counters",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 0.0038765110075473785,
+          "path": "prepared RP counters",
+          "timestamp_bytes": 0,
+          "fingerprint": "8b9357fd0d36f7f0c7a7e8c3b12467830d4af5ae802c69110a873f963b28da8e",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.003068461999646388,
+          "path": "prepared RP counters",
+          "timestamp_bytes": 0,
+          "fingerprint": "8b9357fd0d36f7f0c7a7e8c3b12467830d4af5ae802c69110a873f963b28da8e",
+          "status": "ready"
+        }
+      ],
+      "seconds": 0.019501380011206493,
+      "peak_rss_bytes": 220299264,
+      "source_hash_bytes": 0
+    }
+  },
+  "agreement": {
+    "original": {
+      "fingerprints_equal": true,
+      "source_seconds": 14.725798075000057,
+      "prepared_seconds": 0.26277301499794703,
+      "speedup": 56.03999358577632,
+      "comparison_note": "Source timing includes first-use authentication; timestamp original is not the precomputed-counter path."
+    },
+    "merge": {
+      "fingerprints_equal": true,
+      "source_seconds": 2.16931946000841,
+      "prepared_seconds": 0.7879041740088724,
+      "speedup": 2.753278293946418,
+      "comparison_note": "Source reader authenticated by preceding original query; root cache disabled in both paths."
+    },
+    "amplitude-child": {
+      "fingerprints_equal": true,
+      "source_seconds": 2.021045839996077,
+      "prepared_seconds": 0.3684799030015711,
+      "speedup": 5.484819724313323,
+      "comparison_note": "Threshold is raw amplitude >= 0; source reader already authenticated; root cache disabled."
+    }
+  },
+  "benchmark_tool_change": "Added --source-dir to query and builder modes because the saved preparation points to a removed temporary overlay. Explicit source override authenticates the original export; original preparation and source files are not modified.",
+  "validation": {
+    "command": "make test-full UV_RUN='uv run --no-sync'",
+    "results": [
+      "747 passed, 13 skipped in 144.80s (0:02:24)",
+      "1079 passed, 6 skipped, 84 warnings in 446.11s (0:07:26)"
+    ],
+    "lint": "passed (included in test-full)",
+    "format_check": "passed (included in test-full)",
+    "benchmark_tool_lint_and_format": "passed",
+    "git_diff_check": "passed",
+    "log": "/tmp/phy-rp-resumed-full.log",
+    "source_changes_this_resume": [
+      "tools/benchmark_refractory.py: explicit source directory override for queries and builders"
+    ],
+    "publication": "none"
+  },
+  "counter_agreement": {
+    "source_fingerprint_equal": true,
+    "first_query_seconds": 0.0038765110075473785,
+    "source_access_blocked": true
+  }
+}

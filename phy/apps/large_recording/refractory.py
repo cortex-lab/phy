@@ -127,26 +127,41 @@ class RefractoryAccumulator:
             raise RefractoryUnavailable('Nonfinite source amplitudes.')
         t = np.concatenate((self.ticks, ticks))
         a = np.concatenate((self.scores, amplitudes))
-        boundaries = np.r_[0, np.flatnonzero(np.diff(t) > self.radius) + 1, len(t)]
-        largest = int(np.max(np.diff(boundaries), initial=0))
+        gaps = np.diff(t)
+        if not np.any(gaps <= self.radius):
+            # Isolated spikes cannot suppress one another. Keep the trailing
+            # spike pending until the next batch proves its component complete.
+            largest = int(bool(len(t)))
+            if largest > self.max_component:
+                raise RefractoryUnavailable('Exact duplicate component exceeds memory budget.')
+            stop = len(t) if final else max(0, len(t) - 1)
+            resolved = t[:stop]
+        else:
+            boundaries = np.r_[0, np.flatnonzero(gaps > self.radius) + 1, len(t)]
+            largest = int(np.max(np.diff(boundaries), initial=0))
+            if largest > self.max_component:
+                raise RefractoryUnavailable('Exact duplicate component exceeds memory budget.')
+            stop = len(t) if final else int(boundaries[-2])
+            keep = deduplicate(t[:stop], a[:stop], self.radius, cancel)
+            self.removed += int(np.count_nonzero(~keep))
+            resolved = t[:stop][keep]
         self.largest_component = max(self.largest_component, largest)
-        if largest > self.max_component:
-            raise RefractoryUnavailable('Exact duplicate component exceeds memory budget.')
-        stop = len(t) if final else int(boundaries[-2])
-        keep = deduplicate(t[:stop], a[:stop], self.radius, cancel)
-        self.removed += int(np.count_nonzero(~keep))
-        resolved = t[:stop][keep]
         self.spikes += np.bincount(resolved // self.bin_samples, minlength=self.n_bins)
         self.ticks, self.scores = t[stop:].copy(), a[stop:].copy()
         partners = np.concatenate((self.partners, resolved))
         # The first unresolved original tick bounds every future kept tick.
         watermark = t[stop] if stop < len(t) else (self.num_samples + self.tr if final else -1)
         done = len(partners) if final else np.searchsorted(partners, watermark - self.tr)
-        earlier = partners[:done]
-        nv = np.searchsorted(partners, earlier + self.tr, side='right') - np.searchsorted(
-            partners, earlier + self.radius, side='right'
-        )
-        np.add.at(self.violations, earlier // self.bin_samples, nv)
+        # Deduplication guarantees strictly more than radius between retained
+        # ticks. Only spikes with a successor inside tr can contribute a pair.
+        candidates = np.flatnonzero(np.diff(partners) <= self.tr)
+        candidates = candidates[candidates < done]
+        if len(candidates):
+            earlier = partners[candidates]
+            nv = np.searchsorted(partners, earlier + self.tr, side='right') - candidates - 1
+            bins = earlier // self.bin_samples
+            starts = np.r_[0, np.flatnonzero(np.diff(bins)) + 1]
+            self.violations[bins[starts]] += np.add.reduceat(nv, starts)
         self.partners = partners[done:].copy()
 
     def finish(self, cancel=None):

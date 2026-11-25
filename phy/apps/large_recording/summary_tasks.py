@@ -70,6 +70,9 @@ def inspect_summary_store(request, context):
         try:
             with SummaryStore(engine) as store:
                 compatible, path = True, str(store.path)
+                estimate = estimate_summary_store(
+                    request.package, source_dir=request.source, timestamps=store.timestamps
+                )
             available = True  # Existing rows are sufficient; original source may be offline.
         except (OSError, ValueError, KeyError, TypeError):
             pass

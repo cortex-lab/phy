@@ -138,3 +138,29 @@ def test_oversized_bad_reference_can_be_explicitly_replaced(qtbot, tmp_path):
     )
     assert outcome.state == 'succeeded'
     assert len(summary_store_reference(bounded)) < 65536
+
+
+def test_attached_timestamp_store_uses_full_row_width_in_gui_budget(qtbot, tmp_path):
+    from phy.apps.large_recording.live_summaries import LiveSummaryEngine
+    from phy.apps.large_recording.range_build import estimate_range_index
+    from phy.apps.large_recording.summary_store import build_summary_store
+
+    _, bounded = package(tmp_path)
+    build_summary_store(bounded, tmp_path / 'store', timestamps=True)
+    outcome = execute(
+        qtbot,
+        BackgroundTaskManager(),
+        'inspect-timestamps',
+        inspect_summary_store,
+        StoreRequest(str(bounded)),
+    )
+    assert outcome.state == 'succeeded'
+    inspection = outcome.result
+    expected = estimate_summary_store(bounded, timestamps=True)
+    assert inspection.compatible
+    assert inspection.estimate == expected
+    with LiveSummaryEngine(bounded) as engine:
+        assert (
+            inspection.budget_bytes
+            == expected.estimated_bytes + estimate_range_index(engine).final_bytes
+        )

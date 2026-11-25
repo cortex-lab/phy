@@ -205,6 +205,9 @@ def cli_template_describe(ctx, params_path):
     type=click.Path(path_type=Path),
     help='Build a separate unit-contiguous acceleration store at this new path.',
 )
+@click.option('--rp-summaries', is_flag=True, help='Prepare exact original-unit RP summaries.')
+@click.option('--rp-summary-max-bytes', type=click.IntRange(min=1), default=67108864)
+@click.option('--store-timestamps', is_flag=True, help='Include exact ticks in --summary-store.')
 @click.option('--summary-store-max-bytes', type=click.IntRange(min=1), default=68719476736)
 def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
     """Prepare bounded shared-window evidence and complete-sorting summaries.
@@ -243,6 +246,29 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
     )
 
 
+@phycli.command('build-rp-summaries')
+@click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option('--source-dir', type=click.Path(exists=True, path_type=Path))
+@click.option('--max-bytes', type=click.IntRange(min=1), default=67108864)
+@click.option('--memory-bytes', type=click.IntRange(min=1), default=67108864)
+@click.option('--batch-size', type=click.IntRange(min=1), default=100000)
+def cli_build_rp_summaries(bounded_dir, **kwargs):
+    """Prepare optional exact RP counts for the original units of a bounded package."""
+    from .large_recording.progress import ProgressReporter
+    from .large_recording.refractory_store import build_refractory_summaries
+
+    try:
+        with ProgressReporter() as progress:
+            output = build_refractory_summaries(
+                bounded_dir, cancel=progress.check_cancelled, progress=progress, **kwargs
+            )
+    except CancelledError as error:
+        raise click.ClickException('Operation cancelled.') from error
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f'Prepared RP summaries: {output}')
+
+
 @phycli.command('build-summary-store')
 @click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument('output-dir', type=click.Path(path_type=Path))
@@ -250,6 +276,7 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
 @click.option('--max-bytes', type=click.IntRange(min=1), default=68719476736)
 @click.option('--batch-size', type=click.IntRange(min=1), default=1000000)
 @click.option('--workers', type=click.IntRange(min=1, max=32), default=1, show_default=True)
+@click.option('--timestamps', is_flag=True, help='Include exact ticks for curated RP queries.')
 @click.option(
     '--amplitude-index/--rows-only',
     default=True,
@@ -269,7 +296,9 @@ def cli_build_summary_store(bounded_dir, output_dir, **kwargs):
             if accelerate:
                 from .large_recording.range_build import preflight_summary_store
 
-                preflight_summary_store(bounded_dir, kwargs['max_bytes'])
+                preflight_summary_store(
+                    bounded_dir, kwargs['max_bytes'], timestamps=kwargs['timestamps']
+                )
             output, reference = build_summary_store(
                 bounded_dir,
                 output_dir,

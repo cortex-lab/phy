@@ -23,9 +23,14 @@ VERSION = 1
 REFERENCE = 'live-summary-store.json'
 
 
-def binding(engine):
+def binding(engine, version=VERSION):
     """Bind a store to the same exact source snapshot and native grid as summaries."""
-    return {'version': VERSION, 'summary_binding': engine.binding}
+    result = {'version': version, 'summary_binding': engine.binding}
+    if version == 2:
+        from .refractory_store import refractory_binding
+
+        result['refractory_binding'] = refractory_binding(engine)
+    return result
 
 
 def _atomic_json(path, value):
@@ -68,7 +73,7 @@ class SummaryStorePublishedError(OSError):
         super().__init__(message)
 
 
-def _layout(engine):
+def _layout(engine, timestamps=False):
     inventory = engine.manifest['source_array_inventory']
     names = {'spike_times.npy', 'spike_clusters.npy'}
     specs = [('bin', _bin_dtype(engine.bins))]
@@ -80,15 +85,18 @@ def _layout(engine):
         names.add(name)
         scalar_names[field] = name
         specs.append((field, np.dtype(inventory[name]['dtype'])))
+    if timestamps:
+        span = int(np.max(np.diff(engine.edges)))
+        specs.append(('tick_offset', _bin_dtype(span)))
     return np.dtype(specs), names, scalar_names
 
 
-def estimate_summary_store(package_path, source_dir=None):
+def estimate_summary_store(package_path, source_dir=None, timestamps=False):
     """Read package metadata only; use exactly the builder's disk calculation."""
     from .live_summaries import LiveSummaryEngine
 
     with LiveSummaryEngine(package_path, source_dir=source_dir) as engine:
-        dtype, _, _ = _layout(engine)
+        dtype, _, _ = _layout(engine, timestamps)
         count = int(engine.manifest['num_spikes'])
         payload = count * dtype.itemsize
         return StoreEstimate(
@@ -113,6 +121,7 @@ def build_summary_store(
     before_publish=None,
     return_reference=False,
     workers=1,
+    timestamps=False,
 ):
     """Build an exact prepared-snapshot asset without modifying saved curation.
 
@@ -138,7 +147,7 @@ def build_summary_store(
         source_path = engine.source_dir.resolve()
         if output_dir == source_path or source_path in output_dir.parents:
             raise ValueError('Summary store must be outside the original source.')
-        dtype, names, scalar_names = _layout(engine)
+        dtype, names, scalar_names = _layout(engine, timestamps)
         count = int(engine.manifest['num_spikes'])
         payload_bytes = count * dtype.itemsize
         # Includes the small catalog and headers, independently of bounded budgets.
@@ -228,6 +237,10 @@ def build_summary_store(
                     sorted_rows = rows[order]
                     data = np.empty(stop - start, dtype=dtype)
                     data['bin'] = np.searchsorted(engine.edges, times, side='right') - 1
+                    if timestamps:
+                        if times.dtype.kind not in 'iu' or np.any(times > np.iinfo(np.int64).max):
+                            raise ValueError('Exact timestamps require signed int64 ticks.')
+                        data['tick_offset'] = times.astype(np.int64) - engine.edges[data['bin']]
                     for field, name in scalar_names.items():
                         axis = (
                             engine.manifest['source']['identity']['acquisition']['depth_axis']
@@ -275,7 +288,8 @@ def build_summary_store(
                 os.fsync(stream.fileno())
             engine._unchanged()
             catalog = {
-                'binding': binding(engine),
+                'binding': binding(engine, 2 if timestamps else VERSION),
+                'capabilities': ['timestamps'] if timestamps else [],
                 'dtype': dtype.descr,
                 'payload_bytes': payload_bytes,
                 'units': {
@@ -339,21 +353,19 @@ class SummaryStore:
         if index_path.stat().st_size > 16777216:
             raise StoreIntegrityError('Summary store catalog exceeds limit.')
         self.index = json.loads(index_path.read_text())
+        version = self.index['binding']['version']
+        if version not in (1, 2):
+            raise StoreIntegrityError('Unsupported summary store version.')
         if (
             'index_sha256' in reference and hash_json(self.index) != reference['index_sha256']
-        ) or self.index['binding'] != binding(engine):
+        ) or self.index['binding'] != binding(engine, version):
             raise StoreIntegrityError('Summary store binding mismatch.')
         self.dtype = np.dtype([tuple(s) for s in self.index['dtype']])
-        if self.dtype.hasobject or self.dtype.names != ('bin', *engine.fields):
-            raise StoreIntegrityError('Invalid summary store dtype.')
-        expected = [('bin', _bin_dtype(engine.bins))]
-        inventory = engine.manifest['source_array_inventory']
-        for field in engine.fields:
-            name = 'amplitudes.npy' if field == 'amplitude' else 'spike_depths.npy'
-            if name not in inventory and field == 'depth':
-                name = 'spike_positions.npy'
-            expected.append((field, np.dtype(inventory[name]['dtype'])))
-        if self.dtype != np.dtype(expected):
+        self.timestamps = version == 2 and self.index.get('capabilities') == ['timestamps']
+        if version == 2 and not self.timestamps:
+            raise StoreIntegrityError('Invalid timestamp capability.')
+        expected, _, _ = _layout(engine, self.timestamps)
+        if self.dtype.hasobject or self.dtype != expected:
             raise StoreIntegrityError('Summary store scalar dtype mismatch.')
         end = 0
         for unit, count in zip(engine.manifest['unit_ids'], engine.manifest['counts']):
@@ -384,10 +396,10 @@ class SummaryStore:
 
         item = self.index['units'][str(unit)]
         digest = hashlib.sha256()
-        self.stream.seek(item['start'] * self.dtype.itemsize)
         for start in range(0, item['count'], batch_size):
             _check_cancel(cancel)
             size = min(batch_size, item['count'] - start) * self.dtype.itemsize
+            self.stream.seek((item['start'] + start) * self.dtype.itemsize)
             raw = self.stream.read(size)
             if len(raw) != size:
                 raise StoreIntegrityError('Truncated summary store.')

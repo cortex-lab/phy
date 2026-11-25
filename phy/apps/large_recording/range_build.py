@@ -101,7 +101,7 @@ def estimate_range_index(engine, block_rows=128, units=None, workers=1):
     return RangeEstimate(final, final + workers * (scratch + unit_output), data)
 
 
-def preflight_summary_store(package_path, max_bytes):
+def preflight_summary_store(package_path, max_bytes, timestamps=False):
     """Check the combined metadata estimate before expensive row preparation."""
     from .live_summaries import LiveSummaryEngine
     from .summary_store import estimate_summary_store
@@ -111,7 +111,7 @@ def preflight_summary_store(package_path, max_bytes):
             estimate = estimate_range_index(engine).final_bytes
         except RangeUnavailableError:
             return  # Unsupported scalar layouts keep verified rows.
-        estimate += estimate_summary_store(package_path).estimated_bytes
+        estimate += estimate_summary_store(package_path, timestamps=timestamps).estimated_bytes
         if estimate > max_bytes:
             raise ValueError(
                 f'Combined store estimate {estimate:,} exceeds max_bytes; '

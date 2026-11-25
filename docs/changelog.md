@@ -13,6 +13,12 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- Optional original-unit RP summaries and exact timestamp summary stores accelerate
+  refractory-period diagnostics, including offline merges and amplitude splits
+  against the verified prepared snapshot. Existing stores and authenticated source
+  fallback remain supported; scientific calculations and curation assignments
+  are unchanged.
+
 - Unit Stability adds live refractory-period contamination for visible selected
   units, recomputed from original ticks and raw amplitudes after supported edits.
   Its diagnostic deduplication never changes sorting assignments or exports;

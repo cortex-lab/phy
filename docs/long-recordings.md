@@ -95,7 +95,8 @@ automatic clean/contaminated classification.
 
 Only displayed selected units request work while the panel is enabled and
 visible. Pending, unavailable or failed RP work leaves the other evidence panels
-usable. Original source files must remain available and unchanged. Full content
+usable. Unless optional prepared RP artifacts are available (below), original
+source files must remain available and unchanged. Full content
 authentication and scanning run in a background worker and may take seconds or
 longer for large recordings. A bounded 256 MiB in-memory original-unit tick cache
 accelerates repeated merges and splits; larger or evicted memberships use the
@@ -103,6 +104,86 @@ verified full-source fallback. Completed curves have a separate bounded cache.
 Caches are disposable and are rebuilt after reopening the view. Computation
 reports unavailable if an exact unresolved duplicate component exceeds its
 memory budget; no approximate curve is substituted.
+
+### Preparing RP acceleration
+
+Both RP capabilities are opt-in. To prepare original-unit RP summaries and a
+separate row store containing exact timestamps:
+
+```bash
+phy prepare-large /data/full/params.py /data/bounded \
+    --rp-summaries --summary-store /data/summary-store --store-timestamps
+```
+
+To add either capability to an existing bounded package:
+
+```bash
+phy build-rp-summaries /data/bounded
+phy build-summary-store /data/bounded /data/new-summary-store --timestamps
+```
+
+`--rp-summaries` does not require a row store. It writes small original-unit
+results under `.phy/refractory-summaries`, with a pinned catalog reference in
+`.phy/refractory-summaries.json`. Counts use the RP calculation's fixed 30-minute
+grid, independently of the configurable native summary bins. Complete duplicate
+components and later partners span source batches and bin boundaries. Counters
+from different original units cannot be added to calculate a merge.
+
+`--timestamps` adds exact integer offsets relative to the actual native bin
+starts. The smallest unsigned integer width that fits every bin span is used;
+signed source amplitudes retain their original dtype, including float64 precision.
+For 30 kHz and 30-minute bins, offsets need four bytes per spike: 6.75 billion
+spikes add 27 GB (decimal), before catalog overhead. Other fields and wider bins
+change the total; store estimates and byte-budget checks include the offsets.
+Existing stores without timestamps remain readable by rate/amplitude summaries
+and retain the RP source fallback.
+
+RP uses original-unit summaries first, then timestamp rows for originals, merges
+and supported amplitude-threshold histories, including nested edits, parent
+restoration and undo/redo. Membership filters run before diagnostic deduplication.
+Timestamp queries stream only the selected original ancestors, with bounded
+chronological merging rather than a recording-sized concatenation and sort.
+Template-based predicates require the original source. With source unavailable,
+such requests report unavailable; timestamp rows do not imply template support.
+
+**Offline results describe the authenticated prepared snapshot**, including its
+source identity, assignment revision, scientific algorithm, sample rate,
+duration, valid intervals and grids. They do not certify the current contents of
+the original files. Supported requests do not open, stat or hash those files.
+Prepared unit payloads are verified before derived results are published;
+corruption or missing capabilities retains the authenticated original-source
+fallback. Changed references or row-file signatures invalidate timestamp caches.
+To reconnect a copied timestamp store, use `phy attach-summary-store` with its
+new path. RP counters travel with the bounded package.
+
+The counter builder defaults to a 64 MiB disk limit (`--rp-summary-max-bytes`
+during preparation, or `build-rp-summaries --max-bytes`) and a 64 MiB state
+budget (`build-rp-summaries --memory-bytes`). It checks dense grids before work,
+globally apportions unresolved-component state, and allows at most another half
+of the state budget for source-batch scratch. A unit with invalid amplitudes or
+an oversized duplicate component is marked unavailable without discarding valid
+units. Timestamp query scratch uses the reader's existing 64 MiB allowance, plus
+one accumulator's bounded component state. Prepared query result grids have
+a separate 8 MiB limit; oversized requests report unavailable. Existing store
+budgets and cancellation checks continue to apply.
+
+Artifacts publish atomically and never overwrite an existing artifact directory.
+Optional preparation failure preserves the completed bounded package; retry via
+the corresponding build command. Preparation and RP queries do not change saved
+assignments, curation history or exports. The store-building commands still
+prepare the amplitude index by default; `--rows-only` skips that separate index.
+
+For reproducible measurements on a disposable package copy, run
+`tools/benchmark_refractory.py` in separate processes for `source`,
+`build-counters`, `counters`, `build-timestamps` and `timestamps`. Supply
+`--output report.json`, and `--store` for the timestamp builder. The report
+includes authentication bytes, timestamp query bytes, peak process memory,
+first-query and repeated-query timings, result fingerprints and cancellation
+latency. Use `--membership merge` or `--membership amplitude-child` in a fresh
+process to include first-use source authentication for those cases; the default
+`--membership all` retains the reader across cases. OS cache state is
+uncontrolled; a fresh process is not a cold disk.
+
 
 ### Comparing clusters on a real recording
 

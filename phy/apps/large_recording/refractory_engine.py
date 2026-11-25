@@ -25,8 +25,12 @@ class RefractoryEngine:
     Root rows are disposable and never alter the sorting or export membership.
     """
 
-    def __init__(self, source, root_bytes=268435456, result_bytes=8388608):
+    def __init__(
+        self, source, root_bytes=268435456, result_bytes=8388608, component_budget=1000000
+    ):
         self.source = source
+        self.component_budget = component_budget
+        self.artifact_stamp = None
         self.root_bytes, self.result_bytes = root_bytes, result_bytes
         self.roots, self.results = OrderedDict(), OrderedDict()
         self.last_path = None
@@ -56,6 +60,22 @@ class RefractoryEngine:
             size -= self._bytes(value)
 
     def resolve(self, expressions, cancel=None, progress=None):
+        from .refractory_store import resolve_prepared
+
+        _check_cancel(cancel)
+        prepared = resolve_prepared(self, expressions, cancel, progress)
+        missing = {u: e for u, e in expressions.items() if u not in prepared}
+        if not missing:
+            return prepared
+        try:
+            prepared.update(self._resolve_source(missing, cancel, progress))
+        except (OSError, ValueError) as error:
+            if not prepared:
+                raise
+            prepared.update({u: {'status': 'unavailable', 'message': str(error)} for u in missing})
+        return prepared
+
+    def _resolve_source(self, expressions, cancel=None, progress=None):
         s, m = self.source, self.source.manifest
         names = {'spike_times.npy', 'spike_clusters.npy', 'amplitudes.npy'}
         for e in expressions.values():
@@ -80,7 +100,7 @@ class RefractoryEngine:
                 m['sample_rate'],
                 m['num_samples'],
                 m['valid_intervals'],
-                max_component=max(1, 1000000 // len(missing)),
+                max_component=max(1, self.component_budget // len(missing)),
             )
             for u in missing
         }
@@ -161,10 +181,13 @@ class RefractoryEngine:
                 progress(f'RP {self.last_path}', stop, total)
         _check_cancel(cancel)
         s._unchanged()
+        pending_results = {}
         for unit, accumulator in accumulators.items():
             value = unavailable[unit] if unit in unavailable else accumulator.finish(cancel)
-            self.results[self.key(missing[unit])] = value
+            pending_results[self.key(missing[unit])] = value
             results[unit] = value
+        _check_cancel(cancel)
+        self.results.update(pending_results)
         for root, parts in pending_roots.items():
             self.roots[root] = {n: np.concatenate([p[n] for p in parts]) for n in names}
         self._trim(self.roots, self.root_bytes)

@@ -158,6 +158,9 @@ def prepare_large(
     workers=1,
     cancel=None,
     progress=None,
+    rp_summaries=False,
+    rp_summary_max_bytes=67108864,
+    store_timestamps=False,
 ):
     """Choose complete shared windows, write bounded arrays, and publish atomically.
 
@@ -166,6 +169,8 @@ def prepare_large(
     Candidate windows that exceed either budget are explicitly omitted; spikes
     within accepted windows are never independently thinned.
     """
+    if store_timestamps and summary_store is None:
+        raise ValueError('store_timestamps requires a summary_store destination.')
     with Source(
         params_path,
         duration_seconds,
@@ -190,13 +195,30 @@ def prepare_large(
             cancel,
             progress,
         )
+    if rp_summaries:
+        from .refractory_store import build_refractory_summaries
+
+        try:
+            build_refractory_summaries(
+                output,
+                source_dir=source.path,
+                max_bytes=rp_summary_max_bytes,
+                batch_size=batch_size,
+                cancel=cancel,
+                progress=progress,
+            )
+        except (ValueError, OSError) as error:
+            raise ValueError(
+                f'Bounded package is ready at {output}; optional RP summaries failed: {error}. '
+                'Use build-rp-summaries to retry without preparing again.'
+            ) from error
     if summary_store is not None:
         from .summary_store import build_summary_store
 
         try:
             from .range_build import preflight_summary_store
 
-            preflight_summary_store(output, summary_store_max_bytes)
+            preflight_summary_store(output, summary_store_max_bytes, timestamps=store_timestamps)
             _, reference = build_summary_store(
                 output,
                 summary_store,
@@ -206,6 +228,7 @@ def prepare_large(
                 cancel=cancel,
                 progress=progress,
                 return_reference=True,
+                timestamps=store_timestamps,
             )
             from .range_build import build_amplitude_index
             from .range_intervals import RangeUnavailableError

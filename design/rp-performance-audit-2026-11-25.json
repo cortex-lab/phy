@@ -1,0 +1,272 @@
+{
+  "audit": {
+    "model": "GPT-6.1 Sol",
+    "reasoning": "high",
+    "scope": "read-only audit of RP performance, exact precomputation, Numba, multicore, GPU/HPC; root supplemented local measurements",
+    "custom_binary_extensions": "excluded by user",
+    "publication": "none"
+  },
+  "hardware": {
+    "cpu": "Intel Core i9-14900K",
+    "logical_cpus": 32,
+    "physical_cores": 24,
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "gpu_memory_MiB": 32607
+  },
+  "prototype_environment": {
+    "launch": "uv run --no-sync --with numba",
+    "numba": "0.68.1",
+    "numpy": "2.4.3",
+    "project_dependencies_changed": false
+  },
+  "measurements": {
+    "optimized_regular": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 2.9991373009979725,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0009898540010908619,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 1.7272992408834398e-05,
+      "cancelled_request_seconds": 0.006781752992537804,
+      "seconds": 3.0081933209876297,
+      "peak_rss_bytes": 231133184,
+      "source_hash_bytes": 0
+    },
+    "baseline_poisson": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 7.083105063997209,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "c7301ac6e7e006adf9092caba8cd4e9d8fa3d48a254d45bcdba5232c65a1f447",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0009878570126602426,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "c7301ac6e7e006adf9092caba8cd4e9d8fa3d48a254d45bcdba5232c65a1f447",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.364299143664539e-05,
+      "cancelled_request_seconds": 0.011994404994766228,
+      "seconds": 7.097299722998287,
+      "peak_rss_bytes": 235032576,
+      "source_hash_bytes": 0
+    },
+    "optimized_poisson": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 4.538168281011167,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "c7301ac6e7e006adf9092caba8cd4e9d8fa3d48a254d45bcdba5232c65a1f447",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0009927419887389988,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "c7301ac6e7e006adf9092caba8cd4e9d8fa3d48a254d45bcdba5232c65a1f447",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.3590007913298905e-05,
+      "cancelled_request_seconds": 0.009144266005023383,
+      "seconds": 4.549644910992356,
+      "peak_rss_bytes": 235073536,
+      "source_hash_bytes": 0
+    },
+    "numba_initial_regular": {
+      "prototype": "two roots, whole read-only mmap; bounded-state but RSS/mapping and cancellation NOT production-ready",
+      "verification_seconds": 0.5816308339999523,
+      "kernel_seconds_first_and_repeat": [
+        11.018256787996506,
+        9.80866855799104
+      ],
+      "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+      "spikes_after_dedup": 76000000,
+      "violations": 0,
+      "duplicates_removed": 0,
+      "peak_rss_bytes": 1111277568
+    },
+    "numba_initial_poisson": {
+      "prototype": "two roots, whole read-only mmap; bounded-state but RSS/mapping and cancellation NOT production-ready",
+      "verification_seconds": 0.589644859006512,
+      "kernel_seconds_first_and_repeat": [
+        10.228227327010245,
+        9.94403443999181
+      ],
+      "fingerprint": "c7301ac6e7e006adf9092caba8cd4e9d8fa3d48a254d45bcdba5232c65a1f447",
+      "spikes_after_dedup": 75468024,
+      "violations": 1107760,
+      "duplicates_removed": 531976,
+      "peak_rss_bytes": 1089409024
+    },
+    "numba_inlined_regular": {
+      "prototype": "two roots, whole read-only mmap; bounded-state but RSS/mapping and cancellation NOT production-ready",
+      "verification_seconds": 0.5692608760000439,
+      "kernel_seconds_first_and_repeat": [
+        13.593661984996288,
+        8.882050542000798
+      ],
+      "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+      "spikes_after_dedup": 76000000,
+      "violations": 0,
+      "duplicates_removed": 0,
+      "peak_rss_bytes": 1138823168
+    },
+    "numba_inlined_poisson": {
+      "prototype": "two roots, whole read-only mmap; bounded-state but RSS/mapping and cancellation NOT production-ready",
+      "verification_seconds": 0.5670164360053604,
+      "kernel_seconds_first_and_repeat": [
+        8.981380551005714,
+        9.3991468000022
+      ],
+      "fingerprint": "c7301ac6e7e006adf9092caba8cd4e9d8fa3d48a254d45bcdba5232c65a1f447",
+      "spikes_after_dedup": 75468024,
+      "violations": 1107760,
+      "duplicates_removed": 531976,
+      "peak_rss_bytes": 1090273280
+    }
+  },
+  "raw_report_paths": {
+    "optimized_regular": "/tmp/phy-rp-optimized-merge.json",
+    "baseline_poisson": "/tmp/phy-rp-baseline-poisson.json",
+    "optimized_poisson": "/tmp/phy-rp-numpy-poisson.json",
+    "numba_initial_regular": "/tmp/phy-rp-numba-regular.json",
+    "numba_initial_poisson": "/tmp/phy-rp-numba-poisson.json",
+    "numba_inlined_regular": "/tmp/phy-rp-numba-inline-regular.json",
+    "numba_inlined_poisson": "/tmp/phy-rp-numba-inline-poisson.json"
+  },
+  "poisson_workload": {
+    "spikes": 80000000,
+    "duration_samples": 107938507064,
+    "seed": 25062026,
+    "ticks": "floor exponential interarrival with mean1350 ticks; integer ties allowed",
+    "labels": "exact counts60M,16M,2M,2M shuffled independently per1M rows",
+    "amplitudes": "float32 normal(0,1)"
+  },
+  "optimized_profile": {
+    "path": "/tmp/phy-rp-optimized-poisson.prof",
+    "total_seconds_including_imports": 7.381233393999985,
+    "stages": [
+      {
+        "file": "/home/cyrille/GIT/IBL/phy/phy/apps/large_recording/refractory_store.py",
+        "line": 250,
+        "function": "_unit_batches",
+        "calls": 1166,
+        "self_seconds": 0.390173168,
+        "inclusive_seconds": 1.1241697290000001
+      },
+      {
+        "file": "/home/cyrille/GIT/IBL/phy/phy/apps/large_recording/refractory_store.py",
+        "line": 271,
+        "function": "_chronological",
+        "calls": 1164,
+        "self_seconds": 0.38339335300000005,
+        "inclusive_seconds": 1.84160823
+      },
+      {
+        "file": "/home/cyrille/GIT/IBL/phy/phy/apps/large_recording/refractory.py",
+        "line": 111,
+        "function": "feed",
+        "calls": 1163,
+        "self_seconds": 0.892395577,
+        "inclusive_seconds": 2.637280001
+      },
+      {
+        "file": "/home/cyrille/GIT/IBL/phy/phy/apps/large_recording/summary_store.py",
+        "line": 394,
+        "function": "batches",
+        "calls": 1166,
+        "self_seconds": 0.005295818000000001,
+        "inclusive_seconds": 0.573734594
+      },
+      {
+        "file": "/home/cyrille/GIT/IBL/phy/phy/apps/large_recording/refractory.py",
+        "line": 19,
+        "function": "deduplicate",
+        "calls": 1156,
+        "self_seconds": 0.41736861900000005,
+        "inclusive_seconds": 0.871929646
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'update' of '_hashlib.HASH' objects>",
+        "calls": 1206,
+        "self_seconds": 0.49538740700000006,
+        "inclusive_seconds": 0.49538740700000006
+      }
+    ],
+    "note": "Inclusive stage times overlap and must not be added. Profile instrumentation affects timings."
+  },
+  "source": {
+    "baseline_refractory_sha256": "0751d63f83c8185139dec61060e3119304b49df3212b2df8bff765885cd7512b",
+    "pending_refractory_sha256": "5ca9a4677ec984b321d1b735ae320c9f1d1c1cab4df6c772a70f8329b8d5a55c",
+    "numba_initial_path": "/tmp/phy-rp-numba-prototype-first.py",
+    "numba_inlined_path": "/tmp/phy-rp-numba-prototype.py",
+    "numba_inlined_sha256": "63e44714f21bd6d02a156378c534b680c32b4708ecf4196b585a5557d144164c"
+  },
+  "validation": {
+    "numpy_focused_tests": 51,
+    "numpy_full_suite_since_optimization": false,
+    "numba_dense_small_oracle_cases": 30,
+    "large_fingerprints": "all equal for corresponding workload",
+    "numba_limitations": [
+      "two-original-root pure merges only",
+      "whole-file read-only mmap; peak RSS about1.1GB",
+      "separate pre-verification pass warms data",
+      "bounded cancellation and production publication rechecks not implemented",
+      "compiled-cache state not controlled for every first call"
+    ]
+  },
+  "findings": [
+    "Prepared rows still replay all selected raw spikes; this is the structural latency cost.",
+    "Sparse NumPy counting improves the regular fixture from7.2s to3.0s and Poisson-like fixture from7.08s to4.54s.",
+    "Naive scalar Numba fusion and forced helper inlining do not accelerate these cases; no10x claim is established.",
+    "Prepared exact likely-pair results can eliminate query replay for those exact memberships. Arbitrary multiway merges and threshold descendants require additional evidence or exact fallback.",
+    "Global interaction sparsity must not be assumed from selected-root sparsity.",
+    "Selective page authentication/time directories and certified independent partitions enable sparse access and bounded parallel processing.",
+    "Numba/hybrid, multicore and GPU options require measured end-to-end wins including authentication, startup/JIT and memory."
+  ],
+  "primary_sources": [
+    "https://numba.readthedocs.io/en/stable/user/performance-tips.html",
+    "https://numba.readthedocs.io/en/stable/developer/caching.html",
+    "https://numba.readthedocs.io/en/stable/user/threading-layer.html",
+    "https://numba.readthedocs.io/en/stable/developer/inlining.html",
+    "https://docs.cupy.dev/en/stable/user_guide/performance.html",
+    "https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#data-transfer-between-host-and-device"
+  ]
+}
