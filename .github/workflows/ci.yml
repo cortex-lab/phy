@@ -125,7 +125,7 @@ jobs:
     - name: Test configuration execution and persisted caches
       run: >-
         xvfb-run -a uv run --no-sync pytest --no-cov
-        phy/apps/tests/test_config_execution.py phy/utils/tests/test_context.py
+        phy/apps/tests/test_config_execution.py phy/apps/tests/test_trace_prefetch.py phy/utils/tests/test_context.py
       env:
         QT_QPA_PLATFORM: offscreen
         LIBGL_ALWAYS_SOFTWARE: "1"

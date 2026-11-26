@@ -232,7 +232,7 @@ changes before their next package release. To reproduce that job after syncing:
 
 ```bash
 uv pip install --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@86216fbd50fbb35a9b17662a452ef6625fcb1439"
-uv run --no-sync pytest --no-cov phy/apps/tests/test_config_execution.py phy/utils/tests/test_context.py
+uv run --no-sync pytest --no-cov phy/apps/tests/test_config_execution.py phy/apps/tests/test_trace_prefetch.py phy/utils/tests/test_context.py
 ```
 
 Use `uv run --no-sync` for subsequent commands to retain this exact override.

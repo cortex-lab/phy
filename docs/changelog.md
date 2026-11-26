@@ -22,7 +22,8 @@ behavior they verify rather than listed separately.
   template, trace, waveform-extraction, and ALF-conversion commands when using
   phylib's new configuration API. Unsupported configurations are never retried
   automatically. Document version requirements and pickle cache migration;
-  rejected pickle caches report their path and remain on disk.
+  rejected pickle caches report their path and remain on disk. Trace-prefetch
+  cleanup also tolerates docks already destroyed during GUI teardown.
 
 - Select the preceding Similarity View batch with `Control+Shift+Space`, using
   the same saved batch size as `Control+Space`.
