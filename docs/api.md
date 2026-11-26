@@ -13060,7 +13060,7 @@ Return a TemplateModel instance from a path to a `params.py` file.
 #### phy.apps.template.template_describe
 
 
-**`phy.apps.template.template_describe(params_path)`**
+**`phy.apps.template.template_describe(params_path, *, allow_python_execution=False)`**
 
 Describe a template dataset.
 
@@ -13069,7 +13069,7 @@ Describe a template dataset.
 #### phy.apps.template.template_gui
 
 
-**`phy.apps.template.template_gui(params_path, **kwargs)`**
+**`phy.apps.template.template_gui(params_path, *, allow_python_execution=False, **kwargs)`**
 
 Launch the Template GUI.
 

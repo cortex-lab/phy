@@ -15,6 +15,7 @@ from phy.apps.template import get_template_params
 from phy.cluster.views.trace import TraceView, select_traces
 from phy.gui import GUI, create_app, run_app
 
+from .._config import _config_execution_kwargs
 from .._utils import _close_trace_reader, _TraceNavigationPrefetch
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 
 
-def create_trace_gui(obj, **kwargs):
+def create_trace_gui(obj, *, allow_python_execution=False, **kwargs):
     """Create the Trace GUI.
 
     Parameters
@@ -42,6 +43,9 @@ def create_trace_gui(obj, **kwargs):
         The NumPy data type of the raw binary file.
     offset : int
         The header offset in bytes.
+    allow_python_execution : bool
+        Execute params.py as Python only when explicitly enabled for trusted files.
+        Requires phylib with the trusted configuration API.
 
     """
 
@@ -51,7 +55,9 @@ def create_trace_gui(obj, **kwargs):
     obj = Path(obj).resolve()
     source = obj
     if obj.suffix == '.py':
-        params = get_template_params(str(obj))
+        params = get_template_params(
+            str(obj), **_config_execution_kwargs(get_template_params, allow_python_execution)
+        )
         source = params.pop('dat_path')
         kwargs = params
         if not source:

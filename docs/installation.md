@@ -227,6 +227,19 @@ recorded in the CI workflow. Use `uv run --no-sync` and
 `make test-full UV_RUN="uv run --no-sync"` when intentionally preserving an
 editable phylib source override. After another `uv sync`, reinstall that override.
 
+The hardened configuration/cache compatibility job also tests the merged phylib
+changes before their next package release. To reproduce that job after syncing:
+
+```bash
+uv pip install --python .venv "phylib @ git+https://github.com/cortex-lab/phylib.git@86216fbd50fbb35a9b17662a452ef6625fcb1439"
+uv run --no-sync pytest --no-cov phy/apps/tests/test_config_execution.py phy/apps/tests/test_trace_prefetch.py phy/utils/tests/test_context.py
+```
+
+Use `uv run --no-sync` for subsequent commands to retain this exact override.
+This pin is a development/CI dependency, not a published minimum-version bump.
+Before releasing these changes, require a published phylib version containing
+both configuration and pickle changes and update the lockfile accordingly.
+
 ## Start phy
 
 The Template GUI opens a spike-sorting output described by a `params.py` file:

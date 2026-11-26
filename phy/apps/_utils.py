@@ -141,7 +141,11 @@ class _TraceNavigationPrefetch:
         for callback in entry['callbacks']:
             unconnect(callback)
         if entry['visibility'] is not None:
-            view.dock.visibilityChanged.disconnect(entry['visibility'])
+            from PyQt5 import sip
+
+            # The GUI may already have destroyed its docks before controller cleanup.
+            if not sip.isdeleted(view.dock):
+                view.dock.visibilityChanged.disconnect(entry['visibility'])
         gui = entry['gui']
         if gui in self._guis and not any(info['gui'] is gui for info in self._views.values()):
             unconnect(self._guis.pop(gui))

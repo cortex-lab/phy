@@ -200,3 +200,32 @@ def test_old_reader_and_unregister_late_completion():
     adapter.remove(view)
     emit('trace_navigation', view, (1.0, 1.5), 1, 'after', 1)
     assert reader.calls == [('cancel',)]
+
+
+def test_prefetch_cleanup_after_dock_deletion(qtbot):
+    from PyQt5 import sip
+    from PyQt5.QtWidgets import QDockWidget
+
+    reader = Reader()
+    adapter = _TraceNavigationPrefetch(reader)
+    view = View()
+    view.dock = QDockWidget()
+    gui = object()
+    adapter.register(view)
+    emit('view_attached', view, gui)
+    view.dock.show()
+    view.background_prefetch = True
+    navigate(reader, view)
+    assert reader.calls[-1][0] == 'hint'
+
+    # A GUI teardown can delete the native dock before the controller is closed.
+    sip.delete(view.dock)
+    adapter.close()
+    assert reader.calls[-1] == ('cancel',)
+    assert not adapter._views
+    assert not adapter._guis
+    assert not view.background_prefetch
+    reader.calls.clear()
+    navigate(reader, view)
+    assert reader.calls == [('read', (1.0, 1.5))]
+    adapter.close()

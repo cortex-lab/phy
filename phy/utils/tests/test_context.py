@@ -151,3 +151,55 @@ def test_pickle_cache(tempdir, context):
         ctx = load(f)
     assert isinstance(ctx, Context)
     assert ctx.cache_dir == context.cache_dir
+
+
+def test_context_cluster_cache_round_trip(context):
+    # Supervisor stores this derived mapping when saving curation state.
+    data = {np.int64(0): np.arange(3), np.int64(7): np.array([8, 9], dtype='int64')}
+    context.save('spikes_per_cluster', data, kind='pickle')
+    loaded = context.load('spikes_per_cluster')
+    assert loaded.keys() == data.keys()
+    for cluster_id in data:
+        ae(loaded[cluster_id], data[cluster_id])
+
+
+def test_context_rejected_pickle_preserves_file(context, monkeypatch):
+    from pickle import UnpicklingError
+
+    import pytest
+
+    import phy.utils.context as context_module
+
+    path = context._get_path('legacy', 'local', file_ext='.pkl')
+    path.write_bytes(b'original cached contents')
+
+    def reject(path):
+        raise UnpicklingError('Loading object arrays is forbidden.')
+
+    monkeypatch.setattr(context_module, 'load_pickle', reject)
+    with pytest.raises(UnpicklingError, match='legacy.pkl.*preserved'):
+        context.load('legacy')
+    assert path.read_bytes() == b'original cached contents'
+
+
+def test_context_restricted_pickle_never_executes(context, tmp_path):
+    import pytest
+    from phylib.utils import _misc
+
+    if not hasattr(_misc, '_PICKLE_ALLOWED'):
+        pytest.skip('Requires restricted phylib pickle loading')
+    marker = tmp_path / 'executed'
+
+    class Payload:
+        def __reduce__(self):
+            return (eval, (f"__import__('pathlib').Path({str(marker)!r}).write_text('yes')",))
+
+    context.save('legacy', {'object': Payload()}, kind='pickle')
+    path = context._get_path('legacy', 'local', file_ext='.pkl')
+    original = path.read_bytes()
+    from pickle import UnpicklingError
+
+    with pytest.raises(UnpicklingError, match='preserved'):
+        context.load('legacy')
+    assert not marker.exists()
+    assert path.read_bytes() == original

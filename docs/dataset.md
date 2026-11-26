@@ -277,3 +277,58 @@ phy template-gui /path/to/output/params.py --debug
 
 See [Troubleshooting](troubleshooting.md) for state, cache, graphics, and reporting
 advice.
+
+## Python configuration compatibility
+
+With phylib's restricted configuration loader (introduced by
+[cortex-lab/phylib#71](https://github.com/cortex-lab/phylib/pull/71)), `params.py`
+and probe files accept assignments, supported expressions, and bounded
+comprehensions by default. Unsupported Python, such as imports or function
+definitions, raises an error with a filename and line number. Prefer simple
+values such as `dtype = 'int16'` rather than importing NumPy to obtain a dtype.
+
+For a legacy file whose origin and contents you trust, explicitly enable Python
+execution for that invocation:
+
+```bash
+phy template-describe /path/to/output/params.py --allow-python-execution
+phy template-gui /path/to/output/params.py --allow-python-execution
+```
+
+The option also applies to `trace-gui` when given `params.py`,
+`extract-waveforms`, and `alf-convert`. For multi-probe conversion it
+applies to every input configuration and to merged/converted configurations.
+It permits arbitrary Python execution and phylib logs a warning. Rejected
+configurations are never automatically retried with execution enabled. The
+option does not change how Phy plugins, user configuration, or Klusta's separate
+Kwik loader work.
+
+The option requires a phylib version containing the trusted configuration API.
+Older phylib versions retain their existing loading behavior, which can execute
+configuration files by default; they cannot provide the restricted-loading
+behavior described above. Asking for the new option with an older version fails
+with an upgrade message before loading. Until the supporting phylib release is
+published, use the [source installation instructions](installation.md#install-the-latest-phy-and-phylib-source)
+and run `uv run --no-sync phy ...` to preserve the override.
+
+## Pickle cache migration
+
+With phylib's restricted pickle loader (introduced by
+[cortex-lab/phylib#72](https://github.com/cortex-lab/phylib/pull/72)), persisted
+pickle caches must contain plain containers and NumPy data without object dtype.
+Compressed files and custom objects are unsupported. The loader requires
+joblib 1.5 or later. Phy's standard `spikes_per_cluster.pkl` cache contains a
+mapping of cluster IDs to numeric spike-index arrays and remains supported.
+
+If a pickle cache is rejected, Phy reports its path and preserves its contents;
+it never falls back to unrestricted unpickling. Back up the dataset before
+migration. Only move aside a cache after establishing that it is derived data
+which can be regenerated from the saved dataset. For example, with Phy closed,
+the dataset's `.phy/spikes_per_cluster.pkl` can be moved outside `.phy` and
+rebuilt from `spike_clusters.npy` on the next launch. Do not remove saved spike
+assignments, cluster metadata, or an entire `.phy` directory to resolve a single
+cache error. Plugin-specific caches need their own migration procedure.
+
+The execution option for Python configuration files does not relax pickle
+restrictions. Joblib's separate function/memory caching and third-party loaders
+are also outside these restrictions.

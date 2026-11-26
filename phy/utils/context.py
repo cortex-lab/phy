@@ -9,7 +9,7 @@ import logging
 import os
 from functools import wraps
 from pathlib import Path
-from pickle import dump, load
+from pickle import UnpicklingError, dump, load
 
 from phylib.utils._misc import _fullname, load_json, load_pickle, save_json, save_pickle
 
@@ -201,7 +201,14 @@ class Context:
             return load_json(path)
         path = self._get_path(name, location, file_ext='.pkl')
         if path.exists():
-            return load_pickle(path)
+            try:
+                return load_pickle(path)
+            except UnpicklingError as error:
+                raise UnpicklingError(
+                    f'Cannot load pickle cache {path}: {error} '
+                    'The file has been preserved. Regenerate only derived caches; '
+                    'see the pickle cache migration instructions in docs/dataset.md.'
+                ) from error
         logger.debug("The file `%s` doesn't exist.", path)
         return {}
 
