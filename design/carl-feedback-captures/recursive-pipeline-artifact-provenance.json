@@ -1,0 +1,54 @@
+{
+  "REPORT.md": {
+    "bytes": 1960,
+    "sha256": "c8107f8c6aaefae6baba148d22b8152092be5912517c51a29f675c714f2bb08f"
+  },
+  "curation-result.json": {
+    "bytes": 938,
+    "sha256": "4691371cf07b0bc564230610b268dcc54f2b412a461c8874ae0d67eb5195e7fb"
+  },
+  "curation-state.json": {
+    "bytes": 906568,
+    "sha256": "4f2d219a61f6e2e085500f7989583ebf5772f6816c592dcfd94ef94bca8b49f0"
+  },
+  "execution-provenance.json": {
+    "bytes": 10946,
+    "sha256": "de1812d4ce22a0aa736d62e11263cb00eb77fd6e83962b13bd433d57b7ddf9fb"
+  },
+  "final-checks.json": {
+    "bytes": 2020,
+    "sha256": "20379d6940db74c01f57a68ae0406a9ba53a7cf95a60c660f2c5c4894c65bc56"
+  },
+  "final_checks.py": {
+    "bytes": 7098,
+    "sha256": "547757d8dd413a81ce6e8aeaeac8da401030fe00f2d02e8847045292f5154777"
+  },
+  "independent-oracle.json": {
+    "bytes": 13525,
+    "sha256": "db2f7752dd40abe2272cbb983ca92631c21588c76de2d2e9451f2a0c11fb6817"
+  },
+  "inventory-after.json": {
+    "bytes": 77280,
+    "sha256": "6b2cd3875e52cc83940da740e4e08a61dd688d8c76b00e76b73b58bd93b4b529"
+  },
+  "inventory-before.json": {
+    "bytes": 77280,
+    "sha256": "6b2cd3875e52cc83940da740e4e08a61dd688d8c76b00e76b73b58bd93b4b529"
+  },
+  "result.json": {
+    "bytes": 112773,
+    "sha256": "346e2090d235bffaf6d7fb909417d7ab74813775b47d95fae9530f1be885bc27"
+  },
+  "scenario.json": {
+    "bytes": 538,
+    "sha256": "49777a04bf7cc9972403426fdba82e83a6be8737dbf7b3ec60f8c3428f6254c4"
+  },
+  "validate_pipeline.py": {
+    "bytes": 18803,
+    "sha256": "0263b75a8be46fc9b08b5b3d28c64876b39f8264032689782dd5d40170b9d3b1"
+  },
+  "verify_parent_restore_replay.py": {
+    "bytes": 3469,
+    "sha256": "edb3ec3f5c2c58fee8260d00b34049367a5644358cde1bda5543cfeadb6333a8"
+  }
+}

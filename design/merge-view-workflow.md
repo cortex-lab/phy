@@ -26,7 +26,9 @@ The GUI has two mutually exclusive modes:
   followed by the other selected Cluster View rows and selected Similarity View
   rows in their visible table order.
 - **Merge mode:** the effective selection is the union of every cluster in Merge
-  View and the Similarity View selection. Cluster View is disabled.
+  View and the Similarity View selection. Presentation follows staged row order,
+  then selected Similarity rows. The blue reference can occupy any staged row.
+  Cluster View is disabled.
 
 The effective selection is what graphical and scientific views display. It is
 also what `G` merges. Transferring a cluster between Similarity View and Merge
@@ -73,9 +75,9 @@ remain in Merge View.
 
 Merge View is tied to one blue reference cluster:
 
-- it is always the first row;
+- it initially occupies the first row and may be dragged to any staged row;
 - it remains the reference used to calculate Similarity;
-- it cannot be reordered within Merge View;
+- changing its row position preserves its identity and blue palette slot;
 - it can be transferred to Similarity when another staged cluster remains; and
 - the current reference always owns the blue palette slot.
 
@@ -100,8 +102,8 @@ removing that cluster from Merge View.
 - Right-click on a Similarity row transfers that cluster to Merge View.
 - Drag-and-drop between Similarity View and Merge View provides the equivalent
   transfer operation.
-- Dragging within Merge View reorders candidates, except for the fixed blue
-  reference.
+- Dragging within Merge View reorders any staged row, including the blue
+  reference, without changing reference identity.
 - New candidates are appended after the candidates already in Merge View unless
   they are dropped at an explicit insertion point.
 - Duplicate membership is not possible; adding an existing member is a no-op.
@@ -144,6 +146,8 @@ Similarity View remains the live candidate area during Merge mode:
 
 - Ctrl+Space keeps its existing behavior and selects the next configured number
   of eligible Similarity candidates.
+- Ctrl+Shift+Space selects up to N eligible rows before the first selected eligible
+  row, in current visible order, or from the end with no eligible selection.
 - Ctrl+click manages its multi-row selection.
 - Backspace clears only the Similarity View selection; it does not alter Merge
   View.

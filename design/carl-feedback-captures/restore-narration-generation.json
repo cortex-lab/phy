@@ -1,0 +1,569 @@
+{
+  "model": "kyutai/tts-1.6b-en_fr",
+  "voice": "unmute-prod-website/fabieng-enhanced-v2.wav",
+  "batch_size": 4,
+  "seed": "42+batch_start",
+  "primer": "Bonjour.",
+  "primer_extra_padding_frames": 4,
+  "sample_rate": 24000,
+  "frame_rate": 12.5,
+  "elapsed_seconds": 18.546877312939614,
+  "sentences": [
+    {
+      "number": 1,
+      "text": "Here is the revised merge workflow.",
+      "file": "01-sentence.wav",
+      "with_bonjour": "01-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.93,
+      "raw_duration_seconds": 3.6,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Here",
+          11
+        ],
+        [
+          "is",
+          16
+        ],
+        [
+          "the",
+          18
+        ],
+        [
+          "revised",
+          20
+        ],
+        [
+          "merge",
+          27
+        ],
+        [
+          "workflow.",
+          36
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 2,
+      "text": "First, compare the clusters.",
+      "file": "02-sentence.wav",
+      "with_bonjour": "02-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.13,
+      "raw_duration_seconds": 2.8,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "First,",
+          11
+        ],
+        [
+          "compare",
+          19
+        ],
+        [
+          "the",
+          23
+        ],
+        [
+          "clusters.",
+          27
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 3,
+      "text": "Hold Control to combine two suggestions, then press G to merge.",
+      "file": "03-sentence.wav",
+      "with_bonjour": "03-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 4.61,
+      "raw_duration_seconds": 5.28,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Hold",
+          11
+        ],
+        [
+          "Control",
+          15
+        ],
+        [
+          "to",
+          20
+        ],
+        [
+          "combine",
+          24
+        ],
+        [
+          "two",
+          30
+        ],
+        [
+          "suggestions,",
+          35
+        ],
+        [
+          "then",
+          44
+        ],
+        [
+          "press",
+          47
+        ],
+        [
+          "G",
+          52
+        ],
+        [
+          "to",
+          56
+        ],
+        [
+          "merge.",
+          59
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 4,
+      "text": "Now make an unrelated merge, and mark it as multi-unit activity.",
+      "file": "04-sentence.wav",
+      "with_bonjour": "04-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 4.21,
+      "raw_duration_seconds": 4.88,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Now",
+          11
+        ],
+        [
+          "make",
+          15
+        ],
+        [
+          "an",
+          18
+        ],
+        [
+          "unrelated",
+          20
+        ],
+        [
+          "merge,",
+          25
+        ],
+        [
+          "and",
+          33
+        ],
+        [
+          "mark",
+          35
+        ],
+        [
+          "it",
+          38
+        ],
+        [
+          "as",
+          40
+        ],
+        [
+          "multi-unit",
+          44
+        ],
+        [
+          "activity.",
+          53
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 0
+    },
+    {
+      "number": 5,
+      "text": "Return to the older merge.",
+      "file": "05-sentence.wav",
+      "with_bonjour": "05-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.37,
+      "raw_duration_seconds": 3.04,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Return",
+          11
+        ],
+        [
+          "to",
+          18
+        ],
+        [
+          "the",
+          22
+        ],
+        [
+          "older",
+          25
+        ],
+        [
+          "merge.",
+          30
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 6,
+      "text": "Restore its parents in Merge Mode.",
+      "file": "06-sentence.wav",
+      "with_bonjour": "06-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.45,
+      "raw_duration_seconds": 3.12,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Restore",
+          11
+        ],
+        [
+          "its",
+          18
+        ],
+        [
+          "parents",
+          21
+        ],
+        [
+          "in",
+          25
+        ],
+        [
+          "Merge",
+          28
+        ],
+        [
+          "Mode.",
+          33
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 7,
+      "text": "Undo and redo affect only this restoration.",
+      "file": "07-sentence.wav",
+      "with_bonjour": "07-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 3.33,
+      "raw_duration_seconds": 4.0,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Undo",
+          11
+        ],
+        [
+          "and",
+          16
+        ],
+        [
+          "redo",
+          19
+        ],
+        [
+          "affect",
+          24
+        ],
+        [
+          "only",
+          31
+        ],
+        [
+          "this",
+          36
+        ],
+        [
+          "restoration.",
+          41
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 8,
+      "text": "Leaving Merge Mode keeps these parents alive.",
+      "file": "08-sentence.wav",
+      "with_bonjour": "08-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 2.77,
+      "raw_duration_seconds": 3.44,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Leaving",
+          11
+        ],
+        [
+          "Merge",
+          17
+        ],
+        [
+          "Mode",
+          22
+        ],
+        [
+          "keeps",
+          25
+        ],
+        [
+          "these",
+          28
+        ],
+        [
+          "parents",
+          31
+        ],
+        [
+          "alive.",
+          35
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 4
+    },
+    {
+      "number": 9,
+      "text": "Exclude one parent, and add a new candidate with Control-click.",
+      "file": "09-sentence.wav",
+      "with_bonjour": "09-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 3.73,
+      "raw_duration_seconds": 4.4,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Exclude",
+          11
+        ],
+        [
+          "one",
+          16
+        ],
+        [
+          "parent,",
+          18
+        ],
+        [
+          "and",
+          27
+        ],
+        [
+          "add",
+          29
+        ],
+        [
+          "a",
+          32
+        ],
+        [
+          "new",
+          34
+        ],
+        [
+          "candidate",
+          36
+        ],
+        [
+          "with",
+          42
+        ],
+        [
+          "Control-click.",
+          46
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 8
+    },
+    {
+      "number": 10,
+      "text": "Merge the new combination and save.",
+      "file": "10-sentence.wav",
+      "with_bonjour": "10-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 3.17,
+      "raw_duration_seconds": 3.84,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Merge",
+          11
+        ],
+        [
+          "the",
+          18
+        ],
+        [
+          "new",
+          20
+        ],
+        [
+          "combination",
+          23
+        ],
+        [
+          "and",
+          31
+        ],
+        [
+          "save.",
+          39
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 8
+    },
+    {
+      "number": 11,
+      "text": "Reopening preserves the result, the excluded parent, and the later edits.",
+      "file": "11-sentence.wav",
+      "with_bonjour": "11-with-bonjour.wav",
+      "primer_cut_seconds": 0.6699999999999999,
+      "duration_seconds": 4.53,
+      "raw_duration_seconds": 5.2,
+      "transcript": [
+        [
+          "Bonjour.",
+          2
+        ],
+        [
+          "Reopening",
+          11
+        ],
+        [
+          "preserves",
+          18
+        ],
+        [
+          "the",
+          23
+        ],
+        [
+          "result,",
+          27
+        ],
+        [
+          "the",
+          36
+        ],
+        [
+          "excluded",
+          39
+        ],
+        [
+          "parent,",
+          43
+        ],
+        [
+          "and",
+          50
+        ],
+        [
+          "the",
+          52
+        ],
+        [
+          "later",
+          54
+        ],
+        [
+          "edits.",
+          58
+        ]
+      ],
+      "decoder_timestamp_shift_seconds": 0.16,
+      "batch_start": 8
+    }
+  ],
+  "approved_audio_sha256": {
+    "01-sentence.wav": "7c6b28408b8c515bf46cb99571b2c81503398830cb53560cfde16cb3c3616d1a",
+    "01-with-bonjour.wav": "3a85993e444ac279df46da11dbd204e6bd86c025f7ae77d893f168a35daa948b",
+    "02-sentence.wav": "d95aaeaf50cae81f96972e9b36ecc18beaf4b98119c9e3371e2a07eb90960a14",
+    "02-with-bonjour.wav": "054fb208af06eb3ca68c093212c53c465206493594d3947d6808139ff42edabb",
+    "03-sentence.wav": "39dbf558fba30f312d8f507d500219b306e6a12d135d934bdfaf13b4a577a625",
+    "03-with-bonjour.wav": "0541633436ea8d220b780c736660c9fca8717ed5b7445d9c3a9eea3f968a807c",
+    "04-sentence.wav": "62feacd70fc45493c22b7d518426eefaa261a96fda2776643bc3873a5e455ff2",
+    "04-with-bonjour.wav": "d42b922124406817ce8fa0044cea43a4888d041428cd9e0bbedfc9a8e179f6bd",
+    "05-sentence.wav": "46f12fecc66a7461fb8c017e7a934993e5e370ecffa9846a2ed4a57f3d3c3463",
+    "05-with-bonjour.wav": "e88fb65c09dbbb7aec19392b227ea376f491bfeb4115447d9ee4b80ceec77c9a",
+    "06-sentence.wav": "12c5d4e9d98334a4513ac9f23ef24ef76342d2c1fded81b96e013959cc52c752",
+    "06-with-bonjour.wav": "5dbec477ebad8ef6d341754a6528eefaa92e36f60fec41dacca075a614679a94",
+    "07-sentence.wav": "108838f9419e634cd39f86e69f256fe0a5ee69099bbf67f218f4d99cded7449a",
+    "07-with-bonjour.wav": "ec2805327c7e7359395c4fd1aebf98cc7ad4604b88e34543ca5648bc42af46f8",
+    "08-sentence.wav": "b4dcafd1a8a6e31d5d8a8a8b1f991cc30b2d5560781fb66bcce1653e8d816b54",
+    "08-with-bonjour.wav": "ef5bfc09a93f48224f77085d841baef8e6f89db85c5980986d3030baf44dcd5c",
+    "09-sentence.wav": "01cd4c4bf6533915f6d2d5347e4c239d1b69e823a2e94c0a2cee40bb424343a2",
+    "09-with-bonjour.wav": "0d4b334254255268626bdcea4c1f16be1a4b288e70184eb33cbdbf9fbdec21a6",
+    "10-sentence.wav": "3c245c90d99cfb1f8276b2f7425f8c9d303078e0c49c84d3d4537dd49695b8c9",
+    "10-with-bonjour.wav": "80fa0da1a29f2c41013254329f3d3b84243cc194cd5813b6bf833c5ed6eb7563",
+    "11-sentence.wav": "12cd08208364b8a0c5ace66dd2526697a85ab6bd1264d64cbb93de6a196bd36f",
+    "11-with-bonjour.wav": "3771568b5f71b639ed3d3ed7be94504c200b28586aa566b4b1dcf43ae48ed2b5"
+  },
+  "model_revision": "f65439609986c392cb12df63938abcc550c3fb15",
+  "voice_revision": "323332d33f997de8394f24a193e1a76df720e01a",
+  "model_license": "CC-BY-4.0",
+  "voice_license": "CC0",
+  "generation_environment": {
+    "python": "3.12",
+    "torch": "2.9.1+cu128",
+    "moshi": "0.2.13"
+  }
+}

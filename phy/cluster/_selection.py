@@ -54,6 +54,7 @@ class MergeSession:
     ordered_ids: tuple[int, ...]
     entry_snapshot: NormalWorkflowSnapshot
     proposition_id: str | None = None
+    proposition_ids: tuple[str, ...] = ()
 
     def __post_init__(self):
         ordered = _as_unique_ids(self.ordered_ids)
@@ -62,6 +63,14 @@ class MergeSession:
             raise ValueError('The merge reference must belong to the staged clusters.')
         if self.proposition_id is not None and not self.proposition_id:
             raise ValueError('The merge proposition ID cannot be empty.')
+        keys = tuple(self.proposition_ids) or (
+            (self.proposition_id,) if self.proposition_id else ()
+        )
+        if any(not isinstance(key, str) or not key for key in keys) or len(set(keys)) != len(keys):
+            raise ValueError('Merge proposition IDs must be distinct nonempty strings.')
+        if keys and self.proposition_id != keys[0]:
+            raise ValueError('The active proposition must be the first selected proposition.')
+        object.__setattr__(self, 'proposition_ids', keys)
         object.__setattr__(self, 'reference_id', reference)
         object.__setattr__(self, 'ordered_ids', ordered)
 
@@ -349,6 +358,40 @@ class CurationSelectionController:
             )
         )
 
+    def enter_parent_restore(self, ordered_ids, color_indices=None, workflow_context=None):
+        """Stage real restored units; leaving Merge keeps these units selected."""
+        self._require_normal_mode()
+        ordered = _as_unique_ids(ordered_ids)
+        if len(ordered) < 2:
+            raise ValueError('Parent restoration requires at least two units.')
+        colors = dict(color_indices or {})
+        used = {0}
+        bindings = {ordered[0]: 0}
+        for unit in ordered[1:]:
+            slot = colors.get(unit)
+            if (
+                not isinstance(slot, Integral)
+                or not 0 <= slot < max(32, 2 * len(ordered))
+                or slot in used
+            ):
+                slot = next(i for i in range(len(ordered) + len(used)) if i not in used)
+            bindings[unit] = int(slot)
+            used.add(int(slot))
+        slots = [None] * (max(used) + 1)
+        for unit, slot in bindings.items():
+            slots[slot] = unit
+        normal = CurationSelectionState(cluster_ids=ordered, color_slots=tuple(slots))
+        merge = MergeSession(ordered[0], ordered, NormalWorkflowSnapshot(normal, workflow_context))
+        return self._apply(
+            CurationSelectionState(
+                mode=WorkflowMode.MERGE,
+                reference_id=ordered[0],
+                presentation_order=ordered,
+                color_slots=tuple(slots),
+                merge=merge,
+            )
+        )
+
     def enter_merge_mode(self, workflow_context=None):
         self._require_normal_mode()
         current = self._state
@@ -369,7 +412,9 @@ class CurationSelectionController:
             )
         )
 
-    def enter_merge_proposition(self, proposition_id, ordered_ids, workflow_context=None):
+    def enter_merge_proposition(
+        self, proposition_id, ordered_ids, workflow_context=None, *, proposition_ids=()
+    ):
         """Stage an external merge proposition without changing its entry snapshot."""
         self._require_normal_mode()
         ordered = _as_unique_ids(ordered_ids)
@@ -383,6 +428,7 @@ class CurationSelectionController:
             ordered,
             NormalWorkflowSnapshot(current, workflow_context),
             proposition_id=str(proposition_id),
+            proposition_ids=tuple(proposition_ids),
         )
         return self._apply(
             CurationSelectionState(
@@ -394,7 +440,7 @@ class CurationSelectionController:
             )
         )
 
-    def switch_merge_proposition(self, proposition_id, ordered_ids):
+    def switch_merge_proposition(self, proposition_id, ordered_ids, *, proposition_ids=()):
         """Replace the active Merge workspace while preserving its Normal entry snapshot."""
         self._require_merge_mode()
         ordered = _as_unique_ids(ordered_ids)
@@ -407,6 +453,7 @@ class CurationSelectionController:
             ordered,
             self._state.merge.entry_snapshot,
             proposition_id=str(proposition_id),
+            proposition_ids=tuple(proposition_ids),
         )
         return self._apply(
             CurationSelectionState(
@@ -439,6 +486,7 @@ class CurationSelectionController:
             tuple(ids),
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            proposition_ids=current.merge.proposition_ids,
         )
         similar = tuple(cluster_id for cluster_id in current.similar_ids if cluster_id not in new)
         effective = _ordered_union(merge.ordered_ids, similar)
@@ -467,6 +515,7 @@ class CurationSelectionController:
             merge_ids,
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            proposition_ids=current.merge.proposition_ids,
         )
         similar = _ordered_union(current.similar_ids, removed)
         effective = _ordered_union(merge.ordered_ids, similar)
@@ -550,6 +599,7 @@ class CurationSelectionController:
             merge_ids,
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            proposition_ids=current.merge.proposition_ids,
         )
         slots = self._promote_reference_slot(reference)
         return self._apply(
@@ -577,6 +627,7 @@ class CurationSelectionController:
             tuple(remain),
             current.merge.entry_snapshot,
             proposition_id=current.merge.proposition_id,
+            proposition_ids=current.merge.proposition_ids,
         )
         return self._apply(
             CurationSelectionState(

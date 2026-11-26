@@ -1,0 +1,43 @@
+{
+  "report": "Carl reported D / Shift+D no longer working; email reported by user as 2026-11-24 19:53. Exact affected version and focus context unknown.",
+  "base_commit": "acd944d754ba210430ad9c85f2db356aa430054a",
+  "reproduction": {
+    "headless_existing_tests": "79 passed; did not reproduce native focus problem",
+    "native_existing_shortcut_tests": "2 passed with minimal GUI",
+    "native_full_bounded_gui_before_fix": "D fails to enable auto exclusion despite focused native canvas; waitUntil times out. Reproduced again with explicit native requestActivate and verified QApplication.focusWindow() == canvas.",
+    "focus_observation": "QApplication widget focus can remain on another dock button or be None while the native canvas receives keys. Dock WidgetWithChildrenShortcut cannot activate.",
+    "logs": [
+      "/tmp/phy-ccg-native-full.log",
+      "/tmp/phy-ccg-activated.log"
+    ]
+  },
+  "fix": "Fallback only for unconsumed key events delivered to the focused native sampled-correlogram canvas. Trigger the existing enabled QAction matching its current shortcut. Preserve shortcut remapping, first-instance shortcut policy and table/editor isolation.",
+  "validation": {
+    "native_command": "QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a uv run --no-sync pytest --no-cov -q phy/apps/large_recording/tests/test_ccg_exclusion_view.py phy/apps/large_recording/tests/test_ccg_exclusion.py",
+    "native_results": "81 passed in 6.76s",
+    "new_test": "Full bounded GUI, D and remapped X, Shift+D; auto/cross histogram contributions independent; toggling restores original histogram; no curation events or assignment changes.",
+    "full_suite": {
+      "command": "make test-full UV_RUN='uv run --no-sync'",
+      "results": [
+        "747 passed, 13 skipped in 147.94s (0:02:27)",
+        "1081 passed, 6 skipped, 136 warnings in 463.31s (0:07:43)"
+      ],
+      "log": "/tmp/phy-ccg-fixed-full.log",
+      "lint": "passed",
+      "format_check": "passed"
+    },
+    "native_log": "/tmp/phy-ccg-native-exact.log",
+    "ci_regression": "Added shortcut and full bounded GUI tests to the existing Linux xcb/software-OpenGL CI step; exact pytest command passes 4 tests, 7 deselected.",
+    "docs": "make doc-check UV_RUN=\"uv run --no-sync\" passed",
+    "ci_yaml": "Parsed successfully; native test command verified"
+  },
+  "limits": [
+    "Native validation uses Xvfb and software OpenGL, not Carl's machine.",
+    "This reproduces a matching symptom; cannot establish Carl's exact version or rule out a second cause."
+  ],
+  "publication": "on hold at user request; no push, GitHub comment or email",
+  "source_sha256": {
+    "phy/apps/large_recording/views.py": "dcf313497d6a4821e99864dcb47a9a9ec189a20e23661eed98fc5614bc5ada20",
+    "phy/apps/large_recording/tests/test_ccg_exclusion_view.py": "65e7dc243dd2bc887664b103d224ba40216e50cb672322790918e2f9c48d8ef8"
+  }
+}

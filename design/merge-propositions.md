@@ -218,7 +218,7 @@ support is deferred.
   duplicate entries, missing IDs, and mixed valid/invalid merges.
 - Stable proposition keys and source-file change detection.
 - Exact Normal-state cancellation after starting a review.
-- Ordered staging with the first ID fixed as blue reference.
+- Ordered staging with the initial first ID retained as blue reference after row reordering.
 - Invalid and stale propositions cannot enter Merge mode.
 - Failed merge preserves review state and the complete workspace.
 - Successful and modified acceptance record exact applied and result IDs.

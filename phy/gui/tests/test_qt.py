@@ -4,7 +4,11 @@
 # Imports
 # ------------------------------------------------------------------------------
 
-from pytest import raises
+import subprocess
+import sys
+from textwrap import dedent
+
+from pytest import mark, raises
 
 from ..qt import (
     AsyncCaller,
@@ -35,6 +39,35 @@ from . import show_and_wait
 # ------------------------------------------------------------------------------
 # Tests
 # ------------------------------------------------------------------------------
+
+
+@mark.parametrize('count', [256, 1024, 4096])
+def test_qt_exit_callbacks_can_replace_wrappers(count):
+    # PyQt's exit visitor must tolerate callbacks that delete/create wrappers.
+    # A subprocess is essential: the old SIP runtime crashes after Python tests
+    # have finished, so an in-process assertion cannot detect the regression.
+    code = dedent(f"""
+        from PyQt5.QtCore import QCoreApplication, QObject
+
+        app = QCoreApplication([])
+        retained = [QObject() for _ in range({count})]
+        trigger = QObject()
+
+        def rebuild(*args):
+            retained.clear()
+            retained.extend(QObject() for _ in range({count * 2}))
+            print('rebuilt', len(retained), flush=True)
+
+        trigger.destroyed.connect(rebuild)
+    """)
+    result = subprocess.run(
+        [sys.executable, '-X', 'faulthandler', '-c', code],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+    assert result.stdout.strip() == f'rebuilt {count * 2}'
 
 
 def test_require_qt_with_app(monkeypatch):

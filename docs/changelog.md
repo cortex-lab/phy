@@ -11,13 +11,192 @@ been included in a stable release. The current entries cover all user-visible
 changes committed since 23 July 2026; test-only commits are represented by the
 behavior they verify rather than listed separately.
 
+### Long recordings
+
+- RP summary builds retain only counters and shared exposure, with batches sized
+  to the configured memory budget. `prepare-large` checks RP budgets before
+  constructing the package and exposes `--rp-summary-memory-bytes`; both build
+  paths retain the 64 MiB defaults and report actionable budget errors.
+
+- Fix sampled correlogram `D` and `Shift+D` exclusion shortcuts when native
+  OpenGL canvas focus leaves widget focus in another dock.
+
+- Optional original-unit RP summaries and exact timestamp summary stores accelerate
+  refractory-period diagnostics, including offline merges and amplitude splits
+  against the verified prepared snapshot. Existing stores and authenticated source
+  fallback remain supported; scientific calculations and curation assignments
+  are unchanged.
+
+- Unit Stability adds live refractory-period contamination for visible selected
+  units, recomputed from original ticks and raw amplitudes after supported edits.
+  Its diagnostic deduplication never changes sorting assignments or exports;
+  missing evidence and background work have independent panel status.
+- Cancelling a close/save prompt preserves the live merge workspace, selection
+  callbacks, status reporting and draft protection. GUI state collection and
+  resource cleanup now wait until closure is accepted.
+- Bounded curation protects unsaved semantic edits in background recovery drafts,
+  separate from validated manual checkpoints. A fixed status-bar indicator shows
+  confirmed protection and checkpoint age; a passive Save checkpoint reminder
+  highlights after 15 minutes of unsaved work, with interval, snooze and disable
+  controls. Disabling reminders leaves draft protection active.
+- Sampled correlogram axis labels identify active pending SLAY suggestions with
+  matching colors and a compact legend. Overlapping suggestions retain their
+  membership tooltips; trace colors keep their existing meaning.
+- Sampled Correlogram View can exclude near-zero spike pairs before binning,
+  independently for auto- (`D`) and cross-correlograms (`Shift+D`). The exclusion
+  half-width defaults to 0.3 ms with both switches off. This changes displayed
+  pair counts and their chance reference; spike times, assignments and curation
+  history remain unchanged.
+- Bounded curation applies new journal events to current state instead of replaying
+  every earlier merge after each edit. Metadata-only actions preserve assignments
+  and membership caches. Cached undo/redo uses affected rows within a 64 MiB
+  inverse-patch cache; evicted changes fall back to validated replay. Saves and loads
+  retain full independent journal validation. Metadata edits refresh affected table
+  rows and preserve unchanged stability plots; custom metrics remain refreshed.
+- Mixed split/restore exports compile merge runs once for writing, while retaining
+  the sequential interpreter for independent output verification.
+- Sampled correlograms show a thin chance line calculated from the same retained
+  observation windows. It is the mean off-center expected pair count, without
+  extrapolating full-recording firing rates or central-bin conventions.
+- Moving the final eligible primary unit to good clears obsolete Similarity
+  candidates. Batch navigation no longer queues a mutation against an old primary
+  context. Parent colors now save with the default configuration directory.
+- `Ctrl+Shift+Space` selects up to the preceding N eligible Similarity candidates
+  in current table order. Any Merge row, including the blue reference, can be
+  dragged to another row without changing the reference identity or color.
+
+- Preparation, replay, and summary-store/index CLI commands now report stage
+  progress, rate and ETA, support Ctrl-C cancellation, and offer bounded
+  parallel work with `--workers` (default 1). Summary accumulation uses capped
+  lookup tables and tiled histograms. Replay tries native copy-on-write clones
+  with a space-checked copy fallback, retaining source/output verification.
+
+- Right-clicking a sampled correlogram now transfers its row cluster between
+  primary and Similarity roles in bounded mode, with the same reference and
+  close/reopen behavior as ordinary correlograms.
+
+- Completed background preparation shows a clear terminal state with a Close
+  button. Task details remain available from **File > Show background task**.
+- The curation comparison tool can run from a data directory or another checkout.
+  It records its own checkout revision, or `unknown` when Git metadata is unavailable.
+
+- Unit Stability automatically marks and omits rate bins with negligible recorded
+  time from the plotted trace, keeping tiny acquisition fragments from flattening
+  the rest of the rate plot. Exact summaries and saved curation remain unchanged.
+
+- Rapid candidate navigation preserves pending selection operations. Curation
+  actions settle the displayed selection before choosing targets and recording
+  undo history, including bounded merges, labels and quality assignments.
+
+- Background task cleanup tolerates Qt destruction order when closing Phy.
+  Detached workers finish without retaining Qt objects or sending callbacks to
+  deleted owners. Store-preparation dialogs clean up their preflight tasks too.
+
+- Prepared amplitude indexes accelerate full-recording rate and trend updates
+  after threshold splits without scanning every spike in the original units.
+  Existing stores can be upgraded from the GUI in the background or with
+  `build-amplitude-index`. Indexes preserve native threshold comparisons,
+  authenticate only the pages used, and fall back to verified rows when needed.
+
+- The bounded GUI offers to build missing summary stores in the background,
+  with a destination picker, independent disk budget, per-stage progress and ETA,
+  cancellation and task details. Curation remains available during construction;
+  completed stores take effect without reopening. Build and attach actions are
+  also available from File, with dataset-local prompt preferences.
+
+- Bounded split summaries can read only the original units needed from an
+  attached summary snapshot, rather than scanning the full recording. Shared
+  calculations and histogram accumulation also speed up the source fallback.
+  Background summary status now reports validation and scan progress.
+
+- Added optional, independently budgeted per-unit summary snapshot stores, with
+  build and attach commands for existing bounded packages. Stores preserve the
+  original scalar values and native time bins without changing saved curation.
+
+- SLAY merge suggestions and saved accept/reject decisions now survive bounded
+  curation, full-sorting replay, and subsequent preparation. Suggestions retain
+  their original IDs; pending suggestions affected by merges or splits become
+  stale rather than being silently reassigned.
+- Fixed saving bounded amplitude splits after merge undo/redo when NumPy cluster
+  IDs appear in journal metadata.
+- Bounded amplitude splits now recompute exact full-recording rates, counts and
+  available amplitude/depth trends in the background. Results combine on merges
+  and survive save/reopen through a disposable cache. Source validation, retry
+  and relocation controls preserve curation when the source is unavailable.
+- Added `prepare-large` and `apply-curation` for bounded shared-window evidence,
+  full-duration exposure-aware summaries, semantic merges/labels/source-amplitude
+  splits, and replay into a new complete sorting.
+- Added Unit Stability, precise window-relative amplitude/feature inspection,
+  sampled interval/correlogram views, and explicit full-versus-evidence counts.
+  Standard datasets retain their existing curation workflow and default layout.
+- Bounded Evidence Amplitude now defaults to an all-retained-windows overview on
+  the recording clock, with a saved overview/window scope toggle. Inspecting a
+  window switches the view to that window. `Alt`-right-drag previews a source
+  amplitude threshold. `K` splits retained evidence and records the predicate;
+  `apply-curation` evaluates every source spike. Finite values strictly below
+  the threshold are selected; equality and nonfinite values stay in the remainder.
+- Added source-grounded whole-output curation acceptance checks, with explicit
+  metadata-policy differences, saved-generation binding, and independent
+  all-source validation of cumulative merge and split predicates. Permanent controller
+  tests run the same actions through full and bounded modes across four rounds
+  and three sampling configurations, including points omitted from display.
+- Unit Stability overlays up to 32 selected units by default, with consistent
+  colors and no legend. Its saved display limit accepts zero to show all selected
+  units, without a hard positive upper limit. Saved view settings include the
+  positive rate-line width (0.6 points by default) and the **Show firing rate**,
+  **Show amplitude**, and **Show depth** toggles, which default on. Its
+  dataset-local display-bin setting defaults to native resolution and permits
+  exact coarsening by integer multiples of the native bin width. The screenshot
+  action captures the Matplotlib Qt canvas. Full-source rates use acquisition
+  exposure, and split-child metrics show computation status until exact live
+  summaries are ready. On ordinary recordings, firing rates identify their
+  continuous-acquisition assumption.
+- Bounded replay preserves producer metadata table filenames, delimiters, and
+  column layouts. New merge and split memberships clear producer values and
+  source IDs; quality labels are membership-scoped and start unreviewed until
+  assigned. Legacy journals retain inherited-metadata behavior until explicitly
+  migrated with the bounded session `migrate_metadata()` API. Replay parameter
+  overrides are kept in one managed final block while original source code
+  remains intact.
+- Bounded saves use validated atomic generations and reject conflicting saves
+  from stale sessions. Unsupported selected-row splits are blocked.
+- Sparse cluster IDs no longer require dense allocations during clustering.
+- Bounded amplitude plots label seconds from window start and display the
+  window's recording-time range above the plot.
+- Long-recording preparation accepts explicitly declared elapsed-tick
+  coordinates and can select whole validated producer evidence windows, while
+  keeping the existing spike and output-byte budgets.
+
 ### Documentation
 
 - Documented uv-first installation of exact previous phy releases in separate
   environments, including how to intentionally replace a tool installation.
+- Added a long-recording workflow guide covering bounded evidence preparation,
+  supported curation, full-sorting replay, and limits on interpreting sampled
+  measurements.
 
 ### Added
 
+- **Restore parents in Merge Mode** restores an older merged unit's
+  earliest recorded merge components as real clusters without reversing
+  intervening unrelated edits. Nested merge chains restore all components in
+  one action, stopping at real split boundaries; old immediate-restore journals
+  keep their original replay semantics. It preserves nested ancestry across
+  save/reopen, uses fresh IDs with historical parent labels, and supports undo/redo and full-source bounded
+  replay. **Exclude current row** keeps a parent out of the pending merge;
+  read-only parent inspection remains available separately.
+
+- **Inspect parents (read-only)** opens an isolated comparison of a merged unit's
+  exact immediate parents, with consistent colors across available plots.
+  Ordinary merges record durable lineage; bounded merges use the saved journal.
+  Missing historical lineage is reported explicitly. An integrated dark workspace
+  pairs readable parent IDs/counts with color swatches and preserves pre-merge
+  colors when available. Back or Esc restores the curation workspace; editing
+  shortcuts are disabled during inspection.
+
+- Ctrl-click multiple SLAY merge suggestions to compare their deduplicated units
+  in one Merge workspace. Selection is read-only; an explicit merge records all
+  selected reviews atomically, with undo/redo restoring the combined workspace.
 - Select the preceding Similarity View batch with `Control+Shift+Space`, using
   the same saved batch size as `Control+Space`.
 - Drag the blue reference row anywhere in Merge View while preserving its
@@ -40,7 +219,8 @@ behavior they verify rather than listed separately.
 
 - Record phy/phylib versions, checkout revisions and UTC timestamps in `phy.log`
   at startup and in dataset-local `phy_curation_history.jsonl` after successful
-  curation saves. `phy --version` now identifies the phy checkout itself.
+  curation saves, including bounded GUI checkpoint saves. `phy --version` now
+  identifies the phy checkout itself.
 
 - Added a standalone graphics diagnostic with embedded coding-agent instructions,
   selectable probes, synthetic selection tests and screenshots, crash/hang logs,
@@ -120,6 +300,23 @@ behavior they verify rather than listed separately.
 
 ### Fixed
 
+- Require PyQt5-sip 12.20.1 or later to avoid native shutdown crashes when
+  Qt cleanup callbacks create or destroy wrapped objects.
+
+- Table mouse handlers verify the Qt event class before accessing mouse-only
+  methods, preventing exceptions from generic or mismatched event wrappers
+  during context-menu interaction.
+- Accepted SLAY suggestions return to their accepted display state when their
+  complete recorded membership is remerged after parent restoration. Partial
+  reassembly remains historical; additional membership is accepted-modified.
+
+- Keep summary-store finalization warnings visible even when the destination
+  path is long; the full path remains in Details and the tooltip.
+
+- Action prompts and snippets accept negative numbers, scientific notation, and
+  comma-separated negative values without confusing their signs with ID ranges.
+- On macOS, horizontal table scrollbars reserve space so the last cluster row
+  remains fully visible when scrolling to the bottom.
 - Settle pending table selections before curation actions and discard obsolete
   candidate updates after reference changes. Moving the final selected cluster
   to a quality group clears Similarity View before subsequent batch selection.

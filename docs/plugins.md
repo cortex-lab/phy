@@ -1108,3 +1108,90 @@ class ExampleOpenGLViewPlugin(IPlugin):
         controller.at_least_one_view('MyOpenGLView')
 
 ```
+
+
+## Running an intensive task in the background
+
+Use `phy.gui.tasks.BackgroundTaskManager` for a user-requested background job.
+The runner provides a single task slot, cooperative cancellation, per-stage
+progress, and process-wide exclusion for heavyweight recording I/O. It does not
+replace view rendering or the persistent live-summary reader.
+
+Worker functions receive immutable requests and a `TaskContext`. They must not
+read a controller, session, widget, Qt model or OpenGL object. Keep large arrays
+inside the worker and return small immutable results or artifact paths. For
+example, this worker hashes a file in bounded blocks:
+
+```python
+from dataclasses import dataclass
+from hashlib import sha256
+from pathlib import Path
+
+from phy.gui.tasks import TaskProgress
+
+
+@dataclass(frozen=True)
+class HashRequest:
+    path: str
+
+
+def hash_file_in_background(request, context):
+    path = Path(request.path)
+    total = path.stat().st_size
+    digest = sha256()
+    done = 0
+    with path.open('rb') as stream:
+        while block := stream.read(1024 * 1024):
+            context.check_cancel()
+            digest.update(block)
+            done += len(block)
+            context.report(TaskProgress('Hashing', done, total, 'bytes'))
+    return digest.hexdigest()
+```
+
+Create the manager on the GUI thread and retain it in your plugin. Connect its
+`finished` signal to a GUI-thread callback before submitting a `TaskSpec`:
+
+```python
+from phy.gui.tasks import BackgroundTaskManager, TaskSpec
+from phy.gui.task_widgets import TaskWidget
+
+manager = BackgroundTaskManager()
+widget = TaskWidget(manager, gui)
+gui.statusBar().addPermanentWidget(widget)
+manager.finished.connect(on_finished)  # receives a TaskOutcome on the GUI thread
+manager.submit(TaskSpec(
+    key='hash:' + str(path), title='Hashing recording',
+    worker=hash_file_in_background, request=HashRequest(str(path))))
+```
+
+The `TaskOutcome` states are `succeeded`, `cancelled` and `failed`; a successful
+result is in `result`, and a failure message is in `error`. Do not wait for a
+worker in a GUI callback. Progress uses a latest-value mailbox sampled around
+four times per second, so a stalled GUI cannot accumulate one event per row.
+`TaskWidget` supplies a progress bar, smoothed per-stage ETA, Cancel, Hide and
+bounded details. A different stage or progress unit starts a fresh ETA estimate.
+
+On accepted GUI closure, disconnect your completion callback, call
+`widget.dispose()`, then `manager.detach()`. Do not detach when a close/save
+prompt is vetoed. The manager keeps terminal polling active after detachment,
+without calling the owner's callbacks. Workers retain only plain Python task
+state; they never access Qt delivery objects. If Qt destroys the manager first,
+its destruction handler requests cancellation and releases retained manager
+ownership on the GUI thread. No worker join is required during closure. For dataset tasks, check the dataset and GUI
+identity again before adopting results; do not restore a selection captured at
+submission time.
+
+For an atomic artifact publication, call `context.commit()` after the final
+cancellation check and immediately before the short noncancellable publication
+step. A late cancellation must not turn a successfully published artifact into
+cancelled work. Report a published artifact separately from a subsequent
+attachment error, so users can recover it. Avoid placing long scans or ordinary
+computation inside the commit boundary.
+
+Tasks use dedicated threads initially. Set `heavy=False` only for small
+metadata work or tasks that do not compete for recording I/O. Existing live
+summary scans share the same cancellable I/O permit. Keep worker functions
+module-level and requests serializable where possible, so another execution
+backend can be added later without changing the UI contract. Task persistence,
+resumable builds and arbitrary dependency queues are not provided.

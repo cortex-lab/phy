@@ -1,0 +1,29 @@
+{
+  "excluded_live": 713,
+  "excluded_original": 50,
+  "final_merged": 714,
+  "included_originals": [
+    49
+  ],
+  "included_restored_live": 712,
+  "initial_merge": 705,
+  "initial_parents": [
+    40,
+    44,
+    48
+  ],
+  "intermediate_merge": 708,
+  "new_candidate": 51,
+  "nonfinite": "keep",
+  "operator": "<",
+  "restored_merge_target": 709,
+  "selected_restored_live": 711,
+  "split_remainder": 707,
+  "split_selected": 706,
+  "threshold": -424.19464111328125,
+  "unrelated_inputs": [
+    0,
+    1
+  ],
+  "unrelated_result": 710
+}

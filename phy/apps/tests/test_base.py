@@ -167,6 +167,35 @@ def _mock_controller(tempdir, cls):
     )
 
 
+def test_cancelled_close_preserves_controller_selection_hooks(qtbot, tempdir):
+    controller = _mock_controller(tempdir, MyController)
+    gui = controller.create_gui(default_views=[], do_prompt_save=False)
+    with qtbot.waitExposed(gui):
+        gui.show()
+    handlers = set(logging.getLogger('phy').handlers)
+
+    @connect(event='close', sender=gui)
+    def cancel(sender):
+        return False
+
+    try:
+        gui.close()
+        assert not gui._closed
+        assert set(logging.getLogger('phy').handlers) == handlers
+        emit('request_select', controller, [1])
+        controller.supervisor.block()
+        assert controller.supervisor.selected_clusters == [1]
+        emit('select_more', controller, [2])
+        controller.supervisor.block()
+        assert set(controller.supervisor.selected_clusters) == {1, 2}
+        gui.create_and_add_view('CorrelogramView')
+        assert gui.list_views(CorrelogramView)[0].auto_update
+    finally:
+        unconnect(cancel)
+        gui.close()
+        controller.close()
+
+
 def test_correlogram_transfer_request_preserves_effective_selection(qtbot, tempdir):
     controller = _mock_controller(tempdir, MyController)
     gui = controller.create_gui(do_prompt_save=False)

@@ -20,14 +20,13 @@ selection. Cluster View is dimmed and read-only while the workspace is active, b
 scrollable; its overlay reminds you that `V` returns to the normal workflow.
 
 Every row in Merge View is part of the pending merge. Continue exploring Similarity View, where
-sorting, filtering, `Control+Space`/`Control+Shift+Space`, and multi-selection remain available.
-The Merge View status shows the number of staged clusters, selected similar clusters, and the
-total that `G` will merge.
+sorting, filtering, `Control+Space`, `Control+Shift+Space`, and multi-selection remain available.
+The Merge View status shows the number of staged clusters, selected similar clusters, and the total that `G` will merge.
 
 Move candidates between the two views with right-click or drag-and-drop. Drag within
-Merge View to reorder any row, including the blue reference. Reordering preserves the reference
-identity and every cluster's color. The blue reference can also be transferred when another
-staged row remains. The first remaining row then becomes the blue reference and
+Merge View to reorder any staged row, including the blue reference. Reordering preserves the
+reference identity and color. The reference can be transferred when another staged row remains.
+The first remaining staged row then becomes the blue reference and
 the old reference remains selected in Similarity. The final staged row cannot be transferred, and
 the selection order shown by scientific views is always the Merge View order followed by selected
 Similarity View rows in visible table order. Transfers, table sorting, and Merge reordering redraw
@@ -72,6 +71,19 @@ derived from `P12`; this release does not generate derived proposition rows.
 Click a pending row to stage it in Merge View immediately; this atomically
 replaces any manual or proposition workspace already open in the same dock.
 Clicking a completed, stale, or invalid row cancels any active workspace and only highlights that row.
+
+Use **Ctrl+left-click** to add or remove pending suggestions from the selection.
+Their units appear together in one Merge workspace, with shared units included
+once and the first selected suggestion supplying the reference order. Plain
+click selects one suggestion again. Selecting suggestions only changes the
+comparison; it does not modify spike assignments or mark reviews accepted.
+Clearing the selection or cancelling restores the Normal selection from before
+review. Completed or stale suggestions cannot be mixed into a combined review.
+
+Pressing `G` explicitly merges the displayed combined set and records each
+selected suggestion's acceptance in one undoable operation; a changed candidate
+set is marked `accepted_modified`. Unselected suggestions are never accepted
+automatically. Reject and reset shortcuts require a single selected suggestion.
 You can still add, remove, and reorder candidates in a pending review. `Alt+Down`
 and `Alt+Up` replace the current workspace with the next or previous pending
 proposition in the current visible table order, wrapping at either end.
@@ -221,3 +233,83 @@ cluster_id	neurontype
 ## Undo and redo
 
 You can undo and redo clustering actions (merge, split, move, label) with the **Control+Z** and **Control+Y** keyboard shortcuts.
+
+## Restore a merged unit's parents
+
+Select a merged unit and choose **Restore parents in Merge Mode** from its
+Cluster View context menu or the View menu. Phy restores its earliest recorded merge
+components as real clusters and stages them in the existing Merge workspace.
+For example, merge `1 + 2 → 100`, then `100 + 3 → 101`: restoring `101`
+stages the equivalents of `1`, `2` and `3` in one action. This
+works after intervening curation actions and after saving and reopening the same
+dataset. Later unrelated merges, labels and review decisions are preserved.
+
+Restored clusters receive fresh IDs. The Merge table's parent-origin column
+shows their historical IDs, and their comparison colors are retained where known.
+New memberships start unclassified; the merged unit's quality or custom labels
+are not silently copied to every parent. Historical SLAY decisions remain
+recorded and show that their accepted result was subsequently restored. When
+the complete accepted membership is merged again, the suggestion returns to its
+accepted status. Adding further membership shows accepted-modified; partial
+reassembly remains historical. Previously modified acceptances retain their
+recorded scope and are not silently reinterpreted.
+
+Compare the parents, add further Similarity candidates, and press `G` to merge
+the chosen combination. To leave a parent separate, click its Merge row and
+use **Exclude current row**. Right-click still transfers a row to Similarity and
+leaves it selected; `G` includes selected Similarity rows as well as staged rows.
+The Merge status shows the total that will be merged.
+
+Restoration is one new undoable action. Undo reverses the restoration without
+reversing earlier unrelated work; Redo restores its Merge workspace. Pressing
+`V`, cancelling, or closing Merge View leaves the restored clusters intact and
+returns to Normal mode. Normal-mode splitting and quality/label tools remain
+available there. Saving stores the actual curation; transient Merge staging is
+not automatically reopened.
+
+Exact recorded ancestry is required. Earlier ordinary merges without lineage,
+changed or corrupt partitions, and bounded parents without retained evidence
+are unavailable with an explanation. Nested merge ancestry is expanded all at
+once, stopping at genuine split boundaries or unknown earlier ancestry. A known
+merge with missing or inconsistent descendants rejects the entire restore before
+changing assignments. Editable restoration is not limited to the read-only
+comparison's 16-parent limit; every restored component appears in Merge View.
+Historical IDs are labels, while fresh live IDs preserve unambiguous history.
+
+Bounded restoration records an exact operation for full-source replay, including
+parents formed by earlier source-amplitude splits. It never substitutes sampled
+spike membership for full-recording membership. Save/reopen within the same
+bounded package retains this history. After full replay and a fresh preparation,
+restored live children remain available, but historical merges from before that
+preparation cannot be restored: the new package has no recoverable parent anchor. Older
+bounded clients cannot read journals containing the new recursive restoration
+operation. Existing immediate-parent restoration events keep their original
+meaning on reopen and replay.
+
+## Inspect a merged unit's parents
+
+Right-click a merged unit in Cluster View and choose **Inspect parents (read-only)**. A dark,
+read-only workspace inside the main window compares its immediate parents.
+A parent table uses white IDs and counts with colored swatches; the same colors
+identify each parent in the correlogram, waveform, amplitude, and feature plots.
+New merges preserve the colors used before merging when that information is
+available. Earlier merges use a consistent fallback palette.
+
+Available plots depend on the dataset's stored evidence. Click **Back**, press
+**Esc**, or select another cluster to restore the curation workspace. Editing
+shortcuts are disabled during inspection. Inspection does not change assignments,
+labels, review decisions, or undo history.
+
+Ordinary datasets record exact parent membership for merges made with this
+version, including after splits, and save it in `_phy_merge_parents.npz`.
+Keep that file with the dataset. Earlier merges without recorded lineage cannot
+be reconstructed reliably and have **Show parents** disabled. Bounded datasets
+recover the exact retained parent groups from their saved curation journal,
+without scanning the original recording.
+
+The comparison supports up to 16 immediate parents. It follows the existing
+per-view spike budgets; ordinary correlograms can be sampled. Bounded plots show
+retained-window evidence, with full counts shown separately when known.
+Split-derived full counts may be unavailable. When raw/stored waveforms are
+unavailable, explicitly labeled template traces show up to 100 templates per
+parent. This command inspects parents; it does not undo the merge.

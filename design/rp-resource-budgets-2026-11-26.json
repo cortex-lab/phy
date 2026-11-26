@@ -1,0 +1,88 @@
+{
+  "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "numpy": "2.4.3",
+  "spikes": 2000000,
+  "units": 962,
+  "bins": 2052,
+  "elapsed_seconds": 20.88217046900536,
+  "spikes_per_second": 95775.48478346763,
+  "plan": {
+    "units": 962,
+    "bins": 2052,
+    "disk_bytes": 33621069,
+    "fixed_bytes": 45883548,
+    "component_bytes": 10589696,
+    "max_component": 43,
+    "batch_size": 41545,
+    "row_bytes": 256
+  },
+  "planned_memory_bytes": 67108764,
+  "traced_peak_bytes": 34954400,
+  "peak_rss_bytes": 292712448,
+  "baseline_peak_rss_bytes": 221876224,
+  "artifact_bytes": 32250922,
+  "note": "Synthetic 962-unit,1026h geometry; 2M regular spikes, no duplicate chains. tracemalloc enabled during build; RSS includes interpreter and mapped source pages. Not a real-data throughput comparison.",
+  "source_sha256": {
+    "phy/apps/large_recording/refractory.py": "d258760e41161b0256f1438781b58d56f7865e55e93c026ea1c21bbd19c5495b",
+    "phy/apps/large_recording/refractory_store.py": "227e28285a6fd71e422b550182879f578e1ca71429a2f5c4ac1e1c9102b3e11f",
+    "phy/apps/large_recording/refractory_resources.py": "3293329b3c9837cecd1447085b74dd0f01bd6615142abdb8d92c48d4c1dde9bc"
+  },
+  "implementation_commit": "083bedc9",
+  "workload": {
+    "duration_hours": 1026,
+    "sample_rate": 30000,
+    "spike_times": "arange(2000000, dtype=int64) * (2052 * 1800 * 30000 // 2000000)",
+    "spike_clusters": "(arange(2000000) % 962).astype(int32)",
+    "amplitudes": "ones(2000000, dtype=float32)",
+    "exposure": "continuous acquisition for the full declared duration",
+    "construction": "make_sorting fixture with replaced spike arrays and clock; remove feature/position/depth and waveform-subset sidecars"
+  },
+  "uninstrumented_timings": [
+    {
+      "mode": "defaults",
+      "seconds": 8.39139715701458,
+      "spikes_per_second": 238339.33284019926,
+      "kwargs": {
+        "batch_size": 10000000
+      },
+      "artifact_bytes": 32250922,
+      "note": "Uninstrumented synthetic timing, warm/uncontrolled OS caches; not a real-data benchmark."
+    },
+    {
+      "mode": "large-budget",
+      "seconds": 6.601254294975661,
+      "spikes_per_second": 302972.72467177,
+      "kwargs": {
+        "batch_size": 10000000,
+        "memory_bytes": 17179869184,
+        "max_bytes": 4294967296
+      },
+      "artifact_bytes": 32250922,
+      "note": "Uninstrumented synthetic timing, warm/uncontrolled OS caches; not a real-data benchmark."
+    }
+  ],
+  "validation": {
+    "environment": "uv sync --frozen --dev (94 packages checked; no dependency changes)",
+    "full_suite": {
+      "command": "make test-full UV_RUN='uv run --no-sync'",
+      "results": [
+        "747 passed, 13 skipped in 147.10s",
+        "1089 passed, 6 skipped in 477.16s"
+      ],
+      "lint": "passed (included in test-full)",
+      "format_check": "passed (included in test-full)",
+      "log": "/tmp/phy-rp-full.log"
+    },
+    "documentation": {
+      "command": "make doc-check UV_RUN='uv run --no-sync'",
+      "result": "passed; generated documentation current",
+      "log": "/tmp/phy-rp-doc-check.log"
+    },
+    "diff_check": "passed",
+    "review": "GPT-6.1 Sol high read-only review found fragmented exposure metadata accounting gap; fixed with interval/catalog allowances and a focused regression. No other blockers reported.",
+    "scope": "Synthetic geometry and scientific/integrity regression coverage; Carl actual 4.92B-spike dataset not reproduced."
+  },
+  "uninstrumented_artifacts_byte_identical": true,
+  "uninstrumented_artifact_files_compared": 963
+}

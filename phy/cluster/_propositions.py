@@ -70,6 +70,7 @@ class PropositionStatus(Enum):
     PENDING = 'pending'
     ACCEPTED = 'accepted'
     ACCEPTED_MODIFIED = 'accepted_modified'
+    ACCEPTED_RESTORED = 'accepted_restored'
     REJECTED = 'rejected'
     INVALID = 'invalid'
     STALE = 'stale'
@@ -182,6 +183,8 @@ class MergePropositionCatalog:
     reviews: Mapping[str, PropositionReview] = field(default_factory=dict)
     live_unit_ids: tuple[int, ...] | None = None
     source_mapping: Mapping = field(default_factory=dict)
+    retired_units: Mapping = field(default_factory=dict)
+    reassembled_results: Mapping = field(default_factory=dict)
 
     def __post_init__(self):
         source_ids = _ids(self.source_unit_ids, minimum=0)
@@ -208,6 +211,48 @@ class MergePropositionCatalog:
         object.__setattr__(self, 'reviews', MappingProxyType(reviews))
         object.__setattr__(self, 'live_unit_ids', live_ids)
         object.__setattr__(self, 'source_mapping', source_mapping)
+        retired = {}
+        for key, value in _mapping(self.retired_units, name='retired_units').items():
+            if not isinstance(key, str) or not key.isdecimal() or str(int(key)) != key:
+                raise ValueError(
+                    'retired_units keys must be canonical non-negative integer strings.'
+                )
+            value = _mapping(value, name='retired unit')
+            operation = value.get('operation')
+            if operation not in {'merge', 'threshold_split', 'restore_parents'}:
+                raise ValueError('Unknown retired-unit operation.')
+            replacements = _ids(value.get('replacements'), name='replacements', minimum=1)
+            if operation == 'restore_parents' and len(replacements) < 2:
+                raise ValueError('A restored merge must retain every immediate parent.')
+            if any(unit < 0 for unit in replacements) or int(key) in replacements:
+                raise ValueError(
+                    'Retired-unit replacements must be distinct non-negative new IDs.'
+                )
+            retired[key] = {'operation': operation, 'replacements': replacements}
+        object.__setattr__(self, 'retired_units', _freeze(retired))
+        reassembled = {}
+        for key, value in _mapping(self.reassembled_results, name='reassembled_results').items():
+            if key not in keys or key not in reviews:
+                raise ValueError('Reassembled results require a known accepted review.')
+            if reviews[key].decision is not ReviewDecision.ACCEPTED:
+                raise ValueError('Reassembled results require a known accepted review.')
+            value = _mapping(value, name='reassembled result')
+            if set(value) != {'result_unit_id', 'modified'}:
+                raise ValueError('Reassembled results require result_unit_id and modified.')
+            result = value['result_unit_id']
+            if (
+                not isinstance(result, Integral)
+                or isinstance(result, bool)
+                or result not in live_ids
+            ):
+                raise ValueError('A reassembled result must identify a current live unit.')
+            if type(value['modified']) is not bool:
+                raise ValueError('A reassembled result modified flag must be boolean.')
+            reassembled[key] = {
+                'result_unit_id': int(result),
+                'modified': value['modified'],
+            }
+        object.__setattr__(self, 'reassembled_results', _freeze(reassembled))
 
     @property
     def propositions(self):
@@ -227,23 +272,64 @@ class MergePropositionCatalog:
         entry = self.entry_for(key)
         if entry is None:
             raise KeyError(key)
+        return self._status_for_entry(entry)
+
+    def pending_entries(self):
+        """Iterate current pending entries without repeated catalog or live-ID scans."""
+        source_ids, live_ids = set(self.source_unit_ids), set(self.live_unit_ids)
+        for entry in self.entries:
+            if entry.key is not None and entry.key not in self.reviews:
+                if (
+                    self._status_for_entry(entry, source_ids, live_ids)
+                    is PropositionStatus.PENDING
+                ):
+                    yield entry
+
+    def _status_for_entry(self, entry, source_ids=None, live_ids=None):
+        key = entry.key
         if entry.invalid_reason is not None:
             return PropositionStatus.INVALID
         proposition = entry.proposition
-        if not set(proposition.unit_ids) <= set(self.source_unit_ids):
+        source_ids = set(self.source_unit_ids) if source_ids is None else source_ids
+        if not set(proposition.unit_ids) <= source_ids:
             return PropositionStatus.INVALID
         review = self.reviews.get(key)
         if review is not None:
             if review.decision is ReviewDecision.REJECTED:
                 return PropositionStatus.REJECTED
+            if self._result_was_restored(review.result_unit_id):
+                reassembled = self.reassembled_results.get(key)
+                if reassembled is None:
+                    return PropositionStatus.ACCEPTED_RESTORED
+                return (
+                    PropositionStatus.ACCEPTED_MODIFIED
+                    if reassembled['modified'] or review.applied_unit_ids != proposition.unit_ids
+                    else PropositionStatus.ACCEPTED
+                )
             return (
                 PropositionStatus.ACCEPTED
                 if review.applied_unit_ids == proposition.unit_ids
                 else PropositionStatus.ACCEPTED_MODIFIED
             )
-        if not set(proposition.unit_ids) <= set(self.live_unit_ids):
+        live_ids = set(self.live_unit_ids) if live_ids is None else live_ids
+        if not set(proposition.unit_ids) <= live_ids:
             return PropositionStatus.STALE
         return PropositionStatus.PENDING
+
+    def _result_was_restored(self, result_unit_id):
+        pending, visited = [result_unit_id], set()
+        while pending:
+            unit = pending.pop()
+            if unit in visited:
+                continue
+            visited.add(unit)
+            retirement = self.retired_units.get(str(unit))
+            if retirement is None:
+                continue
+            if retirement['operation'] == 'restore_parents':
+                return True
+            pending.extend(retirement['replacements'])
+        return False
 
     def reason_for(self, key):
         entry = self.entry_for(key)
@@ -253,17 +339,50 @@ class MergePropositionCatalog:
             return entry.invalid_reason
         if self.status_for(key) is PropositionStatus.INVALID:
             return 'One or more unit_ids are absent from curation.json unit_ids.'
+        if self.status_for(key) is PropositionStatus.ACCEPTED_RESTORED:
+            review = self.reviews[key]
+            return (
+                f'Historically accepted into {review.result_unit_id}; that result was '
+                'subsequently restored to its parents. The acceptance is no longer live.'
+            )
         if self.status_for(key) is PropositionStatus.STALE:
             missing = tuple(
                 unit_id
                 for unit_id in entry.proposition.unit_ids
                 if unit_id not in self.live_unit_ids
             )
+            causes = []
+            for unit_id in missing:
+                retirement = self.retired_units.get(str(unit_id))
+                if retirement is not None:
+                    verb = {
+                        'merge': 'merged',
+                        'threshold_split': 'split',
+                        'restore_parents': 'restored to its parents',
+                    }[retirement['operation']]
+                    causes.append(f'{unit_id} was {verb}')
+            if causes:
+                return f'Source clusters no longer exist: {missing}; ' + '; '.join(causes) + '.'
             return f'One or more source clusters no longer exist: {missing}.'
         return None
 
-    def project_live_ids(self, live_unit_ids):
-        return self._replace(live_unit_ids=_ids(live_unit_ids, name='live_unit_ids'))
+    def project_live_ids(self, live_unit_ids, *, retired_units=None, reassembled_results=None):
+        """Project current state without changing historical curator decisions.
+
+        The caller supplies reassembly only after proving that a live unit
+        contains the complete historical accepted membership. ``modified``
+        indicates additional membership, not merely different numeric IDs.
+        Missing or partial membership must have no entry. This derived mapping
+        is replaced on every projection so a later split cannot retain stale
+        acceptance, and is never written to the source or review documents.
+        """
+        changes = {
+            'live_unit_ids': _ids(live_unit_ids, name='live_unit_ids'),
+            'reassembled_results': ({} if reassembled_results is None else reassembled_results),
+        }
+        if retired_units is not None:
+            changes['retired_units'] = retired_units
+        return self._replace(**changes)
 
     def snapshot(self):
         """Return an immutable snapshot suitable for history entries."""
@@ -292,7 +411,9 @@ class MergePropositionCatalog:
             raise ValueError('Cannot reset a review whose source clusters no longer exist.')
         reviews = dict(self.reviews)
         reviews.pop(key, None)
-        return self._replace(reviews=reviews)
+        reassembled = dict(self.reassembled_results)
+        reassembled.pop(key, None)
+        return self._replace(reviews=reviews, reassembled_results=reassembled)
 
     def review_mapping(self, *, source_filename='curation.json', source_sha256=None):
         source = {'filename': source_filename}
@@ -306,7 +427,11 @@ class MergePropositionCatalog:
 
     def _require_reviewable(self, key):
         status = self.status_for(key)
-        if status in {PropositionStatus.INVALID, PropositionStatus.STALE}:
+        if status in {
+            PropositionStatus.INVALID,
+            PropositionStatus.STALE,
+            PropositionStatus.ACCEPTED_RESTORED,
+        }:
             raise ValueError(f'Cannot review a {status.value} merge proposition.')
 
     def _with_review(self, key, review):
@@ -314,7 +439,9 @@ class MergePropositionCatalog:
             raise KeyError(key)
         reviews = dict(self.reviews)
         reviews[key] = review
-        return self._replace(reviews=reviews)
+        reassembled = dict(self.reassembled_results)
+        reassembled.pop(key, None)
+        return self._replace(reviews=reviews, reassembled_results=reassembled)
 
     def _replace(self, **changes):
         values = {
@@ -323,6 +450,8 @@ class MergePropositionCatalog:
             'reviews': self.reviews,
             'live_unit_ids': self.live_unit_ids,
             'source_mapping': self.source_mapping,
+            'retired_units': self.retired_units,
+            'reassembled_results': self.reassembled_results,
         }
         values.update(changes)
         return type(self)(**values)
@@ -355,8 +484,12 @@ class MergePropositionController:
         self._catalog = self._require_catalog(snapshot)
         return None
 
-    def project_live_ids(self, live_unit_ids):
-        self._catalog = self._catalog.project_live_ids(tuple(map(int, live_unit_ids)))
+    def project_live_ids(self, live_unit_ids, *, retired_units=None, reassembled_results=None):
+        self._catalog = self._catalog.project_live_ids(
+            tuple(map(int, live_unit_ids)),
+            retired_units=retired_units,
+            reassembled_results=reassembled_results,
+        )
         return None
 
     def reject(self, key):
@@ -368,6 +501,13 @@ class MergePropositionController:
     def prepare_accept(self, key, applied_unit_ids, result_unit_id):
         """Validate an acceptance without mutating review history."""
         return self._catalog.accept(key, applied_unit_ids, result_unit_id)
+
+    def prepare_accept_many(self, keys, applied_unit_ids, result_unit_id):
+        """Validate all selected reviews before changing spike assignments."""
+        catalog = self._catalog
+        for key in keys:
+            catalog = catalog.accept(key, applied_unit_ids, result_unit_id)
+        return catalog
 
     def commit_prepared(self, before, after):
         """Commit a previously validated acceptance against the same catalog."""
@@ -422,7 +562,7 @@ class MergePropositionController:
         )
 
 
-def decode_curation_mapping(mapping) -> MergePropositionCatalog:
+def decode_curation_mapping(mapping, *, retired_units=None) -> MergePropositionCatalog:
     """Decode a supported AIND/SpikeInterface v2 curation document.
 
     Invalid individual ``merges`` entries become visible invalid catalog entries;
@@ -453,7 +593,12 @@ def decode_curation_mapping(mapping) -> MergePropositionCatalog:
             entries.append(PropositionEntry(index, proposition=proposition, raw_mapping=raw))
         except (TypeError, ValueError) as e:
             entries.append(PropositionEntry(index, invalid_reason=str(e), raw_mapping=raw))
-    return MergePropositionCatalog(source_ids, tuple(entries), source_mapping=mapping)
+    return MergePropositionCatalog(
+        source_ids,
+        tuple(entries),
+        source_mapping=mapping,
+        retired_units={} if retired_units is None else retired_units,
+    )
 
 
 def encode_curation_mapping(catalog: MergePropositionCatalog):

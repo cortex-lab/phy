@@ -291,7 +291,11 @@ template_gui('params.py')
 
 The existing `close` event can be vetoed by a save prompt. Use
 `connect(callback, event='closed', sender=gui)` for cleanup that must happen only
-after closure is accepted. A cancelled prompt emits no `closed` event.
+after closure is accepted. To collect GUI state before it is written to disk,
+use `close_accepted` instead. It runs after every close veto has been checked
+and before the state save. A cancelled prompt emits neither event. Keep
+destructive cleanup out of `close` callbacks: all callbacks for that event run
+even when another callback vetoes closure.
 
 Trace views keep their `traces(interval)` provider contract. Explicit navigation
 emits `trace_navigation(view, interval, direction, phase, serial)`: `direction` is

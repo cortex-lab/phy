@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "method": "exact all-row two-way ID mapping",
+  "revision": "06637b24aeca9b0984d7928d459187df46406444",
+  "rows": 469725567,
+  "assignment_dtypes": [
+    "int64",
+    "int64"
+  ],
+  "partition_mismatch_rows": 0,
+  "examples": [],
+  "input_hashes": {
+    "left": {
+      "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c",
+      "spike_clusters.npy": "2b9c3d4f8163bd29a0d5eb2b15205b38380d87149535f3e5820442eb05bcd936"
+    },
+    "right": {
+      "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c",
+      "spike_clusters.npy": "b0223191c2cd29d2167b975175d22428bfe444175e19dc68e67aa9a82aea5168"
+    }
+  },
+  "unmapped_label_ids": {
+    "left": {
+      "group": [],
+      "notes": []
+    },
+    "right": {
+      "group": [],
+      "notes": []
+    }
+  },
+  "manual_label_mismatches": [],
+  "compared_fields": [
+    "group",
+    "notes"
+  ],
+  "mapped_units": 703,
+  "numeric_ids_also_identical": true,
+  "evidence": "native bounded Qt graphical drag/K and full ordinary Supervisor without GUI views, same PR code revision",
+  "noop-comparison": {
+    "ok": true,
+    "method": "exact matching SHA-256 of complete NPY files and explicit manual-label tables",
+    "arrays": 18
+  },
+  "immutable-check": {
+    "ok": true,
+    "raw_files_verified": 67,
+    "immutable_replay_files_per_round": 19,
+    "rounds": 2
+  }
+}

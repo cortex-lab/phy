@@ -7,7 +7,8 @@
 import logging
 
 import numpy as np
-from phylib.io.array import _spikes_in_clusters, _spikes_per_cluster, _unique
+from phylib.io.array import _spikes_in_clusters, _spikes_per_cluster
+from phylib.io.array import _unique as _unique_dense
 from phylib.utils._types import _as_array, _is_array_like
 from phylib.utils.event import emit
 
@@ -20,6 +21,23 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 # Clustering class
 # ------------------------------------------------------------------------------
+
+
+def _unique(values):
+    """Preserve dense-ID performance without allocating by sparse absolute IDs."""
+    if values is None or len(values) == 0:
+        return np.array([], dtype=np.int64)
+    values = np.asarray(values)
+    if int(values.max()) > max(1024, 4 * len(values)):
+        return np.unique(values[values >= 0]).astype(np.int64)
+    return _unique_dense(values)
+
+
+def _largest_cluster(values):
+    if int(values.max()) > max(1024, 4 * len(values)):
+        ids, counts = np.unique(values, return_counts=True)
+        return int(ids[counts.argmax()])
+    return int(np.bincount(values).argmax())
 
 
 def _extend_spikes(spike_ids, spike_clusters):
@@ -81,7 +99,7 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel, new_cl
 def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     old_clusters = _unique(old_spike_clusters)
     new_clusters = _unique(new_spike_clusters)
-    largest_old_cluster = np.bincount(old_spike_clusters).argmax()
+    largest_old_cluster = _largest_cluster(old_spike_clusters)
     descendants = list(set(zip(old_spike_clusters, new_spike_clusters)))
     update_info = UpdateInfo(
         description='assign',
@@ -142,6 +160,7 @@ class Clustering:
     def __init__(self, spike_clusters, new_cluster_id=None, spikes_per_cluster=None):
         super().__init__()
         self._undo_stack = History(base_item=(None, None, None))
+        self._restored_partitions = {}
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
         self._spikes_per_cluster = {}
@@ -176,6 +195,20 @@ class Clustering:
     def spikes_per_cluster(self):
         """A dictionary {cluster_id: spike_ids}."""
         return self._spikes_per_cluster
+
+    def membership_snapshot(self, cluster_ids):
+        """Read-only views of current per-unit original row IDs.
+
+        Supported clustering operations replace these arrays, including undo;
+        retained snapshots therefore remain valid after subsequent edits.
+        """
+        result = {}
+        for cluster_id in cluster_ids:
+            if cluster_id in self._spikes_per_cluster:
+                rows = self._spikes_per_cluster[cluster_id].view()
+                rows.flags.writeable = False
+                result[cluster_id] = rows
+        return result
 
     @property
     def cluster_ids(self):
@@ -293,9 +326,14 @@ class Clustering:
     def _do_merge(self, spike_ids, cluster_ids, to):
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
-        largest_old_cluster = np.bincount(self.spike_clusters[spike_ids]).argmax()
+        largest_old_cluster = max(
+            cluster_ids, key=lambda cluster: (len(self._spikes_per_cluster[cluster]), -cluster)
+        )
         up = UpdateInfo(
             description='merge',
+            # Retain the exact pre-merge partition. Arrays are immutable by
+            # convention and removed from the live mapping below, not edited.
+            parent_spike_ids={int(c): self._spikes_per_cluster[c] for c in cluster_ids},
             spike_ids=list(spike_ids),
             added=[to],
             deleted=list(cluster_ids),
@@ -367,6 +405,77 @@ class Clustering:
         # Add to stack.
         self._undo_stack.add((spike_ids, [to], undo_state))
 
+        emit('cluster', self, up)
+        return up
+
+    def restore_partition(self, target, groups, *, new_cluster_ids=None):
+        """Restore an exact whole-unit partition into fresh, undoable clusters.
+
+        ``groups`` maps historical parent IDs to sorted spike rows. Historical
+        IDs identify provenance only; they are never revived as live IDs.
+        Validation and assignment touch only this unit's rows.
+        """
+        target = int(target)
+        if target not in self._spikes_per_cluster:
+            raise ValueError('Choose a current merged unit.')
+        if len(groups) < 2:
+            raise ValueError('Restoration requires at least two recorded parents.')
+        if any(
+            isinstance(parent, (bool, np.bool_))
+            or not isinstance(parent, (int, np.integer))
+            or parent < 0
+            for parent in groups
+        ):
+            raise ValueError('Recorded parent IDs must be nonnegative integers.')
+        parents = tuple(map(int, groups))
+        arrays = []
+        for ids in groups.values():
+            ids = np.asarray(ids)
+            if (
+                ids.ndim != 1
+                or ids.dtype.kind not in 'iu'
+                or not len(ids)
+                or ids[0] < 0
+                or ids[-1] >= self._n_spikes
+                or np.any(ids[1:] <= ids[:-1])
+            ):
+                raise ValueError('Every restored parent needs nonempty sorted exact spike rows.')
+            arrays.append(ids)
+        rows = np.concatenate(arrays)
+        order = np.argsort(rows)
+        rows = rows[order]
+        if not np.array_equal(rows, self._spikes_per_cluster[target]):
+            raise ValueError('Recorded parents do not exactly partition this unit.')
+        if new_cluster_ids is None:
+            children = tuple(range(self.new_cluster_id(), self.new_cluster_id() + len(parents)))
+        else:
+            children = tuple(new_cluster_ids)
+        if (
+            len(children) != len(parents)
+            or any(
+                isinstance(c, (bool, np.bool_)) or not isinstance(c, (int, np.integer))
+                for c in children
+            )
+            or len(set(children)) != len(children)
+            or min(children) < self.new_cluster_id()
+            or max(children) > np.iinfo(np.int32).max
+        ):
+            raise ValueError(
+                'Restored clusters require distinct fresh IDs in the loader namespace.'
+            )
+        children = tuple(map(int, children))
+        labels = np.concatenate(
+            [np.full(len(ids), child, dtype=np.int64) for ids, child in zip(arrays, children)]
+        )[order]
+        up = self._do_assign(rows, labels)
+        origins = dict(zip(children, parents))
+        self._restored_partitions[tuple(sorted(children))] = (target, origins)
+        up.description = 'restore_parents'
+        up.parent_restore_target = target
+        up.parent_restore_origins = origins
+        up.clear_metadata = True
+        undo_state = emit('request_undo_state', self, up)
+        self._undo_stack.add((rows, labels, undo_state))
         emit('cluster', self, up)
         return up
 
@@ -533,6 +642,11 @@ class Clustering:
         # We apply the new assignment.
         up = self._do_assign(spike_ids, cluster_ids)
         up.history = 'redo'
+        restored = self._restored_partitions.get(tuple(sorted(up.added)))
+        if restored is not None:
+            up.description = 'restore_parents'
+            up.parent_restore_target, up.parent_restore_origins = restored
+            up.clear_metadata = True
 
         emit('cluster', self, up)
         return up

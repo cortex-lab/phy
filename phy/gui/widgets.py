@@ -45,11 +45,13 @@ from .qt import (
     QLineEdit,
     QMimeData,
     QModelIndex,
+    QMouseEvent,
     QObject,
     QPainter,
     QPalette,
     QPlainTextEdit,
     QPoint,
+    QProxyStyle,
     QSize,
     QSortFilterProxyModel,
     QSpinBox,
@@ -376,7 +378,8 @@ class _TableModel(QAbstractTableModel):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal and 0 <= section < len(self._table.columns):
-            return self._table.columns[section]
+            column = self._table.columns[section]
+            return getattr(self._table, '_column_labels', {}).get(column, column)
         return section + 1
 
     def data(self, index, role=Qt.DisplayRole):
@@ -560,6 +563,15 @@ def _install_table_filter_focus_watcher():
         watcher = _TableFilterFocusWatcher(app)
         app._phy_table_filter_focus_watcher = watcher
         app.installEventFilter(watcher)
+
+
+class _TableScrollbarStyle(QProxyStyle):
+    """Reserve horizontal scrollbar space instead of covering the final table row."""
+
+    def pixelMetric(self, metric, option=None, widget=None):
+        if metric == QStyle.PM_ScrollView_ScrollBarOverlap:
+            return 0
+        return super().pixelMetric(metric, option, widget)
 
 
 class _TableView(QTableView):
@@ -826,6 +838,14 @@ class Table(QWidget):
         self.table_view.setModel(self._proxy)
         self.table_view.setItemDelegate(_TableItemDelegate(self))
         self._apply_dark_style()
+        # Cocoa's transient scrollbar otherwise covers the bottom of the last
+        # row even at maximum scroll. Keep its native appearance and let Qt
+        # reserve the space. A default proxy owns its own base style; passing
+        # QApplication.style() would incorrectly transfer the shared style.
+        self._horizontal_scrollbar_style = _TableScrollbarStyle()
+        scrollbar = self.table_view.horizontalScrollBar()
+        self._horizontal_scrollbar_style.setParent(scrollbar)
+        scrollbar.setStyle(self._horizontal_scrollbar_style)
 
         self._init_table(columns=columns, value_names=value_names, data=data, sort=sort)
         _install_table_filter_focus_watcher()
@@ -959,7 +979,11 @@ class Table(QWidget):
         if obj is self.table_view.viewport() and event.type() == QEvent.Resize:
             if self._interaction_overlay is not None:
                 self._interaction_overlay.setGeometry(self.table_view.viewport().geometry())
-        if obj is self.table_view.viewport() and event.type() == QEvent.MouseMove:
+        if (
+            obj is self.table_view.viewport()
+            and event.type() == QEvent.MouseMove
+            and isinstance(event, QMouseEvent)
+        ):
             index = self.table_view.indexAt(event.pos())
             row_id = self._visible_ids()[index.row()] if index.isValid() else None
             self._set_hovered_row(row_id)
@@ -980,6 +1004,9 @@ class Table(QWidget):
         if (
             obj is self.table_view.viewport()
             and event.type() == QEvent.MouseButtonPress
+            # Event type numbers do not guarantee the Python wrapper's API.
+            # Context-menu or generic events must never reach mouse-only calls.
+            and isinstance(event, QMouseEvent)
             and event.button() == Qt.RightButton
         ):
             # Transfer is deliberately bound only to an unmodified secondary click.

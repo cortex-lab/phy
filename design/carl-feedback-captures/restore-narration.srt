@@ -1,0 +1,47 @@
+1
+00:00:00,370 --> 00:00:03,950
+Bonjour. Here is the revised merge workflow.
+
+2
+00:00:05,470 --> 00:00:07,580
+First, compare the clusters.
+
+3
+00:00:11,170 --> 00:00:15,760
+Hold Control to combine two suggestions, then press G to
+merge.
+
+4
+00:00:20,620 --> 00:00:24,810
+Now make an unrelated merge, and mark it as multi-unit
+activity.
+
+5
+00:00:28,220 --> 00:00:30,570
+Return to the older merge.
+
+6
+00:00:31,320 --> 00:00:33,750
+Restore its parents in Merge Mode.
+
+7
+00:00:35,420 --> 00:00:38,730
+Undo and redo affect only this restoration.
+
+8
+00:00:39,720 --> 00:00:42,470
+Leaving Merge Mode keeps these parents alive.
+
+9
+00:00:43,620 --> 00:00:47,330
+Exclude one parent, and add a new candidate with Control-
+click.
+
+10
+00:00:49,470 --> 00:00:52,620
+Merge the new combination and save.
+
+11
+00:00:53,120 --> 00:00:57,630
+Reopening preserves the result, the excluded parent, and
+the later edits.

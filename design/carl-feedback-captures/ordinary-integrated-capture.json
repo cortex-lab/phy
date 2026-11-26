@@ -1,0 +1,268 @@
+{
+  "mode": "ordinary",
+  "dataset": "Carl Sway ordinary sorting",
+  "capture_scope": "Settled real X11 pixels; Qt input events; not a spontaneous-redraw test",
+  "revision": "3d8b492e3e88417d40347916cdf65a1ab8a53229",
+  "steps": [
+    {
+      "name": "01-initial",
+      "title": "Real-data cluster comparison before the new workflow",
+      "seconds": 5.748,
+      "selected": [
+        9,
+        15
+      ]
+    },
+    {
+      "name": "02-right-click-transfer",
+      "title": "Right-click transfers the correlogram row to Similarity",
+      "seconds": 8.253,
+      "selected": [
+        9,
+        15
+      ],
+      "transferred": 15
+    },
+    {
+      "name": "03-single-suggestion",
+      "title": "One SLAY suggestion in the Merge workspace",
+      "seconds": 10.968,
+      "selected": [
+        9,
+        15
+      ]
+    },
+    {
+      "name": "04-control-click-union",
+      "title": "Ctrl-click combines two suggestions; assignments unchanged",
+      "seconds": 14.634,
+      "selected": [
+        9,
+        15,
+        10,
+        13
+      ],
+      "selected_keys": [
+        "merge:f79990b25de62781",
+        "merge:58e6ea5a4536166f"
+      ],
+      "union": [
+        9,
+        15,
+        10,
+        13
+      ]
+    },
+    {
+      "name": "05-merged",
+      "title": "G commits one merge and both suggestion decisions",
+      "seconds": 21.91,
+      "selected": [
+        614
+      ],
+      "merged": 614
+    },
+    {
+      "name": "06-show-parents",
+      "title": "Exact immediate merge parents \u2014 read only",
+      "seconds": 27.661,
+      "selected": [
+        614
+      ],
+      "parents": [
+        9,
+        15,
+        10,
+        13
+      ]
+    },
+    {
+      "name": "07-return",
+      "title": "One click returns to the merged unit without editing",
+      "seconds": 30.353,
+      "selected": [
+        614
+      ]
+    },
+    {
+      "name": "08-undo",
+      "title": "Undo restores assignments, both decisions and the comparison workspace",
+      "seconds": 33.11,
+      "selected": [
+        9,
+        15,
+        10,
+        13
+      ]
+    },
+    {
+      "name": "09-redo-save",
+      "title": "Redo and Save retain the combined merge",
+      "seconds": 37.023,
+      "selected": [
+        614
+      ]
+    },
+    {
+      "name": "10-reopened",
+      "title": "Reopened: saved assignments, review decisions and parent history verified",
+      "seconds": 42.879,
+      "selected": [
+        614
+      ]
+    }
+  ],
+  "input_events": [
+    {
+      "seconds": 0.221,
+      "label": "Left click: Cluster 9",
+      "point": [
+        229,
+        416
+      ],
+      "click_seconds": 0.866
+    },
+    {
+      "seconds": 2.62,
+      "label": "Ctrl + Left click: Cluster 15",
+      "point": [
+        229,
+        416
+      ],
+      "click_seconds": 3.25
+    },
+    {
+      "seconds": 5.748,
+      "label": "Right click: Transfer correlogram row",
+      "point": [
+        1020,
+        448
+      ],
+      "click_seconds": 6.388
+    },
+    {
+      "seconds": 8.455,
+      "label": "Left click: P1 \u00b7 9, 15",
+      "point": [
+        95,
+        925
+      ],
+      "click_seconds": 9.103
+    },
+    {
+      "seconds": 11.169,
+      "label": "Ctrl + Left click: P2 \u00b7 10, 13",
+      "point": [
+        95,
+        1067
+      ],
+      "click_seconds": 11.804
+    },
+    {
+      "seconds": 14.836,
+      "label": "Ctrl + Left click: P2 \u00b7 10, 13",
+      "point": [
+        95,
+        1067
+      ],
+      "click_seconds": 15.467
+    },
+    {
+      "seconds": 16.911,
+      "label": "Ctrl + Left click: P2 \u00b7 10, 13",
+      "point": [
+        95,
+        1067
+      ],
+      "click_seconds": 17.542
+    },
+    {
+      "seconds": 19.301,
+      "label": "G: merge the combined suggestions",
+      "key_seconds": 19.552,
+      "key_released_seconds": 20.111
+    },
+    {
+      "seconds": 22.123,
+      "label": "Right click: merged unit context menu"
+    },
+    {
+      "seconds": 23.308,
+      "label": "Left click: Show parents",
+      "point": [
+        103,
+        191
+      ],
+      "click_seconds": 23.943
+    },
+    {
+      "seconds": 27.662,
+      "label": "Left click: Back to merged unit",
+      "point": [
+        313,
+        103
+      ],
+      "click_seconds": 28.298
+    },
+    {
+      "seconds": 30.354,
+      "label": "Ctrl + Z: undo",
+      "key_seconds": 30.604,
+      "key_released_seconds": 31.342
+    },
+    {
+      "seconds": 33.11,
+      "label": "Ctrl + Shift + Z: redo",
+      "key_seconds": 33.361,
+      "key_released_seconds": 33.658
+    },
+    {
+      "seconds": 34.492,
+      "label": "Ctrl + S: save",
+      "key_seconds": 34.743,
+      "key_released_seconds": 35.278
+    },
+    {
+      "seconds": 37.026,
+      "label": "Reopen the saved working copy"
+    }
+  ],
+  "recording_fps": 30,
+  "pointer": "Visible native X11 cursor, eased motion and click ring",
+  "label": "Real earlier Carl dataset; engineering validation",
+  "propositions": [
+    {
+      "key": "merge:f79990b25de62781",
+      "unit_ids": [
+        9,
+        15
+      ]
+    },
+    {
+      "key": "merge:58e6ea5a4536166f",
+      "unit_ids": [
+        10,
+        13
+      ]
+    }
+  ],
+  "union": [
+    9,
+    15,
+    10,
+    13
+  ],
+  "premerge_colors": {
+    "9": 0,
+    "15": 1,
+    "10": 2,
+    "13": 3
+  },
+  "parent_colors_preserved": true,
+  "parent_workspace_restored": true,
+  "merged": 614,
+  "assigned_spikes": 31905,
+  "reopened_parent_colors_preserved": true,
+  "source_unchanged": true,
+  "success": true
+}

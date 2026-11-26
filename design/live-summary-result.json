@@ -1,0 +1,313 @@
+{
+  "format": "phy_live_summary_capture",
+  "format_version": 1,
+  "capture_revision": "6a5c982404409488c7a18aaf90f6ccf94829a963",
+  "capture_tool_sha256": "5d421168d4a89035472be3919baf4609edb93934fcd05f2f8d36da6b711ddcf7",
+  "provenance": "Converted engineering validation; acquisition exposure unverified",
+  "dataset_label": "Carl earlier 112.859h converted engineering dataset; not 500h/native-export acceptance",
+  "acceptance_scope": "Existing converted engineering package; not new dataset acceptance",
+  "parent_unit": 49,
+  "control_units": [
+    50
+  ],
+  "children": [
+    709,
+    710
+  ],
+  "threshold": -341.797119140625,
+  "split_event": {
+    "version": 2,
+    "operation": "threshold_split",
+    "parent": 49,
+    "children": [
+      710,
+      709
+    ],
+    "predicate": {
+      "attribute": "amplitudes.npy",
+      "operator": "<",
+      "threshold": -341.797119140625,
+      "nonfinite": "keep"
+    },
+    "metadata": {
+      "amplitude_cutoff": {
+        "710": null,
+        "709": null
+      },
+      "si_unit_id": {
+        "710": null,
+        "709": null
+      },
+      "sync_spike_2": {
+        "710": null,
+        "709": null
+      },
+      "trough_half_width": {
+        "710": null,
+        "709": null
+      },
+      "unitrefine_probability": {
+        "710": null,
+        "709": null
+      },
+      "sliding_rp_violation": {
+        "710": null,
+        "709": null
+      },
+      "isi_violations_count": {
+        "710": null,
+        "709": null
+      },
+      "num_positive_peaks": {
+        "710": null,
+        "709": null
+      },
+      "spread": {
+        "710": null,
+        "709": null
+      },
+      "velocity_below": {
+        "710": null,
+        "709": null
+      },
+      "peak_before_width": {
+        "710": null,
+        "709": null
+      },
+      "num_negative_peaks": {
+        "710": null,
+        "709": null
+      },
+      "trough_width": {
+        "710": null,
+        "709": null
+      },
+      "peak_before_to_trough_ratio": {
+        "710": null,
+        "709": null
+      },
+      "firing_range": {
+        "710": null,
+        "709": null
+      },
+      "noise_cutoff": {
+        "710": null,
+        "709": null
+      },
+      "peak_before_to_peak_after_ratio": {
+        "710": null,
+        "709": null
+      },
+      "group": {
+        "710": null,
+        "709": null
+      },
+      "presence_ratio": {
+        "710": null,
+        "709": null
+      },
+      "sync_spike_8": {
+        "710": null,
+        "709": null
+      },
+      "main_to_next_extremum_duration": {
+        "710": null,
+        "709": null
+      },
+      "channel_group": {
+        "710": null,
+        "709": null
+      },
+      "velocity_above": {
+        "710": null,
+        "709": null
+      },
+      "amplitude_cv_median": {
+        "710": null,
+        "709": null
+      },
+      "peak_after_to_trough_ratio": {
+        "710": null,
+        "709": null
+      },
+      "waveform_baseline_flatness": {
+        "710": null,
+        "709": null
+      },
+      "peak_to_trough_duration": {
+        "710": null,
+        "709": null
+      },
+      "notes": {
+        "710": null,
+        "709": null
+      },
+      "repolarization_slope": {
+        "710": null,
+        "709": null
+      },
+      "recovery_slope": {
+        "710": null,
+        "709": null
+      },
+      "snr": {
+        "710": null,
+        "709": null
+      },
+      "isi_violations_ratio": {
+        "710": null,
+        "709": null
+      },
+      "main_peak_to_trough_ratio": {
+        "710": null,
+        "709": null
+      },
+      "peak_half_width": {
+        "710": null,
+        "709": null
+      },
+      "unitrefine_label": {
+        "710": null,
+        "709": null
+      },
+      "peak_after_width": {
+        "710": null,
+        "709": null
+      },
+      "default_qc": {
+        "710": null,
+        "709": null
+      },
+      "bombcell_label": {
+        "710": null,
+        "709": null
+      },
+      "rp_violations": {
+        "710": null,
+        "709": null
+      },
+      "exp_decay": {
+        "710": null,
+        "709": null
+      },
+      "amplitude_cv_range": {
+        "710": null,
+        "709": null
+      },
+      "rp_contamination": {
+        "710": null,
+        "709": null
+      },
+      "amplitude_median": {
+        "710": null,
+        "709": null
+      },
+      "sd_ratio": {
+        "710": null,
+        "709": null
+      },
+      "sync_spike_4": {
+        "710": null,
+        "709": null
+      },
+      "noise_ratio": {
+        "710": null,
+        "709": null
+      }
+    }
+  },
+  "events_sha256": "02cd4722ed1c340f39f237ef32935e0016394fad6fcf880cfe47b0f52b7d901a",
+  "initial_event_count": 11,
+  "final_event_count": 12,
+  "native_bins": 113,
+  "source_spikes": 469725567,
+  "retained_spikes": 1486361,
+  "full_counts": {
+    "709": 292990,
+    "710": 346764,
+    "50": 541925
+  },
+  "timing_seconds": {
+    "bounded_split": 0.5794001140166074,
+    "resume_to_worker_launch_notification": 0.4424441419541836,
+    "first_job_validation_scan_and_gui_delivery": 8.331006723921746,
+    "worker_notification_to_exact_results": 7.888562581967562,
+    "resume_to_exact_results": 8.331006723921746,
+    "completed_cached_summary_lookup": 0.0006028888747096062
+  },
+  "timing_context": "Preflight SHA256 warms filesystem cache; not cold-storage latency",
+  "source_required_bytes": 9394511724,
+  "source_array_inventory": {
+    "amplitudes.npy": {
+      "bytes": 1878902268,
+      "dtype": "float32",
+      "role": "per_spike",
+      "shape": [
+        469725567,
+        1
+      ]
+    },
+    "spike_clusters.npy": {
+      "bytes": 3757804536,
+      "dtype": "int64",
+      "role": "per_spike",
+      "shape": [
+        469725567,
+        1
+      ]
+    },
+    "spike_times.npy": {
+      "bytes": 3757804536,
+      "dtype": "int64",
+      "role": "per_spike",
+      "shape": [
+        469725567,
+        1
+      ]
+    }
+  },
+  "source_sha256_before": {
+    "amplitudes.npy": "086bf254d385b72c23fa3ecb8918d078741a1cec1d3685be12ca04b7286a77b0",
+    "spike_clusters.npy": "28c21c56f9e36bf97ae1faa279af439fa49874f34361dd43da345bf0cf8b08fb",
+    "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c"
+  },
+  "source_sha256_after": {
+    "amplitudes.npy": "086bf254d385b72c23fa3ecb8918d078741a1cec1d3685be12ca04b7286a77b0",
+    "spike_clusters.npy": "28c21c56f9e36bf97ae1faa279af439fa49874f34361dd43da345bf0cf8b08fb",
+    "spike_times.npy": "fedfe8732bebf59a7446a14a3979fbacd322707b66a3506b07bbe0b3837b042c"
+  },
+  "inputs_unchanged": true,
+  "oracle": {
+    "all_source_rows_checked": 469725567,
+    "batch_size": 100000,
+    "verified_unit_ids": [
+      709,
+      710,
+      50
+    ],
+    "counts_comparison": "exact int64",
+    "finite_counts_comparison": "exact int64",
+    "finite_sums_comparison": {
+      "dtype": "float64",
+      "rtol": 1e-09,
+      "atol": 1e-06
+    },
+    "seconds": 4.137655219994485
+  },
+  "rate_only": true,
+  "recomputing_capture_pending_at_entry": true,
+  "recomputing_capture_pending_at_exit": true,
+  "screenshots": [
+    "before-split.png",
+    "recomputing.png",
+    "after-split.png"
+  ],
+  "gui_size": [
+    2200,
+    1250
+  ],
+  "source_identity_sha256": "103621da4c00da1cdbbeb4234717800fa7f43294148aeeebd2b6561456dc5f8b",
+  "source_revision": "ff45d8502cc2cbb916a8754885ba4c9158490191f1a097bc02b0deaf354549ea",
+  "input_package_file_count": 99,
+  "input_package_files_unchanged": true
+}

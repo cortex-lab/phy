@@ -567,6 +567,8 @@ class GUI(QMainWindow):
     ------
 
     close(gui)
+    close_accepted(gui)  # Capture state after all vetoes, before state.save().
+    closed(gui)  # Emitted only after closure is accepted.
     show(gui)
     close_view(view, gui)
 
@@ -750,9 +752,11 @@ class GUI(QMainWindow):
         if False in res:  # pragma: no cover
             e.ignore()
             return
+        # State capture and teardown must not run until every close veto has
+        # been considered. Capture state before its on-disk save below.
+        emit('close_accepted', self)
         super().closeEvent(e)
         self._closed = True
-
         # Save the state to disk when closing the GUI.
         logger.debug('Save the geometry state.')
         try:

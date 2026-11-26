@@ -4,6 +4,7 @@ from pathlib import Path
 from phylib.utils.testing import captured_output
 
 from phy.apps.base import BaseController
+from phy.apps.large_recording.views import SampledCorrelogramView
 from phy.cluster import views
 from phy.cluster.supervisor import ActionCreator
 from phy.gui import GUI
@@ -13,6 +14,7 @@ from phy.gui.actions import _show_shortcuts, _show_snippets
 
 view_names = [v for v in dir(views) if v.endswith('View') and v != 'ManualClusteringView']
 view_classes = [getattr(views, name) for name in view_names]
+view_classes.append(SampledCorrelogramView)
 
 
 def _get_shortcuts(cls):

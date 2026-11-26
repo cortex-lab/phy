@@ -1,0 +1,496 @@
+{
+  "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "branch_base": "02c8b6f79a1142e96d1c72730caf06e229bf8a4a",
+  "files_sha256": {
+    "phy/apps/__init__.py": "d3f400172ef22670b4d5c29268e766985e22ef897cdafeb883cf44efad916be0",
+    "phy/apps/large_recording/prepare.py": "c4ceca4472a2f242877ea419183f44cab3f9896c9fe5ff12d93e898c0971b5e0",
+    "phy/apps/large_recording/range_build.py": "d705ad8ae286e03bd1b72e25a992c8120ecf33511da57bb6539ed9aaca32b3af",
+    "phy/apps/large_recording/refractory_engine.py": "8ff3e4e7abdb9c065ea7b948c3e9badb90a79a03c9741ed6b8ea6b7fd2d8d27d",
+    "phy/apps/large_recording/refractory_store.py": "05f639748dc7cdd9a8fa6421576cd55d77f966f4dd7fb3dcf7745462ab96f3d6",
+    "phy/apps/large_recording/summary_store.py": "c037167c6717c4165ce2b95ec37e2424bf6aedc9dc18a9936d5f718c5793bf1d",
+    "phy/apps/large_recording/tests/test_refractory_store.py": "49dee93847b201504370e75a65cb9762b1bd80a7befe7935189098f78d50397a",
+    "tools/benchmark_refractory.py": "7b1adeb8ea9c1ee06c778f00892366c889e21fa0087d7a2b223d1b2f8db00937"
+  },
+  "workload": {
+    "spikes": 80000000,
+    "hours": 1000,
+    "sample_rate": 30000,
+    "units": {
+      "0": 60000000,
+      "1": 16000000,
+      "2": 2000000,
+      "99": 2000000
+    },
+    "time_step_samples": 1350,
+    "amplitudes": "float32, (row % 17 - 8) / 8",
+    "native_bin_seconds": 3600,
+    "scientific_bin_seconds": 1800,
+    "note": "Regular sparse synthetic data; no refractory violations or duplicates. Scientific edge cases are covered by independent small-oracle tests. OS caches uncontrolled; fresh-process does not mean cold disk."
+  },
+  "scratch_path": "/tmp/phy-rp-benchmark-3kw_eht_",
+  "equality": "All result fingerprints equal authenticated source results. Prepared requests assert no source access.",
+  "runs": {
+    "source": {
+      "mode": "source",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 6.430178848007927,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "b010c075289a9ac5eea98f71f08bd4457e2205e465651c27f752f1fd4474289b",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.00027263200900051743,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "b010c075289a9ac5eea98f71f08bd4457e2205e465651c27f752f1fd4474289b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 6.603425208988483,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0002733810106292367,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 3.5590111460041953,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.0002777219924610108,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        }
+      ],
+      "seconds": 16.601740051002707,
+      "peak_rss_bytes": 1534197760,
+      "source_hash_bytes": 1280000384
+    },
+    "build-counters": {
+      "mode": "build-counters",
+      "os_cache": "uncontrolled",
+      "queries": [],
+      "seconds": 7.768697706007515,
+      "peak_rss_bytes": 1500672000,
+      "source_hash_bytes": 1280000384,
+      "artifact_bytes": 131807
+    },
+    "counters": {
+      "mode": "counters",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 0.0022168299910845235,
+          "path": "prepared RP counters",
+          "timestamp_bytes": 0,
+          "fingerprint": "b010c075289a9ac5eea98f71f08bd4457e2205e465651c27f752f1fd4474289b",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.0016935289895627648,
+          "path": "prepared RP counters",
+          "timestamp_bytes": 0,
+          "fingerprint": "b010c075289a9ac5eea98f71f08bd4457e2205e465651c27f752f1fd4474289b",
+          "status": "ready"
+        }
+      ],
+      "seconds": 0.005239876001724042,
+      "peak_rss_bytes": 213725184,
+      "source_hash_bytes": 0
+    },
+    "build-timestamps": {
+      "mode": "build-timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [],
+      "seconds": 5.788922972002183,
+      "peak_rss_bytes": 238858240,
+      "source_hash_bytes": 1280000384,
+      "artifact_bytes": 800015653
+    },
+    "timestamps": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 5.79833563399734,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 600000000,
+          "fingerprint": "b010c075289a9ac5eea98f71f08bd4457e2205e465651c27f752f1fd4474289b",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.0010057710023829713,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "b010c075289a9ac5eea98f71f08bd4457e2205e465651c27f752f1fd4474289b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 6.973513268996612,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0009801179985515773,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 4.3267333219992,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.0010096619953401387,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.61410023085773e-05,
+      "cancelled_request_seconds": 0.014258233000873588,
+      "seconds": 17.117750134988455,
+      "peak_rss_bytes": 240033792,
+      "source_hash_bytes": 0
+    },
+    "source-subset": {
+      "mode": "source",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 1.2411384690058185,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "8253fdc62498a0eb8d45e0aee6367e9903758e00a97203df1ee2707ad6e0ef52",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.00026186199102085084,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "8253fdc62498a0eb8d45e0aee6367e9903758e00a97203df1ee2707ad6e0ef52",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 0.4229724479955621,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "b23bca6ccba1ce91f3afc347ff5cf1264861b5d2713b0d683d0a225ccb9804a0",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.00025977499899454415,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "b23bca6ccba1ce91f3afc347ff5cf1264861b5d2713b0d683d0a225ccb9804a0",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 0.3819475509953918,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "2741cc575b00142071cf853b8a3261aa8c9d46ed8bb9b654b2b8b0d9321410f3",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.00027419699472375214,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "2741cc575b00142071cf853b8a3261aa8c9d46ed8bb9b654b2b8b0d9321410f3",
+          "status": "ready"
+        }
+      ],
+      "seconds": 2.055210004997207,
+      "peak_rss_bytes": 1500348416,
+      "source_hash_bytes": 1280000384
+    },
+    "timestamps-subset": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "original",
+          "repeat": 0,
+          "seconds": 0.2166328150051413,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 20000000,
+          "fingerprint": "8253fdc62498a0eb8d45e0aee6367e9903758e00a97203df1ee2707ad6e0ef52",
+          "status": "ready"
+        },
+        {
+          "membership": "original",
+          "repeat": 1,
+          "seconds": 0.0010211139888269827,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "8253fdc62498a0eb8d45e0aee6367e9903758e00a97203df1ee2707ad6e0ef52",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 0.5103752789873397,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 40000000,
+          "fingerprint": "b23bca6ccba1ce91f3afc347ff5cf1264861b5d2713b0d683d0a225ccb9804a0",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0009634180023567751,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "b23bca6ccba1ce91f3afc347ff5cf1264861b5d2713b0d683d0a225ccb9804a0",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 0.31758163300401065,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 40000000,
+          "fingerprint": "2741cc575b00142071cf853b8a3261aa8c9d46ed8bb9b654b2b8b0d9321410f3",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.0009965880017261952,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "2741cc575b00142071cf853b8a3261aa8c9d46ed8bb9b654b2b8b0d9321410f3",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 3.5061006201431155e-05,
+      "cancelled_request_seconds": 0.01858464500401169,
+      "seconds": 1.0679998959967634,
+      "peak_rss_bytes": 237936640,
+      "source_hash_bytes": 0
+    },
+    "source-fresh-merge": {
+      "mode": "source",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 7.70867867799825,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.00027633800345938653,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        }
+      ],
+      "seconds": 7.717049372004112,
+      "peak_rss_bytes": 1526644736,
+      "source_hash_bytes": 1280000384
+    },
+    "timestamps-fresh-merge": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "merge",
+          "repeat": 0,
+          "seconds": 7.219127032003598,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        },
+        {
+          "membership": "merge",
+          "repeat": 1,
+          "seconds": 0.0009931209933711216,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "175e58864b9f8b716e515feca4ee1948bce80c213a129c66d89d9ba1c6aa301b",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.7115005650557578e-05,
+      "cancelled_request_seconds": 0.015303506996133365,
+      "seconds": 7.237172989989631,
+      "peak_rss_bytes": 232169472,
+      "source_hash_bytes": 0
+    },
+    "source-fresh-amplitude-child": {
+      "mode": "source",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 4.657482080991031,
+          "path": "source scan",
+          "timestamp_bytes": 0,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.00027188099920749664,
+          "path": "result cache",
+          "timestamp_bytes": 0,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        }
+      ],
+      "seconds": 4.665822479000781,
+      "peak_rss_bytes": 1514872832,
+      "source_hash_bytes": 1280000384
+    },
+    "timestamps-fresh-amplitude-child": {
+      "mode": "timestamps",
+      "os_cache": "uncontrolled",
+      "queries": [
+        {
+          "membership": "amplitude-child",
+          "repeat": 0,
+          "seconds": 4.340520915997331,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 760000000,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        },
+        {
+          "membership": "amplitude-child",
+          "repeat": 1,
+          "seconds": 0.0010021670022979379,
+          "path": "prepared timestamp rows",
+          "timestamp_bytes": 0,
+          "fingerprint": "8852d570bc73a6dc3cbef5b456c5d2368939fcf28f8e7850a7cd16059e5a8ef7",
+          "status": "ready"
+        }
+      ],
+      "cancel_seconds": 2.3069995222613215e-05,
+      "cancelled_request_seconds": 0.01461819298856426,
+      "seconds": 4.357806073006941,
+      "peak_rss_bytes": 230412288,
+      "source_hash_bytes": 0
+    }
+  },
+  "additional_validated_files_sha256": {
+    "phy/apps/large_recording/summary_tasks.py": "433e0cf07edb01603c2ca842a7e8eab48a81215fcee8a7e314868155c8433ecd",
+    "phy/apps/large_recording/tests/test_summary_tasks.py": "34d6e48ad79522cad4084bd191bb2642fde63c0de3d693ecc7d9a73a7e7ac83c"
+  },
+  "validation": {
+    "full_suite": {
+      "passed": 1826,
+      "skipped": 19,
+      "command": "xvfb-run -a -s '-screen 0 1400x900x24 -ac +extension GLX +render' env QT_QPA_PLATFORM=offscreen make test-full UV_RUN='uv run --no-sync'",
+      "log": "/tmp/phy-rp-full-final.log",
+      "includes": [
+        "lint",
+        "format-check",
+        "non-application tests",
+        "application tests"
+      ]
+    },
+    "focused": {
+      "passed": 28,
+      "log": "/tmp/phy-rp-final-focused.log"
+    },
+    "docs": {
+      "command": "make doc-check UV_RUN='uv run --no-sync'",
+      "result": "passed",
+      "log": "/tmp/phy-rp-doc.log",
+      "comparison": "Temporary Git index held intended documentation edits; generation left them unchanged. Real index untouched."
+    },
+    "build": {
+      "command": "uv build",
+      "result": "passed",
+      "log": "/tmp/phy-rp-build.log"
+    },
+    "reference": "Verified against existing exact source path and independent small pairwise-oracle tests. No local phytastic checkout was available; no direct external-reference parity claim.",
+    "gui_regression": "Attached timestamp stores include exact row width in amplitude-index budget estimates. Regression reproduced before fix and passes in the final full suite."
+  },
+  "dependency_versions": {
+    "numpy": "2.4.3",
+    "phylib": "2.7.1",
+    "PyQt5": "5.15.11",
+    "PyQt5-sip": "12.20.1",
+    "pytest": "9.1.1"
+  },
+  "interpretation": [
+    "Fresh-process source merge and amplitude-child runs include authentication. Default all-membership source runs authenticate once, then reuse that reader.",
+    "Timestamp query bytes equal selected ancestor rows: 600 MB for 60 million rows, 760 MB for 76 million rows, 20/40 MB for the small subset. Prepared paths assert no original-source access.",
+    "Peak RSS includes interpreter/import baseline and mapped source pages; it is not a measurement of heap scratch alone.",
+    "Timings are local synthetic measurements with uncontrolled OS caches. Sparse regular spikes exercise scale; scientific duplicate, pair, gap and history edge cases are tested separately."
+  ]
+}

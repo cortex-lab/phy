@@ -11,7 +11,7 @@ from collections.abc import Iterable, Mapping
 
 from phylib.utils import emit
 
-from phy.gui.qt import QAbstractItemView, QColor
+from phy.gui.qt import QAbstractItemView, QApplication, QColor, Qt
 from phy.gui.widgets import Table
 
 
@@ -58,13 +58,33 @@ class MergePropositionsView(Table):
         self._key_by_id = {}
         self._id_by_key = {}
         self._current_key = None
-        self.table_view.setSelectionMode(QAbstractItemView.SingleSelection)
+        self._selected_keys = ()
+        self.table_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.set_propositions(data or ())
 
     @property
     def current_key(self):
         """The locally highlighted proposition key, if any."""
         return self._current_key
+
+    @property
+    def selected_keys(self):
+        """Stable proposition keys in selection order."""
+        return self._selected_keys
+
+    def select_keys(self, keys):
+        """Project a multi-selection without emitting cluster selection events."""
+        keys = tuple(dict.fromkeys(keys))
+        if any(key not in self._id_by_key for key in keys):
+            return False
+        self._selected_keys = keys
+        self._current_key = keys[0] if keys else None
+        self.set_selected_ids([self._id_by_key[key] for key in keys])
+        if keys:
+            self._set_dock_status(keys[0])
+        elif getattr(self, 'dock', None) is not None:
+            self.dock.set_status('No merge suggestions selected')
+        return True
 
     @staticmethod
     def _as_ordered_ids(value):
@@ -142,7 +162,7 @@ class MergePropositionsView(Table):
 
     def set_propositions(self, rows: Iterable[Mapping]):
         """Replace the projection while retaining a still-present highlight."""
-        previous_key = self._current_key
+        previous_keys = self._selected_keys
         normalized = [self._normalize_row(row, index) for index, row in enumerate(rows)]
         keys = [row['key'] for row in normalized]
         if len(set(keys)) != len(keys):
@@ -150,10 +170,7 @@ class MergePropositionsView(Table):
         self._key_by_id = {row['id']: row['key'] for row in normalized}
         self._id_by_key = {key: row_id for row_id, key in self._key_by_id.items()}
         self.remove_all_and_add(normalized, fit_columns=not self._column_widths_fitted)
-        self._current_key = previous_key if previous_key in self._id_by_key else None
-        if self._current_key is not None:
-            self.set_selected_ids([self._id_by_key[self._current_key]])
-            self._set_dock_status(self._current_key)
+        self.select_keys(key for key in previous_keys if key in self._id_by_key)
 
     def visible_keys(self):
         """Return stable keys in the table's current visible sorted order."""
@@ -176,6 +193,8 @@ class MergePropositionsView(Table):
         """Whether the legacy programmatic action is valid for the current row."""
         if action not in self._action_events:
             raise ValueError(f'Unknown merge proposition action: {action}.')
+        if len(self._selected_keys) != 1:
+            return False
         row_id = self._id_by_key.get(self._current_key)
         row = self._model.row_by_id(row_id) if row_id is not None else None
         return bool(row and row.get(f'_can_{action}'))
@@ -190,29 +209,28 @@ class MergePropositionsView(Table):
         return True
 
     def select_key(self, key):
-        """Highlight ``key`` locally, without emitting an activation event."""
-        row_id = self._id_by_key.get(key)
-        if row_id is None:
-            return False
-        self._current_key = key
-        self.set_selected_ids([row_id])
-        self.scroll_to(row_id)
-        self._set_dock_status(key)
-        return True
+        """Highlight one key locally, without emitting an activation event."""
+        return self.select_keys((key,))
 
     def set_active_key(self, key, previous_key=None):
         """Mark one row active without resetting the table model or its layout."""
-        if key not in self._id_by_key:
+        return self.set_active_keys((key,))
+
+    def set_active_keys(self, keys):
+        """Mark the complete review selection active without resetting the model."""
+        keys = tuple(keys)
+        if any(key not in self._id_by_key for key in keys):
             return False
+        active = set(keys)
         patches = []
-        previous_id = self._id_by_key.get(previous_key or self._current_key)
-        if previous_id is not None:
-            previous = self._model.row_by_id(previous_id)
-            patches.append({'id': previous_id, 'status': previous['_catalog_status']})
-        row_id = self._id_by_key[key]
-        patches.append({'id': row_id, 'status': 'active'})
-        self.change(patches)
-        return self.select_key(key)
+        for key, row_id in self._id_by_key.items():
+            row = self._model.row_by_id(row_id)
+            status = 'active' if key in active else row['_catalog_status']
+            if status != row['status']:
+                patches.append({'id': row_id, 'status': status})
+        if patches:
+            self.change(patches)
+        return self.select_keys(keys)
 
     def _select_actionable(self, direction):
         keys = self.actionable_keys()
@@ -241,8 +259,18 @@ class MergePropositionsView(Table):
         if not 0 <= index.row() < len(visible_ids):
             return
         key = self._key_by_id[visible_ids[index.row()]]
-        self.select_key(key)
-        emit('activate_merge_proposition', self, key)
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers & (Qt.ControlModifier | Qt.MetaModifier):
+            keys = list(self._selected_keys)
+            if key in keys:
+                keys.remove(key)
+            else:
+                keys.append(key)
+            self.select_keys(keys)
+            emit('activate_merge_propositions', self, tuple(keys))
+        else:
+            self.select_key(key)
+            emit('activate_merge_proposition', self, key)
 
     def _set_dock_status(self, key):
         """Expose hidden metadata through the dock status line when available."""
@@ -256,6 +284,8 @@ class MergePropositionsView(Table):
             detail = f'{detail} · reference {row["reference"]}'
         if row['reason']:
             detail = f'{detail} · {row["reason"]}'
+        if len(self._selected_keys) > 1:
+            detail = f'{len(self._selected_keys)} suggestions selected · {detail}'
         dock.set_status(detail)
 
     def _foreground_color(self, row, column):

@@ -1,0 +1,127 @@
+{
+  "phrases": [
+    {
+      "sentence": 1,
+      "text": "Bonjour. We begin by merging two clusters.",
+      "source_file": "01-with-bonjour.wav",
+      "source_sha256": "271b48d1d659364149206872622b43521de9dd8bd4a0dac3bc3aec7d48d91372",
+      "source_start": 0,
+      "source_end": 3.12,
+      "output_start": 0.35,
+      "output_end": 3.47,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 2,
+      "text": "Next, merge that result with a third cluster.",
+      "source_file": "02-sentence.wav",
+      "source_sha256": "5a4fa2495cec77f5981c507e5530009d7d3bd01e81d5290305a2a304f71e8d9c",
+      "source_start": 0,
+      "source_end": 3.33,
+      "output_start": 10.0,
+      "output_end": 13.33,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 3,
+      "text": "Then make an unrelated merge, and mark it as multi-unit activity.",
+      "source_file": "03-sentence.wav",
+      "source_sha256": "f391ffcfc4678c0e510e2356ccc14dc28d34f087cda0681822d87c7e7dee662b",
+      "source_start": 0,
+      "source_end": 4.69,
+      "output_start": 18.1,
+      "output_end": 22.790000000000003,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 4,
+      "text": "Return to the older, nested merge.",
+      "source_file": "04-sentence.wav",
+      "source_sha256": "423cfe93e6df5af58135c42c1601f59d51de5540c98f844e106aa91765a6e187",
+      "source_start": 0,
+      "source_end": 2.69,
+      "output_start": 26.1,
+      "output_end": 28.790000000000003,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 5,
+      "text": "One restore brings back all three original clusters.",
+      "source_file": "05-sentence.wav",
+      "source_sha256": "a15b3739cb3defd8d66ea79c9465e404e55027c6a2dc0ab76f78bef67d6445da",
+      "source_start": 0,
+      "source_end": 3.73,
+      "output_start": 29.3,
+      "output_end": 33.03,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 6,
+      "text": "Undo and redo affect the whole restoration.",
+      "source_file": "06-sentence.wav",
+      "source_sha256": "b19c52957501b4a9def7083429ba82b40af12c029d58a2ee6a243ee4ac63f7e4",
+      "source_start": 0,
+      "source_end": 2.61,
+      "output_start": 33.6,
+      "output_end": 36.21,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 7,
+      "text": "Leaving Merge Mode keeps them separate.",
+      "source_file": "07-sentence.wav",
+      "source_sha256": "8d63f41785a69c137aa9a03d879f32c95796db966a2d0c3030b6ffa71de4e231",
+      "source_start": 0,
+      "source_end": 2.61,
+      "output_start": 37.0,
+      "output_end": 39.61,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 8,
+      "text": "Exclude the third cluster.",
+      "source_file": "08-sentence.wav",
+      "source_sha256": "d8ffed185ea5704b974a40da5530062ae0845e4fa93ce28456ef8a9b1f9c0bcd",
+      "source_start": 0,
+      "source_end": 1.81,
+      "output_start": 40.2,
+      "output_end": 42.010000000000005,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 9,
+      "text": "Remerge the pair: SLAY turns green again.",
+      "source_file": "09-sentence.wav",
+      "source_sha256": "7be136f7b2c896f4152aca8fe04c41e5526f4f53348ac84e209623eeeba044cf",
+      "source_start": 0,
+      "source_end": 2.69,
+      "output_start": 43.6,
+      "output_end": 46.29,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 10,
+      "text": "Undo and redo update the status.",
+      "source_file": "10-sentence.wav",
+      "source_sha256": "a59e891d7275017c62ccce15278c5e3984e1b701981341b41e615475f78c69f3",
+      "source_start": 0,
+      "source_end": 2.29,
+      "output_start": 47.5,
+      "output_end": 49.79,
+      "tempo_factor": 1.0
+    },
+    {
+      "sentence": 11,
+      "text": "Save and reopen: the result and later edits are preserved.",
+      "source_file": "11-sentence.wav",
+      "source_sha256": "6ecedefa3243b84ab334667ce97ed337b81b03b0cc546b29f41dbba50c70805f",
+      "source_start": 0,
+      "source_end": 3.01,
+      "output_start": 54.1,
+      "output_end": 57.11,
+      "tempo_factor": 1.0
+    }
+  ],
+  "timing": "Full approved sentences only; no internal edits, no tempo changes; minimum0.4s silence between sentences",
+  "publication": "Published video verification and native attachment are recorded in recursive-review.json"
+}
