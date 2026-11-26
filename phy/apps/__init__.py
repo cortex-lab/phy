@@ -20,6 +20,10 @@ from phy.gui.qt import QtDialogLogger
 from phy.utils.profiling import _enable_pdb, _enable_profiler
 
 from .base import BaseController, FeatureMixin, TemplateMixin, TraceMixin, WaveformMixin  # noqa
+from .large_recording.refractory_resources import (
+    DEFAULT_RP_MAX_BYTES,
+    DEFAULT_RP_MEMORY_BYTES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +210,14 @@ def cli_template_describe(ctx, params_path):
     help='Build a separate unit-contiguous acceleration store at this new path.',
 )
 @click.option('--rp-summaries', is_flag=True, help='Prepare exact original-unit RP summaries.')
-@click.option('--rp-summary-max-bytes', type=click.IntRange(min=1), default=67108864)
+@click.option('--rp-summary-max-bytes', type=click.IntRange(min=1), default=DEFAULT_RP_MAX_BYTES)
+@click.option(
+    '--rp-summary-memory-bytes',
+    type=click.IntRange(min=1),
+    default=DEFAULT_RP_MEMORY_BYTES,
+    show_default=True,
+    help='Memory budget for exact RP summary construction.',
+)
 @click.option('--store-timestamps', is_flag=True, help='Include exact ticks in --summary-store.')
 @click.option('--summary-store-max-bytes', type=click.IntRange(min=1), default=68719476736)
 def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
@@ -249,8 +260,8 @@ def cli_prepare_large(params_path, output_dir, valid_intervals=None, **kwargs):
 @phycli.command('build-rp-summaries')
 @click.argument('bounded-dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option('--source-dir', type=click.Path(exists=True, path_type=Path))
-@click.option('--max-bytes', type=click.IntRange(min=1), default=67108864)
-@click.option('--memory-bytes', type=click.IntRange(min=1), default=67108864)
+@click.option('--max-bytes', type=click.IntRange(min=1), default=DEFAULT_RP_MAX_BYTES)
+@click.option('--memory-bytes', type=click.IntRange(min=1), default=DEFAULT_RP_MEMORY_BYTES)
 @click.option('--batch-size', type=click.IntRange(min=1), default=100000)
 def cli_build_rp_summaries(bounded_dir, **kwargs):
     """Prepare optional exact RP counts for the original units of a bounded package."""

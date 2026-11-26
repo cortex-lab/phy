@@ -267,7 +267,7 @@ def test_estimates_cli_and_compatible_scalar_consumers(tmp_path):
         assert reader.resolve(expression)[0]['counts'].sum() == 4
 
 
-def test_prepare_optins_and_failure_preserve_bounded_package(tmp_path):
+def test_prepare_optins_and_failure_preserve_bounded_package(tmp_path, monkeypatch):
     source, bounded = make_package(tmp_path)
     rmtree(bounded)
     prepared = prepare_large(
@@ -283,11 +283,21 @@ def test_prepare_optins_and_failure_preserve_bounded_package(tmp_path):
     with pytest.raises(ValueError, match='requires'):
         prepare_large(source / 'params.py', tmp_path / 'invalid', store_timestamps=True)
     assert not (tmp_path / 'invalid').exists()
-    with pytest.raises(ValueError, match='Bounded package is ready.*build-rp-summaries'):
+    with pytest.raises(ValueError, match='disk budget.*--rp-summary-max-bytes'):
         prepare_large(
             source / 'params.py', tmp_path / 'budget', rp_summaries=True, rp_summary_max_bytes=1
         )
-    with BoundedSession(tmp_path / 'budget') as session:
+    assert not (tmp_path / 'budget').exists()
+
+    def failed_build(*args, **kwargs):
+        raise OSError('Simulated late write failure.')
+
+    monkeypatch.setattr(
+        'phy.apps.large_recording.refractory_store.build_refractory_summaries', failed_build
+    )
+    with pytest.raises(ValueError, match='Bounded package is ready.*build-rp-summaries'):
+        prepare_large(source / 'params.py', tmp_path / 'late-failure', rp_summaries=True)
+    with BoundedSession(tmp_path / 'late-failure') as session:
         assert session.unit_ids
 
 

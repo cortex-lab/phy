@@ -10,6 +10,11 @@ from pathlib import Path
 import numpy as np
 
 from .metadata import POLICY, SCHEMA_FILE, write_metadata
+from .refractory_resources import (
+    DEFAULT_RP_MAX_BYTES,
+    DEFAULT_RP_MEMORY_BYTES,
+    plan_refractory_summaries,
+)
 from .source import (
     PER_SPIKE,
     STATIC,
@@ -159,8 +164,9 @@ def prepare_large(
     cancel=None,
     progress=None,
     rp_summaries=False,
-    rp_summary_max_bytes=67108864,
+    rp_summary_max_bytes=DEFAULT_RP_MAX_BYTES,
     store_timestamps=False,
+    rp_summary_memory_bytes=DEFAULT_RP_MEMORY_BYTES,
 ):
     """Choose complete shared windows, write bounded arrays, and publish atomically.
 
@@ -171,6 +177,7 @@ def prepare_large(
     """
     if store_timestamps and summary_store is None:
         raise ValueError('store_timestamps requires a summary_store destination.')
+    output_dir = Path(output_dir)
     with Source(
         params_path,
         duration_seconds,
@@ -180,6 +187,40 @@ def prepare_large(
         cancel=cancel,
         progress=progress,
     ) as source:
+        if rp_summaries:
+            if 'amplitudes.npy' not in source.arrays:
+                raise ValueError('Raw source amplitudes unavailable for RP summaries.')
+            # Source discovery/authentication is required, but no bounded output
+            # should be built when requested RP resources are already impossible.
+            rp_manifest = {
+                'sample_rate': source.sample_rate,
+                'num_samples': source.num_samples,
+                'unit_ids': source.unit_ids,
+                'valid_intervals': source.valid_intervals.tolist(),
+                'source': {
+                    'identity': source.identity,
+                    'revision': source.revision,
+                    'path': str(source.path),
+                },
+                'source_array_inventory': {
+                    name: {'dtype': str(array.dtype)} for name, array in source.arrays.items()
+                },
+            }
+            native_bins = summary_size(source, bin_seconds)[2]
+            rp_plan = plan_refractory_summaries(
+                rp_manifest,
+                max_bytes=rp_summary_max_bytes,
+                memory_bytes=rp_summary_memory_bytes,
+                batch_size=batch_size,
+                native_grid_bytes=(2 * native_bins + 1) * 8,
+                disk_option='--rp-summary-max-bytes',
+                memory_option='--rp-summary-memory-bytes',
+            )
+            destination = output_dir.parent
+            while not destination.exists():
+                destination = destination.parent
+            if shutil.disk_usage(destination).free < rp_plan.disk_bytes:
+                raise OSError(f'RP summaries need {rp_plan.disk_bytes} bytes of free disk space.')
         output = _prepare_source(
             source,
             output_dir,
@@ -203,6 +244,7 @@ def prepare_large(
                 output,
                 source_dir=source.path,
                 max_bytes=rp_summary_max_bytes,
+                memory_bytes=rp_summary_memory_bytes,
                 batch_size=batch_size,
                 cancel=cancel,
                 progress=progress,
