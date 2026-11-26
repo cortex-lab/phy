@@ -13,6 +13,11 @@ behavior they verify rather than listed separately.
 
 ### Long recordings
 
+- RP summary builds retain only counters and shared exposure, with batches sized
+  to the configured memory budget. `prepare-large` checks RP budgets before
+  constructing the package and exposes `--rp-summary-memory-bytes`; both build
+  paths retain the 64 MiB defaults and report actionable budget errors.
+
 - Fix sampled correlogram `D` and `Shift+D` exclusion shortcuts when native
   OpenGL canvas focus leaves widget focus in another dock.
 

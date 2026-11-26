@@ -100,6 +100,12 @@ def plan_refractory_summaries(
     fixed_bytes = (
         units * (16 * bins + UNIT_STATE_BYTES)
         + bins * 8
+        # Geometry retains an outer tuple and one pair per acquisition interval;
+        # validating a shared geometry temporarily constructs a second copy.
+        + 128 * len(manifest['valid_intervals'])
+        # Binding/catalog serialization may be large even with few units/bins.
+        # Allow simultaneous encoded/string metadata and catalog bookkeeping.
+        + 4 * (disk_bytes - units * (16 * bins + UNIT_ARCHIVE_BYTES))
         + native_grid_bytes
         + AUTH_BYTES
         + serialization_bytes

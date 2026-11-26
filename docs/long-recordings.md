@@ -129,6 +129,26 @@ grid, independently of the configurable native summary bins. Complete duplicate
 components and later partners span source batches and bin boundaries. Counters
 from different original units cannot be added to calculate a merge.
 
+The single-pass counter builder retains only two int64 counters per unit/bin.
+It shares acquisition exposure across units, updates only touched bins, and
+serializes each unit as it completes. A shared resource planner caps effective
+batch sizes against explicit memory and disk budgets. After source discovery and
+authentication, preparation checks these budgets before constructing the bounded
+package. The standalone builder checks before authenticating/scanning source
+arrays. The algorithm allocation
+budget is not a hard process-RSS limit: Python and NumPy overhead and mapped
+source pages require additional memory. If an exact duplicate component cannot
+fit its planned allocation, that unit may be marked unavailable while other
+units are still prepared.
+
+Both budgets default to 64 MiB. For `prepare-large`, set them with
+`--rp-summary-max-bytes` (disk) and `--rp-summary-memory-bytes` (memory). For
+standalone `build-rp-summaries`, use `--max-bytes` and `--memory-bytes`:
+
+```bash
+phy build-rp-summaries /data/bounded --max-bytes 67108864 --memory-bytes 67108864
+```
+
 `--timestamps` adds exact integer offsets relative to the actual native bin
 starts. The smallest unsigned integer width that fits every bin span is used;
 signed source amplitudes retain their original dtype, including float64 precision.
@@ -156,20 +176,15 @@ fallback. Changed references or row-file signatures invalidate timestamp caches.
 To reconnect a copied timestamp store, use `phy attach-summary-store` with its
 new path. RP counters travel with the bounded package.
 
-The counter builder defaults to a 64 MiB disk limit (`--rp-summary-max-bytes`
-during preparation, or `build-rp-summaries --max-bytes`) and a 64 MiB state
-budget (`build-rp-summaries --memory-bytes`). It checks dense grids before work,
-globally apportions unresolved-component state, and allows at most another half
-of the state budget for source-batch scratch. A unit with invalid amplitudes or
-an oversized duplicate component is marked unavailable without discarding valid
-units. Timestamp query scratch uses the reader's existing 64 MiB allowance, plus
+Timestamp query scratch uses the reader's existing 64 MiB allowance, plus
 one accumulator's bounded component state. Prepared query result grids have
 a separate 8 MiB limit; oversized requests report unavailable. Existing store
 budgets and cancellation checks continue to apply.
 
 Artifacts publish atomically and never overwrite an existing artifact directory.
 Optional preparation failure preserves the completed bounded package; retry via
-the corresponding build command. Preparation and RP queries do not change saved
+the corresponding build command. A later I/O failure also leaves a ready package
+intact. Preparation and RP queries do not change saved
 assignments, curation history or exports. The store-building commands still
 prepare the amplitude index by default; `--rows-only` skips that separate index.
 

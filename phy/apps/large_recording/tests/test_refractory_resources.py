@@ -51,6 +51,18 @@ def test_dtype_and_native_grid_scratch_are_accounted():
     assert wide.batch_size < baseline.batch_size
 
 
+def test_fragmented_exposure_metadata_is_budgeted_with_few_bins():
+    manifest = geometry(1, 1)
+    baseline = plan_refractory_summaries(manifest)
+    manifest['valid_intervals'] = [[i * 2, i * 2 + 1] for i in range(100000)]
+    fragmented = plan_refractory_summaries(manifest)
+    assert fragmented.fixed_bytes >= baseline.fixed_bytes + 128 * 99999
+    with pytest.raises(ValueError, match='memory budget'):
+        plan_refractory_summaries(
+            manifest, memory_bytes=baseline.fixed_bytes + COMPONENT_ROW_BYTES + baseline.row_bytes
+        )
+
+
 @pytest.mark.parametrize('key,value', [('sample_rate', 0), ('num_samples', 0)])
 def test_invalid_scientific_geometry(key, value):
     manifest = geometry()
