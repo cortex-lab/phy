@@ -7,10 +7,41 @@ import pytest
 
 from phy.apps.large_recording.refractory import (
     RefractoryAccumulator,
+    RefractoryGeometry,
     RefractoryUnavailable,
     deduplicate,
     window_curve,
 )
+
+
+def test_shared_geometry_counter_only_and_sparse_updates(monkeypatch):
+    width = 1800 * 30000
+    intervals = [[0, width * 2000]]
+    geometry = RefractoryGeometry(30000, width * 2000, intervals)
+    left, right = (
+        RefractoryAccumulator(30000, width * 2000, intervals, geometry=geometry) for _ in range(2)
+    )
+    assert left.recorded is right.recorded is geometry.recorded
+    assert not geometry.recorded.flags.writeable
+
+    def no_full_grid(*args, **kwargs):
+        raise AssertionError('A sparse feed must not allocate a full histogram grid.')
+
+    monkeypatch.setattr(np, 'bincount', no_full_grid)
+    ticks = np.array([0, 30, width * 1999, width * 1999 + 30])
+    left.feed(ticks[:3], np.ones(3))
+    left.feed(ticks[3:], np.ones(1))
+    right.feed(ticks, np.ones(4))
+    counters, full = left.finish_counters(), right.finish()
+    assert 'contamination' not in counters
+    assert 'recorded_seconds' not in counters
+    for name in ('spikes', 'violations'):
+        np.testing.assert_array_equal(counters[name], full[name])
+        assert not counters[name].flags.writeable
+    assert counters['spikes'][[0, 1999]].tolist() == [2, 2]
+    assert counters['violations'][[0, 1999]].tolist() == [1, 1]
+    with pytest.raises(ValueError, match='geometry'):
+        RefractoryAccumulator(30000, width * 2000, [[1, width * 2000]], geometry=geometry)
 
 
 def brute(t, a, radius=9):

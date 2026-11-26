@@ -16,8 +16,15 @@ from .refractory import (
     BIN_SECONDS,
     VERSION,
     RefractoryAccumulator,
+    RefractoryGeometry,
     RefractoryUnavailable,
     window_curve,
+)
+from .refractory_resources import (
+    DEFAULT_RP_MAX_BYTES,
+    DEFAULT_RP_MEMORY_BYTES,
+    estimate_refractory_disk,
+    plan_refractory_summaries,
 )
 from .source import hash_file, hash_json, publish_directory
 from .summary_store import (
@@ -52,10 +59,10 @@ def estimate_refractory_summaries(source):
     if samples <= 0:
         raise RefractoryUnavailable('Unsupported RP sample rate.')
     bins = (m['num_samples'] + samples - 1) // samples
-    return 65536 + len(m['unit_ids']) * (8192 + 48 * bins)
+    return estimate_refractory_disk(m, bins)
 
 
-def _prepare_counters(source, component_budget, cancel, progress):
+def _prepare_counters(source, plan, geometry, cancel, progress):
     m = source.manifest
     names = {'spike_times.npy', 'spike_clusters.npy', 'amplitudes.npy'}
     if 'amplitudes.npy' not in m['source_array_inventory']:
@@ -66,12 +73,13 @@ def _prepare_counters(source, component_budget, cancel, progress):
             m['sample_rate'],
             m['num_samples'],
             m['valid_intervals'],
-            max_component=max(1, component_budget // len(m['unit_ids'])),
+            max_component=plan.max_component,
+            geometry=geometry,
         )
         for u in m['unit_ids']
     }
     unavailable = {}
-    chunk = source._chunk_size({}, 128)
+    chunk = plan.batch_size
     for start in range(0, m['num_spikes'], chunk):
         _check_cancel(cancel)
         stop = min(start + chunk, m['num_spikes'])
@@ -93,21 +101,24 @@ def _prepare_counters(source, component_budget, cancel, progress):
                 accumulators[unit].feed(ticks[selected], amplitudes[selected], cancel)
             except RefractoryUnavailable as error:
                 unavailable[unit] = {'status': 'unavailable', 'message': str(error)}
+                del accumulators[unit]
         if progress:
             progress('preparing RP summaries', stop, m['num_spikes'])
     source._unchanged()
-    results = {}
-    for unit, acc in accumulators.items():
+    for unit in m['unit_ids']:
         _check_cancel(cancel)
-        results[unit] = unavailable[unit] if unit in unavailable else acc.finish(cancel)
-    return results
+        if unit in unavailable:
+            yield unit, unavailable.pop(unit)
+        else:
+            acc = accumulators.pop(unit)
+            yield unit, acc.finish_counters(cancel)
 
 
 def build_refractory_summaries(
     package_path,
     source_dir=None,
-    max_bytes=67108864,
-    memory_bytes=67108864,
+    max_bytes=DEFAULT_RP_MAX_BYTES,
+    memory_bytes=DEFAULT_RP_MEMORY_BYTES,
     batch_size=100000,
     cancel=None,
     progress=None,
@@ -115,8 +126,8 @@ def build_refractory_summaries(
     """Publish original-unit counters atomically, independently of row stores.
 
     A single authenticated source scan maintains complete close components for
-    every original unit. The state budget covers grids and unresolved components;
-    source batches use a separate allowance of at most half ``memory_bytes``.
+    every original unit. One plan covers counters, shared exposure, unresolved
+    components, source batches and serialization. No display curves are built.
     Existing artifacts are never overwritten. The package survives failure.
     """
     output = Path(package_path) / '.phy' / 'refractory-summaries'
@@ -128,33 +139,33 @@ def build_refractory_summaries(
         package_path,
         source_dir=source_dir,
         batch_size=batch_size,
-        max_bytes=max(1, memory_bytes // 2),
+        max_bytes=memory_bytes,
     ) as source:
-        estimate = estimate_refractory_summaries(source)
-        RefractoryAccumulator(
-            source.manifest['sample_rate'],
-            source.manifest['num_samples'],
-            source.manifest['valid_intervals'],
-        )
         m = source.manifest
-        # Results and accumulator grids coexist until atomic publication.
-        bins = (m['num_samples'] + round(BIN_SECONDS * m['sample_rate']) - 1) // round(
-            BIN_SECONDS * m['sample_rate']
+        plan = plan_refractory_summaries(
+            m,
+            max_bytes,
+            memory_bytes,
+            batch_size,
+            native_grid_bytes=source.edges.nbytes + source.exposure.nbytes,
         )
-        units = m['unit_ids']
-        if estimate > max_bytes or len(units) * (8192 + bins * 64) > memory_bytes // 2:
-            raise ValueError('RP summary grids exceed disk or memory budget.')
-        component_budget = memory_bytes // 128
-        if len(units) > component_budget:
-            raise ValueError('RP unresolved-component state exceeds memory budget.')
+        geometry = RefractoryGeometry(m['sample_rate'], m['num_samples'], m['valid_intervals'])
+        if progress:
+            progress(
+                f'RP plan: {plan.units} units × {plan.bins} bins; '
+                f'disk <= {plan.disk_bytes} bytes; allocations <= {plan.memory_bytes} bytes; '
+                f'batch {plan.batch_size}',
+                0,
+                m['num_spikes'],
+            )
         output.parent.mkdir(parents=True, exist_ok=True)
-        if shutil.disk_usage(output.parent).free < estimate:
-            raise OSError('Insufficient free space for RP summaries.')
+        if shutil.disk_usage(output.parent).free < plan.disk_bytes:
+            raise OSError(f'RP summaries need {plan.disk_bytes} bytes of free disk space.')
         temporary = Path(tempfile.mkdtemp(prefix='.rp-building-', dir=output.parent))
         try:
-            results = _prepare_counters(source, component_budget, cancel, progress)
+            results = _prepare_counters(source, plan, geometry, cancel, progress)
             catalog = {'binding': refractory_binding(source), 'units': {}}
-            for index, (unit, result) in enumerate(results.items()):
+            for index, (unit, result) in enumerate(results):
                 _check_cancel(cancel)
                 arrays = {k: v for k, v in result.items() if k in ('spikes', 'violations')}
                 item = {k: v for k, v in result.items() if not isinstance(v, np.ndarray)}
@@ -230,7 +241,7 @@ def _counters(source, expressions, cancel, result_bytes=8388608):
                     result.update({k: data[k] for k in data.files})
             if recorded is None:
                 m = source.manifest
-                recorded = RefractoryAccumulator(
+                recorded = RefractoryGeometry(
                     m['sample_rate'], m['num_samples'], m['valid_intervals']
                 ).recorded
             centres, curve = window_curve(

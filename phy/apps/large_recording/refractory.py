@@ -66,11 +66,13 @@ def window_curve(violations, spikes, recorded_seconds, fs):
     return centres / 2, np.where(n >= 1000, contamination, np.nan)
 
 
-class RefractoryAccumulator:
-    """Bounded streaming state for one globally monotonic current membership."""
+class RefractoryGeometry:
+    """Validated scientific grid and immutable exposure shared by memberships."""
 
-    def __init__(self, fs, num_samples, valid_intervals, max_component=1000000):
+    def __init__(self, fs, num_samples, valid_intervals):
         self.fs, self.num_samples = float(fs), int(num_samples)
+        if not np.isfinite(self.fs) or self.fs <= 0:
+            raise RefractoryUnavailable('Unsupported sample rate.')
         self.radius = round(0.3 * self.fs * 1e-3)
         self.tr = round(1.0 * self.fs * 1e-3)
         self.bin_samples = round(BIN_SECONDS * self.fs)
@@ -83,11 +85,10 @@ class RefractoryAccumulator:
             raise RefractoryUnavailable(
                 'Scientific grid or sample arithmetic exceeds resource budget.'
             )
-        self.spikes = np.zeros(self.n_bins, dtype=np.int64)
-        self.violations = np.zeros(self.n_bins, dtype=np.int64)
         self.recorded = np.zeros(self.n_bins)
+        self.valid_intervals = tuple(tuple(interval) for interval in valid_intervals)
         previous = 0
-        for a, b in valid_intervals:
+        for a, b in self.valid_intervals:
             if not (0 <= previous <= a < b <= num_samples):
                 raise RefractoryUnavailable('Invalid recorded exposure intervals.')
             for k in range(
@@ -101,6 +102,24 @@ class RefractoryAccumulator:
         if not np.any(self.recorded):
             raise RefractoryUnavailable('Recorded exposure unavailable.')
         self.recorded /= self.fs
+        self.recorded.flags.writeable = False
+
+
+class RefractoryAccumulator:
+    """Bounded streaming state for one globally monotonic current membership."""
+
+    def __init__(self, fs, num_samples, valid_intervals, max_component=1000000, *, geometry=None):
+        geometry = geometry or RefractoryGeometry(fs, num_samples, valid_intervals)
+        if (
+            geometry.fs != fs
+            or geometry.num_samples != num_samples
+            or geometry.valid_intervals != tuple(tuple(interval) for interval in valid_intervals)
+        ):
+            raise ValueError('RP geometry does not match recording.')
+        for name in ('fs', 'num_samples', 'radius', 'tr', 'bin_samples', 'n_bins', 'recorded'):
+            setattr(self, name, getattr(geometry, name))
+        self.spikes = np.zeros(self.n_bins, dtype=np.int64)
+        self.violations = np.zeros(self.n_bins, dtype=np.int64)
         self.max_component = int(max_component)
         self.ticks = np.empty(0, dtype=np.int64)
         self.scores = np.empty(0)
@@ -146,7 +165,10 @@ class RefractoryAccumulator:
             self.removed += int(np.count_nonzero(~keep))
             resolved = t[:stop][keep]
         self.largest_component = max(self.largest_component, largest)
-        self.spikes += np.bincount(resolved // self.bin_samples, minlength=self.n_bins)
+        if len(resolved):
+            bins = resolved // self.bin_samples
+            starts = np.r_[0, np.flatnonzero(np.diff(bins)) + 1]
+            self.spikes[bins[starts]] += np.diff(np.r_[starts, len(bins)])
         self.ticks, self.scores = t[stop:].copy(), a[stop:].copy()
         partners = np.concatenate((self.partners, resolved))
         # The first unresolved original tick bounds every future kept tick.
@@ -164,20 +186,28 @@ class RefractoryAccumulator:
             self.violations[bins[starts]] += np.add.reduceat(nv, starts)
         self.partners = partners[done:].copy()
 
-    def finish(self, cancel=None):
+    def finish_counters(self, cancel=None):
+        """Resolve pending evidence without allocating display curves."""
         self.feed(np.empty(0, dtype=np.int64), np.empty(0), cancel, final=True)
-        centres, curve = window_curve(self.violations, self.spikes, self.recorded, self.fs)
         result = {
             'status': 'ready',
             'duplicates_removed': self.removed,
             'spikes': self.spikes,
             'violations': self.violations,
-            'recorded_seconds': self.recorded,
-            'window_centres_h': centres,
-            'contamination': curve,
             'largest_component': self.largest_component,
         }
         for value in result.values():
             if isinstance(value, np.ndarray):
                 value.flags.writeable = False
+        return result
+
+    def finish(self, cancel=None):
+        """Return counters with exposure and the fixed diagnostic curve."""
+        result = self.finish_counters(cancel)
+        centres, curve = window_curve(self.violations, self.spikes, self.recorded, self.fs)
+        for value in (centres, curve):
+            value.flags.writeable = False
+        result.update(
+            recorded_seconds=self.recorded, window_centres_h=centres, contamination=curve
+        )
         return result
