@@ -91,6 +91,45 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
 
+  phylib-config-compatibility:
+    name: Hardened phylib configuration and caches
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      with:
+        version: "0.11.31"
+    - name: Set up Python
+      run: uv python install 3.12
+    - name: Install locked dependencies
+      run: uv sync --frozen --dev --python 3.12
+    - name: Install reviewed phylib configuration and pickle changes
+      run: >-
+        uv pip install --python .venv
+        "phylib @ git+https://github.com/cortex-lab/phylib.git@86216fbd50fbb35a9b17662a452ef6625fcb1439"
+    - name: Check required loader capabilities
+      run: |
+        uv run --no-sync python - <<'PYTHON'
+        from inspect import signature
+        from phylib.io.model import get_template_params
+        from phylib.utils import _misc
+        assert 'allow_python_execution' in signature(get_template_params).parameters
+        assert hasattr(_misc, '_PICKLE_ALLOWED')
+        PYTHON
+    - name: Set up display
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
+          libxkbcommon-x11-0 libegl1 libegl-mesa0 libgl1-mesa-dri
+    - name: Test configuration execution and persisted caches
+      run: >-
+        xvfb-run -a uv run --no-sync pytest --no-cov
+        phy/apps/tests/test_config_execution.py phy/utils/tests/test_context.py
+      env:
+        QT_QPA_PLATFORM: offscreen
+        LIBGL_ALWAYS_SOFTWARE: "1"
+
   build:
     runs-on: ubuntu-latest
     needs: test

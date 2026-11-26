@@ -18,6 +18,7 @@ from phy._provenance import _add_log_file, _software_info
 from phy.cluster.views import ScatterView
 from phy.gui import create_app, run_app
 
+from .._config import _config_execution_kwargs
 from ..base import BaseController, FeatureMixin, TemplateMixin, TraceMixin, WaveformMixin
 
 logger = logging.getLogger(__name__)
@@ -261,7 +262,7 @@ class TemplateController(WaveformMixin, FeatureMixin, TemplateMixin, TraceMixin,
 # ------------------------------------------------------------------------------
 
 
-def template_gui(params_path, **kwargs):  # pragma: no cover
+def template_gui(params_path, *, allow_python_execution=False, **kwargs):  # pragma: no cover
     """Launch the Template GUI."""
     # Create a `phy.log` log file with DEBUG level.
     p = Path(params_path)
@@ -269,7 +270,9 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
     handler = _add_log_file(dir_path / 'phy.log')
     try:
         logger.info('Starting Template GUI: %s', _software_info())
-        model = load_model(params_path)
+        model = load_model(
+            params_path, **_config_execution_kwargs(load_model, allow_python_execution)
+        )
         # Automatically export spike waveforms when using compressed raw ephys.
         if model.spike_waveforms is None and isinstance(model.traces, MtscompEphysReader):
             # TODO: customizable values below.
@@ -287,8 +290,8 @@ def template_gui(params_path, **kwargs):  # pragma: no cover
     controller.model.close()
 
 
-def template_describe(params_path):
+def template_describe(params_path, *, allow_python_execution=False):
     """Describe a template dataset."""
-    model = load_model(params_path)
+    model = load_model(params_path, **_config_execution_kwargs(load_model, allow_python_execution))
     model.describe()
     model.close()

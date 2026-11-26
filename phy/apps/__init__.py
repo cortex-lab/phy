@@ -18,6 +18,7 @@ from phy import __version_git__
 from phy.gui.qt import QtDialogLogger
 from phy.utils.profiling import _enable_pdb, _enable_profiler
 
+from ._config import _config_execution_kwargs
 from .base import BaseController, FeatureMixin, TemplateMixin, TraceMixin, WaveformMixin  # noqa
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,15 @@ def phycli(ctx):
 # ------------------------------------------------------------------------------
 
 
+def _python_execution_option(f):
+    return click.option(
+        '--allow-python-execution',
+        is_flag=True,
+        default=False,
+        help='Execute trusted legacy params.py files as Python. May run arbitrary code.',
+    )(f)
+
+
 def _gui_command(f):
     """Command options for GUI commands."""
     f = click.option(
@@ -131,6 +141,7 @@ def _gui_command(f):
 @click.option('-h', '--offset', type=int)
 @click.option('-f', '--fortran', type=bool, is_flag=True)
 @_gui_command
+@_python_execution_option
 @click.pass_context
 def cli_trace_gui(ctx, dat_path, **kwargs):
     """Launch the trace GUI on a raw data file."""
@@ -150,6 +161,7 @@ def cli_trace_gui(ctx, dat_path, **kwargs):
 @phycli.command('template-gui')  # pragma: no cover
 @click.argument('params-path', type=click.Path(exists=True))
 @_gui_command
+@_python_execution_option
 @click.pass_context
 def cli_template_gui(ctx, params_path, **kwargs):
     """Launch the template GUI on a params.py file."""
@@ -160,18 +172,19 @@ def cli_template_gui(ctx, params_path, **kwargs):
         if prof:
             from phy.utils.profiling import _profile
 
-            return _profile(prof, 'template_gui(params_path)', globals(), locals())
+            return _profile(prof, 'template_gui(params_path, **kwargs)', globals(), locals())
         template_gui(params_path, **kwargs)
 
 
 @phycli.command('template-describe')
 @click.argument('params-path', type=click.Path(exists=True))
+@_python_execution_option
 @click.pass_context
-def cli_template_describe(ctx, params_path):
+def cli_template_describe(ctx, params_path, allow_python_execution=False):
     """Describe a template file."""
     from .template.gui import template_describe
 
-    template_describe(params_path)
+    template_describe(params_path, allow_python_execution=allow_python_execution)
 
 
 # ------------------------------------------------------------------------------
@@ -216,8 +229,9 @@ def cli_kwik_describe(ctx, path, channel_group=0, clustering='main'):
 @phycli.command('alf-convert')
 @click.argument('subdirs', nargs=-1, type=click.Path(exists=True, file_okay=False, dir_okay=True))
 @click.argument('out_dir', type=click.Path())
+@_python_execution_option
 @click.pass_context
-def cli_alf_convert(ctx, subdirs, out_dir):
+def cli_alf_convert(ctx, subdirs, out_dir, allow_python_execution=False):
     """Convert an ephys dataset into ALF. If several directories are specified, it is assumed
     that each directory contains the data for one probe of the same recording."""
     from phylib.io.alf import EphysAlfCreator
@@ -228,13 +242,20 @@ def cli_alf_convert(ctx, subdirs, out_dir):
 
     if len(subdirs) >= 2:
         # Merge in the `merged` subdirectory inside the output directory.
-        m = Merger(subdirs, out_dir / '_tmp_merged')
+        m = Merger(
+            subdirs,
+            out_dir / '_tmp_merged',
+            **_config_execution_kwargs(Merger, allow_python_execution),
+        )
         model = m.merge()
     else:
-        model = load_model(Path(subdirs[0]) / 'params.py')
+        model = load_model(
+            Path(subdirs[0]) / 'params.py',
+            **_config_execution_kwargs(load_model, allow_python_execution),
+        )
 
     c = EphysAlfCreator(model)
-    c.convert(out_dir)
+    c.convert(out_dir, **_config_execution_kwargs(c.convert, allow_python_execution))
 
 
 # ------------------------------------------------------------------------------
@@ -246,14 +267,15 @@ def cli_alf_convert(ctx, subdirs, out_dir):
 @click.argument('params-path', type=click.Path(exists=True))
 @click.argument('n_spikes_per_cluster', type=int, default=500)
 @click.option('--nc', type=int, default=16)
+@_python_execution_option
 @click.pass_context
 def template_extract_waveforms(
-    ctx, params_path, n_spikes_per_cluster, nc=None
+    ctx, params_path, n_spikes_per_cluster, nc=None, allow_python_execution=False
 ):  # pragma: no cover
     """Extract spike waveforms."""
     from phylib.io.model import load_model
 
-    model = load_model(params_path)
+    model = load_model(params_path, **_config_execution_kwargs(load_model, allow_python_execution))
     model.save_spikes_subset_waveforms(
         max_n_spikes_per_template=n_spikes_per_cluster, max_n_channels=nc
     )
